@@ -5,6 +5,32 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) | [Semantic Ver
 
 ---
 
+## [2.2.3] — 2026-05-18
+
+### Fixed
+
+- **`scripts/kortext-cli.py`** — `kortext init` artık `.kortext/` ve `AGENTS.md`'yi `git add` ile otomatik olarak git'e ekliyor. Başka bir makinede `git clone` sonrası tüm framework dosyaları hazır, yeniden `init` gerekmez.
+
+---
+
+## [2.2.2] — 2026-05-18
+
+### Changed
+
+- **`scripts/kortext-cli.py`** — `kortext init` artık `proje/.kortext/` altına tüm framework dosyalarını kopyalıyor: `agents/`, `hooks/`, `scripts/`, `workflows/`, `rules/`, `settings/`, `skills/`, `workspace/`. Önceki sürümde sadece `workspace/` kopyalanıyordu; framework dosyaları npm global'de kalıyordu.
+- **`hooks/kortext-lib.sh`** — `kortext/` ve `.kortext/` çift mod desteği kaldırıldı. Canonical dizin artık sadece `.kortext/`. `kortext_find_root` yalnızca `.kortext/hooks` arıyor.
+
+---
+
+## [2.2.1] — 2026-05-18
+
+### Fixed
+
+- **`scripts/kortext-cli.py`** — `kortext init` artık `workspace/` ve `AGENTS.md`'yi proje dizinine kopyalıyor. Önceki sürümde bu dosyalar npm global kurulumunda kalıyordu; iki farklı proje aynı `workspace/`'i paylaşıyordu.
+- **`hooks/kortext-lib.sh`** — `KORTEXT_WORKSPACE_DIR` artık `$PWD/workspace/` varsa önce onu kullanıyor; yoksa framework'ün kendi `workspace/`'ine düşüyor.
+
+---
+
 ## [2.3.0] — 2026-05-16
 
 ### Added

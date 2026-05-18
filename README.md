@@ -23,10 +23,13 @@ No coding knowledge required. You describe what you want to build — Kortext ag
 ## Quick Start
 
 ```bash
-# Install (one-time, global)
+# Install globally (one-time)
 npm install -g kortext
 
-# In your project directory
+# OR run without installing
+npx kortext init
+
+# In your project directory — sets up .kortext/ + git hooks automatically
 kortext init
 
 # Fill in the blueprint (describes your product)
