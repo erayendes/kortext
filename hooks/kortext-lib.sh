@@ -27,7 +27,17 @@ else
 fi
 
 KORTEXT_DIR="${KORTEXT_DIR:-$KORTEXT_ROOT/$KORTEXT_REL}"
-KORTEXT_WORKSPACE_DIR="${KORTEXT_WORKSPACE_DIR:-$KORTEXT_DIR/workspace}"
+
+# KORTEXT_WORKSPACE_DIR: npm global kurulumda framework ve proje dizini ayrılır.
+# Önce çalışma dizininde local workspace/ ara; yoksa framework'ün kendi workspace/'ini kullan.
+if [ -z "${KORTEXT_WORKSPACE_DIR:-}" ]; then
+    if [ -d "$PWD/workspace" ]; then
+        KORTEXT_WORKSPACE_DIR="$PWD/workspace"
+    else
+        KORTEXT_WORKSPACE_DIR="$KORTEXT_DIR/workspace"
+    fi
+fi
+export KORTEXT_WORKSPACE_DIR
 
 kortext_abs_path() {
     local path="$1"

@@ -74,13 +74,62 @@ def _run_shell_script(script_path: Path, args: list[str], env_overrides: dict[st
     return result.returncode
 
 
+def _scaffold_project(project_dir: Path) -> None:
+    """workspace/ ve AGENTS.md'yi proje dizinine kopyalar (ilk kez çalıştırılıyorsa).
+
+    Framework dosyaları (agents/, hooks/, scripts/, workflows/) global npm
+    kurulumunda kalır; sadece proje-spesifik state dosyaları kopyalanır:
+    - workspace/  → her projenin kendi backlog/context/memory'si olması için
+    - AGENTS.md   → AI runtime'ların proje kökünde bulabilmesi için
+    """
+    import shutil
+
+    workspace_src = ROOT / "workspace"
+    workspace_dst = project_dir / "workspace"
+    agents_src = ROOT / "AGENTS.md"
+    agents_dst = project_dir / "AGENTS.md"
+
+    # workspace/ — sadece yoksa kopyala; mevcutsa dokunma (proje verisi)
+    if workspace_src.exists() and not workspace_dst.exists():
+        shutil.copytree(str(workspace_src), str(workspace_dst))
+        print(f"✅ workspace/ oluşturuldu: {workspace_dst}")
+    elif workspace_dst.exists():
+        print(f"ℹ️  workspace/ zaten mevcut, atlandı.")
+
+    # AGENTS.md — yoksa kopyala
+    if agents_src.exists() and not agents_dst.exists():
+        shutil.copy2(str(agents_src), str(agents_dst))
+        print(f"✅ AGENTS.md kopyalandı: {agents_dst}")
+    elif agents_dst.exists():
+        print(f"ℹ️  AGENTS.md zaten mevcut, atlandı.")
+
+
 def cmd_init(args: argparse.Namespace) -> int:
-    """`kortext init` — kortext-init.sh'i tetikler. Runtime bilgisi env ile geçer."""
-    env: dict[str, str] = {}
+    """`kortext init` — proje dizinine workspace + AGENTS.md scaffold eder,
+    git hook'larını ve runtime adapter'ı kurar.
+    """
+    project_dir = Path.cwd()
+
+    # 1. Proje-spesifik dosyaları kopyala (workspace/, AGENTS.md)
+    _scaffold_project(project_dir)
+
+    # 2. Git hook'larını kur
+    env: dict[str, str] = {"KORTEXT_ROOT": str(ROOT)}
     if args.runtime:
         env["KORTEXT_RUNTIME"] = args.runtime
-    # kortext-init.sh git hook kurulumunu da yapar.
-    return _run_shell_script(HOOKS / "kortext-init.sh", ["--install-hooks"], env)
+    rc = _run_shell_script(HOOKS / "kortext-init.sh", ["--install-hooks"], env)
+    if rc != 0:
+        return rc
+
+    # 3. Runtime adapter kur (Claude Code / Gemini CLI / Codex)
+    _run_shell_script(HOOKS / "kortext-init.sh", ["--install-runtime"], env)
+
+    print("\n🎉 Kortext kurulumu tamamlandı.")
+    print(f"   Proje dizini : {project_dir}")
+    print(f"   Framework    : {ROOT}")
+    print("\n💡 Sıradaki adım: workspace/references/blueprint.md dosyasını doldur")
+    print("   ardından AI ajanına '!start analysis' yaz.\n")
+    return 0
 
 
 def cmd_start(args: argparse.Namespace) -> int:
