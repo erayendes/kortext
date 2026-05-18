@@ -1,10 +1,13 @@
 .github/
 .git/
+.claude/
 node_modules/
 *.log
 .DS_Store
 temp/
 tests/
+workspace/.locks/
+*.tgz
 
-# Not: workspace/ altındaki her şey (backups, archive, context şablonları dahil) 
+# Not: workspace/ altındaki her şey (backups, archive, context şablonları dahil)
 # şu an "skeletal templates" olduğu için pakete dahil ediliyor.
