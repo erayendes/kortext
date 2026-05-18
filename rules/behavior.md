@@ -246,7 +246,7 @@ Projeye özel `workspace/references/` ve `workspace/reports/` dosyalarında onay
 
 ### İletişim Dili (Communication Language)
 
-1.  **Config Kontrolü:** Ajan, her oturum başında `kortext/settings/config.md` dosyasındaki `KORTEXT_INTERACTION_LANGUAGE` değerini okumalıdır.
+1.  **Config Kontrolü:** Ajan, her oturum başında `.kortext/settings/config.md` dosyasındaki `KORTEXT_INTERACTION_LANGUAGE` değerini okumalıdır.
 2.  **Dil Uyumu:** Kullanıcı ile kurulan tüm iletişim (yanıtlar, açıklamalar, raporlar), config dosyasında belirtilen dilde (`tr` veya `en`) yapılmalıdır.
 3.  **Teknik İstisna:** Dosya yolları, kod blokları, hata mesajları ve framework çekirdek terimleri (Backlog Item ID, Persona isimleri vb.) orijinal formatında (genellikle İngilizce) bırakılmalıdır.
-4.  **Dinamik Değişim:** Eğer kullanıcı sohbet sırasında dili değiştirirse, ajan kullanıcıyı `config.md` dosyasını güncellemeye yönlendirmeli, ancak o andan itibaren yeni dilde yanıt vermeye başlamalıdır.
+4.  **Dinamik Değişim:** Eğer kullanıcı sohbet sırasında dili değiştirirse, ajan kullanıcıyı `.kortext/settings/config.md` dosyasını güncellemeye yönlendirmeli, ancak o andan itibaren yeni dilde yanıt vermeye başlamalıdır.
