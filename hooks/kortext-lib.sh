@@ -6,7 +6,7 @@ kortext_find_root() {
     local dir="${1:-$PWD}"
 
     while [ "$dir" != "/" ]; do
-        if [ -d "$dir/kortext/hooks" ] || [ -d "$dir/.kortext/hooks" ]; then
+        if [ -d "$dir/.kortext/hooks" ]; then
             printf '%s\n' "$dir"
             return 0
         fi
@@ -18,15 +18,15 @@ kortext_find_root() {
 
 KORTEXT_ROOT="${KORTEXT_ROOT:-$(kortext_find_root "$PWD" 2>/dev/null || pwd)}"
 
-if [ -d "$KORTEXT_ROOT/kortext" ]; then
-    KORTEXT_REL="${KORTEXT_REL:-kortext}"
-elif [ -d "$KORTEXT_ROOT/.kortext" ]; then
-    KORTEXT_REL="${KORTEXT_REL:-.kortext}"
-else
-    KORTEXT_REL="${KORTEXT_REL:-kortext}"
-fi
-
+# .kortext zorunlu — çift modlu sistem kaldırıldı
+KORTEXT_REL="${KORTEXT_REL:-.kortext}"
 KORTEXT_DIR="${KORTEXT_DIR:-$KORTEXT_ROOT/$KORTEXT_REL}"
+
+# Hata kontrolü: .kortext/ bulunmazsa açık hata ver
+if [ ! -d "$KORTEXT_DIR/hooks" ]; then
+    echo "❌ HATA: .kortext/ dizini bulunamadı: $KORTEXT_DIR" >&2
+    return 1
+fi
 
 # KORTEXT_WORKSPACE_DIR: npm global kurulumda framework ve proje dizini ayrılır.
 # Önce çalışma dizininde local workspace/ ara; yoksa framework'ün kendi workspace/'ini kullan.

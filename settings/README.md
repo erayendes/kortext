@@ -9,10 +9,10 @@
 
 Kortext, birden fazla personanın (`/agents/`) kendi rolleri, yetenekleri ve görevleri doğrultusunda; belirlenmiş olan kural (`/rules/`) ve talimatlara (`/workflows/`) uygun olarak projeyi (`/workspace/`) hayata geçirme adımlarını tanımlar. 
 
-> Nihai kurulumda aşağıdaki tüm dosya ve dizinler proje kökündeki `.kortext/` altında yer alır. Framework geliştirme çalışmaları sırasında gizli klasörle uğraşmamak için aynı yapı geçici olarak `kortext/` adıyla tutulabilir; yayın öncesi toplu dönüşümle `.kortext/` adına geçirilir. Başlangıç komut dosyası (`AGENTS.md`) proje kök dizininde yer alır:
+> Tüm dosya ve dizinler proje kökündeki `.kortext/` altında yer alır. Başlangıç komut dosyası (`AGENTS.md`) proje kök dizininde yer alır:
  
 ```text
-kortext/
+.kortext/
 ├── agents/                 # Uzmanlaşmış persona tanımları, yetkiler ve iş akışları
 ├── hooks/                  # Otomatik sistem denetimleri, Git kalkanları ve güvenlik tetikleyicileri
 ├── rules/                  # Projeden bağımsız, tüm personaların uyması gereken katı kurallar

@@ -40,11 +40,11 @@ Kortext, bir AI ajanı (Claude, Gemini vb.) üzerinde çalışan **çok ajanlı 
 
 ### 2.1 Kortext'i Projeye Ekle
 
-Kortext klasörünü projenin kökündeki `.kortext/` (veya geliştirme ortamında `kortext/`) dizinine yerleştir:
+Kortext klasörünü projenin kökündeki `.kortext/` dizinine yerleştir:
 
 ```
 proje-koku/
-├── kortext/          ← tüm Kortext dosyaları buraya
+├── .kortext/         ← tüm Kortext dosyaları buraya
 ├── AGENTS.md         ← AI ajanına "buradan başla" talimatı (proje kökünde)
 ├── src/
 └── ...
@@ -53,7 +53,7 @@ proje-koku/
 ### 2.2 Git Hook'larını Kur
 
 ```bash
-bash kortext/hooks/kortext-init.sh --install-hooks
+bash .kortext/hooks/kortext-init.sh --install-hooks
 ```
 
 Bu komut şu hook'ları kurar:
@@ -76,7 +76,7 @@ export KORTEXT_HOOK_MODE="strict"          # ihlallerde uyarı yerine hata ver
 
 ### Adım 1 — Blueprint'i Doldur
 
-`kortext/workspace/references/blueprint.md` dosyasını aç ve doldur:
+`.kortext/workspace/references/blueprint.md` dosyasını aç ve doldur:
 
 ```markdown
 # Proje Adı

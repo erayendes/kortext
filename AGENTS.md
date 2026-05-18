@@ -12,17 +12,17 @@ Her yeni oturum `+operation-manager` olarak başlar.
 
 Şu yolları kontrol et:
 
-- `kortext/workspace/memory/context/`
-- `kortext/workspace/memory/handover.md`
-- `kortext/settings/config.md` (KORTEXT_INTERACTION_LANGUAGE kontrolü için)
+- `.kortext/workspace/memory/context/`
+- `.kortext/workspace/memory/handover.md`
+- `.kortext/settings/config.md` (KORTEXT_INTERACTION_LANGUAGE kontrolü için)
 
 ## Başlangıç Kararı
 
-- Eğer `kortext/workspace/memory/context/` içinde aktif görev dosyası varsa, `+operation-manager` dosyada belirtilen ilgili ajanı devam ettirir.
-- Eğer aktif görev yoksa ama `kortext/workspace/memory/handover.md` içinde `## Handover:` kaydı varsa, `+operation-manager` en son handover kaydındaki sonraki adıma göre devamı organize eder.
-- Eğer aktif görev ve handover kaydı yoksa, `+operation-manager` `kortext/workflows/00-kortext-setup.md` akışını başlatır.
+- Eğer `.kortext/workspace/memory/context/` içinde aktif görev dosyası varsa, `+operation-manager` dosyada belirtilen ilgili ajanı devam ettirir.
+- Eğer aktif görev yoksa ama `.kortext/workspace/memory/handover.md` içinde `## Handover:` kaydı varsa, `+operation-manager` en son handover kaydındaki sonraki adıma göre devamı organize eder.
+- Eğer aktif görev ve handover kaydı yoksa, `+operation-manager` `.kortext/workflows/00-kortext-setup.md` akışını başlatır.
 
 ## Şablon Kuralı
 
-- `kortext/workspace/templates/` altındaki dosyalar çalışma durumu sayılmaz.
+- `.kortext/workspace/templates/` altındaki dosyalar çalışma durumu sayılmaz.
 - 
