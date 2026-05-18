@@ -146,10 +146,19 @@ def cmd_init(args: argparse.Namespace) -> int:
 
     _run_shell_script(init_sh, ["--install-runtime"], env)
 
+    # 4. .kortext/ ve AGENTS.md'yi git'e ekle (varsa git repo)
+    if (project_dir / ".git").exists():
+        subprocess.run(
+            ["git", "add", ".kortext/", "AGENTS.md"],
+            cwd=str(project_dir),
+            capture_output=True,
+        )
+        print("✅ .kortext/ git'e eklendi (git add)")
+
     print("\n🎉 Kortext kurulumu tamamlandı.")
     print(f"\n   proje/")
     print(f"   ├── AGENTS.md")
-    print(f"   └── .kortext/   ← tüm framework burada")
+    print(f"   └── .kortext/          ← tüm framework burada (git'te)")
     print(f"\n💡 Sıradaki adım: .kortext/workspace/references/blueprint.md dosyasını doldur,")
     print(f"   ardından AI ajanına '!start analysis' yaz.\n")
     return 0
