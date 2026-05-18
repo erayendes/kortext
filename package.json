@@ -1,0 +1,29 @@
+{
+  "name": "kortext",
+  "version": "2.2.0",
+  "description": "AI Agent Framework for Operational Discipline and Automated Project Management",
+  "main": "index.js",
+  "bin": {
+    "kortext": "scripts/kortext-cli.py"
+  },
+  "scripts": {
+    "test": "python3 scripts/kortext-consistency-check.py",
+    "check": "python3 scripts/kortext-context-check.py",
+    "health": "python3 scripts/kortext-backlog-health.py"
+  },
+  "keywords": [
+    "ai",
+    "agent",
+    "framework",
+    "automation",
+    "project-management",
+    "gemini",
+    "claude"
+  ],
+  "author": "Eray Endes",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0",
+    "python": ">=3.10.0"
+  }
+}

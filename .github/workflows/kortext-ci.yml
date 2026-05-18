@@ -1,0 +1,30 @@
+name: Kortext CI
+
+on:
+  push:
+    branches: [ main, master, dev ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+        
+    - name: Run Consistency Check
+      run: |
+        python3 scripts/kortext-consistency-check.py
+        
+    - name: Run Context Health Check
+      run: |
+        python3 scripts/kortext-context-check.py
+        
+    - name: Run Backlog Health Check
+      run: |
+        python3 scripts/kortext-backlog-health.py

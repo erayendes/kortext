@@ -1,0 +1,10 @@
+.github/
+.git/
+node_modules/
+*.log
+.DS_Store
+temp/
+tests/
+
+# Not: workspace/ altındaki her şey (backups, archive, context şablonları dahil) 
+# şu an "skeletal templates" olduğu için pakete dahil ediliyor.
