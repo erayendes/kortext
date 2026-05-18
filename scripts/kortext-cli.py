@@ -74,61 +74,84 @@ def _run_shell_script(script_path: Path, args: list[str], env_overrides: dict[st
     return result.returncode
 
 
-def _scaffold_project(project_dir: Path) -> None:
-    """workspace/ ve AGENTS.md'yi proje dizinine kopyalar (ilk kez çalıştırılıyorsa).
+def _scaffold_project(project_dir: Path) -> Path:
+    """Tüm framework dosyalarını proje/.kortext/ altına kopyalar.
 
-    Framework dosyaları (agents/, hooks/, scripts/, workflows/) global npm
-    kurulumunda kalır; sadece proje-spesifik state dosyaları kopyalanır:
-    - workspace/  → her projenin kendi backlog/context/memory'si olması için
-    - AGENTS.md   → AI runtime'ların proje kökünde bulabilmesi için
+    Yapı:
+        proje/
+        ├── AGENTS.md          ← AI runtime'ın proje kökünde bulduğu dosya
+        └── .kortext/
+            ├── agents/
+            ├── hooks/
+            ├── scripts/
+            ├── workflows/
+            ├── rules/
+            ├── settings/
+            └── workspace/     ← proje-spesifik bellek (backlog, context...)
+
+    İkinci çalıştırmada mevcut .kortext/'e dokunulmaz; workspace/ güncellenmez
+    (içinde proje verisi olabilir).
     """
     import shutil
 
-    workspace_src = ROOT / "workspace"
-    workspace_dst = project_dir / "workspace"
+    kortext_dst = project_dir / ".kortext"
+
+    if kortext_dst.exists():
+        print(f"ℹ️  .kortext/ zaten mevcut, atlandı: {kortext_dst}")
+    else:
+        # Tüm framework klasörlerini kopyala
+        folders = ["agents", "hooks", "scripts", "workflows", "rules", "settings", "skills", "workspace"]
+        kortext_dst.mkdir()
+        for folder in folders:
+            src = ROOT / folder
+            dst = kortext_dst / folder
+            if src.exists():
+                shutil.copytree(str(src), str(dst))
+        print(f"✅ .kortext/ oluşturuldu: {kortext_dst}")
+
+    # AGENTS.md proje kökünde olmalı (AI runtime'lar buraya bakar)
     agents_src = ROOT / "AGENTS.md"
     agents_dst = project_dir / "AGENTS.md"
-
-    # workspace/ — sadece yoksa kopyala; mevcutsa dokunma (proje verisi)
-    if workspace_src.exists() and not workspace_dst.exists():
-        shutil.copytree(str(workspace_src), str(workspace_dst))
-        print(f"✅ workspace/ oluşturuldu: {workspace_dst}")
-    elif workspace_dst.exists():
-        print(f"ℹ️  workspace/ zaten mevcut, atlandı.")
-
-    # AGENTS.md — yoksa kopyala
     if agents_src.exists() and not agents_dst.exists():
         shutil.copy2(str(agents_src), str(agents_dst))
         print(f"✅ AGENTS.md kopyalandı: {agents_dst}")
     elif agents_dst.exists():
         print(f"ℹ️  AGENTS.md zaten mevcut, atlandı.")
 
+    return kortext_dst
+
 
 def cmd_init(args: argparse.Namespace) -> int:
-    """`kortext init` — proje dizinine workspace + AGENTS.md scaffold eder,
+    """`kortext init` — proje dizinine .kortext/ scaffold eder,
     git hook'larını ve runtime adapter'ı kurar.
     """
     project_dir = Path.cwd()
 
-    # 1. Proje-spesifik dosyaları kopyala (workspace/, AGENTS.md)
-    _scaffold_project(project_dir)
+    # 1. Her şeyi .kortext/ altına kopyala
+    kortext_dst = _scaffold_project(project_dir)
 
-    # 2. Git hook'larını kur
-    env: dict[str, str] = {"KORTEXT_ROOT": str(ROOT)}
+    # 2. Git hook'ları ve runtime adapter: .kortext/ içindeki hook'lardan çalıştır
+    env: dict[str, str] = {
+        "KORTEXT_ROOT": str(project_dir),   # proje kökü
+        "KORTEXT_DIR": str(kortext_dst),    # .kortext/ dizini
+        "KORTEXT_WORKSPACE_DIR": str(kortext_dst / "workspace"),
+    }
     if args.runtime:
         env["KORTEXT_RUNTIME"] = args.runtime
-    rc = _run_shell_script(HOOKS / "kortext-init.sh", ["--install-hooks"], env)
+
+    init_sh = kortext_dst / "hooks" / "kortext-init.sh"
+    rc = _run_shell_script(init_sh, ["--install-hooks"], env)
     if rc != 0:
         return rc
 
-    # 3. Runtime adapter kur (Claude Code / Gemini CLI / Codex)
-    _run_shell_script(HOOKS / "kortext-init.sh", ["--install-runtime"], env)
+    _run_shell_script(init_sh, ["--install-runtime"], env)
 
     print("\n🎉 Kortext kurulumu tamamlandı.")
-    print(f"   Proje dizini : {project_dir}")
-    print(f"   Framework    : {ROOT}")
-    print("\n💡 Sıradaki adım: workspace/references/blueprint.md dosyasını doldur")
-    print("   ardından AI ajanına '!start analysis' yaz.\n")
+    print(f"\n   proje/")
+    print(f"   ├── AGENTS.md")
+    print(f"   └── .kortext/   ← tüm framework burada")
+    print(f"\n💡 Sıradaki adım: .kortext/workspace/references/blueprint.md dosyasını doldur,")
+    print(f"   ardından AI ajanına '!start analysis' yaz.\n")
     return 0
 
 
