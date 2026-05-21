@@ -1,0 +1,161 @@
+import { spawn } from 'node:child_process';
+import { createWriteStream } from 'node:fs';
+import type { WriteStream } from 'node:fs';
+
+/**
+ * Low-level helper used by every CLI executor.
+ *
+ * Why a helper and not a base class:
+ *   - The three executors (claude, codex, gemini) each own their prompt-assembly,
+ *     output validation, and summary extraction — those stay in the executor file.
+ *   - The boring-but-critical bits (shell-free spawn, SIGTERM→SIGKILL on abort,
+ *     stdout/stderr captured to a log file) live here once so we don't drift.
+ *
+ * IMPORTANT: never pass a single command string. Always pass `binary + args`,
+ * because `spawn(cmd, args)` does NOT invoke a shell, so step descriptions and
+ * persona handles can never be interpreted as shell metacharacters.
+ */
+
+export type SpawnCliOptions = {
+  binary: string;
+  args: string[];
+  cwd: string;
+  stdin?: string;
+  logPath: string;
+  signal: AbortSignal;
+  /** Delay between SIGTERM and SIGKILL when aborted. Default 5000ms. */
+  sigkillDelayMs?: number;
+  /** Soft timeout — kill after N ms regardless of signal. Default unset. */
+  timeoutMs?: number;
+  /** Capped buffer of last K stdout chars used to build a summary. Default 64 KiB. */
+  summaryBufferBytes?: number;
+};
+
+export type SpawnCliResult = {
+  /** Process exit code. null when killed by a signal. */
+  exitCode: number | null;
+  /** Signal that terminated the process, if any. */
+  signal: NodeJS.Signals | null;
+  /** Tail of stdout (up to summaryBufferBytes). */
+  stdoutTail: string;
+  /** Tail of stderr (up to summaryBufferBytes). */
+  stderrTail: string;
+  /** True if AbortSignal triggered the kill. */
+  aborted: boolean;
+};
+
+export async function spawnCli(opts: SpawnCliOptions): Promise<SpawnCliResult> {
+  const sigkillDelayMs = opts.sigkillDelayMs ?? 5000;
+  const summaryCap = opts.summaryBufferBytes ?? 64 * 1024;
+
+  if (opts.signal.aborted) {
+    return {
+      exitCode: null,
+      signal: null,
+      stdoutTail: '',
+      stderrTail: '',
+      aborted: true,
+    };
+  }
+
+  const proc = spawn(opts.binary, opts.args, {
+    cwd: opts.cwd,
+    stdio: ['pipe', 'pipe', 'pipe'],
+    // shell: false is the default for spawn() — being explicit for reviewers
+    shell: false,
+  });
+
+  const log: WriteStream = createWriteStream(opts.logPath, { flags: 'a' });
+  log.write(
+    `\n# kortext cli-executor — ${new Date().toISOString()}\n# binary: ${opts.binary}\n# args: ${JSON.stringify(opts.args)}\n# cwd: ${opts.cwd}\n\n`,
+  );
+
+  // Rolling buffers so we don't OOM on chatty CLIs.
+  let stdoutBuf = '';
+  let stderrBuf = '';
+  const appendCapped = (current: string, chunk: string): string => {
+    const combined = current + chunk;
+    return combined.length > summaryCap ? combined.slice(combined.length - summaryCap) : combined;
+  };
+
+  proc.stdout?.on('data', (chunk: Buffer) => {
+    const s = chunk.toString('utf8');
+    stdoutBuf = appendCapped(stdoutBuf, s);
+    log.write(s);
+  });
+  proc.stderr?.on('data', (chunk: Buffer) => {
+    const s = chunk.toString('utf8');
+    stderrBuf = appendCapped(stderrBuf, s);
+    log.write(`[stderr] ${s}`);
+  });
+
+  if (opts.stdin !== undefined && proc.stdin) {
+    proc.stdin.write(opts.stdin);
+    proc.stdin.end();
+  } else if (proc.stdin) {
+    proc.stdin.end();
+  }
+
+  let aborted = false;
+  let killTimer: NodeJS.Timeout | null = null;
+  let timeoutTimer: NodeJS.Timeout | null = null;
+
+  const onAbort = () => {
+    aborted = true;
+    try {
+      proc.kill('SIGTERM');
+    } catch {
+      /* already gone */
+    }
+    killTimer = setTimeout(() => {
+      try {
+        proc.kill('SIGKILL');
+      } catch {
+        /* already gone */
+      }
+    }, sigkillDelayMs);
+  };
+  opts.signal.addEventListener('abort', onAbort, { once: true });
+
+  if (opts.timeoutMs !== undefined) {
+    timeoutTimer = setTimeout(() => {
+      onAbort();
+    }, opts.timeoutMs);
+  }
+
+  const result = await new Promise<SpawnCliResult>((resolveResult) => {
+    proc.on('error', (err) => {
+      log.write(`\n[spawn-error] ${err.message}\n`);
+      log.end();
+      resolveResult({
+        exitCode: null,
+        signal: null,
+        stdoutTail: stdoutBuf,
+        stderrTail: stderrBuf + `\n[spawn-error] ${err.message}`,
+        aborted,
+      });
+    });
+    proc.on('close', (code, signal) => {
+      log.write(`\n# exit code=${code} signal=${signal} aborted=${aborted}\n`);
+      log.end();
+      resolveResult({
+        exitCode: code,
+        signal,
+        stdoutTail: stdoutBuf,
+        stderrTail: stderrBuf,
+        aborted,
+      });
+    });
+  });
+
+  if (killTimer) clearTimeout(killTimer);
+  if (timeoutTimer) clearTimeout(timeoutTimer);
+  opts.signal.removeEventListener('abort', onAbort);
+  return result;
+}
+
+/** Returns the last N non-empty lines as a single newline-joined string. */
+export function tailLines(text: string, n: number): string {
+  const lines = text.split(/\r?\n/).filter((l) => l.length > 0);
+  return lines.slice(-n).join('\n');
+}

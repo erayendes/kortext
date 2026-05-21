@@ -1,7 +1,11 @@
+import { isAbsolute, join } from 'node:path';
+import { readFileSync } from 'node:fs';
 import type { WorkflowGraph } from './dag.ts';
 import type { Executor, ExecutorContext } from './executor.ts';
 import type { Repositories } from '../db/repositories/index.ts';
 import type { Run } from '../db/schemas.ts';
+import type { SecretScanner } from '../safety/secret-scanner.ts';
+import type { HarmfulOutputFilter } from '../safety/harmful-output-filter.ts';
 
 /**
  * Worker pool that drives a single workflow run against the DB.
@@ -22,17 +26,66 @@ import type { Run } from '../db/schemas.ts';
  *   - Run ends as 'failed' with the first error_message.
  */
 
+export type SafetyGuards = {
+  /** Secret scanner — runs on each successful step's declared outputs + log. */
+  secretScanner?: SecretScanner;
+  /** Harmful-output filter — runs on each successful step's output file bodies + log. */
+  harmfulFilter?: HarmfulOutputFilter;
+};
+
 export type RunWorkflowOptions = {
   concurrency?: number;
   triggeredBy?: string;
   itemId?: string | null;
   worktreePath?: string;
+  /** Optional safety guards. When set, each step's outputs are scanned and a finding fails the step. */
+  safety?: SafetyGuards;
 };
 
 export type RunWorkflowResult = {
   run: Run;
   failedStepKey: string | null;
 };
+
+async function runSafetyGuards(
+  step: import('./workflow-parser.ts').WorkflowStep,
+  logPath: string | null,
+  safety: SafetyGuards | undefined,
+  worktreePath: string,
+  runId: number,
+): Promise<string | null> {
+  if (!safety) return null;
+  const outputFiles = step.outputs.map((rel) =>
+    isAbsolute(rel) ? rel : join(worktreePath, rel),
+  );
+  const filesToScan = logPath ? [...outputFiles, logPath] : outputFiles;
+
+  if (safety.secretScanner && filesToScan.length > 0) {
+    const report = await safety.secretScanner.scanForStep(runId, filesToScan);
+    if (report.shouldFailRun) {
+      const f = report.findings[0];
+      return `secret/token detected in step output: ${f?.finding_type} at ${f?.scanned_path}:${f?.line_number}`;
+    }
+  }
+
+  if (safety.harmfulFilter && filesToScan.length > 0) {
+    for (const file of filesToScan) {
+      let body: string;
+      try {
+        body = readFileSync(file, 'utf8');
+      } catch {
+        continue;
+      }
+      const report = safety.harmfulFilter.scanText(body);
+      if (report.shouldFailRun) {
+        const f = report.findings[0];
+        return `banned/harmful phrase detected in ${file}:${f?.line_number} — ${f?.message}`;
+      }
+    }
+  }
+
+  return null;
+}
 
 export async function runWorkflow(
   graph: WorkflowGraph,
@@ -102,8 +155,36 @@ export async function runWorkflow(
 
     const promise = executor
       .execute(node.step, ctxFor(runStepId))
-      .then((result) => {
+      .then(async (result) => {
         if (result.ok) {
+          // Apply safety guards before we mark the step as succeeded.
+          const safetyError = await runSafetyGuards(
+            node.step,
+            result.logPath ?? null,
+            options.safety,
+            options.worktreePath ?? process.cwd(),
+            run.id,
+          );
+          if (safetyError) {
+            repos.runs.transitionStep(runStepId, 'failed', {
+              output_summary: result.outputSummary ?? null,
+              error_message: safetyError,
+              log_path: result.logPath ?? null,
+            });
+            repos.auditLog.append({
+              actor: 'safety',
+              action: 'pipeline.step.failed',
+              resource_type: 'run_step',
+              resource_id: String(runStepId),
+              payload: { run_id: run.id, step_key: stepKey, error: safetyError },
+            });
+            if (!failedStepKey) {
+              failedStepKey = stepKey;
+              firstError = safetyError;
+              aborter.abort();
+            }
+            return;
+          }
           repos.runs.transitionStep(runStepId, 'succeeded', {
             output_summary: result.outputSummary ?? null,
             log_path: result.logPath ?? null,

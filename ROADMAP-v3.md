@@ -113,18 +113,14 @@ Kortext'i **markdown methodology framework**'ten **tam otonom AI ajan runtime'ı
 - [x] **Worker pool**: configurable concurrency (default 3), "pull ready" scheduler, AbortController ile first-failure short-circuit, kalan adımlar `skipped`'a düşer, audit log boyunca event'ler
 - [x] **Executor interface + Mock executor**: Faz 2.B adapter'ları aynı sözleşmeye uyacak; mock test instrumentation (maxConcurrent, startedOrder)
 
-**Faz 2.B — Yan Sistemler (bu PR dışı)**
-- [ ] **Worktree manager**: `git worktree add .kortext/worktrees/<run-id>` her görev başında, başarı sonrası merge + sil, başarısızlık sonrası karantina
-- [ ] **CLI executor**: Claude Code, Codex CLI, Gemini CLI için ayrı adapter. Her biri:
-  - Persona promptunu, context'i, görev tanımını birleştirir
-  - CLI'yi child_process ile spawn eder
-  - stdout/stderr'i parse eder
-  - Çıktıyı `runtime_artifacts`'a yazar
-- [ ] **Lifecycle gate enforcer**:
-  - Blueprint `status: approved` olmadan analysis pipeline başlamaz
-  - Analysis tamamlanmadan planning başlamaz
-  - vb.
-- [ ] **Output safety**: AgentFlow `server/safety/` benzeri — secret scan, harmful output filter
+**Faz 2.B — Yan Sistemler ✅ `v3.0.0-alpha.3`**
+- [x] **Worktree manager** (`server/engine/worktree.ts`): `git worktree add .kortext/worktrees/run-<id>`, success → merge (opt) + remove, failure → quarantine altında `run-<id>-<timestamp>/`, maxConcurrent limit, branch postmortem korunur, tüm git çağrıları shell-free
+- [x] **CLI executors** (`server/engine/executors/`): `claude-cli-executor.ts`, `codex-cli-executor.ts`, `gemini-cli-executor.ts` — 3 ayrı tam dosya, ortak shell-free spawn yardımcısı `cli-spawn.ts`. Persona prompt'u stdin'den geçer (argv'de değil), AbortSignal → SIGTERM → 5s sonra SIGKILL, log dosyası yazılır, declared `outputs:` varlık doğrulaması yapılır
+- [x] **Gate enforcer** (`server/engine/gate-enforcer.ts`): `graph.externalInputs` frontmatter `status: approved` zorunlu; opsiyonel `previousWorkflowId` → en az 1 başarılı run varlığı; structured `GateFailure[]` döner
+- [x] **Output safety** (`server/safety/`):
+  - [x] `secret-scanner.ts` — 4 pattern grubu (quoted-assignment, env-assignment, service-token, auth-header), exclusion'lar (process.env, YOUR_, PLACEHOLDER, .env), masked snippet, `scanForRun` + `scanForStep` API'ları
+  - [x] `harmful-output-filter.ts` — v3.0 placeholder (banned-phrases configurable); gerçek implement v3.1+
+- [x] **Worker pool entegrasyonu**: `runWorkflow(graph, executor, repos, { safety: { secretScanner, harmfulFilter } })` — her başarılı step'in `outputs:` dosyaları + log'u taranır, finding → step `failed`, pipeline kısa-devre durur
 
 ### Faz 3 — Otonom Orkestratör (3-4 gün)
 
