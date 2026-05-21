@@ -1,0 +1,2366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kortext v3 — Operations Center (v4)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  :root {
+    --bg-0: #0A0814;
+    --bg-1: #14101F;
+    --bg-2: #1E1830;
+    --bg-3: #2A2240;
+    --tx-1: #FAFAFC;
+    --tx-2: #B5B0C2;
+    --tx-3: #6B6577;
+    --tx-4: #3F3B4F;
+    --accent: #A855F7;
+    --accent-soft: #C084FC;
+    --accent-deep: #7C3AED;
+    --signal: #EC4899;
+    --success: #10B981;
+    --warning: #F59E0B;
+    --danger: #EF4444;
+    --info: #3B82F6;
+    --border: rgba(255,255,255,0.08);
+    --border-s: rgba(255,255,255,0.05);
+    --border-strong: rgba(255,255,255,0.16);
+  }
+  * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+  html, body { background: var(--bg-0); color: var(--tx-1); font-family: 'Inter', sans-serif; margin: 0; padding: 0; height: 100vh; overflow: hidden; font-size: 14px; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* ============ TOPBAR ============ */
+  .topbar { height: 48px; border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 16px; gap: 12px; flex-shrink: 0; }
+  .logo-mark { width: 24px; height: 24px; border-radius: 6px; background: linear-gradient(135deg, var(--accent), var(--signal)); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 13px; font-family: 'JetBrains Mono', monospace; }
+  .divider { width: 1px; height: 16px; background: var(--border); }
+  .cmdk-trigger { background: var(--bg-1); border: 1px solid var(--border); border-radius: 6px; padding: 5px 12px; display: flex; align-items: center; gap: 8px; color: var(--tx-3); font-size: 13px; cursor: pointer; min-width: 320px; }
+  .cmdk-trigger:hover { border-color: var(--border-strong); }
+  .cmdk-kbd { font-size: 11px; background: var(--bg-2); border: 1px solid var(--border); padding: 1px 5px; border-radius: 3px; font-family: 'JetBrains Mono', monospace; color: var(--tx-3); }
+  .icon-btn { width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--tx-2); position: relative; transition: all 200ms; border: none; background: transparent; }
+  .icon-btn:hover { background: var(--bg-2); color: var(--tx-1); }
+  .icon-btn .badge-dot { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; background: var(--danger); border-radius: 50%; border: 2px solid var(--bg-0); }
+  .avatar-prime { width: 32px; height: 32px; border-radius: 50%; background: var(--warning); display: flex; align-items: center; justify-content: center; color: var(--bg-0); font-weight: 600; font-size: 12px; font-family: 'JetBrains Mono', monospace; cursor: pointer; }
+  .avatar-prime:hover { filter: brightness(1.1); }
+
+  /* ============ LAYOUT ============ */
+  .layout { display: flex; height: calc(100vh - 48px - 32px); }
+
+  /* Sidebar */
+  .sidebar { width: 220px; background: var(--bg-1); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 12px 0; flex-shrink: 0; transition: width 180ms ease-out; overflow: hidden; }
+  .sidebar.collapsed { width: 56px; }
+  .nav-item { display: flex; align-items: center; gap: 14px; padding: 8px 20px; color: var(--tx-3); cursor: pointer; transition: color 200ms, background 200ms; white-space: nowrap; font-size: 13px; height: 38px; position: relative; }
+  .nav-item:hover { color: var(--tx-1); background: var(--bg-2); }
+  .nav-item.active { color: var(--accent); }
+  .nav-item.active::before { content: ''; position: absolute; left: 0; top: 8px; bottom: 8px; width: 2px; background: var(--accent); border-radius: 0 2px 2px 0; }
+  .nav-item i { width: 16px; height: 16px; flex-shrink: 0; }
+  .nav-label { opacity: 1; transition: opacity 180ms; font-weight: 500; }
+  .sidebar.collapsed .nav-label { opacity: 0; }
+  .nav-spacer { flex: 1; }
+  .nav-section { padding: 14px 20px 4px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--tx-4); opacity: 1; transition: opacity 180ms; }
+  .sidebar.collapsed .nav-section { opacity: 0; }
+
+  /* Main */
+  .main { flex: 1; overflow-y: auto; position: relative; }
+  .route { display: none; padding: 24px 32px; }
+  .route.active { display: block; }
+  .route-header { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 24px; }
+  .route-title { font-size: 22px; font-weight: 600; color: var(--tx-1); margin: 0; }
+  .route-sub { font-size: 13px; color: var(--tx-3); margin-top: 4px; }
+
+  /* ============ FOOTER (status bar) ============ */
+  .footer { height: 32px; border-top: 1px solid var(--border); display: flex; align-items: center; padding: 0 16px; gap: 14px; font-size: 12px; color: var(--tx-3); flex-shrink: 0; background: var(--bg-0); }
+  .footer-item { display: flex; align-items: center; gap: 6px; }
+  .footer-divider { width: 1px; height: 12px; background: var(--border); }
+  .footer .dot { width: 7px; height: 7px; border-radius: 50%; }
+  .dot-active { background: var(--success); box-shadow: 0 0 6px rgba(16,185,129,0.4); }
+  .dot-idle { background: var(--warning); }
+  .dot-blocked { background: var(--danger); }
+  .dot-live { background: var(--signal); animation: pulse 1.6s ease-in-out infinite; }
+  .dot-success { background: var(--success); }
+  .dot-warning { background: var(--warning); }
+  .dot-danger { background: var(--danger); }
+  .dot-neutral { background: var(--tx-4); }
+  .dot-info { background: var(--info); }
+  .dot-accent { background: var(--accent); }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  /* ============ BUTTONS ============ */
+  .btn { font-size: 13px; padding: 6px 12px; border-radius: 6px; font-weight: 500; cursor: pointer; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 6px; transition: all 180ms ease-out; font-family: inherit; line-height: 1.2; }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: var(--accent-soft); }
+  .btn-outline { background: transparent; border-color: var(--border-strong); color: var(--tx-1); }
+  .btn-outline:hover { background: var(--bg-2); }
+  .btn-ghost { background: transparent; color: var(--tx-2); }
+  .btn-ghost:hover { background: var(--bg-2); color: var(--tx-1); }
+  .btn-success { background: transparent; border-color: rgba(16,185,129,0.3); color: var(--success); }
+  .btn-success:hover { background: rgba(16,185,129,0.12); }
+  .btn-danger { background: transparent; border-color: rgba(239,68,68,0.3); color: var(--danger); }
+  .btn-danger:hover { background: rgba(239,68,68,0.12); }
+  .btn-xs { padding: 3px 9px; font-size: 12px; }
+  .btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+
+  /* ============ INPUTS ============ */
+  .input { background: var(--bg-1); border: 1px solid var(--border); border-radius: 6px; padding: 7px 11px; color: var(--tx-1); font-size: 13px; font-family: inherit; outline: none; transition: border-color 180ms; }
+  .input:focus { border-color: var(--accent); }
+  textarea.input { resize: vertical; min-height: 80px; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.5; }
+
+  /* ============ KPI TILES ============ */
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+  .kpi { border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; }
+  .kpi-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--tx-3); margin-bottom: 10px; font-weight: 600; }
+  .kpi-value { font-size: 26px; font-weight: 600; color: var(--tx-1); font-family: 'JetBrains Mono', monospace; line-height: 1.1; }
+  .kpi-value .unit { font-size: 14px; color: var(--tx-3); font-weight: 400; margin-left: 2px; }
+  .kpi-meta { font-size: 12px; color: var(--tx-3); margin-top: 6px; }
+  .kpi.danger .kpi-value { color: var(--danger); }
+
+  /* ============ SECTION ============ */
+  .section-title { font-size: 14px; font-weight: 600; color: var(--tx-1); margin-bottom: 2px; }
+  .section-sub { font-size: 12px; color: var(--tx-3); margin-bottom: 14px; }
+
+  /* ============ ROW LIST (Vercel-style table) ============ */
+  .row-list { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .row { display: grid; grid-template-columns: var(--cols, 1fr); align-items: center; gap: 14px; padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 13px; cursor: pointer; transition: background 180ms; }
+  .row:hover { background: var(--bg-1); }
+  .row:last-child { border-bottom: none; }
+  .row-header { background: var(--bg-1); cursor: default; padding: 9px 16px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--tx-3); font-weight: 600; }
+  .row-header:hover { background: var(--bg-1); }
+
+  /* ============ BADGES ============ */
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; line-height: 1.5; }
+  .badge-amber { background: rgba(245,158,11,0.12); color: #FBBF24; border: 1px solid rgba(245,158,11,0.25); }
+  .badge-purple { background: rgba(168,85,247,0.12); color: #C084FC; border: 1px solid rgba(168,85,247,0.3); }
+  .badge-blue { background: rgba(59,130,246,0.12); color: #60A5FA; border: 1px solid rgba(59,130,246,0.25); }
+  .badge-pink { background: rgba(236,72,153,0.12); color: #F472B6; border: 1px solid rgba(236,72,153,0.25); }
+  .badge-green { background: rgba(16,185,129,0.12); color: #34D399; border: 1px solid rgba(16,185,129,0.25); }
+  .badge-red { background: rgba(239,68,68,0.12); color: #F87171; border: 1px solid rgba(239,68,68,0.25); }
+  .badge-neutral { background: var(--bg-2); color: var(--tx-2); border: 1px solid var(--border); }
+
+  /* ============ TABS ============ */
+  .tab-bar { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 22px; }
+  .tab { padding: 9px 16px; font-size: 13px; color: var(--tx-3); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color 200ms, border-color 200ms; font-weight: 500; }
+  .tab:hover { color: var(--tx-1); }
+  .tab.active { color: var(--accent); border-color: var(--accent); }
+  .tab-count { font-size: 11px; color: var(--tx-4); margin-left: 4px; font-weight: 400; }
+
+  /* ============ KANBAN (Board) — Trello style fixed-width cols ============ */
+  .board-wrap { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 12px; height: calc(100vh - 200px); align-items: stretch; }
+  .kbn-col { width: 286px; flex-shrink: 0; background: var(--bg-1); border: 1px solid var(--border); border-radius: 8px; padding: 10px 10px 12px; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+  .kbn-col-head { display: flex; align-items: center; gap: 8px; padding: 4px 4px 8px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+  .kbn-col-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--tx-3); font-weight: 600; flex: 1; }
+  .kbn-col-count { font-size: 11px; color: var(--tx-3); font-family: 'JetBrains Mono', monospace; }
+  .kbn-col-add { color: var(--tx-3); cursor: pointer; padding: 2px; }
+  .kbn-col-add:hover { color: var(--tx-1); }
+  .kbn-list { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; padding-right: 2px; }
+  .kbn-card { border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; background: var(--bg-0); cursor: pointer; transition: border-color 180ms; position: relative; }
+  .kbn-card:hover { border-color: var(--border-strong); }
+  .kbn-card.blocked { border-left: 2px solid var(--danger); }
+  .kc-head { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+  .kc-id { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--tx-3); }
+  .kc-type-mark { font-size: 9px; padding: 1px 5px; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; line-height: 1.4; }
+  .kc-title { font-size: 13px; color: var(--tx-1); line-height: 1.35; margin-bottom: 8px; }
+  .kc-foot { display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--tx-3); gap: 8px; }
+  .kc-meta { display: flex; align-items: center; gap: 6px; }
+
+  /* Epic column special */
+  .kbn-col.kbn-epic { width: 240px; background: transparent; border: 1px solid var(--border); }
+  .epic-card { border: 1px solid var(--border); border-radius: 6px; padding: 12px; cursor: pointer; background: var(--bg-0); transition: border-color 180ms; }
+  .epic-card:hover { border-color: var(--border-strong); }
+  .epic-head { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+  .epic-id { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--tx-3); }
+  .epic-mark { font-size: 9px; padding: 1px 5px; border-radius: 3px; background: rgba(168,85,247,0.15); color: var(--accent-soft); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; }
+  .epic-title { font-size: 13px; color: var(--tx-1); margin-bottom: 8px; line-height: 1.35; }
+  .epic-progress { height: 3px; background: var(--bg-2); border-radius: 2px; overflow: hidden; margin-bottom: 8px; }
+  .epic-progress-fill { height: 100%; background: var(--accent); }
+  .epic-meta { font-size: 11px; color: var(--tx-3); display: flex; justify-content: space-between; }
+
+  /* ============ DRAWER ============ */
+  .drawer-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 50; opacity: 0; pointer-events: none; transition: opacity 200ms; }
+  .drawer-backdrop.open { opacity: 1; pointer-events: auto; }
+  .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 480px; background: var(--bg-0); border-left: 1px solid var(--border); z-index: 60; transform: translateX(100%); transition: transform 250ms cubic-bezier(0.16, 1, 0.3, 1); display: flex; flex-direction: column; }
+  .drawer.open { transform: translateX(0); }
+  .drawer-wide { width: 540px; }
+  .drawer-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 22px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .drawer-body { flex: 1; overflow-y: auto; padding: 22px; }
+  .drawer-footer { border-top: 1px solid var(--border); padding: 14px 22px; display: flex; gap: 8px; flex-shrink: 0; }
+  .drawer-kv { display: grid; grid-template-columns: 110px 1fr; gap: 10px 16px; font-size: 13px; margin-bottom: 22px; }
+  .drawer-kv .k { color: var(--tx-3); }
+  .drawer-kv .v { color: var(--tx-2); }
+  .drawer-section-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--tx-3); font-weight: 600; margin-bottom: 8px; }
+  .drawer-desc { font-size: 13px; color: var(--tx-2); line-height: 1.6; margin: 0 0 22px; }
+  .drawer-activity { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--tx-3); }
+  .drawer-activity .ts { font-family: 'JetBrains Mono', monospace; }
+
+  /* Inline AC checklist */
+  .ac-list { display: flex; flex-direction: column; gap: 4px; }
+  .ac-row { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 13px; color: var(--tx-2); }
+  .ac-row.done { color: var(--tx-3); }
+  .ac-row .ac-check { color: var(--success); }
+  .ac-row .ac-uncheck { color: var(--tx-4); }
+
+  /* ============ TIMELINE SIDEBAR (Dashboard) ============ */
+  .tl-sidebar { width: 340px; flex-shrink: 0; border-left: 1px solid var(--border); display: flex; flex-direction: column; background: var(--bg-0); transition: margin-right 200ms ease-out; }
+  .tl-sidebar.collapsed { margin-right: -340px; }
+  .tl-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .tl-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--tx-2); font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .tl-filter { padding: 10px 16px; border-bottom: 1px solid var(--border); display: flex; gap: 8px; flex-shrink: 0; }
+  .tl-filter select { background: var(--bg-1); border: 1px solid var(--border); border-radius: 5px; padding: 4px 8px; color: var(--tx-2); font-size: 12px; outline: none; }
+  .tl-filter input { background: var(--bg-1); border: 1px solid var(--border); border-radius: 5px; padding: 4px 8px; color: var(--tx-2); font-size: 12px; outline: none; flex: 1; }
+  .tl-list { flex: 1; overflow-y: auto; }
+  .tl-event { display: grid; grid-template-columns: 48px 14px 1fr; gap: 6px; padding: 10px 16px; border-bottom: 1px solid var(--border-s); align-items: flex-start; font-size: 12px; }
+  .tl-ts { font-family: 'JetBrains Mono', monospace; color: var(--tx-3); }
+  .tl-icon { margin-top: 3px; }
+  .tl-icon .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .tl-text { color: var(--tx-2); line-height: 1.4; }
+  .tl-text .actor { font-family: 'JetBrains Mono', monospace; }
+  .actor-bd { color: #818CF8; } /* indigo backend-developer */
+  .actor-fd { color: #F472B6; } /* pink frontend-developer */
+  .actor-em { color: var(--accent-soft); } /* purple engineering-manager */
+  .actor-pm { color: #60A5FA; } /* blue product-manager */
+  .actor-dm { color: #FB923C; } /* orange delivery-manager */
+  .actor-om { color: #67E8F9; } /* cyan operation-manager */
+  .actor-qa { color: #FACC15; } /* yellow qa */
+  .actor-de { color: #F87171; } /* red devops */
+  .actor-se { color: #DC2626; } /* deep red security */
+  .actor-ds { color: #34D399; } /* emerald designer */
+  .actor-cw { color: #A3E635; } /* lime copywriter */
+  .actor-da { color: #2DD4BF; } /* teal db-admin */
+  .actor-ce { color: #22D3EE; } /* sky compliance */
+  .actor-ge { color: #FB7185; } /* rose growth */
+  .actor-party { color: var(--accent-soft); }
+
+  /* ============ TERMINAL PANEL (floating, bottom-right, height-only animation) ============ */
+  .term-panel { position: fixed; right: 16px; bottom: 48px; width: 480px; height: 380px; background: var(--bg-1); border: 1px solid var(--border-strong); border-radius: 10px; z-index: 40; display: flex; flex-direction: column; transition: height 240ms cubic-bezier(0.16, 1, 0.3, 1); overflow: hidden; transform-origin: bottom right; }
+  .term-panel.collapsed { height: 50px; }
+  .term-panel.collapsed .term-body, .term-panel.collapsed .term-footer { opacity: 0; pointer-events: none; }
+  .term-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border); cursor: pointer; flex-shrink: 0; }
+  .term-panel.collapsed .term-head { border-bottom: none; }
+  .term-head .title { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--tx-1); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .term-head .title .prompt-icon { color: var(--accent); margin-right: 6px; font-weight: 600; }
+  .term-head .ctl { display: flex; align-items: center; gap: 4px; color: var(--tx-3); flex-shrink: 0; }
+  .term-head .ctl i { width: 16px; height: 16px; cursor: pointer; padding: 4px; box-sizing: content-box; border-radius: 4px; }
+  .term-head .ctl i:hover { color: var(--tx-1); background: var(--bg-2); }
+  .term-body { flex: 1; overflow-y: auto; padding: 14px 16px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--tx-3); line-height: 1.7; transition: opacity 180ms; }
+  .term-footer { transition: opacity 180ms; }
+  .term-footer { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-top: 1px solid var(--border); font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+  .term-footer .term-prompt { color: var(--accent); font-weight: 600; }
+  .term-footer input { flex: 1; background: transparent; border: none; outline: none; color: var(--tx-1); font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+  .term-footer input::placeholder { color: var(--tx-3); }
+
+  /* ============ MEMORY CARD ============ */
+  .mem-card { border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; margin-bottom: 12px; position: relative; }
+  .mem-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .mem-id { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--tx-3); }
+  .mem-title { font-size: 14px; font-weight: 600; color: var(--tx-1); flex: 1; }
+  .mem-avatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 11px; font-family: 'JetBrains Mono', monospace; flex-shrink: 0; }
+  .mem-quote { font-size: 13px; color: var(--tx-2); font-style: italic; line-height: 1.55; margin-bottom: 12px; }
+  .mem-foot { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--tx-3); }
+  .mem-foot .author { font-family: 'JetBrains Mono', monospace; }
+  .mem-foot .spacer { flex: 1; }
+  .mem-view { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--tx-2); cursor: pointer; padding: 2px 4px; }
+  .mem-view:hover { color: var(--tx-1); }
+
+  /* ============ REPORT CARD (compact, click → modal) ============ */
+  .rpt-card { border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; margin-bottom: 12px; cursor: pointer; transition: border-color 180ms; }
+  .rpt-card:hover { border-color: var(--border-strong); }
+  .rpt-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .rpt-title { font-size: 14px; font-weight: 600; color: var(--tx-1); flex: 1; }
+  .rpt-ts { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--tx-3); }
+  .rpt-gen { font-size: 12px; color: var(--tx-3); display: flex; align-items: center; gap: 8px; }
+  .rpt-gen .avatar { width: 18px; height: 18px; font-size: 9px; }
+  .rpt-body { background: var(--bg-1); border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--tx-2); line-height: 1.7; white-space: pre-wrap; }
+
+  /* ============ MODAL (Reports detail) ============ */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(10,8,20,0.7); z-index: 80; display: none; align-items: center; justify-content: center; padding: 60px 24px; }
+  .modal-overlay.open { display: flex; }
+  .modal-panel { width: 100%; max-width: 920px; max-height: 86vh; background: var(--bg-0); border: 1px solid var(--border-strong); border-radius: 10px; display: flex; flex-direction: column; overflow: hidden; }
+  .modal-header { padding: 18px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-shrink: 0; }
+  .modal-sub { padding: 10px 24px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0; font-size: 12px; color: var(--tx-3); display: flex; align-items: center; gap: 8px; }
+  .modal-body { flex: 1; overflow-y: auto; padding: 22px 24px; }
+  .modal-footer { padding: 14px 24px; border-top: 1px solid var(--border); display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+
+  /* ============ MD-SHELL (file tree + editor — used in References & Agents Profile) ============ */
+  .md-shell { display: grid; grid-template-columns: 280px 1fr; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; height: calc(100vh - 200px); }
+  .md-files { background: var(--bg-1); border-right: 1px solid var(--border); padding: 10px 8px; overflow-y: auto; }
+  .md-files-h { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--tx-4); font-weight: 600; padding: 4px 10px 8px; }
+  .md-file { padding: 9px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background 180ms; margin-bottom: 1px; }
+  .md-file:hover { background: var(--bg-2); }
+  .md-file.active { background: rgba(168,85,247,0.10); }
+  .md-file > i { width: 14px; height: 14px; color: var(--tx-3); flex-shrink: 0; }
+  .md-file.active > i { color: var(--accent); }
+  .md-file-info { flex: 1; min-width: 0; }
+  .md-file-name { font-size: 12px; color: var(--tx-1); font-family: 'JetBrains Mono', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .md-file.active .md-file-name { color: var(--accent-soft); }
+  .md-file-meta { font-size: 10px; color: var(--tx-3); margin-top: 2px; font-family: 'JetBrains Mono', monospace; display: flex; gap: 6px; }
+  .md-file-upload { padding: 9px 12px; border-radius: 6px; cursor: pointer; color: var(--tx-3); display: flex; align-items: center; gap: 10px; font-size: 12px; border: 1px dashed var(--border); margin-top: 8px; font-style: italic; }
+  .md-file-upload:hover { color: var(--tx-1); border-color: var(--border-strong); }
+  .md-editor { display: flex; flex-direction: column; min-width: 0; background: var(--bg-0); }
+  .md-editor-head { padding: 11px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-shrink: 0; }
+  .md-editor-title { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+  .md-editor-title .filename { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--tx-1); }
+  .md-editor-title .meta { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--tx-3); }
+  .md-editor-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .md-editor textarea { flex: 1; background: transparent; border: none; outline: none; padding: 18px 22px; color: var(--tx-2); font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.75; resize: none; }
+
+  /* ============ AGENT GRID (Settings/Agents) ============ */
+  .agent-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .agent-card { border: 1px solid var(--border); border-radius: 8px; padding: 14px; cursor: pointer; transition: border-color 180ms; position: relative; }
+  .agent-card:hover { border-color: var(--border-strong); }
+  .agent-card.blocked { border-color: rgba(239,68,68,0.25); background: rgba(239,68,68,0.03); }
+  .agent-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .agent-avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 11px; font-family: 'JetBrains Mono', monospace; flex-shrink: 0; }
+  .agent-name { font-size: 13px; font-weight: 500; color: var(--tx-1); font-family: 'JetBrains Mono', monospace; }
+  .agent-status { font-size: 11px; color: var(--tx-3); display: flex; align-items: center; gap: 4px; margin-top: 2px; }
+  .agent-role { font-size: 12px; color: var(--tx-2); margin-bottom: 8px; }
+  .agent-task { font-size: 11px; color: var(--tx-3); }
+
+  /* ============ SETTINGS ============ */
+  .settings-shell { display: block; }
+  .settings-group-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--tx-4); padding: 12px 12px 4px; font-weight: 600; }
+  .settings-nav-item { padding: 7px 12px; font-size: 13px; color: var(--tx-3); cursor: pointer; border-radius: 5px; transition: all 180ms; display: flex; align-items: center; gap: 8px; }
+  .settings-nav-item:hover { color: var(--tx-1); background: var(--bg-1); }
+  .settings-nav-item.active { color: var(--accent); background: rgba(168,85,247,0.08); }
+  .settings-nav-item.danger { color: var(--danger); }
+  .settings-pane { display: none; }
+  .settings-pane.active { display: block; }
+  .settings-pane-h { font-size: 18px; font-weight: 600; color: var(--tx-1); margin: 0 0 4px; }
+  .settings-pane-sub { font-size: 13px; color: var(--tx-3); margin: 0 0 22px; }
+  .field-row { display: grid; grid-template-columns: 220px 1fr; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--border); align-items: flex-start; }
+  .field-row:last-child { border-bottom: none; }
+  .field-label { font-size: 13px; color: var(--tx-1); }
+  .field-desc { font-size: 12px; color: var(--tx-3); margin-top: 2px; line-height: 1.5; }
+  .toggle { width: 36px; height: 20px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 999px; position: relative; cursor: pointer; transition: all 180ms; flex-shrink: 0; }
+  .toggle::after { content: ''; position: absolute; top: 1px; left: 1px; width: 16px; height: 16px; background: var(--tx-2); border-radius: 50%; transition: all 180ms; }
+  .toggle.on { background: var(--accent); border-color: var(--accent); }
+  .toggle.on::after { left: 17px; background: white; }
+
+  /* ============ INBOX (header bell drawer) ============ */
+  .inbox-item { border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; margin-bottom: 10px; }
+  .inbox-head { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+  .inbox-title { font-size: 13px; font-weight: 600; color: var(--tx-1); flex: 1; line-height: 1.35; }
+  .inbox-ts { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--tx-3); }
+  .inbox-meta { font-size: 12px; color: var(--tx-3); margin-bottom: 10px; line-height: 1.5; }
+  .inbox-actions { display: flex; gap: 6px; }
+  .inbox-group-h { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--tx-3); font-weight: 600; padding: 14px 0 8px; display: flex; align-items: center; gap: 6px; }
+
+  /* ============ COMMAND PALETTE ============ */
+  .cmd-overlay { position: fixed; inset: 0; background: rgba(10,8,20,0.65); z-index: 100; display: none; align-items: flex-start; justify-content: center; padding-top: 120px; }
+  .cmd-overlay.open { display: flex; }
+  .cmd-panel { width: 580px; background: var(--bg-1); border: 1px solid var(--border-strong); border-radius: 10px; overflow: hidden; }
+  .cmd-input-row { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+  .cmd-input { flex: 1; background: transparent; border: none; outline: none; color: var(--tx-1); font-size: 15px; font-family: inherit; }
+  .cmd-list { max-height: 360px; overflow-y: auto; padding: 6px; }
+  .cmd-item { padding: 8px 12px; display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--tx-2); cursor: pointer; border-radius: 6px; }
+  .cmd-item:hover { background: var(--bg-2); color: var(--tx-1); }
+  .cmd-item i { width: 14px; height: 14px; color: var(--tx-3); }
+  .cmd-section { padding: 8px 12px 4px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--tx-4); }
+
+  /* ============ TOAST ============ */
+  .toast { position: fixed; bottom: 64px; right: 24px; background: var(--bg-2); border: 1px solid var(--border-strong); border-radius: 6px; padding: 10px 14px; font-size: 13px; color: var(--tx-1); z-index: 200; display: flex; align-items: center; gap: 8px; transform: translateY(20px); opacity: 0; pointer-events: none; transition: all 250ms; }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* ============ SCROLLBAR ============ */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--bg-3); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--tx-4); }
+
+  /* Focus ring */
+  *:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ============ DASHBOARD LAYOUT (main + timeline split) ============ */
+  .dash-layout { display: flex; height: 100%; }
+  .dash-main { flex: 1; overflow-y: auto; padding: 24px 32px; }
+
+  /* Workflow diagram (Settings/Workflows) */
+  .wf-diagram { border: 1px solid var(--border); border-radius: 8px; padding: 24px; min-height: 380px; }
+  .wf-phase-row { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+  .wf-phase { border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; min-width: 180px; }
+  .wf-phase.done { border-color: rgba(16,185,129,0.3); background: rgba(16,185,129,0.04); }
+  .wf-phase.active { border-color: rgba(236,72,153,0.4); background: rgba(236,72,153,0.05); }
+  .wf-phase-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--tx-3); font-weight: 600; }
+  .wf-phase-title { font-size: 13px; color: var(--tx-1); margin-top: 2px; }
+  .wf-arrow { color: var(--tx-4); font-size: 18px; }
+  .wf-gate { border: 1px solid var(--warning); border-radius: 6px; padding: 8px 12px; background: rgba(245,158,11,0.08); font-size: 12px; color: var(--warning); display: flex; align-items: center; gap: 6px; }
+  .wf-loopback { color: var(--danger); font-size: 11px; padding: 4px 8px; border: 1px dashed rgba(239,68,68,0.3); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<!-- ============================== TOPBAR ============================== -->
+<header class="topbar">
+  <button class="icon-btn" onclick="toggleSidebar()" title="Toggle sidebar" style="margin-right: 4px;">
+    <i data-lucide="panel-left" style="width: 16px; height: 16px;"></i>
+  </button>
+  <div class="logo-mark">K</div>
+  <span style="font-weight: 600; font-size: 14px;">Kortext</span>
+  <div class="divider"></div>
+  <span style="font-size: 13px; color: var(--tx-2);">Acme CRM</span>
+  <span class="badge badge-neutral mono" style="font-size: 10px;">v0.1.0</span>
+  <div style="flex: 1;"></div>
+  <button class="cmdk-trigger" onclick="openCmdK()">
+    <i data-lucide="search" style="width: 14px; height: 14px;"></i>
+    <span>Search tasks, agents, decisions&hellip;</span>
+    <span style="flex: 1;"></span>
+    <span class="cmdk-kbd">⌘K</span>
+  </button>
+  <div style="flex: 1;"></div>
+  <button class="icon-btn" onclick="toggleTerminal()" title="Terminal">
+    <i data-lucide="terminal" style="width: 16px; height: 16px;"></i>
+  </button>
+  <button class="icon-btn" onclick="openInbox()" title="Approvals">
+    <i data-lucide="inbox" style="width: 16px; height: 16px;"></i>
+    <span class="badge-dot"></span>
+  </button>
+  <div class="avatar-prime" title="+prime">+p</div>
+</header>
+
+<!-- ============================== LAYOUT ============================== -->
+<div class="layout">
+
+  <!-- =================== SIDEBAR =================== -->
+  <aside class="sidebar">
+    <div class="nav-section">Workspace</div>
+    <div class="nav-item active" data-route="dashboard" onclick="showRoute('dashboard')">
+      <i data-lucide="layout-grid"></i><span class="nav-label">Dashboard</span>
+    </div>
+    <div class="nav-item" data-route="board" onclick="showRoute('board')">
+      <i data-lucide="kanban-square"></i><span class="nav-label">Board</span>
+    </div>
+    <div class="nav-item" data-route="memory" onclick="showRoute('memory')">
+      <i data-lucide="brain"></i><span class="nav-label">Memory</span>
+    </div>
+    <div class="nav-item" data-route="reports" onclick="showRoute('reports')">
+      <i data-lucide="file-text"></i><span class="nav-label">Reports</span>
+    </div>
+    <div class="nav-item" data-route="references" onclick="showRoute('references')">
+      <i data-lucide="book-open"></i><span class="nav-label">References</span>
+    </div>
+
+    <div class="nav-section">Project</div>
+    <div class="nav-item" data-route="settings" data-pane="project" onclick="showRoute('settings','project')">
+      <i data-lucide="sliders"></i><span class="nav-label">Project settings</span>
+    </div>
+    <div class="nav-item" data-route="settings" data-pane="agents" onclick="showRoute('settings','agents')">
+      <i data-lucide="users"></i><span class="nav-label">Agents</span>
+    </div>
+    <div class="nav-item" data-route="settings" data-pane="rules" onclick="showRoute('settings','rules')">
+      <i data-lucide="shield"></i><span class="nav-label">Rules</span>
+    </div>
+    <div class="nav-item" data-route="settings" data-pane="workflows" onclick="showRoute('settings','workflows')">
+      <i data-lucide="git-branch"></i><span class="nav-label">Workflows</span>
+    </div>
+
+    <div class="nav-section">System</div>
+    <div class="nav-item" data-route="settings" data-pane="hooks" onclick="showRoute('settings','hooks')">
+      <i data-lucide="zap"></i><span class="nav-label">Hooks</span>
+    </div>
+    <div class="nav-item" data-route="settings" data-pane="integrations" onclick="showRoute('settings','integrations')">
+      <i data-lucide="plug"></i><span class="nav-label">Integrations</span>
+    </div>
+    <div class="nav-item" data-route="settings" data-pane="environment" onclick="showRoute('settings','environment')">
+      <i data-lucide="key"></i><span class="nav-label">Environment</span>
+    </div>
+    <div class="nav-spacer"></div>
+    <div class="nav-item" data-route="settings" data-pane="danger" onclick="showRoute('settings','danger')" style="color: var(--danger);">
+      <i data-lucide="alert-triangle"></i><span class="nav-label">Danger zone</span>
+    </div>
+  </aside>
+
+  <!-- =================== MAIN =================== -->
+  <main class="main">
+
+    <!-- =============== DASHBOARD =============== -->
+    <section class="route active" data-route="dashboard">
+      <div class="dash-layout">
+        <div class="dash-main">
+          <div class="route-header">
+            <div>
+              <h1 class="route-title">Dashboard</h1>
+              <p class="route-sub"><span class="mono">04-development-cycle</span> &middot; step 4/7</p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-ghost btn-xs" onclick="toggleTimeline()"><i data-lucide="panel-right" style="width: 12px; height: 12px;"></i> Timeline</button>
+              <button class="btn btn-outline btn-xs"><i data-lucide="refresh-cw" style="width: 12px; height: 12px;"></i> Refresh</button>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 28px;">
+            <div class="section-title">Active work</div>
+            <div class="section-sub">6 agents currently running tasks</div>
+            <div class="row-list">
+              <div class="row row-header" style="--cols: 18px 1fr 60px 70px;">
+                <div></div><div>Persona · Task</div><div>Step</div><div>Elapsed</div>
+              </div>
+              <div class="row" style="--cols: 18px 1fr 60px 70px;" onclick="openTaskDrawer('T-001')">
+                <span class="dot dot-live"></span>
+                <div><span class="mono actor-bd">+backend-developer</span> <span style="color: var(--tx-3);">implementing JWT middleware</span> <span class="mono" style="color: var(--tx-3); font-size: 12px;">T-001</span></div>
+                <span class="mono" style="color: var(--tx-2); font-size: 12px;">4/7</span>
+                <span class="mono" style="color: var(--tx-3); font-size: 12px;">4m 12s</span>
+              </div>
+              <div class="row" style="--cols: 18px 1fr 60px 70px;" onclick="openTaskDrawer('T-011')">
+                <span class="dot dot-live"></span>
+                <div><span class="mono actor-qa">+qa-engineer</span> <span style="color: var(--tx-3);">running auth E2E tests</span> <span class="mono" style="color: var(--tx-3); font-size: 12px;">T-011</span></div>
+                <span class="mono" style="color: var(--tx-2); font-size: 12px;">2/5</span>
+                <span class="mono" style="color: var(--tx-3); font-size: 12px;">12m 03s</span>
+              </div>
+              <div class="row" style="--cols: 18px 1fr 60px 70px;" onclick="openTaskDrawer('T-002')">
+                <span class="dot dot-live"></span>
+                <div><span class="mono actor-ds">+designer</span> <span style="color: var(--tx-3);">login screen mocks v3</span> <span class="mono" style="color: var(--tx-3); font-size: 12px;">T-002</span></div>
+                <span class="mono" style="color: var(--tx-2); font-size: 12px;">3/3</span>
+                <span class="mono" style="color: var(--tx-3); font-size: 12px;">2m 41s</span>
+              </div>
+              <div class="row" style="--cols: 18px 1fr 60px 70px;" onclick="openTaskDrawer('T-006')">
+                <span class="dot dot-live"></span>
+                <div><span class="mono actor-fd">+frontend-developer</span> <span style="color: var(--tx-3);">analytics widget grid</span> <span class="mono" style="color: var(--tx-3); font-size: 12px;">T-006</span></div>
+                <span class="mono" style="color: var(--tx-2); font-size: 12px;">5/8</span>
+                <span class="mono" style="color: var(--tx-3); font-size: 12px;">28m 11s</span>
+              </div>
+              <div class="row" style="--cols: 18px 1fr 60px 70px;" onclick="openTaskDrawer('T-008')">
+                <span class="dot dot-warning"></span>
+                <div><span class="mono actor-se">+security-engineer</span> <span style="color: var(--tx-3);">rate limit audit</span> <span class="mono" style="color: var(--tx-3); font-size: 12px;">T-008</span></div>
+                <span class="mono" style="color: var(--tx-2); font-size: 12px;">&ndash;</span>
+                <span style="color: var(--warning); font-size: 12px;">queued</span>
+              </div>
+              <div class="row" style="--cols: 18px 1fr 60px 70px;" onclick="openTaskDrawer('T-013')">
+                <span class="dot dot-danger"></span>
+                <div><span class="mono actor-da">+db-admin</span> <span style="color: var(--tx-3);">subscription schema migration</span> <span class="mono" style="color: var(--tx-3); font-size: 12px;">T-013</span></div>
+                <span class="mono" style="color: var(--tx-2); font-size: 12px;">&ndash;</span>
+                <span style="color: var(--danger); font-size: 12px;">blocked</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Timeline sidebar -->
+        <aside class="tl-sidebar" id="tl-sidebar">
+          <div class="tl-head">
+            <div class="tl-title"><i data-lucide="activity" style="width: 12px; height: 12px; color: var(--accent);"></i> Timeline</div>
+            <i data-lucide="chevrons-right" style="width: 14px; height: 14px; color: var(--tx-3); cursor: pointer;" onclick="toggleTimeline()"></i>
+          </div>
+          <div class="tl-filter">
+            <select>
+              <option>All events</option>
+              <option>Handovers</option>
+              <option>Decisions</option>
+              <option>Commits</option>
+              <option>Blockers</option>
+              <option>Completed</option>
+            </select>
+            <input type="text" placeholder="Search&hellip;">
+          </div>
+          <div class="tl-list">
+            <div class="tl-event">
+              <span class="tl-ts">14:35</span>
+              <span class="tl-icon"><span class="dot dot-info"></span></span>
+              <span class="tl-text"><span class="actor actor-bd">backend-developer</span> &middot; committed <span class="mono">auth/oauth.ts</span> &mdash; <span class="mono">T-101</span> OAuth flow</span>
+            </div>
+            <div class="tl-event">
+              <span class="tl-ts">14:33</span>
+              <span class="tl-icon"><span class="dot dot-info"></span></span>
+              <span class="tl-text"><span class="actor actor-fd">frontend-developer</span> &middot; started <span class="mono">T-103</span> &mdash; dashboard-skeleton</span>
+            </div>
+            <div class="tl-event">
+              <span class="tl-ts">14:31</span>
+              <span class="tl-icon"><i data-lucide="arrow-right" style="width: 11px; height: 11px; color: var(--accent-soft);"></i></span>
+              <span class="tl-text"><span class="actor actor-em">engineering-manager</span> &middot; handover &rarr; <span class="actor actor-bd">backend-developer</span> &middot; <span class="mono">T-101</span> code review</span>
+            </div>
+            <div class="tl-event">
+              <span class="tl-ts">14:29</span>
+              <span class="tl-icon"><span class="dot dot-accent"></span></span>
+              <span class="tl-text"><span class="actor actor-party">Party 3</span> &middot; session ended &mdash; <span class="mono">ADR-003</span> recorded: auth strategy</span>
+            </div>
+            <div class="tl-event">
+              <span class="tl-ts">14:25</span>
+              <span class="tl-icon"><i data-lucide="x" style="width: 11px; height: 11px; color: var(--danger);"></i></span>
+              <span class="tl-text"><span class="actor actor-de">devops-engineer</span> &middot; <span style="color: var(--danger);">BLOCKED</span> &mdash; <span class="mono">B-203</span> email deliverability &mdash; awaiting DNS config</span>
+            </div>
+            <div class="tl-event">
+              <span class="tl-ts">14:22</span>
+              <span class="tl-icon"><span class="dot dot-success"></span></span>
+              <span class="tl-text"><span class="actor actor-pm">product-manager</span> &middot; approved <span class="mono">T-105</span> pricing copy &middot; moved to Review</span>
+            </div>
+            <div class="tl-event">
+              <span class="tl-ts">14:18</span>
+              <span class="tl-icon"><span class="dot dot-success"></span></span>
+              <span class="tl-text"><span class="actor actor-ds">designer</span> &middot; uploaded <span class="mono">dashboard.fig</span> &mdash; <span class="mono">T-108</span></span>
+            </div>
+            <div class="tl-event">
+              <span class="tl-ts">14:14</span>
+              <span class="tl-icon"><i data-lucide="arrow-right" style="width: 11px; height: 11px; color: var(--accent-soft);"></i></span>
+              <span class="tl-text"><span class="actor actor-em">engineering-manager</span> &middot; dispatched <span class="actor actor-bd">backend-developer</span> &rarr; <span class="mono">T-101</span></span>
+            </div>
+            <div class="tl-event">
+              <span class="tl-ts">14:10</span>
+              <span class="tl-icon"><span class="dot dot-info"></span></span>
+              <span class="tl-text"><span class="actor actor-om">operation-manager</span> &middot; workflow step 3&rarr;4 advanced &middot; deploy gate passed</span>
+            </div>
+            <div class="tl-event">
+              <span class="tl-ts">13:58</span>
+              <span class="tl-icon"><span class="dot dot-success"></span></span>
+              <span class="tl-text"><span class="actor actor-qa">qa-engineer</span> &middot; passed <span class="mono">T-097</span> regression suite (24/24)</span>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- =============== BOARD =============== -->
+    <section class="route" data-route="board">
+      <div class="route-header">
+        <div>
+          <h1 class="route-title">Board</h1>
+          <p class="route-sub">13 items across 4 epics</p>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <select class="input" style="padding: 5px 10px;"><option>Epic: All</option><option>E-001</option><option>E-002</option></select>
+          <select class="input" style="padding: 5px 10px;"><option>Agent: All</option></select>
+          <select class="input" style="padding: 5px 10px;"><option>Status: All</option></select>
+          <button class="btn btn-outline btn-xs"><i data-lucide="filter" style="width: 12px; height: 12px;"></i> Filter</button>
+          <button class="btn btn-primary btn-xs"><i data-lucide="plus" style="width: 12px; height: 12px;"></i> New task</button>
+        </div>
+      </div>
+
+      <div class="board-wrap">
+        <!-- Epic column -->
+        <div class="kbn-col kbn-epic">
+          <div class="kbn-col-head">
+            <span class="dot dot-accent"></span>
+            <span class="kbn-col-title">Epic</span>
+            <span class="kbn-col-count">4</span>
+          </div>
+          <div class="kbn-list">
+            <div class="epic-card" onclick="openEpicDrawer('E-001')">
+              <div class="epic-head">
+                <span class="epic-id">E-001</span><span class="epic-mark">Strategic</span>
+              </div>
+              <div class="epic-title">Authentication &amp; Users</div>
+              <div class="epic-progress"><div class="epic-progress-fill" style="width: 40%;"></div></div>
+              <div class="epic-meta"><span>5 tasks &middot; 2 done</span><span>+product-manager</span></div>
+            </div>
+            <div class="epic-card" onclick="openEpicDrawer('E-002')">
+              <div class="epic-head">
+                <span class="epic-id">E-002</span><span class="epic-mark">Strategic</span>
+              </div>
+              <div class="epic-title">Billing &amp; Subscription</div>
+              <div class="epic-progress"><div class="epic-progress-fill" style="width: 8%;"></div></div>
+              <div class="epic-meta"><span>4 tasks &middot; 0 done</span><span>+product-manager</span></div>
+            </div>
+            <div class="epic-card" onclick="openEpicDrawer('E-003')">
+              <div class="epic-head">
+                <span class="epic-id">E-003</span><span class="epic-mark">Strategic</span>
+              </div>
+              <div class="epic-title">Customer Dashboard</div>
+              <div class="epic-progress"><div class="epic-progress-fill" style="width: 25%;"></div></div>
+              <div class="epic-meta"><span>6 tasks &middot; 1 done</span><span>+designer</span></div>
+            </div>
+            <div class="epic-card" onclick="openEpicDrawer('E-004')">
+              <div class="epic-head">
+                <span class="epic-id">E-004</span><span class="epic-mark">Strategic</span>
+              </div>
+              <div class="epic-title">Admin Panel</div>
+              <div class="epic-progress"><div class="epic-progress-fill" style="width: 0%;"></div></div>
+              <div class="epic-meta"><span>3 tasks &middot; 0 done</span><span>not started</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- To Do -->
+        <div class="kbn-col">
+          <div class="kbn-col-head">
+            <span class="dot dot-neutral"></span>
+            <span class="kbn-col-title">To do</span>
+            <span class="kbn-col-count">4</span>
+            <i data-lucide="plus" class="kbn-col-add" style="width: 14px; height: 14px;"></i>
+          </div>
+          <div class="kbn-list">
+            <div class="kbn-card" onclick="openTaskDrawer('T-102')">
+              <div class="kc-head"><span class="kc-id">T-102</span><span class="kc-type-mark" style="color: var(--info); background: rgba(59,130,246,0.1);">Task</span><span style="margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--tx-3);">E-002</span></div>
+              <div class="kc-title">Stripe webhook handler</div>
+              <div class="kc-foot"><span class="mono actor-bd">+backend-developer</span><span style="color: var(--warning);">waiting</span></div>
+            </div>
+            <div class="kbn-card" onclick="openTaskDrawer('B-201')">
+              <div class="kc-head"><span class="kc-id">B-201</span><span class="kc-type-mark" style="color: var(--danger); background: rgba(239,68,68,0.1);">Bug</span><span style="margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--tx-3);">E-003</span></div>
+              <div class="kc-title">Sign-up button misaligned on mobile</div>
+              <div class="kc-foot"><span class="mono actor-fd">+frontend-developer</span></div>
+            </div>
+            <div class="kbn-card" onclick="openTaskDrawer('D-301')">
+              <div class="kc-head"><span class="kc-id">D-301</span><span class="kc-type-mark" style="color: var(--warning); background: rgba(245,158,11,0.1);">Debt</span></div>
+              <div class="kc-title">Refactor auth middleware</div>
+              <div class="kc-foot"><span class="mono actor-bd">+backend-developer</span></div>
+            </div>
+            <div class="kbn-card" onclick="openTaskDrawer('D-302')">
+              <div class="kc-head"><span class="kc-id">D-302</span><span class="kc-type-mark" style="color: var(--warning); background: rgba(245,158,11,0.1);">Debt</span></div>
+              <div class="kc-title">Migrate legacy logs to structured JSON</div>
+              <div class="kc-foot"><span class="mono actor-de">+devops-engineer</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- In Progress -->
+        <div class="kbn-col">
+          <div class="kbn-col-head">
+            <span class="dot dot-live"></span>
+            <span class="kbn-col-title">In progress</span>
+            <span class="kbn-col-count">4</span>
+            <i data-lucide="plus" class="kbn-col-add" style="width: 14px; height: 14px;"></i>
+          </div>
+          <div class="kbn-list">
+            <div class="kbn-card" onclick="openTaskDrawer('T-101')">
+              <div class="kc-head"><span class="kc-id">T-101</span><span class="kc-type-mark" style="color: var(--info); background: rgba(59,130,246,0.1);">Task</span><span style="margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--tx-3);">E-001</span></div>
+              <div class="kc-title">Implement OAuth login flow</div>
+              <div class="kc-foot"><span class="mono actor-bd">+backend-developer</span><span style="color: var(--tx-3);">AC 3/5</span></div>
+            </div>
+            <div class="kbn-card" onclick="openTaskDrawer('T-105')">
+              <div class="kc-head"><span class="kc-id">T-105</span><span class="kc-type-mark" style="color: var(--info); background: rgba(59,130,246,0.1);">Task</span></div>
+              <div class="kc-title">Pricing page copy</div>
+              <div class="kc-foot"><span class="mono actor-cw">+copywriter</span></div>
+            </div>
+            <div class="kbn-card" onclick="openTaskDrawer('T-108')">
+              <div class="kc-head"><span class="kc-id">T-108</span><span class="kc-type-mark" style="color: var(--info); background: rgba(59,130,246,0.1);">Task</span></div>
+              <div class="kc-title">Onboarding flow design</div>
+              <div class="kc-foot"><span class="mono actor-ds">+designer</span></div>
+            </div>
+            <div class="kbn-card blocked" onclick="openTaskDrawer('B-203')">
+              <div class="kc-head"><span class="kc-id">B-203</span><span class="kc-type-mark" style="color: var(--danger); background: rgba(239,68,68,0.1);">Bug</span><span style="margin-left: auto; color: var(--danger); font-size: 10px;">blocked</span></div>
+              <div class="kc-title">Password reset email &rarr; spam</div>
+              <div class="kc-foot"><span class="mono actor-de">+devops-engineer</span><span style="color: var(--danger);">awaiting DNS</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Test -->
+        <div class="kbn-col">
+          <div class="kbn-col-head">
+            <span class="dot dot-info"></span>
+            <span class="kbn-col-title">Test</span>
+            <span class="kbn-col-count">1</span>
+            <i data-lucide="plus" class="kbn-col-add" style="width: 14px; height: 14px;"></i>
+          </div>
+          <div class="kbn-list">
+            <div class="kbn-card" onclick="openTaskDrawer('T-103')">
+              <div class="kc-head"><span class="kc-id">T-103</span><span class="kc-type-mark" style="color: var(--info); background: rgba(59,130,246,0.1);">Task</span><span style="margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--tx-3);">E-003</span></div>
+              <div class="kc-title">Dashboard skeleton component</div>
+              <div class="kc-foot"><span class="mono actor-fd">+frontend-developer</span><span style="color: var(--tx-3);">AC 2/4</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Review -->
+        <div class="kbn-col">
+          <div class="kbn-col-head">
+            <span class="dot dot-warning"></span>
+            <span class="kbn-col-title">Review</span>
+            <span class="kbn-col-count">1</span>
+            <i data-lucide="plus" class="kbn-col-add" style="width: 14px; height: 14px;"></i>
+          </div>
+          <div class="kbn-list">
+            <div class="kbn-card" onclick="openTaskDrawer('T-106')">
+              <div class="kc-head"><span class="kc-id">T-106</span><span class="kc-type-mark" style="color: var(--info); background: rgba(59,130,246,0.1);">Task</span></div>
+              <div class="kc-title">Email transactional templates</div>
+              <div class="kc-foot"><span class="mono actor-cw">+copywriter</span><span style="color: var(--danger);">blocked by T-101</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Done -->
+        <div class="kbn-col">
+          <div class="kbn-col-head">
+            <span class="dot dot-success"></span>
+            <span class="kbn-col-title">Done</span>
+            <span class="kbn-col-count">2</span>
+          </div>
+          <div class="kbn-list">
+            <div class="kbn-card" style="opacity: 0.55;" onclick="openTaskDrawer('T-104')">
+              <div class="kc-head"><span class="kc-id">T-104</span><span class="kc-type-mark" style="color: var(--info); background: rgba(59,130,246,0.1);">Task</span></div>
+              <div class="kc-title" style="text-decoration: line-through;">User table schema migration</div>
+              <div class="kc-foot"><span class="mono actor-da">+db-admin</span><span style="color: var(--success);">✓ all AC</span></div>
+            </div>
+            <div class="kbn-card" style="opacity: 0.55;" onclick="openTaskDrawer('T-107')">
+              <div class="kc-head"><span class="kc-id">T-107</span><span class="kc-type-mark" style="color: var(--info); background: rgba(59,130,246,0.1);">Task</span></div>
+              <div class="kc-title" style="text-decoration: line-through;">CI pipeline setup</div>
+              <div class="kc-foot"><span class="mono actor-de">+devops-engineer</span><span style="color: var(--success);">✓ all AC</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- =============== MEMORY =============== -->
+    <section class="route" data-route="memory">
+      <div class="route-header">
+        <div>
+          <h1 class="route-title">Memory</h1>
+          <p class="route-sub">Collective intelligence of Acme CRM</p>
+        </div>
+        <button class="btn btn-outline btn-xs"><i data-lucide="plus" style="width: 12px; height: 12px;"></i> New entry</button>
+      </div>
+
+      <div class="tab-bar">
+        <div class="tab active" onclick="switchMemTab(this, 'decisions')">Decisions<span class="tab-count">6</span></div>
+        <div class="tab" onclick="switchMemTab(this, 'learned')">Learned<span class="tab-count">5</span></div>
+        <div class="tab" onclick="switchMemTab(this, 'handovers')">Handovers<span class="tab-count">4</span></div>
+      </div>
+
+      <!-- Decisions -->
+      <div data-tab="decisions">
+        <div class="mem-card">
+          <div class="mem-head">
+            <span class="mem-id">D-001</span>
+            <span class="mem-title">Use PostgreSQL over MongoDB</span>
+            <span class="mem-avatar" style="background: #14B8A6;">DA</span>
+          </div>
+          <div class="mem-quote">"Relational model fits the CRM domain better. Auth0 user_id as FK is clean in PostgreSQL."</div>
+          <div class="mem-foot">
+            <span class="actor actor-da">db-admin</span>
+            <span>&middot; today 13:45</span>
+            <span class="spacer"></span>
+            <span class="badge badge-purple">Architecture</span>
+            <span class="mem-view" onclick="openMemDrawer(event, 'D-001')">View <i data-lucide="chevron-down" style="width: 11px; height: 11px;"></i></span>
+          </div>
+        </div>
+        <div class="mem-card">
+          <div class="mem-head">
+            <span class="mem-id">D-002</span>
+            <span class="mem-title">Tailwind CSS for styling</span>
+            <span class="mem-avatar" style="background: #10B981;">Ds</span>
+          </div>
+          <div class="mem-quote">"Speed of iteration in designer &rarr; developer handoff. Utility-first keeps parity between designs."</div>
+          <div class="mem-foot">
+            <span class="actor actor-ds">designer</span>
+            <span>&middot; today 12:30</span>
+            <span class="spacer"></span>
+            <span class="badge badge-green">Adopted</span>
+            <span class="mem-view" onclick="openMemDrawer(event, 'D-002')">View <i data-lucide="chevron-down" style="width: 11px; height: 11px;"></i></span>
+          </div>
+        </div>
+        <div class="mem-card">
+          <div class="mem-head">
+            <span class="mem-id">D-003</span>
+            <span class="mem-title">Stripe over Paddle for billing</span>
+            <span class="mem-avatar" style="background: #3B82F6;">PM</span>
+          </div>
+          <div class="mem-quote">"US-first market validation. Stripe has better SaaS tooling and wider ecosystem support."</div>
+          <div class="mem-foot">
+            <span class="actor actor-pm">product-manager</span>
+            <span>&middot; yesterday</span>
+            <span class="spacer"></span>
+            <span class="badge badge-purple">Architecture</span>
+            <span class="mem-view" onclick="openMemDrawer(event, 'D-003')">View <i data-lucide="chevron-down" style="width: 11px; height: 11px;"></i></span>
+          </div>
+        </div>
+        <div class="mem-card">
+          <div class="mem-head">
+            <span class="mem-id">D-004</span>
+            <span class="mem-title">Auth0 over Clerk</span>
+            <span class="mem-avatar" style="background: #DC2626;">SE</span>
+          </div>
+          <div class="mem-quote">"Enterprise SSO roadmap requirement. Auth0 supports SAML + custom MFA flows out of the box."</div>
+          <div class="mem-foot">
+            <span class="actor actor-se">security-engineer</span>
+            <span>&middot; today 13:00</span>
+            <span class="spacer"></span>
+            <span class="badge badge-purple">Architecture</span>
+            <span class="mem-view" onclick="openMemDrawer(event, 'D-004')">View <i data-lucide="chevron-down" style="width: 11px; height: 11px;"></i></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Learned -->
+      <div data-tab="learned" style="display: none;">
+        <div class="mem-card">
+          <div class="mem-head">
+            <span class="mem-id">L-001</span>
+            <span class="mem-title">DB migrations need both up &amp; down before being applied</span>
+            <span class="mem-avatar" style="background: #14B8A6;">DA</span>
+          </div>
+          <div class="mem-quote">"T-013 rolled back due to missing down migration. Always test rollback path in staging before prod."</div>
+          <div class="mem-foot">
+            <span class="actor actor-da">db-admin</span>
+            <span>&middot; source <span class="mono">T-013</span></span>
+            <span class="spacer"></span>
+            <span class="badge badge-amber">Critical</span>
+            <span class="mem-view"><i data-lucide="chevron-down" style="width: 11px; height: 11px;"></i></span>
+          </div>
+        </div>
+        <div class="mem-card">
+          <div class="mem-head">
+            <span class="mem-id">L-002</span>
+            <span class="mem-title">Rate limiter must run before auth middleware</span>
+            <span class="mem-avatar" style="background: #DC2626;">SE</span>
+          </div>
+          <div class="mem-quote">"Otherwise it never sees attack traffic. Order matters in Express middleware stack."</div>
+          <div class="mem-foot">
+            <span class="actor actor-se">security-engineer</span>
+            <span>&middot; source <span class="mono">T-008</span></span>
+            <span class="spacer"></span>
+            <span class="badge badge-blue">Pattern</span>
+            <span class="mem-view"><i data-lucide="chevron-down" style="width: 11px; height: 11px;"></i></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Handovers -->
+      <div data-tab="handovers" style="display: none;">
+        <div class="mem-card">
+          <div class="mem-head">
+            <span class="mem-id">H-001</span>
+            <span class="mem-title"><span class="mono actor-om">+operation-manager</span> &rarr; <span class="mono actor-qa">+qa-engineer</span></span>
+            <span class="mem-avatar" style="background: #67E8F9; color: #0A0814;">OM</span>
+          </div>
+          <div class="mem-quote">"T-099 implementation complete. AC 5/5 passing. Handing over for E2E regression suite."</div>
+          <div class="mem-foot">
+            <span class="mono">T-099</span>
+            <span>&middot; 14:32:18</span>
+            <span class="spacer"></span>
+            <span class="badge badge-purple">Handover</span>
+            <span class="mem-view"><i data-lucide="chevron-down" style="width: 11px; height: 11px;"></i></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =============== REPORTS =============== -->
+    <section class="route" data-route="reports">
+      <div class="route-header">
+        <div>
+          <h1 class="route-title">Reports</h1>
+          <p class="route-sub">Acme CRM &middot; Day 4</p>
+        </div>
+        <span class="badge badge-amber">2 pending review</span>
+      </div>
+
+      <div class="rpt-card" onclick="openRptModal('daily')">
+        <div class="rpt-head">
+          <span class="rpt-title">Daily Status Report &mdash; Day 4</span>
+          <span class="badge badge-amber">Pending review</span>
+          <span class="rpt-ts">Today 14:00</span>
+        </div>
+        <div class="rpt-gen">
+          <span class="mem-avatar avatar" style="background: #67E8F9; color: #0A0814; width: 18px; height: 18px; font-size: 9px;">OM</span>
+          <span>Generated by <span class="mono actor-om">operation-manager</span></span>
+        </div>
+      </div>
+
+      <div class="rpt-card" onclick="openRptModal('sprint')">
+        <div class="rpt-head">
+          <span class="rpt-title">Sprint Progress Report &mdash; Week 1</span>
+          <span class="badge badge-amber">Pending review</span>
+          <span class="rpt-ts">Today 13:30</span>
+        </div>
+        <div class="rpt-gen">
+          <span class="mem-avatar avatar" style="background: #FB923C; width: 18px; height: 18px; font-size: 9px;">DM</span>
+          <span>Generated by <span class="mono actor-dm">delivery-manager</span></span>
+        </div>
+      </div>
+
+      <div class="rpt-card" onclick="openRptModal('security')">
+        <div class="rpt-head">
+          <span class="rpt-title">Security Audit &mdash; OWASP A07 Auth Flow</span>
+          <span class="badge badge-green">Approved</span>
+          <span class="rpt-ts">Today 14:16</span>
+        </div>
+        <div class="rpt-gen">
+          <span class="mem-avatar avatar" style="background: #DC2626; width: 18px; height: 18px; font-size: 9px;">SE</span>
+          <span>Generated by <span class="mono actor-se">security-engineer</span> &middot; Approved by <span class="mono" style="color: var(--warning);">+prime</span></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- =============== REFERENCES =============== -->
+    <section class="route" data-route="references">
+      <div class="route-header">
+        <div>
+          <h1 class="route-title">References</h1>
+          <p class="route-sub">Context documents &amp; knowledge base &middot; 5 files</p>
+        </div>
+        <button class="btn btn-outline btn-xs"><i data-lucide="upload" style="width: 12px; height: 12px;"></i> Upload file</button>
+      </div>
+      <div class="md-shell">
+        <div class="md-files">
+          <div class="md-files-h">Documents</div>
+          <div class="md-file active" onclick="selectRefFile(this)" data-file="blueprint">
+            <i data-lucide="file-text"></i>
+            <div class="md-file-info">
+              <div class="md-file-name">blueprint.md</div>
+              <div class="md-file-meta"><span>4.2 KB</span><span>·</span><span>4d ago</span></div>
+            </div>
+          </div>
+          <div class="md-file" onclick="selectRefFile(this)" data-file="tech-stack">
+            <i data-lucide="file-text"></i>
+            <div class="md-file-info">
+              <div class="md-file-name">tech-stack.md</div>
+              <div class="md-file-meta"><span>2.8 KB</span><span>·</span><span>6d ago</span></div>
+            </div>
+          </div>
+          <div class="md-file" onclick="selectRefFile(this)" data-file="brand-voice">
+            <i data-lucide="file-text"></i>
+            <div class="md-file-info">
+              <div class="md-file-name">brand-voice.md</div>
+              <div class="md-file-meta"><span>1.4 KB</span><span>·</span><span>7d ago</span></div>
+            </div>
+          </div>
+          <div class="md-file" onclick="selectRefFile(this)" data-file="api-contracts">
+            <i data-lucide="file-text"></i>
+            <div class="md-file-info">
+              <div class="md-file-name">api-contracts.md</div>
+              <div class="md-file-meta"><span>5.8 KB</span><span>·</span><span>yesterday</span></div>
+            </div>
+          </div>
+          <div class="md-files-h" style="padding-top: 14px;">Assets</div>
+          <div class="md-file" onclick="selectRefFile(this)" data-file="dashboard-fig">
+            <i data-lucide="image"></i>
+            <div class="md-file-info">
+              <div class="md-file-name">dashboard.fig</div>
+              <div class="md-file-meta"><span>312 KB</span><span>·</span><span>2d ago</span></div>
+            </div>
+          </div>
+          <div class="md-file-upload"><i data-lucide="plus" style="width: 13px; height: 13px;"></i> Upload reference</div>
+        </div>
+        <div class="md-editor">
+          <div class="md-editor-head">
+            <div class="md-editor-title">
+              <span class="filename">blueprint.md</span>
+              <span class="badge badge-purple">Product vision</span>
+              <span class="meta">4.2 KB &middot; edited 4 days ago</span>
+            </div>
+            <div class="md-editor-actions">
+              <button class="btn btn-ghost btn-xs"><i data-lucide="eye" style="width: 12px; height: 12px;"></i> Preview</button>
+              <button class="btn btn-outline btn-xs">Save</button>
+            </div>
+          </div>
+          <textarea spellcheck="false"># Acme CRM Blueprint
+
+## Product vision
+B2B SaaS CRM for small &amp; medium teams. Self-serve onboarding, transparent pricing, deep Stripe integration.
+
+## Target user
+Founders / sales leads at 10-50 person companies who outgrew spreadsheets but don't want Salesforce.
+
+## MVP scope
+- Authentication (Auth0)
+- Customer dashboard
+- Billing &amp; subscription
+- Basic admin panel
+
+## Tech stack
+Next.js 15 / Node 22 / PostgreSQL 16 / Vercel / Stripe / Auth0
+
+## Constraints
+- 4 concurrent agent runs max
+- $500/month external API budget
+- Production deploys require delivery-manager approval</textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- =============== SETTINGS (panes routed from main sidebar) =============== -->
+    <section class="route" data-route="settings">
+      <div class="settings-shell">
+        <div>
+          <!-- Project settings -->
+          <div class="settings-pane active" data-pane="project">
+            <h2 class="settings-pane-h">Project settings</h2>
+            <p class="settings-pane-sub">Core identity, workspace and behavior</p>
+            <div class="field-row">
+              <div><div class="field-label">Project name</div><div class="field-desc">Displayed in topbar and reports</div></div>
+              <div><input class="input" type="text" value="Acme CRM" style="width: 280px;"></div>
+            </div>
+            <div class="field-row">
+              <div><div class="field-label">Project code</div><div class="field-desc">Slug used in task IDs (e.g. ACME-T-101)</div></div>
+              <div><input class="input mono" type="text" value="ACME" style="width: 200px;"></div>
+            </div>
+            <div class="field-row">
+              <div><div class="field-label">Version</div><div class="field-desc">Bumped automatically on release</div></div>
+              <div><input class="input mono" type="text" value="0.1.0" style="width: 140px;"></div>
+            </div>
+            <div class="field-row">
+              <div><div class="field-label">Target platform</div><div class="field-desc">Multiple allowed &middot; affects stack defaults</div></div>
+              <div style="display: flex; gap: 6px;">
+                <button class="btn btn-primary btn-xs">Web</button>
+                <button class="btn btn-outline btn-xs">iOS</button>
+                <button class="btn btn-outline btn-xs">Android</button>
+                <button class="btn btn-outline btn-xs">Desktop</button>
+              </div>
+            </div>
+            <div class="field-row">
+              <div><div class="field-label">GitHub repository</div><div class="field-desc">Where agents commit</div></div>
+              <div style="display: flex; gap: 8px; align-items: center;"><input class="input mono" type="text" value="github.com/acme/acme-crm" style="width: 320px;"><button class="btn btn-ghost btn-xs">Open</button></div>
+            </div>
+            <div class="field-row">
+              <div><div class="field-label">Blueprint</div><div class="field-desc">Product vision document</div></div>
+              <div style="display: flex; gap: 8px; align-items: center;"><span class="mono" style="font-size: 13px; color: var(--tx-2);">blueprint.md</span><span style="font-size: 12px; color: var(--tx-3);">4.2 KB &middot; edited 4d ago</span><button class="btn btn-ghost btn-xs">View</button><button class="btn btn-ghost btn-xs">Replace</button></div>
+            </div>
+            <div class="field-row">
+              <div><div class="field-label">Auto-commit on transitions</div><div class="field-desc">Every status change creates a kortext meta-commit</div></div>
+              <div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+            </div>
+            <div class="field-row">
+              <div><div class="field-label">Require approval for PR merges</div><div class="field-desc">engineering-manager always asks +prime before merging to main</div></div>
+              <div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+            </div>
+            <div style="margin-top: 24px;"><button class="btn btn-primary btn-xs">Save changes</button></div>
+          </div>
+
+          <!-- Agents (now merged with Models) -->
+          <div class="settings-pane" data-pane="agents">
+            <h2 class="settings-pane-h">Agents</h2>
+            <p class="settings-pane-sub">14 personas &middot; 6 active &middot; configure model + view live status / identity</p>
+
+            <div style="display: flex; gap: 6px; margin-bottom: 16px; align-items: center;">
+              <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--tx-3); font-weight: 600; margin-right: 4px;">Quick preset</span>
+              <button class="btn btn-outline btn-xs">All Opus</button>
+              <button class="btn btn-outline btn-xs">All Sonnet</button>
+              <button class="btn btn-outline btn-xs">All Haiku</button>
+              <button class="btn btn-primary btn-xs">Balanced</button>
+              <span style="flex: 1;"></span>
+              <span style="font-size: 12px; color: var(--tx-3);">Daily est. <span class="mono" style="color: var(--tx-1);">$4.30</span> &middot; Monthly <span class="mono" style="color: var(--tx-1);">$129</span></span>
+            </div>
+
+            <div class="row-list">
+              <div class="row row-header" style="--cols: 32px 1.4fr 90px 1fr 90px 50px;">
+                <div></div><div>Persona &middot; Role</div><div>Status</div><div>Model</div><div>Tier</div><div>Cost</div>
+              </div>
+              <div class="row" style="--cols: 32px 1.4fr 90px 1fr 90px 50px;" onclick="openAgentDrawer('operation-manager')">
+                <div class="agent-avatar" style="background: #67E8F9; color: #0A0814; width: 26px; height: 26px; font-size: 10px;">OM</div>
+                <div><div class="mono actor-om" style="color: var(--tx-1); font-size: 13px;">+operation-manager</div><div style="color: var(--tx-3); font-size: 11px; margin-top: 2px;">Orchestrator</div></div>
+                <div style="display: flex; align-items: center; gap: 6px;"><span class="dot dot-active"></span><span style="color: var(--success); font-size: 12px;">working</span></div>
+                <select class="input" onclick="event.stopPropagation();" style="width: 100%; padding: 4px 8px; font-size: 12px;"><option>claude-opus-4-5</option><option>claude-sonnet-4-5</option><option>claude-haiku-3-5</option></select>
+                <span class="badge badge-purple">orchestrator</span>
+                <span class="mono" style="color: var(--tx-3); font-size: 12px;">$$$$</span>
+              </div>
+              <div class="row" style="--cols: 32px 1.4fr 90px 1fr 90px 50px;" onclick="openAgentDrawer('product-manager')">
+                <div class="agent-avatar" style="background: #3B82F6; width: 26px; height: 26px; font-size: 10px;">PM</div>
+                <div><div class="mono actor-pm" style="color: var(--tx-1); font-size: 13px;">+product-manager</div><div style="color: var(--tx-3); font-size: 11px; margin-top: 2px;">Product strategy &amp; backlog</div></div>
+                <div style="display: flex; align-items: center; gap: 6px;"><span class="dot dot-active"></span><span style="color: var(--success); font-size: 12px;">working</span></div>
+                <select class="input" onclick="event.stopPropagation();" style="width: 100%; padding: 4px 8px; font-size: 12px;"><option>claude-sonnet-4-5</option><option>claude-opus-4-5</option><option>claude-haiku-3-5</option></select>
+                <span class="badge badge-purple">manager</span>
+                <span class="mono" style="color: var(--tx-3); font-size: 12px;">$$$</span>
+              </div>
+              <div class="row" style="--cols: 32px 1.4fr 90px 1fr 90px 50px;" onclick="openAgentDrawer('engineering-manager')">
+                <div class="agent-avatar" style="background: #7C3AED; width: 26px; height: 26px; font-size: 10px;">EM</div>
+                <div><div class="mono actor-em" style="color: var(--tx-1); font-size: 13px;">+engineering-manager</div><div style="color: var(--tx-3); font-size: 11px; margin-top: 2px;">Code &amp; architecture review</div></div>
+                <div style="display: flex; align-items: center; gap: 6px;"><span class="dot dot-active"></span><span style="color: var(--success); font-size: 12px;">working</span></div>
+                <select class="input" onclick="event.stopPropagation();" style="width: 100%; padding: 4px 8px; font-size: 12px;"><option>claude-opus-4-5</option><option>claude-sonnet-4-5</option></select>
+                <span class="badge badge-purple">manager</span>
+                <span class="mono" style="color: var(--tx-3); font-size: 12px;">$$$$</span>
+              </div>
+              <div class="row" style="--cols: 32px 1.4fr 90px 1fr 90px 50px;" onclick="openAgentDrawer('delivery-manager')">
+                <div class="agent-avatar" style="background: #FB923C; width: 26px; height: 26px; font-size: 10px;">DM</div>
+                <div><div class="mono actor-dm" style="color: var(--tx-1); font-size: 13px;">+delivery-manager</div><div style="color: var(--tx-3); font-size: 11px; margin-top: 2px;">Release &amp; hotfix</div></div>
+                <div style="display: flex; align-items: center; gap: 6px;"><span class="dot dot-idle"></span><span style="color: var(--warning); font-size: 12px;">idle</span></div>
+                <select class="input" onclick="event.stopPropagation();" style="width: 100%; padding: 4px 8px; font-size: 12px;"><option>claude-haiku-3-5</option><option>claude-sonnet-4-5</option></select>
+                <span class="badge badge-purple">manager</span>
+                <span class="mono" style="color: var(--tx-3); font-size: 12px;">$</span>
+              </div>
+              <div class="row" style="--cols: 32px 1.4fr 90px 1fr 90px 50px;" onclick="openAgentDrawer('backend-developer')">
+                <div class="agent-avatar" style="background: #6366F1; width: 26px; height: 26px; font-size: 10px;">BD</div>
+                <div><div class="mono actor-bd" style="color: var(--tx-1); font-size: 13px;">+backend-developer</div><div style="color: var(--tx-3); font-size: 11px; margin-top: 2px;">Server &amp; APIs</div></div>
+                <div style="display: flex; align-items: center; gap: 6px;"><span class="dot dot-active"></span><span style="color: var(--success); font-size: 12px;">working</span></div>
+                <select class="input" onclick="event.stopPropagation();" style="width: 100%; padding: 4px 8px; font-size: 12px;"><option>claude-sonnet-4-5</option><option>claude-opus-4-5</option></select>
+                <span class="badge badge-blue">specialist</span>
+                <span class="mono" style="color: var(--tx-3); font-size: 12px;">$$$</span>
+              </div>
+              <div class="row" style="--cols: 32px 1.4fr 90px 1fr 90px 50px;" onclick="openAgentDrawer('frontend-developer')">
+                <div class="agent-avatar" style="background: #EC4899; width: 26px; height: 26px; font-size: 10px;">FD</div>
+                <div><div class="mono actor-fd" style="color: var(--tx-1); font-size: 13px;">+frontend-developer</div><div style="color: var(--tx-3); font-size: 11px; margin-top: 2px;">UI &amp; client logic</div></div>
+                <div style="display: flex; align-items: center; gap: 6px;"><span class="dot dot-active"></span><span style="color: var(--success); font-size: 12px;">working</span></div>
+                <select class="input" onclick="event.stopPropagation();" style="width: 100%; padding: 4px 8px; font-size: 12px;"><option>claude-sonnet-4-5</option><option>claude-haiku-3-5</option></select>
+                <span class="badge badge-blue">specialist</span>
+                <span class="mono" style="color: var(--tx-3); font-size: 12px;">$$$</span>
+              </div>
+              <div class="row" style="--cols: 32px 1.4fr 90px 1fr 90px 50px;" onclick="openAgentDrawer('designer')">
+                <div class="agent-avatar" style="background: #10B981; width: 26px; height: 26px; font-size: 10px;">Ds</div>
+                <div><div class="mono actor-ds" style="color: var(--tx-1); font-size: 13px;">+designer</div><div style="color: var(--tx-3); font-size: 11px; margin-top: 2px;">UI/UX design</div></div>
+                <div style="display: flex; align-items: center; gap: 6px;"><span class="dot dot-active"></span><span style="color: var(--success); font-size: 12px;">working</span></div>
+                <select class="input" onclick="event.stopPropagation();" style="width: 100%; padding: 4px 8px; font-size: 12px;"><option>claude-sonnet-4-5</option></select>
+                <span class="badge badge-blue">specialist</span>
+                <span class="mono" style="color: var(--tx-3); font-size: 12px;">$$$</span>
+              </div>
+              <div class="row" style="--cols: 32px 1.4fr 90px 1fr 90px 50px;" onclick="openAgentDrawer('qa-engineer')">
+                <div class="agent-avatar" style="background: #EAB308; width: 26px; height: 26px; font-size: 10px;">QA</div>
+                <div><div class="mono actor-qa" style="color: var(--tx-1); font-size: 13px;">+qa-engineer</div><div style="color: var(--tx-3); font-size: 11px; margin-top: 2px;">Tests &amp; verification</div></div>
+                <div style="display: flex; align-items: center; gap: 6px;"><span class="dot dot-active"></span><span style="color: var(--success); font-size: 12px;">working</span></div>
+                <select class="input" onclick="event.stopPropagation();" style="width: 100%; padding: 4px 8px; font-size: 12px;"><option>claude-haiku-3-5</option><option>claude-sonnet-4-5</option></select>
+                <span class="badge badge-neutral">utility</span>
+                <span class="mono" style="color: var(--tx-3); font-size: 12px;">$</span>
+              </div>
+              <div class="row" style="--cols: 32px 1.4fr 90px 1fr 90px 50px;" onclick="openAgentDrawer('db-admin')">
+                <div class="agent-avatar" style="background: #14B8A6; width: 26px; height: 26px; font-size: 10px;">DA</div>
+                <div><div class="mono actor-da" style="color: var(--tx-1); font-size: 13px;">+db-admin</div><div style="color: var(--tx-3); font-size: 11px; margin-top: 2px;">Schemas &amp; migrations</div></div>
+                <div style="display: flex; align-items: center; gap: 6px;"><span class="dot dot-idle"></span><span style="color: var(--warning); font-size: 12px;">idle</span></div>
+                <select class="input" onclick="event.stopPropagation();" style="width: 100%; padding: 4px 8px; font-size: 12px;"><option>claude-haiku-3-5</option></select>
+                <span class="badge badge-neutral">utility</span>
+                <span class="mono" style="color: var(--tx-3); font-size: 12px;">$</span>
+              </div>
+              <div class="row" style="--cols: 32px 1.4fr 90px 1fr 90px 50px;" onclick="openAgentDrawer('devops-engineer')">
+                <div class="agent-avatar" style="background: #EF4444; width: 26px; height: 26px; font-size: 10px;">DE</div>
+                <div><div class="mono actor-de" style="color: var(--tx-1); font-size: 13px;">+devops-engineer</div><div style="color: var(--tx-3); font-size: 11px; margin-top: 2px;">Infrastructure &amp; CI/CD</div></div>
+                <div style="display: flex; align-items: center; gap: 6px;"><span class="dot dot-blocked"></span><span style="color: var(--danger); font-size: 12px;">blocked</span></div>
+                <select class="input" onclick="event.stopPropagation();" style="width: 100%; padding: 4px 8px; font-size: 12px;"><option>claude-haiku-3-5</option></select>
+                <span class="badge badge-neutral">utility</span>
+                <span class="mono" style="color: var(--tx-3); font-size: 12px;">$</span>
+              </div>
+              <div class="row" style="--cols: 32px 1.4fr 90px 1fr 90px 50px;" onclick="openAgentDrawer('security-engineer')">
+                <div class="agent-avatar" style="background: #DC2626; width: 26px; height: 26px; font-size: 10px;">SE</div>
+                <div><div class="mono actor-se" style="color: var(--tx-1); font-size: 13px;">+security-engineer</div><div style="color: var(--tx-3); font-size: 11px; margin-top: 2px;">Security audits &amp; OWASP</div></div>
+                <div style="display: flex; align-items: center; gap: 6px;"><span class="dot dot-idle"></span><span style="color: var(--warning); font-size: 12px;">idle</span></div>
+                <select class="input" onclick="event.stopPropagation();" style="width: 100%; padding: 4px 8px; font-size: 12px;"><option>claude-sonnet-4-5</option></select>
+                <span class="badge badge-blue">specialist</span>
+                <span class="mono" style="color: var(--tx-3); font-size: 12px;">$$$</span>
+              </div>
+              <div class="row" style="--cols: 32px 1.4fr 90px 1fr 90px 50px;" onclick="openAgentDrawer('copywriter')">
+                <div class="agent-avatar" style="background: #84CC16; width: 26px; height: 26px; font-size: 10px;">CW</div>
+                <div><div class="mono" style="color: var(--tx-1); font-size: 13px;">+copywriter</div><div style="color: var(--tx-3); font-size: 11px; margin-top: 2px;">Product &amp; marketing copy</div></div>
+                <div style="display: flex; align-items: center; gap: 6px;"><span class="dot dot-active"></span><span style="color: var(--success); font-size: 12px;">working</span></div>
+                <select class="input" onclick="event.stopPropagation();" style="width: 100%; padding: 4px 8px; font-size: 12px;"><option>claude-sonnet-4-5</option></select>
+                <span class="badge badge-blue">specialist</span>
+                <span class="mono" style="color: var(--tx-3); font-size: 12px;">$$$</span>
+              </div>
+              <div class="row" style="--cols: 32px 1.4fr 90px 1fr 90px 50px;" onclick="openAgentDrawer('compliance-expert')">
+                <div class="agent-avatar" style="background: #22D3EE; color: #0A0814; width: 26px; height: 26px; font-size: 10px;">CE</div>
+                <div><div class="mono" style="color: var(--tx-1); font-size: 13px;">+compliance-expert</div><div style="color: var(--tx-3); font-size: 11px; margin-top: 2px;">Legal &amp; GDPR</div></div>
+                <div style="display: flex; align-items: center; gap: 6px;"><span class="dot dot-idle"></span><span style="color: var(--warning); font-size: 12px;">idle</span></div>
+                <select class="input" onclick="event.stopPropagation();" style="width: 100%; padding: 4px 8px; font-size: 12px;"><option>claude-haiku-3-5</option></select>
+                <span class="badge badge-neutral">utility</span>
+                <span class="mono" style="color: var(--tx-3); font-size: 12px;">$</span>
+              </div>
+              <div class="row" style="--cols: 32px 1.4fr 90px 1fr 90px 50px;" onclick="openAgentDrawer('growth-expert')">
+                <div class="agent-avatar" style="background: #F43F5E; width: 26px; height: 26px; font-size: 10px;">GE</div>
+                <div><div class="mono" style="color: var(--tx-1); font-size: 13px;">+growth-expert</div><div style="color: var(--tx-3); font-size: 11px; margin-top: 2px;">Acquisition &amp; metrics</div></div>
+                <div style="display: flex; align-items: center; gap: 6px;"><span class="dot dot-idle"></span><span style="color: var(--warning); font-size: 12px;">idle</span></div>
+                <select class="input" onclick="event.stopPropagation();" style="width: 100%; padding: 4px 8px; font-size: 12px;"><option>claude-haiku-3-5</option></select>
+                <span class="badge badge-neutral">utility</span>
+                <span class="mono" style="color: var(--tx-3); font-size: 12px;">$</span>
+              </div>
+            </div>
+            <p style="font-size: 12px; color: var(--tx-3); margin-top: 12px;">Model changes take effect on next pipeline run. Click any row to view live status &amp; persona definition.</p>
+          </div>
+
+          <!-- (Old Agents grid removed — merged into row table above) -->
+          <div class="settings-pane" data-pane="agents-grid-removed" style="display: none;">
+            <div class="agent-grid">
+              <div class="agent-card" onclick="openAgentDrawer('operation-manager')">
+                <div class="agent-head">
+                  <div class="agent-avatar" style="background: #67E8F9; color: #0A0814;">OM</div>
+                  <div>
+                    <div class="agent-name">operation-manager</div>
+                    <div class="agent-status"><span class="dot dot-active"></span> working</div>
+                  </div>
+                </div>
+                <div class="agent-role">Orchestrator</div>
+                <div class="agent-task">workflow-04 &middot; 31 decisions</div>
+              </div>
+              <div class="agent-card" onclick="openAgentDrawer('product-manager')">
+                <div class="agent-head">
+                  <div class="agent-avatar" style="background: #3B82F6;">PM</div>
+                  <div>
+                    <div class="agent-name">product-manager</div>
+                    <div class="agent-status"><span class="dot dot-active"></span> working</div>
+                  </div>
+                </div>
+                <div class="agent-role">Product strategy &amp; backlog</div>
+                <div class="agent-task">T-106 approval &middot; 18 decisions</div>
+              </div>
+              <div class="agent-card" onclick="openAgentDrawer('engineering-manager')">
+                <div class="agent-head">
+                  <div class="agent-avatar" style="background: #7C3AED;">EM</div>
+                  <div>
+                    <div class="agent-name">engineering-manager</div>
+                    <div class="agent-status"><span class="dot dot-active"></span> working</div>
+                  </div>
+                </div>
+                <div class="agent-role">Code &amp; architecture review</div>
+                <div class="agent-task">T-101 review &middot; 5 tasks done</div>
+              </div>
+              <div class="agent-card" onclick="openAgentDrawer('delivery-manager')">
+                <div class="agent-head">
+                  <div class="agent-avatar" style="background: #FB923C;">DM</div>
+                  <div>
+                    <div class="agent-name">delivery-manager</div>
+                    <div class="agent-status"><span class="dot dot-idle"></span> idle</div>
+                  </div>
+                </div>
+                <div class="agent-role">Release &amp; hotfix</div>
+                <div class="agent-task">last active 2h ago</div>
+              </div>
+              <div class="agent-card" onclick="openAgentDrawer('backend-developer')">
+                <div class="agent-head">
+                  <div class="agent-avatar" style="background: #6366F1;">BD</div>
+                  <div>
+                    <div class="agent-name">backend-developer</div>
+                    <div class="agent-status"><span class="dot dot-active"></span> working T-101</div>
+                  </div>
+                </div>
+                <div class="agent-role">Server &amp; APIs</div>
+                <div class="agent-task">T-101 OAuth &middot; 8 tasks done</div>
+              </div>
+              <div class="agent-card" onclick="openAgentDrawer('frontend-developer')">
+                <div class="agent-head">
+                  <div class="agent-avatar" style="background: #EC4899;">FD</div>
+                  <div>
+                    <div class="agent-name">frontend-developer</div>
+                    <div class="agent-status"><span class="dot dot-active"></span> working T-103</div>
+                  </div>
+                </div>
+                <div class="agent-role">UI &amp; client logic</div>
+                <div class="agent-task">T-103 dashboard &middot; 4 tasks done</div>
+              </div>
+              <div class="agent-card" onclick="openAgentDrawer('db-admin')">
+                <div class="agent-head">
+                  <div class="agent-avatar" style="background: #14B8A6;">DA</div>
+                  <div>
+                    <div class="agent-name">db-admin</div>
+                    <div class="agent-status"><span class="dot dot-idle"></span> idle</div>
+                  </div>
+                </div>
+                <div class="agent-role">Schemas &amp; migrations</div>
+                <div class="agent-task">T-104 done ✓</div>
+              </div>
+              <div class="agent-card" onclick="openAgentDrawer('qa-engineer')">
+                <div class="agent-head">
+                  <div class="agent-avatar" style="background: #EAB308;">QA</div>
+                  <div>
+                    <div class="agent-name">qa-engineer</div>
+                    <div class="agent-status"><span class="dot dot-active"></span> working T-103</div>
+                  </div>
+                </div>
+                <div class="agent-role">Tests &amp; verification</div>
+                <div class="agent-task">T-103 review &middot; 24 tests passed</div>
+              </div>
+              <div class="agent-card blocked" onclick="openAgentDrawer('devops-engineer')">
+                <div class="agent-head">
+                  <div class="agent-avatar" style="background: #EF4444;">DE</div>
+                  <div>
+                    <div class="agent-name">devops-engineer</div>
+                    <div class="agent-status"><span class="dot dot-blocked"></span> blocked</div>
+                  </div>
+                </div>
+                <div class="agent-role">Infrastructure &amp; CI/CD</div>
+                <div class="agent-task" style="color: var(--danger);">B-203 awaiting DNS config</div>
+              </div>
+              <div class="agent-card" onclick="openAgentDrawer('designer')">
+                <div class="agent-head">
+                  <div class="agent-avatar" style="background: #10B981;">Ds</div>
+                  <div>
+                    <div class="agent-name">designer</div>
+                    <div class="agent-status"><span class="dot dot-active"></span> working T-108</div>
+                  </div>
+                </div>
+                <div class="agent-role">UI/UX design &amp; visuals</div>
+                <div class="agent-task">T-108 onboarding &middot; 10m ago</div>
+              </div>
+              <div class="agent-card" onclick="openAgentDrawer('security-engineer')">
+                <div class="agent-head">
+                  <div class="agent-avatar" style="background: #DC2626;">SE</div>
+                  <div>
+                    <div class="agent-name">security-engineer</div>
+                    <div class="agent-status"><span class="dot dot-idle"></span> idle</div>
+                  </div>
+                </div>
+                <div class="agent-role">Security audits &amp; OWASP</div>
+                <div class="agent-task">A07 check ✓ passed</div>
+              </div>
+              <div class="agent-card" onclick="openAgentDrawer('copywriter')">
+                <div class="agent-head">
+                  <div class="agent-avatar" style="background: #84CC16;">CW</div>
+                  <div>
+                    <div class="agent-name">copywriter</div>
+                    <div class="agent-status"><span class="dot dot-active"></span> working T-105</div>
+                  </div>
+                </div>
+                <div class="agent-role">Product &amp; marketing copy</div>
+                <div class="agent-task">T-105 pricing &middot; T-106 review</div>
+              </div>
+              <div class="agent-card" onclick="openAgentDrawer('compliance-expert')">
+                <div class="agent-head">
+                  <div class="agent-avatar" style="background: #22D3EE; color: #0A0814;">CE</div>
+                  <div>
+                    <div class="agent-name">compliance-expert</div>
+                    <div class="agent-status"><span class="dot dot-idle"></span> idle</div>
+                  </div>
+                </div>
+                <div class="agent-role">Legal &amp; GDPR compliance</div>
+                <div class="agent-task">GDPR data flow check ✓</div>
+              </div>
+              <div class="agent-card" onclick="openAgentDrawer('growth-expert')">
+                <div class="agent-head">
+                  <div class="agent-avatar" style="background: #F43F5E;">GE</div>
+                  <div>
+                    <div class="agent-name">growth-expert</div>
+                    <div class="agent-status"><span class="dot dot-idle"></span> idle</div>
+                  </div>
+                </div>
+                <div class="agent-role">Acquisition &amp; metrics</div>
+                <div class="agent-task">waiting for analytics setup</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Rules -->
+          <div class="settings-pane" data-pane="rules">
+            <h2 class="settings-pane-h">Rules</h2>
+            <p class="settings-pane-sub">Behavior, branching, commands, models &middot; markdown definitions</p>
+            <div style="display: grid; grid-template-columns: 220px 1fr; gap: 16px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; min-height: 480px;">
+              <div style="background: var(--bg-1); border-right: 1px solid var(--border); padding: 8px;">
+                <div class="settings-nav-item active" style="padding: 6px 10px;"><i data-lucide="file-text" style="width: 13px; height: 13px;"></i> <span class="mono" style="font-size: 12px;">behavior.md</span></div>
+                <div class="settings-nav-item" style="padding: 6px 10px;"><i data-lucide="file-text" style="width: 13px; height: 13px;"></i> <span class="mono" style="font-size: 12px;">branching.md</span></div>
+                <div class="settings-nav-item" style="padding: 6px 10px;"><i data-lucide="file-text" style="width: 13px; height: 13px;"></i> <span class="mono" style="font-size: 12px;">commands.md</span></div>
+                <div class="settings-nav-item" style="padding: 6px 10px;"><i data-lucide="file-text" style="width: 13px; height: 13px;"></i> <span class="mono" style="font-size: 12px;">emergency.md</span></div>
+                <div class="settings-nav-item" style="padding: 6px 10px;"><i data-lucide="file-text" style="width: 13px; height: 13px;"></i> <span class="mono" style="font-size: 12px;">models.md</span></div>
+              </div>
+              <div style="display: flex; flex-direction: column;">
+                <div style="padding: 10px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between;">
+                  <span class="mono" style="font-size: 13px; color: var(--tx-2);">behavior.md</span>
+                  <div style="display: flex; gap: 6px;"><button class="btn btn-ghost btn-xs">Preview</button><button class="btn btn-outline btn-xs">Save</button></div>
+                </div>
+                <textarea style="flex: 1; background: transparent; border: none; outline: none; padding: 14px; color: var(--tx-2); font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.65; resize: none;" spellcheck="false"># behavior
+
+## Core rules
+
+- Single source of truth: `workspace/` directory.
+- Read-before-write on every persistent output.
+- Conventional Commits enforced by commit-msg hook.
+- Block on logical contradiction; escalate via chain of command.
+- Parallel work permitted on non-overlapping files (worktree isolation).
+- Authority chain: +prime > managers > specialists.</textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Workflows (md + diagram) -->
+          <div class="settings-pane" data-pane="workflows">
+            <h2 class="settings-pane-h">Workflows</h2>
+            <p class="settings-pane-sub">12 pipeline definitions &middot; markdown source + visual flow</p>
+            <div style="display: flex; gap: 4px; margin-bottom: 16px;">
+              <button class="btn btn-primary btn-xs" onclick="switchWfView(this, 'editor')">Markdown editor</button>
+              <button class="btn btn-ghost btn-xs" onclick="switchWfView(this, 'diagram')">Visual flow</button>
+            </div>
+
+            <!-- Editor view -->
+            <div data-wf="editor">
+              <div style="display: grid; grid-template-columns: 240px 1fr; gap: 16px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; min-height: 480px;">
+                <div style="background: var(--bg-1); border-right: 1px solid var(--border); padding: 8px;">
+                  <div class="settings-nav-item" style="padding: 6px 10px;"><span class="mono" style="font-size: 12px;">00-kortext-setup.md</span></div>
+                  <div class="settings-nav-item" style="padding: 6px 10px;"><span class="mono" style="font-size: 12px;">01a-analysis-pipeline.md</span></div>
+                  <div class="settings-nav-item" style="padding: 6px 10px;"><span class="mono" style="font-size: 12px;">01b-onboarding-pipeline.md</span></div>
+                  <div class="settings-nav-item" style="padding: 6px 10px;"><span class="mono" style="font-size: 12px;">02-planning-pipeline.md</span></div>
+                  <div class="settings-nav-item" style="padding: 6px 10px;"><span class="mono" style="font-size: 12px;">02b-spike-workflow.md</span></div>
+                  <div class="settings-nav-item" style="padding: 6px 10px;"><span class="mono" style="font-size: 12px;">03-environment-setup.md</span></div>
+                  <div class="settings-nav-item active" style="padding: 6px 10px;"><span class="mono" style="font-size: 12px;">04-development-cycle.md</span></div>
+                  <div class="settings-nav-item" style="padding: 6px 10px;"><span class="mono" style="font-size: 12px;">05-test-cycle.md</span></div>
+                  <div class="settings-nav-item" style="padding: 6px 10px;"><span class="mono" style="font-size: 12px;">06-deployment-cycle.md</span></div>
+                  <div class="settings-nav-item" style="padding: 6px 10px;"><span class="mono" style="font-size: 12px;">07-rollback-pipeline.md</span></div>
+                  <div class="settings-nav-item" style="padding: 6px 10px;"><span class="mono" style="font-size: 12px;">08-hotfix-pipeline.md</span></div>
+                  <div class="settings-nav-item" style="padding: 6px 10px;"><span class="mono" style="font-size: 12px;">09-maintenance-cycle.md</span></div>
+                </div>
+                <div style="display: flex; flex-direction: column;">
+                  <div style="padding: 10px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between;">
+                    <span class="mono" style="font-size: 13px; color: var(--tx-2);">04-development-cycle.md</span>
+                    <div style="display: flex; gap: 6px;"><button class="btn btn-ghost btn-xs">Preview</button><button class="btn btn-outline btn-xs">Save</button></div>
+                  </div>
+                  <textarea style="flex: 1; background: transparent; border: none; outline: none; padding: 14px; color: var(--tx-2); font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.65; resize: none;" spellcheck="false"># 04-development-cycle
+
+## Trigger
+After 02-planning-pipeline completes and backlog has items in Ready.
+
+## Steps
+1. analyze-blueprint — +operation-manager
+2. plan-pipeline — +operation-manager
+3. dispatch-agents — +operation-manager
+4. implementation — specialists in parallel
+5. code-review — +engineering-manager [GATE]
+6. integration-tests — +qa-engineer
+7. handover-to-qa — +operation-manager
+
+## Loops
+- Code review FAIL → return to step 4
+- QA gate FAIL → return to step 4</textarea>
+                </div>
+              </div>
+            </div>
+
+            <!-- Diagram view -->
+            <div data-wf="diagram" style="display: none;">
+              <div class="wf-diagram">
+                <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--tx-3); margin-bottom: 16px; font-weight: 600;">04-development-cycle &middot; visual flow</div>
+                <div class="wf-phase-row">
+                  <div class="wf-phase done"><div class="wf-phase-label">Step 1 ✓</div><div class="wf-phase-title">Analyze blueprint</div></div>
+                  <span class="wf-arrow">&rarr;</span>
+                  <div class="wf-phase done"><div class="wf-phase-label">Step 2 ✓</div><div class="wf-phase-title">Plan pipeline</div></div>
+                  <span class="wf-arrow">&rarr;</span>
+                  <div class="wf-phase done"><div class="wf-phase-label">Step 3 ✓</div><div class="wf-phase-title">Dispatch agents</div></div>
+                </div>
+                <div class="wf-phase-row">
+                  <div class="wf-phase active"><div class="wf-phase-label">Step 4 &middot; active</div><div class="wf-phase-title">Implementation</div></div>
+                  <span class="wf-arrow">&rarr;</span>
+                  <div class="wf-gate"><i data-lucide="git-merge" style="width: 12px; height: 12px;"></i> Code review gate</div>
+                  <span class="wf-loopback">&larr; FAIL → step 4</span>
+                </div>
+                <div class="wf-phase-row">
+                  <div class="wf-phase"><div class="wf-phase-label">Step 5</div><div class="wf-phase-title">Integration tests</div></div>
+                  <span class="wf-arrow">&rarr;</span>
+                  <div class="wf-gate"><i data-lucide="git-merge" style="width: 12px; height: 12px;"></i> QA gate</div>
+                  <span class="wf-loopback">&larr; FAIL → step 4</span>
+                </div>
+                <div class="wf-phase-row">
+                  <div class="wf-phase"><div class="wf-phase-label">Step 6</div><div class="wf-phase-title">Handover to QA</div></div>
+                  <span class="wf-arrow">&rarr;</span>
+                  <div style="font-size: 12px; color: var(--tx-3);">&rarr; <span class="mono">05-test-cycle</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hooks -->
+          <div class="settings-pane" data-pane="hooks">
+            <h2 class="settings-pane-h">Hooks</h2>
+            <p class="settings-pane-sub">Lifecycle event listeners &middot; toggle to enable/disable</p>
+            <div class="row-list">
+              <div class="row" style="--cols: 1fr auto;"><div><div style="color: var(--tx-1);">PreToolUse</div><div style="color: var(--tx-3); font-size: 12px; margin-top: 2px;">Runs before any tool call &middot; blocks dangerous patterns</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+              <div class="row" style="--cols: 1fr auto;"><div><div style="color: var(--tx-1);">PostToolUse</div><div style="color: var(--tx-3); font-size: 12px; margin-top: 2px;">Audit logger &middot; persists to audit.log</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+              <div class="row" style="--cols: 1fr auto;"><div><div style="color: var(--tx-1);">UserPromptSubmit</div><div style="color: var(--tx-3); font-size: 12px; margin-top: 2px;">Adds context (project, agent, date) when +prime types</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+              <div class="row" style="--cols: 1fr auto;"><div><div style="color: var(--tx-1);">SessionStart</div><div style="color: var(--tx-3); font-size: 12px; margin-top: 2px;">Loads workflow state &amp; memory on session resume</div></div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+              <div class="row" style="--cols: 1fr auto;"><div><div style="color: var(--tx-1);">HandoverStart</div><div style="color: var(--tx-3); font-size: 12px; margin-top: 2px;">Captures context bundle on persona handover</div></div><div class="toggle" onclick="this.classList.toggle('on')"></div></div>
+              <div class="row" style="--cols: 1fr auto;"><div><div style="color: var(--tx-1);">BlockerDetected</div><div style="color: var(--tx-3); font-size: 12px; margin-top: 2px;">Notify +prime when an agent reports it cannot proceed</div></div><div class="toggle" onclick="this.classList.toggle('on')"></div></div>
+            </div>
+          </div>
+
+          <!-- Integrations -->
+          <div class="settings-pane" data-pane="integrations">
+            <h2 class="settings-pane-h">Integrations</h2>
+            <p class="settings-pane-sub">External services connected to this project</p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div style="border: 1px solid var(--border); border-radius: 6px; padding: 14px;"><div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;"><i data-lucide="github" style="width: 16px; height: 16px;"></i><span style="color: var(--tx-1); font-size: 13px; font-weight: 500;">GitHub</span><span style="flex: 1;"></span><span class="badge badge-green">Connected</span></div><div style="font-size: 12px; color: var(--tx-3);"><span class="mono">acme/acme-crm</span></div></div>
+              <div style="border: 1px solid var(--border); border-radius: 6px; padding: 14px;"><div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;"><i data-lucide="cloud" style="width: 16px; height: 16px;"></i><span style="color: var(--tx-1); font-size: 13px; font-weight: 500;">Vercel</span><span style="flex: 1;"></span><span class="badge badge-green">Connected</span></div><div style="font-size: 12px; color: var(--tx-3);">Staging + production</div></div>
+              <div style="border: 1px solid var(--border); border-radius: 6px; padding: 14px;"><div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;"><i data-lucide="credit-card" style="width: 16px; height: 16px;"></i><span style="color: var(--tx-1); font-size: 13px; font-weight: 500;">Stripe</span><span style="flex: 1;"></span><span class="badge badge-amber">Test mode</span></div><div style="font-size: 12px; color: var(--tx-3);">Webhook T-102 in progress</div></div>
+              <div style="border: 1px solid var(--border); border-radius: 6px; padding: 14px;"><div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;"><i data-lucide="lock" style="width: 16px; height: 16px;"></i><span style="color: var(--tx-1); font-size: 13px; font-weight: 500;">Auth0</span><span style="flex: 1;"></span><span class="badge badge-green">Connected</span></div><div style="font-size: 12px; color: var(--tx-3);">acme-crm.us.auth0.com</div></div>
+              <div style="border: 1px solid var(--border); border-radius: 6px; padding: 14px; opacity: 0.55;"><div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;"><i data-lucide="slack" style="width: 16px; height: 16px;"></i><span style="color: var(--tx-1); font-size: 13px; font-weight: 500;">Slack</span><span style="flex: 1;"></span><button class="btn btn-outline btn-xs">Connect</button></div><div style="font-size: 12px; color: var(--tx-3);">Approval notifications</div></div>
+              <div style="border: 1px solid var(--border); border-radius: 6px; padding: 14px; opacity: 0.55;"><div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;"><i data-lucide="send" style="width: 16px; height: 16px;"></i><span style="color: var(--tx-1); font-size: 13px; font-weight: 500;">Telegram</span><span style="flex: 1;"></span><button class="btn btn-outline btn-xs">Connect</button></div><div style="font-size: 12px; color: var(--tx-3);">Approval notifications</div></div>
+            </div>
+          </div>
+
+          <!-- Environment -->
+          <div class="settings-pane" data-pane="environment">
+            <h2 class="settings-pane-h">Environment</h2>
+            <p class="settings-pane-sub">Project-specific variables and secrets available to agents</p>
+            <div class="row-list" style="margin-bottom: 16px;">
+              <div class="row row-header" style="--cols: 1fr 1fr 90px 60px;"><div>Key</div><div>Value</div><div>Type</div><div></div></div>
+              <div class="row" style="--cols: 1fr 1fr 90px 60px;"><span class="mono">ANTHROPIC_API_KEY</span><span class="mono" style="color: var(--tx-3); font-size: 12px;">sk-ant-•••••••1a2b</span><span class="badge badge-red">secret</span><button class="btn btn-ghost btn-xs">Edit</button></div>
+              <div class="row" style="--cols: 1fr 1fr 90px 60px;"><span class="mono">STRIPE_SECRET_KEY</span><span class="mono" style="color: var(--tx-3); font-size: 12px;">sk_live_•••••••3f4g</span><span class="badge badge-red">secret</span><button class="btn btn-ghost btn-xs">Edit</button></div>
+              <div class="row" style="--cols: 1fr 1fr 90px 60px;"><span class="mono">GITHUB_TOKEN</span><span class="mono" style="color: var(--tx-3); font-size: 12px;">ghp_•••••••9h0i</span><span class="badge badge-red">secret</span><button class="btn btn-ghost btn-xs">Edit</button></div>
+              <div class="row" style="--cols: 1fr 1fr 90px 60px;"><span class="mono">DATABASE_URL</span><span class="mono" style="color: var(--tx-3); font-size: 12px;">postgres://acme:••••@&hellip;</span><span class="badge badge-red">secret</span><button class="btn btn-ghost btn-xs">Edit</button></div>
+              <div class="row" style="--cols: 1fr 1fr 90px 60px;"><span class="mono">NODE_ENV</span><span class="mono" style="color: var(--tx-2); font-size: 12px;">production</span><span class="badge badge-neutral">string</span><button class="btn btn-ghost btn-xs">Edit</button></div>
+              <div class="row" style="--cols: 1fr 1fr 90px 60px;"><span class="mono">MAX_CONCURRENT_AGENTS</span><span class="mono" style="color: var(--tx-2); font-size: 12px;">3</span><span class="badge badge-neutral">number</span><button class="btn btn-ghost btn-xs">Edit</button></div>
+            </div>
+            <button class="btn btn-outline btn-xs"><i data-lucide="plus" style="width: 12px; height: 12px;"></i> Add variable</button>
+          </div>
+
+          <!-- Danger zone -->
+          <div class="settings-pane" data-pane="danger">
+            <h2 class="settings-pane-h" style="color: var(--danger);">Danger zone</h2>
+            <p class="settings-pane-sub">Irreversible actions &mdash; proceed with caution</p>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <div style="border: 1px solid rgba(245,158,11,0.25); border-radius: 8px; padding: 14px; display: flex; align-items: center; justify-content: space-between;"><div><div style="color: var(--tx-1); font-size: 13px; font-weight: 500;">Archive project</div><div style="color: var(--tx-3); font-size: 12px; margin-top: 2px;">Read-only mode. Agents stop, history preserved.</div></div><button class="btn btn-outline btn-xs" style="border-color: rgba(245,158,11,0.4); color: var(--warning);">Archive</button></div>
+              <div style="border: 1px solid rgba(239,68,68,0.25); border-radius: 8px; padding: 14px; display: flex; align-items: center; justify-content: space-between;"><div><div style="color: var(--tx-1); font-size: 13px; font-weight: 500;">Reset memory</div><div style="color: var(--tx-3); font-size: 12px; margin-top: 2px;">Clear all decisions, learned items, handovers. Backlog preserved.</div></div><button class="btn btn-danger btn-xs">Reset memory</button></div>
+              <div style="border: 1px solid rgba(239,68,68,0.25); border-radius: 8px; padding: 14px; display: flex; align-items: center; justify-content: space-between;"><div><div style="color: var(--tx-1); font-size: 13px; font-weight: 500;">Delete project</div><div style="color: var(--tx-3); font-size: 12px; margin-top: 2px;">Permanent. All data removed. Type project code to confirm.</div></div><button class="btn btn-danger btn-xs">Delete</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ============================== FOOTER (status bar) ============================== -->
+<footer class="footer">
+  <div class="footer-item"><span class="dot dot-active"></span><span style="color: var(--tx-1);">Acme CRM</span></div>
+  <div class="footer-divider"></div>
+  <div class="footer-item"><span class="dot dot-active"></span><span class="mono">6</span> active</div>
+  <div class="footer-item"><span class="dot dot-idle"></span><span class="mono">2</span> idle</div>
+  <div class="footer-item"><span class="dot dot-blocked"></span><span class="mono">1</span> blocked</div>
+  <div class="footer-divider"></div>
+  <div class="footer-item"><i data-lucide="zap" style="width: 12px; height: 12px;"></i> <span class="mono">~1.2K</span> tkn/s</div>
+  <div class="footer-item"><span class="mono">$4.30</span> today</div>
+  <div class="footer-divider"></div>
+  <div class="footer-item"><i data-lucide="git-branch" style="width: 12px; height: 12px;"></i> <span class="mono">feature/auth-42</span></div>
+  <div style="flex: 1;"></div>
+  <div class="footer-item"><span style="color: var(--tx-3);">workflow:</span> <span class="mono" style="color: var(--accent-soft);">04-development</span> <span class="mono" style="color: var(--tx-3);">4/7</span></div>
+</footer>
+
+<!-- ============================== TERMINAL PANEL (floating) ============================== -->
+<div class="term-panel" id="term-panel">
+  <div class="term-head" onclick="toggleTerminal()">
+    <span class="title"><span class="prompt-icon">&gt;_</span> kortext@acme-crm</span>
+    <div class="ctl">
+      <i data-lucide="minus" onclick="event.stopPropagation(); collapseTerminal()"></i>
+      <i data-lucide="x" onclick="event.stopPropagation(); collapseTerminal()"></i>
+    </div>
+  </div>
+  <div class="term-body">
+    <div>Welcome to kortext v0.1.0 — type <span style="color: var(--accent);">`!help`</span> for commands.</div>
+  </div>
+  <div class="term-footer">
+    <span class="term-prompt">+prime $</span>
+    <input type="text" placeholder="Type a command…">
+  </div>
+</div>
+
+<!-- ============================== INBOX DRAWER (bell click) ============================== -->
+<aside class="drawer drawer-wide" id="inbox-drawer">
+  <div class="drawer-header">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <i data-lucide="inbox" style="width: 16px; height: 16px; color: var(--accent);"></i>
+      <span style="font-size: 15px; font-weight: 600;">Inbox</span>
+      <span class="badge badge-red">5 pending</span>
+    </div>
+    <button class="btn btn-ghost btn-xs" onclick="closeInbox()"><i data-lucide="x" style="width: 14px; height: 14px;"></i></button>
+  </div>
+  <div class="drawer-body">
+    <div class="inbox-group-h"><span class="dot dot-warning"></span> Blueprint <span style="color: var(--tx-4);">·</span> <span style="color: var(--tx-4);">1</span></div>
+    <div class="inbox-item">
+      <div class="inbox-head">
+        <span class="inbox-title">Blueprint v2 approval &mdash; payments domain expansion</span>
+        <span class="inbox-ts">12m ago</span>
+      </div>
+      <div class="inbox-meta">Adds 3 new epics: subscription tiers (E-005), invoicing (E-006), refund processing (E-007). +28 tasks, ~$340 estimated agent cost over 2 weeks. <span class="mono actor-om">+operation-manager</span></div>
+      <div class="inbox-actions">
+        <button class="btn btn-success btn-xs"><i data-lucide="check" style="width: 12px; height: 12px;"></i> Approve</button>
+        <button class="btn btn-outline btn-xs">Revise</button>
+        <button class="btn btn-ghost btn-xs">Reject</button>
+      </div>
+    </div>
+
+    <div class="inbox-group-h"><span class="dot dot-accent"></span> ADR <span style="color: var(--tx-4);">·</span> <span style="color: var(--tx-4);">1</span></div>
+    <div class="inbox-item">
+      <div class="inbox-head">
+        <span class="inbox-title">Architecture decision: auth provider &mdash; Auth0 vs Clerk</span>
+        <span class="inbox-ts">28m ago</span>
+      </div>
+      <div class="inbox-meta">Recommendation: Auth0 &mdash; mature SSO, 50% cheaper at projected scale. Clerk has better DX but lock-in concerns. <span class="mono actor-em">+engineering-manager</span> &middot; <span class="mono">D-007</span></div>
+      <div class="inbox-actions">
+        <button class="btn btn-success btn-xs"><i data-lucide="check" style="width: 12px; height: 12px;"></i> Ratify</button>
+        <button class="btn btn-outline btn-xs">Revise</button>
+        <button class="btn btn-ghost btn-xs">Reject</button>
+      </div>
+    </div>
+
+    <div class="inbox-group-h"><span class="dot dot-info"></span> Report <span style="color: var(--tx-4);">·</span> <span style="color: var(--tx-4);">1</span></div>
+    <div class="inbox-item">
+      <div class="inbox-head">
+        <span class="inbox-title">Daily status report &mdash; Day 4</span>
+        <span class="inbox-ts">1h ago</span>
+      </div>
+      <div class="inbox-meta">Velocity 4 done / 6 in flight. B-203 blocker is sprint risk. On track for v0.5 staging by Day 6. <span class="mono actor-dm">+delivery-manager</span></div>
+      <div class="inbox-actions">
+        <button class="btn btn-success btn-xs"><i data-lucide="check" style="width: 12px; height: 12px;"></i> Approve</button>
+        <button class="btn btn-ghost btn-xs" onclick="showRoute('reports'); closeInbox();">Open report</button>
+      </div>
+    </div>
+
+    <div class="inbox-group-h"><span class="dot dot-live"></span> Deploy <span style="color: var(--tx-4);">·</span> <span style="color: var(--tx-4);">1</span></div>
+    <div class="inbox-item">
+      <div class="inbox-head">
+        <span class="inbox-title">Production deploy: <span class="mono">v0.4.2</span></span>
+        <span class="inbox-ts">2h ago</span>
+      </div>
+      <div class="inbox-meta">38 commits since v0.4.1 &middot; tests 47/47 passing &middot; rollback automated. Changeset: T-001 (auth), T-012 (CI/CD), T-008 (rate limit). <span class="mono actor-dm">+delivery-manager</span></div>
+      <div class="inbox-actions">
+        <button class="btn btn-success btn-xs"><i data-lucide="check" style="width: 12px; height: 12px;"></i> Authorize</button>
+        <button class="btn btn-outline btn-xs">Hold</button>
+        <button class="btn btn-ghost btn-xs">Reject</button>
+      </div>
+    </div>
+
+    <div class="inbox-group-h"><span class="dot dot-warning"></span> Security <span style="color: var(--tx-4);">·</span> <span style="color: var(--tx-4);">1</span></div>
+    <div class="inbox-item">
+      <div class="inbox-head">
+        <span class="inbox-title">New dependency: <span class="mono">stripe-sdk@14.0.0</span></span>
+        <span class="inbox-ts">3h ago</span>
+      </div>
+      <div class="inbox-meta">License MIT &middot; CVE scan clean &middot; 4 direct deps, 28 transitive. Requested for T-004 webhook. <span class="mono actor-se">+security-engineer</span></div>
+      <div class="inbox-actions">
+        <button class="btn btn-success btn-xs"><i data-lucide="check" style="width: 12px; height: 12px;"></i> Approve</button>
+        <button class="btn btn-outline btn-xs">Audit</button>
+        <button class="btn btn-ghost btn-xs">Reject</button>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ============================== TASK DRAWER ============================== -->
+<aside class="drawer" id="task-drawer">
+  <div class="drawer-header">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <span class="mono" id="td-id" style="font-size: 12px; color: var(--tx-3);">T-001</span>
+      <span class="badge badge-pink" id="td-badge">In progress</span>
+    </div>
+    <button class="btn btn-ghost btn-xs" onclick="closeTaskDrawer()"><i data-lucide="x" style="width: 14px; height: 14px;"></i></button>
+  </div>
+  <div class="drawer-body">
+    <h3 id="td-title" style="font-size: 17px; font-weight: 600; margin: 0 0 18px; line-height: 1.35;">JWT auth middleware implementation</h3>
+    <div class="drawer-kv">
+      <span class="k">Epic</span><span class="v" id="td-epic">E-001 Authentication</span>
+      <span class="k">Assignee</span><span class="v mono actor-bd" id="td-assignee">+backend-developer</span>
+      <span class="k">Priority</span><span class="v" id="td-prio">High</span>
+      <span class="k">Points</span><span class="v" id="td-pts">8</span>
+      <span class="k">Created</span><span class="v mono" id="td-created" style="font-size: 12px; color: var(--tx-3);">2026-05-10</span>
+    </div>
+
+    <div class="drawer-section-label">Description</div>
+    <p class="drawer-desc" id="td-desc">Express middleware to validate JWT tokens on protected routes. Handle token expiry, invalid signatures, and missing auth header gracefully.</p>
+
+    <div class="drawer-section-label">Acceptance criteria <span style="color: var(--tx-4); font-weight: 400; margin-left: 6px;">3/5</span></div>
+    <div class="ac-list" style="margin-bottom: 22px;">
+      <div class="ac-row done"><i data-lucide="check-circle" class="ac-check" style="width: 14px; height: 14px;"></i> OAuth provider config (Auth0)</div>
+      <div class="ac-row done"><i data-lucide="check-circle" class="ac-check" style="width: 14px; height: 14px;"></i> Callback URL handler</div>
+      <div class="ac-row done"><i data-lucide="check-circle" class="ac-check" style="width: 14px; height: 14px;"></i> Token refresh logic</div>
+      <div class="ac-row"><i data-lucide="circle" class="ac-uncheck" style="width: 14px; height: 14px;"></i> Unit tests (min 80% coverage)</div>
+      <div class="ac-row"><i data-lucide="circle" class="ac-uncheck" style="width: 14px; height: 14px;"></i> E2E auth flow test</div>
+    </div>
+
+    <div class="drawer-section-label">Activity</div>
+    <div class="drawer-activity">
+      <div><span class="ts">14:35</span> &middot; <span class="actor actor-bd">backend-developer</span> committed <span class="mono">auth/oauth.ts</span> &mdash; callback handler done</div>
+      <div><span class="ts">14:20</span> &middot; <span class="actor actor-em">engineering-manager</span> marked In Progress &middot; assigned <span class="actor actor-bd">backend-developer</span></div>
+      <div><span class="ts">14:14</span> &middot; <span class="actor actor-bd">backend-developer</span> accepted task &middot; confirmed scope</div>
+      <div><span class="ts">14:10</span> &middot; <span class="actor actor-pm">product-manager</span> created T-001 with AC × 5 &middot; priority HIGH</div>
+    </div>
+  </div>
+  <div class="drawer-footer">
+    <button class="btn btn-primary btn-xs">Move to Review</button>
+    <button class="btn btn-outline btn-xs">Mark blocked</button>
+    <button class="btn btn-ghost btn-xs">Add comment</button>
+  </div>
+</aside>
+
+<!-- ============================== EPIC DRAWER ============================== -->
+<aside class="drawer" id="epic-drawer">
+  <div class="drawer-header">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <span class="mono" id="ed-id" style="font-size: 12px; color: var(--tx-3);">E-001</span>
+      <span class="badge badge-purple">Strategic epic</span>
+    </div>
+    <button class="btn btn-ghost btn-xs" onclick="closeEpicDrawer()"><i data-lucide="x" style="width: 14px; height: 14px;"></i></button>
+  </div>
+  <div class="drawer-body">
+    <h3 id="ed-title" style="font-size: 17px; font-weight: 600; margin: 0 0 18px; line-height: 1.35;">Authentication &amp; Users</h3>
+    <div class="drawer-kv">
+      <span class="k">Owner</span><span class="v mono actor-pm">+product-manager</span>
+      <span class="k">Progress</span><span class="v">40% &middot; 2 of 5 done</span>
+      <span class="k">Created</span><span class="v mono" style="font-size: 12px; color: var(--tx-3);">2026-05-08</span>
+    </div>
+
+    <div class="drawer-section-label">Description</div>
+    <p class="drawer-desc">End-to-end authentication system: OAuth2 flow, JWT middleware, session management, password reset, MFA support, and admin role management. Foundation for all downstream user-aware features.</p>
+
+    <div class="drawer-section-label">Child items <span style="color: var(--tx-4); font-weight: 400; margin-left: 6px;">5</span></div>
+    <div style="display: flex; flex-direction: column; gap: 4px; margin-bottom: 22px;">
+      <div class="ac-row done"><span class="mono" style="color: var(--tx-3); font-size: 11px;">T-104</span><span style="text-decoration: line-through; color: var(--tx-3);">User table schema migration</span><span style="margin-left: auto;" class="badge badge-green">Done</span></div>
+      <div class="ac-row done"><span class="mono" style="color: var(--tx-3); font-size: 11px;">T-011</span><span style="text-decoration: line-through; color: var(--tx-3);">E2E auth test suite</span><span style="margin-left: auto;" class="badge badge-green">Done</span></div>
+      <div class="ac-row"><span class="mono" style="color: var(--tx-3); font-size: 11px;">T-001</span><span>JWT auth middleware</span><span style="margin-left: auto;" class="badge badge-pink">In progress</span></div>
+      <div class="ac-row"><span class="mono" style="color: var(--tx-3); font-size: 11px;">T-002</span><span>Login screens v3</span><span style="margin-left: auto;" class="badge badge-amber">Review</span></div>
+      <div class="ac-row"><span class="mono" style="color: var(--tx-3); font-size: 11px;">T-003</span><span>OAuth2 Google integration</span><span style="margin-left: auto;" class="badge badge-neutral">Backlog</span></div>
+    </div>
+
+    <div class="drawer-section-label">Activity</div>
+    <div class="drawer-activity">
+      <div><span class="ts">today</span> &middot; <span class="actor actor-pm">product-manager</span> approved scope expansion</div>
+      <div><span class="ts">2d ago</span> &middot; <span class="actor actor-em">engineering-manager</span> ratified architecture (Auth0)</div>
+      <div><span class="ts">3d ago</span> &middot; <span class="actor actor-pm">product-manager</span> created epic with 5 child tasks</div>
+    </div>
+  </div>
+  <div class="drawer-footer">
+    <button class="btn btn-primary btn-xs">Add task</button>
+    <button class="btn btn-outline btn-xs">Edit epic</button>
+  </div>
+</aside>
+
+<!-- ============================== AGENT DRAWER (Live + Profile) ============================== -->
+<aside class="drawer" id="agent-drawer">
+  <div class="drawer-header">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <div class="agent-avatar" style="background: #67E8F9; color: #0A0814; width: 32px; height: 32px;">OM</div>
+      <div>
+        <div style="font-size: 15px; font-weight: 600; color: var(--tx-1);">operation-manager</div>
+        <div style="font-size: 12px; color: var(--tx-3);">Orchestrator</div>
+      </div>
+    </div>
+    <button class="btn btn-ghost btn-xs" onclick="closeAgentDrawer()"><i data-lucide="x" style="width: 14px; height: 14px;"></i></button>
+  </div>
+  <div class="drawer-body" style="padding-top: 0; display: flex; flex-direction: column;">
+    <div class="tab-bar" style="margin-bottom: 20px; padding-top: 14px; flex-shrink: 0;">
+      <div class="tab active" onclick="switchAgentTab(this, 'live')">Live</div>
+      <div class="tab" onclick="switchAgentTab(this, 'profile')">Profile</div>
+    </div>
+
+    <div data-agent-tab="live">
+      <div class="drawer-kv">
+        <span class="k">Status</span><span class="v"><span class="dot dot-active" style="display: inline-block; margin-right: 4px;"></span> Working</span>
+        <span class="k">Model</span><span class="v mono">claude-opus-4-5</span>
+        <span class="k">Current task</span><span class="v">Advancing workflow step 3→4</span>
+        <span class="k">Tokens today</span><span class="v"><span class="mono">8,400 / 50,000</span></span>
+        <span class="k">Last activity</span><span class="v">4m ago</span>
+      </div>
+
+      <div class="drawer-section-label">Recent logs</div>
+      <div class="drawer-activity" style="margin-bottom: 22px;">
+        <div><span class="ts">14:10</span> &middot; workflow step 3→4 advanced &middot; deploy gate passed</div>
+        <div><span class="ts">13:58</span> &middot; dispatched <span class="actor actor-bd">backend-developer</span> → T-101</div>
+        <div><span class="ts">13:45</span> &middot; ADR-003 recorded: auth strategy approved</div>
+        <div><span class="ts">13:30</span> &middot; party session started · 3 participants</div>
+        <div><span class="ts">13:15</span> &middot; analysis pipeline completed · backlog seeded</div>
+      </div>
+
+      <div class="drawer-section-label">Completed today</div>
+      <div class="drawer-activity">
+        <div><i data-lucide="check" style="width: 11px; height: 11px; color: var(--success);"></i> T-101 dispatched to backend-developer</div>
+        <div><i data-lucide="check" style="width: 11px; height: 11px; color: var(--success);"></i> ADR-003 authored (auth strategy)</div>
+        <div><i data-lucide="check" style="width: 11px; height: 11px; color: var(--success);"></i> Workflow 04 initiated</div>
+        <div><i data-lucide="check" style="width: 11px; height: 11px; color: var(--success);"></i> Backlog seeded from blueprint</div>
+      </div>
+    </div>
+
+    <div data-agent-tab="profile" style="display: none; flex-direction: column; min-height: 0; flex: 1;">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px;">
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <span class="mono" style="font-size: 13px; color: var(--tx-1);">operation-manager.md</span>
+          <span class="badge badge-purple">Persona definition</span>
+        </div>
+        <div style="display: flex; gap: 6px;">
+          <button class="btn btn-ghost btn-xs"><i data-lucide="eye" style="width: 12px; height: 12px;"></i> Preview</button>
+          <button class="btn btn-outline btn-xs">Save</button>
+        </div>
+      </div>
+      <textarea spellcheck="false" style="flex: 1; min-height: 380px; background: var(--bg-1); border: 1px solid var(--border); border-radius: 6px; outline: none; padding: 14px 16px; color: var(--tx-2); font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.75; resize: none;"># operation-manager
+
+## Role
+Top-level orchestrator. Reports directly to +prime (human). Dispatches and coordinates all other agents through the pipeline lifecycle.
+
+## Authority
+- Start, pause, resume any pipeline
+- Issue handovers between any two agents
+- Halt blocked work and escalate to +prime
+- Allocate the worker pool across pipelines
+
+## Model
+Tier: orchestrator
+Default: claude-opus-4-5 (highest reasoning depth required for cross-agent coordination)
+
+## Reports to
++prime (human approval gate)
+
+## Directs
++engineering-manager, +product-manager, +delivery-manager, and any specialist when temporarily reassigned.
+
+## Decision rights
+- Pipeline selection from workflow catalog
+- Agent pool allocation per phase
+- When to invoke +prime for gate approval
+
+## Escalation triggers
+- Pipeline stalled &gt; 30 min with no progress event
+- Cost spike &gt; $50/hour
+- Two or more agents reporting same blocker</textarea>
+    </div>
+  </div>
+  <div class="drawer-footer">
+    <button class="btn btn-outline btn-xs"><i data-lucide="edit-2" style="width: 12px; height: 12px;"></i> Edit definition</button>
+    <button class="btn btn-ghost btn-xs">View full markdown</button>
+  </div>
+</aside>
+
+<!-- ============================== MEMORY DRAWER ============================== -->
+<aside class="drawer" id="mem-drawer">
+  <div class="drawer-header">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <span class="mono" id="md-id" style="font-size: 12px; color: var(--tx-3);">D-001</span>
+      <span class="badge badge-purple">Decision</span>
+    </div>
+    <button class="btn btn-ghost btn-xs" onclick="closeMemDrawer()"><i data-lucide="x" style="width: 14px; height: 14px;"></i></button>
+  </div>
+  <div class="drawer-body" style="display: flex; flex-direction: column; gap: 16px;">
+    <div>
+      <div class="drawer-section-label">Title</div>
+      <input class="input" type="text" value="Use PostgreSQL over MongoDB" style="width: 100%;">
+    </div>
+    <div>
+      <div class="drawer-section-label">Owner</div>
+      <input class="input mono" type="text" value="+db-admin" style="width: 100%;">
+    </div>
+    <div style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
+      <div class="drawer-section-label">Content</div>
+      <textarea class="input" style="width: 100%; flex: 1; min-height: 0; resize: none;">## Context
+Need a primary datastore for the CRM domain. Options: PostgreSQL, MongoDB, MySQL.
+
+## Decision
+**PostgreSQL 16** — relational model fits CRM domain (customers, deals, contacts, orgs).
+
+## Trade-offs
+- Schema rigidity helps with consistency at scale
+- JSONB columns cover semi-structured needs
+- Auth0 user_id integrates cleanly as FK
+
+## Consequences
+- All agents use Postgres adapter
+- Migrations via Drizzle ORM
+- DATABASE_URL secret in Environment</textarea>
+    </div>
+  </div>
+  <div class="drawer-footer">
+    <button class="btn btn-primary btn-xs">Save</button>
+    <button class="btn btn-ghost btn-xs" onclick="closeMemDrawer()">Cancel</button>
+  </div>
+</aside>
+
+<!-- ============================== COMMAND PALETTE ============================== -->
+<div class="cmd-overlay" id="cmd-overlay" onclick="if(event.target===this)closeCmdK()">
+  <div class="cmd-panel">
+    <div class="cmd-input-row">
+      <i data-lucide="search" style="width: 16px; height: 16px; color: var(--tx-3);"></i>
+      <input class="cmd-input" id="cmd-input" type="text" placeholder="Search routes, items, agents…">
+      <span class="cmdk-kbd">ESC</span>
+    </div>
+    <div class="cmd-list">
+      <div class="cmd-section">Navigate</div>
+      <div class="cmd-item" onclick="showRoute('dashboard'); closeCmdK();"><i data-lucide="layout-grid"></i><span>Dashboard</span></div>
+      <div class="cmd-item" onclick="showRoute('board'); closeCmdK();"><i data-lucide="kanban-square"></i><span>Board</span></div>
+      <div class="cmd-item" onclick="showRoute('memory'); closeCmdK();"><i data-lucide="brain"></i><span>Memory</span></div>
+      <div class="cmd-item" onclick="showRoute('reports'); closeCmdK();"><i data-lucide="file-text"></i><span>Reports</span></div>
+      <div class="cmd-item" onclick="showRoute('references'); closeCmdK();"><i data-lucide="book-open"></i><span>References</span></div>
+      <div class="cmd-item" onclick="showRoute('settings'); closeCmdK();"><i data-lucide="settings"></i><span>Settings</span></div>
+      <div class="cmd-section">Actions</div>
+      <div class="cmd-item" onclick="openInbox(); closeCmdK();"><i data-lucide="inbox"></i><span>Open inbox (5 pending)</span></div>
+      <div class="cmd-item" onclick="toggleTerminal(); closeCmdK();"><i data-lucide="terminal"></i><span>Toggle terminal</span></div>
+      <div class="cmd-item"><i data-lucide="plus"></i><span>New task</span></div>
+      <div class="cmd-item"><i data-lucide="play"></i><span>Start workflow…</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== REPORTS MODAL ============================== -->
+<div class="modal-overlay" id="rpt-modal" onclick="if(event.target===this)closeRptModal()">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0;">
+        <span id="rm-title" style="font-size: 17px; font-weight: 600; color: var(--tx-1);">Daily Status Report — Day 4</span>
+        <span id="rm-status" class="badge badge-amber">Pending review</span>
+      </div>
+      <button class="btn btn-ghost btn-xs" onclick="closeRptModal()"><i data-lucide="x" style="width: 14px; height: 14px;"></i></button>
+    </div>
+    <div class="modal-sub">
+      <span id="rm-avatar" class="mem-avatar avatar" style="background: #67E8F9; color: #0A0814; width: 18px; height: 18px; font-size: 9px;">OM</span>
+      <span>Generated by <span id="rm-gen" class="mono actor-om">operation-manager</span></span>
+      <span style="color: var(--tx-4);">·</span>
+      <span id="rm-ts" class="mono">Today 14:00</span>
+    </div>
+    <div class="modal-body">
+      <pre id="rm-body" class="rpt-body" style="margin: 0;">## Daily Status Report — Day 4</pre>
+      <div id="rm-revise-form" style="display: none; margin-top: 18px;">
+        <div class="drawer-section-label">Revision feedback</div>
+        <textarea id="rm-revise-text" class="input" placeholder="Explain what needs revision (min 5 characters)…" style="width: 100%; min-height: 120px; font-family: 'Inter', sans-serif; font-size: 13px; line-height: 1.5;" oninput="validateRevise()"></textarea>
+        <div style="font-size: 11px; color: var(--tx-3); margin-top: 6px;">Agent will receive your feedback and rerun the report.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <div id="rm-actions-default" style="display: flex; gap: 8px;">
+        <button class="btn btn-success btn-xs"><i data-lucide="check" style="width: 12px; height: 12px;"></i> Approve</button>
+        <button class="btn btn-outline btn-xs" onclick="showReviseForm()"><i data-lucide="message-square" style="width: 12px; height: 12px;"></i> Request revision</button>
+      </div>
+      <div id="rm-actions-revise" style="display: none; gap: 8px;">
+        <button class="btn btn-primary btn-xs" id="rm-send-revise" disabled onclick="sendRevise()"><i data-lucide="send" style="width: 12px; height: 12px;"></i> Send revision request</button>
+        <button class="btn btn-ghost btn-xs" onclick="cancelRevise()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== TOAST ============================== -->
+<div class="toast" id="toast">
+  <i data-lucide="check" style="width: 14px; height: 14px; color: var(--success);"></i>
+  <span id="toast-text">Saved</span>
+</div>
+
+<!-- ============================== SCRIPT ============================== -->
+<script>
+  const ROUTES = ['dashboard','board','memory','reports','references','settings'];
+  const SETTINGS_PANES = ['project','agents','rules','workflows','hooks','integrations','environment','danger'];
+  function showRoute(name, pane) {
+    if (!ROUTES.includes(name)) name = 'dashboard';
+    document.querySelectorAll('section.route').forEach(s => s.classList.toggle('active', s.dataset.route === name));
+    if (name === 'settings') {
+      if (!SETTINGS_PANES.includes(pane)) pane = 'project';
+      document.querySelectorAll('.settings-pane').forEach(p => p.classList.toggle('active', p.dataset.pane === pane));
+    }
+    document.querySelectorAll('.nav-item').forEach(n => {
+      let isActive;
+      if (name === 'settings') {
+        isActive = n.dataset.route === 'settings' && n.dataset.pane === pane;
+      } else {
+        isActive = n.dataset.route === name && !n.dataset.pane;
+      }
+      n.classList.toggle('active', isActive);
+    });
+    history.replaceState(null, '', '#' + name + (name === 'settings' && pane ? '/' + pane : ''));
+    window.scrollTo(0, 0);
+  }
+
+  // Sidebar (persistent collapsed state)
+  function toggleSidebar() {
+    const sb = document.querySelector('.sidebar');
+    sb.classList.toggle('collapsed');
+    try { localStorage.setItem('kortext_sidebar_collapsed', sb.classList.contains('collapsed')); } catch(e) {}
+  }
+
+  // Terminal
+  function toggleTerminal() {
+    const t = document.getElementById('term-panel');
+    t.classList.toggle('collapsed');
+    try { localStorage.setItem('kortext_terminal_collapsed', t.classList.contains('collapsed')); } catch(e) {}
+  }
+  function collapseTerminal() {
+    document.getElementById('term-panel').classList.add('collapsed');
+    try { localStorage.setItem('kortext_terminal_collapsed', 'true'); } catch(e) {}
+  }
+
+  // Timeline
+  function toggleTimeline() {
+    document.getElementById('tl-sidebar').classList.toggle('collapsed');
+  }
+
+  // Drawers
+  function openTaskDrawer(id) {
+    document.getElementById('td-id').textContent = id;
+    document.querySelector('.drawer-backdrop')?.classList.add('open') || createBackdrop();
+    document.getElementById('task-drawer').classList.add('open');
+  }
+  function closeTaskDrawer() {
+    document.getElementById('task-drawer').classList.remove('open');
+    document.querySelector('.drawer-backdrop')?.classList.remove('open');
+  }
+  function openEpicDrawer(id) {
+    document.getElementById('ed-id').textContent = id;
+    createBackdrop();
+    document.querySelector('.drawer-backdrop')?.classList.add('open');
+    document.getElementById('epic-drawer').classList.add('open');
+  }
+  function closeEpicDrawer() {
+    document.getElementById('epic-drawer').classList.remove('open');
+    document.querySelector('.drawer-backdrop')?.classList.remove('open');
+  }
+  function openAgentDrawer(id) {
+    createBackdrop();
+    document.querySelector('.drawer-backdrop')?.classList.add('open');
+    document.getElementById('agent-drawer').classList.add('open');
+  }
+  function closeAgentDrawer() {
+    document.getElementById('agent-drawer').classList.remove('open');
+    document.querySelector('.drawer-backdrop')?.classList.remove('open');
+  }
+  function openMemDrawer(e, id) {
+    if (e) e.stopPropagation();
+    document.getElementById('md-id').textContent = id;
+    createBackdrop();
+    document.querySelector('.drawer-backdrop')?.classList.add('open');
+    document.getElementById('mem-drawer').classList.add('open');
+  }
+  function closeMemDrawer() {
+    document.getElementById('mem-drawer').classList.remove('open');
+    document.querySelector('.drawer-backdrop')?.classList.remove('open');
+  }
+  function openInbox() {
+    createBackdrop();
+    document.querySelector('.drawer-backdrop')?.classList.add('open');
+    document.getElementById('inbox-drawer').classList.add('open');
+  }
+  function closeInbox() {
+    document.getElementById('inbox-drawer').classList.remove('open');
+    document.querySelector('.drawer-backdrop')?.classList.remove('open');
+  }
+
+  function createBackdrop() {
+    if (!document.querySelector('.drawer-backdrop')) {
+      const b = document.createElement('div');
+      b.className = 'drawer-backdrop';
+      b.onclick = () => {
+        closeTaskDrawer(); closeEpicDrawer(); closeAgentDrawer(); closeMemDrawer(); closeInbox();
+      };
+      document.body.appendChild(b);
+    }
+  }
+
+  // Tabs
+  function switchMemTab(el, tab) {
+    el.parentElement.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('section[data-route="memory"] [data-tab]').forEach(d => {
+      d.style.display = d.dataset.tab === tab ? '' : 'none';
+    });
+  }
+  function switchAgentTab(el, tab) {
+    el.parentElement.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('[data-agent-tab]').forEach(d => {
+      if (d.dataset.agentTab === tab) {
+        d.style.display = (tab === 'profile') ? 'flex' : 'block';
+      } else {
+        d.style.display = 'none';
+      }
+    });
+  }
+  function switchSettingsPane(el, pane) {
+    el.parentElement.querySelectorAll('.settings-nav-item').forEach(n => n.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('.settings-pane').forEach(p => {
+      p.classList.toggle('active', p.dataset.pane === pane);
+    });
+  }
+  function switchWfView(el, view) {
+    el.parentElement.querySelectorAll('button').forEach(b => { b.classList.remove('btn-primary'); b.classList.add('btn-ghost'); });
+    el.classList.remove('btn-ghost'); el.classList.add('btn-primary');
+    document.querySelectorAll('[data-wf]').forEach(d => {
+      d.style.display = d.dataset.wf === view ? '' : 'none';
+    });
+  }
+
+  // Command palette
+  function openCmdK() { document.getElementById('cmd-overlay').classList.add('open'); setTimeout(() => document.getElementById('cmd-input').focus(), 50); }
+  function closeCmdK() { document.getElementById('cmd-overlay').classList.remove('open'); document.getElementById('cmd-input').value = ''; }
+
+  // Reports modal
+  const REPORTS = {
+    daily: {
+      title: 'Daily Status Report — Day 4', status: 'Pending review', statusClass: 'badge-amber',
+      avatar: 'OM', avatarBg: '#67E8F9', avatarColor: '#0A0814',
+      gen: 'operation-manager', genClass: 'actor-om', ts: 'Today 14:00',
+      body: `## Daily Status Report — Day 4
+Generated: 2026-05-19 14:00 · operation-manager
+
+### Summary
+Development cycle step 4/7 is active. 6 agents are currently working,
+1 is blocked (devops-engineer — awaiting DNS config for B-203).
+
+### Completed Today
+- T-107 CI pipeline setup — DONE (devops-engineer)
+- T-104 DB schema migration — DONE (db-admin)
+
+### In Progress
+- T-101 OAuth login flow (backend-developer)
+- T-103 Dashboard skeleton (frontend-developer, qa-engineer reviewing)
+- T-102 Stripe webhook handler (backend-developer, queued)
+- T-105 Pricing page copy (copywriter)
+- T-108 Onboarding flow design (designer)
+
+### Blockers
+- B-203 Password reset email → spam (devops-engineer, awaiting DNS config)
+
+### Outlook
+On track for v0.5 staging by Day 6 unless B-203 slips past EOD.`
+    },
+    sprint: {
+      title: 'Sprint Progress Report — Week 1', status: 'Pending review', statusClass: 'badge-amber',
+      avatar: 'DM', avatarBg: '#FB923C', avatarColor: 'white',
+      gen: 'delivery-manager', genClass: 'actor-dm', ts: 'Today 13:30',
+      body: `## Sprint Progress Report — Week 1
+Generated: 2026-05-19 13:30 · delivery-manager
+
+### Velocity
+Planned: 8 tasks | Completed: 2 | In Progress: 4 | Blocked: 1
+Sprint health: AMBER — on track but B-203 is a risk
+
+### Backlog Burndown
+Week 1 target:    8 tasks
+Week 1 actual:    2 done + 4 in flight
+Projected end:    Day 7 (1 day late if B-203 unblocks today)
+
+### Quality Signals
+- E2E suite passing: 24/24 (T-011 done)
+- CI pipeline: green (T-107 deployed)
+- Security audit: PASSED (OWASP A07)
+
+### Risks
+- B-203 DNS config blocker (devops-engineer)
+- Stripe webhook handler (T-102) is queued behind T-101 OAuth completion
+
+### Recommendation
+Escalate B-203 if not resolved within 2h. All other tracks stable.`
+    },
+    security: {
+      title: 'Security Audit — OWASP A07 Auth Flow', status: 'Approved', statusClass: 'badge-green',
+      avatar: 'SE', avatarBg: '#DC2626', avatarColor: 'white',
+      gen: 'security-engineer', genClass: 'actor-se', ts: 'Today 14:16',
+      body: `## Security Audit Report — OWASP A07 Authentication
+Generated: 2026-05-19 14:16 · security-engineer · STATUS: PASSED
+
+### Checks Performed (OWASP A07:2021)
+- ✓ Password complexity enforced (min 12, mixed case, digits, symbols)
+- ✓ Rate limiting active (10 req/min per IP)
+- ✓ JWT signature verification with rotating keys
+- ✓ Refresh token rotation on use
+- ✓ Brute force protection (exponential backoff after 5 failures)
+- ✓ Session timeout (24h absolute, 30m idle)
+- ✓ MFA support via Auth0 (optional per user)
+- ✓ SIEM logging for all auth events
+
+### Coverage
+Routes audited: 14/14
+CWE references: CWE-287, CWE-307, CWE-384, CWE-613
+
+### Recommendation
+Ship to production. No outstanding findings.`
+    }
+  };
+
+  function openRptModal(id) {
+    const r = REPORTS[id]; if (!r) return;
+    document.getElementById('rm-title').textContent = r.title;
+    const statusEl = document.getElementById('rm-status');
+    statusEl.className = 'badge ' + r.statusClass;
+    statusEl.textContent = r.status;
+    const avEl = document.getElementById('rm-avatar');
+    avEl.textContent = r.avatar;
+    avEl.style.background = r.avatarBg;
+    avEl.style.color = r.avatarColor;
+    const genEl = document.getElementById('rm-gen');
+    genEl.textContent = r.gen;
+    genEl.className = 'mono ' + r.genClass;
+    document.getElementById('rm-ts').textContent = r.ts;
+    document.getElementById('rm-body').textContent = r.body;
+    // Reset to default action view
+    cancelRevise();
+    // Hide actions if already approved
+    if (r.status === 'Approved') {
+      document.getElementById('rm-actions-default').style.display = 'none';
+      document.getElementById('rm-actions-revise').style.display = 'none';
+    } else {
+      document.getElementById('rm-actions-default').style.display = 'flex';
+    }
+    document.getElementById('rpt-modal').classList.add('open');
+    if (window.lucide) setTimeout(() => lucide.createIcons(), 30);
+  }
+  function closeRptModal() {
+    document.getElementById('rpt-modal').classList.remove('open');
+    cancelRevise();
+  }
+  function showReviseForm() {
+    document.getElementById('rm-revise-form').style.display = '';
+    document.getElementById('rm-actions-default').style.display = 'none';
+    document.getElementById('rm-actions-revise').style.display = 'flex';
+    setTimeout(() => document.getElementById('rm-revise-text').focus(), 50);
+  }
+  function cancelRevise() {
+    document.getElementById('rm-revise-form').style.display = 'none';
+    document.getElementById('rm-actions-default').style.display = 'flex';
+    document.getElementById('rm-actions-revise').style.display = 'none';
+    const ta = document.getElementById('rm-revise-text');
+    if (ta) ta.value = '';
+    const btn = document.getElementById('rm-send-revise');
+    if (btn) btn.disabled = true;
+  }
+  function validateRevise() {
+    const text = document.getElementById('rm-revise-text').value.trim();
+    document.getElementById('rm-send-revise').disabled = text.length < 5;
+  }
+  function sendRevise() {
+    showToast('Revision request sent to agent');
+    closeRptModal();
+  }
+
+  // References file selection
+  function selectRefFile(el) {
+    el.parentElement.querySelectorAll('.md-file').forEach(f => f.classList.remove('active'));
+    el.classList.add('active');
+    const name = el.querySelector('.md-file-name').textContent;
+    const editor = document.querySelector('section[data-route="references"] .md-editor-title .filename');
+    if (editor) editor.textContent = name;
+  }
+
+  // Keyboard
+  document.addEventListener('keydown', e => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      e.preventDefault();
+      const open = document.getElementById('cmd-overlay').classList.contains('open');
+      if (open) closeCmdK(); else openCmdK();
+    }
+    if (e.key === 'Escape') {
+      closeCmdK(); closeTaskDrawer(); closeEpicDrawer(); closeAgentDrawer(); closeMemDrawer(); closeInbox(); closeRptModal();
+    }
+  });
+
+  // Toast
+  let toastTimer;
+  function showToast(text) {
+    document.getElementById('toast-text').textContent = text;
+    document.getElementById('toast').classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => document.getElementById('toast').classList.remove('show'), 2500);
+  }
+
+  // Inbox notification (incoming approvals → popup toast, click → open inbox)
+  function notifyApproval(title, persona) {
+    const t = document.getElementById('toast');
+    t.classList.remove('show');
+    t.replaceChildren();
+
+    const bell = document.createElement('i');
+    bell.setAttribute('data-lucide', 'bell');
+    bell.style.cssText = 'width:14px;height:14px;color:var(--signal);flex-shrink:0;';
+    t.appendChild(bell);
+
+    const txt = document.createElement('div');
+    txt.style.cssText = 'display:flex;flex-direction:column;gap:2px;min-width:0;';
+    const titleEl = document.createElement('span');
+    titleEl.style.cssText = 'font-size:13px;color:var(--tx-1);font-weight:500;';
+    titleEl.textContent = 'New approval · ' + title;
+    txt.appendChild(titleEl);
+    const subEl = document.createElement('span');
+    subEl.style.cssText = 'font-size:12px;color:var(--tx-3);';
+    const personaSpan = document.createElement('span');
+    personaSpan.className = 'mono';
+    personaSpan.style.color = 'var(--accent-soft)';
+    personaSpan.textContent = persona;
+    subEl.appendChild(personaSpan);
+    subEl.appendChild(document.createTextNode(' · just now'));
+    txt.appendChild(subEl);
+    t.appendChild(txt);
+
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-outline btn-xs';
+    btn.textContent = 'Open';
+    btn.style.marginLeft = '6px';
+    btn.onclick = () => { openInbox(); t.classList.remove('show'); };
+    t.appendChild(btn);
+
+    if (window.lucide) lucide.createIcons();
+    requestAnimationFrame(() => t.classList.add('show'));
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 8000);
+  }
+
+  // Init
+  window.addEventListener('load', () => {
+    // Restore persisted UI state
+    try {
+      if (localStorage.getItem('kortext_sidebar_collapsed') === 'true') {
+        document.querySelector('.sidebar').classList.add('collapsed');
+      }
+      if (localStorage.getItem('kortext_terminal_collapsed') === 'true') {
+        document.getElementById('term-panel').classList.add('collapsed');
+      }
+    } catch(e) {}
+    if (window.lucide) lucide.createIcons();
+    const hash = (window.location.hash.replace('#', '') || 'dashboard').split('/');
+    showRoute(hash[0], hash[1]);
+    setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 100);
+
+    // Demo incoming approval notification (mockup)
+    setTimeout(() => notifyApproval('Production deploy v0.4.3', '+delivery-manager'), 7000);
+  });
+</script>
+</body>
+</html>

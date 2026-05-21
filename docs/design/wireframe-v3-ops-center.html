@@ -1,0 +1,1795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kortext v3 — Operations Center</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  :root {
+    --bg-0: #0A0814;
+    --bg-1: #14101F;
+    --bg-2: #1E1830;
+    --bg-3: #2A2240;
+    --tx-1: #FAFAFC;
+    --tx-2: #B5B0C2;
+    --tx-3: #6B6577;
+    --tx-4: #3F3B4F;
+    --accent: #A855F7;
+    --accent-soft: #C084FC;
+    --accent-deep: #7C3AED;
+    --signal: #EC4899;
+    --success: #10B981;
+    --warning: #F59E0B;
+    --danger: #EF4444;
+    --info: #3B82F6;
+    --border: rgba(255,255,255,0.08);
+    --border-s: rgba(255,255,255,0.05);
+    --border-strong: rgba(255,255,255,0.16);
+  }
+  * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+  html, body { background: var(--bg-0); color: var(--tx-1); font-family: 'Inter', sans-serif; margin: 0; padding: 0; height: 100vh; overflow: hidden; font-size: 14px; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* Topbar */
+  .topbar { height: 48px; border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 16px; gap: 12px; flex-shrink: 0; }
+  .logo-mark { width: 22px; height: 22px; border-radius: 5px; background: linear-gradient(135deg, var(--accent) 0%, var(--signal) 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 12px; font-family: 'JetBrains Mono', monospace; }
+  .divider { width: 1px; height: 16px; background: var(--border); }
+  .cmdk-trigger { background: var(--bg-1); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; display: flex; align-items: center; gap: 8px; color: var(--tx-3); font-size: 13px; cursor: pointer; min-width: 240px; }
+  .cmdk-trigger:hover { border-color: var(--border-strong); }
+  .cmdk-kbd { font-size: 11px; background: var(--bg-2); border: 1px solid var(--border); padding: 1px 5px; border-radius: 3px; font-family: 'JetBrains Mono', monospace; }
+  .status-pill { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--tx-2); }
+  .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .dot-live { background: var(--signal); animation: pulse 1.6s ease-in-out infinite; }
+  .dot-success { background: var(--success); }
+  .dot-warning { background: var(--warning); }
+  .dot-danger { background: var(--danger); }
+  .dot-idle { background: var(--tx-4); }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  /* Sidebar */
+  .layout { display: flex; height: calc(100vh - 48px); }
+  .sidebar { width: 56px; background: var(--bg-1); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 12px 0; flex-shrink: 0; transition: width 200ms ease-out; overflow: hidden; }
+  .sidebar:hover { width: 200px; }
+  .nav-item { display: flex; align-items: center; gap: 12px; padding: 8px 18px; color: var(--tx-3); cursor: pointer; transition: color 200ms, background 200ms; white-space: nowrap; font-size: 13px; height: 36px; }
+  .nav-item:hover { color: var(--tx-1); background: var(--bg-2); }
+  .nav-item.active { color: var(--accent); }
+  .nav-item.active::before { content: ''; position: absolute; left: 0; width: 2px; height: 20px; background: var(--accent); }
+  .nav-item { position: relative; }
+  .nav-item i { width: 16px; height: 16px; flex-shrink: 0; }
+  .nav-label { opacity: 0; transition: opacity 200ms; }
+  .sidebar:hover .nav-label { opacity: 1; }
+  .nav-spacer { flex: 1; }
+  .nav-section { padding: 12px 18px 4px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--tx-4); opacity: 0; transition: opacity 200ms; }
+  .sidebar:hover .nav-section { opacity: 1; }
+
+  /* Main */
+  .main { flex: 1; overflow-y: auto; }
+  .route { display: none; padding: 24px 32px; }
+  .route.active { display: block; }
+  .route-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+  .route-title { font-size: 20px; font-weight: 600; color: var(--tx-1); }
+  .route-sub { font-size: 13px; color: var(--tx-3); margin-top: 2px; }
+
+  /* Buttons */
+  .btn { font-size: 13px; padding: 6px 12px; border-radius: 6px; font-weight: 500; cursor: pointer; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 6px; transition: all 200ms ease-out; font-family: inherit; }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: var(--accent-soft); }
+  .btn-outline { background: transparent; border-color: var(--border-strong); color: var(--tx-1); }
+  .btn-outline:hover { background: var(--bg-2); }
+  .btn-ghost { background: transparent; color: var(--tx-2); }
+  .btn-ghost:hover { background: var(--bg-2); color: var(--tx-1); }
+  .btn-xs { padding: 3px 8px; font-size: 12px; }
+  .btn-danger { background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.3); color: var(--danger); }
+  .btn-danger:hover { background: rgba(239, 68, 68, 0.2); }
+  .btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+
+  /* Inputs */
+  .input { background: var(--bg-1); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; color: var(--tx-1); font-size: 13px; font-family: inherit; outline: none; }
+  .input:focus { border-color: var(--accent); }
+  textarea.input { resize: vertical; min-height: 80px; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.5; }
+
+  /* KPI Tiles */
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+  .kpi { border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .kpi-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--tx-3); margin-bottom: 8px; }
+  .kpi-value { font-size: 24px; font-weight: 600; color: var(--tx-1); font-family: 'JetBrains Mono', monospace; }
+  .kpi-meta { font-size: 12px; color: var(--tx-3); margin-top: 4px; }
+
+  /* Region */
+  .region { border-top: 1px solid var(--border); padding-top: 20px; margin-bottom: 32px; }
+  .region-title { font-size: 13px; font-weight: 600; color: var(--tx-1); margin-bottom: 4px; }
+  .region-sub { font-size: 12px; color: var(--tx-3); margin-bottom: 16px; }
+
+  /* Row list (Vercel style) */
+  .row-list { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .row { display: grid; grid-template-columns: var(--cols, 1fr); align-items: center; gap: 16px; padding: 14px 16px; border-bottom: 1px solid var(--border); font-size: 13px; cursor: pointer; transition: background 200ms; }
+  .row:hover { background: var(--bg-1); }
+  .row:last-child { border-bottom: none; }
+  .row-header { background: var(--bg-1); cursor: default; padding: 10px 16px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--tx-3); }
+  .row-header:hover { background: var(--bg-1); }
+  .row-meta { color: var(--tx-3); font-size: 12px; }
+
+  /* Badges */
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; line-height: 1.4; }
+  .badge-purple { background: rgba(168, 85, 247, 0.15); color: var(--accent-soft); border: 1px solid rgba(168, 85, 247, 0.3); }
+  .badge-pink { background: rgba(236, 72, 153, 0.14); color: #F472B6; border: 1px solid rgba(236, 72, 153, 0.25); }
+  .badge-blue { background: rgba(59, 130, 246, 0.14); color: #60A5FA; border: 1px solid rgba(59, 130, 246, 0.25); }
+  .badge-amber { background: rgba(245, 158, 11, 0.14); color: #FBBF24; border: 1px solid rgba(245, 158, 11, 0.25); }
+  .badge-green { background: rgba(16, 185, 129, 0.14); color: #34D399; border: 1px solid rgba(16, 185, 129, 0.25); }
+  .badge-red { background: rgba(239, 68, 68, 0.14); color: #F87171; border: 1px solid rgba(239, 68, 68, 0.25); }
+  .badge-neutral { background: var(--bg-2); color: var(--tx-2); border: 1px solid var(--border); }
+
+  /* Kanban */
+  .kanban { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; min-height: 600px; }
+  .kanban-col { background: var(--bg-1); border: 1px solid var(--border); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .kanban-col-header { display: flex; align-items: center; justify-content: space-between; padding: 4px 4px 8px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+  .kanban-col-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--tx-3); font-weight: 600; }
+  .kanban-col-count { font-size: 11px; color: var(--tx-3); font-family: 'JetBrains Mono', monospace; }
+  .kanban-card { border: 1px solid var(--border); border-radius: 6px; padding: 10px; cursor: pointer; transition: border-color 200ms; background: var(--bg-0); }
+  .kanban-card:hover { border-color: var(--border-strong); }
+  .kc-head { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+  .kc-id { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--tx-3); }
+  .kc-type { font-size: 10px; padding: 1px 5px; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }
+  .kc-title { font-size: 13px; color: var(--tx-1); line-height: 1.35; margin-bottom: 8px; }
+  .kc-foot { display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--tx-3); }
+
+  /* Tabs */
+  .tab-bar { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+  .tab { padding: 8px 14px; font-size: 13px; color: var(--tx-3); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color 200ms, border-color 200ms; }
+  .tab:hover { color: var(--tx-1); }
+  .tab.active { color: var(--accent); border-color: var(--accent); font-weight: 500; }
+
+  /* Filter chips */
+  .chip-bar { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+  .chip { padding: 4px 10px; font-size: 12px; color: var(--tx-2); background: var(--bg-1); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; transition: all 200ms; }
+  .chip:hover { color: var(--tx-1); border-color: var(--border-strong); }
+  .chip.active { color: var(--accent); border-color: var(--accent); background: rgba(168, 85, 247, 0.08); }
+
+  /* Drawer */
+  .drawer-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 50; opacity: 0; pointer-events: none; transition: opacity 200ms; }
+  .drawer-backdrop.open { opacity: 1; pointer-events: auto; }
+  .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 520px; background: var(--bg-0); border-left: 1px solid var(--border); z-index: 60; transform: translateX(100%); transition: transform 250ms cubic-bezier(0.16, 1, 0.3, 1); display: flex; flex-direction: column; }
+  .drawer.open { transform: translateX(0); }
+  .drawer-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .drawer-body { flex: 1; overflow-y: auto; padding: 20px; }
+  .drawer-footer { border-top: 1px solid var(--border); padding: 14px 20px; display: flex; gap: 8px; flex-shrink: 0; }
+
+  /* Inline expand */
+  .expand-body { display: none; padding: 16px; background: var(--bg-1); border-top: 1px solid var(--border); }
+  .expand-body.open { display: block; }
+
+  /* Library editor */
+  .lib-shell { display: grid; grid-template-columns: 240px 1fr; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; height: 540px; }
+  .lib-files { background: var(--bg-1); border-right: 1px solid var(--border); overflow-y: auto; padding: 8px; }
+  .lib-file { padding: 6px 10px; font-size: 13px; color: var(--tx-2); cursor: pointer; border-radius: 4px; display: flex; align-items: center; gap: 6px; }
+  .lib-file:hover { background: var(--bg-2); color: var(--tx-1); }
+  .lib-file.active { background: rgba(168, 85, 247, 0.12); color: var(--accent); }
+  .lib-file .mono { font-size: 12px; }
+  .lib-editor { display: flex; flex-direction: column; }
+  .lib-editor-header { padding: 10px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+  .lib-editor-body { flex: 1; padding: 16px; overflow-y: auto; }
+  .lib-editor textarea { width: 100%; height: 100%; background: transparent; border: none; outline: none; color: var(--tx-2); font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.6; resize: none; }
+
+  /* Command palette */
+  .cmd-overlay { position: fixed; inset: 0; background: rgba(10, 8, 20, 0.6); z-index: 100; display: none; align-items: flex-start; justify-content: center; padding-top: 120px; }
+  .cmd-overlay.open { display: flex; }
+  .cmd-panel { width: 560px; background: var(--bg-1); border: 1px solid var(--border-strong); border-radius: 8px; overflow: hidden; }
+  .cmd-input-row { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+  .cmd-input { flex: 1; background: transparent; border: none; outline: none; color: var(--tx-1); font-size: 15px; font-family: inherit; }
+  .cmd-list { max-height: 360px; overflow-y: auto; padding: 6px; }
+  .cmd-item { padding: 8px 12px; display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--tx-2); cursor: pointer; border-radius: 6px; }
+  .cmd-item:hover, .cmd-item.focus { background: var(--bg-2); color: var(--tx-1); }
+  .cmd-item i { width: 14px; height: 14px; color: var(--tx-3); }
+  .cmd-section { padding: 8px 12px 4px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--tx-4); }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--bg-2); border: 1px solid var(--border-strong); border-radius: 6px; padding: 10px 14px; font-size: 13px; color: var(--tx-1); z-index: 200; display: flex; align-items: center; gap: 8px; transform: translateY(20px); opacity: 0; pointer-events: none; transition: all 250ms; }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* Settings tabs (sub) */
+  .settings-shell { display: grid; grid-template-columns: 180px 1fr; gap: 32px; }
+  .settings-nav { display: flex; flex-direction: column; gap: 2px; }
+  .settings-nav-item { padding: 7px 12px; font-size: 13px; color: var(--tx-3); cursor: pointer; border-radius: 6px; transition: all 200ms; }
+  .settings-nav-item:hover { color: var(--tx-1); background: var(--bg-1); }
+  .settings-nav-item.active { color: var(--accent); background: rgba(168, 85, 247, 0.08); }
+  .settings-nav-item.danger { color: var(--danger); }
+  .settings-pane { display: none; }
+  .settings-pane.active { display: block; }
+  .field-row { display: grid; grid-template-columns: 200px 1fr; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .field-row:last-child { border-bottom: none; }
+  .field-label { font-size: 13px; color: var(--tx-2); }
+  .field-desc { font-size: 12px; color: var(--tx-3); margin-top: 2px; }
+  .toggle { width: 36px; height: 20px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 999px; position: relative; cursor: pointer; transition: background 200ms; }
+  .toggle::after { content: ''; position: absolute; top: 1px; left: 1px; width: 16px; height: 16px; background: var(--tx-2); border-radius: 50%; transition: all 200ms; }
+  .toggle.on { background: var(--accent); border-color: var(--accent); }
+  .toggle.on::after { left: 17px; background: white; }
+
+  /* Pipeline step tree */
+  .step-tree { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--tx-2); line-height: 1.7; }
+  .step-tree-row { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
+  .step-tree-row .dot { width: 7px; height: 7px; }
+  .log-line { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--tx-3); padding: 2px 0; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--bg-3); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--tx-4); }
+
+  /* Focus ring */
+  *:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+
+<!-- ============================== TOPBAR ============================== -->
+<header class="topbar">
+  <div class="logo-mark">K</div>
+  <span style="font-weight: 600; font-size: 14px;">Kortext</span>
+  <div class="divider"></div>
+  <span style="font-size: 13px; color: var(--tx-2);">Acme CRM</span>
+  <span class="badge badge-neutral mono" style="font-size: 10px;">v2.3.1</span>
+  <div style="flex: 1;"></div>
+  <button class="cmdk-trigger" onclick="openCmdK()">
+    <i data-lucide="search" style="width: 14px; height: 14px;"></i>
+    <span>Search&hellip;</span>
+    <span style="flex: 1;"></span>
+    <span class="cmdk-kbd">⌘K</span>
+  </button>
+  <div class="status-pill">
+    <span class="dot dot-live"></span>
+    <span>6 active</span>
+  </div>
+  <div class="divider"></div>
+  <div class="status-pill"><span style="color: var(--tx-3);">2 blocked</span></div>
+  <div class="divider"></div>
+  <div style="width: 28px; height: 28px; border-radius: 50%; background: var(--bg-2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: var(--tx-1);">EE</div>
+</header>
+
+<!-- ============================== LAYOUT ============================== -->
+<div class="layout">
+
+  <!-- =================== SIDEBAR =================== -->
+  <aside class="sidebar">
+    <div class="nav-section">Workspace</div>
+    <div class="nav-item active" data-route="overview" onclick="showRoute('overview')">
+      <i data-lucide="layout-grid"></i><span class="nav-label">Overview</span>
+    </div>
+    <div class="nav-item" data-route="backlog" onclick="showRoute('backlog')">
+      <i data-lucide="kanban-square"></i><span class="nav-label">Backlog</span>
+    </div>
+    <div class="nav-item" data-route="pipelines" onclick="showRoute('pipelines')">
+      <i data-lucide="git-branch"></i><span class="nav-label">Pipelines</span>
+    </div>
+    <div class="nav-item" data-route="approvals" onclick="showRoute('approvals')">
+      <i data-lucide="inbox"></i><span class="nav-label">Approvals</span>
+      <span style="margin-left: auto; font-size: 11px; color: var(--signal); font-family: 'JetBrains Mono', monospace;" class="nav-label">5</span>
+    </div>
+    <div class="nav-section">Knowledge</div>
+    <div class="nav-item" data-route="memory" onclick="showRoute('memory')">
+      <i data-lucide="brain"></i><span class="nav-label">Memory</span>
+    </div>
+    <div class="nav-item" data-route="library" onclick="showRoute('library')">
+      <i data-lucide="book-open"></i><span class="nav-label">Library</span>
+    </div>
+    <div class="nav-spacer"></div>
+    <div class="nav-item" data-route="settings" onclick="showRoute('settings')">
+      <i data-lucide="settings"></i><span class="nav-label">Settings</span>
+    </div>
+  </aside>
+
+  <!-- =================== MAIN =================== -->
+  <main class="main">
+
+    <!-- =============== OVERVIEW =============== -->
+    <section class="route active" data-route="overview">
+      <div class="route-header">
+        <div>
+          <h1 class="route-title">Overview</h1>
+          <p class="route-sub">Acme CRM &middot; <span class="mono">04-development-cycle</span> &middot; step 4/7</p>
+        </div>
+        <button class="btn btn-outline btn-xs"><i data-lucide="refresh-cw" style="width: 12px; height: 12px;"></i> Refresh</button>
+      </div>
+
+      <div class="kpi-row">
+        <div class="kpi">
+          <div class="kpi-label">Token rate</div>
+          <div class="kpi-value">1.2K<span style="font-size: 14px; color: var(--tx-3);">/s</span></div>
+          <div class="kpi-meta">last 60s avg</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Cost today</div>
+          <div class="kpi-value">$4.30</div>
+          <div class="kpi-meta">~$129/mo projected</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Active agents</div>
+          <div class="kpi-value">6<span style="font-size: 14px; color: var(--tx-3);">/14</span></div>
+          <div class="kpi-meta">8 idle</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Blocked</div>
+          <div class="kpi-value" style="color: var(--danger);">2</div>
+          <div class="kpi-meta">awaiting your input</div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1.6fr 1fr; gap: 24px; margin-bottom: 32px;">
+        <!-- Active Work -->
+        <div>
+          <div class="region-title">Active work</div>
+          <div class="region-sub">6 agents currently running tasks</div>
+          <div class="row-list">
+            <div class="row row-header" style="--cols: 24px 1fr auto auto;">
+              <div></div><div>Persona &middot; Task</div><div>Step</div><div>Elapsed</div>
+            </div>
+            <div class="row" style="--cols: 24px 1fr auto auto;" onclick="showRoute('pipelines')">
+              <span class="dot dot-live"></span>
+              <div><span style="color: var(--tx-1);">+backend-developer</span> <span style="color: var(--tx-3);">implementing JWT middleware</span> <span class="mono" style="color: var(--tx-3); font-size: 12px;">T-001</span></div>
+              <span class="mono" style="color: var(--tx-2); font-size: 12px;">4/7</span>
+              <span class="mono" style="color: var(--tx-3); font-size: 12px;">4m 12s</span>
+            </div>
+            <div class="row" style="--cols: 24px 1fr auto auto;" onclick="showRoute('pipelines')">
+              <span class="dot dot-live"></span>
+              <div><span style="color: var(--tx-1);">+qa-engineer</span> <span style="color: var(--tx-3);">running auth E2E tests</span> <span class="mono" style="color: var(--tx-3); font-size: 12px;">T-011</span></div>
+              <span class="mono" style="color: var(--tx-2); font-size: 12px;">2/5</span>
+              <span class="mono" style="color: var(--tx-3); font-size: 12px;">12m 03s</span>
+            </div>
+            <div class="row" style="--cols: 24px 1fr auto auto;" onclick="showRoute('pipelines')">
+              <span class="dot dot-live"></span>
+              <div><span style="color: var(--tx-1);">+designer</span> <span style="color: var(--tx-3);">login screen mocks v3</span> <span class="mono" style="color: var(--tx-3); font-size: 12px;">T-002</span></div>
+              <span class="mono" style="color: var(--tx-2); font-size: 12px;">3/3</span>
+              <span class="mono" style="color: var(--tx-3); font-size: 12px;">2m 41s</span>
+            </div>
+            <div class="row" style="--cols: 24px 1fr auto auto;" onclick="showRoute('pipelines')">
+              <span class="dot dot-live"></span>
+              <div><span style="color: var(--tx-1);">+frontend-developer</span> <span style="color: var(--tx-3);">analytics widget grid</span> <span class="mono" style="color: var(--tx-3); font-size: 12px;">T-006</span></div>
+              <span class="mono" style="color: var(--tx-2); font-size: 12px;">5/8</span>
+              <span class="mono" style="color: var(--tx-3); font-size: 12px;">28m 11s</span>
+            </div>
+            <div class="row" style="--cols: 24px 1fr auto auto;" onclick="showRoute('pipelines')">
+              <span class="dot dot-warning"></span>
+              <div><span style="color: var(--tx-1);">+security-engineer</span> <span style="color: var(--tx-3);">rate limit audit</span> <span class="mono" style="color: var(--tx-3); font-size: 12px;">T-008</span></div>
+              <span class="mono" style="color: var(--tx-2); font-size: 12px;">queued</span>
+              <span class="mono" style="color: var(--tx-3); font-size: 12px;">&ndash;</span>
+            </div>
+            <div class="row" style="--cols: 24px 1fr auto auto;" onclick="showRoute('pipelines')">
+              <span class="dot dot-danger"></span>
+              <div><span style="color: var(--tx-1);">+db-admin</span> <span style="color: var(--tx-3);">subscription schema migration</span> <span class="mono" style="color: var(--tx-3); font-size: 12px;">T-013</span></div>
+              <span style="color: var(--danger); font-size: 12px;">blocked</span>
+              <span class="mono" style="color: var(--tx-3); font-size: 12px;">&ndash;</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Awaiting You -->
+        <div>
+          <div class="region-title">Awaiting you</div>
+          <div class="region-sub">5 items need approval</div>
+          <div class="row-list">
+            <div class="row" style="--cols: 1fr auto;" onclick="showRoute('approvals')">
+              <div>
+                <div style="color: var(--tx-1); font-size: 13px; margin-bottom: 2px;">Blueprint v2 approval</div>
+                <div style="color: var(--tx-3); font-size: 12px;"><span class="mono">+operation-manager</span> &middot; 12m ago</div>
+              </div>
+              <span class="badge badge-amber">Blueprint</span>
+            </div>
+            <div class="row" style="--cols: 1fr auto;" onclick="showRoute('approvals')">
+              <div>
+                <div style="color: var(--tx-1); font-size: 13px; margin-bottom: 2px;">Architecture decision: auth provider</div>
+                <div style="color: var(--tx-3); font-size: 12px;"><span class="mono">+engineering-manager</span> &middot; 28m ago</div>
+              </div>
+              <span class="badge badge-purple">ADR</span>
+            </div>
+            <div class="row" style="--cols: 1fr auto;" onclick="showRoute('approvals')">
+              <div>
+                <div style="color: var(--tx-1); font-size: 13px; margin-bottom: 2px;">Daily status report &mdash; Day 4</div>
+                <div style="color: var(--tx-3); font-size: 12px;"><span class="mono">+delivery-manager</span> &middot; 1h ago</div>
+              </div>
+              <span class="badge badge-blue">Report</span>
+            </div>
+            <div class="row" style="--cols: 1fr auto;" onclick="showRoute('approvals')">
+              <div>
+                <div style="color: var(--tx-1); font-size: 13px; margin-bottom: 2px;">Production deploy: <span class="mono">v0.4.2</span></div>
+                <div style="color: var(--tx-3); font-size: 12px;"><span class="mono">+delivery-manager</span> &middot; 2h ago</div>
+              </div>
+              <span class="badge badge-pink">Deploy</span>
+            </div>
+            <div class="row" style="--cols: 1fr auto;" onclick="showRoute('approvals')">
+              <div>
+                <div style="color: var(--tx-1); font-size: 13px; margin-bottom: 2px;">New dependency: <span class="mono">stripe-sdk@14</span></div>
+                <div style="color: var(--tx-3); font-size: 12px;"><span class="mono">+security-engineer</span> &middot; 3h ago</div>
+              </div>
+              <span class="badge badge-amber">Security</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="region">
+        <div class="region-title">Recent activity</div>
+        <div class="region-sub">Last 10 events</div>
+        <div class="row-list">
+          <div class="row" style="--cols: 70px 1fr 90px;">
+            <span class="mono" style="color: var(--tx-3); font-size: 12px;">14:32:18</span>
+            <div><span class="mono" style="color: var(--accent-soft);">+operation-manager</span> handed <span class="mono" style="color: var(--tx-2);">T-099</span> to <span class="mono" style="color: var(--accent-soft);">+qa-engineer</span></div>
+            <span class="badge badge-purple">handover</span>
+          </div>
+          <div class="row" style="--cols: 70px 1fr 90px;">
+            <span class="mono" style="color: var(--tx-3); font-size: 12px;">14:30:42</span>
+            <div><span class="mono" style="color: var(--accent-soft);">+backend-developer</span> completed <span class="mono" style="color: var(--tx-2);">T-098</span> &mdash; auth flow refactor</div>
+            <span class="badge badge-green">completed</span>
+          </div>
+          <div class="row" style="--cols: 70px 1fr 90px;">
+            <span class="mono" style="color: var(--tx-3); font-size: 12px;">14:28:11</span>
+            <div><span class="mono" style="color: var(--accent-soft);">+designer</span> uploaded <span class="mono" style="color: var(--tx-2);">login-v3.fig</span> to references</div>
+            <span class="badge badge-neutral">file</span>
+          </div>
+          <div class="row" style="--cols: 70px 1fr 90px;">
+            <span class="mono" style="color: var(--tx-3); font-size: 12px;">14:25:58</span>
+            <div><span class="mono" style="color: var(--accent-soft);">+engineering-manager</span> filed ADR <span class="mono" style="color: var(--tx-2);">D-007</span> &mdash; auth provider selection</div>
+            <span class="badge badge-purple">decision</span>
+          </div>
+          <div class="row" style="--cols: 70px 1fr 90px;">
+            <span class="mono" style="color: var(--tx-3); font-size: 12px;">14:21:03</span>
+            <div><span class="mono" style="color: var(--accent-soft);">+db-admin</span> reported blocker on <span class="mono" style="color: var(--tx-2);">T-013</span> &mdash; awaiting T-004</div>
+            <span class="badge badge-red">blocked</span>
+          </div>
+          <div class="row" style="--cols: 70px 1fr 90px;">
+            <span class="mono" style="color: var(--tx-3); font-size: 12px;">14:17:44</span>
+            <div><span class="mono" style="color: var(--accent-soft);">+devops-engineer</span> deployed staging <span class="mono" style="color: var(--tx-2);">v0.4.1</span> &mdash; smoke tests passed</div>
+            <span class="badge badge-green">deploy</span>
+          </div>
+          <div class="row" style="--cols: 70px 1fr 90px;">
+            <span class="mono" style="color: var(--tx-3); font-size: 12px;">14:12:30</span>
+            <div><span class="mono" style="color: var(--accent-soft);">+frontend-developer</span> opened PR <span class="mono" style="color: var(--tx-2);">#41</span> &mdash; dashboard widget grid</div>
+            <span class="badge badge-blue">pr</span>
+          </div>
+          <div class="row" style="--cols: 70px 1fr 90px;">
+            <span class="mono" style="color: var(--tx-3); font-size: 12px;">14:08:02</span>
+            <div><span class="mono" style="color: var(--accent-soft);">+operation-manager</span> started pipeline <span class="mono" style="color: var(--tx-2);">04-development-cycle #042</span></div>
+            <span class="badge badge-pink">pipeline</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =============== BACKLOG =============== -->
+    <section class="route" data-route="backlog">
+      <div class="route-header">
+        <div>
+          <h1 class="route-title">Backlog</h1>
+          <p class="route-sub">13 items across 4 epics</p>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-outline btn-xs"><i data-lucide="filter" style="width: 12px; height: 12px;"></i> Filter</button>
+          <button class="btn btn-outline btn-xs"><i data-lucide="list" style="width: 12px; height: 12px;"></i> Table view</button>
+          <button class="btn btn-primary btn-xs"><i data-lucide="plus" style="width: 12px; height: 12px;"></i> New item</button>
+        </div>
+      </div>
+
+      <div class="chip-bar">
+        <div class="chip active">All epics</div>
+        <div class="chip">E-001 Authentication</div>
+        <div class="chip">E-002 Billing</div>
+        <div class="chip">E-003 Dashboard</div>
+        <div class="chip">E-004 Admin</div>
+      </div>
+
+      <div class="kanban">
+        <!-- Backlog col -->
+        <div class="kanban-col">
+          <div class="kanban-col-header">
+            <span class="kanban-col-title">Backlog</span><span class="kanban-col-count">3</span>
+          </div>
+          <div class="kanban-card" onclick="openTaskDrawer('T-003')">
+            <div class="kc-head"><span class="kc-id">T-003</span><span class="kc-type" style="color: var(--info); background: rgba(59,130,246,0.12);">Task</span></div>
+            <div class="kc-title">OAuth2 Google integration</div>
+            <div class="kc-foot"><span>E-001</span><span>+backend-developer</span></div>
+          </div>
+          <div class="kanban-card" onclick="openTaskDrawer('T-007')">
+            <div class="kc-head"><span class="kc-id">T-007</span><span class="kc-type" style="color: var(--info); background: rgba(59,130,246,0.12);">Task</span></div>
+            <div class="kc-title">Write auth API docs (OpenAPI 3.0)</div>
+            <div class="kc-foot"><span>E-001</span><span>+copywriter</span></div>
+          </div>
+          <div class="kanban-card" onclick="openTaskDrawer('T-010')">
+            <div class="kc-head"><span class="kc-id">T-010</span><span class="kc-type" style="color: var(--info); background: rgba(59,130,246,0.12);">Task</span></div>
+            <div class="kc-title">Admin user management UI</div>
+            <div class="kc-foot"><span>E-004</span><span>+frontend-developer</span></div>
+          </div>
+        </div>
+
+        <!-- Ready col -->
+        <div class="kanban-col">
+          <div class="kanban-col-header">
+            <span class="kanban-col-title">Ready</span><span class="kanban-col-count">2</span>
+          </div>
+          <div class="kanban-card" onclick="openTaskDrawer('T-005')">
+            <div class="kc-head"><span class="kc-id">T-005</span><span class="kc-type" style="color: var(--info); background: rgba(59,130,246,0.12);">Task</span></div>
+            <div class="kc-title">Billing portal UI &mdash; plan + invoices</div>
+            <div class="kc-foot"><span>E-002</span><span>+frontend-developer</span></div>
+          </div>
+          <div class="kanban-card" onclick="openTaskDrawer('S-014')">
+            <div class="kc-head"><span class="kc-id">S-014</span><span class="kc-type" style="color: var(--accent-soft); background: rgba(168,85,247,0.12);">Spike</span></div>
+            <div class="kc-title">Investigate edge function cold starts</div>
+            <div class="kc-foot"><span>E-003</span><span>+devops-engineer</span></div>
+          </div>
+        </div>
+
+        <!-- In Progress col -->
+        <div class="kanban-col">
+          <div class="kanban-col-header">
+            <span class="kanban-col-title">In progress</span><span class="kanban-col-count">4</span>
+          </div>
+          <div class="kanban-card" onclick="openTaskDrawer('T-001')">
+            <div class="kc-head"><span class="kc-id">T-001</span><span class="kc-type" style="color: var(--info); background: rgba(59,130,246,0.12);">Task</span><span class="dot dot-live" style="margin-left: auto;"></span></div>
+            <div class="kc-title">JWT auth middleware implementation</div>
+            <div class="kc-foot"><span>E-001</span><span>+backend-developer</span></div>
+          </div>
+          <div class="kanban-card" onclick="openTaskDrawer('T-004')">
+            <div class="kc-head"><span class="kc-id">T-004</span><span class="kc-type" style="color: var(--info); background: rgba(59,130,246,0.12);">Task</span><span class="dot dot-live" style="margin-left: auto;"></span></div>
+            <div class="kc-title">Stripe subscription webhooks</div>
+            <div class="kc-foot"><span>E-002</span><span>+backend-developer</span></div>
+          </div>
+          <div class="kanban-card" onclick="openTaskDrawer('T-006')">
+            <div class="kc-head"><span class="kc-id">T-006</span><span class="kc-type" style="color: var(--info); background: rgba(59,130,246,0.12);">Task</span><span class="dot dot-live" style="margin-left: auto;"></span></div>
+            <div class="kc-title">Analytics widget grid</div>
+            <div class="kc-foot"><span>E-003</span><span>+frontend-developer</span></div>
+          </div>
+          <div class="kanban-card" onclick="openTaskDrawer('T-009')">
+            <div class="kc-head"><span class="kc-id">T-009</span><span class="kc-type" style="color: var(--info); background: rgba(59,130,246,0.12);">Task</span><span class="dot dot-live" style="margin-left: auto;"></span></div>
+            <div class="kc-title">RBAC roles &amp; permissions matrix</div>
+            <div class="kc-foot"><span>E-004</span><span>+backend-developer</span></div>
+          </div>
+        </div>
+
+        <!-- Review col -->
+        <div class="kanban-col">
+          <div class="kanban-col-header">
+            <span class="kanban-col-title">Review</span><span class="kanban-col-count">2</span>
+          </div>
+          <div class="kanban-card" onclick="openTaskDrawer('T-002')">
+            <div class="kc-head"><span class="kc-id">T-002</span><span class="kc-type" style="color: var(--info); background: rgba(59,130,246,0.12);">Task</span></div>
+            <div class="kc-title">Login &amp; registration screen designs</div>
+            <div class="kc-foot"><span>E-001</span><span>+designer</span></div>
+          </div>
+          <div class="kanban-card" onclick="openTaskDrawer('T-008')">
+            <div class="kc-head"><span class="kc-id">T-008</span><span class="kc-type" style="color: var(--info); background: rgba(59,130,246,0.12);">Task</span></div>
+            <div class="kc-title">Rate limiting &amp; brute force protection</div>
+            <div class="kc-foot"><span>E-001</span><span>+security-engineer</span></div>
+          </div>
+        </div>
+
+        <!-- Done col -->
+        <div class="kanban-col">
+          <div class="kanban-col-header">
+            <span class="kanban-col-title">Done</span><span class="kanban-col-count">2</span>
+          </div>
+          <div class="kanban-card" style="opacity: 0.7;" onclick="openTaskDrawer('T-011')">
+            <div class="kc-head"><span class="kc-id">T-011</span><span class="kc-type" style="color: var(--info); background: rgba(59,130,246,0.12);">Task</span></div>
+            <div class="kc-title">E2E auth test suite</div>
+            <div class="kc-foot"><span>E-001</span><span>+qa-engineer</span></div>
+          </div>
+          <div class="kanban-card" style="opacity: 0.7;" onclick="openTaskDrawer('T-012')">
+            <div class="kc-head"><span class="kc-id">T-012</span><span class="kc-type" style="color: var(--info); background: rgba(59,130,246,0.12);">Task</span></div>
+            <div class="kc-title">CI/CD deployment pipeline</div>
+            <div class="kc-foot"><span>E-003</span><span>+devops-engineer</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Blocked row -->
+      <div style="margin-top: 24px; padding: 12px 16px; border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 8px; background: rgba(239, 68, 68, 0.04); display: flex; align-items: center; gap: 12px;">
+        <span class="dot dot-danger"></span>
+        <span class="mono" style="font-size: 12px; color: var(--tx-3);">T-013</span>
+        <span style="color: var(--tx-1); font-size: 13px;">Database schema migration</span>
+        <span style="color: var(--tx-3); font-size: 12px;">blocked by T-004 &mdash; +db-admin awaiting webhook completion</span>
+        <span style="flex: 1;"></span>
+        <button class="btn btn-ghost btn-xs">View &rarr;</button>
+      </div>
+    </section>
+
+    <!-- =============== PIPELINES =============== -->
+    <section class="route" data-route="pipelines">
+      <div class="route-header">
+        <div>
+          <h1 class="route-title">Pipelines</h1>
+          <p class="route-sub">Workflow execution &middot; 1 running &middot; 41 completed today</p>
+        </div>
+        <button class="btn btn-outline btn-xs"><i data-lucide="play" style="width: 12px; height: 12px;"></i> Start workflow</button>
+      </div>
+
+      <div class="chip-bar">
+        <div class="chip active">All</div>
+        <div class="chip">Running</div>
+        <div class="chip">Completed</div>
+        <div class="chip">Failed</div>
+        <div class="chip">Paused</div>
+      </div>
+
+      <div class="row-list">
+        <div class="row row-header" style="--cols: 24px 1fr 140px 100px 80px 24px;">
+          <div></div><div>Pipeline</div><div>Progress</div><div>Started</div><div>Duration</div><div></div>
+        </div>
+
+        <!-- Running -->
+        <div class="row" style="--cols: 24px 1fr 140px 100px 80px 24px;" onclick="togglePipeline(this)">
+          <span class="dot dot-live"></span>
+          <div>
+            <div style="color: var(--tx-1);"><span class="mono">04-development-cycle</span> <span style="color: var(--tx-3);">&middot; run</span> <span class="mono" style="color: var(--tx-2);">#042</span></div>
+            <div style="color: var(--tx-3); font-size: 12px; margin-top: 2px;">+operation-manager dispatched 6 agents</div>
+          </div>
+          <div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <div style="flex: 1; height: 4px; background: var(--bg-2); border-radius: 2px; overflow: hidden;"><div style="width: 57%; height: 100%; background: var(--signal);"></div></div>
+              <span class="mono" style="font-size: 11px; color: var(--tx-3);">4/7</span>
+            </div>
+          </div>
+          <span class="mono" style="color: var(--tx-2); font-size: 12px;">14:08:02</span>
+          <span class="mono" style="color: var(--tx-3); font-size: 12px;">24m 19s</span>
+          <i data-lucide="chevron-down" style="width: 14px; height: 14px; color: var(--tx-3);"></i>
+        </div>
+        <div class="expand-body">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+            <div>
+              <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--tx-3); margin-bottom: 8px;">Step tree</div>
+              <div class="step-tree">
+                <div class="step-tree-row"><span class="dot dot-success"></span><span>1. analyze-blueprint &mdash; +operation-manager &middot; 1m 02s</span></div>
+                <div class="step-tree-row"><span class="dot dot-success"></span><span>2. plan-pipeline &mdash; +operation-manager &middot; 0m 41s</span></div>
+                <div class="step-tree-row"><span class="dot dot-success"></span><span>3. dispatch-agents &mdash; +operation-manager &middot; 0m 12s</span></div>
+                <div class="step-tree-row"><span class="dot dot-live"></span><span style="color: var(--signal);">4. implementation &mdash; 4 agents in progress</span></div>
+                <div class="step-tree-row"><span class="dot dot-idle"></span><span style="color: var(--tx-3);">5. code-review &mdash; pending</span></div>
+                <div class="step-tree-row"><span class="dot dot-idle"></span><span style="color: var(--tx-3);">6. integration-tests &mdash; pending</span></div>
+                <div class="step-tree-row"><span class="dot dot-idle"></span><span style="color: var(--tx-3);">7. handover-to-qa &mdash; pending</span></div>
+              </div>
+            </div>
+            <div>
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--tx-3);">Recent logs</div>
+                <button class="btn btn-ghost btn-xs">Full logs &rarr;</button>
+              </div>
+              <div style="background: var(--bg-1); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px;">
+                <div class="log-line"><span style="color: var(--tx-4);">14:32:18</span> +backend-developer: applied JWT verify middleware to /api/*</div>
+                <div class="log-line"><span style="color: var(--tx-4);">14:32:01</span> +backend-developer: ran tests &mdash; 14 passed, 0 failed</div>
+                <div class="log-line"><span style="color: var(--tx-4);">14:31:42</span> +qa-engineer: launched Playwright e2e suite (12 tests)</div>
+                <div class="log-line"><span style="color: var(--tx-4);">14:30:58</span> +designer: exported login-v3.fig artifacts</div>
+                <div class="log-line"><span style="color: var(--tx-4);">14:30:42</span> +operation-manager: handover T-099 &rarr; +qa-engineer</div>
+              </div>
+              <div style="margin-top: 12px;"><button class="btn btn-outline btn-xs"><i data-lucide="git-pull-request" style="width: 12px; height: 12px;"></i> View diff (12 files)</button></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Completed -->
+        <div class="row" style="--cols: 24px 1fr 140px 100px 80px 24px;">
+          <span class="dot dot-success"></span>
+          <div><span class="mono" style="color: var(--tx-1);">02-planning-pipeline</span> <span style="color: var(--tx-3);">&middot; run</span> <span class="mono" style="color: var(--tx-2);">#041</span></div>
+          <div><span style="font-size: 12px; color: var(--success);">completed &middot; 5/5</span></div>
+          <span class="mono" style="color: var(--tx-2); font-size: 12px;">13:42:11</span>
+          <span class="mono" style="color: var(--tx-3); font-size: 12px;">18m 47s</span>
+          <i data-lucide="chevron-down" style="width: 14px; height: 14px; color: var(--tx-3);"></i>
+        </div>
+
+        <div class="row" style="--cols: 24px 1fr 140px 100px 80px 24px;">
+          <span class="dot dot-success"></span>
+          <div><span class="mono" style="color: var(--tx-1);">01a-analysis-pipeline</span> <span style="color: var(--tx-3);">&middot; run</span> <span class="mono" style="color: var(--tx-2);">#040</span></div>
+          <div><span style="font-size: 12px; color: var(--success);">completed &middot; 4/4</span></div>
+          <span class="mono" style="color: var(--tx-2); font-size: 12px;">13:21:55</span>
+          <span class="mono" style="color: var(--tx-3); font-size: 12px;">11m 02s</span>
+          <i data-lucide="chevron-down" style="width: 14px; height: 14px; color: var(--tx-3);"></i>
+        </div>
+
+        <div class="row" style="--cols: 24px 1fr 140px 100px 80px 24px;">
+          <span class="dot dot-danger"></span>
+          <div><span class="mono" style="color: var(--tx-1);">05-test-cycle</span> <span style="color: var(--tx-3);">&middot; run</span> <span class="mono" style="color: var(--tx-2);">#039</span></div>
+          <div><span style="font-size: 12px; color: var(--danger);">failed at 3/6 &mdash; flaky test</span></div>
+          <span class="mono" style="color: var(--tx-2); font-size: 12px;">12:48:30</span>
+          <span class="mono" style="color: var(--tx-3); font-size: 12px;">7m 12s</span>
+          <i data-lucide="chevron-down" style="width: 14px; height: 14px; color: var(--tx-3);"></i>
+        </div>
+
+        <div class="row" style="--cols: 24px 1fr 140px 100px 80px 24px;">
+          <span class="dot dot-success"></span>
+          <div><span class="mono" style="color: var(--tx-1);">06-deployment-cycle</span> <span style="color: var(--tx-3);">&middot; run</span> <span class="mono" style="color: var(--tx-2);">#038</span></div>
+          <div><span style="font-size: 12px; color: var(--success);">completed &middot; 8/8 &middot; v0.4.1 staging</span></div>
+          <span class="mono" style="color: var(--tx-2); font-size: 12px;">11:55:08</span>
+          <span class="mono" style="color: var(--tx-3); font-size: 12px;">22m 31s</span>
+          <i data-lucide="chevron-down" style="width: 14px; height: 14px; color: var(--tx-3);"></i>
+        </div>
+      </div>
+    </section>
+
+    <!-- =============== APPROVALS =============== -->
+    <section class="route" data-route="approvals">
+      <div class="route-header">
+        <div>
+          <h1 class="route-title">Approvals</h1>
+          <p class="route-sub">5 items waiting on you</p>
+        </div>
+      </div>
+
+      <div class="chip-bar">
+        <div class="chip active" onclick="filterApprovals(this, 'all')">All <span style="color: var(--tx-3);">5</span></div>
+        <div class="chip" onclick="filterApprovals(this, 'blueprint')">Blueprints <span style="color: var(--tx-3);">1</span></div>
+        <div class="chip" onclick="filterApprovals(this, 'adr')">Decisions <span style="color: var(--tx-3);">1</span></div>
+        <div class="chip" onclick="filterApprovals(this, 'report')">Reports <span style="color: var(--tx-3);">1</span></div>
+        <div class="chip" onclick="filterApprovals(this, 'deploy')">Deploys <span style="color: var(--tx-3);">1</span></div>
+        <div class="chip" onclick="filterApprovals(this, 'security')">Security <span style="color: var(--tx-3);">1</span></div>
+      </div>
+
+      <div class="row-list">
+        <!-- Blueprint -->
+        <div data-type="blueprint">
+          <div class="row" style="--cols: auto 1fr auto;" onclick="toggleApprovalExpand(this)">
+            <span class="badge badge-amber">Blueprint</span>
+            <div>
+              <div style="color: var(--tx-1); font-size: 13px; margin-bottom: 3px;">Blueprint v2 approval &mdash; payments domain expansion</div>
+              <div style="color: var(--tx-3); font-size: 12px;"><span class="mono">+operation-manager</span> &middot; <span class="mono">B-002</span> &middot; 12m ago</div>
+            </div>
+            <i data-lucide="chevron-down" style="width: 14px; height: 14px; color: var(--tx-3);"></i>
+          </div>
+          <div class="expand-body">
+            <div style="font-size: 13px; color: var(--tx-2); line-height: 1.6; margin-bottom: 16px;">
+              <p style="margin: 0 0 12px;">Adds 3 new epics under the Payments domain: subscription tiers (E-005), invoicing workflow (E-006), and refund processing (E-007). Estimated impact: +28 tasks, ~$340 in agent costs over 2 weeks.</p>
+              <p style="margin: 0; color: var(--tx-3);">Approving will trigger 02-planning-pipeline to break down the new epics into tasks.</p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-primary btn-xs" onclick="approveItem(event, this)">Approve</button>
+              <button class="btn btn-outline btn-xs" onclick="showRevise(event, this)">Request revision</button>
+              <button class="btn btn-ghost btn-xs" onclick="showReject(event, this)">Reject</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ADR -->
+        <div data-type="adr">
+          <div class="row" style="--cols: auto 1fr auto;" onclick="toggleApprovalExpand(this)">
+            <span class="badge badge-purple">ADR</span>
+            <div>
+              <div style="color: var(--tx-1); font-size: 13px; margin-bottom: 3px;">Architecture decision: auth provider &mdash; Auth0 vs Clerk</div>
+              <div style="color: var(--tx-3); font-size: 12px;"><span class="mono">+engineering-manager</span> &middot; <span class="mono">D-007</span> &middot; 28m ago</div>
+            </div>
+            <i data-lucide="chevron-down" style="width: 14px; height: 14px; color: var(--tx-3);"></i>
+          </div>
+          <div class="expand-body">
+            <div style="font-size: 13px; color: var(--tx-2); line-height: 1.6;">
+              <p style="margin: 0 0 8px;"><strong style="color: var(--tx-1);">Recommendation:</strong> Auth0 &mdash; mature OAuth flow, enterprise SSO support, 50% cheaper at our projected scale.</p>
+              <p style="margin: 0 0 12px;"><strong style="color: var(--tx-1);">Trade-off:</strong> Clerk has better DX, but lock-in concerns. Auth0 has portable JWT format.</p>
+            </div>
+            <div style="margin-top: 16px; display: flex; gap: 8px;">
+              <button class="btn btn-primary btn-xs" onclick="approveItem(event, this)">Approve &amp; ratify</button>
+              <button class="btn btn-outline btn-xs" onclick="showRevise(event, this)">Request revision</button>
+              <button class="btn btn-ghost btn-xs" onclick="showReject(event, this)">Reject</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Report -->
+        <div data-type="report">
+          <div class="row" style="--cols: auto 1fr auto;" onclick="toggleApprovalExpand(this)">
+            <span class="badge badge-blue">Report</span>
+            <div>
+              <div style="color: var(--tx-1); font-size: 13px; margin-bottom: 3px;">Daily status report &mdash; Day 4</div>
+              <div style="color: var(--tx-3); font-size: 12px;"><span class="mono">+delivery-manager</span> &middot; <span class="mono">R-014</span> &middot; 1h ago</div>
+            </div>
+            <i data-lucide="chevron-down" style="width: 14px; height: 14px; color: var(--tx-3);"></i>
+          </div>
+          <div class="expand-body">
+            <div style="font-size: 13px; color: var(--tx-2); line-height: 1.6;">
+              <strong style="color: var(--tx-1);">Velocity:</strong> 4 tasks completed, 6 in flight. <strong style="color: var(--tx-1);">Risks:</strong> T-013 blocker, may slip billing E-002 by 1 day. <strong style="color: var(--tx-1);">Outlook:</strong> on track for v0.5 staging by Day 6.
+            </div>
+            <div style="margin-top: 16px; display: flex; gap: 8px;">
+              <button class="btn btn-primary btn-xs" onclick="approveItem(event, this)">Approve</button>
+              <button class="btn btn-outline btn-xs" onclick="showRevise(event, this)">Request revision</button>
+              <button class="btn btn-ghost btn-xs" onclick="showReject(event, this)">Reject</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Deploy -->
+        <div data-type="deploy">
+          <div class="row" style="--cols: auto 1fr auto;" onclick="toggleApprovalExpand(this)">
+            <span class="badge badge-pink">Deploy</span>
+            <div>
+              <div style="color: var(--tx-1); font-size: 13px; margin-bottom: 3px;">Production deploy: <span class="mono">v0.4.2</span></div>
+              <div style="color: var(--tx-3); font-size: 12px;"><span class="mono">+delivery-manager</span> &middot; 2h ago &middot; tests passing &middot; 38 commits since v0.4.1</div>
+            </div>
+            <i data-lucide="chevron-down" style="width: 14px; height: 14px; color: var(--tx-3);"></i>
+          </div>
+          <div class="expand-body">
+            <div style="font-size: 13px; color: var(--tx-2); line-height: 1.6;">
+              <strong style="color: var(--tx-1);">Changeset:</strong> auth middleware (T-001), CI/CD pipeline (T-012), rate limiting (T-008). <strong style="color: var(--tx-1);">Smoke tests:</strong> 47/47 passing. <strong style="color: var(--tx-1);">Rollback plan:</strong> tagged v0.4.1, automated revert via GitHub Actions.
+            </div>
+            <div style="margin-top: 16px; display: flex; gap: 8px;">
+              <button class="btn btn-primary btn-xs" onclick="approveItem(event, this)">Authorize deploy</button>
+              <button class="btn btn-outline btn-xs" onclick="showRevise(event, this)">Hold &amp; review</button>
+              <button class="btn btn-ghost btn-xs" onclick="showReject(event, this)">Reject</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Security -->
+        <div data-type="security">
+          <div class="row" style="--cols: auto 1fr auto;" onclick="toggleApprovalExpand(this)">
+            <span class="badge badge-amber">Security</span>
+            <div>
+              <div style="color: var(--tx-1); font-size: 13px; margin-bottom: 3px;">New dependency: <span class="mono">stripe-sdk@14.0.0</span></div>
+              <div style="color: var(--tx-3); font-size: 12px;"><span class="mono">+security-engineer</span> &middot; 3h ago &middot; license: MIT &middot; CVE scan: clean</div>
+            </div>
+            <i data-lucide="chevron-down" style="width: 14px; height: 14px; color: var(--tx-3);"></i>
+          </div>
+          <div class="expand-body">
+            <div style="font-size: 13px; color: var(--tx-2); line-height: 1.6;">
+              Requested by +backend-developer for T-004 webhook implementation. Direct dependencies: 4 (all in allowlist). Transitive: 28. License audit: MIT (compatible). Vulnerability scan: 0 known issues.
+            </div>
+            <div style="margin-top: 16px; display: flex; gap: 8px;">
+              <button class="btn btn-primary btn-xs" onclick="approveItem(event, this)">Approve dependency</button>
+              <button class="btn btn-outline btn-xs" onclick="showRevise(event, this)">Request audit</button>
+              <button class="btn btn-ghost btn-xs" onclick="showReject(event, this)">Reject</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =============== MEMORY =============== -->
+    <section class="route" data-route="memory">
+      <div class="route-header">
+        <div>
+          <h1 class="route-title">Memory</h1>
+          <p class="route-sub">Collective intelligence &middot; persisted decisions, lessons, and handovers</p>
+        </div>
+        <button class="btn btn-outline btn-xs"><i data-lucide="plus" style="width: 12px; height: 12px;"></i> New entry</button>
+      </div>
+
+      <div class="tab-bar">
+        <div class="tab active" onclick="switchMemTab(this, 'decisions')">Decisions <span style="color: var(--tx-4); font-size: 11px;">6</span></div>
+        <div class="tab" onclick="switchMemTab(this, 'learned')">Learned <span style="color: var(--tx-4); font-size: 11px;">5</span></div>
+        <div class="tab" onclick="switchMemTab(this, 'handovers')">Handovers <span style="color: var(--tx-4); font-size: 11px;">4</span></div>
+      </div>
+
+      <!-- Decisions -->
+      <div data-tab="decisions">
+        <div class="row-list">
+          <div class="row row-header" style="--cols: 70px 1fr 160px 90px 70px;">
+            <div>ID</div><div>Title</div><div>Owner</div><div>Date</div><div></div>
+          </div>
+          <div class="row" style="--cols: 70px 1fr 160px 90px 70px;" onclick="openMemDrawer('decision', 'D-007')">
+            <span class="mono" style="color: var(--accent-soft); font-size: 12px;">D-007</span>
+            <div style="color: var(--tx-1);">Auth provider: Auth0 over Clerk</div>
+            <span style="color: var(--tx-2); font-size: 13px;">+engineering-manager</span>
+            <span class="mono" style="color: var(--tx-3); font-size: 12px;">14-May</span>
+            <button class="btn btn-ghost btn-xs">Edit</button>
+          </div>
+          <div class="row" style="--cols: 70px 1fr 160px 90px 70px;" onclick="openMemDrawer('decision', 'D-006')">
+            <span class="mono" style="color: var(--accent-soft); font-size: 12px;">D-006</span>
+            <div style="color: var(--tx-1);">PostgreSQL as primary datastore</div>
+            <span style="color: var(--tx-2); font-size: 13px;">+engineering-manager</span>
+            <span class="mono" style="color: var(--tx-3); font-size: 12px;">13-May</span>
+            <button class="btn btn-ghost btn-xs">Edit</button>
+          </div>
+          <div class="row" style="--cols: 70px 1fr 160px 90px 70px;" onclick="openMemDrawer('decision', 'D-005')">
+            <span class="mono" style="color: var(--accent-soft); font-size: 12px;">D-005</span>
+            <div style="color: var(--tx-1);">Stripe for billing &mdash; not Paddle</div>
+            <span style="color: var(--tx-2); font-size: 13px;">+product-manager</span>
+            <span class="mono" style="color: var(--tx-3); font-size: 12px;">12-May</span>
+            <button class="btn btn-ghost btn-xs">Edit</button>
+          </div>
+          <div class="row" style="--cols: 70px 1fr 160px 90px 70px;" onclick="openMemDrawer('decision', 'D-004')">
+            <span class="mono" style="color: var(--accent-soft); font-size: 12px;">D-004</span>
+            <div style="color: var(--tx-1);">Vercel for hosting (preview deployments)</div>
+            <span style="color: var(--tx-2); font-size: 13px;">+devops-engineer</span>
+            <span class="mono" style="color: var(--tx-3); font-size: 12px;">12-May</span>
+            <button class="btn btn-ghost btn-xs">Edit</button>
+          </div>
+          <div class="row" style="--cols: 70px 1fr 160px 90px 70px;" onclick="openMemDrawer('decision', 'D-003')">
+            <span class="mono" style="color: var(--accent-soft); font-size: 12px;">D-003</span>
+            <div style="color: var(--tx-1);">Conventional Commits enforced by hook</div>
+            <span style="color: var(--tx-2); font-size: 13px;">+engineering-manager</span>
+            <span class="mono" style="color: var(--tx-3); font-size: 12px;">11-May</span>
+            <button class="btn btn-ghost btn-xs">Edit</button>
+          </div>
+          <div class="row" style="--cols: 70px 1fr 160px 90px 70px;" onclick="openMemDrawer('decision', 'D-002')">
+            <span class="mono" style="color: var(--accent-soft); font-size: 12px;">D-002</span>
+            <div style="color: var(--tx-1);">Next.js App Router &mdash; not Pages</div>
+            <span style="color: var(--tx-2); font-size: 13px;">+frontend-developer</span>
+            <span class="mono" style="color: var(--tx-3); font-size: 12px;">11-May</span>
+            <button class="btn btn-ghost btn-xs">Edit</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Learned -->
+      <div data-tab="learned" style="display: none;">
+        <div class="row-list">
+          <div class="row row-header" style="--cols: 70px 1fr 120px 90px 70px;">
+            <div>ID</div><div>Lesson</div><div>Source</div><div>Date</div><div></div>
+          </div>
+          <div class="row" style="--cols: 70px 1fr 120px 90px 70px;">
+            <span class="mono" style="color: var(--accent-soft); font-size: 12px;">L-005</span>
+            <div style="color: var(--tx-1);">Always lock Stripe API version explicitly in webhook setup &mdash; defaults drift</div>
+            <span class="mono" style="color: var(--tx-2); font-size: 12px;">T-004</span>
+            <span class="mono" style="color: var(--tx-3); font-size: 12px;">13-May</span>
+            <button class="btn btn-ghost btn-xs">Edit</button>
+          </div>
+          <div class="row" style="--cols: 70px 1fr 120px 90px 70px;">
+            <span class="mono" style="color: var(--accent-soft); font-size: 12px;">L-004</span>
+            <div style="color: var(--tx-1);">Rate limiter middleware must run before auth or it never sees attack traffic</div>
+            <span class="mono" style="color: var(--tx-2); font-size: 12px;">T-008</span>
+            <span class="mono" style="color: var(--tx-3); font-size: 12px;">12-May</span>
+            <button class="btn btn-ghost btn-xs">Edit</button>
+          </div>
+          <div class="row" style="--cols: 70px 1fr 120px 90px 70px;">
+            <span class="mono" style="color: var(--accent-soft); font-size: 12px;">L-003</span>
+            <div style="color: var(--tx-1);">Playwright headless mode in CI needs explicit display server &mdash; xvfb-run</div>
+            <span class="mono" style="color: var(--tx-2); font-size: 12px;">T-011</span>
+            <span class="mono" style="color: var(--tx-3); font-size: 12px;">11-May</span>
+            <button class="btn btn-ghost btn-xs">Edit</button>
+          </div>
+          <div class="row" style="--cols: 70px 1fr 120px 90px 70px;">
+            <span class="mono" style="color: var(--accent-soft); font-size: 12px;">L-002</span>
+            <div style="color: var(--tx-1);">CSS Grid 1fr with min-content children causes overflow &mdash; use minmax(0, 1fr)</div>
+            <span class="mono" style="color: var(--tx-2); font-size: 12px;">T-006</span>
+            <span class="mono" style="color: var(--tx-3); font-size: 12px;">10-May</span>
+            <button class="btn btn-ghost btn-xs">Edit</button>
+          </div>
+          <div class="row" style="--cols: 70px 1fr 120px 90px 70px;">
+            <span class="mono" style="color: var(--accent-soft); font-size: 12px;">L-001</span>
+            <div style="color: var(--tx-1);">DB migrations need both up &amp; down before being applied &mdash; rollback test required</div>
+            <span class="mono" style="color: var(--tx-2); font-size: 12px;">T-013</span>
+            <span class="mono" style="color: var(--tx-3); font-size: 12px;">09-May</span>
+            <button class="btn btn-ghost btn-xs">Edit</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Handovers -->
+      <div data-tab="handovers" style="display: none;">
+        <div class="row-list">
+          <div class="row row-header" style="--cols: 80px 1fr 1fr 90px 70px;">
+            <div>Item</div><div>From</div><div>To</div><div>When</div><div></div>
+          </div>
+          <div class="row" style="--cols: 80px 1fr 1fr 90px 70px;">
+            <span class="mono" style="color: var(--accent-soft); font-size: 12px;">T-099</span>
+            <span class="mono" style="color: var(--tx-2); font-size: 13px;">+operation-manager</span>
+            <span class="mono" style="color: var(--tx-2); font-size: 13px;">+qa-engineer</span>
+            <span class="mono" style="color: var(--tx-3); font-size: 12px;">14:32:18</span>
+            <button class="btn btn-ghost btn-xs">View</button>
+          </div>
+          <div class="row" style="--cols: 80px 1fr 1fr 90px 70px;">
+            <span class="mono" style="color: var(--accent-soft); font-size: 12px;">T-098</span>
+            <span class="mono" style="color: var(--tx-2); font-size: 13px;">+backend-developer</span>
+            <span class="mono" style="color: var(--tx-2); font-size: 13px;">+qa-engineer</span>
+            <span class="mono" style="color: var(--tx-3); font-size: 12px;">14:30:42</span>
+            <button class="btn btn-ghost btn-xs">View</button>
+          </div>
+          <div class="row" style="--cols: 80px 1fr 1fr 90px 70px;">
+            <span class="mono" style="color: var(--accent-soft); font-size: 12px;">T-097</span>
+            <span class="mono" style="color: var(--tx-2); font-size: 13px;">+designer</span>
+            <span class="mono" style="color: var(--tx-2); font-size: 13px;">+frontend-developer</span>
+            <span class="mono" style="color: var(--tx-3); font-size: 12px;">13:48:11</span>
+            <button class="btn btn-ghost btn-xs">View</button>
+          </div>
+          <div class="row" style="--cols: 80px 1fr 1fr 90px 70px;">
+            <span class="mono" style="color: var(--accent-soft); font-size: 12px;">B-021</span>
+            <span class="mono" style="color: var(--tx-2); font-size: 13px;">+qa-engineer</span>
+            <span class="mono" style="color: var(--tx-2); font-size: 13px;">+backend-developer</span>
+            <span class="mono" style="color: var(--tx-3); font-size: 12px;">12:15:30</span>
+            <button class="btn btn-ghost btn-xs">View</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =============== LIBRARY =============== -->
+    <section class="route" data-route="library">
+      <div class="route-header">
+        <div>
+          <h1 class="route-title">Library</h1>
+          <p class="route-sub">Editable definitions &mdash; agents, workflows, rules, references</p>
+        </div>
+      </div>
+
+      <div class="tab-bar">
+        <div class="tab active" onclick="switchLibTab(this, 'agents')">Agents <span style="color: var(--tx-4); font-size: 11px;">14</span></div>
+        <div class="tab" onclick="switchLibTab(this, 'workflows')">Workflows <span style="color: var(--tx-4); font-size: 11px;">12</span></div>
+        <div class="tab" onclick="switchLibTab(this, 'rules')">Rules <span style="color: var(--tx-4); font-size: 11px;">5</span></div>
+        <div class="tab" onclick="switchLibTab(this, 'references')">References <span style="color: var(--tx-4); font-size: 11px;">5</span></div>
+      </div>
+
+      <!-- Agents tab -->
+      <div data-tab="agents">
+        <div class="lib-shell">
+          <div class="lib-files">
+            <div class="lib-file active" onclick="selectLibFile(this, 'operation-manager.md')"><i data-lucide="file-text" style="width: 13px; height: 13px;"></i><span class="mono">operation-manager.md</span></div>
+            <div class="lib-file" onclick="selectLibFile(this, 'engineering-manager.md')"><i data-lucide="file-text" style="width: 13px; height: 13px;"></i><span class="mono">engineering-manager.md</span></div>
+            <div class="lib-file" onclick="selectLibFile(this, 'product-manager.md')"><i data-lucide="file-text" style="width: 13px; height: 13px;"></i><span class="mono">product-manager.md</span></div>
+            <div class="lib-file" onclick="selectLibFile(this, 'delivery-manager.md')"><i data-lucide="file-text" style="width: 13px; height: 13px;"></i><span class="mono">delivery-manager.md</span></div>
+            <div class="lib-file" onclick="selectLibFile(this, 'backend-developer.md')"><i data-lucide="file-text" style="width: 13px; height: 13px;"></i><span class="mono">backend-developer.md</span></div>
+            <div class="lib-file" onclick="selectLibFile(this, 'frontend-developer.md')"><i data-lucide="file-text" style="width: 13px; height: 13px;"></i><span class="mono">frontend-developer.md</span></div>
+            <div class="lib-file" onclick="selectLibFile(this, 'qa-engineer.md')"><i data-lucide="file-text" style="width: 13px; height: 13px;"></i><span class="mono">qa-engineer.md</span></div>
+            <div class="lib-file" onclick="selectLibFile(this, 'designer.md')"><i data-lucide="file-text" style="width: 13px; height: 13px;"></i><span class="mono">designer.md</span></div>
+            <div class="lib-file" onclick="selectLibFile(this, 'devops-engineer.md')"><i data-lucide="file-text" style="width: 13px; height: 13px;"></i><span class="mono">devops-engineer.md</span></div>
+            <div class="lib-file" onclick="selectLibFile(this, 'security-engineer.md')"><i data-lucide="file-text" style="width: 13px; height: 13px;"></i><span class="mono">security-engineer.md</span></div>
+            <div class="lib-file" onclick="selectLibFile(this, 'db-admin.md')"><i data-lucide="file-text" style="width: 13px; height: 13px;"></i><span class="mono">db-admin.md</span></div>
+            <div class="lib-file" onclick="selectLibFile(this, 'copywriter.md')"><i data-lucide="file-text" style="width: 13px; height: 13px;"></i><span class="mono">copywriter.md</span></div>
+            <div class="lib-file" onclick="selectLibFile(this, 'compliance-expert.md')"><i data-lucide="file-text" style="width: 13px; height: 13px;"></i><span class="mono">compliance-expert.md</span></div>
+            <div class="lib-file" onclick="selectLibFile(this, 'growth-expert.md')"><i data-lucide="file-text" style="width: 13px; height: 13px;"></i><span class="mono">growth-expert.md</span></div>
+          </div>
+          <div class="lib-editor">
+            <div class="lib-editor-header">
+              <span class="mono" style="font-size: 13px; color: var(--tx-2);">operation-manager.md</span>
+              <div style="display: flex; gap: 6px;">
+                <button class="btn btn-ghost btn-xs">Preview</button>
+                <button class="btn btn-outline btn-xs">Save</button>
+              </div>
+            </div>
+            <div class="lib-editor-body">
+              <textarea spellcheck="false"># operation-manager
+
+## Role
+Top-level orchestrator. Reports directly to +prime (human). Dispatches and coordinates all other agents.
+
+## Authority
+- Start, pause, resume any pipeline
+- Issue handovers between any two agents
+- Halt blocked work and escalate to +prime
+- Allocate the worker pool across pipelines
+
+## Model
+Tier: orchestrator
+Default: claude-opus-4-5 (highest reasoning depth required for cross-agent coordination)
+
+## Reports to
++prime (human approval gate)
+
+## Directs
++engineering-manager, +product-manager, +delivery-manager, and any specialist when temporarily reassigned.
+
+## Decision rights
+- Pipeline selection from workflow catalog
+- Agent pool allocation per phase
+- When to invoke +prime for gate approval
+
+## Escalation triggers
+- Pipeline stalled &gt; 30 min with no progress event
+- Cost spike &gt; $50/hour
+- Two or more agents reporting same blocker
+</textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Workflows tab -->
+      <div data-tab="workflows" style="display: none;">
+        <div class="lib-shell">
+          <div class="lib-files">
+            <div class="lib-file active"><i data-lucide="git-branch" style="width: 13px; height: 13px;"></i><span class="mono">00-kortext-setup.md</span></div>
+            <div class="lib-file"><i data-lucide="git-branch" style="width: 13px; height: 13px;"></i><span class="mono">01a-analysis-pipeline.md</span></div>
+            <div class="lib-file"><i data-lucide="git-branch" style="width: 13px; height: 13px;"></i><span class="mono">01b-onboarding-pipeline.md</span></div>
+            <div class="lib-file"><i data-lucide="git-branch" style="width: 13px; height: 13px;"></i><span class="mono">02-planning-pipeline.md</span></div>
+            <div class="lib-file"><i data-lucide="git-branch" style="width: 13px; height: 13px;"></i><span class="mono">02b-spike-workflow.md</span></div>
+            <div class="lib-file"><i data-lucide="git-branch" style="width: 13px; height: 13px;"></i><span class="mono">03-environment-setup.md</span></div>
+            <div class="lib-file"><i data-lucide="git-branch" style="width: 13px; height: 13px;"></i><span class="mono">04-development-cycle.md</span></div>
+            <div class="lib-file"><i data-lucide="git-branch" style="width: 13px; height: 13px;"></i><span class="mono">05-test-cycle.md</span></div>
+            <div class="lib-file"><i data-lucide="git-branch" style="width: 13px; height: 13px;"></i><span class="mono">06-deployment-cycle.md</span></div>
+            <div class="lib-file"><i data-lucide="git-branch" style="width: 13px; height: 13px;"></i><span class="mono">07-rollback-pipeline.md</span></div>
+            <div class="lib-file"><i data-lucide="git-branch" style="width: 13px; height: 13px;"></i><span class="mono">08-hotfix-pipeline.md</span></div>
+            <div class="lib-file"><i data-lucide="git-branch" style="width: 13px; height: 13px;"></i><span class="mono">09-maintenance-cycle.md</span></div>
+          </div>
+          <div class="lib-editor">
+            <div class="lib-editor-header">
+              <span class="mono" style="font-size: 13px; color: var(--tx-2);">00-kortext-setup.md</span>
+              <div style="display: flex; gap: 6px;">
+                <button class="btn btn-ghost btn-xs">Preview</button>
+                <button class="btn btn-outline btn-xs">Save</button>
+              </div>
+            </div>
+            <div class="lib-editor-body">
+              <textarea spellcheck="false"># 00-kortext-setup
+
+## Trigger
+First-time project initialization, manual via `kortext init`.
+
+## Steps
+1. validate-environment &mdash; +devops-engineer
+2. scaffold-workspace &mdash; +operation-manager
+3. seed-blueprint-template &mdash; +product-manager
+4. configure-git-hooks &mdash; +devops-engineer
+5. initialize-sqlite &mdash; +db-admin
+6. emit-ready-event &mdash; +operation-manager
+
+## Gate
+After step 6, blocks on blueprint approval before 01a-analysis-pipeline auto-fires.
+</textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rules tab -->
+      <div data-tab="rules" style="display: none;">
+        <div class="lib-shell">
+          <div class="lib-files">
+            <div class="lib-file active"><i data-lucide="shield" style="width: 13px; height: 13px;"></i><span class="mono">behavior.md</span></div>
+            <div class="lib-file"><i data-lucide="shield" style="width: 13px; height: 13px;"></i><span class="mono">branching.md</span></div>
+            <div class="lib-file"><i data-lucide="shield" style="width: 13px; height: 13px;"></i><span class="mono">commands.md</span></div>
+            <div class="lib-file"><i data-lucide="shield" style="width: 13px; height: 13px;"></i><span class="mono">emergency.md</span></div>
+            <div class="lib-file"><i data-lucide="shield" style="width: 13px; height: 13px;"></i><span class="mono">models.md</span></div>
+          </div>
+          <div class="lib-editor">
+            <div class="lib-editor-header">
+              <span class="mono" style="font-size: 13px; color: var(--tx-2);">behavior.md</span>
+              <div style="display: flex; gap: 6px;">
+                <button class="btn btn-ghost btn-xs">Preview</button>
+                <button class="btn btn-outline btn-xs">Save</button>
+              </div>
+            </div>
+            <div class="lib-editor-body">
+              <textarea spellcheck="false"># behavior
+
+## Core rules
+
+- Single source of truth: `workspace/` directory. Never hallucinate &mdash; ask +prime.
+- Read-before-write on every persistent output.
+- Conventional Commits enforced by commit-msg hook.
+- Block on any logical contradiction and escalate via chain of command.
+- Parallel work permitted when files don't overlap (worktree isolation).
+- Authority chain: +prime &gt; managers &gt; specialists.
+
+## Communication
+- Reporting language: Turkish (when user-facing)
+- Code, variables, comments: English
+- UI strings: project target language
+</textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- References tab -->
+      <div data-tab="references" style="display: none;">
+        <div class="lib-shell">
+          <div class="lib-files">
+            <div class="lib-file active"><i data-lucide="book" style="width: 13px; height: 13px;"></i><span class="mono">blueprint.md</span></div>
+            <div class="lib-file"><i data-lucide="book" style="width: 13px; height: 13px;"></i><span class="mono">tech-stack.md</span></div>
+            <div class="lib-file"><i data-lucide="book" style="width: 13px; height: 13px;"></i><span class="mono">brand-voice.md</span></div>
+            <div class="lib-file"><i data-lucide="image" style="width: 13px; height: 13px;"></i><span class="mono">dashboard.fig</span></div>
+            <div class="lib-file"><i data-lucide="book" style="width: 13px; height: 13px;"></i><span class="mono">api-contracts.md</span></div>
+            <div class="lib-file" style="color: var(--tx-3); font-style: italic;"><i data-lucide="upload" style="width: 13px; height: 13px;"></i><span>+ Upload reference</span></div>
+          </div>
+          <div class="lib-editor">
+            <div class="lib-editor-header">
+              <span class="mono" style="font-size: 13px; color: var(--tx-2);">blueprint.md</span>
+              <span class="badge badge-green" style="margin-left: 10px;">approved</span>
+              <span style="flex: 1;"></span>
+              <button class="btn btn-ghost btn-xs">Preview</button>
+              <button class="btn btn-outline btn-xs">Save</button>
+            </div>
+            <div class="lib-editor-body">
+              <textarea spellcheck="false"># Acme CRM Blueprint
+
+## Product vision
+B2B SaaS CRM for small &amp; medium teams. Self-serve onboarding, transparent pricing, deep Stripe integration.
+
+## Target user
+Founders / sales leads at 10-50 person companies who outgrew spreadsheets but don't want Salesforce.
+
+## MVP scope
+- Authentication (Auth0)
+- Customer dashboard
+- Billing &amp; subscription
+- Basic admin panel
+
+## Tech stack
+Next.js 15 / Node 22 / PostgreSQL 16 / Vercel / Stripe / Auth0
+
+## Constraints
+- 4 concurrent agent runs max
+- $500/month external API budget
+- Production deploys require delivery-manager approval
+</textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =============== SETTINGS =============== -->
+    <section class="route" data-route="settings">
+      <div class="route-header">
+        <div>
+          <h1 class="route-title">Settings</h1>
+          <p class="route-sub">Configure workspace, agents, hooks, and access</p>
+        </div>
+      </div>
+
+      <div class="settings-shell">
+        <nav class="settings-nav">
+          <div class="settings-nav-item active" onclick="switchSettingsPane(this, 'general')">General</div>
+          <div class="settings-nav-item" onclick="switchSettingsPane(this, 'models')">Models</div>
+          <div class="settings-nav-item" onclick="switchSettingsPane(this, 'hooks')">Hooks</div>
+          <div class="settings-nav-item" onclick="switchSettingsPane(this, 'integrations')">Integrations</div>
+          <div class="settings-nav-item" onclick="switchSettingsPane(this, 'environment')">Environment</div>
+          <div style="height: 12px;"></div>
+          <div class="settings-nav-item danger" onclick="switchSettingsPane(this, 'danger')">Danger zone</div>
+        </nav>
+
+        <div>
+          <!-- General -->
+          <div class="settings-pane active" data-pane="general">
+            <h2 style="font-size: 16px; font-weight: 600; margin: 0 0 4px;">General</h2>
+            <p style="font-size: 13px; color: var(--tx-3); margin: 0 0 20px;">Project identity and base configuration</p>
+            <div class="field-row">
+              <div><div class="field-label">Project name</div><div class="field-desc">Displayed in topbar and reports</div></div>
+              <div><input class="input" type="text" value="Acme CRM" style="width: 320px;"></div>
+            </div>
+            <div class="field-row">
+              <div><div class="field-label">Project code</div><div class="field-desc">Slug used in file paths and commit messages</div></div>
+              <div><input class="input mono" type="text" value="acme-crm" style="width: 320px;"></div>
+            </div>
+            <div class="field-row">
+              <div><div class="field-label">Version</div><div class="field-desc">Current release version</div></div>
+              <div><input class="input mono" type="text" value="0.4.1" style="width: 160px;"></div>
+            </div>
+            <div class="field-row">
+              <div><div class="field-label">GitHub repository</div><div class="field-desc">For PR automation</div></div>
+              <div><input class="input mono" type="text" value="acme-corp/crm" style="width: 320px;"></div>
+            </div>
+            <div class="field-row">
+              <div><div class="field-label">Auto-commit on transitions</div><div class="field-desc">Every status change creates a kortext meta-commit</div></div>
+              <div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+            </div>
+            <div class="field-row">
+              <div><div class="field-label">Default language</div><div class="field-desc">Source language for UI strings &mdash; translations layered on top</div></div>
+              <div><select class="input" style="width: 200px;"><option>English</option><option>Turkish</option></select></div>
+            </div>
+            <div style="margin-top: 24px;"><button class="btn btn-primary btn-xs">Save changes</button></div>
+          </div>
+
+          <!-- Models -->
+          <div class="settings-pane" data-pane="models">
+            <h2 style="font-size: 16px; font-weight: 600; margin: 0 0 4px;">Models</h2>
+            <p style="font-size: 13px; color: var(--tx-3); margin: 0 0 20px;">Assign AI models per persona &middot; affects cost and quality</p>
+            <div style="display: flex; gap: 6px; margin-bottom: 16px;">
+              <button class="btn btn-outline btn-xs">All Opus</button>
+              <button class="btn btn-outline btn-xs">All Sonnet</button>
+              <button class="btn btn-outline btn-xs">All Haiku</button>
+              <button class="btn btn-primary btn-xs">Balanced (recommended)</button>
+            </div>
+            <div class="row-list" style="margin-bottom: 16px;">
+              <div class="row row-header" style="--cols: 1fr 140px 200px 80px;">
+                <div>Persona</div><div>Tier</div><div>Model</div><div>Cost</div>
+              </div>
+              <div class="row" style="--cols: 1fr 140px 200px 80px;">
+                <span class="mono" style="color: var(--tx-1);">+operation-manager</span>
+                <span class="badge badge-purple">orchestrator</span>
+                <select class="input" style="width: 100%;"><option>claude-opus-4-5</option></select>
+                <span class="mono" style="font-size: 12px; color: var(--tx-3);">$$$$</span>
+              </div>
+              <div class="row" style="--cols: 1fr 140px 200px 80px;">
+                <span class="mono" style="color: var(--tx-1);">+engineering-manager</span>
+                <span class="badge badge-purple">manager</span>
+                <select class="input" style="width: 100%;"><option>claude-opus-4-5</option></select>
+                <span class="mono" style="font-size: 12px; color: var(--tx-3);">$$$$</span>
+              </div>
+              <div class="row" style="--cols: 1fr 140px 200px 80px;">
+                <span class="mono" style="color: var(--tx-1);">+backend-developer</span>
+                <span class="badge badge-blue">specialist</span>
+                <select class="input" style="width: 100%;"><option>claude-sonnet-4-5</option></select>
+                <span class="mono" style="font-size: 12px; color: var(--tx-3);">$$$</span>
+              </div>
+              <div class="row" style="--cols: 1fr 140px 200px 80px;">
+                <span class="mono" style="color: var(--tx-1);">+frontend-developer</span>
+                <span class="badge badge-blue">specialist</span>
+                <select class="input" style="width: 100%;"><option>claude-sonnet-4-5</option></select>
+                <span class="mono" style="font-size: 12px; color: var(--tx-3);">$$$</span>
+              </div>
+              <div class="row" style="--cols: 1fr 140px 200px 80px;">
+                <span class="mono" style="color: var(--tx-1);">+qa-engineer</span>
+                <span class="badge badge-neutral">utility</span>
+                <select class="input" style="width: 100%;"><option>claude-haiku-3-5</option></select>
+                <span class="mono" style="font-size: 12px; color: var(--tx-3);">$</span>
+              </div>
+              <div class="row" style="--cols: 1fr 140px 200px 80px;">
+                <span class="mono" style="color: var(--tx-1);">+devops-engineer</span>
+                <span class="badge badge-neutral">utility</span>
+                <select class="input" style="width: 100%;"><option>claude-haiku-3-5</option></select>
+                <span class="mono" style="font-size: 12px; color: var(--tx-3);">$</span>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 16px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-1);">
+              <i data-lucide="trending-up" style="width: 16px; height: 16px; color: var(--accent);"></i>
+              <div style="flex: 1;">
+                <div style="font-size: 13px; color: var(--tx-1);">Daily estimate: <span class="mono">$4.30</span> &middot; Monthly projection: <span class="mono">$129.00</span></div>
+                <div style="font-size: 12px; color: var(--tx-3);">Based on past 7-day token usage</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hooks -->
+          <div class="settings-pane" data-pane="hooks">
+            <h2 style="font-size: 16px; font-weight: 600; margin: 0 0 4px;">Hooks</h2>
+            <p style="font-size: 13px; color: var(--tx-3); margin: 0 0 20px;">Lifecycle event listeners &middot; toggle to enable/disable</p>
+            <div class="row-list">
+              <div class="row" style="--cols: 1fr auto;">
+                <div>
+                  <div style="color: var(--tx-1); font-size: 13px;">PreToolUse</div>
+                  <div style="color: var(--tx-3); font-size: 12px; margin-top: 2px;">Fires before any tool invocation &middot; used for write-guard, secret scan</div>
+                </div>
+                <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+              </div>
+              <div class="row" style="--cols: 1fr auto;">
+                <div>
+                  <div style="color: var(--tx-1); font-size: 13px;">PostToolUse</div>
+                  <div style="color: var(--tx-3); font-size: 12px; margin-top: 2px;">Audit logger &middot; persists every action to audit_log table</div>
+                </div>
+                <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+              </div>
+              <div class="row" style="--cols: 1fr auto;">
+                <div>
+                  <div style="color: var(--tx-1); font-size: 13px;">UserPromptSubmit</div>
+                  <div style="color: var(--tx-3); font-size: 12px; margin-top: 2px;">Validates +prime input format before dispatching</div>
+                </div>
+                <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+              </div>
+              <div class="row" style="--cols: 1fr auto;">
+                <div>
+                  <div style="color: var(--tx-1); font-size: 13px;">SessionStart</div>
+                  <div style="color: var(--tx-3); font-size: 12px; margin-top: 2px;">Reloads agent context &middot; checks for stale work</div>
+                </div>
+                <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+              </div>
+              <div class="row" style="--cols: 1fr auto;">
+                <div>
+                  <div style="color: var(--tx-1); font-size: 13px;">HandoverStart</div>
+                  <div style="color: var(--tx-3); font-size: 12px; margin-top: 2px;">Captures context bundle on persona handover &middot; <span style="color: var(--tx-4);">disabled</span></div>
+                </div>
+                <div class="toggle" onclick="this.classList.toggle('on')"></div>
+              </div>
+              <div class="row" style="--cols: 1fr auto;">
+                <div>
+                  <div style="color: var(--tx-1); font-size: 13px;">BlockerDetected</div>
+                  <div style="color: var(--tx-3); font-size: 12px; margin-top: 2px;">Auto-notify +prime when a task blocks &middot; <span style="color: var(--tx-4);">disabled</span></div>
+                </div>
+                <div class="toggle" onclick="this.classList.toggle('on')"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Integrations -->
+          <div class="settings-pane" data-pane="integrations">
+            <h2 style="font-size: 16px; font-weight: 600; margin: 0 0 4px;">Integrations</h2>
+            <p style="font-size: 13px; color: var(--tx-3); margin: 0 0 20px;">External services connected to this project</p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div style="border: 1px solid var(--border); border-radius: 6px; padding: 14px;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                  <i data-lucide="github" style="width: 16px; height: 16px;"></i>
+                  <span style="font-size: 13px; color: var(--tx-1); font-weight: 500;">GitHub</span>
+                  <span style="flex: 1;"></span>
+                  <span class="badge badge-green">connected</span>
+                </div>
+                <div style="font-size: 12px; color: var(--tx-3);"><span class="mono">acme-corp/crm</span></div>
+              </div>
+              <div style="border: 1px solid var(--border); border-radius: 6px; padding: 14px;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                  <i data-lucide="cloud" style="width: 16px; height: 16px;"></i>
+                  <span style="font-size: 13px; color: var(--tx-1); font-weight: 500;">Vercel</span>
+                  <span style="flex: 1;"></span>
+                  <span class="badge badge-green">connected</span>
+                </div>
+                <div style="font-size: 12px; color: var(--tx-3);">Preview + production deployments</div>
+              </div>
+              <div style="border: 1px solid var(--border); border-radius: 6px; padding: 14px;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                  <i data-lucide="credit-card" style="width: 16px; height: 16px;"></i>
+                  <span style="font-size: 13px; color: var(--tx-1); font-weight: 500;">Stripe</span>
+                  <span style="flex: 1;"></span>
+                  <span class="badge badge-amber">test mode</span>
+                </div>
+                <div style="font-size: 12px; color: var(--tx-3);">Webhooks &middot; subscriptions</div>
+              </div>
+              <div style="border: 1px solid var(--border); border-radius: 6px; padding: 14px;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                  <i data-lucide="lock" style="width: 16px; height: 16px;"></i>
+                  <span style="font-size: 13px; color: var(--tx-1); font-weight: 500;">Auth0</span>
+                  <span style="flex: 1;"></span>
+                  <span class="badge badge-green">connected</span>
+                </div>
+                <div style="font-size: 12px; color: var(--tx-3);">OAuth identity provider</div>
+              </div>
+              <div style="border: 1px solid var(--border); border-radius: 6px; padding: 14px; opacity: 0.5;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                  <i data-lucide="slack" style="width: 16px; height: 16px;"></i>
+                  <span style="font-size: 13px; color: var(--tx-1); font-weight: 500;">Slack</span>
+                  <span style="flex: 1;"></span>
+                  <button class="btn btn-outline btn-xs">Connect</button>
+                </div>
+                <div style="font-size: 12px; color: var(--tx-3);">Approval notifications</div>
+              </div>
+              <div style="border: 1px solid var(--border); border-radius: 6px; padding: 14px; opacity: 0.5;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                  <i data-lucide="send" style="width: 16px; height: 16px;"></i>
+                  <span style="font-size: 13px; color: var(--tx-1); font-weight: 500;">Telegram</span>
+                  <span style="flex: 1;"></span>
+                  <button class="btn btn-outline btn-xs">Connect</button>
+                </div>
+                <div style="font-size: 12px; color: var(--tx-3);">Approval notifications</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Environment -->
+          <div class="settings-pane" data-pane="environment">
+            <h2 style="font-size: 16px; font-weight: 600; margin: 0 0 4px;">Environment</h2>
+            <p style="font-size: 13px; color: var(--tx-3); margin: 0 0 20px;">Project-specific variables and secrets available to agents</p>
+            <div class="row-list" style="margin-bottom: 16px;">
+              <div class="row row-header" style="--cols: 1fr 1fr 100px 70px;">
+                <div>Key</div><div>Value</div><div>Type</div><div></div>
+              </div>
+              <div class="row" style="--cols: 1fr 1fr 100px 70px;">
+                <span class="mono" style="color: var(--tx-1);">ANTHROPIC_API_KEY</span>
+                <span class="mono" style="color: var(--tx-3); font-size: 12px;">sk-ant-•••••••1a2b</span>
+                <span class="badge badge-red">secret</span>
+                <button class="btn btn-ghost btn-xs">Edit</button>
+              </div>
+              <div class="row" style="--cols: 1fr 1fr 100px 70px;">
+                <span class="mono" style="color: var(--tx-1);">STRIPE_SECRET_KEY</span>
+                <span class="mono" style="color: var(--tx-3); font-size: 12px;">sk_live_•••••••3f4g</span>
+                <span class="badge badge-red">secret</span>
+                <button class="btn btn-ghost btn-xs">Edit</button>
+              </div>
+              <div class="row" style="--cols: 1fr 1fr 100px 70px;">
+                <span class="mono" style="color: var(--tx-1);">GITHUB_TOKEN</span>
+                <span class="mono" style="color: var(--tx-3); font-size: 12px;">ghp_•••••••9h0i</span>
+                <span class="badge badge-red">secret</span>
+                <button class="btn btn-ghost btn-xs">Edit</button>
+              </div>
+              <div class="row" style="--cols: 1fr 1fr 100px 70px;">
+                <span class="mono" style="color: var(--tx-1);">DATABASE_URL</span>
+                <span class="mono" style="color: var(--tx-3); font-size: 12px;">postgres://acme:••••@&hellip;</span>
+                <span class="badge badge-red">secret</span>
+                <button class="btn btn-ghost btn-xs">Edit</button>
+              </div>
+              <div class="row" style="--cols: 1fr 1fr 100px 70px;">
+                <span class="mono" style="color: var(--tx-1);">NODE_ENV</span>
+                <span class="mono" style="color: var(--tx-2); font-size: 12px;">production</span>
+                <span class="badge badge-neutral">string</span>
+                <button class="btn btn-ghost btn-xs">Edit</button>
+              </div>
+              <div class="row" style="--cols: 1fr 1fr 100px 70px;">
+                <span class="mono" style="color: var(--tx-1);">MAX_CONCURRENT_AGENTS</span>
+                <span class="mono" style="color: var(--tx-2); font-size: 12px;">3</span>
+                <span class="badge badge-neutral">number</span>
+                <button class="btn btn-ghost btn-xs">Edit</button>
+              </div>
+            </div>
+            <button class="btn btn-outline btn-xs"><i data-lucide="plus" style="width: 12px; height: 12px;"></i> Add variable</button>
+          </div>
+
+          <!-- Danger -->
+          <div class="settings-pane" data-pane="danger">
+            <h2 style="font-size: 16px; font-weight: 600; margin: 0 0 4px; color: var(--danger);">Danger zone</h2>
+            <p style="font-size: 13px; color: var(--tx-3); margin: 0 0 20px;">Irreversible actions &mdash; proceed with caution</p>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <div style="border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 6px; padding: 14px; display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                  <div style="font-size: 13px; color: var(--tx-1); font-weight: 500;">Archive project</div>
+                  <div style="font-size: 12px; color: var(--tx-3); margin-top: 2px;">Read-only mode. Agents stop, history preserved.</div>
+                </div>
+                <button class="btn btn-outline btn-xs" style="border-color: rgba(245, 158, 11, 0.4); color: var(--warning);">Archive</button>
+              </div>
+              <div style="border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 6px; padding: 14px; display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                  <div style="font-size: 13px; color: var(--tx-1); font-weight: 500;">Reset memory</div>
+                  <div style="font-size: 12px; color: var(--tx-3); margin-top: 2px;">Clear all decisions, learned items, handovers. Backlog preserved.</div>
+                </div>
+                <button class="btn btn-danger btn-xs">Reset memory</button>
+              </div>
+              <div style="border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 6px; padding: 14px; display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                  <div style="font-size: 13px; color: var(--tx-1); font-weight: 500;">Delete project</div>
+                  <div style="font-size: 12px; color: var(--tx-3); margin-top: 2px;">Permanent. All data removed from SQLite. Type project code to confirm.</div>
+                </div>
+                <button class="btn btn-danger btn-xs">Delete</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- =================== TASK DRAWER =================== -->
+<div class="drawer-backdrop" onclick="closeTaskDrawer()"></div>
+<aside class="drawer" id="task-drawer">
+  <div class="drawer-header">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <span class="mono" id="td-id" style="font-size: 12px; color: var(--tx-3);">T-001</span>
+      <span class="badge badge-pink" id="td-badge">In progress</span>
+    </div>
+    <button class="btn btn-ghost btn-xs" onclick="closeTaskDrawer()"><i data-lucide="x" style="width: 14px; height: 14px;"></i></button>
+  </div>
+  <div class="drawer-body">
+    <h3 id="td-title" style="font-size: 16px; font-weight: 600; margin: 0 0 16px; line-height: 1.4;">JWT auth middleware implementation</h3>
+    <div style="display: grid; grid-template-columns: 100px 1fr; gap: 12px; margin-bottom: 24px; font-size: 13px;">
+      <span style="color: var(--tx-3);">Epic</span><span id="td-epic" style="color: var(--tx-2);">E-001 Authentication</span>
+      <span style="color: var(--tx-3);">Assignee</span><span id="td-assignee" style="color: var(--tx-2);" class="mono">+backend-developer</span>
+      <span style="color: var(--tx-3);">Priority</span><span id="td-prio" style="color: var(--tx-2);">High</span>
+      <span style="color: var(--tx-3);">Points</span><span id="td-pts" style="color: var(--tx-2);">8</span>
+      <span style="color: var(--tx-3);">Created</span><span class="mono" id="td-created" style="color: var(--tx-3); font-size: 12px;">2026-05-10</span>
+    </div>
+    <div style="margin-bottom: 24px;">
+      <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--tx-3); margin-bottom: 8px;">Description</div>
+      <p id="td-desc" style="font-size: 13px; color: var(--tx-2); line-height: 1.6; margin: 0;">Create Express middleware to validate JWT tokens on protected routes. Should handle token expiry, invalid signatures, and missing auth header gracefully.</p>
+    </div>
+    <div>
+      <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--tx-3); margin-bottom: 8px;">Activity</div>
+      <div id="td-activity" style="display: flex; flex-direction: column; gap: 6px; font-size: 12px;">
+        <div style="color: var(--tx-3);"><span class="mono">14:32:18</span> &middot; +backend-developer applied middleware to /api/*</div>
+        <div style="color: var(--tx-3);"><span class="mono">14:31:42</span> &middot; tests passed (14/14)</div>
+        <div style="color: var(--tx-3);"><span class="mono">14:08:02</span> &middot; status &rarr; In progress</div>
+        <div style="color: var(--tx-3);"><span class="mono">11-May</span> &middot; +operation-manager assigned +backend-developer</div>
+      </div>
+    </div>
+  </div>
+  <div class="drawer-footer">
+    <button class="btn btn-outline btn-xs">Move to Review</button>
+    <button class="btn btn-ghost btn-xs">Add comment</button>
+  </div>
+</aside>
+
+<!-- =================== MEMORY DRAWER =================== -->
+<aside class="drawer" id="mem-drawer">
+  <div class="drawer-header">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <span class="mono" id="md-id" style="font-size: 12px; color: var(--tx-3);">D-007</span>
+      <span class="badge badge-purple">Decision</span>
+    </div>
+    <button class="btn btn-ghost btn-xs" onclick="closeMemDrawer()"><i data-lucide="x" style="width: 14px; height: 14px;"></i></button>
+  </div>
+  <div class="drawer-body" style="display: flex; flex-direction: column; gap: 16px;">
+    <div>
+      <label style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--tx-3); display: block; margin-bottom: 6px;">Title</label>
+      <input class="input" type="text" value="Auth provider: Auth0 over Clerk" style="width: 100%;">
+    </div>
+    <div>
+      <label style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--tx-3); display: block; margin-bottom: 6px;">Owner</label>
+      <input class="input mono" type="text" value="+engineering-manager" style="width: 100%;">
+    </div>
+    <div style="flex: 1;">
+      <label style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--tx-3); display: block; margin-bottom: 6px;">Content</label>
+      <textarea class="input" style="width: 100%; min-height: 240px;">## Context
+Need an identity provider for E-001 authentication epic. Two finalists: Auth0 and Clerk.
+
+## Decision
+**Auth0** &mdash; chosen for enterprise SSO maturity and JWT portability.
+
+## Trade-offs
+- Clerk has better DX (faster integration)
+- Auth0 has 50% lower projected cost at our scale
+- Auth0 JWT format is portable (no lock-in)
+
+## Consequences
+- T-001 (JWT middleware) uses Auth0 JWKS
+- T-003 (OAuth2) uses Auth0 social connections
+- Budget impact: $0 up to 7000 MAUs (free tier)</textarea>
+    </div>
+  </div>
+  <div class="drawer-footer">
+    <button class="btn btn-primary btn-xs">Save</button>
+    <button class="btn btn-ghost btn-xs" onclick="closeMemDrawer()">Cancel</button>
+  </div>
+</aside>
+
+<!-- =================== COMMAND PALETTE =================== -->
+<div class="cmd-overlay" id="cmd-overlay" onclick="if(event.target===this)closeCmdK()">
+  <div class="cmd-panel">
+    <div class="cmd-input-row">
+      <i data-lucide="search" style="width: 16px; height: 16px; color: var(--tx-3);"></i>
+      <input class="cmd-input" id="cmd-input" type="text" placeholder="Search routes, items, pipelines&hellip;" oninput="filterCmd(this.value)">
+      <span class="cmdk-kbd">ESC</span>
+    </div>
+    <div class="cmd-list" id="cmd-list">
+      <div class="cmd-section">Navigate</div>
+      <div class="cmd-item" onclick="showRoute('overview'); closeCmdK();"><i data-lucide="layout-grid"></i><span>Overview</span></div>
+      <div class="cmd-item" onclick="showRoute('backlog'); closeCmdK();"><i data-lucide="kanban-square"></i><span>Backlog</span></div>
+      <div class="cmd-item" onclick="showRoute('pipelines'); closeCmdK();"><i data-lucide="git-branch"></i><span>Pipelines</span></div>
+      <div class="cmd-item" onclick="showRoute('approvals'); closeCmdK();"><i data-lucide="inbox"></i><span>Approvals</span></div>
+      <div class="cmd-item" onclick="showRoute('memory'); closeCmdK();"><i data-lucide="brain"></i><span>Memory</span></div>
+      <div class="cmd-item" onclick="showRoute('library'); closeCmdK();"><i data-lucide="book-open"></i><span>Library</span></div>
+      <div class="cmd-item" onclick="showRoute('settings'); closeCmdK();"><i data-lucide="settings"></i><span>Settings</span></div>
+      <div class="cmd-section">Pipelines</div>
+      <div class="cmd-item"><i data-lucide="play"></i><span>04-development-cycle <span class="mono" style="color: var(--tx-3);">#042 running</span></span></div>
+      <div class="cmd-item"><i data-lucide="check-circle"></i><span>02-planning-pipeline <span class="mono" style="color: var(--tx-3);">#041 completed</span></span></div>
+      <div class="cmd-section">Actions</div>
+      <div class="cmd-item"><i data-lucide="plus"></i><span>New backlog item</span></div>
+      <div class="cmd-item"><i data-lucide="play"></i><span>Start workflow&hellip;</span></div>
+      <div class="cmd-item"><i data-lucide="pause"></i><span>Pause all pipelines</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- =================== TOAST =================== -->
+<div class="toast" id="toast">
+  <i data-lucide="check" style="width: 14px; height: 14px; color: var(--success);"></i>
+  <span id="toast-text">Approved</span>
+</div>
+
+<!-- =================== SCRIPT =================== -->
+<script>
+  // ROUTING
+  const ROUTES = ['overview','backlog','pipelines','approvals','memory','library','settings'];
+  function showRoute(name) {
+    if (!ROUTES.includes(name)) name = 'overview';
+    document.querySelectorAll('section.route').forEach(s => s.classList.toggle('active', s.dataset.route === name));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.route === name));
+    history.replaceState(null, '', '#' + name);
+    window.scrollTo(0, 0);
+  }
+
+  // TASK DRAWER
+  const TASKS = {
+    'T-001': { title: 'JWT auth middleware implementation', epic: 'E-001 Authentication', assignee: '+backend-developer', prio: 'High', pts: 8, created: '2026-05-10', status: 'In progress', badge: 'badge-pink', desc: 'Create Express middleware to validate JWT tokens on protected routes. Should handle token expiry, invalid signatures, and missing auth header gracefully.' },
+    'T-002': { title: 'Login & registration screen designs', epic: 'E-001 Authentication', assignee: '+designer', prio: 'High', pts: 5, created: '2026-05-09', status: 'Review', badge: 'badge-amber', desc: 'Figma designs for login, register, password reset, 2FA. Mobile breakpoints required.' },
+    'T-003': { title: 'OAuth2 Google integration', epic: 'E-001 Authentication', assignee: '+backend-developer', prio: 'Medium', pts: 5, created: '2026-05-11', status: 'Backlog', badge: 'badge-neutral', desc: 'Integrate Google OAuth2 via Passport.js. Store provider ID alongside local account for linking.' },
+    'T-004': { title: 'Stripe subscription webhooks', epic: 'E-002 Billing', assignee: '+backend-developer', prio: 'High', pts: 13, created: '2026-05-08', status: 'In progress', badge: 'badge-pink', desc: 'Handle Stripe webhooks: subscription.created/updated/deleted, invoice.payment_failed.' },
+    'T-005': { title: 'Billing portal UI', epic: 'E-002 Billing', assignee: '+frontend-developer', prio: 'Medium', pts: 8, created: '2026-05-12', status: 'Ready', badge: 'badge-neutral', desc: 'Customer billing portal: plan display, upgrade/downgrade, payment methods, invoice history.' },
+    'T-006': { title: 'Analytics widget grid', epic: 'E-003 Dashboard', assignee: '+frontend-developer', prio: 'Medium', pts: 8, created: '2026-05-07', status: 'In progress', badge: 'badge-pink', desc: 'Responsive widget grid: DAU chart, revenue sparkline, pipeline health, top tasks.' },
+    'T-007': { title: 'Write auth API docs', epic: 'E-001 Authentication', assignee: '+copywriter', prio: 'Low', pts: 3, created: '2026-05-13', status: 'Backlog', badge: 'badge-neutral', desc: 'Document auth endpoints in OpenAPI 3.0. Include request/response examples, error codes.' },
+    'T-008': { title: 'Rate limiting & brute force protection', epic: 'E-001 Authentication', assignee: '+security-engineer', prio: 'High', pts: 5, created: '2026-05-10', status: 'Review', badge: 'badge-amber', desc: 'Per-IP rate limit (10 req/min). Exponential backoff after 5 failed attempts. SIEM logging.' },
+    'T-009': { title: 'User roles & permissions matrix', epic: 'E-004 Admin', assignee: '+backend-developer', prio: 'High', pts: 8, created: '2026-05-09', status: 'In progress', badge: 'badge-pink', desc: 'RBAC: owner, admin, member, viewer. Permission matrix across resources. Route middleware.' },
+    'T-010': { title: 'Admin user management UI', epic: 'E-004 Admin', assignee: '+frontend-developer', prio: 'Medium', pts: 5, created: '2026-05-11', status: 'Backlog', badge: 'badge-neutral', desc: 'Admin panel: list users, invite, deactivate, change roles. Filter by role and status.' },
+    'T-011': { title: 'E2E auth test suite', epic: 'E-001 Authentication', assignee: '+qa-engineer', prio: 'Medium', pts: 5, created: '2026-05-12', status: 'Done', badge: 'badge-green', desc: 'Playwright E2E: login happy path, invalid creds, token refresh, logout, OAuth flow.' },
+    'T-012': { title: 'CI/CD deployment pipeline', epic: 'E-003 Dashboard', assignee: '+devops-engineer', prio: 'High', pts: 8, created: '2026-05-08', status: 'Done', badge: 'badge-green', desc: 'GitHub Actions: lint→test→build→staging→smoke→prod. delivery-manager approval gate.' },
+    'S-014': { title: 'Investigate edge function cold starts', epic: 'E-003 Dashboard', assignee: '+devops-engineer', prio: 'Medium', pts: 3, created: '2026-05-14', status: 'Ready', badge: 'badge-neutral', desc: 'Measure cold start latency for Vercel edge functions vs serverless. Recommend approach.' },
+  };
+
+  function openTaskDrawer(id) {
+    const t = TASKS[id]; if (!t) return;
+    document.getElementById('td-id').textContent = id;
+    document.getElementById('td-badge').textContent = t.status;
+    document.getElementById('td-badge').className = 'badge ' + t.badge;
+    document.getElementById('td-title').textContent = t.title;
+    document.getElementById('td-epic').textContent = t.epic;
+    document.getElementById('td-assignee').textContent = t.assignee;
+    document.getElementById('td-prio').textContent = t.prio;
+    document.getElementById('td-pts').textContent = t.pts;
+    document.getElementById('td-created').textContent = t.created;
+    document.getElementById('td-desc').textContent = t.desc;
+    document.querySelector('.drawer-backdrop').classList.add('open');
+    document.getElementById('task-drawer').classList.add('open');
+  }
+  function closeTaskDrawer() {
+    document.querySelector('.drawer-backdrop').classList.remove('open');
+    document.getElementById('task-drawer').classList.remove('open');
+  }
+
+  function openMemDrawer(type, id) {
+    document.getElementById('md-id').textContent = id;
+    document.querySelector('.drawer-backdrop').classList.add('open');
+    document.getElementById('mem-drawer').classList.add('open');
+  }
+  function closeMemDrawer() {
+    document.querySelector('.drawer-backdrop').classList.remove('open');
+    document.getElementById('mem-drawer').classList.remove('open');
+  }
+
+  // MEMORY TABS
+  function switchMemTab(el, tab) {
+    el.parentElement.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('section[data-route="memory"] [data-tab]').forEach(d => {
+      d.style.display = d.dataset.tab === tab ? '' : 'none';
+    });
+  }
+
+  // LIBRARY TABS
+  function switchLibTab(el, tab) {
+    el.parentElement.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('section[data-route="library"] [data-tab]').forEach(d => {
+      d.style.display = d.dataset.tab === tab ? '' : 'none';
+    });
+  }
+  function selectLibFile(el, name) {
+    el.parentElement.querySelectorAll('.lib-file').forEach(f => f.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  // SETTINGS PANES
+  function switchSettingsPane(el, pane) {
+    el.parentElement.querySelectorAll('.settings-nav-item').forEach(n => n.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('.settings-pane').forEach(p => {
+      p.classList.toggle('active', p.dataset.pane === pane);
+    });
+  }
+
+  // APPROVAL EXPAND + ACTIONS
+  function toggleApprovalExpand(rowEl) {
+    const body = rowEl.nextElementSibling;
+    if (body && body.classList.contains('expand-body')) {
+      const isOpen = body.classList.contains('open');
+      document.querySelectorAll('section[data-route="approvals"] .expand-body.open').forEach(b => b.classList.remove('open'));
+      if (!isOpen) body.classList.add('open');
+    }
+  }
+  function filterApprovals(chip, type) {
+    chip.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    document.querySelectorAll('section[data-route="approvals"] [data-type]').forEach(el => {
+      el.style.display = (type === 'all' || el.dataset.type === type) ? '' : 'none';
+    });
+  }
+  function approveItem(e, btn) { e.stopPropagation(); btn.closest('[data-type]').style.opacity = '0.4'; showToast('Approved'); }
+  function showRevise(e, btn) { e.stopPropagation(); showToast('Revision form opened'); }
+  function showReject(e, btn) { e.stopPropagation(); showToast('Reject reason required'); }
+
+  // PIPELINE EXPAND
+  function togglePipeline(rowEl) {
+    const body = rowEl.nextElementSibling;
+    if (body && body.classList.contains('expand-body')) {
+      body.classList.toggle('open');
+      const chev = rowEl.querySelector('[data-lucide="chevron-down"]');
+      if (chev) chev.style.transform = body.classList.contains('open') ? 'rotate(180deg)' : 'rotate(0deg)';
+    }
+  }
+
+  // COMMAND PALETTE
+  function openCmdK() {
+    document.getElementById('cmd-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('cmd-input').focus(), 50);
+  }
+  function closeCmdK() {
+    document.getElementById('cmd-overlay').classList.remove('open');
+    document.getElementById('cmd-input').value = '';
+    filterCmd('');
+  }
+  function filterCmd(q) {
+    q = q.toLowerCase();
+    document.querySelectorAll('.cmd-item').forEach(i => {
+      i.style.display = i.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  }
+
+  // TOAST
+  let toastTimer;
+  function showToast(text) {
+    document.getElementById('toast-text').textContent = text;
+    document.getElementById('toast').classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => document.getElementById('toast').classList.remove('show'), 2500);
+  }
+
+  // KEYBOARD
+  document.addEventListener('keydown', e => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      e.preventDefault();
+      const open = document.getElementById('cmd-overlay').classList.contains('open');
+      if (open) closeCmdK(); else openCmdK();
+    }
+    if (e.key === 'Escape') {
+      closeCmdK();
+      closeTaskDrawer();
+      closeMemDrawer();
+    }
+  });
+
+  // INIT
+  window.addEventListener('load', () => {
+    if (window.lucide) lucide.createIcons();
+    const hash = window.location.hash.replace('#', '') || 'overview';
+    showRoute(hash);
+    setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 100);
+  });
+</script>
+</body>
+</html>
