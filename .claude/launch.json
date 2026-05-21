@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "kortext-wireframe",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "-l", "8092", "/Users/erayendes/Documents/_codebase/kortext/docs/design"],
+      "port": 8092
+    }
+  ]
+}
