@@ -5,7 +5,7 @@
 
 **Tarih:** 2026-05-21
 **Yazan oturum:** Faz 2.B
-**Son commit:** _bu commit_ — `feat(v3): worktree manager + 3 CLI executors + gate enforcer + safety guards (Faz 2.B)`
+**Son commit:** `9d10a7d` — `feat(v3): worktree manager + 3 CLI executors + gate enforcer + safety guards (Faz 2.B)`
 
 ---
 
@@ -16,7 +16,7 @@
 | **0 — Stack iskeleti** | `v3.0.0-alpha.0` | `02746f3` | smoke: 2 |
 | **1 — SQLite şema + repositories** | `v3.0.0-alpha.1` | `9b1e72c` | db integration: 12 |
 | **2.A — Engine çekirdeği** | `v3.0.0-alpha.2` | `54a8984` | engine: 7 |
-| **2.B — Worktree + CLI executors + gate + safety** | `v3.0.0-alpha.3` | _bu commit_ | worktree: 10, cli-executor: 10, gate: 8, secret: 18, harmful: 3, engine-safety: 4 |
+| **2.B — Worktree + CLI executors + gate + safety** | `v3.0.0-alpha.3` | `9d10a7d` | worktree: 10, cli-executor: 10, gate: 8, secret: 18, harmful: 3, engine-safety: 4 |
 | **Toplam** | — | — | **74/74 ✅** |
 
 Hızlı doğrulama:
