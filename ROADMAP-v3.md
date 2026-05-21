@@ -39,12 +39,12 @@ Kortext'i **markdown methodology framework**'ten **tam otonom AI ajan runtime'ı
 > Tahmini efor brüt — paralelleştirme ve ajan üretkenliğine göre değişir.
 > Her faz sonunda Vitest + integration test + git tag.
 
-### Faz 0 — Stack İskeleti (1-2 gün)
+### Faz 0 — Stack İskeleti (1-2 gün) ✅ `v3.0.0-alpha.0`
 
 **Amaç:** TypeScript monorepo iskeleti, build pipeline, dev experience.
 
-- [ ] `package.json` v3 sürüm yapısı: workspaces yok, tek paket
-- [ ] Klasör yapısı:
+- [x] `package.json` v3 sürüm yapısı: workspaces yok, tek paket
+- [x] Klasör yapısı:
   ```
   kortext/
   ├── src/                      # React frontend (Vite)
@@ -69,15 +69,15 @@ Kortext'i **markdown methodology framework**'ten **tam otonom AI ajan runtime'ı
   ├── tests/
   └── docs/
   ```
-- [ ] `tsconfig.json`, `tsconfig.build.json`, `tsconfig.server.json`
-- [ ] Vite + React 19 + Tailwind v4 setup
-- [ ] Express 5 + better-sqlite3 + Zod setup
-- [ ] Vitest setup
-- [ ] ESLint + Prettier
-- [ ] `.env.example`: PORT, KORTEXT_DB_PATH, SLACK_*, TELEGRAM_*
-- [ ] Eski Python/Bash kodları `legacy/` klasörüne taşı (silmeden önce migrasyon doğrulansın)
+- [x] `tsconfig.json`, `tsconfig.build.json`, `tsconfig.server.json`
+- [x] Vite + React 19 + Tailwind v4 setup
+- [x] Express 5 + better-sqlite3 + Zod setup
+- [x] Vitest setup
+- [x] ESLint + Prettier
+- [x] `.env.example`: KORTEXT_PORT (PORT yerine — preview tool çakışması nedeniyle), KORTEXT_DB_PATH, SLACK_*, TELEGRAM_*
+- [x] Eski Python/Bash kodları `legacy/` klasörüne taşındı (silmedi, `git mv` ile tarih korundu)
 
-### Faz 1 — SQLite Şema + Veri Modeli (2-3 gün)
+### Faz 1 — SQLite Şema + Veri Modeli (2-3 gün) ✅ `v3.0.0-alpha.1`
 
 **Amaç:** Tüm durum verisinin SQLite şeması; markdown ↔ SQLite senkronizasyon stratejisi.
 
@@ -101,14 +101,19 @@ Kortext'i **markdown methodology framework**'ten **tam otonom AI ajan runtime'ı
 - **Üretilen markdown (artefakt):** decisions.md, learned.md, handover.md, ADR'ler — engine üretir, SQLite'a index'ler, dosyayı `workspace/memory/`'de tutar (insan history için).
 - **Tamamen SQLite (eski markdown):** backlog item'ları, context, log, lock — markdown karşılığı YOK.
 
-**Migrasyon scripti:** `legacy/workspace/memory/backlog/*.md` → SQLite `backlog_items` tablosu.
+**Migrasyon scripti:** `bin/migrate-legacy-backlog.ts` — `workspace/memory/backlog/*.md` → SQLite `backlog_items` (idempotent, `--dry-run` destekli; mevcut depo sadece template içerdiğinden boş insert).
 
 ### Faz 2 — Pipeline Engine + Worker Pool + Worktree Manager (5-7 gün)
 
 **Amaç:** Workflow markdown'larını yürütebilen otonom engine; her görev kendi git worktree'sinde.
 
-- [ ] **Workflow parser**: `workflows/*.md` → adım grafı (DAG)
-- [ ] **Worker pool**: configurable concurrency (default: 3 paralel ajan)
+**Faz 2.A — Engine Çekirdeği ✅ `v3.0.0-alpha.2`**
+- [x] **Workflow parser**: `workflows/*.md` → typed WorkflowDefinition (steps, gates, startCommand, nextWorkflowId)
+- [x] **DAG builder**: inputs/outputs üzerinden bağımlılık çıkarımı, Kahn-style cycle detection, `readyKeys(done)`
+- [x] **Worker pool**: configurable concurrency (default 3), "pull ready" scheduler, AbortController ile first-failure short-circuit, kalan adımlar `skipped`'a düşer, audit log boyunca event'ler
+- [x] **Executor interface + Mock executor**: Faz 2.B adapter'ları aynı sözleşmeye uyacak; mock test instrumentation (maxConcurrent, startedOrder)
+
+**Faz 2.B — Yan Sistemler (bu PR dışı)**
 - [ ] **Worktree manager**: `git worktree add .kortext/worktrees/<run-id>` her görev başında, başarı sonrası merge + sil, başarısızlık sonrası karantina
 - [ ] **CLI executor**: Claude Code, Codex CLI, Gemini CLI için ayrı adapter. Her biri:
   - Persona promptunu, context'i, görev tanımını birleştirir
