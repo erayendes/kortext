@@ -1,29 +1,73 @@
 {
   "name": "kortext",
-  "version": "2.2.3",
-  "description": "AI Agent Framework for Operational Discipline and Automated Project Management",
-  "main": "index.js",
+  "version": "3.0.0-alpha.0",
+  "description": "Autonomous AI agent runtime — TypeScript + SQLite + React",
+  "type": "module",
+  "private": false,
   "bin": {
-    "kortext": "scripts/kortext-cli.py"
+    "kortext": "./bin/kortext.js"
   },
   "scripts": {
-    "test": "python3 scripts/kortext-consistency-check.py",
-    "check": "python3 scripts/kortext-context-check.py",
-    "health": "python3 scripts/kortext-backlog-health.py"
+    "dev": "concurrently -n server,web -c blue,magenta \"npm:dev:server\" \"npm:dev:web\"",
+    "dev:server": "tsx watch --clear-screen=false server/index.ts",
+    "dev:web": "vite",
+    "build": "npm run build:server && npm run build:web",
+    "build:server": "tsc -p tsconfig.build.json",
+    "build:web": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.server.json --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "keywords": [
     "ai",
     "agent",
     "framework",
     "automation",
-    "project-management",
+    "claude",
+    "codex",
     "gemini",
-    "claude"
+    "mcp",
+    "orchestration"
   ],
   "author": "Eray Endes",
   "license": "MIT",
   "engines": {
-    "node": ">=14.0.0",
-    "python": ">=3.10.0"
+    "node": ">=22.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "better-sqlite3": "^12.10.0",
+    "express": "^5.0.1",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.5",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "@typescript-eslint/eslint-plugin": "^8.20.0",
+    "@typescript-eslint/parser": "^8.20.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.2",
+    "eslint": "^9.18.0",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-react": "^7.37.4",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "globals": "^15.14.0",
+    "prettier": "^3.4.2",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwindcss": "^4.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vite": "^7.0.0",
+    "vitest": "^3.0.0"
   }
 }

@@ -1,4 +1,5 @@
 node_modules/
+dist/
 *.log
 .DS_Store
 temp/
@@ -6,3 +7,7 @@ __pycache__/
 *.pyc
 *.pyo
 .env
+.env.local
+coverage/
+.kortext/runtime/
+.kortext/worktrees/
