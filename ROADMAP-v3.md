@@ -122,20 +122,17 @@ Kortext'i **markdown methodology framework**'ten **tam otonom AI ajan runtime'ı
   - [x] `harmful-output-filter.ts` — v3.0 placeholder (banned-phrases configurable); gerçek implement v3.1+
 - [x] **Worker pool entegrasyonu**: `runWorkflow(graph, executor, repos, { safety: { secretScanner, harmfulFilter } })` — her başarılı step'in `outputs:` dosyaları + log'u taranır, finding → step `failed`, pipeline kısa-devre durur
 
-### Faz 3 — Otonom Orkestratör (3-4 gün)
+### Faz 3 — Otonom Orkestratör ✅
 
 **Amaç:** "Komut vermek istemiyorum" — sistem kendi tetiklesin.
 
-- [ ] **Blueprint watcher**: `blueprint.md` `status: approved` olarak kaydedildiğinde `01a-analysis-pipeline` otomatik tetiklensin
-- [ ] **Pipeline zincirleme**: Bir pipeline başarıyla bittiğinde, mantıksal sıradaki bir sonraki tetiklensin (analysis → planning → development...)
-- [ ] **Onay kuyruğu**: Workflow'larda `<gate>` marker'ı olan adımlar `pending_questions`'a yazsın, dashboard'da kullanıcıdan onay beklensin
-- [ ] **Bildirim katmanı**: Slack + Telegram + UI badge. Olaylar:
-  - Pipeline başladı
-  - Onay bekleniyor (+prime soru)
-  - Hata oluştu
-  - Pipeline tamamlandı
-- [ ] **Schedule + cron**: Düzenli health check (saatlik backlog-health, günlük consistency-check)
-- [ ] **Resume semantics**: Sistem yeniden başlatıldığında devam eden pipeline'ları kaldığı yerden sürdürsün
+- [x] **Pipeline zincirleme** (`server/orchestrator/pipeline-chainer.ts`, 6 test): `nextWorkflowId` → otomatik run
+- [x] **Blueprint watcher** (`server/orchestrator/blueprint-watcher.ts`, 7 test): `status: approved` transition'ı callback fırlat
+- [x] **Onay kuyruğu + REST** (`server/orchestrator/approval-queue.ts` + `server/routes/approvals.ts`, 8 test): `pending_questions` lifecycle + 3 endpoint
+- [x] **Bildirim katmanı** (`server/notifications/{dispatcher,slack,telegram}.ts`, 11 test): dedup'lu, çok-kanallı
+- [x] **CLI orkestratör entry** (`server/cli/commands.ts` + `bin/kortext.ts`, 5 test): start / approve / status
+- [ ] **Schedule + cron** (Faz 4'e ertelendi)
+- [ ] **Resume semantics** (Faz 4'e ertelendi — orchestrator wiring ile birlikte)
 
 ### Faz 4 — Persona + Workflow Engine TS Portu (3-4 gün)
 

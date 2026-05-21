@@ -2,17 +2,22 @@ import express from 'express';
 import { env } from './config/env.ts';
 import { healthRouter } from './routes/health.ts';
 import { dbInfoRouter } from './routes/db-info.ts';
+import { approvalRouter } from './routes/approvals.ts';
 import { getDb } from './db/client.ts';
+import { ApprovalQueue } from './orchestrator/approval-queue.ts';
 
 // Open DB + run migrations before the HTTP server starts accepting traffic.
-const { schemaVersion } = getDb();
+const { schemaVersion, repositories: repos } = getDb();
 console.log(`[kortext] db ready (schema v${schemaVersion})`);
+
+const approvalQueue = new ApprovalQueue({ repos });
 
 const app = express();
 
 app.use(express.json());
 app.use('/api', healthRouter);
 app.use('/api', dbInfoRouter);
+app.use('/api', approvalRouter({ repos, queue: approvalQueue }));
 
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('[kortext]', err);

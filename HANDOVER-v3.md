@@ -4,8 +4,8 @@
 > Açar açmaz şunu yaz: **"HANDOVER-v3.md'yi oku, Faz 3'e başla"**
 
 **Tarih:** 2026-05-21
-**Yazan oturum:** Faz 2.B
-**Son commit:** `9d10a7d` — `feat(v3): worktree manager + 3 CLI executors + gate enforcer + safety guards (Faz 2.B)`
+**Yazan oturum:** Faz 3
+**Son commit:** Faz 3 commit'i (chainer + watcher + approval + notifications + CLI)
 
 ---
 
@@ -17,13 +17,14 @@
 | **1 — SQLite şema + repositories** | `v3.0.0-alpha.1` | `9b1e72c` | db integration: 12 |
 | **2.A — Engine çekirdeği** | `v3.0.0-alpha.2` | `54a8984` | engine: 7 |
 | **2.B — Worktree + CLI executors + gate + safety** | `v3.0.0-alpha.3` | `9d10a7d` | worktree: 10, cli-executor: 10, gate: 8, secret: 18, harmful: 3, engine-safety: 4 |
-| **Toplam** | — | — | **74/74 ✅** |
+| **3 — Otonom orkestratör** | — | (bu commit) | chainer: 6, blueprint-watcher: 7, approval: 8, notifications: 11, cli-commands: 5 |
+| **Toplam** | — | — | **111/111 ✅** |
 
 Hızlı doğrulama:
 ```bash
-npm test          # 74 yeşil
+npm test          # 111 yeşil
 npm run typecheck # frontend + server, sıfır hata
-npm run dev       # Vite 5173 + Express 3200, /api/health + /api/db/info
+npm run dev       # Vite 5173 + Express 3200, /api/health + /api/db/info + /api/questions
 ```
 
 ---
@@ -47,59 +48,70 @@ npm run dev       # Vite 5173 + Express 3200, /api/health + /api/db/info
 
 ---
 
-## Sırada: Faz 3 — Otonom Orkestratör
+## Faz 3 — Otonom Orkestratör (TAMAMLANDI)
 
-Faz 3 amacı: "komut vermek istemiyorum" — sistem kendi tetiklesin. Faz 2.B'deki parçalar (worktree, executors, gate, safety) artık var; orkestratör bunları zincirleyecek.
+Tamamlanan parçalar:
 
-### 1. Blueprint watcher — `server/orchestrator/blueprint-watcher.ts`
-- `workspace/references/blueprint.md` `status: approved` olarak değiştiğinde `01a-analysis-pipeline` otomatik tetiklensin
-- `chokidar` veya `node:fs/promises.watch` — dosya değişimi izle
-- Debounce: aynı yazımda 2x trigger etme (frontmatter parse → status compare)
-- Tetiklemeden ÖNCE `GateEnforcer.check()` çağır → fail → `pending_questions`'a soru bırak
+| # | Modül | Dosya | Test |
+|---|---|---|---|
+| 3.1 | Pipeline chainer | `server/orchestrator/pipeline-chainer.ts` | 6 |
+| 3.2 | Blueprint watcher | `server/orchestrator/blueprint-watcher.ts` | 7 |
+| 3.3 | Approval queue + REST | `server/orchestrator/approval-queue.ts` + `server/routes/approvals.ts` | 8 |
+| 3.4 | Notifications | `server/notifications/{dispatcher,slack,telegram}.ts` | 11 |
+| 3.5 | CLI orkestratör | `server/cli/commands.ts` + `bin/kortext.ts` | 5 |
 
-### 2. Pipeline zincirleme — `server/orchestrator/pipeline-chainer.ts`
-- `WorkflowDefinition.nextWorkflowId` zaten parse ediliyor
-- `runWorkflow` başarıyla bittiğinde, `nextWorkflowId` varsa onu tetikle (yeni worktree, yeni run)
-- Her zincir adımı için audit log + notification
+REST endpoint'leri Express'e mount'lu:
+- `GET  /api/questions` — açık sorular
+- `POST /api/questions/:id/answer` — belirli soruyu cevapla
+- `POST /api/runs/:runId/approve` — run'ın açık sorusunu onayla
 
-### 3. Approval kuyruğu — `server/orchestrator/approval-queue.ts`
-- Workflow gate'leri (`ApprovalGate[]`) zaten parse ediliyor; `afterStepIndex` sınırına gelince pipeline duraklasın
-- `pending_questions`'a soru bırak (already-exists tablosu)
-- Dashboard onay verince çalış sürsün (REST endpoint: `POST /api/runs/:id/approve`)
+CLI komutları:
+- `node bin/kortext.js start <workflow-id>` — workflow'u tetikle (mock executor)
+- `node bin/kortext.js approve <run-id> [answer]` — terminal'den onay
+- `node bin/kortext.js status` — aktif run'lar ve pending questions
 
-### 4. Bildirimler — `server/notifications/`
-- Faz 3'te Slack + Telegram (zaten env değişkenleri `.env.example`'da var)
-- `notifications_sent` tablosu deduplication için var
-- Event'ler: pipeline.started, pipeline.failed, gate.awaiting-approval, secret.detected
+## Sırada: Faz 4 — Üretim Sertleştirmesi
 
-### 5. CLI orkestratör entry — `bin/kortext.ts`
-- `kortext start <workflow-id>` — manuel tetikleme (CI / debug için)
-- `kortext approve <run-id>` — terminal'den onay
-- `kortext status` — aktif run'lar ve pending questions
+Faz 3 yapı taşları yerinde; Faz 4 bunları gerçek senaryolarla evlendirir:
 
-### Önerilen Sıra
-1. Pipeline-chainer (Faz 2.B parçalarını bağlar, hızlı kazanım)
-2. Blueprint watcher (gerçek otonomluk ilk burada görünür)
-3. Approval queue + REST endpoint
-4. Notifications
-5. CLI
+### 1. Worker-pool ↔ approval-queue entegrasyonu
+- Şu an `ApprovalGate[]` parse ediliyor ama runWorkflow mid-flight pause etmiyor
+- Seçenek A: workflow'u gate sınırlarında subgraph'lere böl, sırayla çalıştır
+- Seçenek B: worker-pool'a `pauseAfterStepIndex` opsiyonu ekle, queue.waitForAnswer() ile bekle
 
-Faz 3 tahmin: 3-4 gün.
+### 2. Orchestrator wiring — `server/orchestrator/orchestrator.ts`
+- Watcher + chainer + queue + dispatcher'ı tek noktada bağla
+- `Orchestrator.start()` — watcher kur, runWorkflow ile zincirle, gate'lerde duraksat, notification gönder
+- `server/index.ts` artık bu Orchestrator'u boot edebilsin
+
+### 3. Gerçek CLI executor entegrasyonu
+- Faz 2.B'deki Claude/Codex/Gemini executor'ları orchestrator'a bağla
+- CLI `--executor=claude|codex|gemini|mock` flag'i
+
+### 4. Worktree maintenance
+- `kortext cleanup --quarantine-older-than 7d` komutu
+- `git branch -D kortext/run-<id>` toplu silici
+
+### 5. Faz 7 build kopya step'i (taşınmış)
+- `server/db/migrations/*.sql` → `dist/server/db/migrations/`
+- `tsc` config'e `files: copy` veya `postbuild` script
+- bin/kortext.ts artık tsx'e bağımlı — bin için de derleme
 
 ---
 
-## Dosya Haritası (Faz 3 için en bakılacaklar)
+## Dosya Haritası (Faz 4 için en bakılacaklar)
 
 | Yer | İşlev |
 |---|---|
-| [server/engine/worker-pool.ts](server/engine/worker-pool.ts) | `runWorkflow()` — orkestratör burayı tetikleyecek (`safety` opt-in) |
+| [server/orchestrator/pipeline-chainer.ts](server/orchestrator/pipeline-chainer.ts) | `chainNextWorkflow(prevRun, prevDef, opts)` — `nextWorkflowId`'yi otomatik tetikler |
+| [server/orchestrator/blueprint-watcher.ts](server/orchestrator/blueprint-watcher.ts) | `BlueprintWatcher` — `status: approved` transition'ında callback fırlat |
+| [server/orchestrator/approval-queue.ts](server/orchestrator/approval-queue.ts) | `ApprovalQueue.enqueue() / waitForAnswer() / answer()` — pause/resume yapı taşı |
+| [server/routes/approvals.ts](server/routes/approvals.ts) | REST: `/api/questions`, `/api/questions/:id/answer`, `/api/runs/:id/approve` |
+| [server/notifications/dispatcher.ts](server/notifications/dispatcher.ts) | `NotificationDispatcher.dispatch(event)` — dedup'lu, çok-kanallı |
+| [server/cli/commands.ts](server/cli/commands.ts) | `startCommand / approveCommand / statusCommand` — saf fonksiyonlar |
+| [server/engine/worker-pool.ts](server/engine/worker-pool.ts) | `runWorkflow()` — Faz 4'te `pauseAfterStepIndex` eklenmesi gerekebilir |
 | [server/engine/worktree.ts](server/engine/worktree.ts) | `WorktreeManager.acquire(runId)` / `release(handle, {success})` |
-| [server/engine/gate-enforcer.ts](server/engine/gate-enforcer.ts) | `GateEnforcer.check(graph, { previousWorkflowId })` — başlatmadan önce |
-| [server/engine/executors/](server/engine/executors/) | 3 CLI adapter + mock + ortak `cli-spawn.ts` |
-| [server/engine/workflow-parser.ts](server/engine/workflow-parser.ts) | `WorkflowDefinition.nextWorkflowId` + `gates[]` — chainer + approval queue burayı okuyacak |
-| [server/db/repositories/pending-questions.ts](server/db/repositories/pending-questions.ts) | Approval kuyruğu tablosu — zaten hazır |
-| [server/db/repositories/notifications.ts](server/db/repositories/notifications.ts) | Bildirim deduplication tablosu — zaten hazır |
-| [server/safety/secret-scanner.ts](server/safety/secret-scanner.ts) | Faz 2.B'de worker pool'a opt-in olarak bağlı (`runWorkflow({ safety: { secretScanner } })`) |
+| [server/engine/workflow-parser.ts](server/engine/workflow-parser.ts) | `WorkflowDefinition.gates[]` — Faz 4'te queue ile bağlanacak |
 
 ---
 

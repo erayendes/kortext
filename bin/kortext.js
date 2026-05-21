@@ -1,13 +1,16 @@
 #!/usr/bin/env node
-const cmd = process.argv[2] ?? 'help';
+// Dev-mode shim: delegates to the .ts entry via tsx until Faz 7 wires a real
+// build step. In production, this file will be replaced by the compiled JS.
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
 
-const messages = {
-  help: 'kortext v3 — commands: start, mcp, status, doctor (Phase 7 — not implemented yet)',
-  start: 'kortext start: backend + dashboard runtime (Phase 7 placeholder)',
-  mcp: 'kortext mcp: MCP server stdio (Phase 5 placeholder)',
-  status: 'kortext status: runtime status (Phase 7 placeholder)',
-  doctor: 'kortext doctor: diagnostics (Phase 7 placeholder)',
-};
+const here = dirname(fileURLToPath(import.meta.url));
+const tsEntry = resolve(here, 'kortext.ts');
 
-const out = messages[cmd] ?? `unknown command: ${cmd}\n${messages.help}`;
-console.log(out);
+const result = spawnSync('npx', ['tsx', tsEntry, ...process.argv.slice(2)], {
+  stdio: 'inherit',
+  shell: false,
+});
+
+process.exit(result.status ?? 1);
