@@ -5,7 +5,7 @@
 
 **Tarih:** 2026-05-21
 **Yazan oturum:** Faz 3
-**Son commit:** Faz 3 commit'i (chainer + watcher + approval + notifications + CLI)
+**Son commit:** `dc23d0f` — `feat(v3): autonomous orchestrator — chainer + watcher + approval + notifications + CLI (Faz 3)`
 
 ---
 
@@ -17,7 +17,7 @@
 | **1 — SQLite şema + repositories** | `v3.0.0-alpha.1` | `9b1e72c` | db integration: 12 |
 | **2.A — Engine çekirdeği** | `v3.0.0-alpha.2` | `54a8984` | engine: 7 |
 | **2.B — Worktree + CLI executors + gate + safety** | `v3.0.0-alpha.3` | `9d10a7d` | worktree: 10, cli-executor: 10, gate: 8, secret: 18, harmful: 3, engine-safety: 4 |
-| **3 — Otonom orkestratör** | — | (bu commit) | chainer: 6, blueprint-watcher: 7, approval: 8, notifications: 11, cli-commands: 5 |
+| **3 — Otonom orkestratör** | — | `dc23d0f` | chainer: 6, blueprint-watcher: 7, approval: 8, notifications: 11, cli-commands: 5 |
 | **Toplam** | — | — | **111/111 ✅** |
 
 Hızlı doğrulama:
