@@ -32,6 +32,7 @@ import { cleanupQuarantine, cleanupBranches } from '../server/cli/cleanup.ts';
 import { runDoctor, formatDoctorReport } from '../server/cli/doctor.ts';
 import { initCommand } from '../server/cli/init.ts';
 import { logsCommand, formatLogsForCli } from '../server/cli/logs.ts';
+import { runPreflight, formatPreflightForCli } from '../server/cli/preflight.ts';
 import { buildServeCommands, type ServeMode } from '../server/cli/serve.ts';
 import { loadWorkflowsFromDir } from '../server/engine/workflow-loader.ts';
 import { loadPersonasFromDir } from '../server/engine/persona-registry.ts';
@@ -89,6 +90,32 @@ function parseIntFlag(name: string, fallback: number): number {
   const m = raw.match(/^(\d+)$/);
   if (!m) throw new Error(`invalid --${name}=${raw}; expected a positive integer`);
   return Number(m[1]);
+}
+
+function openBrowser(url: string): void {
+  const platform = process.platform;
+  let cmd: string;
+  let cmdArgs: string[];
+  if (platform === 'darwin') {
+    cmd = 'open';
+    cmdArgs = [url];
+  } else if (platform === 'win32') {
+    cmd = 'cmd';
+    cmdArgs = ['/c', 'start', '""', url];
+  } else {
+    cmd = 'xdg-open';
+    cmdArgs = [url];
+  }
+  try {
+    const child = spawn(cmd, cmdArgs, {
+      stdio: 'ignore',
+      detached: true,
+      shell: false,
+    });
+    child.unref();
+  } catch {
+    // Best-effort — the URL is also printed by the server on listen.
+  }
 }
 
 function packageRoot(): string {
@@ -163,6 +190,18 @@ async function main(): Promise<number> {
   }
 
   if (cmd === 'init') {
+    if (!hasFlag('skip-preflight')) {
+      const report = runPreflight();
+      console.log('preflight check:');
+      console.log(formatPreflightForCli(report));
+      console.log('');
+      if (!report.ready) {
+        console.error(
+          'init aborted: missing or out-of-date runtime. Install/upgrade the items above and rerun, or pass --skip-preflight to bypass.',
+        );
+        return 1;
+      }
+    }
     const result = initCommand({
       targetDir: process.cwd(),
       force: hasFlag('force'),
@@ -199,6 +238,23 @@ async function main(): Promise<number> {
       port,
     });
     console.error(`[kortext] serve mode=${plan.mode} port=${port}`);
+
+    // Open the dashboard URL in the default browser shortly after the
+    // server boots. Dev mode points at Vite (5173); prod mode points at
+    // the Express dashboard mount (the chosen port). Suppress with
+    // --no-open or KORTEXT_NO_OPEN=1 (useful for CI / headless servers).
+    const shouldOpen =
+      !hasFlag('no-open') && process.env.KORTEXT_NO_OPEN !== '1';
+    if (shouldOpen) {
+      const targetUrl =
+        plan.mode === 'dev'
+          ? 'http://localhost:5173/'
+          : `http://localhost:${port}/`;
+      // Give the server a moment to bind. If it never binds, opening the
+      // URL just shows the browser's "connection refused" page — strictly
+      // less confusing than ignoring the flag.
+      setTimeout(() => openBrowser(targetUrl), 1500);
+    }
 
     // Prod mode now has exactly one command (Express also serves dist/web).
     // Running it as a child process via spawn + stdio:inherit broke on

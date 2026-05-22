@@ -106,6 +106,87 @@ body {
   font-family: var(--font-mono);
 }
 
+/* Form controls — palette-bound input + button primitives.
+   Mirrored from the v3 palette mockup so onboarding/persona editor share one look. */
+.input {
+  width: 100%;
+  background: var(--bg-2);
+  border: 1px solid var(--border-default);
+  color: var(--tx-1);
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  transition: all 180ms ease-out;
+  outline: none;
+}
+.input::placeholder {
+  color: var(--tx-3);
+}
+.input:hover {
+  border-color: var(--border-strong);
+}
+.input:focus {
+  border-color: var(--accent);
+  background: var(--bg-1);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+.input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 500;
+  border: 1px solid var(--border-default);
+  background: var(--bg-2);
+  color: var(--tx-1);
+  cursor: pointer;
+  transition: all 180ms ease-out;
+}
+.btn:hover {
+  background: var(--bg-3);
+  border-color: var(--border-strong);
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  box-shadow: 0 0 18px var(--accent-glow);
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-deep);
+  border-color: var(--accent-deep);
+}
+.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--tx-3);
+}
+.btn-ghost:hover {
+  background: var(--bg-2);
+  color: var(--tx-1);
+}
+.btn-xs {
+  padding: 4px 8px;
+  font-size: 11px;
+}
+.btn-sm {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
 /* Status dot — color-coded, no fill, Vercel discipline */
 .dot {
   display: inline-block;
