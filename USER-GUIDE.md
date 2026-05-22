@@ -506,4 +506,4 @@ validates parsing before writing).
 - [Migration Guide](./MIGRATION-v2-to-v3.md) — upgrading from v2
 
 For bug reports and feature requests, open an issue on
-[GitHub](https://github.com/erayendes/kortext-framework/issues).
+[GitHub](https://github.com/erayendes/kortext/issues).

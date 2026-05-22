@@ -2,7 +2,7 @@
 
 **Autonomous AI agent runtime — TypeScript + SQLite + React + MCP**
 
-[![CI](https://github.com/erayendes/kortext-framework/actions/workflows/kortext-ci.yml/badge.svg)](https://github.com/erayendes/kortext-framework/actions/workflows/kortext-ci.yml)
+[![CI](https://github.com/erayendes/kortext/actions/workflows/kortext-ci.yml/badge.svg)](https://github.com/erayendes/kortext/actions/workflows/kortext-ci.yml)
 [![npm](https://img.shields.io/npm/v/kortext.svg)](https://www.npmjs.com/package/kortext)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 

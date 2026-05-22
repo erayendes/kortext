@@ -220,6 +220,6 @@ without affecting any markdown.
 ## Help
 
 - Documentation: [USER-GUIDE.md](./USER-GUIDE.md), [docs/architecture.md](./docs/architecture.md)
-- Issues: [GitHub Issues](https://github.com/erayendes/kortext-framework/issues)
+- Issues: [GitHub Issues](https://github.com/erayendes/kortext/issues)
 - v2 archive tag: `tr-archive` (last v2 commit on the Turkish line),
   `en-archive` (English translation)
