@@ -28,7 +28,7 @@ describe('buildServeCommands', () => {
     expect(web.cwd).toBe(pkg);
   });
 
-  it('auto-resolves to prod when both compiled server and built web exist', () => {
+  it('auto-resolves to prod with a single server command (Express serves dist/web)', () => {
     const plan = buildServeCommands({
       packageRoot: pkg,
       projectDir: proj,
@@ -36,14 +36,18 @@ describe('buildServeCommands', () => {
       existsImpl: existsTrue,
     });
     expect(plan.mode).toBe('prod');
+    // Prod is one process: no separate `vite preview` child, because Express
+    // itself serves the compiled dashboard from dist/web (see server/index.ts).
+    expect(plan.commands).toHaveLength(1);
 
-    const server = plan.commands.find((c) => c.name === 'server')!;
+    const server = plan.commands[0]!;
+    expect(server.name).toBe('server');
     expect(server.command).toBe(process.execPath);
     expect(server.args).toEqual([`${pkg}/dist/server/index.js`]);
     expect(server.cwd).toBe(proj);
-
-    const web = plan.commands.find((c) => c.name === 'web')!;
-    expect(web.args.slice(0, 2)).toEqual(['vite', 'preview']);
+    // Server needs to know where the package lives so it can find dist/web
+    // regardless of the user's project cwd.
+    expect(server.env.KORTEXT_PACKAGE_ROOT).toBe(pkg);
   });
 
   it('forwards --port=N into the server env', () => {

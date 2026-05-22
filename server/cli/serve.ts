@@ -52,6 +52,12 @@ export function buildServeCommands(input: BuildServeCommandsInput): ResolvedServ
   }
 
   if (mode === 'prod') {
+    // Production: one process. Express serves the compiled dashboard from
+    // `dist/web/` itself (see server/index.ts), so no separate vite preview
+    // child is needed. This is what fixed the v3.0.0 bug where a global
+    // install (which doesn't carry vite as a devDependency) couldn't
+    // `npx vite preview` and the parent killed the backend in response.
+    const envWithPackageRoot = { ...baseEnv, KORTEXT_PACKAGE_ROOT: input.packageRoot };
     return {
       mode,
       commands: [
@@ -60,20 +66,7 @@ export function buildServeCommands(input: BuildServeCommandsInput): ResolvedServ
           command: process.execPath,
           args: [join(input.packageRoot, 'dist', 'server', 'index.js')],
           cwd: input.projectDir,
-          env: baseEnv,
-        },
-        {
-          name: 'web',
-          command: 'npx',
-          args: [
-            'vite',
-            'preview',
-            '--host',
-            '--port',
-            String(input.port ? input.port + 1 : 5173),
-          ],
-          cwd: input.packageRoot,
-          env: baseEnv,
+          env: envWithPackageRoot,
         },
       ],
     };
