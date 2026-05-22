@@ -25,11 +25,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/erayendes/kortext-framework.git"
+    "url": "git+https://github.com/erayendes/kortext.git"
   },
-  "homepage": "https://github.com/erayendes/kortext-framework#readme",
+  "homepage": "https://github.com/erayendes/kortext#readme",
   "bugs": {
-    "url": "https://github.com/erayendes/kortext-framework/issues"
+    "url": "https://github.com/erayendes/kortext/issues"
   },
   "scripts": {
     "dev": "concurrently -n server,web -c blue,magenta \"npm:dev:server\" \"npm:dev:web\"",
