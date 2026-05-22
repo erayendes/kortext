@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as cp from 'node:child_process';
@@ -99,4 +100,51 @@ describe('build verification', () => {
       expect(out).toContain(sub);
     }
   });
+
+  it(
+    'compiled `kortext init` scaffolds agents/workflows/rules/workspace from the package root',
+    () => {
+      // Regression guard for the v3.0.0-release init bug: in compiled mode,
+      // `server/cli/init.ts`'s old `packageRootFromHere()` walked two levels up
+      // from `dist/server/cli/init.js` and landed in `dist/` — which contains
+      // no template dirs. Init silently created only AGENTS.md + the DB.
+      //
+      // The fix is a package.json walk-up identical to bin/kortext.ts's. This
+      // test pins the behaviour by running the compiled CLI against a real
+      // empty directory and asserting the full scaffold lands.
+      const compiledEntry = join(projectRoot, 'dist', 'bin', 'kortext.js');
+      if (!existsSync(compiledEntry)) {
+        throw new Error('dist/bin/kortext.js missing — build smoke must run first');
+      }
+
+      const targetDir = mkdtempSync(join(tmpdir(), 'kortext-init-smoke-'));
+      try {
+        runFile('node', [compiledEntry, 'init'], {
+          cwd: targetDir,
+          encoding: 'utf8',
+          timeout: 30_000,
+        });
+
+        // The four template dirs must all exist and be non-empty — otherwise
+        // a user running `npm install -g kortext && kortext init` would land
+        // in a half-empty project and the orchestrator could not find any
+        // workflows / personas to load.
+        for (const rel of ['agents', 'workflows', 'rules', 'workspace']) {
+          const dir = join(targetDir, rel);
+          expect(existsSync(dir)).toBe(true);
+          expect(readdirSync(dir).length).toBeGreaterThan(0);
+        }
+        expect(existsSync(join(targetDir, 'AGENTS.md'))).toBe(true);
+        expect(existsSync(join(targetDir, '.kortext', 'runtime', 'kortext.db'))).toBe(true);
+        // Spot-check one well-known persona + one workflow so a future refactor
+        // that copies empty dirs would still fail loudly.
+        expect(existsSync(join(targetDir, 'agents', 'backend-developer.md'))).toBe(true);
+        expect(existsSync(join(targetDir, 'workflows', '04-development-cycle.md'))).toBe(true);
+        expect(existsSync(join(targetDir, 'workspace', 'references', 'blueprint.md'))).toBe(true);
+      } finally {
+        rmSync(targetDir, { recursive: true, force: true });
+      }
+    },
+    60_000,
+  );
 });

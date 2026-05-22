@@ -62,8 +62,18 @@ kortext doctor    # workflow / persona / lock consistency scan
 `;
 
 function packageRootFromHere(): string {
-  // server/cli/init.ts → package root is two levels up
+  // Source path is `server/cli/init.ts` (root two levels up). Compiled path is
+  // `dist/server/cli/init.js` (root three levels up). Walking up until we find
+  // a package.json keeps both layouts working without special-casing — the same
+  // pattern bin/kortext.ts uses for version reporting.
   const here = dirname(fileURLToPath(import.meta.url));
+  let cursor = here;
+  for (let i = 0; i < 6; i++) {
+    if (existsSync(join(cursor, 'package.json'))) return cursor;
+    const parent = resolve(cursor, '..');
+    if (parent === cursor) break;
+    cursor = parent;
+  }
   return resolve(here, '..', '..');
 }
 
