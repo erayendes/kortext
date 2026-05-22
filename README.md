@@ -12,8 +12,6 @@ matter; the agents pick up tasks, write code, run tests, hand off between
 each other, and ship — with a real-time dashboard showing what they're
 doing.
 
-> **Migrating from v2?** Start with the [Migration Guide](./MIGRATION-v2-to-v3.md).
-
 ---
 
 ## What v3 gives you
@@ -172,7 +170,6 @@ your environment. The dispatcher dedupes notifications and posts on:
 
 - [User Guide](./USER-GUIDE.md) — full walkthrough of the autonomous flow
 - [Architecture](./docs/architecture.md) — schema, engine, MCP, dashboard
-- [Migration Guide](./MIGRATION-v2-to-v3.md) — v2 → v3 upgrade
 - [Changelog](./CHANGELOG.md) — release notes
 
 ---

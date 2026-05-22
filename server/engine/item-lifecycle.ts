@@ -7,13 +7,15 @@ import type {
 import type { PersonaRegistry } from './persona-registry.ts';
 
 /**
- * Item lifecycle engine — TS port of the v2 trio:
- *   - kortext-backlog-add.py  → create()
- *   - kortext-item-start.py   → transition('start')
- *   - kortext-item-transition.py → transition(<action>)
+ * Item lifecycle engine.
  *
- * Layers a state-machine policy on top of BacklogRepository, which is the
- * unchecked data layer. Lifecycle enforces:
+ * Exposes three operations on top of BacklogRepository (the unchecked data
+ * layer):
+ *   - create()                — add a new backlog item
+ *   - transition('start')     — move an item into `in_progress`
+ *   - transition(<action>)    — apply any other status change
+ *
+ * Lifecycle enforces:
  *   - legal status transitions (rejects e.g. `to_do → done`)
  *   - terminal states (`done`, `cancelled`) are sticky
  *   - audit_log entry per transition

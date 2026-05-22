@@ -5,12 +5,12 @@ import type { PersonaRegistry } from './persona-registry.ts';
 import { gitCommit } from './git-commit.ts';
 
 /**
- * Handover engine — TS port of legacy/scripts/kortext-handover.py.
+ * Handover engine.
  *
  * Records a persona-to-persona handover both as a row in the SQLite
  * `handovers` table (machine-readable, for dashboard/timeline) and as a
  * markdown block prepended to `workspace/memory/handover.md` (human-
- * readable, preserved for backwards continuity with v2 reviewers).
+ * readable).
  *
  * `from` and `to` personas are validated against the registry — bad
  * handles throw immediately rather than silently writing dangling

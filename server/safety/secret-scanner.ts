@@ -4,9 +4,9 @@ import type { SecretsRepository } from '../db/repositories/secrets.ts';
 import type { SecretSeverity } from '../db/schemas.ts';
 
 /**
- * Secret scanner — TypeScript port of legacy/hooks/secret-scanner.sh.
+ * Secret scanner.
  *
- * Four pattern groups (carried over verbatim, modulo JS regex syntax):
+ * Four pattern groups:
  *   P1 quoted-assignment  : (api_key|password|token|...) = "..."        → severity high
  *   P2 env-assignment     : API_KEY=value  (unquoted)                   → severity high
  *   P3 service-token      : sk-..., AKIA..., ghp_..., xox*-...          → severity critical
