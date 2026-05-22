@@ -1,4 +1,6 @@
-import { resolve } from 'node:path';
+import { existsSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import express from 'express';
 import { env } from './config/env.ts';
 import { healthRouter } from './routes/health.ts';
@@ -102,6 +104,39 @@ app.use(
     workflowsDir,
   }),
 );
+
+// Serve the compiled dashboard (Vite output) when present. In compiled
+// layout `server/index.ts` lives at `dist/server/index.js`, so the
+// dashboard is `../web`. In source layout (`tsx watch`), no dist/web
+// exists — Vite dev server handles the UI in its own process.
+// KORTEXT_PACKAGE_ROOT is set by `kortext serve --mode=prod` so the
+// resolution survives any caller cwd; otherwise we walk up from this file.
+function resolveWebDist(): string | null {
+  const env = process.env.KORTEXT_PACKAGE_ROOT;
+  if (env) {
+    const candidate = join(env, 'dist', 'web');
+    return existsSync(join(candidate, 'index.html')) ? candidate : null;
+  }
+  const here = dirname(fileURLToPath(import.meta.url));
+  for (const rel of ['../web', '../../dist/web']) {
+    const candidate = resolve(here, rel);
+    if (existsSync(join(candidate, 'index.html'))) return candidate;
+  }
+  return null;
+}
+
+const webDist = resolveWebDist();
+if (webDist) {
+  console.log(`[kortext] dashboard mounted from ${webDist}`);
+  app.use(express.static(webDist));
+  // Hash-router SPA fallback: anything not under /api or /mcp that hasn't
+  // matched yet should return index.html so deep links (e.g. /board) work.
+  app.get(/^\/(?!api\/|mcp\/).*/, (_req, res) => {
+    res.sendFile(join(webDist, 'index.html'));
+  });
+} else {
+  console.log('[kortext] no dist/web found — backend-only (dev: use vite separately)');
+}
 
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('[kortext]', err);
