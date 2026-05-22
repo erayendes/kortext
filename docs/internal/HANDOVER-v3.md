@@ -1,11 +1,17 @@
 # Kortext v3 — Yeni Oturum Handover
 
 > Bu dosya yeni Claude Code oturumunun bootstrap pusulasıdır.
-> Açar açmaz şunu yaz: **"HANDOVER-v3.md'yi oku, v3.0.0 yayınla"** (Faz 10 tamam)
+> Açar açmaz şunu yaz: **"HANDOVER-v3.md'yi oku, onboarding wizard + UI regression fix"**
 
-**Tarih:** 2026-05-22
-**Yazan oturum:** Faz 10
-**Son commit:** `1746b28` — `feat(v3): release docs + npm-publish gate + version 3.0.0 (Faz 10)`
+**Tarih:** 2026-05-22 (akşam)
+**Yazan oturum:** Faz 10 + yayın + UAT (post-publish hardening)
+**Son commit:** `d118f48` — `fix(v3): kortext serve runs prod in-process — works on Node 26`
+
+## Çok kritik bilgi: yayın durumu
+
+- ✅ **GitHub:** `erayendes/kortext` PUBLIC. main branch d118f48'de. v3.0.0 tag `300b035`'i işaret ediyor (4 fix-commit eskisi).
+- 🟡 **npm registry:** `kortext@3.0.0` YAYINLANDI — ama **broken state**: kortext serve Node 26'da patlıyor + log flush race + EPIPE race. **Kimseye `npm install -g kortext` önerme.** Kullanıcılar bunun yerine lokal tgz install etmeli (aşağıda).
+- ⏸ **Lokal-only 4 fix:** 5ba9032 (log flush race), 0b9cba6 (EPIPE), 70f2186 (Express static + vite spawn kaldır), d118f48 (in-process import — Node 26 spawn workaround). Hepsi GitHub'da push edilmiş + 264/264 yeşil, **ama tag `v3.0.0` taşınmadığı için npm-publish.yml tetiklenmedi**. Onboarding wizard ile birlikte v3.1.0 olarak çıkacak.
 
 ---
 
@@ -24,8 +30,9 @@
 | **7 — MCP Server** | — | `263a8f8` | mcp-tools: 14 (15 tool surface + lifecycle smoke) |
 | **8 — CLI + Bin** | — | `61aedf2` | cli-init: 5, cli-logs: 4, cli-serve: 5 |
 | **9 — Test + CI** | — | `217d13b` | e2e-pipeline: 6, build-verification: 3, cli-smoke: 5 |
-| **10 — Yayın + Docs** | `v3.0.0` (pending) | `1746b28` | (docs-only, 263 yeşil baseline korundu) |
-| **Toplam** | — | — | **263/263 ✅** |
+| **10 — Yayın + Docs** | `v3.0.0` (published) | `1746b28` | (docs-only) |
+| **Post-10 — Yayın + UAT** | — | `d118f48` | 264/264 (+1 regression test) |
+| **Toplam** | — | — | **264/264 ✅** |
 
 Hızlı doğrulama:
 ```bash
@@ -198,6 +205,37 @@ checkout → setup-node@v4 (npm cache) → npm ci → npm run lint
 
 Concurrency: `cancel-in-progress: true` aynı ref için superseded run'ları iptal eder.
 
+## Post-Faz-10 — Yayın + UAT (bu oturumda yapıldı)
+
+### Yayın akışı
+
+1. Repo geçişi: `erayendes/kortext-framework` → **`erayendes/kortext`** (paket adıyla eşleşsin). Eski repo dokunulmaz, yedek.
+2. v2 temizliği: `legacy/`, `settings/`, `skills/`, `MIGRATION-v2-to-v3.md`, `bin/migrate-legacy-backlog.ts` silindi (62 dosya, 4.5K satır). v2 kullanan yok diye Eray onayladı.
+3. Dev-only docs `docs/internal/`'a taşındı (HANDOVER, ROADMAP, CLAUDE.md).
+4. `.claude/` git-untracked (developer-local).
+5. AGENTS.md WIP banner kaldırıldı.
+6. GitHub repo public + description + 8 topic.
+7. GitHub Actions billing engeli aşıldı (public = unlimited free).
+8. v3.0.0 release oluşturuldu → npm-publish.yml tetiklendi → **npm'de yayında** (provenance attested).
+
+### Yayın sonrası 5 bug + fix (UAT'tan çıkanlar)
+
+| # | Bulgu | Dosya | Commit |
+|---|---|---|---|
+| 1 | `kortext init` compiled modda yarım scaffold (template root walk-up) | server/cli/init.ts | 34ce730 |
+| 2 | MCP server hardcoded `3.0.0-alpha.7` version | mcp/server.ts | 158e14e |
+| 3 | Linux CI: `log.end()` flush race (cli-spawn promise unflushed file ile resolve oluyor) | server/engine/executors/cli-spawn.ts | 5ba9032 |
+| 4 | Linux CI: EPIPE — child stdin kapanmadan önce parent yazıyor | server/engine/executors/cli-spawn.ts | 0b9cba6 |
+| 5 | Node 26 spawn race: serve prod child-process'te ölüyor | server/cli/serve.ts + server/index.ts + bin/kortext.ts | 70f2186, d118f48 |
+
+### Faz 10 + UAT'da eklenen kararlar
+
+48. **Express dist/web'i kendi serve eder** (prod modda). Faz 8 handover not'undaki "v3.1'de fix" deadline'ı Node 26 sayesinde yayın gününe çekildi. `vite preview` child kaldırıldı, prod tek-process.
+49. **Prod mod = in-process import**, dev mod = spawn. Node 26'da `spawn() + stdio:inherit` child'ı immediate exit ediyor — dynamic import bypass'ı çözüyor. Dev modda vite + tsx hâlâ ayrı process'ler.
+50. **Walk-up `packageRoot()` pattern her yerde tutarlı**: bin/kortext.ts (Faz 9'da eklendi) + server/cli/init.ts (yayın günü fix'i) + mcp/server.ts (yayın günü fix'i) + server/routes/health.ts (yayın günü fix'i) hepsi aynı pattern'i kullanır. Yeni runtime modülünde version/path resolution gerekirse aynı pattern'i tekrarla.
+51. **app.listen() error handler eksik (v3.0.1 borç)**: EADDRINUSE durumunda Express sessizce listening callback'i atlayıp exit ediyor — kullanıcı "Cannot GET /" görüyor, gerçek hatayı görmüyor. UAT'ta 6 saat dev server zombie process bizi bu sebeple yanılttı.
+52. **Lokal install pattern UAT için**: `npm pack` + `npm install -g ./kortext-3.0.0.tgz`. npm registry'deki broken v3.0.0'ı bypass etmenin tek yolu (v3.1.0 yayınlanana dek).
+
 ## Faz 10 — Yayın + Dokümantasyon (TAMAMLANDI)
 
 | # | Modül | Dosya | Not |
@@ -218,25 +256,75 @@ Concurrency: `cancel-in-progress: true` aynı ref için superseded run'ları ipt
 46. **Publish gate = CI gate'in aynısı**: `npm-publish.yml` lint + typecheck + test + build + smoke'u publish'ten önce tekrar koşar. Pre-merge gate atlanmışsa veya release tag elle yapılmışsa publish hâlâ doğrulanmış olur.
 47. **HANDOVER-v3.md pakete dahil**: `.npmignore` `.github/` ve `.git/` exclude ediyor ama `HANDOVER-v3.md`'ye dokunmuyor — bilinçli; geliştirici-okur kim olursa olsun (npm install eden user dahil) son durumu görür. v3.1+'da temizlenebilir.
 
-## Sırada: v3.0.0 yayını
+## Sırada: Onboarding wizard + UI regression fix → v3.1.0
 
-Tek bir yayın oturumu — yeni faz değil. Sıralı adımlar:
+Yeni oturumun yapması gereken iki iş:
 
-```bash
-# 1) Final commit zaten atıldı (bu HANDOVER güncellemesiyle birlikte).
-# 2) Tag + push
-git tag v3.0.0
-git push origin main --tags
+### 1. Onboarding wizard (yeni özellik, brainstorming + tasarım gerekli)
 
-# 3) GitHub release oluştur (CHANGELOG.md > [3.0.0] bölümünü body olarak yapıştır)
-gh release create v3.0.0 --title "v3.0.0 — Autonomous AI agent runtime" \
-  --notes-file <(awk '/^## \[3\.0\.0\]/,/^## \[2\.2\.3\]/' CHANGELOG.md | head -n -1)
+**Problem (Eray UAT'tan):** v3.0'da kullanıcı blueprint'i terminalden bulup markdown editöründe YAML frontmatter düzenlemek zorunda. Non-coder için kullanılamaz. Eray'ın aynen sözü: "BEN BURADA BLUEPRINT GİRMEMELİYİM. ONUN YERİ ONBOARDING EKRANI OLMALI".
 
-# 4) GHA `npm-publish.yml` release event'iyle tetiklenecek. İzle:
-gh run watch
+**Hedef akış:**
+```
+1. kortext init   (terminal — sadece bu)
+2. kortext serve  (terminal — sadece bu)
+3. Tarayıcı açar → dashboard'da blueprint boşsa /onboarding'e yönlendir
+4. 3-4 adımlı wizard form: proje meta (ad, owner) → vizyon → personalar → tech kısıt
+5. "Approve & Start" → arka planda blueprint.md'ye serialize + status: approved
+6. BlueprintWatcher zaten dosya değişikliğini yakalıyor → analysis pipeline tetiklenir
+7. Dashboard'a yönlendir, izle.
 ```
 
-NPM token GHA secret olarak (`NPM_TOKEN`) zaten ayarlı olmalı; değilse `gh secret set NPM_TOKEN`.
+**Brainstorming gerekli:** form alanları detayı, validation, geri-dön butonu, partial save davranışı.
+
+**İmplementasyon adımları (tahmini):**
+- POST /api/blueprint endpoint (frontmatter + body kabul, blueprint.md yaz, BlueprintWatcher zaten devrede)
+- /onboarding React route (TanStack Router)
+- Dashboard root: blueprint draft ise /onboarding redirect
+- Wizard component (4 step, formdata state, ileri/geri navigation)
+- Yardımcı: blueprint.md → form data parser (varsa partial complete edebilsin)
+- Test: REST endpoint + UI smoke + e2e form → pipeline tetik
+
+### 2. UI regression (teşhis gerekli)
+
+Eray UAT'ta dashboard'u görmüş ve "tasarımda bir şeyler bozulmuş" demiş. **Hangi ekran/komponent bozulmuş tanımlanmadı.** Yeni oturumun ilk işi:
+
+1. Eray'a "hangi ekran/etkileşim bozulmuş gözüküyor" diye sor (screenshot ideal)
+2. git log --oneline -20 ile son UI commit'lerini gözden geçir
+3. **Referans:** docs/design/ altındaki wireframe (eğer hâlâ varsa) vs şu anki implementasyon karşılaştırması
+4. Fix yap
+
+### 3. v3.0.1 paralel borç (small, opsiyonel)
+
+EADDRINUSE sessiz fail — `server/index.ts`'te `app.listen` error handler eksik. v3.0.1 patch için iyi bir candidate (sadece bu fix). Veya onboarding wizard'la birlikte v3.1.0'a paketle.
+
+### Yayın akışı (her iki iş bitince)
+
+```bash
+# 0) version bump
+# package.json: "version": "3.0.0" → "3.1.0"
+
+# 1) CHANGELOG.md güncelle — yeni [3.1.0] bölümü, Added/Changed
+# 2) Lokal smoke
+npm run lint && npm run typecheck && npm test && npm run build
+node dist/bin/kortext.js --version
+
+# 3) Eray UAT (lokal tgz)
+npm pack
+# Eray makinesinde: npm uninstall -g kortext && npm install -g ./kortext-3.1.0.tgz
+# Onboarding wizard + UI fix doğrula
+
+# 4) Commit + tag + release
+git tag v3.1.0
+git push origin main --tags
+gh release create v3.1.0 --title "v3.1.0 — Onboarding wizard + UI polish" \
+  --notes-file <(awk '/^## \[3\.1\.0\]/{flag=1; next} /^## \[/{flag=0} flag' CHANGELOG.md)
+
+# 5) Yayın sonrası npm doğrula
+npm view kortext version  # → 3.1.0
+```
+
+NPM_TOKEN secret `erayendes/kortext` repo'sunda zaten kurulu. Repo public, GitHub Actions ücretsiz.
 
 ---
 

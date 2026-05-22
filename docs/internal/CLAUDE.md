@@ -12,9 +12,11 @@ Kortext v3 is a **TypeScript runtime + React dashboard + SQLite + worker pool** 
 
 ## Active plan
 
-- **Roadmap:** [ROADMAP-v3.md](./ROADMAP-v3.md) — 10 phases, ~25-36 day effort estimate.
-- **Current phase:** Faz 0 — TypeScript stack iskeleti (TypeScript + Express + React 19 + Vite + Tailwind v4 + better-sqlite3 + Zod + Vitest).
-- **Phases pending:** Faz 1 (SQLite schema), Faz 2 (engine + worker pool + git worktree), Faz 3 (autonomous orchestrator), Faz 4 (persona/workflow TS port), Faz 5 (MCP server), Faz 6 (React dashboard), Faz 7 (CLI), Faz 8 (tests + CI), Faz 9 (publish + docs).
+- **Roadmap:** [ROADMAP-v3.md](./ROADMAP-v3.md) — Faz 0-10 complete (see roadmap for full state).
+- **Current state:** Post-Faz-10 — `kortext@3.0.0` published to npm (2026-05-22). Repo `erayendes/kortext` is public.
+- **Next:** v3.1.0 — onboarding wizard (replace terminal blueprint flow) + UI regression fix flagged during UAT. See [HANDOVER-v3.md](./HANDOVER-v3.md) "Sırada" section for the exact brief.
+
+> ⚠️ The npm v3.0.0 currently published is **broken in real use** — `kortext serve` patches landed locally and on GitHub (`main`) but the v3.0.0 tag hasn't been moved. Users who want to test must build from source: `npm pack` + `npm install -g ./kortext-3.0.0.tgz`. The next published version will be **v3.1.0**, bundling the post-publish fixes with the onboarding wizard.
 
 ## Design system (approved)
 
@@ -94,8 +96,11 @@ B2B SaaS CRM — Next.js 15 / Node 22 / PostgreSQL 16 / Vercel / Stripe / Auth0.
 
 ## Servers
 
-- **Wireframe preview:** `npx serve -l 8092 /Users/erayendes/Documents/_codebase/kortext/docs/design` (configured in `.claude/launch.json`). Open http://localhost:8092/wireframe-v4-final.html.
-- **Future dev server (Faz 0):** `npm run dev` → frontend on `PORT` (default 3200), backend on `PORT+1`.
+- **Dev server:** `npm run dev` (in this repo) → Vite on 5173, Express on 3200 (concurrently). Use this for UI iteration on dashboard/routes.
+- **Production CLI:** `kortext serve` (after a local install — see "lokal tgz" pattern in HANDOVER). Express serves both API and the compiled dashboard on a single port. One process, no separate vite preview child.
+- **Eray UAT directory:** `~/Documents/_codebase/waterloo/` — empty project where Eray installs the local tgz and runs `kortext serve` to test as a real user.
+
+⚠️ Don't both have `npm run dev` and `kortext serve` running at once — both bind port 3200 and the second one silently fails (EADDRINUSE — `app.listen` error handler isn't wired up yet, tracked for v3.0.1).
 
 ## Memory
 
