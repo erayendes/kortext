@@ -20,6 +20,9 @@ import {
 } from '../server/cli/commands.ts';
 import type { ExecutorKind } from '../server/cli/executor-factory.ts';
 import { cleanupQuarantine, cleanupBranches } from '../server/cli/cleanup.ts';
+import { runDoctor, formatDoctorReport } from '../server/cli/doctor.ts';
+import { loadWorkflowsFromDir } from '../server/engine/workflow-loader.ts';
+import { loadPersonasFromDir } from '../server/engine/persona-registry.ts';
 
 const args = process.argv.slice(2);
 const cmd = args[0];
@@ -157,6 +160,20 @@ async function main(): Promise<number> {
       return 0;
     }
 
+    case 'doctor': {
+      const workflows = loadWorkflowsFromDir(resolve(process.cwd(), 'workflows'));
+      const personas = loadPersonasFromDir(resolve(process.cwd(), 'agents'));
+      const report = runDoctor({ workflows, personas, repos });
+      console.log(formatDoctorReport(report));
+      console.log('');
+      console.log(
+        `summary: ${report.summary.workflowsLoaded} workflow(s), ${report.summary.personasLoaded} persona(s), ` +
+          `${report.summary.unknownPersonaRefs} unknown ref(s), ${report.summary.staleLocks} stale lock(s), ` +
+          `${report.summary.blockedItems} blocked item(s)`,
+      );
+      return report.hasErrors ? 1 : 0;
+    }
+
     case 'help':
     case undefined:
       console.log(
@@ -172,6 +189,8 @@ async function main(): Promise<number> {
           '  cleanup [--quarantine-older-than=Nd] [--branches] [--dry-run]',
           '                             remove old quarantine dirs and (optionally)',
           '                             abandoned kortext/run-* branches',
+          '  doctor                     scan workflows + personas + locks + items',
+          '                             for inconsistencies; exit 1 on errors',
         ].join('\n'),
       );
       return 0;

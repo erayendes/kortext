@@ -1,8 +1,9 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
 import type { Executor, ExecutorContext, ExecutorResult } from '../executor.ts';
 import type { WorkflowStep } from '../workflow-parser.ts';
 import { spawnCli, tailLines } from './cli-spawn.ts';
+import { readPersonaPrompt, type PersonaRegistry } from '../persona-registry.ts';
 
 /**
  * Runs a step by shelling out to the Gemini CLI (Google's gemini cli).
@@ -15,6 +16,8 @@ export type GeminiCliExecutorOptions = {
   binary: string;
   agentsDir: string;
   logsDir: string;
+  /** Preferred persona source. When set, agentsDir is only a fallback. */
+  personaRegistry?: PersonaRegistry;
   extraArgs?: string[];
   summaryTailLines?: number;
   timeoutMs?: number;
@@ -27,7 +30,11 @@ export class GeminiCliExecutor implements Executor {
   constructor(private readonly opts: GeminiCliExecutorOptions) {}
 
   async execute(step: WorkflowStep, ctx: ExecutorContext): Promise<ExecutorResult> {
-    const prompt = buildPrompt(step, ctx, this.opts.agentsDir);
+    const personaBody = readPersonaPrompt(
+      step.persona,
+      this.opts.personaRegistry ?? { agentsDir: this.opts.agentsDir },
+    );
+    const prompt = buildPrompt(step, ctx, personaBody);
     const logPath = join(this.opts.logsDir, `run-${ctx.runId}-step-${ctx.runStepId}.log`);
     const args = [...(this.opts.extraArgs ?? [])];
 
@@ -74,8 +81,7 @@ export class GeminiCliExecutor implements Executor {
   }
 }
 
-function buildPrompt(step: WorkflowStep, ctx: ExecutorContext, agentsDir: string): string {
-  const personaBody = readPersona(step.persona, agentsDir);
+function buildPrompt(step: WorkflowStep, ctx: ExecutorContext, personaBody: string): string {
   const inputs = step.inputs.length > 0 ? step.inputs.join(', ') : '(none)';
   const outputs = step.outputs.length > 0 ? step.outputs.join(', ') : '(none)';
   return `${personaBody}
@@ -88,12 +94,4 @@ Task:     ${step.description}
 Inputs:   ${inputs}
 Outputs:  ${outputs}
 `;
-}
-
-function readPersona(persona: string | null, agentsDir: string): string {
-  if (!persona) return '';
-  const handle = persona.replace(/^\+/, '');
-  const path = join(agentsDir, `${handle}.md`);
-  if (!existsSync(path)) return '';
-  return readFileSync(path, 'utf8');
 }

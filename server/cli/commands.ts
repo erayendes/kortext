@@ -1,8 +1,8 @@
-import { existsSync } from 'node:fs';
-import { join, isAbsolute, resolve } from 'node:path';
+import { isAbsolute, resolve } from 'node:path';
 import type { Repositories } from '../db/repositories/index.ts';
 import type { PendingQuestion, Run } from '../db/schemas.ts';
-import { loadWorkflowFromFile } from '../engine/workflow-parser.ts';
+import { loadWorkflowsFromDir } from '../engine/workflow-loader.ts';
+import { loadPersonasFromDir } from '../engine/persona-registry.ts';
 import { buildGraph } from '../engine/dag.ts';
 import { runWorkflow } from '../engine/worker-pool.ts';
 import { createExecutor, type ExecutorKind } from './executor-factory.ts';
@@ -33,9 +33,21 @@ export async function startCommand(input: StartCommandInput): Promise<StartComma
   const workflowsDir = isAbsolute(input.workflowsDir)
     ? input.workflowsDir
     : resolve(process.cwd(), input.workflowsDir);
-  const filePath = join(workflowsDir, `${input.workflowId}.md`);
-  if (!existsSync(filePath)) {
-    return { ok: false, errorMessage: `workflow file not found: ${filePath}` };
+
+  const registry = loadWorkflowsFromDir(workflowsDir);
+  const def = registry.get(input.workflowId);
+  if (!def) {
+    const loadError = registry.errors().find((e) => e.file === `${input.workflowId}.md`);
+    if (loadError) {
+      return {
+        ok: false,
+        errorMessage: `workflow '${input.workflowId}' not loadable: ${loadError.reason}`,
+      };
+    }
+    return {
+      ok: false,
+      errorMessage: `workflow not found: ${input.workflowId} (in ${workflowsDir})`,
+    };
   }
 
   if (input.executor !== 'mock' && !input.executorBinary) {
@@ -45,12 +57,16 @@ export async function startCommand(input: StartCommandInput): Promise<StartComma
     };
   }
 
-  const def = loadWorkflowFromFile(filePath);
   const graph = buildGraph(def);
+  const agentsDir = input.agentsDir ?? resolve(process.cwd(), 'agents');
+  // Mock executor doesn't read personas — skip the disk scan when possible.
+  const personaRegistry =
+    input.executor === 'mock' ? undefined : loadPersonasFromDir(agentsDir);
   const executor = createExecutor(input.executor, {
     binary: input.executorBinary ?? '',
-    agentsDir: input.agentsDir ?? resolve(process.cwd(), 'agents'),
+    agentsDir,
     logsDir: input.logsDir ?? resolve(process.cwd(), '.kortext', 'logs'),
+    personaRegistry,
   });
   const result = await runWorkflow(graph, executor, input.repos, {
     concurrency: input.concurrency ?? 3,

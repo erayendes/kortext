@@ -64,6 +64,21 @@ describe('startCommand', () => {
       expect(result.errorMessage).toMatch(/not found/i);
     }
   });
+
+  it('returns ok=false with a clear reason when the workflow file has no steps', async () => {
+    writeFileSync(join(workflowsDir, 'broken.md'), '# Title only\n\nno steps\n', 'utf8');
+
+    const result = await startCommand({
+      repos,
+      workflowsDir,
+      workflowId: 'broken',
+      executor: 'mock',
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errorMessage).toMatch(/empty|no steps/i);
+    }
+  });
 });
 
 describe('approveCommand', () => {
