@@ -209,14 +209,17 @@ Sub-fazlar (tamamlanan sırayla):
 
 **Amaç:** `kortext` komutu kullanıcı dostu.
 
-- [ ] `kortext init` — projeye yerleştir (`.kortext/` + AGENTS.md + DB)
-- [ ] `kortext start` — backend + dashboard başlat (default port 3200)
-- [ ] `kortext mcp` — MCP server stdio
-- [ ] `kortext status` — runtime durumu
-- [ ] `kortext logs` — son log'lar
-- [ ] `kortext doctor` — diagnostik (CLI'ler kurulu mu, DB erişilebilir mi, git OK mı)
-- [ ] `kortext --help`
-- [ ] `npx kortext` çalışsın (one-shot)
+- [x] `kortext init` — projeye yerleştir (`.kortext/` + AGENTS.md + DB; idempotent, `--force`)
+- [x] `kortext serve` — backend + dashboard birlikte başlat (`--mode=dev|prod|auto`, `--port=N`)
+- [x] `kortext mcp` — MCP server stdio (Faz 7'den geliyor)
+- [x] `kortext status` — runtime durumu
+- [x] `kortext logs` — audit log tail (`--limit`, `--actor`, `--action`, `--resource-type/-id`)
+- [x] `kortext doctor` — diagnostik (workflow/persona/lock consistency)
+- [x] `kortext --help` / `--version`
+- [x] `npx kortext` one-shot çalışsın — `bin/kortext.js` derlenmiş JS'i tercih eder, dev'de tsx'e fallback
+- [x] Migration copy step: `build:server` sonrasında `scripts/copy-migrations.mjs` SQL'leri `dist/server/db/migrations/`'a kopyalar
+
+**TAMAMLANDI** — 14 yeni test (`tests/cli-init.test.ts` 5, `tests/cli-logs.test.ts` 4, `tests/cli-serve.test.ts` 5). Komut dağılımı: `server/cli/init.ts` (template scaffold + DB migration tetikleme), `server/cli/logs.ts` (audit log query + cli formatter), `server/cli/serve.ts` (pure `buildServeCommands()` — dev/prod/auto resolve, DI ile testlenebilir). `bin/kortext.ts` üst-düzey `--version` / `--help` flag'leri + SIGINT-routed çift child process spawn (`serve`). `bin/kortext.js` dual-mode shim: `dist/bin/kortext.js` varsa in-process import (tsx hop'u atla), yoksa tsx fallback.
 
 ### Faz 9 — Test + CI (2-3 gün)
 

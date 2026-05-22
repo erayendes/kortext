@@ -12,7 +12,7 @@
     "dev:server": "tsx watch --clear-screen=false server/index.ts",
     "dev:web": "vite",
     "build": "npm run build:server && npm run build:web",
-    "build:server": "tsc -p tsconfig.build.json",
+    "build:server": "tsc -p tsconfig.build.json && node scripts/copy-migrations.mjs",
     "build:web": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.server.json --noEmit",
