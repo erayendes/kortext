@@ -5,7 +5,7 @@
 
 **Tarih:** 2026-05-22
 **Yazan oturum:** Faz 9
-**Son commit:** (Faz 9 commit hash'i pinlenecek)
+**Son commit:** `217d13b` — `feat(v3): tests + CI — E2E pipeline + build verification + GHA workflow (Faz 9)`
 
 ---
 
@@ -23,7 +23,7 @@
 | **6 — React Dashboard** | — | `e48e266` | routes: 17 (runs/handovers/doctor/personas/workflows/backlog/docs + PUT validate) |
 | **7 — MCP Server** | — | `263a8f8` | mcp-tools: 14 (15 tool surface + lifecycle smoke) |
 | **8 — CLI + Bin** | — | `61aedf2` | cli-init: 5, cli-logs: 4, cli-serve: 5 |
-| **9 — Test + CI** | — | (pending) | e2e-pipeline: 6, build-verification: 3, cli-smoke: 5 |
+| **9 — Test + CI** | — | `217d13b` | e2e-pipeline: 6, build-verification: 3, cli-smoke: 5 |
 | **Toplam** | — | — | **263/263 ✅** |
 
 Hızlı doğrulama:
