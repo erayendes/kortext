@@ -1,11 +1,11 @@
 # Kortext v3 — Yeni Oturum Handover
 
 > Bu dosya yeni Claude Code oturumunun bootstrap pusulasıdır.
-> Açar açmaz şunu yaz: **"HANDOVER-v3.md'yi oku, Faz 8'e başla"**
+> Açar açmaz şunu yaz: **"HANDOVER-v3.md'yi oku, Faz 9'a başla"**
 
 **Tarih:** 2026-05-22
-**Yazan oturum:** Faz 7
-**Son commit:** `263a8f8` — `feat(v3): MCP server — 15 tool, stdio + SSE, Zod schema (Faz 7)`
+**Yazan oturum:** Faz 8
+**Son commit:** Faz 8 commit'i (CLI + bin)
 
 ---
 
@@ -22,14 +22,17 @@
 | **5 — Persona + workflow içerik katmanı** | — | `48093d5` | workflow-loader: 7, persona-registry: 8, consistency: 4, handover: 8, item-lifecycle: 13, doctor: 8, git-commit: 4 |
 | **6 — React Dashboard** | — | `e48e266` | routes: 17 (runs/handovers/doctor/personas/workflows/backlog/docs + PUT validate) |
 | **7 — MCP Server** | — | `263a8f8` | mcp-tools: 14 (15 tool surface + lifecycle smoke) |
-| **Toplam** | — | — | **235/235 ✅** |
+| **8 — CLI + Bin** | — | (bu commit) | cli-init: 5, cli-logs: 4, cli-serve: 5 |
+| **Toplam** | — | — | **249/249 ✅** |
 
 Hızlı doğrulama:
 ```bash
-npm test          # 235 yeşil
+npm test          # 249 yeşil
 npm run typecheck # frontend + server, sıfır hata
 npm run dev       # Vite 5173 + Express 3200 (Express ayrıca /mcp/sse + /mcp/messages mount eder)
-npx tsx bin/kortext.ts mcp   # stdio MCP server (Claude Code, Cursor, vs. bağlanabilir)
+npx tsx bin/kortext.ts mcp     # stdio MCP server (Claude Code, Cursor, vs. bağlanabilir)
+npx tsx bin/kortext.ts --help  # Faz 8 üst-düzey help
+npx tsx bin/kortext.ts init    # boş klasörde scaffold
 # Tarayıcı: http://localhost:5173 — hash-based router, dashboard default
 ```
 
@@ -63,6 +66,16 @@ npx tsx bin/kortext.ts mcp   # stdio MCP server (Claude Code, Cursor, vs. bağla
 31. **SSE oturum başına yeni McpServer**: Tek server iki transport ile karışır (handler state transport'a kilitli). `mcp/sse.ts` her `GET /mcp/sse` için fresh instance üretir, `transports` Map'i sessionId → transport tutar, `onclose` cleanup.
 32. **Tool envelope = JSON text + structuredContent**: Her tool `{ content: [{type:'text', text: JSON.stringify(...)}], structuredContent: payload }` döner — eski MCP client'lar text frame'i, yeni client'lar structured payload'u görür.
 33. **`approve_blueprint` = frontmatter rewrite**: Yeni orchestrator çağrısı eklemek yerine `BlueprintWatcher`'ın zaten izlediği dosyaya `status: approved` yazıyoruz; downstream pipeline tetikleme otomatik.
+
+### Faz 8'de eklenen kararlar
+
+34. **Üç pure command modülü + ince bin layer**: `server/cli/init.ts`, `logs.ts`, `serve.ts` hiçbir `console.*` çağırmaz — sadece veri/komut listesi döner. `bin/kortext.ts` formatlama, stdout/stderr ve spawn'ı tek yerden yönetir; test ile çakışma olmaz.
+35. **`buildServeCommands` DI ile testlenebilir**: `existsImpl` parametresi sayesinde dev/prod auto-detect'i gerçek fs olmadan unit test edilir. CI'da spawn-free smoke.
+36. **`init` idempotent + per-entry skip**: Her dir/dosya ayrı kontrol edilir; sadece eksik olanlar oluşur. `--force` user override içindir; default davranış güvenli.
+37. **`init` template kaynağı `bin/`'in bir üst dizini**: Kaynak ağacında ve `node_modules/kortext/` install'unda aynı yol işler. Test'lerde `templatesDir` override ile tmp dir'den çalışılır.
+38. **Migration runner copy step**: `tsc` `.sql` kopyalamıyor (bilinen gotcha). `scripts/copy-migrations.mjs` `build:server`'a zincirlendi — derlemeden sonra `dist/server/db/migrations/` doluyor.
+39. **`bin/kortext.js` dual-mode shim**: `dist/bin/kortext.js` varsa in-process `import()` (tsx hop'unu atla, ~200ms daha hızlı startup); yoksa `tsx` fallback. `npx kortext`'in iki ortamda da çalışmasını garanti eder.
+40. **`serve` SIGINT propagation**: Tek parent process iki child spawn'lar; biri exit ederse kardeş öldürülüyor; SIGINT/SIGTERM toplu route. Stale frontend / backend kalmıyor.
 
 ### Faz 6'da eklenen kararlar
 
@@ -130,34 +143,55 @@ claude mcp add kortext -- npx tsx /Users/erayendes/Documents/_docbase/kortext/bi
 curl -N http://localhost:3200/mcp/sse
 ```
 
-## Sırada: Faz 8 — CLI + Bin
+## Faz 8 — CLI + Bin (TAMAMLANDI)
 
-**⚠ İlk iş: [ROADMAP-v3.md](ROADMAP-v3.md) → "Faz 8 — CLI + Bin" bölümünü oku.** Kapsam özeti:
+| # | Modül | Dosya | Test |
+|---|---|---|---|
+| 8.1 | `kortext init` — scaffold + DB migration trigger | [server/cli/init.ts](server/cli/init.ts) | 5 |
+| 8.2 | `kortext logs` — audit log query + cli formatter | [server/cli/logs.ts](server/cli/logs.ts) | 4 |
+| 8.3 | `kortext serve` — buildServeCommands (dev/prod auto-detect, DI) | [server/cli/serve.ts](server/cli/serve.ts) | 5 |
+| 8.4 | Bin layer — `--version` / `--help` + spawn + SIGINT propagation | [bin/kortext.ts](bin/kortext.ts) | manuel smoke |
+| 8.5 | Dual-mode shim — dist/bin/kortext.js prefer + tsx fallback | [bin/kortext.js](bin/kortext.js) | manuel smoke |
+| 8.6 | Migration copy step — tsc post-build | [scripts/copy-migrations.mjs](scripts/copy-migrations.mjs), [package.json](package.json) | (build smoke) |
 
-- `kortext init` — boş projeye `.kortext/` + AGENTS.md + DB seed
-- `kortext start` — backend + dashboard birlikte başlat (concurrently zaten kurulu)
-- `kortext logs` — son audit log
-- `kortext --help` + `--version`
-- `npx kortext` one-shot çalışsın
-- `bin/kortext.js` shim → derlenmiş JS'e geç (`npm run build:server` migration runner'ı dahil etmeli — bilinen gotcha)
+CLI yüzeyi (Faz 8 sonrası):
+```
+kortext init [--force]               scaffold .kortext/, workflows, agents, rules, workspace, AGENTS.md, DB
+kortext serve [--mode=…] [--port=N]  backend + dashboard birlikte
+kortext start <workflow-id> […]      workflow başlat (mock|claude|codex|gemini)
+kortext approve <run-id> [answer]    açık soruyu yanıtla
+kortext status                       son run'lar + açık sorular
+kortext logs [--limit=…] […]         audit log tail
+kortext cleanup […]                  quarantine + branch temizliği
+kortext doctor                       workflow/persona/lock tutarlılık
+kortext mcp                          stdio MCP server
+kortext --help / --version
+```
 
-Faz 7'de eklenen `kortext mcp` ve mevcut start/approve/status/cleanup/doctor komutları bir araya gelerek CLI yüzeyini tamamlayacak.
+## Sırada: Faz 9 — Test + CI
+
+**⚠ İlk iş: [ROADMAP-v3.md](ROADMAP-v3.md) → "Faz 9 — Test + CI" bölümünü oku.** Kapsam özeti:
+
+- **E2E senaryosu**: `init` → boş klasör → `blueprint.md` `status: approved` → analysis → planning → development chain otomatik → onay kuyruğu mock cevap → backlog item transition → her aşamada git commit doğrulama
+- **GitHub Actions CI**: PR başına lint + typecheck + test (mevcut 249 testi pinle)
+- **Smoke test**: `npx kortext --version` CI'da minimal check
+- **Build verification**: `npm run build` sonrası `dist/bin/kortext.js` çalışabiliyor mu, migration SQL kopyalanmış mı kontrol
+- (Opsiyonel) **E2E test harness**: tek bir Vitest dosyası içinde tüm pipeline chain'i mock executor ile uçtan uca koştur
 
 ---
 
-## Dosya Haritası (Faz 8 için en bakılacaklar)
+## Dosya Haritası (Faz 9 için en bakılacaklar)
 
 | Yer | İşlev |
 |---|---|
-| [bin/kortext.ts](bin/kortext.ts) | Mevcut CLI entry — Faz 8 init/start/logs/--help/--version eklenecek |
-| [bin/kortext.js](bin/kortext.js) | `npx tsx` shim — Faz 8'de derlenmiş JS'e geçiş |
-| [mcp/](mcp/) | Faz 7 — MCP server (referans olarak) |
-| [server/routes/](server/routes/) | Tool wrap'lerinin nasıl repo + registry'lere bağlandığına örnek |
-| [server/orchestrator/](server/orchestrator/) | `triggerWorkflow`, `retryRun`, `approvalQueue` — programatik API hazır |
-| [server/cli/doctor.ts](server/cli/doctor.ts) | `runDoctor()` — `get_runtime_status` tool'u için kaynak |
-| [server/engine/workflow-loader.ts](server/engine/workflow-loader.ts) | `list_workflows` veri kaynağı |
-| [server/engine/persona-registry.ts](server/engine/persona-registry.ts) | `list_personas` veri kaynağı |
-| [docs/design/wireframe-v4-final.html](docs/design/wireframe-v4-final.html) | Görsel referans (Faz 6 tamamlandı, yeni UI işi için kullanılabilir) |
+| [bin/kortext.ts](bin/kortext.ts) | CLI entry — `init`, `serve`, `start`, `approve`, `status`, `logs`, `cleanup`, `doctor`, `mcp` |
+| [bin/kortext.js](bin/kortext.js) | Dual-mode shim — derlenmiş `dist/bin/kortext.js` varsa import, yoksa tsx fallback |
+| [server/cli/init.ts](server/cli/init.ts) | E2E senaryonun ilk adımı için altyapı — tmp dir'de `initCommand({ targetDir, templatesDir })` |
+| [server/orchestrator/](server/orchestrator/) | `triggerWorkflow`, `retryRun`, `approvalQueue`, `pipeline-chainer` — E2E chain için programatik API |
+| [server/engine/](server/engine/) | `workflow-loader`, `persona-registry`, `dag`, `worker-pool` — pipeline koşum altyapısı |
+| [tests/orchestrator.test.ts](tests/orchestrator.test.ts) + [tests/pipeline-chainer.test.ts](tests/pipeline-chainer.test.ts) | E2E test için en yakın referans |
+| [scripts/copy-migrations.mjs](scripts/copy-migrations.mjs) | `build:server` post-step — CI'da build verification için |
+| [docs/design/wireframe-v4-final.html](docs/design/wireframe-v4-final.html) | Görsel referans (Faz 6 tamamlandı) |
 
 ---
 
@@ -178,6 +212,8 @@ Faz 7'de eklenen `kortext mcp` ve mevcut start/approve/status/cleanup/doctor kom
 - **Frontend bundle tipi mirror**: Server tipini frontend'e koymak yerine `src/lib/api-types.ts` elden mirror. Schema değişikliğinde her iki yer de güncellenmeli.
 - **MCP stdio'da `console.log` ölümcül**: stdout = JSONRPC. `bin/kortext.ts mcp` ilk iş `console.log = console.error` monkey-patch yapar. Yeni log ekleyen herhangi bir modül bu kuralı bilmeden bozabilir. Genel kural: server kodu `console.error` kullansın, `console.log` sadece CLI komut çıktısı için (mcp dışı).
 - **SSE deprecated note**: SDK 1.29 SSEServerTransport için "deprecated, use StreamableHTTP" diyor. Dashboard + claude mcp SSE'yi hâlâ kullanıyor; v3.1'de StreamableHTTP'ye migration tracked.
+- **`serve` child cwd ≠ kortext kaynak dizini**: `kortext serve` backend'i kullanıcının `process.cwd()`'sinde, Vite'ı paket kökünde çalıştırır — Vite'ın `tsx`/`vite` binary'leri kullanıcının projesinde yok, devDeps paket kökünde. Faz 9'da prod modu için Express'te static dist/web serve eklenmesi gerekecek (şu an `vite preview` ayrı port'ta).
+- **`init` template paths**: Çalıştırıldığı yer kaynak ağacı veya `node_modules/kortext/` olabilir. Template lookup `bin/kortext.ts` → `..` → paket kökü. Yeni scaffold edilecek dosya eklerken `.npmignore`'a bakıp pakete dahil olduğundan emin ol.
 
 ---
 
@@ -190,12 +226,15 @@ npx tsx server/index.ts                    # sadece backend
 npx vitest                                 # watch mode
 
 # Test + doğrulama
-npm test                                   # 235 test
+npm test                                   # 249 test
 npm run typecheck
 
 # Tek bir test dosyası
 npx vitest run tests/routes.test.ts        # Faz 6 REST smoke (17 test)
 npx vitest run tests/mcp-tools.test.ts     # Faz 7 MCP tool smoke (14 test)
+npx vitest run tests/cli-init.test.ts      # Faz 8 init scaffold (5 test)
+npx vitest run tests/cli-logs.test.ts      # Faz 8 audit log tail (4 test)
+npx vitest run tests/cli-serve.test.ts     # Faz 8 serve plan (5 test)
 npx vitest run tests/orchestrator.test.ts
 
 # MCP server (Faz 7) manuel smoke
@@ -209,6 +248,13 @@ npx tsx bin/kortext.ts approve <run-id> [answer]
 npx tsx bin/kortext.ts status
 npx tsx bin/kortext.ts cleanup --dry-run
 npx tsx bin/kortext.ts doctor
+
+# CLI (Faz 8)
+npx tsx bin/kortext.ts --help
+npx tsx bin/kortext.ts --version
+npx tsx bin/kortext.ts init [--force]        # boş bir klasörde dene
+npx tsx bin/kortext.ts serve [--mode=auto|dev|prod] [--port=3200]
+npx tsx bin/kortext.ts logs [--limit=50] [--actor=…] [--action=…]
 
 # REST API canlı dene
 curl http://localhost:3200/api/health
