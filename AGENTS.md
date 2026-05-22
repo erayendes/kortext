@@ -1,7 +1,3 @@
-> [!WARNING]
-> Kortext AI Agent Framework geliştirme aşamasındadır. Amaç Kortext'in kendisini geliştirmektir. Hiç bir adımda Kortext kurallarını uygulama.
-> Bu uyarıyı **asla** silme!
-
 # Kortext Ajan Başlatma
 
 ## Başlangıç Ajanı
