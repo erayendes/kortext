@@ -45,6 +45,8 @@ export type PersonaRegistry = {
   get(handle: string): PersonaDefinition | null;
   list(): PersonaDefinition[];
   errors(): PersonaLoadError[];
+  /** Re-read the source directory in place. Same object identity, fresh data. */
+  reload(): void;
 };
 
 const H1_RE = /^#\s+([\w-]+)\s*$/;
@@ -104,23 +106,28 @@ export function loadPersonasFromDir(dir: string): PersonaRegistry {
   const byHandle = new Map<string, PersonaDefinition>();
   const errors: PersonaLoadError[] = [];
 
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    if (!entry.isFile()) continue;
-    if (!entry.name.endsWith('.md')) continue;
-
-    const fullPath = join(dir, entry.name);
-    const fileId = basename(entry.name, '.md');
-    try {
-      const source = readFileSync(fullPath, 'utf8');
-      const def = parsePersonaMarkdown(source, fileId);
-      byHandle.set(def.handle, def);
-    } catch (err) {
-      errors.push({
-        file: entry.name,
-        reason: err instanceof Error ? err.message : String(err),
-      });
+  const refresh = () => {
+    byHandle.clear();
+    errors.length = 0;
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (!entry.isFile()) continue;
+      if (!entry.name.endsWith('.md')) continue;
+      const fullPath = join(dir, entry.name);
+      const fileId = basename(entry.name, '.md');
+      try {
+        const source = readFileSync(fullPath, 'utf8');
+        const def = parsePersonaMarkdown(source, fileId);
+        byHandle.set(def.handle, def);
+      } catch (err) {
+        errors.push({
+          file: entry.name,
+          reason: err instanceof Error ? err.message : String(err),
+        });
+      }
     }
-  }
+  };
+
+  refresh();
 
   return {
     get(handle) {
@@ -133,6 +140,7 @@ export function loadPersonasFromDir(dir: string): PersonaRegistry {
     errors() {
       return [...errors];
     },
+    reload: refresh,
   };
 }
 
