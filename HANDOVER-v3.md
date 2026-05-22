@@ -1,11 +1,11 @@
 # Kortext v3 — Yeni Oturum Handover
 
 > Bu dosya yeni Claude Code oturumunun bootstrap pusulasıdır.
-> Açar açmaz şunu yaz: **"HANDOVER-v3.md'yi oku, Faz 10'a başla"**
+> Açar açmaz şunu yaz: **"HANDOVER-v3.md'yi oku, v3.0.0 yayınla"** (Faz 10 tamam)
 
 **Tarih:** 2026-05-22
-**Yazan oturum:** Faz 9
-**Son commit:** `217d13b` — `feat(v3): tests + CI — E2E pipeline + build verification + GHA workflow (Faz 9)`
+**Yazan oturum:** Faz 10
+**Son commit:** Faz 10 commit'i bu oturumun sonunda atıldı (`feat(v3): docs + release v3.0.0 (Faz 10)`)
 
 ---
 
@@ -24,6 +24,7 @@
 | **7 — MCP Server** | — | `263a8f8` | mcp-tools: 14 (15 tool surface + lifecycle smoke) |
 | **8 — CLI + Bin** | — | `61aedf2` | cli-init: 5, cli-logs: 4, cli-serve: 5 |
 | **9 — Test + CI** | — | `217d13b` | e2e-pipeline: 6, build-verification: 3, cli-smoke: 5 |
+| **10 — Yayın + Docs** | `v3.0.0` (pending) | Faz 10 commit | (docs-only, 263 yeşil baseline korundu) |
 | **Toplam** | — | — | **263/263 ✅** |
 
 Hızlı doğrulama:
@@ -197,29 +198,61 @@ checkout → setup-node@v4 (npm cache) → npm ci → npm run lint
 
 Concurrency: `cancel-in-progress: true` aynı ref için superseded run'ları iptal eder.
 
-## Sırada: Faz 10 — Yayın + Dokümantasyon
+## Faz 10 — Yayın + Dokümantasyon (TAMAMLANDI)
 
-**⚠ İlk iş: [ROADMAP-v3.md](ROADMAP-v3.md) → "Faz 10 — Yayın + Dokümantasyon" bölümünü oku.** Kapsam özeti:
+| # | Modül | Dosya | Not |
+|---|---|---|---|
+| 10.1 | CHANGELOG.md | [CHANGELOG.md](CHANGELOG.md) | Keep-a-Changelog formatı; v3.0.0 Added/Changed/Removed/Migration; v2.x özet |
+| 10.2 | Migration rehberi | [MIGRATION-v2-to-v3.md](MIGRATION-v2-to-v3.md) | Dry-run-first migration scripti, `PORT → KORTEXT_PORT`, legacy/ politikası |
+| 10.3 | README.md yenileme | [README.md](README.md) | TS runtime + dashboard + MCP odaklı quick start + ASCII layer diyagramı |
+| 10.4 | USER-GUIDE.md | [USER-GUIDE.md](USER-GUIDE.md) | Mental model, ekran-ekran dashboard, gate akışı, troubleshooting (8 senaryo) |
+| 10.5 | Architecture | [docs/architecture.md](docs/architecture.md) | Mermaid: katman, ER, sequence (orchestrator), engine flow, MCP factory, CI |
+| 10.6 | npm-publish.yml bump | [.github/workflows/npm-publish.yml](.github/workflows/npm-publish.yml) | Node 22, actions@v4, full verify gate (lint+typecheck+test+build+smoke), `--provenance` |
+| 10.7 | Version bump | [package.json](package.json) | `3.0.0-alpha.0` → `3.0.0` |
 
-- **CHANGELOG.md**: v3.0.0 breaking change notu, v2 → v3 migration linki
-- **MIGRATION-v2-to-v3.md**: legacy markdown backlog → SQLite (mevcut `bin/migrate-legacy-backlog.ts` etrafında)
-- **README.md** yenile: TS runtime + dashboard + MCP odaklı quick start
-- **USER-GUIDE.md** yenile: otonom mod, blueprint onay akışı, dashboard nasıl çalışılır
-- **docs/architecture.md**: SQLite şema + engine + worker pool + MCP + dashboard diyagramları
-- **npm publish v3.0.0**: tag + GitHub release; `npm-publish.yml` Node 22'ye bump'la (şu an v18)
+**Yayına hazır:** lint 0 hata, typecheck 0 hata, 263/263 yeşil, `dist/bin/kortext.js --version` = `3.0.0`.
+
+### Faz 10'da eklenen kararlar
+
+45. **`npm publish --provenance`**: Workflow'da `permissions.id-token: write` + `--provenance --access public` flag'i. npm OIDC ile cryptographic attestation; paket gerçekten bu GHA run'da, bu commit'ten yapıldığına dair public ledger kaydı. v3.0.0 release'i için supply-chain sigortası.
+46. **Publish gate = CI gate'in aynısı**: `npm-publish.yml` lint + typecheck + test + build + smoke'u publish'ten önce tekrar koşar. Pre-merge gate atlanmışsa veya release tag elle yapılmışsa publish hâlâ doğrulanmış olur.
+47. **HANDOVER-v3.md pakete dahil**: `.npmignore` `.github/` ve `.git/` exclude ediyor ama `HANDOVER-v3.md`'ye dokunmuyor — bilinçli; geliştirici-okur kim olursa olsun (npm install eden user dahil) son durumu görür. v3.1+'da temizlenebilir.
+
+## Sırada: v3.0.0 yayını
+
+Tek bir yayın oturumu — yeni faz değil. Sıralı adımlar:
+
+```bash
+# 1) Final commit zaten atıldı (bu HANDOVER güncellemesiyle birlikte).
+# 2) Tag + push
+git tag v3.0.0
+git push origin main --tags
+
+# 3) GitHub release oluştur (CHANGELOG.md > [3.0.0] bölümünü body olarak yapıştır)
+gh release create v3.0.0 --title "v3.0.0 — Autonomous AI agent runtime" \
+  --notes-file <(awk '/^## \[3\.0\.0\]/,/^## \[2\.2\.3\]/' CHANGELOG.md | head -n -1)
+
+# 4) GHA `npm-publish.yml` release event'iyle tetiklenecek. İzle:
+gh run watch
+```
+
+NPM token GHA secret olarak (`NPM_TOKEN`) zaten ayarlı olmalı; değilse `gh secret set NPM_TOKEN`.
 
 ---
 
-## Dosya Haritası (Faz 10 için en bakılacaklar)
+## Dosya Haritası (yayın için en bakılacaklar)
 
 | Yer | İşlev |
 |---|---|
-| [package.json](package.json) | `version: 3.0.0-alpha.0` — Faz 10'da `3.0.0`'a bump |
-| [README.md](README.md) | v2 era — yenilenecek |
-| [USER-GUIDE.md](USER-GUIDE.md) | v2 era — yenilenecek (mevcutsa) |
-| [bin/migrate-legacy-backlog.ts](bin/migrate-legacy-backlog.ts) | v2 backlog markdown'larını SQLite'a aktarır — migration guide'ın çekirdek aracı |
-| [.github/workflows/npm-publish.yml](.github/workflows/npm-publish.yml) | v2 era (Node 18, setup-node@v3) — release event'inde tetikleniyor; Node 22'ye bump'la |
-| [HANDOVER-v3.md](HANDOVER-v3.md) | Bu dosya — Faz 10 sonunda son sürüm |
+| [package.json](package.json) | `version: 3.0.0` (Faz 10'da bump edildi) |
+| [README.md](README.md) | v3 quick start (Faz 10'da yeniden yazıldı) |
+| [USER-GUIDE.md](USER-GUIDE.md) | Son-kullanıcı rehberi (Faz 10) |
+| [CHANGELOG.md](CHANGELOG.md) | v3.0.0 release notes (Faz 10) |
+| [MIGRATION-v2-to-v3.md](MIGRATION-v2-to-v3.md) | v2 → v3 upgrade (Faz 10) |
+| [docs/architecture.md](docs/architecture.md) | Schema + engine + MCP + dashboard mimari (Faz 10) |
+| [bin/migrate-legacy-backlog.ts](bin/migrate-legacy-backlog.ts) | v2 backlog markdown → SQLite — migration guide'ın çekirdek aracı |
+| [.github/workflows/npm-publish.yml](.github/workflows/npm-publish.yml) | Node 22 + actions@v4 + provenance (Faz 10) |
+| [HANDOVER-v3.md](HANDOVER-v3.md) | Bu dosya |
 
 ### Faz 9'da değişen önemli dosyalar (referans için)
 
