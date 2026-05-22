@@ -1,7 +1,7 @@
 # Kortext v3 — Yeni Oturum Handover
 
 > Bu dosya yeni Claude Code oturumunun bootstrap pusulasıdır.
-> Açar açmaz şunu yaz: **"HANDOVER-v3.md'yi oku, Faz 7'ye başla"**
+> Açar açmaz şunu yaz: **"HANDOVER-v3.md'yi oku, Faz 8'e başla"**
 
 **Tarih:** 2026-05-22
 **Yazan oturum:** Faz 7
