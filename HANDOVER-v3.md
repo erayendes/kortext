@@ -5,7 +5,7 @@
 
 **Tarih:** 2026-05-22
 **Yazan oturum:** Faz 6
-**Son commit:** _(commit hash bir sonraki dokümantasyon commit'inde pinlenecek)_
+**Son commit:** `e48e266` — `feat(v3): React dashboard — router shell + REST API + 6 ekran + 8 settings + bell/toast/terminal/timeline (Faz 6)`
 
 ---
 
