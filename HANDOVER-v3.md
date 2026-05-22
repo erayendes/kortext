@@ -5,7 +5,7 @@
 
 **Tarih:** 2026-05-22
 **Yazan oturum:** Faz 10
-**Son commit:** Faz 10 commit'i bu oturumun sonunda atıldı (`feat(v3): docs + release v3.0.0 (Faz 10)`)
+**Son commit:** `1746b28` — `feat(v3): release docs + npm-publish gate + version 3.0.0 (Faz 10)`
 
 ---
 
@@ -24,7 +24,7 @@
 | **7 — MCP Server** | — | `263a8f8` | mcp-tools: 14 (15 tool surface + lifecycle smoke) |
 | **8 — CLI + Bin** | — | `61aedf2` | cli-init: 5, cli-logs: 4, cli-serve: 5 |
 | **9 — Test + CI** | — | `217d13b` | e2e-pipeline: 6, build-verification: 3, cli-smoke: 5 |
-| **10 — Yayın + Docs** | `v3.0.0` (pending) | Faz 10 commit | (docs-only, 263 yeşil baseline korundu) |
+| **10 — Yayın + Docs** | `v3.0.0` (pending) | `1746b28` | (docs-only, 263 yeşil baseline korundu) |
 | **Toplam** | — | — | **263/263 ✅** |
 
 Hızlı doğrulama:
