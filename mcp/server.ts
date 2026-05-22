@@ -13,7 +13,8 @@
  * when applicable. Errors throw — the SDK serializes them as JSON-RPC errors.
  */
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { Repositories } from '../server/db/repositories/index.ts';
@@ -44,9 +45,35 @@ export type KortextMcpDeps = {
   blueprintPath?: string;
 };
 
+/**
+ * Read the package version from the nearest package.json above this file.
+ * Source path is `mcp/server.ts`; compiled path is `dist/mcp/server.js`.
+ * Same walk-up pattern bin/kortext.ts uses — keeps the SERVER_INFO version
+ * in sync with package.json without a hardcoded literal that drifts.
+ */
+function readPackageVersion(): string {
+  const here = dirname(fileURLToPath(import.meta.url));
+  let cursor = here;
+  for (let i = 0; i < 6; i++) {
+    const pkgPath = join(cursor, 'package.json');
+    if (existsSync(pkgPath)) {
+      try {
+        const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as { version?: string };
+        if (pkg.version) return pkg.version;
+      } catch {
+        // fall through
+      }
+    }
+    const parent = resolve(cursor, '..');
+    if (parent === cursor) break;
+    cursor = parent;
+  }
+  return 'unknown';
+}
+
 const SERVER_INFO = {
   name: 'kortext',
-  version: '3.0.0-alpha.7',
+  version: readPackageVersion(),
   title: 'Kortext autonomous agent runtime',
 } as const;
 
