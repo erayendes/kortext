@@ -199,6 +199,46 @@ async function main(): Promise<number> {
       port,
     });
     console.error(`[kortext] serve mode=${plan.mode} port=${port}`);
+
+    // Prod mode now has exactly one command (Express also serves dist/web).
+    // Running it as a child process via spawn + stdio:inherit broke on
+    // Node 26 — the child exited as soon as the import resolved, even
+    // though the same `node dist/server/index.js` ran fine in a normal
+    // shell. Importing the server in-process keeps the event loop alive
+    // via app.listen(), and signal handlers register against this
+    // process directly. No spawn weirdness.
+    if (plan.mode === 'prod') {
+      const cmdPlan = plan.commands[0];
+      if (!cmdPlan) {
+        console.error('[kortext] prod plan returned no command');
+        return 2;
+      }
+      // The server reads its config from process.env — merge in what the
+      // plan would have passed to a child.
+      for (const [k, v] of Object.entries(cmdPlan.env)) {
+        process.env[k] = v;
+      }
+      // Chdir so the server resolves workflows/agents/workspace relative
+      // to the user's project, exactly the way the spawned child would.
+      const previousCwd = process.cwd();
+      process.chdir(cmdPlan.cwd);
+      try {
+        // The compiled server registers its own SIGINT/SIGTERM handlers
+        // and calls process.exit on shutdown — so once we await this, we
+        // never need to return. await new Promise<never>(() => {})
+        // parks us until the server tears down the process.
+        await import(cmdPlan.args[0]!);
+        await new Promise<never>(() => {});
+        return 0;
+      } catch (err) {
+        process.chdir(previousCwd);
+        console.error('[kortext] server failed to start:', err);
+        return 1;
+      }
+    }
+
+    // Dev mode: tsx (server) + vite (web) run in parallel children, and
+    // we still want sibling-kill semantics if one of them dies.
     const children: ChildProcess[] = [];
     let shuttingDown = false;
     const shutdown = (signal: NodeJS.Signals) => {
@@ -229,7 +269,6 @@ async function main(): Promise<number> {
       });
     }
 
-    // Wait for all children to finish, then propagate worst exit code.
     const codes = await Promise.all(
       children.map(
         (child) =>
