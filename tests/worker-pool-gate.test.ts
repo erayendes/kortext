@@ -1,14 +1,11 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type Database from 'better-sqlite3';
 import { openDb } from '../server/db/client.ts';
 import type { Repositories } from '../server/db/repositories/index.ts';
-import {
-  parseWorkflowMarkdown,
-  type ApprovalGate,
-} from '../server/engine/workflow-parser.ts';
+import { parseWorkflowMarkdown } from '../server/engine/workflow-parser.ts';
 import { buildGraph } from '../server/engine/dag.ts';
 import { MockExecutor } from '../server/engine/executors/mock-executor.ts';
 import { runWorkflow, type GateController } from '../server/engine/worker-pool.ts';

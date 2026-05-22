@@ -221,19 +221,14 @@ Sub-fazlar (tamamlanan sırayla):
 
 **TAMAMLANDI** — 14 yeni test (`tests/cli-init.test.ts` 5, `tests/cli-logs.test.ts` 4, `tests/cli-serve.test.ts` 5). Komut dağılımı: `server/cli/init.ts` (template scaffold + DB migration tetikleme), `server/cli/logs.ts` (audit log query + cli formatter), `server/cli/serve.ts` (pure `buildServeCommands()` — dev/prod/auto resolve, DI ile testlenebilir). `bin/kortext.ts` üst-düzey `--version` / `--help` flag'leri + SIGINT-routed çift child process spawn (`serve`). `bin/kortext.js` dual-mode shim: `dist/bin/kortext.js` varsa in-process import (tsx hop'u atla), yoksa tsx fallback.
 
-### Faz 9 — Test + CI (2-3 gün)
+### Faz 9 — Test + CI ✅
 
-- [ ] **Vitest unit**: Engine, executor, parser, services
-- [ ] **Integration**: SQLite operasyonları, worker pool concurrency, worktree lifecycle
-- [ ] **E2E senaryosu**:
-  1. `kortext init` boş klasörde
-  2. `blueprint.md` örnek içerikle `status: approved`
-  3. Sistem otomatik analysis → planning → development pipeline'larını sürsün
-  4. Onay kuyruğunda soru oluştur, mock yanıt ver
-  5. Backlog item'ları üret, transition et
-  6. Her aşamada git commit doğrula
-- [ ] **GitHub Actions CI**: lint + typecheck + test her PR'da
-- [ ] **Smoke test**: `npx kortext --version`
+- [x] **Vitest unit + integration**: 249 baseline + 14 yeni = 263 yeşil
+- [x] **E2E senaryosu** (`tests/e2e-pipeline.test.ts`, 6 test): init → blueprint approved → analysis → planning → development chain (mock executor) → approval queue mock cevap → backlog lifecycle → handover + git commit
+- [x] **Build verification** (`tests/build-verification.test.ts`, 3 test): `npm run build:server` smoke + migration SQL copy + compiled `--version` (`bin/kortext.ts` `packageRoot()` walk-up fix burada doğdu)
+- [x] **CLI smoke** (`tests/cli-smoke.test.ts`, 5 test): shim entry `--version` / `-v` / `--help` / no-arg / unknown command
+- [x] **GitHub Actions CI** (`.github/workflows/kortext-ci.yml`): Node 22, npm ci → lint → typecheck → test → build → compiled CLI smoke; concurrency cancel-in-progress
+- [x] **ESLint config genişletildi**: `.js/.mjs/.cjs` Node globals + TS tarafında `NodeJS` namespace + test dosyalarında `no-explicit-any` off; 19 önceki lint hatası → 0 hata
 
 ### Faz 10 — Yayın + Dokümantasyon (1-2 gün)
 

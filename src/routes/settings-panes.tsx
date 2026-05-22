@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { PageHeader } from '../components/PageHeader.tsx';
 import { MarkdownViewer } from '../components/MarkdownViewer.tsx';
 import { PersonaEditor } from '../components/PersonaEditor.tsx';
@@ -243,7 +244,7 @@ function DangerRow({ title, desc, command }: { title: string; desc: string; comm
   );
 }
 
-function Hint({ children }: { children: React.ReactNode }) {
+function Hint({ children }: { children: ReactNode }) {
   return (
     <div className="text-[12px] text-tx-3 mt-1">{children}</div>
   );
