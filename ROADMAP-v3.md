@@ -131,10 +131,22 @@ Kortext'i **markdown methodology framework**'ten **tam otonom AI ajan runtime'ı
 - [x] **Onay kuyruğu + REST** (`server/orchestrator/approval-queue.ts` + `server/routes/approvals.ts`, 8 test): `pending_questions` lifecycle + 3 endpoint
 - [x] **Bildirim katmanı** (`server/notifications/{dispatcher,slack,telegram}.ts`, 11 test): dedup'lu, çok-kanallı
 - [x] **CLI orkestratör entry** (`server/cli/commands.ts` + `bin/kortext.ts`, 5 test): start / approve / status
-- [ ] **Schedule + cron** (Faz 4'e ertelendi)
-- [ ] **Resume semantics** (Faz 4'e ertelendi — orchestrator wiring ile birlikte)
+- [x] **Schedule + cron** (Faz 4'e ertelendi → Faz 4 kapsamında çözüldü: orchestrator + cleanup)
+- [x] **Resume semantics** (Faz 4'e ertelendi → Faz 4.5'te tamamlandı)
 
-### Faz 4 — Persona + Workflow Engine TS Portu (3-4 gün)
+### Faz 4 — Üretim Sertleştirmesi ✅
+
+**Amaç:** Faz 3'te yazılan yapı taşlarını gerçek senaryoda çalışır hale getirmek — orchestrator wiring, mid-run gate, gerçek CLI executor, worktree bakımı, crash sonrası kurtarma.
+
+- [x] **4.1 — Orchestrator wiring + paralel iş başlatma** (`server/orchestrator/orchestrator.ts`, 11 test): watcher + chainer + queue + dispatcher facade; `triggerWorkflow` / `triggerMany` / `setMaxParallelRuns`; iş başına ayrı worktree
+- [x] **4.2 — Worker-pool ↔ approval-queue (mid-run gate pause/resume)** (`server/engine/worker-pool.ts` + retry, 9 test): gate barrier; `gateController.pauseAtGate`; `decision: reject + reason` → `cancelled` + `error_message: rejected: <reason>`; `orchestrator.retryRun()` aynı worktree'de kaldığı yerden
+- [x] **4.3 — Gerçek CLI executor entegrasyonu** (`server/cli/executor-factory.ts` + `persona-routed-executor.ts`, 9 test): `--executor=claude|codex|gemini|mock` flag; `KORTEXT_<KIND>_BIN` env; persona → executor routing (`+developer → claude`, `+reviewer → gemini`)
+- [x] **4.4 — Worktree maintenance** (`server/cli/cleanup.ts`, 5 test): `kortext cleanup --quarantine-older-than=Nd --branches --dry-run` — eski quarantine dirs + terminal-status `kortext/run-*` branch'leri
+- [x] **4.5 — Resume semantics** (`server/orchestrator/resume.ts`, 5 test): server boot'unda `running` kalan run'lar `cancelled` + `error_message: orphaned: server restarted`; `retryRun` orphaned'lere de izin verir; preCompleted gate'leri replay edilir
+
+**Toplam Faz 4:** 39 yeni test, 111 → 150.
+
+### Faz 5 — Persona + Workflow Engine TS Portu (3-4 gün)
 
 **Amaç:** Mevcut 14 persona ve 12 workflow markdown'unu engine'e bağla.
 
@@ -149,7 +161,7 @@ Kortext'i **markdown methodology framework**'ten **tam otonom AI ajan runtime'ı
 - [ ] **Consistency check**: `kortext-consistency-check.py`, `kortext-context-check.py`, `kortext-backlog-health.py` TS portu
 - [ ] **Git commit integration**: Her durum değişikliğinde otomatik `chore(kortext): <action> <item-id>` commit (v2 planındaki Faz 2.4)
 
-### Faz 5 — MCP Server (2 gün)
+### Faz 6 — MCP Server (2 gün)
 
 **Amaç:** Tüm runtime operasyonlarını MCP üzerinden programatik erişilebilir kıl.
 
@@ -177,7 +189,7 @@ Kortext'i **markdown methodology framework**'ten **tam otonom AI ajan runtime'ı
 - [ ] Zod schema her tool için
 - [ ] `claude mcp add kortext -- kortext mcp` komutu çalışsın
 
-### Faz 6 — React Dashboard (5-7 gün)
+### Faz 7 — React Dashboard (5-7 gün)
 
 **Amaç:** Eray için canlı kontrol paneli. Sıfırdan tasarım.
 
@@ -204,7 +216,7 @@ Kortext'i **markdown methodology framework**'ten **tam otonom AI ajan runtime'ı
 - [ ] Lucide ikon seti (mevcut mockup'a uyum)
 - [ ] Dark mode default (mevcut UI yönü)
 
-### Faz 7 — CLI + Bin (1-2 gün)
+### Faz 8 — CLI + Bin (1-2 gün)
 
 **Amaç:** `kortext` komutu kullanıcı dostu.
 
@@ -217,7 +229,7 @@ Kortext'i **markdown methodology framework**'ten **tam otonom AI ajan runtime'ı
 - [ ] `kortext --help`
 - [ ] `npx kortext` çalışsın (one-shot)
 
-### Faz 8 — Test + CI (2-3 gün)
+### Faz 9 — Test + CI (2-3 gün)
 
 - [ ] **Vitest unit**: Engine, executor, parser, services
 - [ ] **Integration**: SQLite operasyonları, worker pool concurrency, worktree lifecycle
@@ -231,7 +243,7 @@ Kortext'i **markdown methodology framework**'ten **tam otonom AI ajan runtime'ı
 - [ ] **GitHub Actions CI**: lint + typecheck + test her PR'da
 - [ ] **Smoke test**: `npx kortext --version`
 
-### Faz 9 — Yayın + Dokümantasyon (1-2 gün)
+### Faz 10 — Yayın + Dokümantasyon (1-2 gün)
 
 - [ ] **CHANGELOG**: v3.0.0 — breaking change notu, migration guide linki
 - [ ] **MIGRATION-v2-to-v3.md**: Eski markdown backlog'u nasıl SQLite'a aktarılır; legacy/ klasör politikası
@@ -251,15 +263,16 @@ Kortext'i **markdown methodology framework**'ten **tam otonom AI ajan runtime'ı
 | 1 — SQLite şema | 2g | 3g |
 | 2 — Engine + worker pool + worktree | 5g | 7g |
 | 3 — Otonom orkestratör | 3g | 4g |
-| 4 — Persona + workflow TS portu | 3g | 4g |
-| 5 — MCP server | 2g | 2g |
-| 6 — React dashboard | 5g | 7g |
-| 7 — CLI + bin | 1g | 2g |
-| 8 — Test + CI | 2g | 3g |
-| 9 — Yayın + docs | 1g | 2g |
-| **Toplam** | **25g** | **36g** |
+| 4 — Üretim sertleştirmesi | 2g | 3g |
+| 5 — Persona + workflow TS portu | 3g | 4g |
+| 6 — MCP server | 2g | 2g |
+| 7 — React dashboard | 5g | 7g |
+| 8 — CLI + bin | 1g | 2g |
+| 9 — Test + CI | 2g | 3g |
+| 10 — Yayın + docs | 1g | 2g |
+| **Toplam** | **27g** | **39g** |
 
-> Ajan üretkenliğine göre takvim — paralel ajanlar Faz 1+4 ve Faz 6'yı eş zamanlı yürütebilir, kritik yol Faz 0→2→3→7→8.
+> Ajan üretkenliğine göre takvim — paralel ajanlar Faz 1+5 ve Faz 7'yi eş zamanlı yürütebilir, kritik yol Faz 0→2→3→4→8→9.
 
 ---
 

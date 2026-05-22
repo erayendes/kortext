@@ -5,7 +5,7 @@ import type { PendingQuestion, Run } from '../db/schemas.ts';
 import { loadWorkflowFromFile } from '../engine/workflow-parser.ts';
 import { buildGraph } from '../engine/dag.ts';
 import { runWorkflow } from '../engine/worker-pool.ts';
-import { MockExecutor } from '../engine/executors/mock-executor.ts';
+import { createExecutor, type ExecutorKind } from './executor-factory.ts';
 import type { ApprovalQueue } from '../orchestrator/approval-queue.ts';
 
 /**
@@ -17,7 +17,11 @@ export type StartCommandInput = {
   repos: Repositories;
   workflowsDir: string;
   workflowId: string;
-  executor: 'mock'; // claude/codex/gemini come later
+  executor: ExecutorKind;
+  /** Required for non-mock executors. */
+  executorBinary?: string;
+  agentsDir?: string;
+  logsDir?: string;
   concurrency?: number;
 };
 
@@ -34,9 +38,20 @@ export async function startCommand(input: StartCommandInput): Promise<StartComma
     return { ok: false, errorMessage: `workflow file not found: ${filePath}` };
   }
 
+  if (input.executor !== 'mock' && !input.executorBinary) {
+    return {
+      ok: false,
+      errorMessage: `executor '${input.executor}' requires --binary (or KORTEXT_${input.executor.toUpperCase()}_BIN env var)`,
+    };
+  }
+
   const def = loadWorkflowFromFile(filePath);
   const graph = buildGraph(def);
-  const executor = new MockExecutor(() => ({ durationMs: 1 }));
+  const executor = createExecutor(input.executor, {
+    binary: input.executorBinary ?? '',
+    agentsDir: input.agentsDir ?? resolve(process.cwd(), 'agents'),
+    logsDir: input.logsDir ?? resolve(process.cwd(), '.kortext', 'logs'),
+  });
   const result = await runWorkflow(graph, executor, input.repos, {
     concurrency: input.concurrency ?? 3,
     triggeredBy: 'cli',

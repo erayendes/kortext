@@ -5,10 +5,19 @@ import { dbInfoRouter } from './routes/db-info.ts';
 import { approvalRouter } from './routes/approvals.ts';
 import { getDb } from './db/client.ts';
 import { ApprovalQueue } from './orchestrator/approval-queue.ts';
+import { resumeOrphanedRuns } from './orchestrator/resume.ts';
 
 // Open DB + run migrations before the HTTP server starts accepting traffic.
 const { schemaVersion, repositories: repos } = getDb();
 console.log(`[kortext] db ready (schema v${schemaVersion})`);
+
+// Reconcile zombie runs left behind by a previous crash/restart.
+const resumed = resumeOrphanedRuns(repos);
+if (resumed.recovered.length > 0) {
+  console.log(
+    `[kortext] orphan recovery: ${resumed.recovered.length} run(s) moved to cancelled — retry with 'kortext retry <id>'`,
+  );
+}
 
 const approvalQueue = new ApprovalQueue({ repos });
 

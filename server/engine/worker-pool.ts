@@ -6,6 +6,21 @@ import type { Repositories } from '../db/repositories/index.ts';
 import type { Run } from '../db/schemas.ts';
 import type { SecretScanner } from '../safety/secret-scanner.ts';
 import type { HarmfulOutputFilter } from '../safety/harmful-output-filter.ts';
+import type { ApprovalGate } from './workflow-parser.ts';
+
+export type GatePauseContext = {
+  gate: ApprovalGate;
+  runId: number;
+  workflowId: string;
+};
+
+export type GateDecision =
+  | { decision: 'approve' }
+  | { decision: 'reject'; reason: string };
+
+export type GateController = {
+  pauseAtGate(ctx: GatePauseContext): Promise<GateDecision>;
+};
 
 /**
  * Worker pool that drives a single workflow run against the DB.
@@ -40,6 +55,16 @@ export type RunWorkflowOptions = {
   worktreePath?: string;
   /** Optional safety guards. When set, each step's outputs are scanned and a finding fails the step. */
   safety?: SafetyGuards;
+  /** Mid-run gates parsed from the workflow markdown. Each fires once after its `afterStepIndex`. */
+  gates?: ApprovalGate[];
+  /** Required when gates are non-empty — invoked to decide approve/reject. */
+  gateController?: GateController;
+  /**
+   * Step keys whose work was already done in a previous run (retry-from-rejected).
+   * These are pre-marked as 'skipped' with summary 'resumed-from-previous-run'
+   * and added to the `done` set, so the scheduler picks up from the next layer.
+   */
+  preCompletedStepKeys?: ReadonlySet<string>;
 };
 
 export type RunWorkflowResult = {
@@ -115,7 +140,9 @@ export async function runWorkflow(
   // Pre-create step rows so the dashboard can render the full plan immediately.
   const stepRowByKey = new Map<string, number>();
   const orderedNodes = [...graph.nodes.values()].sort((a, b) => a.step.index - b.step.index);
+  const preCompleted = options.preCompletedStepKeys ?? new Set<string>();
   for (const node of orderedNodes) {
+    const isResumed = preCompleted.has(node.step.key);
     const row = repos.runs.addStep({
       run_id: run.id,
       step_index: node.step.index,
@@ -124,9 +151,46 @@ export async function runWorkflow(
       status: 'pending',
     });
     stepRowByKey.set(node.step.key, row.id);
+    if (isResumed) {
+      repos.runs.transitionStep(row.id, 'skipped', {
+        output_summary: 'resumed-from-previous-run',
+      });
+    }
   }
 
-  const done = new Set<string>();
+  const gateByStepIndex = new Map<number, ApprovalGate>();
+  for (const gate of options.gates ?? []) {
+    if (gate.afterStepIndex >= 0) gateByStepIndex.set(gate.afterStepIndex, gate);
+  }
+  const firedGateIndices = new Set<number>();
+  let pendingGate: ApprovalGate | null = null;
+  let rejectionReason: string | null = null;
+
+  // Resumed runs (Orchestrator.retryRun) replay the lowest gate that sat
+  // *after* one of the resumed steps. Without this, the scheduler's barrier
+  // would block forever — the gate would never fire because the step that
+  // would have fired it was pre-marked as skipped.
+  for (const node of orderedNodes) {
+    if (!preCompleted.has(node.step.key)) continue;
+    const gate = gateByStepIndex.get(node.step.index);
+    if (gate && !pendingGate) {
+      pendingGate = gate;
+      firedGateIndices.add(gate.afterStepIndex);
+      repos.auditLog.append({
+        actor: 'orchestrator',
+        action: 'gate.paused',
+        resource_type: 'run',
+        resource_id: String(run.id),
+        payload: {
+          phase: gate.phase,
+          after_step_index: gate.afterStepIndex,
+          reason: 'resumed',
+        },
+      });
+    }
+  }
+
+  const done = new Set<string>(preCompleted);
   const running = new Map<string, Promise<void>>();
   const aborter = new AbortController();
   let failedStepKey: string | null = null;
@@ -197,6 +261,19 @@ export async function runWorkflow(
             payload: { run_id: run.id, step_key: stepKey },
           });
           done.add(stepKey);
+          // Gate trigger: a gate fires once after the step at its afterStepIndex completes.
+          const gate = gateByStepIndex.get(node.step.index);
+          if (gate && !firedGateIndices.has(gate.afterStepIndex)) {
+            firedGateIndices.add(gate.afterStepIndex);
+            pendingGate = gate;
+            repos.auditLog.append({
+              actor: 'orchestrator',
+              action: 'gate.paused',
+              resource_type: 'run',
+              resource_id: String(run.id),
+              payload: { phase: gate.phase, after_step_index: gate.afterStepIndex },
+            });
+          }
         } else {
           repos.runs.transitionStep(runStepId, 'failed', {
             output_summary: result.outputSummary ?? null,
@@ -234,21 +311,75 @@ export async function runWorkflow(
   };
 
   // Scheduler loop.
-  while (done.size + (failedStepKey ? 1 : 0) < graph.size || running.size > 0) {
-    if (!failedStepKey) {
-      const ready = graph.readyKeys(done).filter((k) => !running.has(k));
+  while (
+    done.size + (failedStepKey ? 1 : 0) < graph.size ||
+    running.size > 0 ||
+    pendingGate !== null
+  ) {
+    // Gate barrier: when a gate is pending we drain in-flight work first,
+    // then ask the controller for approve/reject before scheduling more steps.
+    const gateToProcess: ApprovalGate | null = pendingGate;
+    if (gateToProcess && running.size === 0 && !failedStepKey && !rejectionReason) {
+      if (!options.gateController) {
+        throw new Error(
+          `gate encountered but no gateController provided (phase: ${(gateToProcess as ApprovalGate).phase})`,
+        );
+      }
+      pendingGate = null;
+      const decision = await options.gateController.pauseAtGate({
+        gate: gateToProcess,
+        runId: run.id,
+        workflowId: graph.workflowId,
+      });
+      if (decision.decision === 'approve') {
+        repos.auditLog.append({
+          actor: 'orchestrator',
+          action: 'gate.resumed',
+          resource_type: 'run',
+          resource_id: String(run.id),
+          payload: { phase: (gateToProcess as ApprovalGate).phase, decision: 'approve' },
+        });
+      } else {
+        rejectionReason = decision.reason;
+        repos.auditLog.append({
+          actor: 'orchestrator',
+          action: 'gate.rejected',
+          resource_type: 'run',
+          resource_id: String(run.id),
+          payload: { phase: (gateToProcess as ApprovalGate).phase, reason: decision.reason },
+        });
+        aborter.abort();
+      }
+    }
+
+    if (!failedStepKey && !rejectionReason && !pendingGate) {
+      // Gate barrier: do not start any step whose index lies past an un-fired gate.
+      // This makes gates semantically equivalent to a phase boundary even when the
+      // pure data-flow DAG sees later steps as already runnable in parallel.
+      let barrier = Number.POSITIVE_INFINITY;
+      for (const idx of gateByStepIndex.keys()) {
+        if (!firedGateIndices.has(idx) && idx < barrier) barrier = idx;
+      }
+      const ready = graph.readyKeys(done).filter((k) => {
+        if (running.has(k)) return false;
+        const node = graph.nodes.get(k);
+        if (node && node.step.index > barrier) return false;
+        return true;
+      });
       while (ready.length > 0 && running.size < concurrency) {
         const next = ready.shift()!;
         launch(next);
       }
     }
 
-    if (running.size === 0) break;
-    await Promise.race(running.values());
+    if (running.size === 0 && !pendingGate) break;
+    if (running.size > 0) {
+      await Promise.race(running.values());
+    }
   }
 
-  // Mark any un-started steps as skipped (only happens after a failure).
-  if (failedStepKey) {
+  // Mark any un-started steps as skipped (only happens after failure or rejection).
+  if (failedStepKey || rejectionReason) {
     for (const [key, rowId] of stepRowByKey) {
       if (done.has(key)) continue;
       if (key === failedStepKey) continue;
@@ -259,9 +390,20 @@ export async function runWorkflow(
     }
   }
 
-  const finalStatus = failedStepKey ? 'failed' : 'succeeded';
+  let finalStatus: 'succeeded' | 'failed' | 'cancelled';
+  let finalError: string | null;
+  if (rejectionReason) {
+    finalStatus = 'cancelled';
+    finalError = `rejected: ${rejectionReason}`;
+  } else if (failedStepKey) {
+    finalStatus = 'failed';
+    finalError = firstError;
+  } else {
+    finalStatus = 'succeeded';
+    finalError = null;
+  }
   const finalRun = repos.runs.transitionRun(run.id, finalStatus, {
-    error_message: firstError,
+    error_message: finalError,
   });
   repos.auditLog.append({
     actor: 'system',
@@ -272,6 +414,7 @@ export async function runWorkflow(
       workflow_id: graph.workflowId,
       failed_step: failedStepKey,
       step_count: graph.size,
+      rejection_reason: rejectionReason,
     },
   });
 
