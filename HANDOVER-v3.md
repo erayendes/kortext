@@ -5,7 +5,7 @@
 
 **Tarih:** 2026-05-22
 **Yazan oturum:** Faz 7
-**Son commit:** _(bu commit — `feat(v3): MCP server — 15 tool, stdio + SSE, Zod schema (Faz 7)`)_
+**Son commit:** `263a8f8` — `feat(v3): MCP server — 15 tool, stdio + SSE, Zod schema (Faz 7)`
 
 ---
 
@@ -21,7 +21,7 @@
 | **4 — Üretim sertleştirmesi** | — | `d3c493c` | orchestrator: 11, worker-pool-gate: 9, executor-factory: 9, cleanup: 5, resume: 5 |
 | **5 — Persona + workflow içerik katmanı** | — | `48093d5` | workflow-loader: 7, persona-registry: 8, consistency: 4, handover: 8, item-lifecycle: 13, doctor: 8, git-commit: 4 |
 | **6 — React Dashboard** | — | `e48e266` | routes: 17 (runs/handovers/doctor/personas/workflows/backlog/docs + PUT validate) |
-| **7 — MCP Server** | — | _(bu commit)_ | mcp-tools: 14 (15 tool surface + lifecycle smoke) |
+| **7 — MCP Server** | — | `263a8f8` | mcp-tools: 14 (15 tool surface + lifecycle smoke) |
 | **Toplam** | — | — | **235/235 ✅** |
 
 Hızlı doğrulama:
