@@ -408,5 +408,6 @@ otherwise.
 | CLI bin | `bin/kortext.ts`, `bin/kortext.js` |
 | Dashboard | `src/router.tsx`, `src/routes/*`, `src/components/*` |
 
-For day-to-day operations see [USER-GUIDE.md](../USER-GUIDE.md); for the
-ten-phase delivery timeline see [ROADMAP-v3.md](../ROADMAP-v3.md).
+For day-to-day operations see [USER-GUIDE.md](../USER-GUIDE.md). Internal
+project history (phase-by-phase roadmap, handover bootstrap, contributor
+guidelines) lives under [docs/internal/](./internal/).

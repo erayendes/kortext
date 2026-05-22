@@ -501,7 +501,6 @@ validates parsing before writing).
 ## Where next
 
 - [Architecture](./docs/architecture.md) — schema, engine internals
-- [Roadmap](./ROADMAP-v3.md) — what's done, what's coming in v3.1+
 - [Changelog](./CHANGELOG.md) — release notes
 - [Migration Guide](./MIGRATION-v2-to-v3.md) — upgrading from v2
 

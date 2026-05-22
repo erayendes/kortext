@@ -174,7 +174,6 @@ your environment. The dispatcher dedupes notifications and posts on:
 - [Architecture](./docs/architecture.md) — schema, engine, MCP, dashboard
 - [Migration Guide](./MIGRATION-v2-to-v3.md) — v2 → v3 upgrade
 - [Changelog](./CHANGELOG.md) — release notes
-- [Roadmap](./ROADMAP-v3.md) — phases 0–10
 
 ---
 
