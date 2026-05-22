@@ -76,7 +76,7 @@ function parseItem(filename: string, content: string): ParsedItem | null {
   const id = `${prefix}${num}`;
 
   const titleMatch = content.match(/^#\s+(.+?)\s*$/m);
-  const title = titleMatch?.[1]?.replace(/^[TBDESH]\d+[:\-]\s*/, '').trim() ?? slug ?? id;
+  const title = titleMatch?.[1]?.replace(/^[TBDESH]\d+[:-]\s*/, '').trim() ?? slug ?? id;
 
   const statusMatch = content.match(/\*\*Status:\*\*\s*\[?([^\]\n]+?)\]?\s*$/im);
   const rawStatus = statusMatch?.[1]?.toLowerCase().trim() ?? 'to do';

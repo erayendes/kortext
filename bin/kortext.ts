@@ -17,7 +17,7 @@
  */
 
 import { spawn, type ChildProcess } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getDb } from '../server/db/client.ts';
@@ -92,8 +92,19 @@ function parseIntFlag(name: string, fallback: number): number {
 }
 
 function packageRoot(): string {
-  // bin/kortext.ts → package root is one level up.
+  // Walk up from this file until a package.json is found. Source path is
+  // `bin/kortext.ts` (root one level up); compiled path is
+  // `dist/bin/kortext.js` (root two levels up). Walking up keeps both
+  // layouts working without special-casing.
   const here = dirname(fileURLToPath(import.meta.url));
+  let cursor = here;
+  for (let i = 0; i < 6; i++) {
+    if (existsSync(join(cursor, 'package.json'))) return cursor;
+    const parent = resolve(cursor, '..');
+    if (parent === cursor) break;
+    cursor = parent;
+  }
+  // Fallback — preserve old behaviour so callers still get a directory.
   return resolve(here, '..');
 }
 
