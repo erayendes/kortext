@@ -4,8 +4,8 @@
 > Açar açmaz şunu yaz: **"HANDOVER-v3.md'yi oku, Faz 5'e başla"**
 
 **Tarih:** 2026-05-22
-**Yazan oturum:** Faz 4
-**Son commit:** `d3c493c` — `feat(v3): production hardening — orchestrator facade + mid-run gates + CLI executors + maintenance + resume (Faz 4)`
+**Yazan oturum:** Faz 5
+**Son commit:** `48093d5` — `feat(v3): persona + workflow content layer — registries + handover + lifecycle + doctor + git commit (Faz 5)`
 
 ---
 
@@ -19,13 +19,15 @@
 | **2.B — Worktree + CLI executors + gate + safety** | `v3.0.0-alpha.3` | `9d10a7d` | worktree: 10, cli-executor: 10, gate: 8, secret: 18, harmful: 3, engine-safety: 4 |
 | **3 — Otonom orkestratör** | — | `dc23d0f` | chainer: 6, blueprint-watcher: 7, approval: 8, notifications: 11, cli-commands: 5 |
 | **4 — Üretim sertleştirmesi** | — | `d3c493c` | orchestrator: 11, worker-pool-gate: 9, executor-factory: 9, cleanup: 5, resume: 5 |
-| **Toplam** | — | — | **150/150 ✅** |
+| **5 — Persona + workflow içerik katmanı** | — | `48093d5` | workflow-loader: 7, persona-registry: 8, consistency: 4, handover: 8, item-lifecycle: 13, doctor: 8, git-commit: 4, +cli/executor delta |
+| **Toplam** | — | — | **204/204 ✅** |
 
 Hızlı doğrulama:
 ```bash
-npm test          # 150 yeşil
+npm test          # 204 yeşil
 npm run typecheck # frontend + server, sıfır hata
 npm run dev       # Vite 5173 + Express 3200, /api/health + /api/db/info + /api/questions
+npx tsx bin/kortext.ts doctor   # sağlık raporu (Faz 5.5)
 ```
 
 ---
@@ -75,51 +77,55 @@ Orchestrator API (programatik):
 - `orchestrator.start()` — blueprint watcher kurar; `status: approved` flip'inde tetik
 - Server boot'unda `resumeOrphanedRuns(repos)` çağrılır (`server/index.ts`)
 
-## Sırada: Faz 5 — Persona + Workflow Engine TS Portu
+## Faz 5 — Persona + Workflow İçerik Katmanı (TAMAMLANDI)
 
-Faz 4 üretim altyapısı yerinde; Faz 5 mevcut markdown içeriği engine'e bağlar:
+| # | Modül | Dosya | Test |
+|---|---|---|---|
+| 5.1 | Workflow directory loader | [server/engine/workflow-loader.ts](server/engine/workflow-loader.ts) | 7 |
+| 5.2 | Persona registry + consistency | [server/engine/persona-registry.ts](server/engine/persona-registry.ts) + [server/engine/consistency.ts](server/engine/consistency.ts) | 8 + 4 |
+| 5.3 | Handover engine | [server/engine/handover.ts](server/engine/handover.ts) | 8 |
+| 5.4 | Item lifecycle | [server/engine/item-lifecycle.ts](server/engine/item-lifecycle.ts) | 13 |
+| 5.5 | `kortext doctor` | [server/cli/doctor.ts](server/cli/doctor.ts) | 8 |
+| 5.6 | Git commit integration | [server/engine/git-commit.ts](server/engine/git-commit.ts) | 4 |
 
-### 1. Persona registry
-- `agents/*.md` dosyalarını parse et — frontmatter + system prompt + yetkili komutlar + eskalasyon kuralları + devir protokolü
-- In-memory registry (`Map<personaHandle, Persona>`) — orchestrator dispatch için
-- `getPersona('+developer')` API
-- Persona dosyalarının `outputs:` listesi vs. tutarlılık denetimi
+CLI yüzeyi (yeni komut):
+- `kortext doctor` — workflow + persona + cross-ref + lock + blocked item taraması. Error varsa exit 1, sadece warn ise exit 0.
 
-### 2. Workflow registry
-- `workflows/*.md` zaten parse ediliyor (Faz 2.A)
-- Eksik: directory loader — dizinden topla, id index'le, `loadWorkflowById(id)` orchestrator'a verilen kontratı tatmin etsin
-- Server boot'ta tüm workflow'ları yükle, hatalı olanları log'la
+API (programatik):
+- `loadWorkflowsFromDir(dir)` → `WorkflowRegistry { get, list, errors }`
+- `loadPersonasFromDir(dir)` → `PersonaRegistry { get, list, errors }`
+- `readPersonaPrompt(handle, source)` — CLI executor prompt resolver (registry-aware)
+- `findUnknownPersonas(workflows, personas)` — cross-reference helper
+- `new HandoverEngine({ repos, personas, workspaceRoot, git? })` — `record()` SQLite + markdown + opsiyonel git commit
+- `new ItemLifecycle({ repos, personas })` — `create()` + `transition(id, action, by, reason?)` state machine
+- `runDoctor({ workflows, personas, repos })` → `DoctorReport`
 
-### 3. Handover engine
-- Eski `kortext-handover.py` TS portu
-- `handovers` tablosu güncellemesi
-- Context dosyası taşıması (ajan A'nın çıktısını ajan B'nin input'una bağla)
+Boot davranışı: server `loadWorkflowsFromDir('workflows')` + `loadPersonasFromDir('agents')` çağırır, `findUnknownPersonas` ile cross-validation log'lar (+prime allow-list).
 
-### 4. Item lifecycle
-- `kortext-item-start.py`, `kortext-item-transition.py`, `kortext-backlog-add.py` TS portu
-- backlog_items tablosu üzerinde CRUD + status state machine
+## Sırada: Faz 6 — React Dashboard
 
-### 5. Consistency check
-- `kortext-consistency-check.py`, `kortext-context-check.py`, `kortext-backlog-health.py` TS portu
-- Kortext doctor benzeri — `kortext doctor` veya CLI alt komut
+Faz 5 içerik katmanı + doctor yerinde; Faz 6 görsel kabuğu kurar:
 
-### 6. Git commit integration
-- Her durum değişikliğinde otomatik `chore(kortext): <action> <item-id>` commit
-- Audit log artı git history — eski v2 planındaki Faz 2.4
+- `src/` altında React 19 + Vite + Tailwind v4 ekran iskeleti
+- Referans: [docs/design/wireframe-v4-final.html](docs/design/wireframe-v4-final.html) (2400+ satır, 6 route + 9 settings sub-pane)
+- `/api/runs`, `/api/pending-questions`, `/api/handovers`, `/api/doctor` route'larıyla canlı veri
+- Header bell + popup toast — `pending_questions.status='open'` polling
+- Terminal panel + timeline sidebar
+- Palette: `#0A0814` (bg), `#A855F7` (purple), `#EC4899` (signal), `#F59E0B` (+prime amber)
 
 ---
 
-## Dosya Haritası (Faz 5 için en bakılacaklar)
+## Dosya Haritası (Faz 6 için en bakılacaklar)
 
 | Yer | İşlev |
 |---|---|
-| [agents/](agents/) | 14 persona markdown — Faz 5'te parse edilecek |
-| [workflows/](workflows/) | 12 workflow markdown — directory loader gerekli |
-| [server/engine/workflow-parser.ts](server/engine/workflow-parser.ts) | Tek dosya parser zaten var (Faz 2.A); dizin loader eklenecek |
-| [server/orchestrator/orchestrator.ts](server/orchestrator/orchestrator.ts) | `loadWorkflowById` callback bu loader ile bağlanacak |
-| [server/db/repositories/backlog.ts](server/db/repositories/backlog.ts) | Item lifecycle için CRUD zemin |
-| [server/db/repositories/handovers.ts](server/db/repositories/handovers.ts) | Handover engine için zemin |
-| [legacy/](legacy/) | Eski Python script'leri — referans için (silinmedi, port'lanacak) |
+| [docs/design/wireframe-v4-final.html](docs/design/wireframe-v4-final.html) | 2400+ satır görsel spec — 6 route + 9 settings sub-pane |
+| [docs/design/PALETTE-v3.md](docs/design/PALETTE-v3.md) | Renk + tipo + status nokta sistemi |
+| [src/](src/) | Şu an iskele — React 19 + Vite + Tailwind v4 ekran katmanı buraya kurulacak |
+| [server/routes/](server/routes/) | `/api/health`, `/api/db/info`, `/api/questions` zaten var — runs/handovers/doctor route'ları Faz 6'da eklenecek |
+| [server/cli/doctor.ts](server/cli/doctor.ts) | `runDoctor()` saf fonksiyon — dashboard "system health" panel'inin veri kaynağı |
+| [server/engine/persona-registry.ts](server/engine/persona-registry.ts) | Persona drawer + Library tab'ının veri kaynağı |
+| [legacy/](legacy/) | Eski Python script'leri — referans (silinmedi); Faz 5.3/5.4'te port edildi |
 
 ---
 
@@ -138,6 +144,11 @@ Faz 4 üretim altyapısı yerinde; Faz 5 mevcut markdown içeriği engine'e bağ
 - **TS narrowing in Promise.then**: TS CFA, Promise.then() callback içinden ana scope'a yapılan atamayı tipte göremez. `let x: T | null = null` declared olsa bile `x` reassign edildikten sonra `x.foo` "never" hatası verebilir. Workaround: yerel `const copy: T | null = x;` çıkar, narrowing ondan yap. (`worker-pool.ts`'deki `gateToProcess` pattern.)
 - **Gate barrier**: Bir gate'in `afterStepIndex`'inden büyük index'li adımlar gate fire+approve olana dek başlatılamaz. Bu DAG'a değil scheduler'a ait — DAG hâlâ saf veri akışı.
 - **retryRun semantic'i**: Hem `rejected:` hem `orphaned:` prefix'li run'ları kabul eder. preCompleted gate'lerinden en küçük index'li olan retry başlangıcında pendingGate olarak set edilir — kullanıcı yeniden onay verir.
+- **Handover SQLite vs markdown**: `HandoverEngine.record()` SQLite'a + `workspace/memory/handover.md`'ye paralel yazar; opsiyonel `git: { repoRoot }` ile auto-commit. Markdown prepend pattern'i header'ı (`# Handover Reports`) sayar — header yoksa ekler, varsa yenisini altına koyar.
+- **Item lifecycle terminal state**: `done` ve `cancelled` sticky. Bu state'lerden başka transition denemesi `IllegalTransitionError` fırlatır. `repos.backlog.transitionStatus()` doğrudan çağrılırsa kuralları bypass eder — engine üzerinden gidin.
+- **Lifecycle commit ETMEZ, handover EDER**: Item transition'ları sadece audit_log yazar (disk değişmez, --allow-empty hack istemiyoruz). Handover hem markdown'u değiştirir hem opsiyonel commit'ler.
+- **`+prime` allow-list konumu**: Engine seviyesinde değil, caller seviyesinde (`server/index.ts` boot + `server/cli/doctor.ts`). `findUnknownPersonas` ham veri döner, politika dışarıda. Yeni human handle eklerken `DEFAULT_ALLOWED_MISSING` array'ini güncelleyin.
+- **Persona registry zorunlu**: `HandoverEngine` ve `ItemLifecycle` her ikisi de constructor'da `PersonaRegistry` ister. Bilinmeyen persona handle'ı throw eder — "dangling reference" yazılması imkansız.
 
 ---
 
@@ -165,6 +176,7 @@ npx tsx bin/kortext.ts approve <run-id> [answer]
 npx tsx bin/kortext.ts status
 npx tsx bin/kortext.ts cleanup --dry-run                   # önizleme
 npx tsx bin/kortext.ts cleanup --quarantine-older-than=7d --branches
+npx tsx bin/kortext.ts doctor                              # sağlık raporu (Faz 5.5)
 
 # DB
 KORTEXT_DB_PATH=.tmp/test.db npx tsx bin/migrate-legacy-backlog.ts --dry-run
