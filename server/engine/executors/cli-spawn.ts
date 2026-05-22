@@ -124,26 +124,33 @@ export async function spawnCli(opts: SpawnCliOptions): Promise<SpawnCliResult> {
   }
 
   const result = await new Promise<SpawnCliResult>((resolveResult) => {
+    // log.end() flushes asynchronously. On Linux that flush can outlast our
+    // promise resolution, leaving callers who readFileSync(logPath) right
+    // after await with a half-written file. macOS happens to flush fast
+    // enough to hide it. Wait for 'finish' (or the end() callback) before
+    // resolving so the file is durable when the caller reads it.
     proc.on('error', (err) => {
       log.write(`\n[spawn-error] ${err.message}\n`);
-      log.end();
-      resolveResult({
-        exitCode: null,
-        signal: null,
-        stdoutTail: stdoutBuf,
-        stderrTail: stderrBuf + `\n[spawn-error] ${err.message}`,
-        aborted,
+      log.end(() => {
+        resolveResult({
+          exitCode: null,
+          signal: null,
+          stdoutTail: stdoutBuf,
+          stderrTail: stderrBuf + `\n[spawn-error] ${err.message}`,
+          aborted,
+        });
       });
     });
     proc.on('close', (code, signal) => {
       log.write(`\n# exit code=${code} signal=${signal} aborted=${aborted}\n`);
-      log.end();
-      resolveResult({
-        exitCode: code,
-        signal,
-        stdoutTail: stdoutBuf,
-        stderrTail: stderrBuf,
-        aborted,
+      log.end(() => {
+        resolveResult({
+          exitCode: code,
+          signal,
+          stdoutTail: stdoutBuf,
+          stderrTail: stderrBuf,
+          aborted,
+        });
       });
     });
   });
