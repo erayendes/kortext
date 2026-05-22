@@ -5,6 +5,7 @@ import {
   Route,
   createHashHistory,
 } from '@tanstack/react-router';
+import { useEffect, useState } from 'react';
 import { Header } from './components/Header.tsx';
 import { Sidebar } from './components/Sidebar.tsx';
 import { Footer } from './components/Footer.tsx';
@@ -19,6 +20,10 @@ import { MemoryRoute } from './routes/memory.tsx';
 import { ReportsRoute } from './routes/reports.tsx';
 import { ReferencesRoute } from './routes/references.tsx';
 import { SettingsLayout } from './routes/settings.tsx';
+import { OnboardingRoute } from './routes/onboarding.tsx';
+import { OnboardingScreen } from './components/OnboardingScreen.tsx';
+import { apiGet } from './lib/api.ts';
+import type { BlueprintStatusResponse } from './lib/api-types.ts';
 import {
   ProjectPane,
   AgentsPane,
@@ -30,7 +35,47 @@ import {
   DangerPane,
 } from './routes/settings-panes.tsx';
 
+type GuardState = 'loading' | 'onboarding' | 'app';
+
+function useBlueprintGuard(): { state: GuardState; refresh: () => void } {
+  const [state, setState] = useState<GuardState>('loading');
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    apiGet<BlueprintStatusResponse>('/api/blueprint/status')
+      .then((res) => {
+        if (!alive) return;
+        const needsOnboarding =
+          res.status === 'uninitialized' ||
+          res.status === 'draft' ||
+          res.status === 'unknown';
+        setState(needsOnboarding ? 'onboarding' : 'app');
+      })
+      .catch(() => {
+        if (!alive) return;
+        // If status endpoint fails (older server, network issue), default
+        // to showing the app — the dashboard surfaces server health.
+        setState('app');
+      });
+    return () => {
+      alive = false;
+    };
+  }, [tick]);
+  return { state, refresh: () => setTick((n) => n + 1) };
+}
+
 function RootShell() {
+  const guard = useBlueprintGuard();
+  if (guard.state === 'loading') {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-bg-0 text-tx-3 text-[13px]">
+        Loading…
+      </div>
+    );
+  }
+  if (guard.state === 'onboarding') {
+    return <OnboardingScreen onDone={() => guard.refresh()} />;
+  }
   return (
     <ShellProvider>
       <PendingQuestionsProvider>
@@ -58,6 +103,12 @@ const dashboardRoute = new Route({
   getParentRoute: () => rootRoute,
   path: '/',
   component: DashboardRoute,
+});
+
+const onboardingRoute = new Route({
+  getParentRoute: () => rootRoute,
+  path: '/onboarding',
+  component: OnboardingRoute,
 });
 
 const boardRoute = new Route({
@@ -133,6 +184,7 @@ const dangerPaneRoute = new Route({
 
 const routeTree = rootRoute.addChildren([
   dashboardRoute,
+  onboardingRoute,
   boardRoute,
   memoryRoute,
   reportsRoute,

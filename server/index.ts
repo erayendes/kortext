@@ -13,6 +13,8 @@ import { personasRouter } from './routes/personas.ts';
 import { workflowsRouter } from './routes/workflows.ts';
 import { backlogRouter } from './routes/backlog.ts';
 import { docsRouter } from './routes/docs.ts';
+import { blueprintRouter } from './routes/blueprint.ts';
+import { startCommand } from './cli/commands.ts';
 import { getDb } from './db/client.ts';
 import { ApprovalQueue } from './orchestrator/approval-queue.ts';
 import { mcpSseRouter } from '../mcp/sse.ts';
@@ -81,6 +83,31 @@ app.use('/api', backlogRouter({ repos }));
 app.use('/api', personasRouter({ personas: personaRegistry, agentsDir }));
 app.use('/api', workflowsRouter({ workflows: workflowRegistry }));
 app.use('/api', doctorRouter({ repos, workflows: workflowRegistry, personas: personaRegistry }));
+app.use(
+  '/api',
+  blueprintRouter({
+    workspaceRoot: process.cwd(),
+    onApproved: (workflowId) => {
+      // Fire-and-forget: the wizard returns 201 immediately while the
+      // analysis pipeline runs in the background. Failures land in the
+      // run row + audit log; the dashboard surfaces them.
+      void startCommand({
+        repos,
+        workflowsDir,
+        workflowId,
+        executor: 'mock',
+      }).then((result) => {
+        if (!result.ok) {
+          console.warn(`[kortext] blueprint trigger failed: ${result.errorMessage}`);
+        } else {
+          console.log(
+            `[kortext] blueprint trigger ok: workflow=${workflowId} run=${result.runId} status=${result.status}`,
+          );
+        }
+      });
+    },
+  }),
+);
 app.use(
   '/api',
   docsRouter({

@@ -129,3 +129,41 @@ export type WorkflowSummary = {
   stepCount: number;
   gateCount: number;
 };
+
+export type BlueprintStatus =
+  | 'uninitialized'
+  | 'draft'
+  | 'approved'
+  | 'unknown';
+
+export type ProjectType = 'new' | 'existing';
+
+export type ProjectMeta = {
+  name: string;
+  code: string;
+  type: ProjectType;
+  platforms: string[];
+  githubRepo: string | null;
+  createdAt: number;
+};
+
+export type BlueprintStatusResponse = {
+  status: BlueprintStatus;
+  blueprintPath: string;
+  project: ProjectMeta | null;
+};
+
+export type BlueprintSubmitInput = {
+  projectName: string;
+  projectCode: string;
+  projectType: ProjectType;
+  platforms: string[];
+  blueprintBody: string;
+  githubRepo: string | null;
+};
+
+export type BlueprintSubmitResponse = {
+  ok: true;
+  triggerWorkflowId: string;
+  project: ProjectMeta;
+};

@@ -11,6 +11,34 @@ export async function apiGet<T>(path: string): Promise<T> {
   return (await res.json()) as T;
 }
 
+export type ApiPostError = {
+  status: number;
+  error: string;
+  message?: string;
+  details?: unknown;
+};
+
+export async function apiPost<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(path, {
+    method: 'POST',
+    headers: { accept: 'application/json', 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  const payload = text ? (JSON.parse(text) as unknown) : null;
+  if (!res.ok) {
+    const obj = (payload as Record<string, unknown> | null) ?? {};
+    const err: ApiPostError = {
+      status: res.status,
+      error: typeof obj.error === 'string' ? obj.error : `http_${res.status}`,
+      message: typeof obj.message === 'string' ? obj.message : undefined,
+      details: obj.details,
+    };
+    throw err;
+  }
+  return payload as T;
+}
+
 export type PollingState<T> = {
   data: T | null;
   error: string | null;
