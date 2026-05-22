@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 import express from 'express';
 import { env } from './config/env.ts';
 import { healthRouter } from './routes/health.ts';
@@ -6,10 +7,47 @@ import { approvalRouter } from './routes/approvals.ts';
 import { getDb } from './db/client.ts';
 import { ApprovalQueue } from './orchestrator/approval-queue.ts';
 import { resumeOrphanedRuns } from './orchestrator/resume.ts';
+import { loadWorkflowsFromDir } from './engine/workflow-loader.ts';
+import { loadPersonasFromDir } from './engine/persona-registry.ts';
+import { findUnknownPersonas } from './engine/consistency.ts';
 
 // Open DB + run migrations before the HTTP server starts accepting traffic.
 const { schemaVersion, repositories: repos } = getDb();
 console.log(`[kortext] db ready (schema v${schemaVersion})`);
+
+// Load workflow + persona definitions from disk into in-memory registries.
+// Faz 5.5+: these become the source for `loadWorkflowById` and persona
+// dispatch when the orchestrator is wired into the server process.
+const workflowsDir = resolve(process.cwd(), 'workflows');
+const agentsDir = resolve(process.cwd(), 'agents');
+const workflowRegistry = loadWorkflowsFromDir(workflowsDir);
+const personaRegistry = loadPersonasFromDir(agentsDir);
+const wfErrors = workflowRegistry.errors();
+const personaErrors = personaRegistry.errors();
+console.log(
+  `[kortext] workflows loaded: ${workflowRegistry.list().length} ok, ${wfErrors.length} error(s)`,
+);
+for (const err of wfErrors) {
+  console.warn(`[kortext]   - ${err.file}: ${err.reason}`);
+}
+console.log(
+  `[kortext] personas loaded: ${personaRegistry.list().length} ok, ${personaErrors.length} error(s)`,
+);
+for (const err of personaErrors) {
+  console.warn(`[kortext]   - ${err.file}: ${err.reason}`);
+}
+// Cross-validate: every persona handle used in workflows must resolve.
+// '+prime' is the human-in-the-loop and is allowed to be missing.
+const unknownPersonas = findUnknownPersonas(workflowRegistry, personaRegistry)
+  .filter((f) => f.persona !== '+prime');
+if (unknownPersonas.length > 0) {
+  console.warn(
+    `[kortext] consistency: ${unknownPersonas.length} unknown persona reference(s):`,
+  );
+  for (const f of unknownPersonas) {
+    console.warn(`[kortext]   - ${f.workflowId} (${f.stepKey}): ${f.persona}`);
+  }
+}
 
 // Reconcile zombie runs left behind by a previous crash/restart.
 const resumed = resumeOrphanedRuns(repos);

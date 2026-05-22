@@ -7,6 +7,7 @@ import { CodexCliExecutor } from '../server/engine/executors/codex-cli-executor.
 import { GeminiCliExecutor } from '../server/engine/executors/gemini-cli-executor.ts';
 import type { WorkflowStep } from '../server/engine/workflow-parser.ts';
 import type { ExecutorContext } from '../server/engine/executor.ts';
+import { loadPersonasFromDir } from '../server/engine/persona-registry.ts';
 
 let tmpRoot: string;
 let workdir: string;
@@ -145,6 +146,30 @@ describe('ClaudeCliExecutor', () => {
     );
     expect(result.ok).toBe(true);
     expect(existsSync(join(workdir, targetRel))).toBe(true);
+  });
+
+  it('prefers personaRegistry over disk-direct read when both are provided', async () => {
+    // Disk fixture (seeded in beforeEach) has no description bullet — not a
+    // valid registry entry. We point a separate dir at a valid persona file
+    // and load it into a registry. The registry version must win.
+    const regDir = join(tmpRoot, 'registered-agents');
+    mkdirSync(regDir, { recursive: true });
+    writeFileSync(
+      join(regDir, 'backend-developer.md'),
+      '# backend-developer\n\n- description: registry version.\n\nFROM_REGISTRY_PROMPT\n',
+    );
+    const personaRegistry = loadPersonasFromDir(regDir);
+
+    const bin = makeMockBinary('claude-echo-reg', `cat`);
+    const exec = new ClaudeCliExecutor({
+      binary: bin,
+      agentsDir,
+      logsDir,
+      personaRegistry,
+    });
+    const result = await exec.execute(makeStep(), makeCtx());
+    expect(result.ok).toBe(true);
+    expect(result.outputSummary).toContain('FROM_REGISTRY_PROMPT');
   });
 
   it('truncates outputSummary to the last N lines', async () => {

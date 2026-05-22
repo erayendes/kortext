@@ -3,6 +3,7 @@ import { MockExecutor } from '../engine/executors/mock-executor.ts';
 import { ClaudeCliExecutor } from '../engine/executors/claude-cli-executor.ts';
 import { CodexCliExecutor } from '../engine/executors/codex-cli-executor.ts';
 import { GeminiCliExecutor } from '../engine/executors/gemini-cli-executor.ts';
+import type { PersonaRegistry } from '../engine/persona-registry.ts';
 
 /**
  * Translates a `--executor=<kind>` CLI flag (or programmatic call) into a
@@ -24,6 +25,8 @@ export type ExecutorFactoryOptions = {
   logsDir: string;
   /** Optional extra CLI flags forwarded to the underlying executor. */
   extraArgs?: string[];
+  /** Optional preloaded persona registry — preferred over disk-direct reads. */
+  personaRegistry?: PersonaRegistry;
 };
 
 export function createExecutor(
@@ -39,6 +42,7 @@ export function createExecutor(
         agentsDir: opts.agentsDir,
         logsDir: opts.logsDir,
         extraArgs: opts.extraArgs,
+        personaRegistry: opts.personaRegistry,
       });
     case 'codex':
       return new CodexCliExecutor({
@@ -46,6 +50,7 @@ export function createExecutor(
         agentsDir: opts.agentsDir,
         logsDir: opts.logsDir,
         extraArgs: opts.extraArgs,
+        personaRegistry: opts.personaRegistry,
       });
     case 'gemini':
       return new GeminiCliExecutor({
@@ -53,6 +58,7 @@ export function createExecutor(
         agentsDir: opts.agentsDir,
         logsDir: opts.logsDir,
         extraArgs: opts.extraArgs,
+        personaRegistry: opts.personaRegistry,
       });
     default: {
       const exhaustive: never = kind;
