@@ -161,7 +161,21 @@ Kortext'i **markdown methodology framework**'ten **tam otonom AI ajan runtime'ı
 - [ ] **Consistency check**: `kortext-consistency-check.py`, `kortext-context-check.py`, `kortext-backlog-health.py` TS portu
 - [ ] **Git commit integration**: Her durum değişikliğinde otomatik `chore(kortext): <action> <item-id>` commit (v2 planındaki Faz 2.4)
 
-### Faz 6 — MCP Server (2 gün)
+### Faz 6 — React Dashboard ✅
+
+**Tamamlandı:** TanStack Router + Tailwind v4 palette + 6 ana route (Dashboard/Board/Memory/Reports/References) + 8 settings sub-pane (project/agents/rules/workflows/hooks/integrations/environment/danger) + bell/toast/terminal/timeline overlay'leri. Persona inline editor (PUT + hot reload). 17 yeni route smoke test, toplam 221/221.
+
+Yeni backend route'lar: `/api/runs`, `/api/handovers`, `/api/doctor`, `/api/personas` (GET/PUT), `/api/workflows`, `/api/backlog`, `/api/docs/:scope[/:file]`. Yeni frontend dep: `@tanstack/react-router`, `lucide-react`, `marked`, `dompurify`.
+
+Sub-fazlar (tamamlanan sırayla):
+- **6.1** Layout shell + TanStack Router (hash history) + palette tokenları
+- **6.2** Backend API rotaları + 9 smoke testi
+- **6.3** Dashboard ekranı (canlı veri, polling 3s, doctor 10s)
+- **6.4** Board/Memory/Reports/References + `/api/docs` (allow-listed scope, DOMPurify sanitized marked)
+- **6.5** 8 settings sub-pane + persona inline editor (PUT validate-before-write + hot reload)
+- **6.6** Bell + popup, toast, terminal panel, timeline drawer (tek-poll + Context fan-out)
+
+### Faz 7 — MCP Server (2 gün)
 
 **Amaç:** Tüm runtime operasyonlarını MCP üzerinden programatik erişilebilir kıl.
 
@@ -188,33 +202,6 @@ Kortext'i **markdown methodology framework**'ten **tam otonom AI ajan runtime'ı
 - [ ] `@modelcontextprotocol/sdk` ile stdio + SSE transport
 - [ ] Zod schema her tool için
 - [ ] `claude mcp add kortext -- kortext mcp` komutu çalışsın
-
-### Faz 7 — React Dashboard (5-7 gün)
-
-**Amaç:** Eray için canlı kontrol paneli. Sıfırdan tasarım.
-
-**Tasarım aşaması (önce mockup, sonra implement):**
-- [ ] claude-design veya feature-dev:code-architect ile dashboard mockup'ları üret
-- [ ] Eray onayı al
-- [ ] Implement
-
-**Görünümler:**
-- [ ] **Ana sayfa**: Aktif pipeline'lar, son aktiviteler, onay kuyruğu sayısı, sistem sağlığı
-- [ ] **Pipeline timeline**: Çalışan pipeline'lar, her birinin adımları, ETA, log akışı
-- [ ] **Backlog board**: Epic/Task/Bug/Spike/Hotfix kanban; sürükle-bırak status değişimi
-- [ ] **Onay kuyruğu**: +prime soruları, blueprint onayları, mimari kararlar
-- [ ] **Persona panosu**: 14 ajanın o anki durumu (idle, working, blocked)
-- [ ] **Log + diff viewer**: Her run için stdout, stderr, git diff
-- [ ] **Blueprint editor**: Markdown editor, `status: approved` toggle
-- [ ] **ADR viewer**: Karar geçmişi
-- [ ] **Settings**: CLI yolları, notification config, concurrency, KORTEXT_DB_PATH
-- [ ] **Audit log**: Filtrelenebilir aksiyon log'u
-
-**Teknik:**
-- [ ] React 19 + Tailwind v4
-- [ ] WebSocket veya SSE ile canlı güncelleme (REST polling fallback)
-- [ ] Lucide ikon seti (mevcut mockup'a uyum)
-- [ ] Dark mode default (mevcut UI yönü)
 
 ### Faz 8 — CLI + Bin (1-2 gün)
 

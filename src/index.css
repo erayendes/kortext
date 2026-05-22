@@ -1,9 +1,88 @@
 @import 'tailwindcss';
 
-@theme {
-  --color-brand-50: oklch(0.97 0.02 264);
-  --color-brand-500: oklch(0.62 0.18 264);
-  --color-brand-700: oklch(0.45 0.18 264);
+/*
+  Kortext v3 — Palette tokens (PALETTE-v3.md).
+  CSS variables = source of truth. @theme inline maps them to Tailwind utilities
+  so both `var(--accent)` and `bg-accent` work everywhere.
+*/
+
+:root {
+  /* Background layers — purple-tinted black */
+  --bg-0: #0a0814;
+  --bg-1: #14101f;
+  --bg-2: #1e1830;
+  --bg-3: #2a2240;
+  --bg-overlay: rgba(10, 8, 20, 0.75);
+
+  /* Text hierarchy */
+  --tx-1: #fafafc;
+  --tx-2: #b5b0c2;
+  --tx-3: #6b6577;
+  --tx-disabled: #3f3b4f;
+
+  /* Accent — purple */
+  --accent: #a855f7;
+  --accent-soft: #c084fc;
+  --accent-deep: #7c3aed;
+  --accent-glow: rgba(168, 85, 247, 0.25);
+
+  /* Signal — pink */
+  --signal: #ec4899;
+  --signal-soft: #f472b6;
+  --signal-glow: rgba(236, 72, 153, 0.20);
+
+  /* Semantic */
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #3b82f6;
+
+  /* Borders */
+  --border-subtle: rgba(255, 255, 255, 0.05);
+  --border-default: rgba(255, 255, 255, 0.10);
+  --border-accent: rgba(168, 85, 247, 0.30);
+  --border-strong: rgba(255, 255, 255, 0.18);
+
+  /* +prime amber */
+  --prime: #f59e0b;
+
+  /* Layout */
+  --sidebar-w: 220px;
+  --header-h: 48px;
+  --footer-h: 32px;
+}
+
+@theme inline {
+  --color-bg-0: var(--bg-0);
+  --color-bg-1: var(--bg-1);
+  --color-bg-2: var(--bg-2);
+  --color-bg-3: var(--bg-3);
+
+  --color-tx-1: var(--tx-1);
+  --color-tx-2: var(--tx-2);
+  --color-tx-3: var(--tx-3);
+  --color-tx-disabled: var(--tx-disabled);
+
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-deep: var(--accent-deep);
+
+  --color-signal: var(--signal);
+  --color-signal-soft: var(--signal-soft);
+
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+  --color-prime: var(--prime);
+
+  --color-border-subtle: var(--border-subtle);
+  --color-border-default: var(--border-default);
+  --color-border-accent: var(--border-accent);
+  --color-border-strong: var(--border-strong);
+
+  --font-mono:
+    'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 }
 
 html,
@@ -11,3 +90,72 @@ body,
 #root {
   height: 100%;
 }
+
+body {
+  margin: 0;
+  background: var(--bg-0);
+  color: var(--tx-1);
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+/* Status dot — color-coded, no fill, Vercel discipline */
+.dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dot-success { background: var(--success); }
+.dot-warning { background: var(--warning); }
+.dot-danger  { background: var(--danger); }
+.dot-info    { background: var(--info); }
+.dot-accent  { background: var(--accent); }
+.dot-signal  { background: var(--signal); }
+.dot-muted   { background: var(--tx-3); }
+
+/* Subtle pulse for "live" indicators only — single 200ms ease-out */
+@keyframes signal-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.dot-pulse {
+  animation: signal-pulse 1.6s ease-in-out infinite;
+}
+
+/* Toast slide-in — single 220ms ease-out, no constant pulse */
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-toast-in {
+  animation: toast-in 220ms ease-out;
+}
+
+/* Markdown prose — minimal, mono code, no fancy typography */
+.prose-markdown h1 { font-size: 22px; font-weight: 600; margin: 0.6em 0 0.4em; color: var(--tx-1); letter-spacing: -0.01em; }
+.prose-markdown h2 { font-size: 17px; font-weight: 600; margin: 1.4em 0 0.4em; color: var(--tx-1); }
+.prose-markdown h3 { font-size: 14px; font-weight: 600; margin: 1.2em 0 0.4em; color: var(--tx-2); text-transform: uppercase; letter-spacing: 0.06em; }
+.prose-markdown h4 { font-size: 13px; font-weight: 600; margin: 1em 0 0.3em; color: var(--tx-2); }
+.prose-markdown p  { margin: 0.6em 0; color: var(--tx-2); }
+.prose-markdown ul, .prose-markdown ol { margin: 0.6em 0 0.6em 1.4em; color: var(--tx-2); }
+.prose-markdown li { margin: 0.25em 0; }
+.prose-markdown a { color: var(--accent-soft); text-decoration: underline; text-underline-offset: 2px; }
+.prose-markdown a:hover { color: var(--accent); }
+.prose-markdown code { font-family: var(--font-mono); font-size: 0.92em; background: var(--bg-2); border: 1px solid var(--border-subtle); padding: 0.08em 0.35em; border-radius: 4px; color: var(--tx-1); }
+.prose-markdown pre { background: var(--bg-2); border: 1px solid var(--border-subtle); border-radius: 6px; padding: 12px 14px; overflow-x: auto; margin: 0.8em 0; }
+.prose-markdown pre code { background: transparent; border: none; padding: 0; font-size: 12px; line-height: 1.55; }
+.prose-markdown blockquote { border-left: 2px solid var(--accent); padding-left: 12px; margin: 0.8em 0; color: var(--tx-3); }
+.prose-markdown hr { border: 0; border-top: 1px solid var(--border-subtle); margin: 1.4em 0; }
+.prose-markdown table { border-collapse: collapse; width: 100%; margin: 0.8em 0; font-size: 12px; }
+.prose-markdown th, .prose-markdown td { border: 1px solid var(--border-subtle); padding: 6px 10px; text-align: left; }
+.prose-markdown th { background: var(--bg-2); color: var(--tx-1); }
+.prose-markdown img { max-width: 100%; border-radius: 6px; }

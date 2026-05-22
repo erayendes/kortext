@@ -4,6 +4,13 @@ import { env } from './config/env.ts';
 import { healthRouter } from './routes/health.ts';
 import { dbInfoRouter } from './routes/db-info.ts';
 import { approvalRouter } from './routes/approvals.ts';
+import { runsRouter } from './routes/runs.ts';
+import { handoversRouter } from './routes/handovers.ts';
+import { doctorRouter } from './routes/doctor.ts';
+import { personasRouter } from './routes/personas.ts';
+import { workflowsRouter } from './routes/workflows.ts';
+import { backlogRouter } from './routes/backlog.ts';
+import { docsRouter } from './routes/docs.ts';
 import { getDb } from './db/client.ts';
 import { ApprovalQueue } from './orchestrator/approval-queue.ts';
 import { resumeOrphanedRuns } from './orchestrator/resume.ts';
@@ -65,6 +72,24 @@ app.use(express.json());
 app.use('/api', healthRouter);
 app.use('/api', dbInfoRouter);
 app.use('/api', approvalRouter({ repos, queue: approvalQueue }));
+app.use('/api', runsRouter({ repos }));
+app.use('/api', handoversRouter({ repos }));
+app.use('/api', backlogRouter({ repos }));
+app.use('/api', personasRouter({ personas: personaRegistry, agentsDir }));
+app.use('/api', workflowsRouter({ workflows: workflowRegistry }));
+app.use('/api', doctorRouter({ repos, workflows: workflowRegistry, personas: personaRegistry }));
+app.use(
+  '/api',
+  docsRouter({
+    scopes: {
+      references: resolve(process.cwd(), 'workspace/references'),
+      reports: resolve(process.cwd(), 'workspace/reports'),
+      memory: resolve(process.cwd(), 'workspace/memory'),
+      rules: resolve(process.cwd(), 'rules'),
+      workflows: workflowsDir,
+    },
+  }),
+);
 
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('[kortext]', err);
