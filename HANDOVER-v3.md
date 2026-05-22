@@ -4,8 +4,8 @@
 > Açar açmaz şunu yaz: **"HANDOVER-v3.md'yi oku, Faz 7'ye başla"**
 
 **Tarih:** 2026-05-22
-**Yazan oturum:** Faz 6
-**Son commit:** `e48e266` — `feat(v3): React dashboard — router shell + REST API + 6 ekran + 8 settings + bell/toast/terminal/timeline (Faz 6)`
+**Yazan oturum:** Faz 7
+**Son commit:** _(bu commit — `feat(v3): MCP server — 15 tool, stdio + SSE, Zod schema (Faz 7)`)_
 
 ---
 
@@ -20,14 +20,16 @@
 | **3 — Otonom orkestratör** | — | `dc23d0f` | chainer: 6, blueprint-watcher: 7, approval: 8, notifications: 11, cli-commands: 5 |
 | **4 — Üretim sertleştirmesi** | — | `d3c493c` | orchestrator: 11, worker-pool-gate: 9, executor-factory: 9, cleanup: 5, resume: 5 |
 | **5 — Persona + workflow içerik katmanı** | — | `48093d5` | workflow-loader: 7, persona-registry: 8, consistency: 4, handover: 8, item-lifecycle: 13, doctor: 8, git-commit: 4 |
-| **6 — React Dashboard** | — | _(bu commit)_ | routes: 17 (runs/handovers/doctor/personas/workflows/backlog/docs + PUT validate) |
-| **Toplam** | — | — | **221/221 ✅** |
+| **6 — React Dashboard** | — | `e48e266` | routes: 17 (runs/handovers/doctor/personas/workflows/backlog/docs + PUT validate) |
+| **7 — MCP Server** | — | _(bu commit)_ | mcp-tools: 14 (15 tool surface + lifecycle smoke) |
+| **Toplam** | — | — | **235/235 ✅** |
 
 Hızlı doğrulama:
 ```bash
-npm test          # 221 yeşil
+npm test          # 235 yeşil
 npm run typecheck # frontend + server, sıfır hata
-npm run dev       # Vite 5173 + Express 3200
+npm run dev       # Vite 5173 + Express 3200 (Express ayrıca /mcp/sse + /mcp/messages mount eder)
+npx tsx bin/kortext.ts mcp   # stdio MCP server (Claude Code, Cursor, vs. bağlanabilir)
 # Tarayıcı: http://localhost:5173 — hash-based router, dashboard default
 ```
 
@@ -53,6 +55,14 @@ npm run dev       # Vite 5173 + Express 3200
 16. **Reddetme/orphan kurtarma = `cancelled` + prefix convention**: `error_message: rejected:|orphaned: ...`.
 17. **İş başına 1 worktree, paralel iş = paralel worktree**.
 18. **Persona-routed executor**: persona handle → executor map.
+
+### Faz 7'de eklenen kararlar
+
+29. **Factory + injectable deps**: `createKortextMcpServer(deps)` tüm tool'ları register eder; transport host-bağımsız. Stdio CLI, SSE Express hook ve testler aynı imzayı paylaşır.
+30. **Stdio'da `console.log = console.error`**: stdout JSONRPC kanalı, bir tek log frame'i protokolü kırar. `bin/kortext.ts mcp` switch case'inin EN BAŞINDA monkey-patch + log routing yapar.
+31. **SSE oturum başına yeni McpServer**: Tek server iki transport ile karışır (handler state transport'a kilitli). `mcp/sse.ts` her `GET /mcp/sse` için fresh instance üretir, `transports` Map'i sessionId → transport tutar, `onclose` cleanup.
+32. **Tool envelope = JSON text + structuredContent**: Her tool `{ content: [{type:'text', text: JSON.stringify(...)}], structuredContent: payload }` döner — eski MCP client'lar text frame'i, yeni client'lar structured payload'u görür.
+33. **`approve_blueprint` = frontmatter rewrite**: Yeni orchestrator çağrısı eklemek yerine `BlueprintWatcher`'ın zaten izlediği dosyaya `status: approved` yazıyoruz; downstream pipeline tetikleme otomatik.
 
 ### Faz 6'da eklenen kararlar
 
@@ -95,27 +105,56 @@ Frontend ekranları:
 - Routes: `/`, `/board`, `/memory`, `/reports`, `/references`, `/settings/{project,agents,rules,workflows,hooks,integrations,environment,danger}`
 - Overlays: Header bell popup, Toasts (yeni approval → 8s otomatik kapanır), Terminal panel (alt drawer — LIVE RUNS), Timeline drawer (sağ — handovers + runs reverse-chrono)
 
-## Sırada: Faz 7 — MCP Server
+## Faz 7 — MCP Server (TAMAMLANDI)
 
-**⚠ İlk iş: [ROADMAP-v3.md](ROADMAP-v3.md) → "Faz 7 — MCP Server" bölümünü oku.** 15 tool'luk tam tablo, MCP transport gereksinimleri ve kabul kriterleri orada. Aşağıdaki özet sadece kapsamı hatırlatır:
+| # | Modül | Dosya | Test |
+|---|---|---|---|
+| 7.1 | McpServer factory + 15 tool registration | [mcp/server.ts](mcp/server.ts) | 14 (lifecycle + per-tool) |
+| 7.2 | Stdio transport entry | [mcp/stdio.ts](mcp/stdio.ts) | manuel smoke (initialize + tools/list) |
+| 7.3 | SSE Express hook | [mcp/sse.ts](mcp/sse.ts) | server/index.ts mount |
+| 7.4 | CLI `kortext mcp` | [bin/kortext.ts](bin/kortext.ts) | `npx tsx bin/kortext.ts mcp` |
 
-- `@modelcontextprotocol/sdk` ile stdio + SSE transport
-- Tool'lar: `list_pipelines`, `start_pipeline`, `list_backlog`, `add_backlog_item`, `transition_item`, `list_pending_questions`, `respond_to_question`, `list_personas`, `list_workflows`, `get_runtime_status`, vs.
-- Zod schema her tool için
-- `claude mcp add kortext -- kortext mcp` komutu çalışsın
+Tool listesi (15):
+- **Workflow / persona / pipeline**: `list_workflows`, `list_personas`, `list_pipelines`, `get_pipeline`, `start_pipeline`
+- **Backlog**: `list_backlog`, `add_backlog_item`, `transition_item`
+- **Approval**: `list_pending_questions`, `respond_to_question`
+- **Context / handover / log**: `get_context`, `handover`, `get_logs`
+- **Blueprint**: `read_blueprint`, `approve_blueprint`
+- **Health**: `get_runtime_status`
 
-Faz 6'da kurulan REST endpoint'lerin çoğu bire bir MCP tool'u olarak sarmalanabilir — repo + registry referansları zaten paylaşılan.
+İstemci entegrasyonu:
+```bash
+# Claude Code'a stdio üzerinden bağla:
+claude mcp add kortext -- npx tsx /Users/erayendes/Documents/_docbase/kortext/bin/kortext.ts mcp
+# Dashboard veya uzaktan client → SSE:
+curl -N http://localhost:3200/mcp/sse
+```
+
+## Sırada: Faz 8 — CLI + Bin
+
+**⚠ İlk iş: [ROADMAP-v3.md](ROADMAP-v3.md) → "Faz 8 — CLI + Bin" bölümünü oku.** Kapsam özeti:
+
+- `kortext init` — boş projeye `.kortext/` + AGENTS.md + DB seed
+- `kortext start` — backend + dashboard birlikte başlat (concurrently zaten kurulu)
+- `kortext logs` — son audit log
+- `kortext --help` + `--version`
+- `npx kortext` one-shot çalışsın
+- `bin/kortext.js` shim → derlenmiş JS'e geç (`npm run build:server` migration runner'ı dahil etmeli — bilinen gotcha)
+
+Faz 7'de eklenen `kortext mcp` ve mevcut start/approve/status/cleanup/doctor komutları bir araya gelerek CLI yüzeyini tamamlayacak.
 
 ---
 
-## Dosya Haritası (Faz 7 için en bakılacaklar)
+## Dosya Haritası (Faz 8 için en bakılacaklar)
 
 | Yer | İşlev |
 |---|---|
-| [mcp/](mcp/) | Şu an boş; Faz 7'de stdio + SSE server buraya kurulacak |
+| [bin/kortext.ts](bin/kortext.ts) | Mevcut CLI entry — Faz 8 init/start/logs/--help/--version eklenecek |
+| [bin/kortext.js](bin/kortext.js) | `npx tsx` shim — Faz 8'de derlenmiş JS'e geçiş |
+| [mcp/](mcp/) | Faz 7 — MCP server (referans olarak) |
 | [server/routes/](server/routes/) | Tool wrap'lerinin nasıl repo + registry'lere bağlandığına örnek |
 | [server/orchestrator/](server/orchestrator/) | `triggerWorkflow`, `retryRun`, `approvalQueue` — programatik API hazır |
-| [server/cli/doctor.ts](server/cli/doctor.ts) | `runDoctor()` — `get_runtime_status` tool'u için doğrudan kullanılabilir |
+| [server/cli/doctor.ts](server/cli/doctor.ts) | `runDoctor()` — `get_runtime_status` tool'u için kaynak |
 | [server/engine/workflow-loader.ts](server/engine/workflow-loader.ts) | `list_workflows` veri kaynağı |
 | [server/engine/persona-registry.ts](server/engine/persona-registry.ts) | `list_personas` veri kaynağı |
 | [docs/design/wireframe-v4-final.html](docs/design/wireframe-v4-final.html) | Görsel referans (Faz 6 tamamlandı, yeni UI işi için kullanılabilir) |
@@ -137,6 +176,8 @@ Faz 6'da kurulan REST endpoint'lerin çoğu bire bir MCP tool'u olarak sarmalana
 - **Worktree quarantine branch'leri**: Failure quarantine sonrasında `kortext/run-<id>` branch'leri silinmez — postmortem için.
 - **Migration runner production'da**: `server/db/migrations/*.sql` `tsc` tarafından kopyalanmıyor. Faz 8'de `npm run build:server`'a copy step ekle.
 - **Frontend bundle tipi mirror**: Server tipini frontend'e koymak yerine `src/lib/api-types.ts` elden mirror. Schema değişikliğinde her iki yer de güncellenmeli.
+- **MCP stdio'da `console.log` ölümcül**: stdout = JSONRPC. `bin/kortext.ts mcp` ilk iş `console.log = console.error` monkey-patch yapar. Yeni log ekleyen herhangi bir modül bu kuralı bilmeden bozabilir. Genel kural: server kodu `console.error` kullansın, `console.log` sadece CLI komut çıktısı için (mcp dışı).
+- **SSE deprecated note**: SDK 1.29 SSEServerTransport için "deprecated, use StreamableHTTP" diyor. Dashboard + claude mcp SSE'yi hâlâ kullanıyor; v3.1'de StreamableHTTP'ye migration tracked.
 
 ---
 
@@ -149,12 +190,18 @@ npx tsx server/index.ts                    # sadece backend
 npx vitest                                 # watch mode
 
 # Test + doğrulama
-npm test                                   # 221 test
+npm test                                   # 235 test
 npm run typecheck
 
 # Tek bir test dosyası
 npx vitest run tests/routes.test.ts        # Faz 6 REST smoke (17 test)
+npx vitest run tests/mcp-tools.test.ts     # Faz 7 MCP tool smoke (14 test)
 npx vitest run tests/orchestrator.test.ts
+
+# MCP server (Faz 7) manuel smoke
+KORTEXT_DB_PATH=.tmp/test.db npx tsx bin/kortext.ts mcp
+# Sonra başka terminalde:
+claude mcp add kortext -- npx tsx /Users/erayendes/Documents/_docbase/kortext/bin/kortext.ts mcp
 
 # CLI (Faz 4-5)
 npx tsx bin/kortext.ts start <wf-id>

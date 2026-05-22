@@ -23,6 +23,7 @@ import { cleanupQuarantine, cleanupBranches } from '../server/cli/cleanup.ts';
 import { runDoctor, formatDoctorReport } from '../server/cli/doctor.ts';
 import { loadWorkflowsFromDir } from '../server/engine/workflow-loader.ts';
 import { loadPersonasFromDir } from '../server/engine/persona-registry.ts';
+import { runStdioServer } from '../mcp/stdio.ts';
 
 const args = process.argv.slice(2);
 const cmd = args[0];
@@ -71,6 +72,16 @@ function parseDaysFlag(name: string, fallback: number): number {
 }
 
 async function main(): Promise<number> {
+  // `kortext mcp` owns stdout for JSON-RPC frames — handle BEFORE any
+  // other code path runs console.log on it. Runs the server until SIGINT.
+  if (cmd === 'mcp') {
+    // eslint-disable-next-line no-console
+    console.log = console.error;
+    await runStdioServer({ cwd: process.cwd() });
+    await new Promise<void>(() => undefined); // park until shutdown
+    return 0;
+  }
+
   const { repositories: repos } = getDb();
   const queue = new ApprovalQueue({ repos });
 
@@ -191,6 +202,8 @@ async function main(): Promise<number> {
           '                             abandoned kortext/run-* branches',
           '  doctor                     scan workflows + personas + locks + items',
           '                             for inconsistencies; exit 1 on errors',
+          '  mcp                        run the MCP server over stdio',
+          '                             (use: claude mcp add kortext -- kortext mcp)',
         ].join('\n'),
       );
       return 0;

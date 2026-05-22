@@ -13,6 +13,7 @@ import { backlogRouter } from './routes/backlog.ts';
 import { docsRouter } from './routes/docs.ts';
 import { getDb } from './db/client.ts';
 import { ApprovalQueue } from './orchestrator/approval-queue.ts';
+import { mcpSseRouter } from '../mcp/sse.ts';
 import { resumeOrphanedRuns } from './orchestrator/resume.ts';
 import { loadWorkflowsFromDir } from './engine/workflow-loader.ts';
 import { loadPersonasFromDir } from './engine/persona-registry.ts';
@@ -88,6 +89,17 @@ app.use(
       rules: resolve(process.cwd(), 'rules'),
       workflows: workflowsDir,
     },
+  }),
+);
+// MCP over SSE for dashboard / remote clients.
+app.use(
+  mcpSseRouter({
+    repos,
+    workflows: workflowRegistry,
+    personas: personaRegistry,
+    queue: approvalQueue,
+    workspaceRoot: process.cwd(),
+    workflowsDir,
   }),
 );
 
