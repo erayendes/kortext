@@ -3,11 +3,14 @@ dist/
 *.log
 .DS_Store
 temp/
-__pycache__/
-*.pyc
-*.pyo
 .env
 .env.local
 coverage/
 .kortext/runtime/
 .kortext/worktrees/
+
+# Editor / IDE / AI tooling — local to each developer's machine
+.claude/
+.cursor/
+.idea/
+.vscode/
