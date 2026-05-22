@@ -4,9 +4,7 @@ This guide is for the **person running Kortext on a project** — not the
 person hacking on Kortext itself. It assumes you can use a terminal, but not
 that you know TypeScript.
 
-For migrating from v2, read [MIGRATION-v2-to-v3.md](./MIGRATION-v2-to-v3.md)
-first. For the architecture under the hood, see
-[docs/architecture.md](./docs/architecture.md).
+For the architecture under the hood, see [docs/architecture.md](./docs/architecture.md).
 
 ## Table of contents
 
@@ -502,7 +500,6 @@ validates parsing before writing).
 
 - [Architecture](./docs/architecture.md) — schema, engine internals
 - [Changelog](./CHANGELOG.md) — release notes
-- [Migration Guide](./MIGRATION-v2-to-v3.md) — upgrading from v2
 
 For bug reports and feature requests, open an issue on
 [GitHub](https://github.com/erayendes/kortext/issues).
