@@ -199,9 +199,11 @@ Sub-fazlar (tamamlanan sırayla):
 | `list_workflows` | 12 workflow |
 | `get_runtime_status` | Worker pool durumu |
 
-- [ ] `@modelcontextprotocol/sdk` ile stdio + SSE transport
-- [ ] Zod schema her tool için
-- [ ] `claude mcp add kortext -- kortext mcp` komutu çalışsın
+- [x] `@modelcontextprotocol/sdk` ile stdio + SSE transport
+- [x] Zod schema her tool için
+- [x] `claude mcp add kortext -- kortext mcp` komutu çalışsın
+
+**TAMAMLANDI** — 15/15 tool, stdio + SSE, 14 test (`tests/mcp-tools.test.ts`). `mcp/server.ts` factory tüm tool'ları register eder; `mcp/stdio.ts` CLI entry (stdout = JSONRPC, stderr = log); `mcp/sse.ts` Express'e `/mcp/sse` + `/mcp/messages` mount eder. SSE oturum başına yeni McpServer instance — paylaşılan deps üzerinden.
 
 ### Faz 8 — CLI + Bin (1-2 gün)
 
