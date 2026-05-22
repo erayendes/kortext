@@ -103,7 +103,7 @@ Kortext'i **markdown methodology framework**'ten **tam otonom AI ajan runtime'ı
 
 **Migrasyon scripti:** `bin/migrate-legacy-backlog.ts` — `workspace/memory/backlog/*.md` → SQLite `backlog_items` (idempotent, `--dry-run` destekli; mevcut depo sadece template içerdiğinden boş insert).
 
-### Faz 2 — Pipeline Engine + Worker Pool + Worktree Manager (5-7 gün)
+### Faz 2 — Pipeline Engine + Worker Pool + Worktree Manager ✅ `v3.0.0-alpha.2` / `v3.0.0-alpha.3`
 
 **Amaç:** Workflow markdown'larını yürütebilen otonom engine; her görev kendi git worktree'sinde.
 
@@ -146,7 +146,7 @@ Kortext'i **markdown methodology framework**'ten **tam otonom AI ajan runtime'ı
 
 **Toplam Faz 4:** 39 yeni test, 111 → 150.
 
-### Faz 5 — Persona + Workflow Engine TS Portu (3-4 gün)
+### Faz 5 — Persona + Workflow Engine TS Portu ✅
 
 **Amaç:** Mevcut 14 persona ve 12 workflow markdown'unu engine'e bağla.
 
