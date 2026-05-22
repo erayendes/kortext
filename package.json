@@ -7,6 +7,30 @@
   "bin": {
     "kortext": "./bin/kortext.js"
   },
+  "files": [
+    "bin/",
+    "dist/",
+    "agents/",
+    "workflows/",
+    "rules/",
+    "workspace/",
+    "scripts/",
+    "AGENTS.md",
+    "CHANGELOG.md",
+    "MIGRATION-v2-to-v3.md",
+    "USER-GUIDE.md",
+    "ROADMAP-v3.md",
+    "docs/architecture.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/erayendes/kortext-framework.git"
+  },
+  "homepage": "https://github.com/erayendes/kortext-framework#readme",
+  "bugs": {
+    "url": "https://github.com/erayendes/kortext-framework/issues"
+  },
   "scripts": {
     "dev": "concurrently -n server,web -c blue,magenta \"npm:dev:server\" \"npm:dev:web\"",
     "dev:server": "tsx watch --clear-screen=false server/index.ts",
