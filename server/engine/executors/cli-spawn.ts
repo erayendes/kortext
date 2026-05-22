@@ -89,10 +89,22 @@ export async function spawnCli(opts: SpawnCliOptions): Promise<SpawnCliResult> {
     log.write(`[stderr] ${s}`);
   });
 
-  if (opts.stdin !== undefined && proc.stdin) {
-    proc.stdin.write(opts.stdin);
-    proc.stdin.end();
-  } else if (proc.stdin) {
+  // Short-lived CLIs (e.g. `echo X; exit 0`) can close stdin before we
+  // finish writing the persona prompt, which surfaces as EPIPE on the
+  // parent. The prompt is best-effort — if the child didn't want to read
+  // it, we shouldn't crash the test/run with an unhandled error. macOS
+  // hides this race because the kernel keeps the pipe buffer alive
+  // briefly after exit; Linux closes immediately.
+  if (proc.stdin) {
+    proc.stdin.on('error', (err) => {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code !== 'EPIPE') {
+        log.write(`\n[stdin-error] ${err.message}\n`);
+      }
+    });
+    if (opts.stdin !== undefined) {
+      proc.stdin.write(opts.stdin);
+    }
     proc.stdin.end();
   }
 
