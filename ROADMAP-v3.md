@@ -230,15 +230,17 @@ Sub-fazlar (tamamlanan sırayla):
 - [x] **GitHub Actions CI** (`.github/workflows/kortext-ci.yml`): Node 22, npm ci → lint → typecheck → test → build → compiled CLI smoke; concurrency cancel-in-progress
 - [x] **ESLint config genişletildi**: `.js/.mjs/.cjs` Node globals + TS tarafında `NodeJS` namespace + test dosyalarında `no-explicit-any` off; 19 önceki lint hatası → 0 hata
 
-### Faz 10 — Yayın + Dokümantasyon (1-2 gün)
+### Faz 10 — Yayın + Dokümantasyon ✅
 
-- [ ] **CHANGELOG**: v3.0.0 — breaking change notu, migration guide linki
-- [ ] **MIGRATION-v2-to-v3.md**: Eski markdown backlog'u nasıl SQLite'a aktarılır; legacy/ klasör politikası
-- [ ] **README.md**: Yeni mimari, yeni quick start
-- [ ] **USER-GUIDE.md**: Tam yenileme (otonom mod, dashboard'da nasıl çalışılır, blueprint nasıl onaylanır)
-- [ ] **docs/architecture.md**: SQLite şema, engine, worker pool, MCP, dashboard mimari diyagramları
-- [ ] **npm publish**: v3.0.0
-- [ ] **GitHub release**: tag + binary assets
+- [x] **CHANGELOG.md**: v3.0.0 — Added/Changed/Removed + migration linki + v2.x özet
+- [x] **MIGRATION-v2-to-v3.md**: Dry-run-first backlog migration, `PORT → KORTEXT_PORT`, legacy/ politikası, rollback
+- [x] **README.md**: v3 quick start, ASCII layer diyagramı, CLI surface, integrations (Claude Code MCP, Slack, Telegram)
+- [x] **USER-GUIDE.md**: Mental model, setup, blueprint yazma, dashboard ekran-ekran, gate approve/reject, persona/workflow edit, MCP, notifications, troubleshooting (8 senaryo)
+- [x] **docs/architecture.md**: Mermaid layer + ER + sequence (orchestrator) + engine flow + MCP factory + CI diyagramları; SQLite schema notları; codebase haritası
+- [x] **package.json version bump**: `3.0.0-alpha.0` → `3.0.0`
+- [x] **npm-publish.yml**: Node 22, actions@v4, pre-publish verify gate (lint+typecheck+test+build+smoke), `--provenance --access public`
+- [ ] **npm publish**: v3.0.0 (release event yayın oturumunda tag + `gh release create` ile tetiklenecek)
+- [ ] **GitHub release**: tag + release notes (CHANGELOG'dan otomatik)
 
 ---
 
