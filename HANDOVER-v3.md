@@ -97,7 +97,7 @@ Frontend ekranları:
 
 ## Sırada: Faz 7 — MCP Server
 
-Roadmap'te tam liste, kısaca:
+**⚠ İlk iş: [ROADMAP-v3.md](ROADMAP-v3.md) → "Faz 7 — MCP Server" bölümünü oku.** 15 tool'luk tam tablo, MCP transport gereksinimleri ve kabul kriterleri orada. Aşağıdaki özet sadece kapsamı hatırlatır:
 
 - `@modelcontextprotocol/sdk` ile stdio + SSE transport
 - Tool'lar: `list_pipelines`, `start_pipeline`, `list_backlog`, `add_backlog_item`, `transition_item`, `list_pending_questions`, `respond_to_question`, `list_personas`, `list_workflows`, `get_runtime_status`, vs.
