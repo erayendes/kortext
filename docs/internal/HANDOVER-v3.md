@@ -1,17 +1,20 @@
 # Kortext v3 — Yeni Oturum Handover
 
 > Bu dosya yeni Claude Code oturumunun bootstrap pusulasıdır.
-> Açar açmaz şunu yaz: **"HANDOVER-v3.md'yi oku, onboarding wizard + UI regression fix"**
+> Açar açmaz şunu yaz: **"HANDOVER-v3.md'yi oku, feat/v3.1-onboarding-and-dashboard-polish branch'inden devam — PR + v3.1.0 release"**
 
-**Tarih:** 2026-05-22 (akşam)
-**Yazan oturum:** Faz 10 + yayın + UAT (post-publish hardening)
-**Son commit:** `d118f48` — `fix(v3): kortext serve runs prod in-process — works on Node 26`
+**Tarih:** 2026-05-23 (akşam)
+**Yazan oturum:** Faz 11 — onboarding wizard + dashboard mockup polish (v3.1.0 hazırlığı)
+**Son commit:** `0052c43` — `feat(v3): onboarding wizard + dashboard mockup polish (v3.1.0 prep)` (branch `feat/v3.1-onboarding-and-dashboard-polish`)
+**main branch:** `d118f48` (dokunulmadı; v3.0.0 broken-published state'inde)
 
 ## Çok kritik bilgi: yayın durumu
 
-- ✅ **GitHub:** `erayendes/kortext` PUBLIC. main branch d118f48'de. v3.0.0 tag `300b035`'i işaret ediyor (4 fix-commit eskisi).
+- ✅ **GitHub:** `erayendes/kortext` PUBLIC. main hâlâ d118f48'de. v3.0.0 tag `300b035`'i işaret ediyor (5 fix-commit eskisi).
+- ✅ **Feature branch:** `feat/v3.1-onboarding-and-dashboard-polish` push edildi, commit 0052c43. PR açılmayı bekliyor: https://github.com/erayendes/kortext/pull/new/feat/v3.1-onboarding-and-dashboard-polish
 - 🟡 **npm registry:** `kortext@3.0.0` YAYINLANDI — ama **broken state**: kortext serve Node 26'da patlıyor + log flush race + EPIPE race. **Kimseye `npm install -g kortext` önerme.** Kullanıcılar bunun yerine lokal tgz install etmeli (aşağıda).
-- ⏸ **Lokal-only 4 fix:** 5ba9032 (log flush race), 0b9cba6 (EPIPE), 70f2186 (Express static + vite spawn kaldır), d118f48 (in-process import — Node 26 spawn workaround). Hepsi GitHub'da push edilmiş + 264/264 yeşil, **ama tag `v3.0.0` taşınmadığı için npm-publish.yml tetiklenmedi**. Onboarding wizard ile birlikte v3.1.0 olarak çıkacak.
+- ⏸ **Lokal-only 4 fix (main'de var, npm tag'de değil):** 5ba9032 (log flush race), 0b9cba6 (EPIPE), 70f2186 (Express static + vite spawn kaldır), d118f48 (in-process import — Node 26 spawn workaround).
+- ⏸ **Branch-only Faz 11 (henüz main'de değil):** 0052c43 — onboarding wizard + dashboard mockup polish + preflight + auto-open. Merge sonrası v3.1.0 olarak yayınlanacak.
 
 ---
 
@@ -32,7 +35,8 @@
 | **9 — Test + CI** | — | `217d13b` | e2e-pipeline: 6, build-verification: 3, cli-smoke: 5 |
 | **10 — Yayın + Docs** | `v3.0.0` (published) | `1746b28` | (docs-only) |
 | **Post-10 — Yayın + UAT** | — | `d118f48` | 264/264 (+1 regression test) |
-| **Toplam** | — | — | **264/264 ✅** |
+| **Faz 11 — Onboarding + dashboard polish** | branch `feat/v3.1-...` | `0052c43` | blueprint-route: 6, preflight: 4 |
+| **Toplam** | — | — | **274/274 ✅** |
 
 Hızlı doğrulama:
 ```bash
@@ -256,75 +260,108 @@ Concurrency: `cancel-in-progress: true` aynı ref için superseded run'ları ipt
 46. **Publish gate = CI gate'in aynısı**: `npm-publish.yml` lint + typecheck + test + build + smoke'u publish'ten önce tekrar koşar. Pre-merge gate atlanmışsa veya release tag elle yapılmışsa publish hâlâ doğrulanmış olur.
 47. **HANDOVER-v3.md pakete dahil**: `.npmignore` `.github/` ve `.git/` exclude ediyor ama `HANDOVER-v3.md`'ye dokunmuyor — bilinçli; geliştirici-okur kim olursa olsun (npm install eden user dahil) son durumu görür. v3.1+'da temizlenebilir.
 
-## Sırada: Onboarding wizard + UI regression fix → v3.1.0
+## Faz 11 — Onboarding wizard + dashboard mockup polish (TAMAMLANDI)
 
-Yeni oturumun yapması gereken iki iş:
+**Branch:** `feat/v3.1-onboarding-and-dashboard-polish` (commit `0052c43`, 24 dosya, +2748 / −263 satır)
+**Spec:** [docs/superpowers/specs/2026-05-22-onboarding-wizard-design.md](docs/superpowers/specs/2026-05-22-onboarding-wizard-design.md)
 
-### 1. Onboarding wizard (yeni özellik, brainstorming + tasarım gerekli)
+### Onboarding wizard
+- `/onboarding` route + RootShell guard: blueprint.status `uninitialized|draft|unknown` → tam-ekran form (sidebar/header/polling render edilmez).
+- Tek-sayfa form (mockup-v3-palette-preview.html 'Initialize your project' ekranı 1:1): Project Name + Project Code (auto-uppercase, A-Z0-9, 2-6) + Project Type radyo (new/existing) + Target Platform chips (Web/iOS/Android, multi) + Blueprint dropzone (`.md|.txt`, ≤100KB) + Sample MD/AI Prompt yardımcı panelleri + GitHub repo (opsiyonel).
+- `POST /api/blueprint` workspace/references/blueprint.md (frontmatter `status: approved`) + `.kortext/project.json` yazar, `triggerWorkflowId` döner ve `startCommand` ile mock executor fire-and-forget tetikler.
+- `GET /api/blueprint/status` guard + header + footer + terminal panel için tek kaynak.
+- index.html `lang=en` — Türkçe locale CSS uppercase'i I→İ dönüştürüyordu, fix.
 
-**Problem (Eray UAT'tan):** v3.0'da kullanıcı blueprint'i terminalden bulup markdown editöründe YAML frontmatter düzenlemek zorunda. Non-coder için kullanılamaz. Eray'ın aynen sözü: "BEN BURADA BLUEPRINT GİRMEMELİYİM. ONUN YERİ ONBOARDING EKRANI OLMALI".
+### CLI
+- `kortext init` artık preflight koşar (node ≥22, git ≥2.30, claude/codex/gemini varlık). Blocker varsa abort eder; `--skip-preflight` bypass.
+- `kortext serve` ready event sonrası default tarayıcıyı açar (open / xdg-open / start). `--no-open` veya `KORTEXT_NO_OPEN=1` ile devre dışı.
 
-**Hedef akış:**
-```
-1. kortext init   (terminal — sadece bu)
-2. kortext serve  (terminal — sadece bu)
-3. Tarayıcı açar → dashboard'da blueprint boşsa /onboarding'e yönlendir
-4. 3-4 adımlı wizard form: proje meta (ad, owner) → vizyon → personalar → tech kısıt
-5. "Approve & Start" → arka planda blueprint.md'ye serialize + status: approved
-6. BlueprintWatcher zaten dosya değişikliğini yakalıyor → analysis pipeline tetiklenir
-7. Dashboard'a yönlendir, izle.
-```
+### Dashboard mockup polish
+- **Header:** K gradient logo + project name + v3.1.0 badge + ⌘K search bar + live "N active" pill + terminal/inbox/+p avatar.
+- **Dashboard subtitle:** workflow durumu (`<workflow-id> · run #N · <status>`) — generic copy yerine.
+- **RunsTable:** PERSONA / TASK / STEP / ELAPSED grid; persona avatarı (renk + initials) + renkli persona handle; `workflow-primary-persona.ts` ile workflow → persona map.
+- **PendingQuestionsCard:** kind badge (blueprint/gate/deploy) + filter chips + inline Approve/Reject.
+- **TimelinePanel:** event-kind dropdown + free-text search + persona-renkli handover akışı.
+- **TerminalPanel:** sağ-alt köşede floating panel `kortext@<project-code>`; minimize/expand.
+- **Footer:** dinamik proje adı + canlı run sayıları + renkli chip'ler (active green pulse, idle gray, blocked red, tkn/s purple, $today green).
 
-**Brainstorming gerekli:** form alanları detayı, validation, geri-dön butonu, partial save davranışı.
+### Palette / utility eklemeleri
+- `src/index.css`: `.input` + `.btn` + `.btn-primary` palette token'a bağlı (önceden tanımsızdı, OnboardingScreen raw HTML default'larıyla render oluyordu).
+- `src/lib/persona-colors.ts`: 14 persona handle → fixed hex + initials (mockup'la birebir).
+- `src/lib/workflow-primary-persona.ts`: workflow id → primary persona map.
 
-**İmplementasyon adımları (tahmini):**
-- POST /api/blueprint endpoint (frontmatter + body kabul, blueprint.md yaz, BlueprintWatcher zaten devrede)
-- /onboarding React route (TanStack Router)
-- Dashboard root: blueprint draft ise /onboarding redirect
-- Wizard component (4 step, formdata state, ileri/geri navigation)
-- Yardımcı: blueprint.md → form data parser (varsa partial complete edebilsin)
-- Test: REST endpoint + UI smoke + e2e form → pipeline tetik
+### Doğrulama
+- Test: **274/274 ✅** (önceki 264 + 10 yeni: `blueprint-route` 6, `preflight` 4)
+- Lint: 0 hata (3 önceden var olan warning)
+- Typecheck: 0 hata
+- Build: temiz (dist/web 416KB JS / 29KB CSS)
+- End-to-end manuel: Eray "DENEME" projesi ile Helsinki blueprint yükledi → blueprint.md + project.json yazıldı → run #6 (`01a-analysis-pipeline`, mock, succeeded) dashboard'da görüldü.
 
-### 2. UI regression (teşhis gerekli)
+## Sırada: PR + v3.1.0 release
 
-Eray UAT'ta dashboard'u görmüş ve "tasarımda bir şeyler bozulmuş" demiş. **Hangi ekran/komponent bozulmuş tanımlanmadı.** Yeni oturumun ilk işi:
+Yeni oturumun yapması gerekenler — yukarıdaki branch'ten devam:
 
-1. Eray'a "hangi ekran/etkileşim bozulmuş gözüküyor" diye sor (screenshot ideal)
-2. git log --oneline -20 ile son UI commit'lerini gözden geçir
-3. **Referans:** docs/design/ altındaki wireframe (eğer hâlâ varsa) vs şu anki implementasyon karşılaştırması
-4. Fix yap
-
-### 3. v3.0.1 paralel borç (small, opsiyonel)
-
-EADDRINUSE sessiz fail — `server/index.ts`'te `app.listen` error handler eksik. v3.0.1 patch için iyi bir candidate (sadece bu fix). Veya onboarding wizard'la birlikte v3.1.0'a paketle.
-
-### Yayın akışı (her iki iş bitince)
+### 1. PR aç + main'e merge
 
 ```bash
-# 0) version bump
+git checkout feat/v3.1-onboarding-and-dashboard-polish
+git pull
+gh pr create --title "feat(v3): onboarding wizard + dashboard polish (v3.1.0)" \
+  --body "$(cat <<'BODY'
+## Summary
+- Onboarding wizard replaces terminal blueprint edit; backend writes blueprint.md + project.json + fires analysis pipeline
+- kortext init preflight (node/git/CLI checks); kortext serve auto-opens browser
+- Dashboard mockup-fidelity polish: header, subtitle, active-work table, approvals filter chips, timeline drawer, floating terminal, colored footer
+
+## Test plan
+- [x] 274/274 tests
+- [x] lint 0 errors, typecheck clean, build clean
+- [x] manual UAT: form submit → blueprint.md + project.json + run #6 mock-executed
+- [ ] reviewer skim: docs/superpowers/specs/2026-05-22-onboarding-wizard-design.md
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+BODY
+)"
+# Onaydan sonra: gh pr merge --squash  (veya merge commit; preferred main history style)
+```
+
+### 2. Version bump + CHANGELOG + tag + npm publish
+
+```bash
+git checkout main && git pull
 # package.json: "version": "3.0.0" → "3.1.0"
-
-# 1) CHANGELOG.md güncelle — yeni [3.1.0] bölümü, Added/Changed
-# 2) Lokal smoke
+# CHANGELOG.md: yeni [3.1.0] section (Onboarding wizard / CLI preflight + auto-open / Dashboard polish)
 npm run lint && npm run typecheck && npm test && npm run build
-node dist/bin/kortext.js --version
+node dist/bin/kortext.js --version  # → 3.1.0
 
-# 3) Eray UAT (lokal tgz)
-npm pack
-# Eray makinesinde: npm uninstall -g kortext && npm install -g ./kortext-3.1.0.tgz
-# Onboarding wizard + UI fix doğrula
-
-# 4) Commit + tag + release
+git add package.json CHANGELOG.md
+git commit -m "chore(v3): release 3.1.0"
+git push
 git tag v3.1.0
-git push origin main --tags
-gh release create v3.1.0 --title "v3.1.0 — Onboarding wizard + UI polish" \
-  --notes-file <(awk '/^## \[3\.1\.0\]/{flag=1; next} /^## \[/{flag=0} flag' CHANGELOG.md)
+git push origin v3.1.0     # → npm-publish.yml tetikler
 
-# 5) Yayın sonrası npm doğrula
+# Yayın sonrası npm doğrula
 npm view kortext version  # → 3.1.0
 ```
 
-NPM_TOKEN secret `erayendes/kortext` repo'sunda zaten kurulu. Repo public, GitHub Actions ücretsiz.
+NPM_TOKEN secret zaten `erayendes/kortext`'te kurulu. Publish workflow lint+typecheck+test+build+smoke gate'ini publish'ten önce tekrar koşar (decision #46).
+
+### 3. UAT lokal tgz (opsiyonel pre-publish)
+
+```bash
+npm pack
+# Eray makinesinde: npm uninstall -g kortext && npm install -g ./kortext-3.1.0.tgz
+# kortext init     (preflight + scaffold)
+# kortext serve    (tarayıcı otomatik açılır → onboarding ekranı)
+# Form doldur → submit → dashboard'da run görünmeli
+```
+
+### 4. v3.1.x küçük borç / nice-to-have (opsiyonel)
+
+- `app.listen` error handler — EADDRINUSE sessiz fail (HANDOVER #51, Faz 10 borcu).
+- Onboarding'de executor seçimi (project.json'a `executor: mock|claude|codex|gemini`); şu an mock sabit kodlu (`server/index.ts`).
+- Orbit ekranı (mockup'ta var, hâlâ implementlenmedi).
+- Sidebar kompakt mod (mockup'taki 40×40 icon-only nav; şu an label'lı geniş kolon — bilinçli sapma).
 
 ---
 
