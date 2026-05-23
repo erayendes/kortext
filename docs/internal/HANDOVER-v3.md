@@ -1,13 +1,13 @@
 # Kortext v3 — Yeni Oturum Handover
 
 > Bu dosya yeni Claude Code oturumunun bootstrap pusulasıdır.
-> Açar açmaz şunu yaz: **"HANDOVER-v3.md'yi oku, feat/v3.1-onboarding-and-dashboard-polish branch'inde dashboard tasarım iterasyonu — Eray onayı bekleniyor"**
+> Açar açmaz şunu yaz: **"HANDOVER-v3.md'yi oku, feat/v3.1-onboarding-and-dashboard-polish branch'inde v4 wireframe alignment iterasyonu devam ediyor — Board / Memory / Reports / References / Settings / Onboarding sırada"**
 
-> ⚠️ **Tasarım hâlâ onaylanmadı.** Branch'teki onboarding + dashboard polish testten geçiyor (274/274) ama Eray görsel olarak mockup'a yeterince yakın bulmadı (oturum kapanışında: "mevcut branch'teki tasarım benim için ok değil"). Hangi alanların sapma içerdiği belirsiz — yeni oturumun ilk işi Eray'a sormak/screenshot karşılaştırması yapmak. **PR açma, release prep'e geçme** — önce iterasyon.
+> ⚠️ **Tasarım kısmi onaylı.** Eray "wireframe-v4-final.html'e birebir uy" dedi. Sidebar / Header / Footer / Dashboard tarafı bu oturumda v4'e hizalandı ve commit edildi (`a212ca4`). Board kanban + Memory/Reports/References + 8 Settings sub-pane + Onboarding hâlâ Faz 11 (mockup-v3-palette-preview.html odaklı) görünümünde — v4'e indirgemeli. **PR açma, release prep'e geçme** — iterasyon devam ediyor.
 
-**Tarih:** 2026-05-23 (akşam)
-**Yazan oturum:** Faz 11 — onboarding wizard + dashboard mockup polish (v3.1.0 hazırlığı)
-**Son commit:** `0052c43` — `feat(v3): onboarding wizard + dashboard mockup polish (v3.1.0 prep)` (branch `feat/v3.1-onboarding-and-dashboard-polish`)
+**Tarih:** 2026-05-24 (gece)
+**Yazan oturum:** Faz 11.1 — v4 wireframe alignment (shell + dashboard)
+**Son commit:** `a212ca4` — `fix(v3): align shell + dashboard to wireframe-v4-final 1:1` (henüz remote'a push edilmedi)
 **main branch:** `d118f48` (dokunulmadı; v3.0.0 broken-published state'inde)
 
 ## Çok kritik bilgi: yayın durumu
@@ -299,65 +299,67 @@ Concurrency: `cancel-in-progress: true` aynı ref için superseded run'ları ipt
 - Build: temiz (dist/web 416KB JS / 29KB CSS)
 - End-to-end manuel: Eray "DENEME" projesi ile Helsinki blueprint yükledi → blueprint.md + project.json yazıldı → run #6 (`01a-analysis-pipeline`, mock, succeeded) dashboard'da görüldü.
 
-## Sırada: Dashboard tasarım iterasyonu (Eray onayı bekleniyor)
+## Faz 11.1 — v4 wireframe alignment (bu oturumda BAŞLANDI, sürüyor)
 
-> **Önemli:** PR açma, version bump, release flow'una geçme. Önce görsel onay.
+**Eray'ın direktifi:** "wireframe-v4-final.html'e birebir uy, sidebar ikon büyüklükleri bile farklı, header farklı, footer öyle. Ben buna onay verdim."
 
-### 1. İlk adım — Eray'a sor
+**Referans:** [docs/design/wireframe-v4-final.html](docs/design/wireframe-v4-final.html) — Bu **TEK** visual spec. mockup-v3-palette-preview.html artık referans değil (Orbit graph paradigm, branch tablo mimarisi — Eray tablo'yu seçti dolaylı olarak v4 üzerinden).
 
-Eray oturum kapanışında "mevcut branch'teki tasarım benim için ok değil" dedi ama **hangi alan sorunlu olduğunu detaylandırmadı.** Yeni oturumun ilk işi:
+### Bu oturumda yapılan (commit `a212ca4`)
 
-1. Eray'a "tarayıcıyı aç (`npm run dev` → http://localhost:5173/), hangi ekran/element hâlâ mockup'a uymuyor söyle / işaret koy / screenshot at" diye sor.
-2. Referans: [docs/design/mockup-v3-palette-preview.html](docs/design/mockup-v3-palette-preview.html) — özellikle:
-   - Onboarding ekranı (line ~580-697 "Initialize your project")
-   - Dashboard / Orbit / Active Work card
-   - Header (line ~445-473)
-   - Sidebar / Footer
-3. Bilinen bilinçli sapmalar (dokunmadan önce sor):
-   - **Sidebar:** mockup'ta 40×40 icon-only kompakt nav, branch'te label'lı geniş kolon (HANDOVER tasarım kararı #19 ve sonrası: Workspace/Project/System merged into main sidebar).
-   - **Orbit ekranı:** mockup'ta var, hiç implementlenmedi (scope dışı).
+| Component | v4 farkları | Yapılan |
+|---|---|---|
+| **RootShell layout** | header full-width yatay; sidebar header'ın altında | row-flex → col-flex (router.tsx) |
+| **Sidebar** | aside içindeki 'Kortext v3' logo bloğu yok; 24px icons; tx-disabled dim section title; flex-spacer ile Danger sticky bottom; v4 icon set (sliders/users/shield/git-branch/zap/plug/key/file-text) | Sidebar.tsx yeniden yazıldı |
+| **Header** | active pill yok; Timeline toggle yok; K gradient logo 24×24 (accent→signal); Inbox badge sayı yerine kırmızı nokta + halo; solid amber +p avatar; 320px sabit cmdk-trigger | Header.tsx yeniden yazıldı |
+| **Footer** | 12px font; 3 vertical divider; Lucide Zap/GitBranch SVG (⚡/⎇ değil); accent-soft workflow ID; pulse yok | Footer.tsx yeniden yazıldı |
+| **Dashboard route** | 2-kolon (main + inline TimelineSidebar 340px); btn-ghost Timeline + btn-outline Refresh; healthy/wf/personas chip yok; APPROVALS card right column'dan kalktı | dashboard.tsx yeniden yazıldı |
+| **RunsTable** | avatar circle yok; rainbow persona handle text (v4 .actor-* paletine); tek 'Active work' section (Recent yok); dot states + queued/blocked tail labels | RunsTable.tsx yeniden yazıldı |
+| **persona-colors** | 15 handle v4 actor-bd/qa/ds/fd/se/da hex değerlerine (Tailwind 400 range; branch 500 range'den) | persona-colors.ts güncellendi |
+| **TimelineSidebar** | yeni inline 340px sağ kolon; filter + search; event dots; persona-routed colour | TimelineSidebar.tsx (new) |
+| **index.css** | .btn-outline class (transparent bg + white/8% border) | eklendi |
 
-### 2. İterasyon döngüsü
+**Doğrulama:**
+- 274/274 test ✅, typecheck 0, lint 0
+- Eray Sidebar / Header / Footer / Dashboard adımlarını teker teker onayladı (her birinde "tamam, sonrakine geç" dedi)
 
-Her tweak için:
-1. Mockup'taki ilgili kısmı oku → diff'i bul
-2. Component'ı güncelle (`src/components/*` + `src/index.css`)
-3. Vite HMR ile preview screenshot al
-4. Eray'a göster → onay/reddet
-5. Bu branch'e ek commit (`fix(v3): dashboard polish — <component>`); push
-6. 274/274 testleri bozma (özellikle `routes.test.ts` + `blueprint-route.test.ts`)
+### Yeni oturumun ilk işi: kalan ekranları v4'e indirgemek
 
-### 3. Onay sonrası → release flow
+> **PR açma, version bump, release flow yok.** İterasyon hâlâ sürüyor.
 
-Eray görsel olarak onayladığında bir önceki handover'da yazılı 3-adım release flow'una geç:
+Sırasıyla yapılacaklar (her biri muhtemelen ~30-60 dk):
+
+1. **Board route** — v4 kanban: Epic kolonu (4 epic progress card), 4 status kolon (To do / In progress / Review / Done), filter selectleri (Epic / Agent / Status), "Filter" + "New task" (primary) butonları, color-coded type-mark badge'leri. Branch şu an 6 kolon (To do/In progress/Blocked/Review/Done/Cancelled), epic'siz, filter'sız.
+2. **Memory / Reports / References** — muhtemelen markdown viewer; v4'te belirli layout var (route-header pattern, filter, list+detail), branch sade. Birer hafif iterasyon.
+3. **Settings sub-panes (8)** — Project settings / Agents / Rules / Workflows / Hooks / Integrations / Environment / Danger zone. Her birinin v4 layout'u ayrı. Agents özellikle persona library + profile drawer (Faz 6'da inline editor kuruldu).
+4. **Onboarding ekranı** — branch /onboarding zaten 'Initialize your project' formuna sahip ama v4'le tam karşılaştırma yapılmadı. Form alanları/kopyaları v4'le eşleşmeli.
+
+### İterasyon döngüsü (her component için)
+
+1. v4 HTML/computed CSS'i preview_eval ile extract et
+2. Branch component'ı yeniden yaz
+3. typecheck + (gerekirse) test
+4. preview screenshot → Eray'a göster
+5. onay → bir sonraki component'a geç
+6. Bir yığın bitince commit (`fix(v3): align <area> to wireframe-v4-final`)
+
+### Onay sonrası → release flow
+
+Tüm v4 alignment tamamlandığında:
 - `gh pr create` (PR aç)
 - merge → main
 - `package.json` 3.0.0 → 3.1.0 + CHANGELOG [3.1.0] section + tag `v3.1.0` push → npm-publish.yml tetiklenir
 - Pre-publish lokal tgz UAT: `npm pack` + Eray makinesinde `npm install -g ./kortext-3.1.0.tgz`
 
-### 4. Olası tasarım iterasyon kalemleri (Eray spesifik söyleyene kadar tahmin)
+### Bilinçli sapmalar (Eray hâlâ kabul ediyor)
 
-Branch'te şu an şöyle:
-- ✅ Header K logo + project name + v3.1.0 badge + ⌘K search bar + 1 active pill + terminal/inbox/+p avatar
-- ✅ Dashboard subtitle workflow durumu (`04-development-cycle · run #2 · awaiting_approval`)
-- ✅ Active Work card PERSONA/TASK/STEP/ELAPSED + persona avatarları
-- ✅ Approvals filter chips + GATE badge + Approve/Reject
-- ✅ Timeline drawer event-kind filter + search
-- ✅ Terminal panel `kortext@<code>` floating minimize/expand
-- ✅ Footer dinamik proje + renkli chip'ler
+(Şimdilik yok — v4'e birebir uyma kararı sonrasında tüm sapmalar yeniden ele alınacak.)
 
-Mockup'la potansiyel sapmalar (Eray'ın bahsetmiş olabilecekleri):
-- Active Work card'daki step indicator boş (mockup'ta "2/5", "3/", "5" gibi sayılar var) — bu /api/runs/:id'den step bilgisi alarak doldurulabilir
-- Approvals card mockup'ta drawer-tipi expanded form gösteriyor; branch'te tek sayfa card
-- Header'daki "active" pill mockup'ta "6/14 active" (running/total) formatında; branch'te sadece "N active"
-- Persona renkleri runs satırlarında: mockup persona ismini bold + renkli gösteriyor, branch aynı ama hover effect zayıf olabilir
-- Sidebar (bilinçli sapma — Eray onaylamak/yeniden açmak isteyebilir)
-
-### 5. v3.1.x küçük borç / nice-to-have (release sonrası)
+### v3.1.x küçük borç / nice-to-have (release sonrası)
 
 - `app.listen` error handler — EADDRINUSE sessiz fail (HANDOVER #51, Faz 10 borcu).
 - Onboarding'de executor seçimi (project.json'a `executor: mock|claude|codex|gemini`); şu an mock sabit kodlu (`server/index.ts`).
-- Orbit ekranı (mockup'ta var, hâlâ implementlenmedi).
+- TimelinePanel.tsx (drawer overlay) artık unused — Header'dan toggle kaldırıldı; ya kaldırılsın ya da yeni bir entry point eklensin (v3.2'de).
 
 ---
 
