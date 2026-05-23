@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { GitBranch, Zap } from 'lucide-react';
 import { apiGet } from '../lib/api.ts';
 import type { BlueprintStatusResponse, Run } from '../lib/api-types.ts';
 
@@ -55,49 +56,73 @@ function useProjectName(): string {
   return name;
 }
 
+function Divider() {
+  return (
+    <div
+      className="w-px h-3"
+      style={{ background: 'rgba(255, 255, 255, 0.08)' }}
+    />
+  );
+}
+
 export function Footer() {
   const { active, idle, blocked } = useCounts();
   const projectName = useProjectName();
   return (
     <footer
-      className="border-t flex items-center gap-4 px-4 text-[11px]"
+      className="flex items-center gap-[14px] border-t px-4 text-[12px] text-tx-3"
       style={{
         height: 'var(--footer-h)',
         background: 'var(--bg-0)',
-        borderColor: 'var(--border-subtle)',
-        color: 'var(--tx-3)',
+        borderTopColor: 'rgba(255, 255, 255, 0.08)',
       }}
     >
       <span className="flex items-center gap-1.5">
-        <span className="dot dot-accent" />
-        <span className="text-tx-2">{projectName}</span>
+        <span className="dot dot-success" />
+        <span className="text-tx-1">{projectName}</span>
+      </span>
+
+      <Divider />
+
+      <span className="flex items-center gap-1.5">
+        <span className="dot dot-success" />
+        <span className="mono">{active}</span> active
       </span>
       <span className="flex items-center gap-1.5">
-        <span className="dot dot-success dot-pulse" />
-        <span className="text-tx-2">
-          <span className="mono">{active}</span> active
-        </span>
-      </span>
-      <span className="flex items-center gap-1.5">
-        <span className="dot dot-muted" />
-        <span>
-          <span className="mono">{idle}</span> idle
-        </span>
+        <span className="dot dot-warning" />
+        <span className="mono">{idle}</span> idle
       </span>
       <span className="flex items-center gap-1.5">
         <span className="dot dot-danger" />
-        <span>
-          <span className="mono">{blocked}</span> blocked
+        <span className="mono">{blocked}</span> blocked
+      </span>
+
+      <Divider />
+
+      <span className="flex items-center gap-1.5">
+        <Zap size={12} />
+        <span className="mono">~1.2K</span> tkn/s
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="mono">$4.30</span> today
+      </span>
+
+      <Divider />
+
+      <span className="flex items-center gap-1.5">
+        <GitBranch size={12} />
+        <span className="mono">feature/auth-42</span>
+      </span>
+
+      <div className="flex-1" />
+
+      <span className="flex items-center gap-1.5">
+        <span>workflow:</span>
+        <span className="mono" style={{ color: 'var(--accent-soft)' }}>
+          04-development
         </span>
+        <span className="mono">4/7</span>
       </span>
-      <span className="ml-auto mono" style={{ color: 'var(--accent-soft)' }}>
-        ⚡ ~1.2K tkn/s
-      </span>
-      <span className="mono" style={{ color: 'var(--success)' }}>
-        $4.30 today
-      </span>
-      <span className="mono text-tx-3">⎇ feature/auth-42</span>
-      <span className="mono text-tx-3">workflow: 04-development 4/7</span>
     </footer>
   );
 }

@@ -1,15 +1,12 @@
 import { usePolling, formatElapsed } from '../lib/api.ts';
 import type { Run } from '../lib/api-types.ts';
-import { personaPalette } from '../lib/persona-colors.ts';
+import { personaColor } from '../lib/persona-colors.ts';
 import { primaryPersonaFor } from '../lib/workflow-primary-persona.ts';
 
 const ACTIVE: Run['status'][] = ['queued', 'running', 'awaiting_approval'];
 
 export function RunsTable() {
-  const { data, error, loading } = usePolling<{ runs: Run[] }>(
-    '/api/runs',
-    3000,
-  );
+  const { data, error, loading } = usePolling<{ runs: Run[] }>('/api/runs', 3000);
 
   if (loading && !data) {
     return <Skeleton label="loading runs…" />;
@@ -19,165 +16,122 @@ export function RunsTable() {
   }
   const runs = data?.runs ?? [];
   const active = runs.filter((r) => ACTIVE.includes(r.status));
-  const recent = runs
-    .filter((r) => !ACTIVE.includes(r.status))
-    .slice(0, 5);
 
   return (
-    <div
-      className="rounded-lg border border-border-subtle"
-      style={{ background: 'var(--bg-1)' }}
-    >
-      <Section
-        title="Active work"
-        sub={
-          active.length === 0
-            ? 'No agents running'
-            : `${active.length} agent${active.length === 1 ? '' : 's'} currently running tasks`
-        }
-      />
+    <section className="mb-7">
+      <h2 className="text-[14px] font-semibold text-tx-1 mb-0.5">Active work</h2>
+      <p className="text-[12px] text-tx-3 mb-3.5">
+        {active.length === 0
+          ? 'No agents running'
+          : `${active.length} agent${active.length === 1 ? '' : 's'} currently running tasks`}
+      </p>
+
       {active.length === 0 ? (
         <EmptyRow text="No active runs. Start one with " code="kortext start <workflow-id>" />
       ) : (
-        <>
-          <ColumnHeader />
-          <ul>
-            {active.map((r) => (
-              <RunRow key={r.id} run={r} />
-            ))}
-          </ul>
-        </>
+        <div>
+          <RowHeader />
+          {active.map((r) => (
+            <RunRow key={r.id} run={r} />
+          ))}
+        </div>
       )}
-
-      {recent.length > 0 && (
-        <>
-          <Section
-            title="Recent"
-            sub={`${recent.length} of ${runs.length - active.length} finished`}
-          />
-          <ColumnHeader />
-          <ul>
-            {recent.map((r) => (
-              <RunRow key={r.id} run={r} />
-            ))}
-          </ul>
-        </>
-      )}
-    </div>
+    </section>
   );
 }
 
-function ColumnHeader() {
+function RowHeader() {
   return (
     <div
-      className="grid items-center gap-3 px-4 py-2 border-b text-[10px] uppercase tracking-[0.10em] text-tx-3"
+      className="grid items-center gap-3 px-4 py-[9px] text-[10px] font-semibold uppercase tracking-[0.08em] text-tx-3 border-b"
       style={{
-        gridTemplateColumns: '32px 180px 1fr 60px 90px',
-        borderColor: 'var(--border-subtle)',
+        gridTemplateColumns: '18px 1fr 60px 70px',
+        borderColor: 'rgba(255, 255, 255, 0.08)',
       }}
     >
       <span />
-      <span>Persona</span>
-      <span>Task</span>
-      <span className="text-right">Step</span>
-      <span className="text-right">Elapsed</span>
+      <span>Persona · Task</span>
+      <span>Step</span>
+      <span>Elapsed</span>
     </div>
   );
 }
 
 function RunRow({ run }: { run: Run }) {
   const persona = primaryPersonaFor(run.workflow_id);
-  const palette = personaPalette(persona);
+  const color = personaColor(persona);
   const elapsedFrom = run.started_at ?? run.created_at;
-  const taskLabel = run.item_id
-    ? `${run.workflow_id} · ${run.item_id}`
-    : run.workflow_id;
-  return (
-    <li
-      className="grid items-center gap-3 px-4 py-3 border-b hover:bg-bg-2 transition-colors duration-200"
-      style={{
-        gridTemplateColumns: '32px 180px 1fr 60px 90px',
-        borderColor: 'var(--border-subtle)',
-      }}
-    >
-      <Avatar palette={palette} />
-      <div className="flex items-center gap-2 min-w-0">
-        <span
-          className="mono text-[12px] font-medium truncate"
-          style={{ color: palette.color }}
-        >
-          {persona.replace(/^\+/, '+')}
-        </span>
-      </div>
-      <span className="text-[13px] text-tx-2 truncate">
-        <span className="mono">#{run.id}</span>
-        <span className="text-tx-disabled mx-2">·</span>
-        <span className="mono text-tx-3">{taskLabel}</span>
-      </span>
-      <span className="mono text-[11px] text-tx-3 text-right">
-        {run.status === 'running' ? '…' : statusGlyph(run.status)}
-      </span>
-      <span className="mono text-[11px] text-tx-3 text-right">
-        {formatElapsed(elapsedFrom)}
-      </span>
-    </li>
-  );
-}
-
-function Avatar({ palette }: { palette: { color: string; initials: string } }) {
+  const dot = dotForStatus(run.status);
+  const stepLabel = run.status === 'queued' || run.status === 'awaiting_approval' ? '–' : '–';
+  const tail = tailForStatus(run.status);
   return (
     <div
-      className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold mono flex-shrink-0"
+      className="grid items-center gap-3 px-4 py-3 text-[13px] cursor-pointer border-b hover:bg-bg-1 transition-colors"
       style={{
-        background: palette.color,
-        color: needsDarkText(palette.color) ? '#0A0814' : '#fff',
+        gridTemplateColumns: '18px 1fr 60px 70px',
+        borderColor: 'rgba(255, 255, 255, 0.08)',
       }}
     >
-      {palette.initials}
+      <span className={`dot ${dot}`} />
+      <div className="min-w-0 truncate">
+        <span className="mono" style={{ color }}>
+          {persona}
+        </span>{' '}
+        <span className="text-tx-3">{describeRun(run)}</span>{' '}
+        {run.item_id ? (
+          <span className="mono text-[12px] text-tx-3">{run.item_id}</span>
+        ) : null}
+      </div>
+      <span className="mono text-[12px] text-tx-2">{stepLabel}</span>
+      {tail ? (
+        <span
+          className="text-[12px]"
+          style={{ color: tail.color }}
+        >
+          {tail.text}
+        </span>
+      ) : (
+        <span className="mono text-[12px] text-tx-3">{formatElapsed(elapsedFrom)}</span>
+      )}
     </div>
   );
 }
 
-function needsDarkText(hex: string): boolean {
-  // Pick dark text for light / mid-tone backgrounds (cyan, teal, yellow,
-  // amber). Quick luma estimate; not perceptually perfect but matches the
-  // mockup picks where dark text reads cleanly on warmer hues.
-  const v = hex.replace('#', '');
-  if (v.length !== 6) return false;
-  const r = parseInt(v.slice(0, 2), 16);
-  const g = parseInt(v.slice(2, 4), 16);
-  const b = parseInt(v.slice(4, 6), 16);
-  const luma = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luma > 0.55;
-}
-
-function statusGlyph(status: Run['status']): string {
+function dotForStatus(status: Run['status']): string {
   switch (status) {
-    case 'succeeded':
-      return '✓';
-    case 'failed':
-      return '✗';
-    case 'cancelled':
-      return '—';
-    case 'awaiting_approval':
-      return 'gate';
+    case 'running':
+      return 'dot-success';
     case 'queued':
-      return 'queue';
+      return 'dot-warning';
+    case 'awaiting_approval':
+      return 'dot-danger';
     default:
-      return '—';
+      return 'dot-muted';
   }
 }
 
-function Section({ title, sub }: { title: string; sub: string }) {
-  return (
-    <div
-      className="px-4 py-2.5 border-b"
-      style={{ borderColor: 'var(--border-subtle)' }}
-    >
-      <div className="text-[10px] uppercase tracking-[0.10em] text-tx-3">{title}</div>
-      <div className="text-[12px] text-tx-2 mt-0.5">{sub}</div>
-    </div>
-  );
+function describeRun(run: Run): string {
+  switch (run.status) {
+    case 'running':
+      return `running ${run.workflow_id}`;
+    case 'queued':
+      return `queued for ${run.workflow_id}`;
+    case 'awaiting_approval':
+      return `awaiting approval — ${run.workflow_id}`;
+    default:
+      return run.workflow_id;
+  }
+}
+
+function tailForStatus(status: Run['status']): { text: string; color: string } | null {
+  switch (status) {
+    case 'queued':
+      return { text: 'queued', color: 'var(--warning)' };
+    case 'awaiting_approval':
+      return { text: 'blocked', color: 'var(--danger)' };
+    default:
+      return null;
+  }
 }
 
 function EmptyRow({ text, code }: { text: string; code?: string }) {
@@ -191,10 +145,7 @@ function EmptyRow({ text, code }: { text: string; code?: string }) {
 
 function Skeleton({ label, tone }: { label: string; tone?: 'danger' }) {
   return (
-    <div
-      className="rounded-lg border px-4 py-6 text-[12px]"
-      style={{ borderColor: 'var(--border-subtle)', background: 'var(--bg-1)' }}
-    >
+    <div className="px-4 py-6 text-[12px]">
       <span className={tone === 'danger' ? 'text-danger' : 'text-tx-3'}>{label}</span>
     </div>
   );
