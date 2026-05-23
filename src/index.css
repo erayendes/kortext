@@ -178,6 +178,16 @@ body {
   background: var(--bg-2);
   color: var(--tx-1);
 }
+.btn-outline {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--tx-2);
+}
+.btn-outline:hover {
+  background: var(--bg-2);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: var(--tx-1);
+}
 .btn-xs {
   padding: 4px 8px;
   font-size: 11px;

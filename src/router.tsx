@@ -79,15 +79,15 @@ function RootShell() {
   return (
     <ShellProvider>
       <PendingQuestionsProvider>
-        <div className="flex h-screen w-screen overflow-hidden bg-bg-0 text-tx-1">
-          <Sidebar />
-          <div className="flex-1 flex flex-col min-w-0">
-            <Header />
-            <main className="flex-1 overflow-y-auto bg-bg-0">
+        <div className="flex flex-col h-screen w-screen overflow-hidden bg-bg-0 text-tx-1">
+          <Header />
+          <div className="flex-1 flex min-h-0">
+            <Sidebar />
+            <main className="flex-1 overflow-y-auto bg-bg-0 min-w-0">
               <Outlet />
             </main>
-            <Footer />
           </div>
+          <Footer />
           <TerminalPanel />
           <TimelinePanel />
           <Toasts />

@@ -1,10 +1,8 @@
 /**
- * Persona-routed colour palette — mirrored from the v3 mockup.
- *
- * Each persona handle (`+backend-developer`, `+qa-engineer`, etc.) maps to a
- * fixed hex value so the dashboard, timeline, and approvals all show the same
- * colour for the same persona. `initials` is the 2-character mono badge used
- * in avatar circles ("BD", "QA", "EM"…).
+ * Persona-routed colour palette — mirrored from wireframe-v4-final.html's
+ * `.actor-*` stylesheet. Each persona handle (`+backend-developer`,
+ * `+qa-engineer`, etc.) maps to a fixed hex value so the dashboard,
+ * timeline, and approvals all show the same colour for the same persona.
  *
  * Unknown personas fall back to neutral gray.
  */
@@ -16,20 +14,20 @@ export type PersonaPalette = {
 
 const PALETTE: Record<string, PersonaPalette> = {
   '+prime': { color: '#F59E0B', initials: '+p' },
-  '+operation-manager': { color: '#06B6D4', initials: 'OM' },
-  '+product-manager': { color: '#3B82F6', initials: 'PM' },
-  '+engineering-manager': { color: '#8B5CF6', initials: 'EM' },
-  '+delivery-manager': { color: '#F97316', initials: 'DM' },
-  '+backend-developer': { color: '#6366F1', initials: 'BD' },
-  '+frontend-developer': { color: '#EC4899', initials: 'FD' },
-  '+db-admin': { color: '#14B8A6', initials: 'DA' },
-  '+qa-engineer': { color: '#EAB308', initials: 'QA' },
-  '+security-engineer': { color: '#EF4444', initials: 'SE' },
-  '+devops-engineer': { color: '#A855F7', initials: 'DO' },
-  '+designer': { color: '#22D3EE', initials: 'DS' },
-  '+copywriter': { color: '#FBBF24', initials: 'CW' },
-  '+growth-expert': { color: '#10B981', initials: 'GE' },
-  '+compliance-expert': { color: '#84CC16', initials: 'CE' },
+  '+operation-manager': { color: '#67E8F9', initials: 'OM' },
+  '+product-manager': { color: '#60A5FA', initials: 'PM' },
+  '+engineering-manager': { color: '#C084FC', initials: 'EM' },
+  '+delivery-manager': { color: '#FB923C', initials: 'DM' },
+  '+backend-developer': { color: '#818CF8', initials: 'BD' },
+  '+frontend-developer': { color: '#F472B6', initials: 'FD' },
+  '+db-admin': { color: '#2DD4BF', initials: 'DA' },
+  '+qa-engineer': { color: '#FACC15', initials: 'QA' },
+  '+security-engineer': { color: '#DC2626', initials: 'SE' },
+  '+devops-engineer': { color: '#F87171', initials: 'DE' },
+  '+designer': { color: '#34D399', initials: 'DS' },
+  '+copywriter': { color: '#A3E635', initials: 'CW' },
+  '+growth-expert': { color: '#FB7185', initials: 'GE' },
+  '+compliance-expert': { color: '#22D3EE', initials: 'CE' },
 };
 
 const FALLBACK: PersonaPalette = { color: '#6B6577', initials: '??' };
