@@ -234,8 +234,13 @@ describe('GET /api/docs/:scope', () => {
   it('lists only .md files in the scope', async () => {
     const res = await fetch(`${baseUrl}/api/docs/refs`);
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { files: string[] };
-    expect(body.files).toEqual(['blueprint.md']);
+    const body = (await res.json()) as {
+      files: { name: string; size: number; mtime: number }[];
+    };
+    expect(body.files).toHaveLength(1);
+    expect(body.files[0]?.name).toBe('blueprint.md');
+    expect(body.files[0]?.size).toBeGreaterThan(0);
+    expect(body.files[0]?.mtime).toBeGreaterThan(0);
   });
 
   it('returns 404 for unknown scope', async () => {

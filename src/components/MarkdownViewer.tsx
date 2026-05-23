@@ -23,11 +23,11 @@ marked.setOptions({ gfm: true, breaks: false });
  * agent writing raw HTML into a report) cannot script the dashboard.
  */
 export function MarkdownViewer({ scope, subtitle }: Props) {
-  const { data, error } = usePolling<{ files: string[] }>(
+  const { data, error } = usePolling<{ files: { name: string }[] }>(
     `/api/docs/${scope}`,
     15_000,
   );
-  const files = data?.files ?? [];
+  const files = useMemo(() => (data?.files ?? []).map((f) => f.name), [data]);
   const [selected, setSelected] = useState<string | null>(null);
 
   useEffect(() => {
@@ -80,7 +80,7 @@ export function MarkdownViewer({ scope, subtitle }: Props) {
   );
 }
 
-function DocBody({ scope, file }: { scope: Scope; file: string }) {
+export function DocBody({ scope, file }: { scope: Scope; file: string }) {
   const [body, setBody] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 

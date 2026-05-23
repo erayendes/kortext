@@ -25,6 +25,7 @@ export const BacklogStatusSchema = z.enum([
   'to_do',
   'in_progress',
   'blocked',
+  'test',
   'review',
   'done',
   'cancelled',
