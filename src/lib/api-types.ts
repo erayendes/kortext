@@ -61,6 +61,20 @@ export type PendingQuestion = {
   created_at: number;
 };
 
+export type DecisionStatus = 'proposed' | 'accepted' | 'superseded' | 'rejected';
+
+export type DecisionIndex = {
+  id: number;
+  decision_id: string;
+  title: string;
+  status: DecisionStatus;
+  markdown_path: string;
+  item_id: string | null;
+  tags: string[];
+  created_at: number;
+  decided_at: number | null;
+};
+
 export type Handover = {
   id: number;
   item_id: string | null;
@@ -76,7 +90,14 @@ export type BacklogItem = {
   id: string;
   type: 'epic' | 'task' | 'bug' | 'debt' | 'spike' | 'hotfix';
   title: string;
-  status: 'to_do' | 'in_progress' | 'blocked' | 'review' | 'done' | 'cancelled';
+  status:
+    | 'to_do'
+    | 'in_progress'
+    | 'blocked'
+    | 'test'
+    | 'review'
+    | 'done'
+    | 'cancelled';
   owner: string | null;
   parent_id: string | null;
   version: string | null;

@@ -1,4 +1,4 @@
-import { readFile, readdir } from 'node:fs/promises';
+import { readFile, readdir, stat } from 'node:fs/promises';
 import { resolve, sep } from 'node:path';
 import { Router } from 'express';
 
@@ -31,10 +31,20 @@ export function docsRouter(deps: DocsRouterDeps): Router {
     }
     try {
       const entries = await readdir(root, { withFileTypes: true });
-      const files = entries
+      const names = entries
         .filter((e) => e.isFile() && FILE_RE.test(e.name))
         .map((e) => e.name)
         .sort();
+      const files = await Promise.all(
+        names.map(async (name) => {
+          try {
+            const s = await stat(resolve(root, name));
+            return { name, size: s.size, mtime: s.mtimeMs };
+          } catch {
+            return { name, size: 0, mtime: 0 };
+          }
+        }),
+      );
       res.json({ scope, files });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
