@@ -1,7 +1,9 @@
 # Kortext v3 — Yeni Oturum Handover
 
 > Bu dosya yeni Claude Code oturumunun bootstrap pusulasıdır.
-> Açar açmaz şunu yaz: **"HANDOVER-v3.md'yi oku, feat/v3.1-onboarding-and-dashboard-polish branch'inden devam — PR + v3.1.0 release"**
+> Açar açmaz şunu yaz: **"HANDOVER-v3.md'yi oku, feat/v3.1-onboarding-and-dashboard-polish branch'inde dashboard tasarım iterasyonu — Eray onayı bekleniyor"**
+
+> ⚠️ **Tasarım hâlâ onaylanmadı.** Branch'teki onboarding + dashboard polish testten geçiyor (274/274) ama Eray görsel olarak mockup'a yeterince yakın bulmadı (oturum kapanışında: "mevcut branch'teki tasarım benim için ok değil"). Hangi alanların sapma içerdiği belirsiz — yeni oturumun ilk işi Eray'a sormak/screenshot karşılaştırması yapmak. **PR açma, release prep'e geçme** — önce iterasyon.
 
 **Tarih:** 2026-05-23 (akşam)
 **Yazan oturum:** Faz 11 — onboarding wizard + dashboard mockup polish (v3.1.0 hazırlığı)
@@ -297,71 +299,65 @@ Concurrency: `cancel-in-progress: true` aynı ref için superseded run'ları ipt
 - Build: temiz (dist/web 416KB JS / 29KB CSS)
 - End-to-end manuel: Eray "DENEME" projesi ile Helsinki blueprint yükledi → blueprint.md + project.json yazıldı → run #6 (`01a-analysis-pipeline`, mock, succeeded) dashboard'da görüldü.
 
-## Sırada: PR + v3.1.0 release
+## Sırada: Dashboard tasarım iterasyonu (Eray onayı bekleniyor)
 
-Yeni oturumun yapması gerekenler — yukarıdaki branch'ten devam:
+> **Önemli:** PR açma, version bump, release flow'una geçme. Önce görsel onay.
 
-### 1. PR aç + main'e merge
+### 1. İlk adım — Eray'a sor
 
-```bash
-git checkout feat/v3.1-onboarding-and-dashboard-polish
-git pull
-gh pr create --title "feat(v3): onboarding wizard + dashboard polish (v3.1.0)" \
-  --body "$(cat <<'BODY'
-## Summary
-- Onboarding wizard replaces terminal blueprint edit; backend writes blueprint.md + project.json + fires analysis pipeline
-- kortext init preflight (node/git/CLI checks); kortext serve auto-opens browser
-- Dashboard mockup-fidelity polish: header, subtitle, active-work table, approvals filter chips, timeline drawer, floating terminal, colored footer
+Eray oturum kapanışında "mevcut branch'teki tasarım benim için ok değil" dedi ama **hangi alan sorunlu olduğunu detaylandırmadı.** Yeni oturumun ilk işi:
 
-## Test plan
-- [x] 274/274 tests
-- [x] lint 0 errors, typecheck clean, build clean
-- [x] manual UAT: form submit → blueprint.md + project.json + run #6 mock-executed
-- [ ] reviewer skim: docs/superpowers/specs/2026-05-22-onboarding-wizard-design.md
+1. Eray'a "tarayıcıyı aç (`npm run dev` → http://localhost:5173/), hangi ekran/element hâlâ mockup'a uymuyor söyle / işaret koy / screenshot at" diye sor.
+2. Referans: [docs/design/mockup-v3-palette-preview.html](docs/design/mockup-v3-palette-preview.html) — özellikle:
+   - Onboarding ekranı (line ~580-697 "Initialize your project")
+   - Dashboard / Orbit / Active Work card
+   - Header (line ~445-473)
+   - Sidebar / Footer
+3. Bilinen bilinçli sapmalar (dokunmadan önce sor):
+   - **Sidebar:** mockup'ta 40×40 icon-only kompakt nav, branch'te label'lı geniş kolon (HANDOVER tasarım kararı #19 ve sonrası: Workspace/Project/System merged into main sidebar).
+   - **Orbit ekranı:** mockup'ta var, hiç implementlenmedi (scope dışı).
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-BODY
-)"
-# Onaydan sonra: gh pr merge --squash  (veya merge commit; preferred main history style)
-```
+### 2. İterasyon döngüsü
 
-### 2. Version bump + CHANGELOG + tag + npm publish
+Her tweak için:
+1. Mockup'taki ilgili kısmı oku → diff'i bul
+2. Component'ı güncelle (`src/components/*` + `src/index.css`)
+3. Vite HMR ile preview screenshot al
+4. Eray'a göster → onay/reddet
+5. Bu branch'e ek commit (`fix(v3): dashboard polish — <component>`); push
+6. 274/274 testleri bozma (özellikle `routes.test.ts` + `blueprint-route.test.ts`)
 
-```bash
-git checkout main && git pull
-# package.json: "version": "3.0.0" → "3.1.0"
-# CHANGELOG.md: yeni [3.1.0] section (Onboarding wizard / CLI preflight + auto-open / Dashboard polish)
-npm run lint && npm run typecheck && npm test && npm run build
-node dist/bin/kortext.js --version  # → 3.1.0
+### 3. Onay sonrası → release flow
 
-git add package.json CHANGELOG.md
-git commit -m "chore(v3): release 3.1.0"
-git push
-git tag v3.1.0
-git push origin v3.1.0     # → npm-publish.yml tetikler
+Eray görsel olarak onayladığında bir önceki handover'da yazılı 3-adım release flow'una geç:
+- `gh pr create` (PR aç)
+- merge → main
+- `package.json` 3.0.0 → 3.1.0 + CHANGELOG [3.1.0] section + tag `v3.1.0` push → npm-publish.yml tetiklenir
+- Pre-publish lokal tgz UAT: `npm pack` + Eray makinesinde `npm install -g ./kortext-3.1.0.tgz`
 
-# Yayın sonrası npm doğrula
-npm view kortext version  # → 3.1.0
-```
+### 4. Olası tasarım iterasyon kalemleri (Eray spesifik söyleyene kadar tahmin)
 
-NPM_TOKEN secret zaten `erayendes/kortext`'te kurulu. Publish workflow lint+typecheck+test+build+smoke gate'ini publish'ten önce tekrar koşar (decision #46).
+Branch'te şu an şöyle:
+- ✅ Header K logo + project name + v3.1.0 badge + ⌘K search bar + 1 active pill + terminal/inbox/+p avatar
+- ✅ Dashboard subtitle workflow durumu (`04-development-cycle · run #2 · awaiting_approval`)
+- ✅ Active Work card PERSONA/TASK/STEP/ELAPSED + persona avatarları
+- ✅ Approvals filter chips + GATE badge + Approve/Reject
+- ✅ Timeline drawer event-kind filter + search
+- ✅ Terminal panel `kortext@<code>` floating minimize/expand
+- ✅ Footer dinamik proje + renkli chip'ler
 
-### 3. UAT lokal tgz (opsiyonel pre-publish)
+Mockup'la potansiyel sapmalar (Eray'ın bahsetmiş olabilecekleri):
+- Active Work card'daki step indicator boş (mockup'ta "2/5", "3/", "5" gibi sayılar var) — bu /api/runs/:id'den step bilgisi alarak doldurulabilir
+- Approvals card mockup'ta drawer-tipi expanded form gösteriyor; branch'te tek sayfa card
+- Header'daki "active" pill mockup'ta "6/14 active" (running/total) formatında; branch'te sadece "N active"
+- Persona renkleri runs satırlarında: mockup persona ismini bold + renkli gösteriyor, branch aynı ama hover effect zayıf olabilir
+- Sidebar (bilinçli sapma — Eray onaylamak/yeniden açmak isteyebilir)
 
-```bash
-npm pack
-# Eray makinesinde: npm uninstall -g kortext && npm install -g ./kortext-3.1.0.tgz
-# kortext init     (preflight + scaffold)
-# kortext serve    (tarayıcı otomatik açılır → onboarding ekranı)
-# Form doldur → submit → dashboard'da run görünmeli
-```
-
-### 4. v3.1.x küçük borç / nice-to-have (opsiyonel)
+### 5. v3.1.x küçük borç / nice-to-have (release sonrası)
 
 - `app.listen` error handler — EADDRINUSE sessiz fail (HANDOVER #51, Faz 10 borcu).
 - Onboarding'de executor seçimi (project.json'a `executor: mock|claude|codex|gemini`); şu an mock sabit kodlu (`server/index.ts`).
 - Orbit ekranı (mockup'ta var, hâlâ implementlenmedi).
-- Sidebar kompakt mod (mockup'taki 40×40 icon-only nav; şu an label'lı geniş kolon — bilinçli sapma).
 
 ---
 
