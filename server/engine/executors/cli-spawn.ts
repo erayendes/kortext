@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
-import { createWriteStream } from 'node:fs';
+import { createWriteStream, mkdirSync } from 'node:fs';
 import type { WriteStream } from 'node:fs';
+import { dirname } from 'node:path';
 
 /**
  * Low-level helper used by every CLI executor.
@@ -65,6 +66,11 @@ export async function spawnCli(opts: SpawnCliOptions): Promise<SpawnCliResult> {
     shell: false,
   });
 
+  // Ensure the log directory exists. Fresh `kortext init` projects don't
+  // have `.kortext/logs/` yet — the first run would crash with ENOENT
+  // (uncaught error event on the WriteStream) before we got the chance to
+  // mark the run as failed.
+  mkdirSync(dirname(opts.logPath), { recursive: true });
   const log: WriteStream = createWriteStream(opts.logPath, { flags: 'a' });
   log.write(
     `\n# kortext cli-executor — ${new Date().toISOString()}\n# binary: ${opts.binary}\n# args: ${JSON.stringify(opts.args)}\n# cwd: ${opts.cwd}\n\n`,

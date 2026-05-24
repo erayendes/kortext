@@ -45,8 +45,10 @@ describe('workflow-parser', () => {
     // Specific anchor: +product-manager step in Product Analysis has 3 inputs and 1 output.
     const pm = wf.steps.find((s) => s.persona === '+product-manager');
     expect(pm).toBeDefined();
-    expect(pm?.outputs).toContain('../workspace/reports/product-requirements.md');
-    expect(pm?.inputs).toContain('../workspace/references/blueprint.md');
+    // Parser strips one leading `../` from each workflow path so they resolve
+    // under the run's cwd (project root / worktree). See normalizeWorkflowPath.
+    expect(pm?.outputs).toContain('workspace/reports/product-requirements.md');
+    expect(pm?.inputs).toContain('workspace/references/blueprint.md');
     expect(pm?.approver).toBe('+prime');
 
     // Gates: at least one approval gate detected (RAPOR HAZIR notes).

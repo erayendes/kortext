@@ -5,12 +5,16 @@ export type BlueprintStatus = 'uninitialized' | 'draft' | 'approved' | 'unknown'
 
 export type ProjectType = 'new' | 'existing';
 
+export type ExecutorChoice = 'mock' | 'claude' | 'antigravity';
+
 export type ProjectMeta = {
   name: string;
   code: string;
   type: ProjectType;
   platforms: string[];
   githubRepo: string | null;
+  executor: ExecutorChoice;
+  executorBinary: string | null;
   createdAt: number;
 };
 
@@ -100,12 +104,19 @@ export function readProjectMeta(projectJsonPath: string): ProjectMeta | null {
       Array.isArray(parsed.platforms) &&
       typeof parsed.createdAt === 'number'
     ) {
+      const exec: ExecutorChoice =
+        parsed.executor === 'claude' || parsed.executor === 'antigravity'
+          ? parsed.executor
+          : 'mock';
       return {
         name: parsed.name,
         code: parsed.code,
         type: parsed.type,
         platforms: parsed.platforms.filter((p): p is string => typeof p === 'string'),
         githubRepo: typeof parsed.githubRepo === 'string' ? parsed.githubRepo : null,
+        executor: exec,
+        executorBinary:
+          typeof parsed.executorBinary === 'string' ? parsed.executorBinary : null,
         createdAt: parsed.createdAt,
       };
     }

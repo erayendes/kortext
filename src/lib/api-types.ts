@@ -159,12 +159,16 @@ export type BlueprintStatus =
 
 export type ProjectType = 'new' | 'existing';
 
+export type ExecutorChoice = 'mock' | 'claude' | 'antigravity';
+
 export type ProjectMeta = {
   name: string;
   code: string;
   type: ProjectType;
   platforms: string[];
   githubRepo: string | null;
+  executor: ExecutorChoice;
+  executorBinary: string | null;
   createdAt: number;
 };
 
@@ -181,6 +185,8 @@ export type BlueprintSubmitInput = {
   platforms: string[];
   blueprintBody: string;
   githubRepo: string | null;
+  executor: ExecutorChoice;
+  executorBinary: string | null;
 };
 
 export type BlueprintSubmitResponse = {

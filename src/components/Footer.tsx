@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { GitBranch, Zap } from 'lucide-react';
 import { apiGet } from '../lib/api.ts';
 import type { BlueprintStatusResponse, Run } from '../lib/api-types.ts';
 
@@ -97,32 +96,7 @@ export function Footer() {
         <span className="mono">{blocked}</span> blocked
       </span>
 
-      <Divider />
-
-      <span className="flex items-center gap-1.5">
-        <Zap size={12} />
-        <span className="mono">~1.2K</span> tkn/s
-      </span>
-      <span className="flex items-center gap-1.5">
-        <span className="mono">$4.30</span> today
-      </span>
-
-      <Divider />
-
-      <span className="flex items-center gap-1.5">
-        <GitBranch size={12} />
-        <span className="mono">feature/auth-42</span>
-      </span>
-
       <div className="flex-1" />
-
-      <span className="flex items-center gap-1.5">
-        <span>workflow:</span>
-        <span className="mono" style={{ color: 'var(--accent-soft)' }}>
-          04-development
-        </span>
-        <span className="mono">4/7</span>
-      </span>
     </footer>
   );
 }

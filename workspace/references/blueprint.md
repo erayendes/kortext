@@ -1,29 +1,32 @@
 ---
 status: uninitialized
 owner: +prime
-last_review: 2026-05-17
+last_review: null
 ---
 
-# Product Roadmap & Vision
+# Project Blueprint
 
-> [!INFO]
-> - status: [draft/approved] | [DD.MM.YY-HH:MM]
-> - author: +prime
+> This file is a placeholder. The Kortext onboarding wizard rewrites it
+> with your project's blueprint when you initialize.
+>
+> If you are seeing this content in the dashboard, the wizard didn't
+> run — delete `.kortext/` and re-run `kortext serve` to trigger
+> onboarding.
 
----
+## Vision
+*(filled by onboarding wizard)*
 
-## Product Vision & Goals
+## Target Users
+*(filled by onboarding wizard)*
 
-- [Ürünün ana amacı ve vizyonu]
+## Core Features (MVP)
+*(filled by onboarding wizard)*
 
-## Target Audience & Personas
+## Out of Scope (v1)
+*(filled by onboarding wizard)*
 
-- [Hangi kullanıcı kitlelerine hitap ediliyor?]
+## Tech Preferences
+*(filled by onboarding wizard)*
 
-## Key Performance Indicators (KPIs)
-
-- [Başarı kriterleri nelerdir?]
-
-## Future Scope & Out of Scope
-
-- [Neler kapsam dışında?]
+## Success Metrics
+*(filled by onboarding wizard)*

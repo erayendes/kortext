@@ -28,6 +28,7 @@ import { apiPost, type ApiPostError } from '../lib/api.ts';
 import type {
   BlueprintSubmitInput,
   BlueprintSubmitResponse,
+  ExecutorChoice,
   ProjectType,
 } from '../lib/api-types.ts';
 
@@ -92,6 +93,8 @@ type FormState = {
   githubRepo: string;
   blueprintFile: File | null;
   blueprintBody: string;
+  executor: ExecutorChoice;
+  executorBinary: string;
 };
 
 const INITIAL_STATE: FormState = {
@@ -102,7 +105,15 @@ const INITIAL_STATE: FormState = {
   githubRepo: '',
   blueprintFile: null,
   blueprintBody: '',
+  executor: 'mock',
+  executorBinary: '',
 };
+
+const EXECUTOR_OPTIONS: { value: ExecutorChoice; label: string; desc: string }[] = [
+  { value: 'mock', label: 'Mock', desc: 'No-op simulator · zero cost, instant' },
+  { value: 'claude', label: 'Claude', desc: 'claude CLI · real Anthropic agents' },
+  { value: 'antigravity', label: 'AGY', desc: 'agy CLI · Google Antigravity' },
+];
 
 const PROJECT_CODE_PATTERN = /^[A-Z0-9]{2,6}$/;
 const GITHUB_PATTERN = /^github\.com\/[\w.-]+\/[\w.-]+$/;
@@ -196,10 +207,24 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
       platforms: state.platforms,
       blueprintBody: state.blueprintBody,
       githubRepo: state.githubRepo.trim().length > 0 ? state.githubRepo.trim() : null,
+      executor: state.executor,
+      executorBinary:
+        state.executorBinary.trim().length > 0 ? state.executorBinary.trim() : null,
     };
     try {
       await apiPost<BlueprintSubmitResponse>('/api/blueprint', payload);
-      onDone?.();
+      // Reset the spinner state before navigating — otherwise on slow systems
+      // the screen flashes "Initializing…" while the guard re-checks status.
+      setSubmitting(false);
+      if (onDone) {
+        onDone();
+      } else {
+        // Direct-URL fallback (/#/onboarding) where the route is mounted
+        // without the RootShell guard's onDone. Force a hard reload so the
+        // guard re-runs and lands us on the dashboard.
+        window.location.hash = '/';
+        window.location.reload();
+      }
     } catch (err) {
       const apiErr = err as ApiPostError;
       if (apiErr && typeof apiErr === 'object' && 'status' in apiErr) {
@@ -405,6 +430,44 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
             )}
           </Field>
 
+          <Field
+            label="AI Executor"
+            hint={
+              state.executor === 'mock'
+                ? 'Mock = simulation only, no real AI calls. Pick Claude or AGY for real autonomous work.'
+                : state.executor === 'claude'
+                ? 'Uses your local `claude` CLI. Make sure you are logged in (claude login).'
+                : 'Uses your local `agy` CLI (Antigravity). Make sure you are logged in (agy install).'
+            }
+          >
+            <div className="flex gap-2 flex-wrap">
+              {EXECUTOR_OPTIONS.map((opt) => (
+                <ExecutorChip
+                  key={opt.value}
+                  label={opt.label}
+                  desc={opt.desc}
+                  active={state.executor === opt.value}
+                  onClick={() => setState((s) => ({ ...s, executor: opt.value }))}
+                />
+              ))}
+            </div>
+            {state.executor !== 'mock' && (
+              <input
+                className="input w-full mono mt-2"
+                style={{ fontSize: 12 }}
+                placeholder={
+                  state.executor === 'claude'
+                    ? 'Optional: binary path (default: claude on PATH)'
+                    : 'Optional: binary path (default: agy on PATH)'
+                }
+                value={state.executorBinary}
+                onChange={(e) =>
+                  setState((s) => ({ ...s, executorBinary: e.target.value }))
+                }
+              />
+            )}
+          </Field>
+
           <Field label="GitHub Repository (optional)" hint="Where agents will commit. Skip for sandbox mode." error={githubError}>
             <div className="relative">
               <GithubMark
@@ -541,6 +604,48 @@ function RadioCard({
         <span className="text-[13px] font-medium text-tx-1">{title}</span>
       </div>
       <div className="text-[11px] text-tx-3" style={{ paddingLeft: '22px' }}>
+        {desc}
+      </div>
+    </button>
+  );
+}
+
+function ExecutorChip({
+  label,
+  desc,
+  active,
+  onClick,
+}: {
+  label: string;
+  desc: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex-1 min-w-[140px] text-left px-3 py-2.5 rounded-md transition-all"
+      style={{
+        background: 'var(--bg-2)',
+        border: active
+          ? '1px solid var(--accent)'
+          : '1px solid var(--border-default)',
+      }}
+    >
+      <div className="flex items-center gap-2 mb-0.5">
+        <span
+          className="inline-block w-2.5 h-2.5 rounded-sm flex-shrink-0"
+          style={{
+            background: active ? 'var(--accent)' : 'transparent',
+            border: active
+              ? '1px solid var(--accent)'
+              : '1px solid var(--border-default)',
+          }}
+        />
+        <span className="text-[13px] font-medium text-tx-1">{label}</span>
+      </div>
+      <div className="text-[11px] text-tx-3" style={{ paddingLeft: '18px' }}>
         {desc}
       </div>
     </button>

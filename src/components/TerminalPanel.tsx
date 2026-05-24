@@ -68,10 +68,10 @@ export function TerminalPanel() {
     <div
       className="fixed z-30 flex flex-col rounded-md overflow-hidden"
       style={{
-        right: '16px',
-        bottom: 'calc(var(--footer-h) + 12px)',
-        width: expanded ? '480px' : '220px',
-        height: expanded ? '320px' : '30px',
+        right: '12px',
+        bottom: 'calc(var(--footer-h) + 8px)',
+        width: expanded ? '440px' : '180px',
+        height: expanded ? '280px' : '24px',
         background: 'var(--bg-1)',
         border: '1px solid var(--border-default)',
         boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
@@ -82,22 +82,20 @@ export function TerminalPanel() {
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="flex items-center justify-between px-3 h-[30px] flex-shrink-0 cursor-pointer w-full"
+        className="flex items-center justify-between px-2.5 h-[24px] flex-shrink-0 cursor-pointer w-full"
         style={{
           background: 'var(--bg-2)',
           borderBottom: expanded ? '1px solid var(--border-subtle)' : 'none',
         }}
       >
-        <div className="flex items-center gap-2 mono text-[11px] text-tx-2">
+        <div className="flex items-center gap-1.5 mono text-[10px] text-tx-2">
           <span style={{ color: 'var(--accent)' }}>{'>_'}</span>
-          <span>
-            kortext@{projectCode}
-          </span>
+          <span>kortext@{projectCode}</span>
         </div>
         <div className="flex items-center gap-1">
           {expanded ? (
             <Minus
-              size={12}
+              size={10}
               className="text-tx-3 hover:text-tx-1"
               onClick={(e) => {
                 e.stopPropagation();
@@ -106,14 +104,14 @@ export function TerminalPanel() {
             />
           ) : (
             <ChevronDown
-              size={12}
+              size={10}
               className="text-tx-3 hover:text-tx-1"
               style={{ transform: 'rotate(180deg)' }}
             />
           )}
           <X
-            size={12}
-            className="text-tx-3 hover:text-tx-1 ml-1"
+            size={10}
+            className="text-tx-3 hover:text-tx-1 ml-0.5"
             onClick={(e) => {
               e.stopPropagation();
               closeTerminal();
@@ -124,7 +122,7 @@ export function TerminalPanel() {
 
       {expanded ? (
         <div
-          className="flex-1 overflow-y-auto mono text-[11px] leading-[1.55] px-3 py-2 space-y-1"
+          className="flex-1 overflow-y-auto mono text-[10px] leading-[1.55] px-2.5 py-1.5 space-y-1"
           style={{ color: 'var(--tx-2)' }}
         >
           {runs.length === 0 ? (

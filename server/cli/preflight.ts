@@ -32,6 +32,7 @@ export type PreflightReport = {
   claude: ToolCheck;
   codex: ToolCheck;
   gemini: ToolCheck;
+  agy: ToolCheck;
   /** True if node + git are present with versions OK and at least one CLI exists. */
   ready: boolean;
   /** Hard blockers — node or git missing / too old. */
@@ -58,6 +59,7 @@ const INSTALL_HINTS: Record<string, string> = {
   claude: 'install: https://docs.claude.com/claude-code',
   codex: 'install: https://github.com/openai/codex-cli',
   gemini: 'install: https://github.com/google-gemini/gemini-cli',
+  agy: 'install: https://antigravity.google/install',
 };
 
 function parseSemver(raw: string): [number, number, number] | null {
@@ -95,10 +97,13 @@ function checkTool(
   const semver = parseSemver(r.raw);
   if (!semver) {
     // Tool runs but we can't read the version — still treat as present.
+    // Some CLIs (e.g. `agy help`) print help text instead of a version
+    // string; falling back to "(installed)" keeps the preflight readout
+    // clean rather than showing the first line of help output.
     return {
       name,
       ok: true,
-      version: r.raw.split('\n')[0] ?? '',
+      version: '(installed)',
       required: required ? required.join('.') : undefined,
       versionOk: required === null,
     };
@@ -123,6 +128,9 @@ export function runPreflight(opts: PreflightOptions = {}): PreflightReport {
   const claude = checkTool('claude', 'claude', ['--version'], null, probe);
   const codex = checkTool('codex', 'codex', ['--version'], null, probe);
   const gemini = checkTool('gemini', 'gemini', ['--version'], null, probe);
+  // Antigravity (`agy`) prints help to stderr without a version flag; we
+  // probe `agy help` which exits 0 when the binary is present.
+  const agy = checkTool('agy', 'agy', ['help'], null, probe);
 
   const blockers: string[] = [];
   if (!node.ok) blockers.push('node not found');
@@ -131,10 +139,10 @@ export function runPreflight(opts: PreflightOptions = {}): PreflightReport {
   else if (!git.versionOk) blockers.push(`git ${git.version} < required ${git.required}`);
 
   const warnings: string[] = [];
-  const cliPresent = [claude, codex, gemini].some((c) => c.ok);
+  const cliPresent = [claude, codex, gemini, agy].some((c) => c.ok);
   if (!cliPresent) {
     warnings.push(
-      'no agent CLI found (claude / codex / gemini) — runtime will only work with --executor=mock',
+      'no agent CLI found (claude / codex / gemini / agy) — runtime will only work with --executor=mock',
     );
   }
 
@@ -144,6 +152,7 @@ export function runPreflight(opts: PreflightOptions = {}): PreflightReport {
     claude,
     codex,
     gemini,
+    agy,
     ready: blockers.length === 0,
     blockers,
     warnings,
@@ -158,6 +167,7 @@ export function formatPreflightForCli(report: PreflightReport): string {
     'claude',
     'codex',
     'gemini',
+    'agy',
   ];
   for (const key of order) {
     const tool = report[key] as ToolCheck;

@@ -6,6 +6,7 @@ import {
   triggerWorkflowIdFor,
   writeBlueprint,
   writeProjectMeta,
+  type ExecutorChoice,
   type ProjectMeta,
   type ProjectType,
 } from '../blueprint/io.ts';
@@ -41,6 +42,8 @@ export function blueprintRouter(deps: BlueprintRouterDeps): Router {
       platforms: string[];
       blueprintBody: string;
       githubRepo: string | null;
+      executor: string;
+      executorBinary: string | null;
     }>;
 
     const errors: string[] = [];
@@ -79,6 +82,15 @@ export function blueprintRouter(deps: BlueprintRouterDeps): Router {
       }
     }
 
+    const executor: ExecutorChoice =
+      body.executor === 'claude' || body.executor === 'antigravity'
+        ? body.executor
+        : 'mock';
+    const executorBinary: string | null =
+      typeof body.executorBinary === 'string' && body.executorBinary.trim().length > 0
+        ? body.executorBinary.trim()
+        : null;
+
     if (errors.length > 0 || projectType === null) {
       res.status(422).json({ error: 'validation_failed', details: errors });
       return;
@@ -100,6 +112,8 @@ export function blueprintRouter(deps: BlueprintRouterDeps): Router {
       type: projectType,
       platforms,
       githubRepo,
+      executor,
+      executorBinary,
       createdAt: Date.now(),
     };
     try {

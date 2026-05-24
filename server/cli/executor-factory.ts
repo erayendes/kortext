@@ -3,6 +3,7 @@ import { MockExecutor } from '../engine/executors/mock-executor.ts';
 import { ClaudeCliExecutor } from '../engine/executors/claude-cli-executor.ts';
 import { CodexCliExecutor } from '../engine/executors/codex-cli-executor.ts';
 import { GeminiCliExecutor } from '../engine/executors/gemini-cli-executor.ts';
+import { AntigravityCliExecutor } from '../engine/executors/antigravity-cli-executor.ts';
 import type { PersonaRegistry } from '../engine/persona-registry.ts';
 
 /**
@@ -14,7 +15,7 @@ import type { PersonaRegistry } from '../engine/persona-registry.ts';
  * caller (the CLI entry point), not here — so this stays trivially testable.
  */
 
-export type ExecutorKind = 'mock' | 'claude' | 'codex' | 'gemini';
+export type ExecutorKind = 'mock' | 'claude' | 'codex' | 'gemini' | 'antigravity';
 
 export type ExecutorFactoryOptions = {
   /** Path to the CLI binary. Ignored for kind='mock'. */
@@ -54,6 +55,14 @@ export function createExecutor(
       });
     case 'gemini':
       return new GeminiCliExecutor({
+        binary: opts.binary,
+        agentsDir: opts.agentsDir,
+        logsDir: opts.logsDir,
+        extraArgs: opts.extraArgs,
+        personaRegistry: opts.personaRegistry,
+      });
+    case 'antigravity':
+      return new AntigravityCliExecutor({
         binary: opts.binary,
         agentsDir: opts.agentsDir,
         logsDir: opts.logsDir,

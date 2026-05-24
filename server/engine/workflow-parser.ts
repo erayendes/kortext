@@ -91,7 +91,21 @@ function splitList(value: string): string[] {
     .replace(/`/g, '')
     .split(',')
     .map((s) => s.trim())
-    .filter((s) => s.length > 0);
+    .filter((s) => s.length > 0)
+    .map(normalizeWorkflowPath);
+}
+
+/**
+ * Workflow files live at `<projectRoot>/workflows/<id>.md` and author paths
+ * relative to that location — e.g. `../workspace/foo.md`. The engine executes
+ * steps with cwd = project root (or a worktree of it), so we strip exactly
+ * one leading `../` per entry so the path resolves correctly under cwd.
+ * Non-path entries (free-text "Inputs: existing codebase…") are unaffected
+ * because they don't start with `../`.
+ */
+function normalizeWorkflowPath(raw: string): string {
+  if (raw.startsWith('../')) return raw.slice(3);
+  return raw;
 }
 
 export function parseWorkflowMarkdown(source: string, fileId: string): WorkflowDefinition {

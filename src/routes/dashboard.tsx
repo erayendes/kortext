@@ -3,21 +3,24 @@ import { usePolling } from '../lib/api.ts';
 import type { Run } from '../lib/api-types.ts';
 import { RunsTable } from '../components/RunsTable.tsx';
 import { TimelineSidebar } from '../components/TimelineSidebar.tsx';
+import { useShell } from '../lib/shell-store.tsx';
 
 export function DashboardRoute() {
+  const { timelineOpen } = useShell();
   return (
     <div className="flex h-full">
       <div className="flex-1 min-w-0 overflow-y-auto px-8 py-6">
         <DashboardHeader />
         <RunsTable />
       </div>
-      <TimelineSidebar />
+      {timelineOpen && <TimelineSidebar />}
     </div>
   );
 }
 
 function DashboardHeader() {
   const { data, refresh } = usePolling<{ runs: Run[] }>('/api/runs', 3000);
+  const { timelineOpen, toggleTimeline } = useShell();
   const runs = data?.runs ?? [];
   const active = runs.find(
     (r) => r.status === 'running' || r.status === 'awaiting_approval',
@@ -41,7 +44,9 @@ function DashboardHeader() {
       <div className="flex items-center gap-2">
         <button
           type="button"
-          className="btn btn-ghost btn-xs"
+          onClick={toggleTimeline}
+          className={timelineOpen ? 'btn btn-outline btn-xs' : 'btn btn-ghost btn-xs'}
+          style={timelineOpen ? { color: 'var(--accent)' } : undefined}
         >
           <PanelRight size={12} /> Timeline
         </button>
