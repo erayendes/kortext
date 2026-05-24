@@ -370,11 +370,109 @@ Tüm v4 alignment tamamlandı. Eray onayıyla:
 ### v3.1.x küçük borç / nice-to-have (release sonrası)
 
 - `app.listen` error handler — EADDRINUSE sessiz fail (HANDOVER #51, Faz 10 borcu).
-- Onboarding'de executor seçimi (project.json'a `executor: mock|claude|codex|gemini`); şu an mock sabit kodlu (`server/index.ts`).
+- ~~Onboarding'de executor seçimi~~ → **çözüldü Faz 11.3** (Mock / Claude / AGY chip + project.json).
 - TimelinePanel.tsx (drawer overlay) artık unused — Header'dan toggle kaldırıldı; ya kaldırılsın ya da yeni bir entry point eklensin (v3.2'de).
 - Footer.tsx canlı stats wiring (active/idle/blocked counts).
 - Inline markdown save endpoint (PUT /api/docs/:scope/:file) — Rules / Workflows / References "Save" butonları için.
 - Decisions cards'a author + quote alanı (Decision schema genişletme veya markdown frontmatter parse).
+
+---
+
+## Faz 11.3 — Lokal UAT (DEVAM EDİYOR — claude tool use bloğu)
+
+**Bu oturumda** Faz 11.2 alignment commit'inden sonra Eray ile lokal UAT başlatıldı. Davranışsal fix'ler + executor selection + AGY adapter + Inbox drawer + crash önleme fix'leri pakete girdi ama commit'lenmedi henüz (working tree dirty). UAT'da yeni bug zinciri çıktı, hepsi düzeltildi, sonunda asıl mimari problem ortaya çıktı.
+
+### Bu oturumda eklenen davranışsal/altyapı düzeltmeleri (HENÜZ COMMIT YOK)
+
+| # | Sorun | Düzeltme | Dosya |
+|---|---|---|---|
+| 1 | `kortext init` Helsinki test blueprint'ini `status: approved` ile scaffold ediyordu → onboarding bypass | Repo'daki `workspace/references/blueprint.md` skeleton + `status: uninitialized` ile değiştirildi | `workspace/references/blueprint.md` |
+| 2 | Sidebar toggle butonu onClick yoktu | `shell-store.sidebarCollapsed` + RootShell conditional | `src/lib/shell-store.tsx`, `src/router.tsx`, `src/components/Header.tsx` |
+| 3 | Timeline toggle butonu işlevsizdi | `shell-store.timelineOpen` + dashboard conditional | `src/lib/shell-store.tsx`, `src/routes/dashboard.tsx` |
+| 4 | Footer'da hardcoded `~1.2K tkn/s · $4.30 today · feature/auth-42 · workflow: 04-development 4/7` | Token + cost + branch + workflow chip'leri kaldırıldı; active/idle/blocked canlı | `src/components/Footer.tsx` |
+| 5 | +prime avatar header sağında gereksiz | Kaldırıldı (tek-kullanıcı sistem) | `src/components/Header.tsx` |
+| 6 | Terminal panel collapsed 30px + 11px font v4'ten büyük | 24px header + 10px font + 440×280 expanded | `src/components/TerminalPanel.tsx` |
+| 7 | Searchbar tıklanır görünüyor ama no-op | `disabled` + `cursor-not-allowed` + opacity 0.55 + "soon" badge | `src/components/Header.tsx` |
+| 8 | OnboardingScreen submit `setSubmitting(false)` sadece catch'te → success'te "Initializing…" takılı kalıyor | try success path'ine `setSubmitting(false)` + onDone fallback `window.location.reload()` | `src/components/OnboardingScreen.tsx` |
+| 9 | TimelinePanel.tsx (drawer overlay) artık unused — router.tsx'ten import edildiği için bundle'da | Router'dan kaldırıldı | `src/router.tsx` |
+| 10 | Onboarding'de executor seçimi yok — hep `executor: 'mock'` hardcoded | 3 chip (Mock / Claude / AGY) + binary path field + project.json'a kaydet + blueprint trigger'da oku | `OnboardingScreen.tsx`, `blueprint.ts` route, `blueprint/io.ts`, `server/index.ts` |
+| 11 | AGY (Antigravity) executor yoktu | Yeni `antigravity-cli-executor.ts` (`agy -p --dangerously-skip-permissions --print-timeout=10m`) + ExecutorKind enum + factory + preflight (`agy help`) | `server/engine/executors/antigravity-cli-executor.ts`, `executor-factory.ts`, `preflight.ts`, `bin/kortext.ts` |
+| 12 | Preflight `agy --version` desteklemiyor → "Usage of agy:" satırını version sanıyordu | Semver parse fail → `(installed)` fallback | `server/cli/preflight.ts` |
+| 13 | Inbox bell sadece dot, drawer yoktu | `InboxDrawer.tsx` 420px right + question card per pending q + Approve/Revise/Reject → POST /api/questions/:id/answer | `src/components/InboxDrawer.tsx`, `shell-store.inboxOpen`, `Header.tsx` |
+| 14 | Express 5 SPA fallback regex `/^\/(?!api\/|mcp\/).*/` lookahead'i path-to-regexp v6 desteklemiyor → "Cannot GET /" | regex → plain middleware (`req.path.startsWith` checks) | `server/index.ts` |
+| 15 | cli-spawn `.kortext/logs/` dizini yoksa `createWriteStream` ENOENT atıp **server crash** | spawnCli içine `mkdirSync(dirname(logPath), {recursive:true})` | `server/engine/executors/cli-spawn.ts` |
+| 16 | claude executor default args boş → `claude` REPL'e düşüp stdin'i okuyor ama hiç çıktı üretmeden hung | Default `['--print', '--dangerously-skip-permissions']` | `server/engine/executors/claude-cli-executor.ts` |
+
+Doğrulama: 274/274 test ✅ · typecheck 0 · lint 0 (alignment kapsamı). Build + npm pack tgz Eray'a verildi, `/Users/erayendes/Documents/_docbase/kortext/kortext-3.0.0.tgz`.
+
+### Faz 11.3 çözüm turu (bu oturumda — Claude tool use ÇALIŞIYOR)
+
+UAT iki tur döndü:
+
+**Tur 1** (executor only fix): `claude-cli-executor.ts`'e `--append-system-prompt` + `--add-dir <parent>` + imperative user prompt eklendi. Sonuç: claude hâlâ tool çağırmıyor; log'da `★ Insight ────` block + "başarıyla oluşturuldu" hallucination görüldü.
+
+**Tur 2** (gerçek çözüm): 2 ek düzeltme uygulandı:
+
+1. **`--setting-sources project,local`** eklendi — Eray'ın `~/.claude/settings.json` global output style'ı ("explanatory") spawn edilen claude'a sızıyordu. Bu output style claude'a "★ Insight blocks + commentary" davranışını dayatıyor → Write tool çağrılmıyor. `project,local` source'ları yüklenirken `user` source skip edilince claude default davranışına dönüyor. (Auth keychain `user` source'a değil, ayrı kanala bağlı — etkilenmiyor.)
+2. **Path normalization `workflow-parser.ts`'te** — workflow file konvansiyonu `../workspace/foo.md` ("workflow dir'inden bir üst") parser seviyesinde tek leading `../` strip edilerek `workspace/foo.md`'ye normalize ediliyor. Engine cwd (proje kökü) altında doğru resolve oluyor.
+
+Sonuç (UAT, 2026-05-24 14:49+):
+- `workspace/references/legal-strategy.md` 11 KB
+- `workspace/references/growth-strategy.md` 13 KB
+- `workspace/reports/product-requirements.md` 24 KB
+- `workspace/references/design-system.md` 4 KB
+- Diğer step'ler de paralel ilerliyor
+
+Test: 274/274 ✅ · typecheck 0. Build + pack tekrar üretildi.
+
+### Açık (sıradaki oturuma) — workflow içerikleri
+
+Eray UAT'da claude'un akıp dosya yazdığını gördü ama **workflow .md içeriklerinin kendisi sorunlu** (sıralama, persona/RACI, gate akışı, çıktı tanımları). Kortext engine ÇALIŞIYOR; workflow definition'ları (`workflows/01a-analysis-pipeline.md` vs.) elden geçirilecek. Senaryo Eray'dan gelecek.
+
+### ESKİ ASIL BUG (ÇÖZÜLDÜ) — claude headless tool use
+
+UAT akışı: Eray fresh install + `kortext init` + `kortext serve` + Onboarding (Claude executor) + Initialize project. Chainer 3 run koştu (01a-analysis-pipeline ×3), **3'ü de FAILED**, aynı sebepten:
+
+```
+error_message: "declared outputs not produced: ../workspace/references/legal-strategy.md"
+```
+
+`.kortext/logs/run-3-step-37.log` örneği (compliance-expert step):
+- claude `args: ["--print","--dangerously-skip-permissions"]` ile çağrılıyor ✓
+- Exit code 0 ✓
+- Aborted false ✓
+- **Stdout'u**: claude güzel bir markdown analiz yazısı yazıyor, sonunda da `` `workspace/references/legal-strategy.md` dosyası tamamlandı. `` diyor
+- **Disk'te dosya yok**
+
+Tanı: `claude --print --dangerously-skip-permissions` headless mode'da **tool çağrısı (Write/Edit/Bash) yapmıyor** — claude tool'ları çağırmaya çalışmadan sadece text üretip "dosya yazıldı" gibi uydurma cevap veriyor. Step output validation gerçek dosyayı arıyor → bulamıyor → run failed → chainer aynı pipeline'ı tekrar tetikliyor → infinite fail loop.
+
+### Sıradaki oturum için görev
+
+**Tek odak**: `server/engine/executors/claude-cli-executor.ts`'i tool use yapacak şekilde düzelt. Olası yaklaşımlar (research + test):
+
+1. **`--allowedTools` flag denemesi**: `claude --print --dangerously-skip-permissions --allowedTools "Write,Edit,Read,Bash,Grep,Glob"` — belki bu eksik
+2. **Project-level CLAUDE.md / .claude/settings.json**: scaffold edilen kortext-uat dizininde `.claude/settings.json` ile permissions / allowed tools ayarı
+3. **MCP server pattern**: claude'a workspace edit araçlarını MCP üzerinden expose et
+4. **CLI doc deep-dive**: `claude help -p`, `claude print --help`, GitHub repo'da headless mode best practice
+5. **`--max-turns N` deneme**: belki tool use için iteration limit lazım
+
+Test akışı (UAT komutu hazır):
+```bash
+cd ~/Documents/_codebase/kortext-uat && npm uninstall -g kortext && rm -rf .kortext workspace agents workflows rules AGENTS.md && npm install -g /Users/erayendes/Documents/_docbase/kortext/kortext-3.0.0.tgz && kortext init && kortext serve
+```
+
+Doğru `claude` invocation bulundu mu test edilir: workflow step'i çalışır, gerçek dosya `workspace/references/legal-strategy.md` disk'e yazılır, step `succeeded` olur, chainer ilerler.
+
+AGY executor için aynı pattern tekrarlanmalı (büyük ihtimalle agy de aynı mimari ile çalışıyor — `-p --dangerously-skip-permissions` ile sadece text yanıt verir, dosya yazmaz).
+
+### Bu commit edilmemiş 16 fix + asıl claude fix toplu commit edilecek
+
+Yeni oturumun claude fix'i tamamlandığında **tek bir büyük commit** (Faz 11.2 commit'inde benzer pattern, multi-bullet body):
+```
+fix(v3): real local UAT — onboarding redirect + sidebar/timeline/inbox wiring + executor selection + AGY adapter + claude headless tool use
+```
+
+Sonra ayrı bir handover commit + PR aç + main merge + 3.1.0 release flow.
 
 ### Bilinçli sapmalar (Eray hâlâ kabul ediyor)
 

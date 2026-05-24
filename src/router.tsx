@@ -10,9 +10,9 @@ import { Header } from './components/Header.tsx';
 import { Sidebar } from './components/Sidebar.tsx';
 import { Footer } from './components/Footer.tsx';
 import { TerminalPanel } from './components/TerminalPanel.tsx';
-import { TimelinePanel } from './components/TimelinePanel.tsx';
+import { InboxDrawer } from './components/InboxDrawer.tsx';
 import { Toasts } from './components/Toasts.tsx';
-import { ShellProvider } from './lib/shell-store.tsx';
+import { ShellProvider, useShell } from './lib/shell-store.tsx';
 import { PendingQuestionsProvider } from './lib/pending-questions.tsx';
 import { DashboardRoute } from './routes/dashboard.tsx';
 import { BoardRoute } from './routes/board.tsx';
@@ -79,21 +79,28 @@ function RootShell() {
   return (
     <ShellProvider>
       <PendingQuestionsProvider>
-        <div className="flex flex-col h-screen w-screen overflow-hidden bg-bg-0 text-tx-1">
-          <Header />
-          <div className="flex-1 flex min-h-0">
-            <Sidebar />
-            <main className="flex-1 overflow-y-auto bg-bg-0 min-w-0">
-              <Outlet />
-            </main>
-          </div>
-          <Footer />
-          <TerminalPanel />
-          <TimelinePanel />
-          <Toasts />
-        </div>
+        <ShellChrome />
       </PendingQuestionsProvider>
     </ShellProvider>
+  );
+}
+
+function ShellChrome() {
+  const { sidebarCollapsed } = useShell();
+  return (
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-bg-0 text-tx-1">
+      <Header />
+      <div className="flex-1 flex min-h-0">
+        {!sidebarCollapsed && <Sidebar />}
+        <main className="flex-1 overflow-y-auto bg-bg-0 min-w-0">
+          <Outlet />
+        </main>
+      </div>
+      <Footer />
+      <TerminalPanel />
+      <InboxDrawer />
+      <Toasts />
+    </div>
   );
 }
 

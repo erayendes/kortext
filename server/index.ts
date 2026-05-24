@@ -16,6 +16,8 @@ import { backlogRouter } from './routes/backlog.ts';
 import { docsRouter } from './routes/docs.ts';
 import { blueprintRouter } from './routes/blueprint.ts';
 import { startCommand } from './cli/commands.ts';
+import { readProjectMeta, resolveBlueprintPaths } from './blueprint/io.ts';
+import type { ExecutorKind } from './cli/executor-factory.ts';
 import { getDb } from './db/client.ts';
 import { ApprovalQueue } from './orchestrator/approval-queue.ts';
 import { mcpSseRouter } from '../mcp/sse.ts';
@@ -72,6 +74,18 @@ if (resumed.recovered.length > 0) {
 
 const approvalQueue = new ApprovalQueue({ repos });
 
+// PATH lookup defaults when the wizard doesn't supply a custom binary path.
+// `claude` and `agy` are both on PATH after their respective installers run;
+// callers can override via the wizard's "binary path" field if needed.
+function defaultBinaryFor(executor: ExecutorKind): string | undefined {
+  if (executor === 'claude') return process.env.KORTEXT_CLAUDE_BIN ?? 'claude';
+  if (executor === 'antigravity')
+    return process.env.KORTEXT_ANTIGRAVITY_BIN ?? 'agy';
+  if (executor === 'codex') return process.env.KORTEXT_CODEX_BIN ?? 'codex';
+  if (executor === 'gemini') return process.env.KORTEXT_GEMINI_BIN ?? 'gemini';
+  return undefined;
+}
+
 const app = express();
 
 app.use(express.json());
@@ -90,6 +104,21 @@ app.use(
   blueprintRouter({
     workspaceRoot: process.cwd(),
     onApproved: (workflowId) => {
+      // Read the executor choice from project.json (written by the wizard).
+      // Falls back to 'mock' when project.json is missing or malformed —
+      // safer default than crashing the trigger.
+      const projectMeta = readProjectMeta(
+        resolveBlueprintPaths(process.cwd()).projectJsonPath,
+      );
+      const executor = projectMeta?.executor ?? 'mock';
+      const executorBinary =
+        projectMeta?.executorBinary ?? defaultBinaryFor(executor);
+
+      console.log(
+        `[kortext] blueprint trigger: workflow=${workflowId} executor=${executor}` +
+          (executorBinary ? ` binary=${executorBinary}` : ''),
+      );
+
       // Fire-and-forget: the wizard returns 201 immediately while the
       // analysis pipeline runs in the background. Failures land in the
       // run row + audit log; the dashboard surfaces them.
@@ -97,7 +126,9 @@ app.use(
         repos,
         workflowsDir,
         workflowId,
-        executor: 'mock',
+        executor,
+        executorBinary,
+        agentsDir,
       }).then((result) => {
         if (!result.ok) {
           console.warn(`[kortext] blueprint trigger failed: ${result.errorMessage}`);
@@ -160,7 +191,13 @@ if (webDist) {
   app.use(express.static(webDist));
   // Hash-router SPA fallback: anything not under /api or /mcp that hasn't
   // matched yet should return index.html so deep links (e.g. /board) work.
-  app.get(/^\/(?!api\/|mcp\/).*/, (_req, res) => {
+  // We use a middleware (not `app.get(regex)`) because Express 5's path-to-
+  // regexp dropped support for negative lookaheads — a plain `req.path`
+  // check is both clearer and version-proof.
+  app.use((req, res, next) => {
+    if (req.method !== 'GET') return next();
+    if (req.path.startsWith('/api/') || req.path.startsWith('/mcp/')) return next();
+    if (req.path.startsWith('/api') || req.path.startsWith('/mcp')) return next();
     res.sendFile(join(webDist, 'index.html'));
   });
 } else {
