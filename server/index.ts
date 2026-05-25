@@ -22,6 +22,8 @@ import { readProjectMeta, resolveBlueprintPaths } from './blueprint/io.ts';
 import type { ExecutorKind } from './cli/executor-factory.ts';
 import { getDb } from './db/client.ts';
 import { ApprovalQueue } from './orchestrator/approval-queue.ts';
+import { MarkdownSyncService } from './services/markdown-sync.ts';
+import type { SafetyGuards } from './engine/worker-pool.ts';
 import { mcpSseRouter } from '../mcp/sse.ts';
 import { resumeOrphanedRuns } from './orchestrator/resume.ts';
 import { loadWorkflowsFromDir } from './engine/workflow-loader.ts';
@@ -95,6 +97,18 @@ if (resumed.recovered.length > 0) {
 
 const approvalQueue = new ApprovalQueue({ repos });
 
+// Faz 12.9 follow-up: wire the reports-index back-fill into the worker
+// pool's safety guard so per-file outputs (`<scope>_<slug>_<ts>.md`)
+// written by the executor land in `reports_index` without an explicit
+// `writeReport` MCP call. Errors are swallowed inside `runSafetyGuards`
+// — index bookkeeping must not break a pipeline.
+const markdownSync = new MarkdownSyncService(repos, { root: layout.root });
+const safetyGuards: SafetyGuards = {
+  outputIndexer: ({ absolutePath }) => {
+    markdownSync.indexReportFromPath({ absolutePath });
+  },
+};
+
 // PATH lookup defaults when the wizard doesn't supply a custom binary path.
 // `claude` and `agy` are both on PATH after their respective installers run;
 // callers can override via the wizard's "binary path" field if needed.
@@ -151,6 +165,7 @@ app.use(
         executor,
         executorBinary,
         agentsDir,
+        safety: safetyGuards,
       }).then((result) => {
         if (!result.ok) {
           console.warn(`[kortext] blueprint trigger failed: ${result.errorMessage}`);
