@@ -295,3 +295,26 @@ Faz 0'a başlanır. İlk somut adım:
 2. `package.json`'u TypeScript stack'i için yeniden yaz
 3. Klasör iskeletini kur
 4. Hello-world Express + Vite çalıştır
+
+---
+
+## v3.1.0 — UI polish + architecture refactor (2026-05-24 / 2026-05-25)
+
+| Faz | Tamamlanma | Kapsam | PR/Tag |
+|---|---|---|---|
+| **Faz 11** — Onboarding wizard + dashboard polish | 2026-05-23 | `feat/v3.1-onboarding-and-dashboard-polish`'in ilk halkası: blueprint upload wizard, preflight check, auto-open browser, mockup polish | `0052c43` |
+| **Faz 11.1** — v4 wireframe alignment (shell + dashboard) | 2026-05-24 | Sidebar / Header / Footer / Dashboard 1:1 v4 wireframe'e hizalandı | `a212ca4` |
+| **Faz 11.2** — v4 alignment (board/memory/reports/references/settings) | 2026-05-24 | 8 settings pane + 5 data ekran v4'e hizalandı; migration 002 `test` status | `072f072` |
+| **Faz 11.3** — Lokal UAT + 17 davranışsal fix | 2026-05-24 | Onboarding executor seçimi, AGY adapter, Inbox drawer, Express 5 SPA fallback, ENOENT crash önleme, claude headless tool use fix (`--setting-sources project,local` + path normalization) | `c30e61a` |
+| **Faz 11.4** — v3.1 planning + clean-break | 2026-05-25 | `docs/internal/v3.1-{architecture-proposal,todo,setup-onboarding-scenario}.md`; legacy/settings/skills/migrate-legacy-backlog kalktı; root `CLAUDE.md` (developer brief) | `f733b0e` |
+| **Faz 12.1+12.2** — `.kortext/` encapsulation + global runtime | 2026-05-25 | `workspace/` → `.kortext/`; `agents/workflows/rules` paket içinden (proje kopyası yok); `server/paths.ts` | `a6b30f2` |
+| **Faz 12.3** — `templates/` scaffold | 2026-05-25 | 38 iskelet (backlogs/references/reports/memory) + 4 frontmatter standardı + INFO callout söküm | `1749b27` |
+| **Faz 12.5** — Per-file reports + reports_index | 2026-05-25 | Migration 003 + ReportsRepository + REST + engine `outputIndexer` hook | `651f49a` |
+| **Faz 12.6** — Handover rotation + TOC engine | 2026-05-25 | 5/30KB rotation + `kortext archive handover` + `toc-updater` (writeDecision/writeLearned'a bağlı) | `15d2841` |
+| **Faz 12.7** — Prompt cache aktivasyonu | 2026-05-25 | Persona body `--append-system-prompt`'a + `--exclude-dynamic-system-prompt-sections`; AGY/Codex/Gemini stable-prefix discipline'ı dokümante edildi | `7ae7f46` |
+| **Faz 12.8** — Workflow/persona SQL index | 2026-05-25 | Migration 004 + `index-sync` boot-time projection + FK validation + cross-cut REST | `ec6f5b8` |
+| **Faz 12.9 (partial)** — Backlog UI + readonly editors | 2026-05-25 | Board "+ New Item" modal + `POST /api/backlog` + Agents/Workflows/Rules readonly view. **Reports SQL UI + Memory archive dropdown v3.1.x'e ertelendi** (mevcut ekranlar v3.0 endpoint'leriyle çalışıyor). | `b92f6f7` + `ef45795` |
+
+**Test/lint/typecheck/build (PR HEAD `ef45795`):** 360/360 (baseline 274 + 86), lint 0, typecheck 0, build temiz.
+**PR:** https://github.com/erayendes/kortext/pull/1
+**Sıradaki:** Faz 13 — workflow content rewrite ([faz-13-bootstrap.md](faz-13-bootstrap.md))

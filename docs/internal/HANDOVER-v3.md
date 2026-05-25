@@ -1,22 +1,22 @@
 # Kortext v3 — Yeni Oturum Handover
 
 > Bu dosya yeni Claude Code oturumunun bootstrap pusulasıdır.
-> Açar açmaz şunu yaz: **"HANDOVER-v3.md'yi oku, feat/v3.1-onboarding-and-dashboard-polish branch'inde v4 wireframe alignment iterasyonu tamamlandı — PR aç + v3.1.0 release flow için bilgi ver"**
+> Açar açmaz şunu yaz: **"HANDOVER-v3.md'yi oku, Faz 12 (v3.1 architecture refactor) bitti, PR #1 review/merge sürecinde; bir sonraki iş Faz 13 (workflow content rewrite) — `docs/internal/faz-13-bootstrap.md`'yi aç, plan ver."**
 
-> ✅ **Tasarım onaylı.** Eray "wireframe-v4-final.html'e birebir uy" dedi. Faz 11.1'de shell + dashboard (`a212ca4`), Faz 11.2'de board / memory / reports / references / 8 settings (`072f072`) v4'e hizalandı. Onboarding ekranı v4 wireframe'de tanımlı değildi — mevcut Faz 11 mockup-v3 odaklı form'unun korunması Eray tarafından onaylandı (form alanları zaten v4 ProjectSettings ile eşleşiyor). **Tüm v4 alignment iterasyonu bitti.** Sırada: PR aç → main'e merge → v3.1.0 release flow (CHANGELOG + tag + npm publish).
+> ✅ **v3.1 mimari refactor tamam.** 2026-05-25 oturumunda Faz 11.4 + 12.1-12.9 paralel worktree disipline'ı ile uygulandı. PR https://github.com/erayendes/kortext/pull/1 açık, 9 commit, 360/360 test yeşil. **Faz 13 (workflow .md content rewrite) yapılmadı** — Eray ayrı oturumda yürütecek (senaryolar Eray'dan). Faz 12.9'un partial UI işleri (Reports SQL UI revamp, Memory archive dropdown, POST /api/backlog integration test) v3.1.x follow-up'a bırakıldı, blocker değil.
 
-**Tarih:** 2026-05-24 (gece)
-**Yazan oturum:** Faz 11.2 — v4 wireframe alignment (board / memory / reports / references / settings)
-**Son commit:** `072f072` — `fix(v3): align board / memory / reports / references / settings to wireframe-v4-final 1:1` (henüz remote'a push edilmedi)
-**main branch:** `d118f48` (dokunulmadı; v3.0.0 broken-published state'inde)
+**Tarih:** 2026-05-25
+**Yazan oturum:** Faz 11.4 + 12.1-12.9 — v3.1 architecture refactor (parallel worktree dispatch)
+**Son commit:** `ef45795` — `fix(v3.1): faz 12.9 — replace React.ReactNode with named ReactNode import in board.tsx`
+**PR:** https://github.com/erayendes/kortext/pull/1 (`feat/v3.1-onboarding-and-dashboard-polish` → `main`)
+**main branch:** `c30e61a` (dokunulmadı; v3.1 işleri feat branch'inde merge bekliyor)
 
 ## Çok kritik bilgi: yayın durumu
 
-- ✅ **GitHub:** `erayendes/kortext` PUBLIC. main hâlâ d118f48'de. v3.0.0 tag `300b035`'i işaret ediyor (5 fix-commit eskisi).
-- ✅ **Feature branch:** `feat/v3.1-onboarding-and-dashboard-polish` push edildi, commit 0052c43. PR açılmayı bekliyor: https://github.com/erayendes/kortext/pull/new/feat/v3.1-onboarding-and-dashboard-polish
-- 🟡 **npm registry:** `kortext@3.0.0` YAYINLANDI — ama **broken state**: kortext serve Node 26'da patlıyor + log flush race + EPIPE race. **Kimseye `npm install -g kortext` önerme.** Kullanıcılar bunun yerine lokal tgz install etmeli (aşağıda).
-- ⏸ **Lokal-only 4 fix (main'de var, npm tag'de değil):** 5ba9032 (log flush race), 0b9cba6 (EPIPE), 70f2186 (Express static + vite spawn kaldır), d118f48 (in-process import — Node 26 spawn workaround).
-- ⏸ **Branch-only Faz 11 (henüz main'de değil):** 0052c43 — onboarding wizard + dashboard mockup polish + preflight + auto-open. Merge sonrası v3.1.0 olarak yayınlanacak.
+- ✅ **GitHub:** `erayendes/kortext` PUBLIC. main hâlâ `c30e61a`'da (Faz 11.3 fix'leri zaten orada; v3.1 işleri feat branch'inde).
+- ✅ **PR #1:** v3.1 refactor (9 commit) review/merge bekliyor. Açıklama PR description'da tam detaylı.
+- 🟡 **npm registry:** `kortext@3.0.0` YAYINLANDI — hâlâ broken (HANDOVER #51 EADDRINUSE silent fail, Node 26 spawn race). **Önerme.** v3.1.0 release lokal tgz UAT geçince yapılır.
+- ⏸ **v3.1.0 release planı:** PR merge → `package.json` 3.1.0 → CHANGELOG → tag `v3.1.0` → npm-publish.yml otomatik tetik. **UAT:** Eray makinesinde `npm pack` + `npm install -g ./kortext-3.1.0.tgz` boş klasörde test (detay: [v3.1-uat-guide.md](v3.1-uat-guide.md)).
 
 ---
 
@@ -483,6 +483,73 @@ Sonra ayrı bir handover commit + PR aç + main merge + 3.1.0 release flow.
 - `app.listen` error handler — EADDRINUSE sessiz fail (HANDOVER #51, Faz 10 borcu).
 - Onboarding'de executor seçimi (project.json'a `executor: mock|claude|codex|gemini`); şu an mock sabit kodlu (`server/index.ts`).
 - TimelinePanel.tsx (drawer overlay) artık unused — Header'dan toggle kaldırıldı; ya kaldırılsın ya da yeni bir entry point eklensin (v3.2'de).
+
+---
+
+## Faz 12 — v3.1 architecture refactor (TAMAMLANDI, 2026-05-25)
+
+**PR:** https://github.com/erayendes/kortext/pull/1 (`feat/v3.1-onboarding-and-dashboard-polish` → `main`, 9 commit)
+**Spec:** [v3.1-architecture-proposal.md](v3.1-architecture-proposal.md) (14 bölüm)
+**Strateji:** Paralel git worktree alt-fazları (spec §14). Her alt-faz kendi worktree'sinde başlatıldı, bitince cherry-pick ile feat branch'e taşındı.
+
+### Tamamlanan alt-fazlar
+
+| Alt-faz | Commit | Test delta | Ana iş |
+|---|---|---|---|
+| **11.4** | `f733b0e` | — | Planning docs (`v3.1-architecture-proposal.md`, `v3.1-todo.md`, `setup-onboarding-scenario.md`) + clean-break cleanup (legacy/, settings/, skills/, bin/migrate-legacy-backlog.ts, kortext-3.0.0.tgz silindi; .kortext/+*.tgz git-ignored); root `CLAUDE.md` (code-side developer brief — _docbase/_codebase split + sync rule). |
+| **12.7** | `7ae7f46` | +3 (277) | Prompt cache aktivasyonu — persona body `--append-system-prompt`'a taşındı; `--exclude-dynamic-system-prompt-sections` per-machine churn'ü user message'a verir; cache invalidation guard testi (system prompt byte-identical across runs). AGY/Codex/Gemini için `--system-prompt` analog yok — stable-prefix discipline'ı dokümante edildi. |
+| **12.3** | `1749b27` | — | `templates/` 38 iskelet — AGENTS.md, .gitignore, .env.example, 6 backlog prefix (TXX/BXX/EXX/DXX/SXX/HXX), 15 references (env-setup.md yeni), 11 reports, handover/decisions/learned TOC iskeletleriyle. 4 frontmatter standardı uygulandı (spec §5), `> [!INFO]` callout söküldü. |
+| **12.1+12.2** | `a6b30f2` | — | `workspace/` kalktı, proje markdown'ı `.kortext/{references,reports,memory}/`'ye taşındı; engine state + worktrees `.kortext/data/` altında; `agents/workflows/rules` paket içinden yüklenir (proje kopyası yok). Yeni `server/paths.ts` `packageRoot()` walk-up + `ProjectLayout`/`RuntimeLayout` helper'ları. `kortext init` yeniden yazıldı (sadece `templates/` ve `.kortext/data/`'yı seed eder). |
+| **12.5** | `651f49a` | +27 (304) | Per-file rapor: `003_add_reports_index.sql` (kolon: id/scope/slug/file_path UNIQUE/author/status/tags JSON/related_item/created_at) + `ReportsRepository` (create/get/getByPath/list/updateStatus) + `GET /api/reports[/:id]` + `markdown-sync.writeReport()` & `indexReportFromPath()`. Engine entegrasyonu: `worker-pool.ts::runSafetyGuards` opsiyonel `outputIndexer` callback alır; declared output başına çağrılır (errors swallow). |
+| **12.8** | `ec6f5b8` | +25 (302→ feat'te 329) | `004_add_workflow_persona_index.sql` — `personas` (handle PK, capabilities JSON, when_to_use, model_default) + `workflow_steps` (compound UNIQUE on workflow_id+step_no, persona_handle FK). `server/engine/index-sync.ts` boot-time projection + parse-time FK validation: bilinmeyen `+ajan` referansı toplu olarak raporlanır ve fatal throw. `+prime` synthetic row. Yeni REST: `GET /api/personas/usage`, `GET /api/workflows/:id/dependencies`. `gate_kind` ve `capabilities` kolon var ama parser henüz doldurmuyor — Faz 13'ün işi. |
+| **12.6** | `15d2841` | +31 (335) | `server/services/handover-rotation.ts` (5 entry VEYA 30 KB → `handover-<YYYY-MM-DD-HHMM>.md`); `server/services/toc-updater.ts` (GitHub-slug, idempotent, opt-in `## İçindekiler` heading'i varsa); `server/cli/archive.ts` + `kortext archive handover` subcommand. `HandoverEngine.record()` sonunda best-effort rotation, opt-out flag. `markdown-sync.writeDecision()` + yeni `writeLearned()` TOC refresh çağırır. |
+| **12.9** | `b92f6f7` + `ef45795` | — | Backlog "+ New Item" modal (board.tsx) + `POST /api/backlog` (auto-id per prefix: T01/B01/E01/...) + Settings/Agents/Workflows/Rules **readonly** view (PersonaEditor source/rendered toggle). `React.ReactNode` → `type ReactNode` named import (HANDOVER #57 lint discipline). |
+
+### Test/lint/typecheck/build (PR HEAD `ef45795`)
+
+```
+Test Files  46 passed (46)
+     Tests  360 passed (360)   ← baseline 274 + 86 yeni
+lint        0 errors (4 pre-existing/harmless warnings)
+typecheck   0 hata
+build       temiz (dist/web 460 KB / 141 KB gzip)
+```
+
+### Faz 12'de eklenen tasarım kararları
+
+59. **`outputIndexer` callback slot** = engine-adapter ayrımı: `worker-pool` reports indexer'ı doğrudan import etmek yerine `SafetyGuards`'a opsiyonel callback ekledi (secret-scanner/harmful-filter ile aynı pattern). Üretim engine boot'unun bu slot'a indexer geçirmesi tek satırlık follow-up — Faz 12.5 kapsamında slot tanımlandı, çağrı yapılmadı.
+60. **Prompt cache disipline'i** = stable prefix: cache hit'in temeli `--append-system-prompt`'a byte-identical içerik geçmek. RunId/stepId/timestamp gibi her çalıştırmada değişen şey kesinlikle system prompt'a karışmaz; bunlar user prompt veya stdin payload'ında kalır. Test (`cli-executor.test.ts`) bu garantiyi 2 farklı runId/stepId'yle aynı step koşturup arg byte-eşitliğini doğrulayarak verir.
+61. **TOC engine sorumluluğu, persona maintenance turuna bırakılmadı**: `+operation-manager` 09-maintenance-cycle'da TOC tut" idea'sı reddedildi (her ADR yazıldıktan saatler sonra güncellenir, tutarsızlık penceresi). Onun yerine `markdown-sync.writeDecision/writeLearned` sonunda `toc-updater.updateToc()` çağrılır — atomik tutarlılık. Opt-in: dosyada `## İçindekiler` heading'i yoksa no-op.
+62. **`+prime` synthetic persona row**: `personas` tablosunda `+prime` için `agents/prime.md` dosyası yok ama workflow step'ler `+prime` referansı verebiliyor. Index-sync `+prime`'ı boot'ta synthetic row olarak ekler (`source_path: '(synthetic)'`) — dashboard ayırt edebilir. Aynı yaklaşım gerekirse v3.2'de `+human` veya `+external` için kullanılır.
+63. **Per-file rapor naming + tags JSON kolon**: spec'te tags array olarak öngörüldü (`tags JSON column — kategorizasyon ileride zenginleşebilir`). v3.1.0'da yazılan rapor için `tags: []` default; CLI/UI tarafında tag-add UI yok. Spec bilinçli olarak ertelenmiş "zenginleşebilir" notuyla.
+64. **`React.ReactNode` namespace yasak (lint kuralı pekiştirildi)**: `no-undef` ESLint kuralı React namespace'ini görmüyor — `import { type ReactNode } from 'react'` pattern'i her UI dosyasında zorunlu. Faz 12.9'da board.tsx bu kuraldan kaçtı, ayrı fix commit (`ef45795`) ile düzeltildi. Yeni component yazarken hatırla.
+
+### Faz 12.9'da scope dışında kalanlar (v3.1.x follow-up, blocker değil)
+
+UI ajanı socket-error öncesi şu parçalara ulaşamadı; mevcut ekranlar v3.0 endpoint'leriyle çalışmaya devam ediyor (kırık değil):
+
+- **Reports ekranı SQL UI revamp** — `src/routes/reports.tsx` hâlâ `/api/docs/reports` (filesystem listing) kullanıyor. Faz 12.5 yeni `/api/reports` (SQL-backed `reports_index`) endpoint'i tüketiciyi bekliyor. Filter chip'leri, tags multi-select, status badge.
+- **Memory ekranı TOC nav + handover archive dropdown** — Decisions/Learned tab'larında sol panel TOC navigation yok; Handovers tab'ında eski `handover-<ts>.md` segmentleri için dropdown yok.
+- **POST /api/backlog integration test** — route landed, route-level test eksik.
+- **Orchestrator wiring of `outputIndexer`** — engine boot'tan `worker-pool.SafetyGuards`'a indexer callback geçirme tek satırlık iş; şu an slot boş, üretim akışında reports auto-indexing tetiklenmiyor.
+
+### Faz 12 sonrası v3.1.x küçük borç
+
+- Yukarıdaki 4 madde
+- `app.listen` error handler (Faz 10 borcu, hâlâ açık)
+- TimelinePanel.tsx unused (router'dan kaldırıldı ama dosya duruyor; v3.2 cleanup)
+- Eski v3.0 endpoint'leri kaldırma kararı: `/api/docs/reports` (filesystem) hâlâ aktif — UI'ı `/api/reports`'a çevirince kaldırılabilir, v3.2.
+- `+prime` synthetic row için `agents/prime.md` yazmak mı yoksa registry'de synthetic mı bırakmak mı kararı (v3.2)
+
+---
+
+## Faz 13 — workflow content rewrite (SIRADA, Eray senaryolarıyla)
+
+**Durum:** Bekliyor. Faz 12'nin mimari değişiklikleri (path, frontmatter, SQL index) workflow .md'lerinin **içeriği** ile uyumlu değil — placeholder `+ajan` referansları, `scripts/kortext-*.py` ve `hooks/git-pre-commit.sh` referansları, eski `workspace/` path'leri, monolitik rapor disipline'ı hâlâ workflow content'inde yazılı.
+
+**Plan dosyası:** [faz-13-bootstrap.md](faz-13-bootstrap.md) — yeni oturumda bu dosya açılır, plan oradan çekilir.
+
+**Önemli:** Faz 13'ün senaryoları **Eray'dan gelir** (örn. setup onboarding scenario, hangi workflow'un nasıl yeniden yazılacağı). Faz 13 öncesi `+ajan` placeholder'larla yüklenirse `index-sync` boot'ta fatal throw atar — bu istenen davranış: `kortext serve` çalışmadan önce content rewrite tamamlanmalı VEYA bir interim "skip validation" flag eklenmeli (önerilmez, hata atan validasyon Faz 12.8'in core garantisi).
 
 ---
 
