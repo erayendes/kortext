@@ -429,3 +429,58 @@ export const AuditLogInsertSchema = z.object({
   payload: z.record(z.unknown()).default({}),
 });
 export type AuditLogInsert = z.input<typeof AuditLogInsertSchema>;
+
+// ---------- personas ----------
+
+export const GateKindSchema = z.enum(['blueprint', 'architecture', 'deploy']);
+export type GateKind = z.infer<typeof GateKindSchema>;
+
+export const PersonaIndexSchema = z.object({
+  handle: PersonaHandle,
+  purpose: z.string().nullable(),
+  capabilities: z.array(z.string()),
+  when_to_use: z.string().nullable(),
+  model_default: z.string().nullable(),
+  source_path: z.string().min(1),
+  updated_at: Timestamp,
+});
+export type PersonaIndex = z.infer<typeof PersonaIndexSchema>;
+
+export const PersonaIndexUpsertSchema = z.object({
+  handle: PersonaHandle,
+  purpose: z.string().nullable().default(null),
+  capabilities: z.array(z.string()).default([]),
+  when_to_use: z.string().nullable().default(null),
+  model_default: z.string().nullable().default(null),
+  source_path: z.string().min(1),
+});
+export type PersonaIndexUpsert = z.input<typeof PersonaIndexUpsertSchema>;
+
+// ---------- workflow_steps ----------
+
+export const WorkflowStepIndexSchema = z.object({
+  id: z.number().int().positive(),
+  workflow_id: z.string().min(1),
+  step_no: z.number().int().nonnegative(),
+  step_name: z.string().nullable(),
+  persona_handle: PersonaHandle,
+  inputs: z.array(z.string()),
+  outputs: z.array(z.string()),
+  gate_kind: GateKindSchema.nullable(),
+  parallel_with: z.array(z.number().int().nonnegative()),
+  source_path: z.string().min(1),
+});
+export type WorkflowStepIndex = z.infer<typeof WorkflowStepIndexSchema>;
+
+export const WorkflowStepIndexUpsertSchema = z.object({
+  workflow_id: z.string().min(1),
+  step_no: z.number().int().nonnegative(),
+  step_name: z.string().nullable().default(null),
+  persona_handle: PersonaHandle,
+  inputs: z.array(z.string()).default([]),
+  outputs: z.array(z.string()).default([]),
+  gate_kind: GateKindSchema.nullable().default(null),
+  parallel_with: z.array(z.number().int().nonnegative()).default([]),
+  source_path: z.string().min(1),
+});
+export type WorkflowStepIndexUpsert = z.input<typeof WorkflowStepIndexUpsertSchema>;
