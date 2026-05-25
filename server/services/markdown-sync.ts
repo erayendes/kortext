@@ -1,7 +1,8 @@
-import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
+import { mkdirSync, writeFileSync, readFileSync, existsSync, appendFileSync } from 'node:fs';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import type { Repositories } from '../db/repositories/index.ts';
 import type { ReportStatus } from '../db/schemas.ts';
+import { updateToc } from './toc-updater.ts';
 
 /**
  * Markdown ↔ SQLite sync for *generated artifacts* (decisions, handovers, learned).
@@ -24,6 +25,11 @@ export type WorkspaceLayout = {
 const DECISIONS_SUBDIR = '.kortext/memory/decisions';
 const HANDOVERS_SUBDIR = '.kortext/memory/handovers';
 const REPORTS_SUBDIR = '.kortext/reports';
+
+/** Single-file ADR markdown (v3.1 spec Bölüm 5.4). Engine maintains its TOC. */
+const DECISIONS_SINGLE_FILE = '.kortext/memory/decisions.md';
+/** Single-file learned markdown (v3.1 spec Bölüm 5.4). Never archived. */
+const LEARNED_SINGLE_FILE = '.kortext/memory/learned.md';
 
 /**
  * Per-file report filename pattern (v3.1 spec section 6):
@@ -122,7 +128,75 @@ export class MarkdownSyncService {
       });
     }
 
+    // Best-effort TOC refresh on the single-file ADR doc, if it exists and
+    // opts in (i.e. has a `## İçindekiler` heading). Errors swallowed —
+    // the per-file ADR + index row are already persisted.
+    this.refreshTocBestEffort(DECISIONS_SINGLE_FILE);
+
     return { markdown_path: relPath, absolutePath };
+  }
+
+  /**
+   * Append a `## Öğrenim: <title>` block to `.kortext/memory/learned.md`
+   * and refresh its TOC. Unlike ADRs, learned entries are NOT indexed in
+   * SQL (Eray's decision — knowledge base stays pure markdown).
+   *
+   * Idempotent on identical (title, body) — the file is append-only by
+   * design; callers are responsible for de-duplication if needed.
+   */
+  writeLearned(input: {
+    title: string;
+    body_md: string;
+    author?: string | null;
+    status?: 'Waiting' | 'Approved' | 'Rejected';
+    approver?: string | null;
+    timestamp?: Date;
+  }): { markdown_path: string; absolutePath: string } {
+    const absolutePath = resolve(this.layout.root, LEARNED_SINGLE_FILE);
+    const relPath = relative(this.layout.root, absolutePath);
+    mkdirSync(dirname(absolutePath), { recursive: true });
+
+    const ts = input.timestamp ?? new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const stamp =
+      `${ts.getUTCFullYear()}-${pad(ts.getUTCMonth() + 1)}-${pad(ts.getUTCDate())}` +
+      `-${pad(ts.getUTCHours())}:${pad(ts.getUTCMinutes())}`;
+
+    const header =
+      `## Öğrenim: ${input.title}\n` +
+      `**Author:** ${input.author ?? 'unknown'} | **Status:** ${input.status ?? 'Waiting'} | ${stamp}` +
+      (input.approver ? ` | **Approver:** ${input.approver}` : '') +
+      '\n\n';
+    const block = header + input.body_md + (input.body_md.endsWith('\n') ? '' : '\n') + '\n';
+
+    if (!existsSync(absolutePath)) {
+      // Seed with a minimal scaffold so the TOC heading exists.
+      writeFileSync(
+        absolutePath,
+        '# Knowledge Base\n\n## İçindekiler\n\n---\n\n' + block,
+        'utf8',
+      );
+    } else {
+      appendFileSync(absolutePath, block, 'utf8');
+    }
+
+    this.refreshTocBestEffort(LEARNED_SINGLE_FILE);
+
+    return { markdown_path: relPath, absolutePath };
+  }
+
+  /**
+   * Refresh the TOC of a single-file memory document (decisions / learned)
+   * if it exists. Errors are swallowed — TOC maintenance MUST NOT break
+   * the calling write path.
+   */
+  private refreshTocBestEffort(subPath: string): void {
+    try {
+      const absolutePath = resolve(this.layout.root, subPath);
+      updateToc({ filePath: absolutePath });
+    } catch {
+      // Best-effort.
+    }
   }
 
   /**
