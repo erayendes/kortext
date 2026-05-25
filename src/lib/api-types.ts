@@ -107,6 +107,20 @@ export type BacklogItem = {
   updated_at: number;
 };
 
+export type ReportStatus = 'uninitialized' | 'writing' | 'approved';
+
+export type ReportIndex = {
+  id: number;
+  scope: string;
+  slug: string;
+  file_path: string;
+  author: string | null;
+  status: ReportStatus;
+  tags: string[];
+  related_item: string | null;
+  created_at: number;
+};
+
 export type DoctorSeverity = 'ok' | 'warn' | 'error';
 export type DoctorCategory =
   | 'workflow'

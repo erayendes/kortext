@@ -3,11 +3,11 @@ import {
   AlertTriangle,
   Cloud,
   CreditCard,
-  Eye,
   EyeOff,
   FileText,
   Code2,
   GitMerge,
+  Info,
   Lock,
   Plus,
   Send,
@@ -679,7 +679,6 @@ function MarkdownFileShell({
   }, [data, knownFiles]);
 
   const [selected, setSelected] = useState<string | null>(null);
-  const [mode, setMode] = useState<'preview' | 'edit'>('preview');
 
   useEffect(() => {
     if (selected === null && available.length > 0) setSelected(available[0]!);
@@ -709,7 +708,7 @@ function MarkdownFileShell({
           );
         })}
       </aside>
-      <FileBody scope={scope} file={selected} mode={mode} onModeChange={setMode} />
+      <FileBody scope={scope} file={selected} />
     </div>
   );
 }
@@ -717,16 +716,13 @@ function MarkdownFileShell({
 function FileBody({
   scope,
   file,
-  mode,
-  onModeChange,
 }: {
   scope: string;
   file: string | null;
-  mode: 'preview' | 'edit';
-  onModeChange: (m: 'preview' | 'edit') => void;
 }) {
   const [body, setBody] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
+  const [showSource, setShowSource] = useState(false);
 
   useEffect(() => {
     if (!file) {
@@ -745,6 +741,8 @@ function FileBody({
     };
   }, [scope, file]);
 
+  // Sanitize marked HTML through DOMPurify before injecting it — same XSS
+  // guard as MarkdownViewer / PersonaEditor.
   const html = useMemo(() => {
     if (!body) return '';
     const raw = marked.parse(body, { async: false }) as string;
@@ -762,35 +760,47 @@ function FileBody({
   return (
     <section className="flex flex-col min-w-0">
       <header className="flex items-center justify-between gap-3 px-3.5 py-2.5 border-b border-border-default">
-        <span className="mono text-[13px] text-tx-2">{file}</span>
-        <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            className="btn btn-ghost btn-xs"
-            onClick={() => onModeChange(mode === 'preview' ? 'edit' : 'preview')}
-          >
-            <Eye className="w-3 h-3" /> {mode === 'preview' ? 'Edit' : 'Preview'}
-          </button>
-          <button type="button" disabled title="Inline save lands in v3.2" className="btn btn-outline btn-xs">
-            Save
-          </button>
+        <div className="flex items-center gap-2 mono text-[12px] text-tx-3">
+          <Lock className="w-3 h-3 text-tx-disabled" />
+          <span className="text-tx-2">{file}</span>
+          <span className="text-tx-disabled">·</span>
+          <span>{scope}/ · readonly</span>
         </div>
+        <button
+          type="button"
+          className="btn btn-ghost btn-xs"
+          onClick={() => setShowSource((v) => !v)}
+        >
+          {showSource ? 'Rendered' : 'View source'}
+        </button>
       </header>
+      <div className="px-3.5 py-2 flex items-center gap-2 text-[11px] text-tx-3 border-b border-border-subtle">
+        <Info className="w-3 h-3 text-tx-disabled" />
+        <span>
+          Package-owned content. Editing requires forking the kortext npm package — v3.2 will
+          revisit.
+        </span>
+      </div>
       {error && <div className="px-4 py-3 text-[12px] text-danger">{error}</div>}
-      {mode === 'edit' ? (
-        <textarea
-          spellCheck={false}
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          className="flex-1 bg-transparent border-none outline-none p-3.5 mono text-[12px] leading-[1.65] text-tx-2 resize-none"
-        />
+      {showSource ? (
+        <pre className="flex-1 overflow-auto px-3.5 py-3.5 mono text-[12px] leading-[1.65] text-tx-2 whitespace-pre-wrap">
+          {body}
+        </pre>
       ) : (
-        <article
-          className="prose-markdown overflow-y-auto px-5 py-4 text-[13px] leading-[1.65]"
-          dangerouslySetInnerHTML={{ __html: html }}
-        />
+        <SanitizedMarkdownArticle html={html} />
       )}
     </section>
+  );
+}
+
+function SanitizedMarkdownArticle({ html }: { html: string }) {
+  // DOMPurify sanitized `html` upstream — see FileBody's useMemo.
+  return (
+    <article
+      className="prose-markdown overflow-y-auto px-5 py-4 text-[13px] leading-[1.65]"
+      // eslint-disable-next-line react/no-danger -- input pre-sanitized via DOMPurify
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
   );
 }
 
