@@ -44,6 +44,7 @@ describe('migrations', () => {
         'locks',
         'notifications_sent',
         'pending_questions',
+        'reports_index',
         'run_steps',
         'runs',
         'runtime_artifacts',

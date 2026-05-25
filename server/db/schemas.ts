@@ -181,6 +181,40 @@ export const DecisionIndexInsertSchema = z.object({
 });
 export type DecisionIndexInsert = z.input<typeof DecisionIndexInsertSchema>;
 
+// ---------- reports_index ----------
+
+export const ReportStatusSchema = z.enum([
+  'uninitialized',
+  'writing',
+  'approved',
+]);
+export type ReportStatus = z.infer<typeof ReportStatusSchema>;
+
+export const ReportIndexSchema = z.object({
+  id: z.number().int().positive(),
+  scope: z.string().min(1),
+  slug: z.string().min(1),
+  file_path: z.string().min(1),
+  author: z.string().nullable(),
+  status: ReportStatusSchema,
+  tags: z.array(z.string()),
+  related_item: z.string().nullable(),
+  created_at: Timestamp,
+});
+export type ReportIndex = z.infer<typeof ReportIndexSchema>;
+
+export const ReportIndexInsertSchema = z.object({
+  scope: z.string().min(1),
+  slug: z.string().min(1),
+  file_path: z.string().min(1),
+  author: z.string().nullable().default(null),
+  status: ReportStatusSchema.default('uninitialized'),
+  tags: z.array(z.string()).default([]),
+  related_item: z.string().nullable().default(null),
+  created_at: Timestamp.optional(),
+});
+export type ReportIndexInsert = z.input<typeof ReportIndexInsertSchema>;
+
 // ---------- runs ----------
 
 export const RunStatusSchema = z.enum([

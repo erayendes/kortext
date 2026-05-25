@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
+import { basename, dirname, join, relative, resolve } from 'node:path';
 import type { Repositories } from '../db/repositories/index.ts';
+import type { ReportStatus } from '../db/schemas.ts';
 
 /**
  * Markdown ↔ SQLite sync for *generated artifacts* (decisions, handovers, learned).
@@ -22,6 +23,43 @@ export type WorkspaceLayout = {
 
 const DECISIONS_SUBDIR = '.kortext/memory/decisions';
 const HANDOVERS_SUBDIR = '.kortext/memory/handovers';
+const REPORTS_SUBDIR = '.kortext/reports';
+
+/**
+ * Per-file report filename pattern (v3.1 spec section 6):
+ *   <scope>_<slug>_<YYYY-MM-DD-HHMM>.md
+ *
+ * scope and slug are kebab-case; underscores separate the three parts.
+ */
+export const REPORT_FILENAME_PATTERN =
+  /^([a-z][a-z0-9-]*)_([a-z0-9][a-z0-9-]*)_(\d{4}-\d{2}-\d{2}-\d{4})\.md$/;
+
+export type ParsedReportFilename = {
+  scope: string;
+  slug: string;
+  timestamp: string;
+};
+
+/**
+ * Parse a per-file report filename. Returns null if the name does not match
+ * the v3.1 pattern. Accepts a full path or a bare filename.
+ */
+export function parseReportFilename(pathOrName: string): ParsedReportFilename | null {
+  const name = basename(pathOrName);
+  const match = REPORT_FILENAME_PATTERN.exec(name);
+  if (!match) return null;
+  const [, scope, slug, timestamp] = match;
+  if (!scope || !slug || !timestamp) return null;
+  return { scope, slug, timestamp };
+}
+
+function formatReportTimestamp(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return (
+    `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}` +
+    `-${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}`
+  );
+}
 
 function writeAtomic(path: string, content: string): void {
   mkdirSync(dirname(path), { recursive: true });
@@ -130,6 +168,113 @@ export class MarkdownSyncService {
     });
 
     return { handoverId: row.id, markdown_path: relPath };
+  }
+
+  /**
+   * Persist a per-file report under `.kortext/reports/` and index it.
+   *
+   * Naming pattern (v3.1 spec section 6):
+   *   <scope>_<slug>_<YYYY-MM-DD-HHMM>.md
+   *
+   * Returns the absolute + relative path and the indexed row id. If a row
+   * already exists for the target file_path (re-write), the row is reused
+   * and its status updated.
+   */
+  writeReport(input: {
+    scope: string;
+    slug: string;
+    body_md: string;
+    author?: string | null;
+    status?: ReportStatus;
+    tags?: string[];
+    related_item?: string | null;
+    /** Override timestamp (mostly for tests). */
+    timestamp?: Date;
+  }): { markdown_path: string; absolutePath: string; reportId: number } {
+    const ts = input.timestamp ?? new Date();
+    const stamp = formatReportTimestamp(ts);
+    const filename = `${input.scope}_${input.slug}_${stamp}.md`;
+    const absolutePath = resolve(this.layout.root, REPORTS_SUBDIR, filename);
+    const relPath = relative(this.layout.root, absolutePath);
+
+    const frontmatter = [
+      '---',
+      `status: ${input.status ?? 'writing'}`,
+      input.author ? `author: ${input.author}` : null,
+      `updated_at: ${ts.toISOString()}`,
+      input.related_item ? `related_item: ${input.related_item}` : null,
+      input.tags && input.tags.length > 0
+        ? `tags: [${input.tags.join(', ')}]`
+        : null,
+      '---',
+      '',
+    ]
+      .filter((line): line is string => line !== null)
+      .join('\n');
+
+    writeAtomic(absolutePath, frontmatter + input.body_md);
+
+    const existing = this.repos.reports.getByPath(relPath);
+    if (existing) {
+      const next = this.repos.reports.updateStatus(
+        existing.id,
+        input.status ?? existing.status,
+      );
+      return { markdown_path: relPath, absolutePath, reportId: next.id };
+    }
+
+    const row = this.repos.reports.create({
+      scope: input.scope,
+      slug: input.slug,
+      file_path: relPath,
+      author: input.author ?? null,
+      status: input.status ?? 'writing',
+      tags: input.tags ?? [],
+      related_item: input.related_item ?? null,
+    });
+    return { markdown_path: relPath, absolutePath, reportId: row.id };
+  }
+
+  /**
+   * Best-effort indexer: given an arbitrary output file written by the
+   * engine, if it lives under `.kortext/reports/` AND matches the per-file
+   * naming pattern, ensure a `reports_index` row exists for it.
+   *
+   * Used by the worker pool's post-step output guard to back-fill the index
+   * for outputs the executor wrote on its own (without going through
+   * `writeReport`).
+   *
+   * Returns the resulting (or pre-existing) row id, or null if the file is
+   * not a per-file report.
+   */
+  indexReportFromPath(input: {
+    absolutePath: string;
+    author?: string | null;
+    status?: ReportStatus;
+    relatedItem?: string | null;
+  }): number | null {
+    const parsed = parseReportFilename(input.absolutePath);
+    if (!parsed) return null;
+    const relPath = relative(this.layout.root, input.absolutePath);
+    // Only index files that actually fall inside the project's reports dir.
+    if (!relPath.startsWith(`${REPORTS_SUBDIR}/`) && relPath !== REPORTS_SUBDIR) {
+      return null;
+    }
+    if (!existsSync(input.absolutePath)) return null;
+
+    const existing = this.repos.reports.getByPath(relPath);
+    if (existing) return existing.id;
+
+    const row = this.repos.reports.create({
+      scope: parsed.scope,
+      slug: parsed.slug,
+      file_path: relPath,
+      author: input.author ?? null,
+      status: input.status ?? 'writing',
+      tags: [],
+      related_item: input.relatedItem ?? null,
+    });
+    return row.id;
   }
 
   /**
