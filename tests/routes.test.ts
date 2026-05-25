@@ -17,6 +17,7 @@ import { personasRouter } from '../server/routes/personas.ts';
 import { workflowsRouter } from '../server/routes/workflows.ts';
 import { backlogRouter } from '../server/routes/backlog.ts';
 import { docsRouter } from '../server/routes/docs.ts';
+import { reportsRouter } from '../server/routes/reports.ts';
 
 let tmpRoot: string;
 let db: Database.Database;
@@ -60,6 +61,7 @@ beforeEach(async () => {
   app.use('/api', workflowsRouter({ workflows }));
   app.use('/api', doctorRouter({ repos, workflows, personas }));
   app.use('/api', docsRouter({ scopes: { refs: docsDir } }));
+  app.use('/api', reportsRouter({ repos, projectRoot: tmpRoot }));
 
   await new Promise<void>((resolve) => {
     server = app.listen(0, () => resolve());
@@ -263,6 +265,112 @@ describe('GET /api/docs/:scope', () => {
   it('404s an unknown file in a valid scope', async () => {
     const res = await fetch(`${baseUrl}/api/docs/refs/missing.md`);
     expect(res.status).toBe(404);
+  });
+});
+
+describe('GET /api/reports', () => {
+  it('returns empty when no reports indexed', async () => {
+    const res = await fetch(`${baseUrl}/api/reports`);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ reports: [] });
+  });
+
+  it('filters by scope, status, and related_item', async () => {
+    repos.reports.create({
+      scope: 'test-reports',
+      slug: 'a',
+      file_path: '.kortext/reports/test-reports_a_2026-05-20-0900.md',
+      status: 'approved',
+    });
+    repos.reports.create({
+      scope: 'security-reports',
+      slug: 'b',
+      file_path: '.kortext/reports/security-reports_b_2026-05-21-0900.md',
+      status: 'writing',
+      related_item: 'T01',
+    });
+    repos.reports.create({
+      scope: 'test-reports',
+      slug: 'c',
+      file_path: '.kortext/reports/test-reports_c_2026-05-22-0900.md',
+      status: 'writing',
+      related_item: 'T01',
+    });
+
+    const all = (await (await fetch(`${baseUrl}/api/reports`)).json()) as {
+      reports: { slug: string }[];
+    };
+    expect(all.reports).toHaveLength(3);
+
+    const scoped = (await (
+      await fetch(`${baseUrl}/api/reports?scope=test-reports`)
+    ).json()) as { reports: { slug: string }[] };
+    expect(scoped.reports.map((r) => r.slug).sort()).toEqual(['a', 'c']);
+
+    const writing = (await (
+      await fetch(`${baseUrl}/api/reports?status=writing`)
+    ).json()) as { reports: { slug: string }[] };
+    expect(writing.reports.map((r) => r.slug).sort()).toEqual(['b', 'c']);
+
+    const byItem = (await (
+      await fetch(`${baseUrl}/api/reports?related_item=T01`)
+    ).json()) as { reports: { slug: string }[] };
+    expect(byItem.reports.map((r) => r.slug).sort()).toEqual(['b', 'c']);
+
+    const limit1 = (await (
+      await fetch(`${baseUrl}/api/reports?limit=1`)
+    ).json()) as { reports: unknown[] };
+    expect(limit1.reports).toHaveLength(1);
+  });
+
+  it('400s an invalid status query', async () => {
+    const res = await fetch(`${baseUrl}/api/reports?status=bogus`);
+    expect(res.status).toBe(400);
+  });
+
+  it('returns the row and body for /api/reports/:id', async () => {
+    const reportsDir = join(tmpRoot, '.kortext/reports');
+    mkdirSync(reportsDir, { recursive: true });
+    const filename = 'test-reports_e2e_2026-05-22-1000.md';
+    writeFileSync(join(reportsDir, filename), '# e2e report\n\nbody\n');
+
+    const created = repos.reports.create({
+      scope: 'test-reports',
+      slug: 'e2e',
+      file_path: `.kortext/reports/${filename}`,
+      status: 'approved',
+    });
+
+    const res = await fetch(`${baseUrl}/api/reports/${created.id}`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      report: { id: number; slug: string };
+      body: string | null;
+    };
+    expect(body.report.id).toBe(created.id);
+    expect(body.body).toContain('# e2e report');
+  });
+
+  it('returns body=null when the file is missing', async () => {
+    const created = repos.reports.create({
+      scope: 'test-reports',
+      slug: 'orphan',
+      file_path: '.kortext/reports/test-reports_orphan_2026-05-22-1000.md',
+    });
+    const res = await fetch(`${baseUrl}/api/reports/${created.id}`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { body: string | null };
+    expect(body.body).toBeNull();
+  });
+
+  it('404s an unknown id', async () => {
+    const res = await fetch(`${baseUrl}/api/reports/9999`);
+    expect(res.status).toBe(404);
+  });
+
+  it('400s an invalid id', async () => {
+    const res = await fetch(`${baseUrl}/api/reports/abc`);
+    expect(res.status).toBe(400);
   });
 });
 

@@ -41,11 +41,28 @@ export type GateController = {
  *   - Run ends as 'failed' with the first error_message.
  */
 
+/**
+ * Callback invoked once per declared output file after a step succeeds.
+ *
+ * v3.1 Faz 12.5 uses this to back-fill `reports_index` for outputs that the
+ * executor wrote into `.kortext/reports/` with a per-file naming pattern.
+ *
+ * Implementations must be best-effort: failures are swallowed so engine flow
+ * is never blocked by index bookkeeping. Returning a value is not required.
+ */
+export type OutputIndexer = (input: {
+  absolutePath: string;
+  step: import('./workflow-parser.ts').WorkflowStep;
+  runId: number;
+}) => void;
+
 export type SafetyGuards = {
   /** Secret scanner — runs on each successful step's declared outputs + log. */
   secretScanner?: SecretScanner;
   /** Harmful-output filter — runs on each successful step's output file bodies + log. */
   harmfulFilter?: HarmfulOutputFilter;
+  /** Per-output post-step indexer (e.g. `reports_index`). Errors are swallowed. */
+  outputIndexer?: OutputIndexer;
 };
 
 export type RunWorkflowOptions = {
@@ -105,6 +122,17 @@ async function runSafetyGuards(
       if (report.shouldFailRun) {
         const f = report.findings[0];
         return `banned/harmful phrase detected in ${file}:${f?.line_number} — ${f?.message}`;
+      }
+    }
+  }
+
+  // Best-effort output indexer (e.g. reports_index). Never fail the run.
+  if (safety.outputIndexer && outputFiles.length > 0) {
+    for (const absolutePath of outputFiles) {
+      try {
+        safety.outputIndexer({ absolutePath, step, runId });
+      } catch {
+        // swallow — bookkeeping must not break the pipeline
       }
     }
   }

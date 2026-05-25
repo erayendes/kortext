@@ -5,6 +5,7 @@ import { ContextsRepository } from './contexts.ts';
 import { LocksRepository } from './locks.ts';
 import { HandoversRepository } from './handovers.ts';
 import { DecisionsRepository } from './decisions.ts';
+import { ReportsRepository } from './reports.ts';
 import { RunsRepository } from './runs.ts';
 import { PendingQuestionsRepository } from './pending-questions.ts';
 import { RuntimeArtifactsRepository } from './runtime-artifacts.ts';
@@ -19,6 +20,7 @@ export {
   LocksRepository,
   HandoversRepository,
   DecisionsRepository,
+  ReportsRepository,
   RunsRepository,
   PendingQuestionsRepository,
   RuntimeArtifactsRepository,
@@ -34,6 +36,7 @@ export type Repositories = {
   locks: LocksRepository;
   handovers: HandoversRepository;
   decisions: DecisionsRepository;
+  reports: ReportsRepository;
   runs: RunsRepository;
   pendingQuestions: PendingQuestionsRepository;
   runtimeArtifacts: RuntimeArtifactsRepository;
@@ -50,6 +53,7 @@ export function createRepositories(db: Database.Database): Repositories {
     locks: new LocksRepository(db),
     handovers: new HandoversRepository(db),
     decisions: new DecisionsRepository(db),
+    reports: new ReportsRepository(db),
     runs: new RunsRepository(db),
     pendingQuestions: new PendingQuestionsRepository(db),
     runtimeArtifacts: new RuntimeArtifactsRepository(db),
