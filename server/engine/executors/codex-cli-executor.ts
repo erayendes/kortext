@@ -1,7 +1,7 @@
-import { existsSync } from 'node:fs';
-import { isAbsolute, join } from 'node:path';
+import { join } from 'node:path';
 import type { Executor, ExecutorContext, ExecutorResult } from '../executor.ts';
 import type { WorkflowStep } from '../workflow-parser.ts';
+import { findActualOutputFiles } from '../output-resolver.ts';
 import { spawnCli, tailLines } from './cli-spawn.ts';
 import { readPersonaPrompt, type PersonaRegistry } from '../persona-registry.ts';
 
@@ -74,10 +74,9 @@ export class CodexCliExecutor implements Executor {
       };
     }
 
-    const missing = step.outputs.filter((rel) => {
-      const p = isAbsolute(rel) ? rel : join(ctx.worktreePath, rel);
-      return !existsSync(p);
-    });
+    const missing = step.outputs.filter(
+      (rel) => findActualOutputFiles(rel, ctx.worktreePath).length === 0,
+    );
     if (missing.length > 0) {
       return {
         ok: false,

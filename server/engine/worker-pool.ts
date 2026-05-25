@@ -1,4 +1,3 @@
-import { isAbsolute, join } from 'node:path';
 import { readFileSync } from 'node:fs';
 import type { WorkflowGraph } from './dag.ts';
 import type { Executor, ExecutorContext } from './executor.ts';
@@ -7,6 +6,7 @@ import type { Run } from '../db/schemas.ts';
 import type { SecretScanner } from '../safety/secret-scanner.ts';
 import type { HarmfulOutputFilter } from '../safety/harmful-output-filter.ts';
 import type { ApprovalGate } from './workflow-parser.ts';
+import { findActualOutputFiles } from './output-resolver.ts';
 
 export type GatePauseContext = {
   gate: ApprovalGate;
@@ -97,8 +97,12 @@ async function runSafetyGuards(
   runId: number,
 ): Promise<string | null> {
   if (!safety) return null;
-  const outputFiles = step.outputs.map((rel) =>
-    isAbsolute(rel) ? rel : join(worktreePath, rel),
+  // Resolve declared outputs to actual file paths. Static declared paths
+  // produce 0 or 1 absolute path (existence check); patterned declared paths
+  // (e.g. `.kortext/reports/foo_<slug>_<ts>.md`) expand to every matching
+  // file in the target directory at this point in time.
+  const outputFiles = step.outputs.flatMap((rel) =>
+    findActualOutputFiles(rel, worktreePath),
   );
   const filesToScan = logPath ? [...outputFiles, logPath] : outputFiles;
 
