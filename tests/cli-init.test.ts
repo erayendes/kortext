@@ -16,20 +16,38 @@ beforeEach(() => {
   mkdirSync(templatesDir, { recursive: true });
   mkdirSync(targetDir, { recursive: true });
 
-  // Minimal template tree: enough to exercise the scaffold loop.
-  mkdirSync(join(templatesDir, 'agents'), { recursive: true });
-  writeFileSync(join(templatesDir, 'agents', 'persona.md'), '# Persona\n', 'utf8');
-  mkdirSync(join(templatesDir, 'workflows'), { recursive: true });
-  writeFileSync(join(templatesDir, 'workflows', 'wf.md'), '# WF\n', 'utf8');
-  mkdirSync(join(templatesDir, 'rules'), { recursive: true });
-  writeFileSync(join(templatesDir, 'rules', 'behavior.md'), '# Rules\n', 'utf8');
-  mkdirSync(join(templatesDir, 'workspace', 'references'), { recursive: true });
+  // v3.1 minimal template tree: only the things init still copies. Personas,
+  // workflows, and rules now live in the npm package itself and are loaded
+  // from there, so they no longer appear under templates/.
+  mkdirSync(join(templatesDir, 'templates', 'references'), { recursive: true });
   writeFileSync(
-    join(templatesDir, 'workspace', 'references', 'blueprint.md'),
-    '---\nstatus: draft\n---\n# Blueprint\n',
+    join(templatesDir, 'templates', 'references', 'blueprint.md'),
+    '---\nstatus: uninitialized\n---\n# Blueprint\n',
     'utf8',
   );
-  writeFileSync(join(templatesDir, 'AGENTS.md'), '# Template AGENTS\n', 'utf8');
+  mkdirSync(join(templatesDir, 'templates', 'reports'), { recursive: true });
+  writeFileSync(
+    join(templatesDir, 'templates', 'reports', 'test-reports.md'),
+    '---\nstatus: uninitialized\n---\n# Test Report\n',
+    'utf8',
+  );
+  mkdirSync(join(templatesDir, 'templates', 'memory'), { recursive: true });
+  writeFileSync(
+    join(templatesDir, 'templates', 'memory', 'handover.md'),
+    '# Handover Reports\n',
+    'utf8',
+  );
+  writeFileSync(join(templatesDir, 'templates', 'AGENTS.md'), '# Template AGENTS\n', 'utf8');
+  writeFileSync(
+    join(templatesDir, 'templates', '.gitignore'),
+    '.kortext/data/\n.env\nnode_modules/\n.DS_Store\n',
+    'utf8',
+  );
+  writeFileSync(
+    join(templatesDir, 'templates', '.env.example'),
+    '# Kortext env\nKORTEXT_PORT=3200\n',
+    'utf8',
+  );
 });
 
 afterEach(() => {
@@ -37,27 +55,40 @@ afterEach(() => {
 });
 
 describe('initCommand', () => {
-  it('scaffolds a fresh project with all template dirs + AGENTS.md + DB', () => {
+  it('scaffolds a fresh project under .kortext/ + AGENTS.md + DB', () => {
     const result = initCommand({ targetDir, templatesDir });
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error('expected ok');
 
+    // v3.1: root gets AGENTS.md / .gitignore / .env.example; the framework
+    // folder is `.kortext/` (think `.git/`); personas/workflows/rules are
+    // NOT copied (loaded from the package).
     expect(result.created).toEqual(
       expect.arrayContaining([
-        'agents',
-        'workflows',
-        'rules',
-        'workspace',
         'AGENTS.md',
-        join('.kortext', 'runtime', 'kortext.db'),
+        '.gitignore',
+        '.env.example',
+        join('.kortext', 'references'),
+        join('.kortext', 'reports'),
+        join('.kortext', 'memory'),
+        join('.kortext', 'data'),
+        join('.kortext', 'data', 'kortext.db'),
       ]),
     );
     expect(result.skipped).toEqual([]);
 
-    expect(existsSync(join(targetDir, 'agents', 'persona.md'))).toBe(true);
-    expect(existsSync(join(targetDir, 'workflows', 'wf.md'))).toBe(true);
-    expect(existsSync(join(targetDir, 'rules', 'behavior.md'))).toBe(true);
-    expect(existsSync(join(targetDir, 'workspace', 'references', 'blueprint.md'))).toBe(true);
+    // Files copied from templates/.
+    expect(existsSync(join(targetDir, '.kortext', 'references', 'blueprint.md'))).toBe(true);
+    expect(existsSync(join(targetDir, '.kortext', 'reports', 'test-reports.md'))).toBe(true);
+    expect(existsSync(join(targetDir, '.kortext', 'memory', 'handover.md'))).toBe(true);
+    expect(existsSync(join(targetDir, '.gitignore'))).toBe(true);
+    expect(existsSync(join(targetDir, '.env.example'))).toBe(true);
+
+    // No per-project copy of personas / workflows / rules anymore.
+    expect(existsSync(join(targetDir, 'agents'))).toBe(false);
+    expect(existsSync(join(targetDir, 'workflows'))).toBe(false);
+    expect(existsSync(join(targetDir, 'rules'))).toBe(false);
+    expect(existsSync(join(targetDir, 'workspace'))).toBe(false);
 
     const agentsMd = readFileSync(join(targetDir, 'AGENTS.md'), 'utf8');
     expect(agentsMd).toBe('# Template AGENTS\n');
@@ -65,6 +96,7 @@ describe('initCommand', () => {
     // DB was created and migrations applied (schemaVersion > 0).
     expect(result.schemaVersion).toBeGreaterThan(0);
     expect(existsSync(result.dbPath)).toBe(true);
+    expect(result.dbPath).toBe(join(targetDir, '.kortext', 'data', 'kortext.db'));
 
     // Sanity: schema_migrations row should be present.
     const db = new Database(result.dbPath, { readonly: true });
@@ -84,18 +116,20 @@ describe('initCommand', () => {
     expect(second.created).toEqual([]);
     expect(second.skipped).toEqual(
       expect.arrayContaining([
-        'agents',
-        'workflows',
-        'rules',
-        'workspace',
         'AGENTS.md',
-        join('.kortext', 'runtime', 'kortext.db'),
+        '.gitignore',
+        '.env.example',
+        join('.kortext', 'references'),
+        join('.kortext', 'reports'),
+        join('.kortext', 'memory'),
+        join('.kortext', 'data'),
+        join('.kortext', 'data', 'kortext.db'),
       ]),
     );
   });
 
   it('writes the default AGENTS.md when the template lacks one', () => {
-    rmSync(join(templatesDir, 'AGENTS.md'));
+    rmSync(join(templatesDir, 'templates', 'AGENTS.md'));
     const result = initCommand({ targetDir, templatesDir });
     expect(result.ok).toBe(true);
     const written = readFileSync(join(targetDir, 'AGENTS.md'), 'utf8');
@@ -107,12 +141,19 @@ describe('initCommand', () => {
     initCommand({ targetDir, templatesDir });
 
     // User edited a scaffolded file; --force should overwrite.
-    writeFileSync(join(targetDir, 'agents', 'persona.md'), '# Edited\n', 'utf8');
+    writeFileSync(
+      join(targetDir, '.kortext', 'references', 'blueprint.md'),
+      '# Edited\n',
+      'utf8',
+    );
 
     const result = initCommand({ targetDir, templatesDir, force: true });
     expect(result.ok).toBe(true);
-    const restored = readFileSync(join(targetDir, 'agents', 'persona.md'), 'utf8');
-    expect(restored).toBe('# Persona\n');
+    const restored = readFileSync(
+      join(targetDir, '.kortext', 'references', 'blueprint.md'),
+      'utf8',
+    );
+    expect(restored).toMatch(/^---\nstatus: uninitialized\n---\n# Blueprint/);
   });
 
   it('refuses to init into the templates dir itself without --force', () => {

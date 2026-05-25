@@ -22,8 +22,10 @@ import { readPersonaPrompt, type PersonaRegistry } from '../persona-registry.ts'
  *        Claude its response will not be read until files are validated.
  *     3. The user prompt itself lists Outputs as commands ("Use the Write
  *        tool to create …"), not as descriptive metadata.
- *   Workflow path convention (`../workspace/foo.md`) is normalised by the
- *   parser into project-root-relative paths before reaching the executor.
+ *   Workflow path convention (`../.kortext/foo.md` post-v3.1, or the legacy
+ *   `../workspace/foo.md` until Faz 13 rewrites the workflows) is normalised
+ *   by the parser into project-root-relative paths before reaching the
+ *   executor.
  *
  * Prompt cache activation (Faz 12.7):
  *   Claude CLI auto-caches the system prompt on the server side; we get a

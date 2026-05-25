@@ -9,7 +9,7 @@ import { gitCommit } from './git-commit.ts';
  *
  * Records a persona-to-persona handover both as a row in the SQLite
  * `handovers` table (machine-readable, for dashboard/timeline) and as a
- * markdown block prepended to `workspace/memory/handover.md` (human-
+ * markdown block prepended to `.kortext/memory/handover.md` (human-
  * readable).
  *
  * `from` and `to` personas are validated against the registry — bad
@@ -43,7 +43,7 @@ export type HandoverResult = {
 export type HandoverEngineOptions = {
   repos: Repositories;
   personas: PersonaRegistry;
-  /** Project workspace root — handover.md lives at `<root>/memory/handover.md`. */
+  /** Project root — handover.md lives at `<root>/.kortext/memory/handover.md`. */
   workspaceRoot: string;
   /**
    * When set, the engine commits the markdown change after each record()
@@ -70,7 +70,12 @@ export class HandoverEngine {
     this.assertKnownPersona(input.fromPersona, 'from');
     this.assertKnownPersona(input.toPersona, 'to');
 
-    const markdownPath = join(this.opts.workspaceRoot, 'memory', 'handover.md');
+    const markdownPath = join(
+      this.opts.workspaceRoot,
+      '.kortext',
+      'memory',
+      'handover.md',
+    );
     mkdirSync(dirname(markdownPath), { recursive: true });
 
     const now = (this.opts.now ?? (() => new Date()))();

@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { projectLayout, runtimeLayout } from './paths.ts';
 import express from 'express';
 import { env } from './config/env.ts';
 import { healthRouter } from './routes/health.ts';
@@ -30,11 +31,12 @@ import { findUnknownPersonas } from './engine/consistency.ts';
 const { schemaVersion, repositories: repos } = getDb();
 console.log(`[kortext] db ready (schema v${schemaVersion})`);
 
-// Load workflow + persona definitions from disk into in-memory registries.
-// Faz 5.5+: these become the source for `loadWorkflowById` and persona
-// dispatch when the orchestrator is wired into the server process.
-const workflowsDir = resolve(process.cwd(), 'workflows');
-const agentsDir = resolve(process.cwd(), 'agents');
+// v3.1: persona / workflow / rule definitions are loaded from inside the
+// kortext npm package (not the project). Per-project copies are gone.
+const runtime = runtimeLayout();
+const layout = projectLayout(process.cwd());
+const workflowsDir = runtime.workflowsDir;
+const agentsDir = runtime.agentsDir;
 const workflowRegistry = loadWorkflowsFromDir(workflowsDir);
 const personaRegistry = loadPersonasFromDir(agentsDir);
 const wfErrors = workflowRegistry.errors();
@@ -145,11 +147,13 @@ app.use(
   '/api',
   docsRouter({
     scopes: {
-      references: resolve(process.cwd(), 'workspace/references'),
-      reports: resolve(process.cwd(), 'workspace/reports'),
-      memory: resolve(process.cwd(), 'workspace/memory'),
-      rules: resolve(process.cwd(), 'rules'),
-      workflows: workflowsDir,
+      references: layout.references,
+      reports: layout.reports,
+      memory: layout.memory,
+      // Rules + workflows are read-only paket içeriği — sourced from the
+      // npm package, not the project.
+      rules: runtime.rulesDir,
+      workflows: runtime.workflowsDir,
     },
   }),
 );

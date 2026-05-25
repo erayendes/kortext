@@ -24,7 +24,7 @@ export type BlueprintPaths = {
   projectJsonPath: string;
 };
 
-const DEFAULT_BLUEPRINT_REL = 'workspace/references/blueprint.md';
+const DEFAULT_BLUEPRINT_REL = '.kortext/references/blueprint.md';
 const DEFAULT_PROJECT_JSON_REL = '.kortext/project.json';
 
 export function resolveBlueprintPaths(workspaceRoot: string): BlueprintPaths {

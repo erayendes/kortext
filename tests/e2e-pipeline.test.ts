@@ -348,7 +348,7 @@ describe('E2E — handover writes markdown + auto-commits to git', () => {
     expect(result.commitSha).toMatch(/^[0-9a-f]{40}$/);
 
     // The handover markdown is on disk and contains the new entry.
-    const handoverPath = join(workspaceRoot, 'memory', 'handover.md');
+    const handoverPath = join(workspaceRoot, '.kortext', 'memory', 'handover.md');
     expect(existsSync(handoverPath)).toBe(true);
     const body = readFileSync(handoverPath, 'utf8');
     expect(body).toContain('T01');

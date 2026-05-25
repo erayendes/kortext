@@ -102,16 +102,16 @@ describe('build verification', () => {
   });
 
   it(
-    'compiled `kortext init` scaffolds agents/workflows/rules/workspace from the package root',
+    'compiled `kortext init` scaffolds the v3.1 .kortext/ layout from the package root',
     () => {
       // Regression guard for the v3.0.0-release init bug: in compiled mode,
       // `server/cli/init.ts`'s old `packageRootFromHere()` walked two levels up
       // from `dist/server/cli/init.js` and landed in `dist/` — which contains
       // no template dirs. Init silently created only AGENTS.md + the DB.
       //
-      // The fix is a package.json walk-up identical to bin/kortext.ts's. This
-      // test pins the behaviour by running the compiled CLI against a real
-      // empty directory and asserting the full scaffold lands.
+      // The fix is a package.json walk-up. v3.1 reshaped the scaffold:
+      // personas/workflows/rules are no longer copied per-project (loaded
+      // straight from the package), and the framework folder is now `.kortext/`.
       const compiledEntry = join(projectRoot, 'dist', 'bin', 'kortext.js');
       if (!existsSync(compiledEntry)) {
         throw new Error('dist/bin/kortext.js missing — build smoke must run first');
@@ -125,22 +125,34 @@ describe('build verification', () => {
           timeout: 30_000,
         });
 
-        // The four template dirs must all exist and be non-empty — otherwise
-        // a user running `npm install -g kortext && kortext init` would land
-        // in a half-empty project and the orchestrator could not find any
-        // workflows / personas to load.
-        for (const rel of ['agents', 'workflows', 'rules', 'workspace']) {
+        // v3.1 scaffold: framework folder is .kortext/, root gets the three
+        // template files. References / reports / memory are seeded from
+        // <package-root>/templates/.
+        for (const rel of [
+          join('.kortext', 'references'),
+          join('.kortext', 'reports'),
+          join('.kortext', 'memory'),
+        ]) {
           const dir = join(targetDir, rel);
           expect(existsSync(dir)).toBe(true);
           expect(readdirSync(dir).length).toBeGreaterThan(0);
         }
         expect(existsSync(join(targetDir, 'AGENTS.md'))).toBe(true);
-        expect(existsSync(join(targetDir, '.kortext', 'runtime', 'kortext.db'))).toBe(true);
-        // Spot-check one well-known persona + one workflow so a future refactor
-        // that copies empty dirs would still fail loudly.
-        expect(existsSync(join(targetDir, 'agents', 'backend-developer.md'))).toBe(true);
-        expect(existsSync(join(targetDir, 'workflows', '04-development-cycle.md'))).toBe(true);
-        expect(existsSync(join(targetDir, 'workspace', 'references', 'blueprint.md'))).toBe(true);
+        expect(existsSync(join(targetDir, '.gitignore'))).toBe(true);
+        expect(existsSync(join(targetDir, '.env.example'))).toBe(true);
+        expect(existsSync(join(targetDir, '.kortext', 'data', 'kortext.db'))).toBe(true);
+
+        // Personas / workflows / rules must NOT land in the project — Faz 12.2
+        // moved them inside the package itself.
+        expect(existsSync(join(targetDir, 'agents'))).toBe(false);
+        expect(existsSync(join(targetDir, 'workflows'))).toBe(false);
+        expect(existsSync(join(targetDir, 'rules'))).toBe(false);
+        expect(existsSync(join(targetDir, 'workspace'))).toBe(false);
+
+        // Spot-check one well-known reference + a memory file so a future
+        // refactor that copies empty dirs would still fail loudly.
+        expect(existsSync(join(targetDir, '.kortext', 'references', 'blueprint.md'))).toBe(true);
+        expect(existsSync(join(targetDir, '.kortext', 'memory', 'handover.md'))).toBe(true);
       } finally {
         rmSync(targetDir, { recursive: true, force: true });
       }

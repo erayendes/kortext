@@ -7,6 +7,7 @@ import { buildGraph } from '../engine/dag.ts';
 import { runWorkflow } from '../engine/worker-pool.ts';
 import { createExecutor, type ExecutorKind } from './executor-factory.ts';
 import type { ApprovalQueue } from '../orchestrator/approval-queue.ts';
+import { runtimeLayout } from '../paths.ts';
 
 /**
  * Thin command surface used by `bin/kortext.ts`. Each command is a pure
@@ -58,14 +59,16 @@ export async function startCommand(input: StartCommandInput): Promise<StartComma
   }
 
   const graph = buildGraph(def);
-  const agentsDir = input.agentsDir ?? resolve(process.cwd(), 'agents');
+  // v3.1: personas live in the npm package, not the project.
+  const agentsDir = input.agentsDir ?? runtimeLayout().agentsDir;
   // Mock executor doesn't read personas — skip the disk scan when possible.
   const personaRegistry =
     input.executor === 'mock' ? undefined : loadPersonasFromDir(agentsDir);
   const executor = createExecutor(input.executor, {
     binary: input.executorBinary ?? '',
     agentsDir,
-    logsDir: input.logsDir ?? resolve(process.cwd(), '.kortext', 'logs'),
+    // Per-project raw logs land under .kortext/data/logs (git-ignored).
+    logsDir: input.logsDir ?? resolve(process.cwd(), '.kortext', 'data', 'logs'),
     personaRegistry,
   });
   const result = await runWorkflow(graph, executor, input.repos, {
