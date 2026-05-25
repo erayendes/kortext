@@ -3,6 +3,7 @@ import { dirname, join, relative } from 'node:path';
 import type { Repositories } from '../db/repositories/index.ts';
 import type { PersonaRegistry } from './persona-registry.ts';
 import { gitCommit } from './git-commit.ts';
+import { rotateHandover } from '../services/handover-rotation.ts';
 
 /**
  * Handover engine.
@@ -53,6 +54,16 @@ export type HandoverEngineOptions = {
   git?: { repoRoot: string };
   /** Injectable clock for deterministic tests. */
   now?: () => Date;
+  /**
+   * Rotation policy applied after each `record()`. Defaults: 5 entries /
+   * 30 KB. Set `disabled: true` to opt out (used by tests that need to
+   * accumulate many entries without rotating).
+   */
+  rotation?: {
+    disabled?: boolean;
+    maxEntries?: number;
+    maxBytes?: number;
+  };
 };
 
 const STATUS_LABELS: Record<HandoverStatus, string> = {
@@ -118,6 +129,21 @@ export class HandoverEngine {
         paths: [pathInRepo],
       });
       if (commit.ok) commitSha = commit.sha;
+    }
+
+    // Best-effort rotation. Errors here MUST NOT bubble up — the handover
+    // row + markdown are already persisted; rotation is housekeeping.
+    if (!this.opts.rotation?.disabled) {
+      try {
+        rotateHandover({
+          projectRoot: this.opts.workspaceRoot,
+          maxEntries: this.opts.rotation?.maxEntries,
+          maxBytes: this.opts.rotation?.maxBytes,
+          now: this.opts.now,
+        });
+      } catch {
+        // Swallow — rotation is best-effort.
+      }
     }
 
     return { handoverId: handover.id, markdownPath, commitSha };

@@ -28,6 +28,7 @@ import {
   statusCommand,
 } from '../server/cli/commands.ts';
 import type { ExecutorKind } from '../server/cli/executor-factory.ts';
+import { archiveCommand } from '../server/cli/archive.ts';
 import { cleanupQuarantine, cleanupBranches } from '../server/cli/cleanup.ts';
 import { runDoctor, formatDoctorReport } from '../server/cli/doctor.ts';
 import { initCommand } from '../server/cli/init.ts';
@@ -162,6 +163,8 @@ const HELP_TEXT = [
   '                                 tail of the audit log',
   '  cleanup [--quarantine-older-than=Nd] [--branches] [--dry-run]',
   '                                 remove old quarantine + abandoned branches',
+  '  archive handover               rotate .kortext/memory/handover.md to',
+  '                                 a timestamped archive file',
   '  doctor                         workflow / persona / lock consistency scan',
   '  mcp                            run the MCP server over stdio',
   '',
@@ -441,6 +444,28 @@ async function main(): Promise<number> {
         const b = await cleanupBranches({ repoRoot, repos, dryRun });
         console.log(`Branches — ${prefix} ${b.deleted.length}, kept ${b.kept.length}`);
         for (const name of b.deleted) console.log(`  - ${name}`);
+      }
+      return 0;
+    }
+
+    case 'archive': {
+      const target = args[1];
+      if (target !== 'handover') {
+        console.error('usage: kortext archive handover');
+        return 2;
+      }
+      const result = archiveCommand({
+        what: 'handover',
+        projectRoot: process.cwd(),
+      });
+      if (!result.ok) {
+        console.error(`archive failed: ${result.errorMessage}`);
+        return 1;
+      }
+      if (result.rotated) {
+        console.log(`archived handover → ${result.archivePath}`);
+      } else {
+        console.log(`no rotation needed (${result.reason})`);
       }
       return 0;
     }
