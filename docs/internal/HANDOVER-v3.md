@@ -1,22 +1,31 @@
 # Kortext v3 — Yeni Oturum Handover
 
 > Bu dosya yeni Claude Code oturumunun bootstrap pusulasıdır.
-> Açar açmaz şunu yaz: **"HANDOVER-v3.md'yi oku, Faz 12 (v3.1 architecture refactor) bitti, PR #1 review/merge sürecinde; bir sonraki iş Faz 13 (workflow content rewrite) — `docs/internal/faz-13-bootstrap.md`'yi aç, plan ver."**
+> Açar açmaz şunu yaz: **"HANDOVER-v3.md'yi oku, Faz 12 (v3.1 architecture refactor) main'de; UAT bootstrap pass; bir sonraki iş Faz 13 (workflow content rewrite) — `docs/internal/faz-13-bootstrap.md`'yi aç, plan ver."**
 
-> ✅ **v3.1 mimari refactor tamam.** 2026-05-25 oturumunda Faz 11.4 + 12.1-12.9 paralel worktree disipline'ı ile uygulandı. PR https://github.com/erayendes/kortext/pull/1 açık, 9 commit, 360/360 test yeşil. **Faz 13 (workflow .md content rewrite) yapılmadı** — Eray ayrı oturumda yürütecek (senaryolar Eray'dan). Faz 12.9'un partial UI işleri (Reports SQL UI revamp, Memory archive dropdown, POST /api/backlog integration test) v3.1.x follow-up'a bırakıldı, blocker değil.
+> ✅ **v3.1 mimari refactor tamam ve main'de.** 2026-05-25 oturumunda Faz 11.4 + 12.1-12.9 paralel worktree disipline'ı ile uygulandı. PR #1 ([feat/v3.1-onboarding-and-dashboard-polish](https://github.com/erayendes/kortext/pull/1)) merge edildi → main HEAD `a299290`. Sonrasında docs catch-up PR #2 ([docs/v3.1-post-merge](https://github.com/erayendes/kortext/pull/2)) merge edildi → main HEAD `59916f9`. **UAT bootstrap doğrulaması pass** (`kortext-uat` klasöründe `kortext init` + `kortext serve` koşturuldu — DB schema v4, 15 persona indexed, 41 workflow_step indexed, 161 step "no persona handle" skipped → bu Faz 13 alanı, fatal değil; dashboard mount + listen ok). **Faz 13 (workflow .md content rewrite) yapılmadı** — Eray ayrı oturumda yürütecek (senaryolar Eray'dan).
 
-**Tarih:** 2026-05-25
-**Yazan oturum:** Faz 11.4 + 12.1-12.9 — v3.1 architecture refactor (parallel worktree dispatch)
-**Son commit:** `ef45795` — `fix(v3.1): faz 12.9 — replace React.ReactNode with named ReactNode import in board.tsx`
-**PR:** https://github.com/erayendes/kortext/pull/1 (`feat/v3.1-onboarding-and-dashboard-polish` → `main`)
-**main branch:** `c30e61a` (dokunulmadı; v3.1 işleri feat branch'inde merge bekliyor)
+**Tarih:** 2026-05-25 (gece)
+**Yazan oturum:** Faz 11.4 + 12.1-12.9 — v3.1 architecture refactor + UAT bootstrap doğrulama
+**main HEAD:** `59916f9` (Merge PR #2 — docs catch-up)
+**Açık PR:** yok
+**Faz 12.9'un partial UI işleri** (Reports SQL UI revamp, Memory archive dropdown, POST /api/backlog integration test, orchestrator outputIndexer wiring) v3.1.x follow-up'a bırakıldı, blocker değil.
 
 ## Çok kritik bilgi: yayın durumu
 
-- ✅ **GitHub:** `erayendes/kortext` PUBLIC. main hâlâ `c30e61a`'da (Faz 11.3 fix'leri zaten orada; v3.1 işleri feat branch'inde).
-- ✅ **PR #1:** v3.1 refactor (9 commit) review/merge bekliyor. Açıklama PR description'da tam detaylı.
+- ✅ **GitHub:** `erayendes/kortext` PUBLIC. main `59916f9`'de (Faz 12 + docs catch-up).
 - 🟡 **npm registry:** `kortext@3.0.0` YAYINLANDI — hâlâ broken (HANDOVER #51 EADDRINUSE silent fail, Node 26 spawn race). **Önerme.** v3.1.0 release lokal tgz UAT geçince yapılır.
-- ⏸ **v3.1.0 release planı:** PR merge → `package.json` 3.1.0 → CHANGELOG → tag `v3.1.0` → npm-publish.yml otomatik tetik. **UAT:** Eray makinesinde `npm pack` + `npm install -g ./kortext-3.1.0.tgz` boş klasörde test (detay: [v3.1-uat-guide.md](v3.1-uat-guide.md)).
+- ⏸ **v3.1.0 release planı:** `package.json` 3.1.0 → CHANGELOG → tag `v3.1.0` → npm-publish.yml otomatik tetik. **UAT bootstrap pass; UI/onboarding/prompt-cache adımları henüz koşulmadı** ([v3.1-uat-guide.md](v3.1-uat-guide.md)).
+- ✅ **UAT bootstrap doğrulaması (2026-05-25):** `/Users/erayendes/Documents/_codebase/kortext-uat` klasöründe `kortext init` doğru layout'u kurdu (`.kortext/{data,memory,references,reports}` + AGENTS.md + .gitignore + .env.example, proje kökünde `agents/workflows/rules/workspace/` yok). `kortext serve` boot başarılı — log:
+  ```
+  db ready (schema v4)
+  workflows loaded: 12 ok, 0 error(s)
+  personas loaded: 14 ok, 0 error(s)
+  sql index: 15 persona(s), 41 workflow step(s) upserted
+  sql index: 161 step(s) skipped — no persona handle    ← Faz 13'ün hedef alanı
+  dashboard mounted from .../kortext/dist/web
+  server listening on http://localhost:3200
+  ```
 
 ---
 
