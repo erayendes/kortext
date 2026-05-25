@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
-import { Filter, Plus } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Filter, Plus, X } from 'lucide-react';
 import { PageHeader } from '../components/PageHeader.tsx';
-import { usePolling } from '../lib/api.ts';
-import type { BacklogItem } from '../lib/api-types.ts';
+import { apiPost, usePolling } from '../lib/api.ts';
+import type { ApiPostError } from '../lib/api.ts';
+import type { BacklogItem, PersonaSummary } from '../lib/api-types.ts';
 import { personaColor } from '../lib/persona-colors.ts';
 
 type ColumnStatus = 'to_do' | 'in_progress' | 'test' | 'review' | 'done';
@@ -24,8 +25,17 @@ const TYPE_MARK: Record<BacklogItem['type'], { color: string; bg: string; label:
   epic: { color: 'var(--accent-soft)', bg: 'rgba(168,85,247,0.15)', label: 'Epic' },
 };
 
+const TYPE_OPTIONS: BacklogItem['type'][] = [
+  'task',
+  'bug',
+  'epic',
+  'debt',
+  'spike',
+  'hotfix',
+];
+
 export function BoardRoute() {
-  const { data, error, loading } = usePolling<{ items: BacklogItem[] }>(
+  const { data, error, loading, refresh } = usePolling<{ items: BacklogItem[] }>(
     '/api/backlog?limit=300',
     5000,
   );
@@ -37,6 +47,7 @@ export function BoardRoute() {
   const [epicFilter, setEpicFilter] = useState<string>('all');
   const [agentFilter, setAgentFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [modalOpen, setModalOpen] = useState(false);
 
   const agents = useMemo(() => {
     const set = new Set<string>();
@@ -118,7 +129,11 @@ export function BoardRoute() {
             <button className="btn btn-outline btn-xs">
               <Filter className="w-3 h-3" /> Filter
             </button>
-            <button className="btn btn-primary btn-xs">
+            <button
+              type="button"
+              className="btn btn-primary btn-xs"
+              onClick={() => setModalOpen(true)}
+            >
               <Plus className="w-3 h-3" /> New task
             </button>
           </>
@@ -139,10 +154,22 @@ export function BoardRoute() {
               addable={col.addable}
               items={buckets.get(col.status) ?? []}
               isDone={col.status === 'done'}
+              onAdd={() => setModalOpen(true)}
             />
           ))}
         </div>
       </div>
+
+      {modalOpen && (
+        <NewItemModal
+          epics={epics}
+          onClose={() => setModalOpen(false)}
+          onCreated={() => {
+            setModalOpen(false);
+            refresh();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -239,12 +266,14 @@ function StatusColumn({
   addable,
   items,
   isDone,
+  onAdd,
 }: {
   label: string;
   tone: string;
   addable: boolean;
   items: BacklogItem[];
   isDone: boolean;
+  onAdd: () => void;
 }) {
   return (
     <section className="w-[286px] shrink-0 bg-bg-1 border border-border-default rounded-lg p-2.5 flex flex-col gap-2 min-h-0">
@@ -257,6 +286,7 @@ function StatusColumn({
         {addable && (
           <button
             type="button"
+            onClick={onAdd}
             className="text-tx-3 hover:text-tx-1 p-0.5 transition-colors"
             aria-label={`Add to ${label}`}
           >
@@ -366,4 +396,283 @@ function CardTail({
     if (fm.waiting) return <span className="text-warning">waiting</span>;
   }
   return null;
+}
+
+// ───────────────────────── new-item modal (Faz 12.9)
+
+function NewItemModal({
+  epics,
+  onClose,
+  onCreated,
+}: {
+  epics: BacklogItem[];
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const personas = usePolling<{ personas: PersonaSummary[] }>('/api/personas', 60_000);
+  const personaList = personas.data?.personas ?? [];
+
+  const [type, setType] = useState<BacklogItem['type']>('task');
+  const [title, setTitle] = useState('');
+  const [parentId, setParentId] = useState<string>('');
+  const [owner, setOwner] = useState<string>('');
+  const [acceptance, setAcceptance] = useState('');
+  const [blocks, setBlocks] = useState('');
+  const [blockedBy, setBlockedBy] = useState('');
+  const [notes, setNotes] = useState('');
+
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const titleRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    titleRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape' && !submitting) onClose();
+    }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose, submitting]);
+
+  const trimmedTitle = title.trim();
+  const canSubmit = trimmedTitle.length > 0 && !submitting;
+
+  async function submit() {
+    if (!canSubmit) return;
+    setSubmitting(true);
+    setSubmitError(null);
+
+    // Frontmatter carries acceptance + dependencies + notes — the Markdown
+    // body is template-seeded server-side so the persistent .md stays
+    // human-readable. Empty strings are dropped to keep the JSON tidy.
+    const frontmatter: Record<string, unknown> = {};
+    const acceptanceList = acceptance
+      .split(/\r?\n/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+    if (acceptanceList.length > 0) {
+      frontmatter.acceptance_criteria = acceptanceList;
+      frontmatter.ac_total = acceptanceList.length;
+      frontmatter.ac_done = 0;
+    }
+    const blocksList = parseChips(blocks);
+    if (blocksList.length > 0) frontmatter.blocks = blocksList;
+    const blockedByList = parseChips(blockedBy);
+    if (blockedByList.length > 0) frontmatter.blocked_by = blockedByList;
+    const trimmedNotes = notes.trim();
+    if (trimmedNotes.length > 0) frontmatter.notes = trimmedNotes;
+
+    try {
+      await apiPost<{ item: BacklogItem }>('/api/backlog', {
+        type,
+        title: trimmedTitle,
+        parent_id: parentId || null,
+        owner: owner || null,
+        frontmatter,
+      });
+      onCreated();
+    } catch (e) {
+      const err = e as ApiPostError | Error;
+      const message =
+        'message' in err && typeof err.message === 'string'
+          ? err.message
+          : 'error' in err && typeof err.error === 'string'
+            ? err.error
+            : String(err);
+      setSubmitError(message);
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: 'rgba(10,8,20,0.78)' }}
+      role="dialog"
+      aria-modal="true"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !submitting) onClose();
+      }}
+    >
+      <div
+        className="border border-border-default bg-bg-0 rounded-lg w-[560px] max-w-[92vw] max-h-[88vh] flex flex-col"
+        style={{ boxShadow: '0 24px 64px rgba(0,0,0,0.6)' }}
+      >
+        <header className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border-subtle">
+          <div className="flex items-center gap-2">
+            <span className="text-[13px] text-tx-1 font-medium">New backlog item</span>
+            <span className="mono text-[11px] text-tx-3">+ auto id</span>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={submitting}
+            aria-label="Close"
+            className="text-tx-3 hover:text-tx-1 transition-colors disabled:opacity-40"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </header>
+
+        <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-3.5">
+          <FormRow label="Type" hint="What kind of work item is this?">
+            <select
+              className="input mono"
+              value={type}
+              onChange={(e) => setType(e.target.value as BacklogItem['type'])}
+              style={{ width: 200 }}
+            >
+              {TYPE_OPTIONS.map((t) => (
+                <option key={t} value={t}>
+                  {TYPE_MARK[t].label.toLowerCase()}
+                </option>
+              ))}
+            </select>
+          </FormRow>
+
+          <FormRow label="Title" hint="One-line summary — visible on the board card" required>
+            <input
+              ref={titleRef}
+              className="input"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Email verification flow"
+              maxLength={200}
+            />
+          </FormRow>
+
+          <FormRow label="Epic" hint="Parent epic (optional)">
+            <select
+              className="input mono"
+              value={parentId}
+              onChange={(e) => setParentId(e.target.value)}
+              style={{ width: 240 }}
+            >
+              <option value="">— none —</option>
+              {epics.map((ep) => (
+                <option key={ep.id} value={ep.id}>
+                  {ep.id} · {ep.title}
+                </option>
+              ))}
+            </select>
+          </FormRow>
+
+          <FormRow label="Owner" hint="Assigned persona (optional)">
+            <select
+              className="input mono"
+              value={owner}
+              onChange={(e) => setOwner(e.target.value)}
+              style={{ width: 240, color: owner ? personaColor(owner) : undefined }}
+            >
+              <option value="">— unassigned —</option>
+              {personaList.map((p) => {
+                const handle = p.handle.startsWith('+') ? p.handle : `+${p.handle}`;
+                return (
+                  <option key={handle} value={handle}>
+                    {handle}
+                  </option>
+                );
+              })}
+            </select>
+          </FormRow>
+
+          <FormRow label="Acceptance criteria" hint="One per line — drives the AC X/Y card progress">
+            <textarea
+              className="input mono"
+              value={acceptance}
+              onChange={(e) => setAcceptance(e.target.value)}
+              rows={3}
+              placeholder={'Email is verified within 5 minutes\nResend link works after 30s'}
+              style={{ resize: 'vertical', minHeight: 60, width: '100%' }}
+            />
+          </FormRow>
+
+          <div className="grid grid-cols-2 gap-3">
+            <FormRow label="Blocks" hint="Comma-separated item ids">
+              <input
+                className="input mono"
+                value={blocks}
+                onChange={(e) => setBlocks(e.target.value)}
+                placeholder="T03, B02"
+              />
+            </FormRow>
+            <FormRow label="Blocked by" hint="Comma-separated item ids">
+              <input
+                className="input mono"
+                value={blockedBy}
+                onChange={(e) => setBlockedBy(e.target.value)}
+                placeholder="T01"
+              />
+            </FormRow>
+          </div>
+
+          <FormRow label="Notes" hint="Free-form context (optional)">
+            <textarea
+              className="input"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+              style={{ resize: 'vertical', minHeight: 48, width: '100%' }}
+            />
+          </FormRow>
+
+          {submitError && (
+            <div className="text-[12px] text-danger mono">{submitError}</div>
+          )}
+        </div>
+
+        <footer className="flex items-center justify-end gap-2 px-4 py-3 border-t border-border-subtle">
+          <button
+            type="button"
+            className="btn btn-outline btn-xs"
+            onClick={onClose}
+            disabled={submitting}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary btn-xs"
+            onClick={submit}
+            disabled={!canSubmit}
+          >
+            {submitting ? 'Creating…' : 'Create item'}
+          </button>
+        </footer>
+      </div>
+    </div>
+  );
+}
+
+function FormRow({
+  label,
+  hint,
+  children,
+  required,
+}: {
+  label: string;
+  hint?: string;
+  children: ReactNode;
+  required?: boolean;
+}) {
+  return (
+    <label className="flex flex-col gap-1.5">
+      <span className="text-[11px] uppercase tracking-[0.08em] text-tx-3 font-semibold">
+        {label}
+        {required && <span className="text-signal ml-1">*</span>}
+      </span>
+      {children}
+      {hint && <span className="text-[11px] text-tx-3">{hint}</span>}
+    </label>
+  );
+}
+
+function parseChips(raw: string): string[] {
+  return raw
+    .split(/[,\s]+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
 }

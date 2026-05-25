@@ -24,6 +24,18 @@ import { readPersonaPrompt, type PersonaRegistry } from '../persona-registry.ts'
  *   body — we deliberately avoid passing CLI flags Antigravity may not
  *   recognise yet (e.g. an --append-system-prompt analogue) and instead
  *   bake the instructions into stdin where every CLI reads them.
+ *
+ * Prompt cache discipline (Faz 12.7):
+ *   AGY does not expose a `--system-prompt` flag (`agy --help` 2026-05), so
+ *   we cannot route the persona body through a dedicated cacheable channel
+ *   the way ClaudeCliExecutor does. We still get *some* server-side cache
+ *   reuse if the leading bytes of stdin are byte-identical across runs —
+ *   most LLM providers cache on a stable prefix. To exploit that, we
+ *   emit the prompt in a strict order: STABLE PREFIX first (persona body +
+ *   headless contract; depends only on `step.persona`), then VARIABLE TAIL
+ *   (workflow/phase/task/inputs/outputs/cwd). Anything you add to the
+ *   prefix MUST be a pure function of `step.persona` — no run ids, no
+ *   timestamps — or the cache will miss every step.
  */
 
 const AGY_HEADLESS_CONTRACT = [

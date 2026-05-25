@@ -75,7 +75,7 @@ describe('HandoverEngine.record', () => {
     expect(res.markdownPath).toMatch(/memory\/handover\.md$/);
 
     // markdown file exists and contains the block
-    const md = readFileSync(join(workspaceRoot, 'memory', 'handover.md'), 'utf8');
+    const md = readFileSync(join(workspaceRoot, '.kortext', 'memory', 'handover.md'), 'utf8');
     expect(md).toContain('# Handover Reports');
     expect(md).toContain('## Handover: T01-login-form — Login Form');
     expect(md).toContain('**Author:** +backend-developer');
@@ -128,7 +128,7 @@ describe('HandoverEngine.record', () => {
       nextStep: 'continue',
     });
 
-    const md = readFileSync(join(workspaceRoot, 'memory', 'handover.md'), 'utf8');
+    const md = readFileSync(join(workspaceRoot, '.kortext', 'memory', 'handover.md'), 'utf8');
     expect(md).toContain('**Status:** Bloklandı');
     expect(md).toContain('**Status:** Kısmen tamamlandı');
   });
@@ -158,7 +158,7 @@ describe('HandoverEngine.record', () => {
       nextStep: 'next-second',
     });
 
-    const md = readFileSync(join(workspaceRoot, 'memory', 'handover.md'), 'utf8');
+    const md = readFileSync(join(workspaceRoot, '.kortext', 'memory', 'handover.md'), 'utf8');
     const firstIdx = md.indexOf('T-FIRST');
     const secondIdx = md.indexOf('T-SECOND');
     expect(secondIdx).toBeGreaterThan(-1);
@@ -178,7 +178,7 @@ describe('HandoverEngine.record', () => {
       context: 'ctx',
       nextStep: 'next',
     });
-    const md = readFileSync(join(workspaceRoot, 'memory', 'handover.md'), 'utf8');
+    const md = readFileSync(join(workspaceRoot, '.kortext', 'memory', 'handover.md'), 'utf8');
     // Both lists fall back to single "- Yok" bullet
     const yokCount = (md.match(/^- Yok$/gm) || []).length;
     expect(yokCount).toBeGreaterThanOrEqual(2); // changed files + watch-outs (+ lastCommit maybe)
@@ -271,7 +271,7 @@ describe('HandoverEngine.record', () => {
 
   it('creates the parent memory/ directory if it does not exist', () => {
     // workspaceRoot exists but memory/ does not
-    expect(existsSync(join(workspaceRoot, 'memory'))).toBe(false);
+    expect(existsSync(join(workspaceRoot, '.kortext', 'memory'))).toBe(false);
 
     seedItem('T');
     const engine = makeEngine();
@@ -286,6 +286,6 @@ describe('HandoverEngine.record', () => {
       nextStep: 'x',
     });
 
-    expect(existsSync(join(workspaceRoot, 'memory', 'handover.md'))).toBe(true);
+    expect(existsSync(join(workspaceRoot, '.kortext', 'memory', 'handover.md'))).toBe(true);
   });
 });

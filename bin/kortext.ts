@@ -2,7 +2,7 @@
 /**
  * Kortext CLI entry — user-facing surface.
  *
- *   kortext init                         scaffold .kortext/ + workflows + DB
+ *   kortext init                         scaffold .kortext/ + root templates + DB
  *   kortext serve                        start backend + dashboard together
  *   kortext start <workflow-id>          run a workflow with the mock executor
  *   kortext approve <run-id> [answer]    answer the oldest open question
@@ -28,6 +28,7 @@ import {
   statusCommand,
 } from '../server/cli/commands.ts';
 import type { ExecutorKind } from '../server/cli/executor-factory.ts';
+import { archiveCommand } from '../server/cli/archive.ts';
 import { cleanupQuarantine, cleanupBranches } from '../server/cli/cleanup.ts';
 import { runDoctor, formatDoctorReport } from '../server/cli/doctor.ts';
 import { initCommand } from '../server/cli/init.ts';
@@ -36,6 +37,7 @@ import { runPreflight, formatPreflightForCli } from '../server/cli/preflight.ts'
 import { buildServeCommands, type ServeMode } from '../server/cli/serve.ts';
 import { loadWorkflowsFromDir } from '../server/engine/workflow-loader.ts';
 import { loadPersonasFromDir } from '../server/engine/persona-registry.ts';
+import { runtimeLayout } from '../server/paths.ts';
 import { runStdioServer } from '../mcp/stdio.ts';
 
 const args = process.argv.slice(2);
@@ -149,8 +151,8 @@ function readVersion(): string {
 const HELP_TEXT = [
   'kortext v3 — autonomous AI agent runtime',
   '',
-  '  init [--force]                 scaffold .kortext/, workflows, agents,',
-  '                                 rules, workspace, AGENTS.md, and DB',
+  '  init [--force]                 scaffold .kortext/, AGENTS.md,',
+  '                                 .gitignore, .env.example, and DB',
   '  serve [--mode=dev|prod|auto]   start backend + dashboard together',
   '         [--port=N]              (auto picks prod when dist/ is built)',
   '  start <workflow-id> [--executor=<kind>] [--binary=<path>]',
@@ -161,6 +163,8 @@ const HELP_TEXT = [
   '                                 tail of the audit log',
   '  cleanup [--quarantine-older-than=Nd] [--branches] [--dry-run]',
   '                                 remove old quarantine + abandoned branches',
+  '  archive handover               rotate .kortext/memory/handover.md to',
+  '                                 a timestamped archive file',
   '  doctor                         workflow / persona / lock consistency scan',
   '  mcp                            run the MCP server over stdio',
   '',
@@ -350,7 +354,8 @@ async function main(): Promise<number> {
       const binary = parseFlag('binary', envBinaryFor(kind));
       const result = await startCommand({
         repos,
-        workflowsDir: resolve(process.cwd(), 'workflows'),
+        // v3.1: workflows live inside the kortext npm package.
+        workflowsDir: runtimeLayout().workflowsDir,
         workflowId,
         executor: kind,
         executorBinary: binary,
@@ -428,7 +433,7 @@ async function main(): Promise<number> {
       const olderThanDays = parseDaysFlag('quarantine-older-than', 30);
       const wantsBranches = hasFlag('branches');
       const repoRoot = process.cwd();
-      const quarantineRoot = join(repoRoot, '.kortext', 'worktrees-quarantine');
+      const quarantineRoot = join(repoRoot, '.kortext', 'data', 'worktrees-quarantine');
 
       const q = await cleanupQuarantine({ quarantineRoot, olderThanDays, dryRun });
       const prefix = dryRun ? '(dry-run) would delete' : 'deleted';
@@ -443,9 +448,33 @@ async function main(): Promise<number> {
       return 0;
     }
 
+    case 'archive': {
+      const target = args[1];
+      if (target !== 'handover') {
+        console.error('usage: kortext archive handover');
+        return 2;
+      }
+      const result = archiveCommand({
+        what: 'handover',
+        projectRoot: process.cwd(),
+      });
+      if (!result.ok) {
+        console.error(`archive failed: ${result.errorMessage}`);
+        return 1;
+      }
+      if (result.rotated) {
+        console.log(`archived handover → ${result.archivePath}`);
+      } else {
+        console.log(`no rotation needed (${result.reason})`);
+      }
+      return 0;
+    }
+
     case 'doctor': {
-      const workflows = loadWorkflowsFromDir(resolve(process.cwd(), 'workflows'));
-      const personas = loadPersonasFromDir(resolve(process.cwd(), 'agents'));
+      // v3.1: load from the kortext npm package (not the project).
+      const runtime = runtimeLayout();
+      const workflows = loadWorkflowsFromDir(runtime.workflowsDir);
+      const personas = loadPersonasFromDir(runtime.agentsDir);
       const report = runDoctor({ workflows, personas, repos });
       console.log(formatDoctorReport(report));
       console.log('');

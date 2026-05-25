@@ -71,7 +71,7 @@ describe('WorktreeManager', () => {
     expect(handle.runId).toBe(runId);
     expect(handle.baseBranch).toBe('main');
     expect(handle.branch).toBe(`kortext/run-${runId}`);
-    expect(handle.path).toContain(`.kortext/worktrees/run-${runId}`);
+    expect(handle.path).toContain(`.kortext/data/worktrees/run-${runId}`);
     expect(existsSync(handle.path)).toBe(true);
 
     // worktree should be on the new branch
@@ -142,8 +142,8 @@ describe('WorktreeManager', () => {
 
     // original worktree dir is gone
     expect(existsSync(h.path)).toBe(false);
-    // quarantine entry exists under .kortext/worktrees-quarantine
-    const qRoot = join(repoRoot, '.kortext', 'worktrees-quarantine');
+    // quarantine entry exists under .kortext/data/worktrees-quarantine
+    const qRoot = join(repoRoot, '.kortext', 'data', 'worktrees-quarantine');
     expect(existsSync(qRoot)).toBe(true);
     // contains a dir starting with run-<id>-
     const found = execFileSync('ls', [qRoot], { encoding: 'utf8' })
