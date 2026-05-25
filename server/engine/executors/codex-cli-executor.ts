@@ -11,6 +11,15 @@ import { readPersonaPrompt, type PersonaRegistry } from '../persona-registry.ts'
  * Behaviour matches ClaudeCliExecutor — only the binary identity and prompt
  * preamble differ. Kept as its own file so reviewers can read the full
  * lifecycle of a single executor in one place (no shared subclass).
+ *
+ * Prompt cache discipline (Faz 12.7):
+ *   `codex exec` accepts the full instruction set on stdin and has no
+ *   `--system-prompt` flag (verified via `codex exec --help` 2026-05); base
+ *   instructions live in `~/.codex/config.toml`, not in argv. To still get
+ *   prefix-based server-side cache reuse, we put the STABLE persona body
+ *   first in stdin and the VARIABLE per-task block second. Anything added
+ *   to the prefix must be a pure function of `step.persona` — no run ids,
+ *   no timestamps.
  */
 
 export type CodexCliExecutorOptions = {

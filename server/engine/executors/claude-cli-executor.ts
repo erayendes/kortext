@@ -22,8 +22,30 @@ import { readPersonaPrompt, type PersonaRegistry } from '../persona-registry.ts'
  *        Claude its response will not be read until files are validated.
  *     3. The user prompt itself lists Outputs as commands ("Use the Write
  *        tool to create …"), not as descriptive metadata.
- *   Workflow path convention (`../workspace/foo.md`) is normalised by the
- *   parser into project-root-relative paths before reaching the executor.
+ *   Workflow path convention (`../.kortext/foo.md` post-v3.1, or the legacy
+ *   `../workspace/foo.md` until Faz 13 rewrites the workflows) is normalised
+ *   by the parser into project-root-relative paths before reaching the
+ *   executor.
+ *
+ * Prompt cache activation (Faz 12.7):
+ *   Claude CLI auto-caches the system prompt on the server side; we get a
+ *   ~90% token-cost reduction whenever the system prompt is byte-identical
+ *   to a previous invocation. To make that work for the (large, ~1.2K-token)
+ *   persona body we hand it to `--append-system-prompt` together with the
+ *   headless contract — both are stable per `+handle`. The per-task variable
+ *   payload (Workflow/Phase/Task/Inputs/Outputs) stays in the user prompt
+ *   (stdin) where it belongs.
+ *
+ *   Cache-invalidation guard: nothing in the system prompt may carry a
+ *   per-run identifier (runId, runStepId, ISO timestamp). buildSystemPrompt
+ *   below is intentionally pure on `(personaBody)` for that reason.
+ *
+ *   `--exclude-dynamic-system-prompt-sections` moves Claude's per-machine
+ *   sections (cwd, env info, memory paths, git status) out of the default
+ *   system prompt and into the first user message. Without it, two runs in
+ *   different worktrees would have different system prompts and miss the
+ *   cache. (Flag only takes effect when --system-prompt is NOT passed —
+ *   which is our case; we only --append-system-prompt.)
  *
  * Failure modes (unchanged from earlier fazes):
  *   - exit code ≠ 0
@@ -72,7 +94,8 @@ export class ClaudeCliExecutor implements Executor {
       step.persona,
       this.opts.personaRegistry ?? { agentsDir: this.opts.agentsDir },
     );
-    const prompt = buildPrompt(step, ctx, personaBody);
+    const systemPrompt = buildSystemPrompt(personaBody);
+    const prompt = buildUserPrompt(step, ctx);
     const logPath = join(this.opts.logsDir, `run-${ctx.runId}-step-${ctx.runStepId}.log`);
 
     // claude CLI must run in non-interactive print mode for headless workflow
@@ -85,15 +108,21 @@ export class ClaudeCliExecutor implements Executor {
     // claude returns commentary instead of using the Write tool. Project &
     // local sources stay enabled so a future workspace `.claude/settings.json`
     // can still customise behaviour.
-    // `--append-system-prompt` installs the headless execution contract.
+    // `--append-system-prompt` installs the headless contract + persona body
+    // (Faz 12.7 — see file header). Both halves are stable per +handle, so
+    // the resulting system prompt is byte-identical across runs and qualifies
+    // for Claude's automatic prompt cache (~90% token discount on re-use).
+    // `--exclude-dynamic-system-prompt-sections` keeps cwd/git/env info out
+    // of the cached system prompt so cache reuse extends across worktrees.
     // Callers can still append model overrides etc. via `extraArgs`.
     const args = [
       '--print',
       '--dangerously-skip-permissions',
       '--setting-sources',
       'project,local',
+      '--exclude-dynamic-system-prompt-sections',
       '--append-system-prompt',
-      CLAUDE_HEADLESS_CONTRACT,
+      systemPrompt,
       ...(this.opts.extraArgs ?? []),
     ];
 
@@ -159,10 +188,31 @@ function formatPathList(paths: string[]): string {
   return paths.map((p) => `  - ${p}`).join('\n');
 }
 
-function buildPrompt(step: WorkflowStep, ctx: ExecutorContext, personaBody: string): string {
-  return `${personaBody}
+/**
+ * Cache-eligible half of the prompt: headless contract + persona body.
+ *
+ * Pure function of `personaBody`. MUST stay free of per-run identifiers
+ * (runId, runStepId, timestamps, cwd) — anything that varies per step
+ * would bust the prompt cache.
+ */
+export function buildSystemPrompt(personaBody: string): string {
+  if (personaBody.length === 0) return CLAUDE_HEADLESS_CONTRACT;
+  return `${CLAUDE_HEADLESS_CONTRACT}
 
 ═══════════════════════════════════════════════════════════════════════
+PERSONA
+═══════════════════════════════════════════════════════════════════════
+${personaBody}`;
+}
+
+/**
+ * Per-task half of the prompt, sent on stdin. Carries everything that varies
+ * step-to-step (workflow id, phase label, task description, input/output
+ * paths, cwd). Never put persona content here — that belongs in the system
+ * prompt for cache reuse.
+ */
+export function buildUserPrompt(step: WorkflowStep, ctx: ExecutorContext): string {
+  return `═══════════════════════════════════════════════════════════════════════
 WORKFLOW STEP — autonomous, non-interactive execution
 ═══════════════════════════════════════════════════════════════════════
 

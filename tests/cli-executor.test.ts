@@ -91,14 +91,15 @@ describe('ClaudeCliExecutor', () => {
     expect(result.errorMessage).toMatch(/code 7/);
   });
 
-  it('passes persona prompt via stdin (so binary sees it)', async () => {
-    // mock binary that echoes its stdin back
+  it('passes the per-task user prompt via stdin', async () => {
+    // mock binary that echoes its stdin back. Faz 12.7: persona body now lives
+    // in --append-system-prompt; stdin carries only the per-task variable
+    // payload (Task/Inputs/Outputs/Workflow/Phase).
     const bin = makeMockBinary('claude-echo-stdin', `cat`);
     const exec = new ClaudeCliExecutor({ binary: bin, agentsDir, logsDir });
     const result = await exec.execute(makeStep(), makeCtx());
     expect(result.ok).toBe(true);
-    // persona file content + step description should appear in stdout (echoed from stdin)
-    expect(result.outputSummary).toContain('backend-developer');
+    // Task description (variable per step) must appear in stdin
     expect(result.outputSummary).toContain('write api/health endpoint');
   });
 
@@ -152,6 +153,9 @@ describe('ClaudeCliExecutor', () => {
     // Disk fixture (seeded in beforeEach) has no description bullet — not a
     // valid registry entry. We point a separate dir at a valid persona file
     // and load it into a registry. The registry version must win.
+    //
+    // Faz 12.7: persona body is now passed via --append-system-prompt, so we
+    // observe argv (not stdin) to confirm which source won.
     const regDir = join(tmpRoot, 'registered-agents');
     mkdirSync(regDir, { recursive: true });
     writeFileSync(
@@ -160,7 +164,8 @@ describe('ClaudeCliExecutor', () => {
     );
     const personaRegistry = loadPersonasFromDir(regDir);
 
-    const bin = makeMockBinary('claude-echo-reg', `cat`);
+    const argsFile = join(tmpRoot, 'persona-source-args');
+    const bin = makeMockBinary('claude-echo-reg', `printf '%s\\n' "$@" > "${argsFile}"\necho ok`);
     const exec = new ClaudeCliExecutor({
       binary: bin,
       agentsDir,
@@ -169,7 +174,98 @@ describe('ClaudeCliExecutor', () => {
     });
     const result = await exec.execute(makeStep(), makeCtx());
     expect(result.ok).toBe(true);
-    expect(result.outputSummary).toContain('FROM_REGISTRY_PROMPT');
+    const args = readFileSync(argsFile, 'utf8');
+    expect(args).toContain('FROM_REGISTRY_PROMPT');
+  });
+
+  // Faz 12.7 — prompt cache activation
+  //
+  // Claude CLI auto-caches the system prompt when its content is stable across
+  // invocations. To make the (large, ~1.2K-token) persona body cacheable, the
+  // executor must pass it via `--append-system-prompt` rather than embedding it
+  // in user-prompt stdin. The user prompt remains the per-task variable carrier
+  // (Workflow/Phase/Task/Inputs/Outputs). The headless contract also lives in
+  // the system prompt (same as before).
+  //
+  // Cache invalidation guard: the system-prompt content MUST NOT contain
+  // per-run identifiers (runId, runStepId, timestamps). Otherwise every step
+  // produces a different system prompt and we get zero cache hits.
+  describe('Faz 12.7 — prompt cache', () => {
+    it('passes the persona body via --append-system-prompt (cacheable), NOT stdin', async () => {
+      // Mock binary writes both the args (as $@) and stdin to separate files so
+      // we can inspect what landed where.
+      const argsFile = join(tmpRoot, 'observed-args');
+      const stdinFile = join(tmpRoot, 'observed-stdin');
+      const bin = makeMockBinary(
+        'claude-spy',
+        `printf '%s\\n' "$@" > "${argsFile}"\ncat > "${stdinFile}"\necho ok`,
+      );
+      const exec = new ClaudeCliExecutor({ binary: bin, agentsDir, logsDir });
+      const result = await exec.execute(makeStep(), makeCtx());
+      expect(result.ok).toBe(true);
+
+      const args = readFileSync(argsFile, 'utf8');
+      const stdin = readFileSync(stdinFile, 'utf8');
+
+      // Persona content lands in args (after --append-system-prompt), not stdin
+      expect(args).toContain('--append-system-prompt');
+      expect(args).toContain('backend-developer');
+      expect(args).toContain('Sen sunucu tarafı geliştiricisin');
+      // Stdin (user prompt) must NOT carry the persona body anymore
+      expect(stdin).not.toContain('Sen sunucu tarafı geliştiricisin');
+      // Stdin still carries the per-task variable parts
+      expect(stdin).toContain('write api/health endpoint');
+    });
+
+    it('keeps --append-system-prompt content stable across runs (cache-friendly)', async () => {
+      // Same persona + same step body → identical system prompt → cache hit.
+      // The system prompt MUST NOT embed runId, runStepId, or timestamps.
+      const argsFile1 = join(tmpRoot, 'args-run-1');
+      const argsFile2 = join(tmpRoot, 'args-run-2');
+      const bin1 = makeMockBinary(
+        'claude-spy-1',
+        `printf '%s\\n' "$@" > "${argsFile1}"\necho ok`,
+      );
+      const bin2 = makeMockBinary(
+        'claude-spy-2',
+        `printf '%s\\n' "$@" > "${argsFile2}"\necho ok`,
+      );
+      const ex1 = new ClaudeCliExecutor({ binary: bin1, agentsDir, logsDir });
+      const ex2 = new ClaudeCliExecutor({ binary: bin2, agentsDir, logsDir });
+      await ex1.execute(makeStep(), makeCtx({ runId: 11, runStepId: 101 }));
+      await ex2.execute(makeStep(), makeCtx({ runId: 22, runStepId: 202 }));
+
+      const extractSysPrompt = (raw: string): string => {
+        // The arg list is one-per-line; --append-system-prompt is followed by
+        // its value on the next line.
+        const lines = raw.split('\n');
+        const i = lines.findIndex((l) => l === '--append-system-prompt');
+        return i >= 0 && i + 1 < lines.length ? (lines[i + 1] ?? '') : '';
+      };
+      const sys1 = extractSysPrompt(readFileSync(argsFile1, 'utf8'));
+      const sys2 = extractSysPrompt(readFileSync(argsFile2, 'utf8'));
+      expect(sys1.length).toBeGreaterThan(0);
+      // No run-id / step-id leakage into the system prompt
+      expect(sys1).not.toMatch(/\b(11|101)\b/);
+      expect(sys2).not.toMatch(/\b(22|202)\b/);
+      // Both runs use byte-identical system prompts → fully cache-eligible
+      expect(sys1).toBe(sys2);
+    });
+
+    it('uses --exclude-dynamic-system-prompt-sections to widen cache reuse', async () => {
+      // Per-machine sections (cwd, env info, git status) would otherwise be
+      // embedded in Claude's default system prompt and bust the cache across
+      // worktrees. This flag moves them into the first user message instead.
+      const argsFile = join(tmpRoot, 'args');
+      const bin = makeMockBinary(
+        'claude-spy-excl',
+        `printf '%s\\n' "$@" > "${argsFile}"\necho ok`,
+      );
+      const exec = new ClaudeCliExecutor({ binary: bin, agentsDir, logsDir });
+      await exec.execute(makeStep(), makeCtx());
+      const args = readFileSync(argsFile, 'utf8');
+      expect(args).toContain('--exclude-dynamic-system-prompt-sections');
+    });
   });
 
   it('truncates outputSummary to the last N lines', async () => {

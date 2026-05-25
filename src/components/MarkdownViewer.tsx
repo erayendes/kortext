@@ -18,7 +18,7 @@ marked.setOptions({ gfm: true, breaks: false });
  * Two-pane markdown library: file list on the left, rendered body on the right.
  * Used by References, Reports, and parts of Memory.
  *
- * Content comes from operator-controlled workspace/ markdown files, but we
+ * Content comes from operator-controlled .kortext/ markdown files, but we
  * still pipe the marked output through DOMPurify so a malicious paste (or an
  * agent writing raw HTML into a report) cannot script the dashboard.
  */

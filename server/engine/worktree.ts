@@ -6,10 +6,10 @@ import type { RuntimeArtifactsRepository } from '../db/repositories/runtime-arti
 /**
  * Worktree manager.
  *
- * Each run is given an isolated working copy under `.kortext/worktrees/run-<id>`
+ * Each run is given an isolated working copy under `.kortext/data/worktrees/run-<id>`
  * on its own throwaway branch (`kortext/run-<id>`). On success the branch can be
  * merged back into the base branch and the worktree is removed. On failure the
- * directory is moved to `.kortext/worktrees-quarantine/run-<id>-<timestamp>/`
+ * directory is moved to `.kortext/data/worktrees-quarantine/run-<id>-<timestamp>/`
  * (NOT deleted) so postmortem analysis is possible, and the branch is kept.
  *
  * Limits:
@@ -82,9 +82,10 @@ export class WorktreeManager {
     this.maxConcurrent = opts.maxConcurrent ?? 10;
     this.artifacts = opts.artifacts;
     this.worktreeRoot =
-      opts.worktreeRoot ?? join(this.repoRoot, '.kortext', 'worktrees');
+      opts.worktreeRoot ?? join(this.repoRoot, '.kortext', 'data', 'worktrees');
     this.quarantineRoot =
-      opts.quarantineRoot ?? join(this.repoRoot, '.kortext', 'worktrees-quarantine');
+      opts.quarantineRoot ??
+      join(this.repoRoot, '.kortext', 'data', 'worktrees-quarantine');
   }
 
   /**

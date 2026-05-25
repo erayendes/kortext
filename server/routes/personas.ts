@@ -5,9 +5,11 @@ import {
   parsePersonaMarkdown,
   type PersonaRegistry,
 } from '../engine/persona-registry.ts';
+import type { Repositories } from '../db/repositories/index.ts';
 
 /**
  * GET  /api/personas             — list summaries
+ * GET  /api/personas/usage       — Faz 12.8 cross-cut: step count per persona
  * GET  /api/personas/:handle     — single persona (full systemPrompt)
  * PUT  /api/personas/:handle     — replace the markdown body on disk + reload
  *
@@ -20,6 +22,8 @@ export type PersonasRouterDeps = {
   personas: PersonaRegistry;
   /** Absolute path of the agents/ directory; PUT writes <id>.md here. */
   agentsDir: string;
+  /** Optional — when provided, exposes Faz 12.8 cross-cut endpoints. */
+  repos?: Repositories;
 };
 
 const HANDLE_RE = /^\+?[\w-]+$/;
@@ -37,6 +41,29 @@ export function personasRouter(deps: PersonasRouterDeps): Router {
     }));
     const errors = deps.personas.errors();
     res.json({ personas, errors });
+  });
+
+  r.get('/personas/usage', (_req, res) => {
+    if (!deps.repos) {
+      res.status(503).json({ error: 'sql_index_unavailable' });
+      return;
+    }
+    // SELECT persona_handle, COUNT(*) FROM workflow_steps GROUP BY persona_handle.
+    // Personas with zero steps are NOT in the workflow_steps aggregate;
+    // join against the personas table so the dashboard sees every known
+    // handle even when its step_count is 0.
+    const counts = deps.repos.workflowSteps.usageCounts();
+    const byHandle = new Map(counts.map((c) => [c.persona_handle, c.step_count]));
+    const usage = deps.repos.personas.list().map((p) => ({
+      handle: p.handle,
+      step_count: byHandle.get(p.handle) ?? 0,
+    }));
+    // Sort: highest count first, then alpha by handle for stable output.
+    usage.sort((a, b) => {
+      if (b.step_count !== a.step_count) return b.step_count - a.step_count;
+      return a.handle.localeCompare(b.handle);
+    });
+    res.json({ usage });
   });
 
   r.get('/personas/:handle', (req, res) => {

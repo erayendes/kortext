@@ -10,6 +10,12 @@ import { readPersonaPrompt, type PersonaRegistry } from '../persona-registry.ts'
  *
  * Mirrors ClaudeCliExecutor / CodexCliExecutor so reviewers can read the full
  * lifecycle in one place. Differences: name, default prompt preamble.
+ *
+ * Prompt cache discipline (Faz 12.7):
+ *   Gemini CLI has no `--system-prompt` flag (full instructions land via
+ *   stdin / argv prompt). Same prefix-stability discipline as the AGY and
+ *   Codex executors: persona body sits at the top, per-task variable block
+ *   below. Anything in the stable prefix must depend only on `step.persona`.
  */
 
 export type GeminiCliExecutorOptions = {

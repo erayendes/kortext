@@ -3,13 +3,14 @@ import { dirname, join, relative } from 'node:path';
 import type { Repositories } from '../db/repositories/index.ts';
 import type { PersonaRegistry } from './persona-registry.ts';
 import { gitCommit } from './git-commit.ts';
+import { rotateHandover } from '../services/handover-rotation.ts';
 
 /**
  * Handover engine.
  *
  * Records a persona-to-persona handover both as a row in the SQLite
  * `handovers` table (machine-readable, for dashboard/timeline) and as a
- * markdown block prepended to `workspace/memory/handover.md` (human-
+ * markdown block prepended to `.kortext/memory/handover.md` (human-
  * readable).
  *
  * `from` and `to` personas are validated against the registry — bad
@@ -43,7 +44,7 @@ export type HandoverResult = {
 export type HandoverEngineOptions = {
   repos: Repositories;
   personas: PersonaRegistry;
-  /** Project workspace root — handover.md lives at `<root>/memory/handover.md`. */
+  /** Project root — handover.md lives at `<root>/.kortext/memory/handover.md`. */
   workspaceRoot: string;
   /**
    * When set, the engine commits the markdown change after each record()
@@ -53,6 +54,16 @@ export type HandoverEngineOptions = {
   git?: { repoRoot: string };
   /** Injectable clock for deterministic tests. */
   now?: () => Date;
+  /**
+   * Rotation policy applied after each `record()`. Defaults: 5 entries /
+   * 30 KB. Set `disabled: true` to opt out (used by tests that need to
+   * accumulate many entries without rotating).
+   */
+  rotation?: {
+    disabled?: boolean;
+    maxEntries?: number;
+    maxBytes?: number;
+  };
 };
 
 const STATUS_LABELS: Record<HandoverStatus, string> = {
@@ -70,7 +81,12 @@ export class HandoverEngine {
     this.assertKnownPersona(input.fromPersona, 'from');
     this.assertKnownPersona(input.toPersona, 'to');
 
-    const markdownPath = join(this.opts.workspaceRoot, 'memory', 'handover.md');
+    const markdownPath = join(
+      this.opts.workspaceRoot,
+      '.kortext',
+      'memory',
+      'handover.md',
+    );
     mkdirSync(dirname(markdownPath), { recursive: true });
 
     const now = (this.opts.now ?? (() => new Date()))();
@@ -113,6 +129,21 @@ export class HandoverEngine {
         paths: [pathInRepo],
       });
       if (commit.ok) commitSha = commit.sha;
+    }
+
+    // Best-effort rotation. Errors here MUST NOT bubble up — the handover
+    // row + markdown are already persisted; rotation is housekeeping.
+    if (!this.opts.rotation?.disabled) {
+      try {
+        rotateHandover({
+          projectRoot: this.opts.workspaceRoot,
+          maxEntries: this.opts.rotation?.maxEntries,
+          maxBytes: this.opts.rotation?.maxBytes,
+          now: this.opts.now,
+        });
+      } catch {
+        // Swallow — rotation is best-effort.
+      }
     }
 
     return { handoverId: handover.id, markdownPath, commitSha };

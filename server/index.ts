@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { projectLayout, runtimeLayout } from './paths.ts';
 import express from 'express';
 import { env } from './config/env.ts';
 import { healthRouter } from './routes/health.ts';
@@ -9,6 +10,7 @@ import { approvalRouter } from './routes/approvals.ts';
 import { runsRouter } from './routes/runs.ts';
 import { handoversRouter } from './routes/handovers.ts';
 import { decisionsRouter } from './routes/decisions.ts';
+import { reportsRouter } from './routes/reports.ts';
 import { doctorRouter } from './routes/doctor.ts';
 import { personasRouter } from './routes/personas.ts';
 import { workflowsRouter } from './routes/workflows.ts';
@@ -25,16 +27,18 @@ import { resumeOrphanedRuns } from './orchestrator/resume.ts';
 import { loadWorkflowsFromDir } from './engine/workflow-loader.ts';
 import { loadPersonasFromDir } from './engine/persona-registry.ts';
 import { findUnknownPersonas } from './engine/consistency.ts';
+import { syncRegistriesToDb } from './engine/index-sync.ts';
 
 // Open DB + run migrations before the HTTP server starts accepting traffic.
 const { schemaVersion, repositories: repos } = getDb();
 console.log(`[kortext] db ready (schema v${schemaVersion})`);
 
-// Load workflow + persona definitions from disk into in-memory registries.
-// Faz 5.5+: these become the source for `loadWorkflowById` and persona
-// dispatch when the orchestrator is wired into the server process.
-const workflowsDir = resolve(process.cwd(), 'workflows');
-const agentsDir = resolve(process.cwd(), 'agents');
+// v3.1: persona / workflow / rule definitions are loaded from inside the
+// kortext npm package (not the project). Per-project copies are gone.
+const runtime = runtimeLayout();
+const layout = projectLayout(process.cwd());
+const workflowsDir = runtime.workflowsDir;
+const agentsDir = runtime.agentsDir;
 const workflowRegistry = loadWorkflowsFromDir(workflowsDir);
 const personaRegistry = loadPersonasFromDir(agentsDir);
 const wfErrors = workflowRegistry.errors();
@@ -62,6 +66,23 @@ if (unknownPersonas.length > 0) {
   for (const f of unknownPersonas) {
     console.warn(`[kortext]   - ${f.workflowId} (${f.stepKey}): ${f.persona}`);
   }
+}
+
+// Faz 12.8: project personas + workflow steps into SQL so the dashboard
+// can run cross-cut queries. Parse-time validation lives here — an
+// unknown persona handle in a workflow step throws and stops boot.
+const indexSync = syncRegistriesToDb(
+  { personas: personaRegistry, workflows: workflowRegistry },
+  repos,
+);
+console.log(
+  `[kortext] sql index: ${indexSync.personasUpserted} persona(s), ` +
+    `${indexSync.workflowStepsUpserted} workflow step(s) upserted`,
+);
+if (indexSync.stepsWithoutPersona.length > 0) {
+  console.log(
+    `[kortext] sql index: ${indexSync.stepsWithoutPersona.length} step(s) skipped — no persona handle`,
+  );
 }
 
 // Reconcile zombie runs left behind by a previous crash/restart.
@@ -95,9 +116,10 @@ app.use('/api', approvalRouter({ repos, queue: approvalQueue }));
 app.use('/api', runsRouter({ repos }));
 app.use('/api', handoversRouter({ repos }));
 app.use('/api', decisionsRouter({ repos }));
-app.use('/api', backlogRouter({ repos }));
-app.use('/api', personasRouter({ personas: personaRegistry, agentsDir }));
-app.use('/api', workflowsRouter({ workflows: workflowRegistry }));
+app.use('/api', reportsRouter({ repos, projectRoot: layout.root }));
+app.use('/api', backlogRouter({ repos, templatesDir: runtime.templatesDir }));
+app.use('/api', personasRouter({ personas: personaRegistry, agentsDir, repos }));
+app.use('/api', workflowsRouter({ workflows: workflowRegistry, repos }));
 app.use('/api', doctorRouter({ repos, workflows: workflowRegistry, personas: personaRegistry }));
 app.use(
   '/api',
@@ -145,11 +167,13 @@ app.use(
   '/api',
   docsRouter({
     scopes: {
-      references: resolve(process.cwd(), 'workspace/references'),
-      reports: resolve(process.cwd(), 'workspace/reports'),
-      memory: resolve(process.cwd(), 'workspace/memory'),
-      rules: resolve(process.cwd(), 'rules'),
-      workflows: workflowsDir,
+      references: layout.references,
+      reports: layout.reports,
+      memory: layout.memory,
+      // Rules + workflows are read-only paket içeriği — sourced from the
+      // npm package, not the project.
+      rules: runtime.rulesDir,
+      workflows: runtime.workflowsDir,
     },
   }),
 );

@@ -10,6 +10,7 @@ import { openDb } from '../server/db/client.ts';
 import type { Repositories } from '../server/db/repositories/index.ts';
 import { loadPersonasFromDir, type PersonaRegistry } from '../server/engine/persona-registry.ts';
 import { loadWorkflowsFromDir, type WorkflowRegistry } from '../server/engine/workflow-loader.ts';
+import { syncRegistriesToDb } from '../server/engine/index-sync.ts';
 import { runsRouter } from '../server/routes/runs.ts';
 import { handoversRouter } from '../server/routes/handovers.ts';
 import { doctorRouter } from '../server/routes/doctor.ts';
@@ -17,6 +18,7 @@ import { personasRouter } from '../server/routes/personas.ts';
 import { workflowsRouter } from '../server/routes/workflows.ts';
 import { backlogRouter } from '../server/routes/backlog.ts';
 import { docsRouter } from '../server/routes/docs.ts';
+import { reportsRouter } from '../server/routes/reports.ts';
 
 let tmpRoot: string;
 let db: Database.Database;
@@ -46,20 +48,23 @@ beforeEach(async () => {
   );
   writeFileSync(
     join(workflowsDir, '99-test-pipeline.md'),
-    '# 99 — Test Pipeline `!start test`\n\n## Phase one\n\n**+backend-developer:** ship\n\n1. Implement the thing\n   - inputs: src\n   - outputs: dist\n',
+    '# 99 — Test Pipeline `!start test`\n\n## Phase one\n\n1. **+backend-developer:** Implement the thing.\n   - Inputs: `src`\n   - Outputs: `dist`\n',
   );
   personas = loadPersonasFromDir(personasDir);
   workflows = loadWorkflowsFromDir(workflowsDir);
+  // Mirror engine boot so Faz 12.8 cross-cut endpoints have data to read.
+  syncRegistriesToDb({ personas, workflows }, repos);
 
   const app = express();
   app.use(express.json());
   app.use('/api', runsRouter({ repos }));
   app.use('/api', handoversRouter({ repos }));
   app.use('/api', backlogRouter({ repos }));
-  app.use('/api', personasRouter({ personas, agentsDir: personasDir }));
-  app.use('/api', workflowsRouter({ workflows }));
+  app.use('/api', personasRouter({ personas, agentsDir: personasDir, repos }));
+  app.use('/api', workflowsRouter({ workflows, repos }));
   app.use('/api', doctorRouter({ repos, workflows, personas }));
   app.use('/api', docsRouter({ scopes: { refs: docsDir } }));
+  app.use('/api', reportsRouter({ repos, projectRoot: tmpRoot }));
 
   await new Promise<void>((resolve) => {
     server = app.listen(0, () => resolve());
@@ -230,6 +235,47 @@ describe('GET /api/workflows', () => {
   });
 });
 
+describe('GET /api/personas/usage (Faz 12.8)', () => {
+  it('returns step counts grouped by persona handle', async () => {
+    const res = await fetch(`${baseUrl}/api/personas/usage`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      usage: { handle: string; step_count: number }[];
+    };
+    // The fixture workflow has one step assigned to +backend-developer.
+    const backend = body.usage.find((u) => u.handle === '+backend-developer');
+    expect(backend).toBeDefined();
+    expect(backend?.step_count).toBe(1);
+    // Synthetic +prime is part of the personas table but has 0 steps here.
+    const prime = body.usage.find((u) => u.handle === '+prime');
+    expect(prime).toBeDefined();
+    expect(prime?.step_count).toBe(0);
+  });
+});
+
+describe('GET /api/workflows/:id/dependencies (Faz 12.8)', () => {
+  it('returns deduplicated inputs and outputs for a workflow', async () => {
+    const res = await fetch(
+      `${baseUrl}/api/workflows/99-test-pipeline/dependencies`,
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      workflow_id: string;
+      inputs: string[];
+      outputs: string[];
+    };
+    expect(body.workflow_id).toBe('99-test-pipeline');
+    // Fixture step: "- inputs: src" / "- outputs: dist".
+    expect(body.inputs).toEqual(['src']);
+    expect(body.outputs).toEqual(['dist']);
+  });
+
+  it('returns 404 for an unknown workflow id', async () => {
+    const res = await fetch(`${baseUrl}/api/workflows/no-such-workflow/dependencies`);
+    expect(res.status).toBe(404);
+  });
+});
+
 describe('GET /api/docs/:scope', () => {
   it('lists only .md files in the scope', async () => {
     const res = await fetch(`${baseUrl}/api/docs/refs`);
@@ -263,6 +309,112 @@ describe('GET /api/docs/:scope', () => {
   it('404s an unknown file in a valid scope', async () => {
     const res = await fetch(`${baseUrl}/api/docs/refs/missing.md`);
     expect(res.status).toBe(404);
+  });
+});
+
+describe('GET /api/reports', () => {
+  it('returns empty when no reports indexed', async () => {
+    const res = await fetch(`${baseUrl}/api/reports`);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ reports: [] });
+  });
+
+  it('filters by scope, status, and related_item', async () => {
+    repos.reports.create({
+      scope: 'test-reports',
+      slug: 'a',
+      file_path: '.kortext/reports/test-reports_a_2026-05-20-0900.md',
+      status: 'approved',
+    });
+    repos.reports.create({
+      scope: 'security-reports',
+      slug: 'b',
+      file_path: '.kortext/reports/security-reports_b_2026-05-21-0900.md',
+      status: 'writing',
+      related_item: 'T01',
+    });
+    repos.reports.create({
+      scope: 'test-reports',
+      slug: 'c',
+      file_path: '.kortext/reports/test-reports_c_2026-05-22-0900.md',
+      status: 'writing',
+      related_item: 'T01',
+    });
+
+    const all = (await (await fetch(`${baseUrl}/api/reports`)).json()) as {
+      reports: { slug: string }[];
+    };
+    expect(all.reports).toHaveLength(3);
+
+    const scoped = (await (
+      await fetch(`${baseUrl}/api/reports?scope=test-reports`)
+    ).json()) as { reports: { slug: string }[] };
+    expect(scoped.reports.map((r) => r.slug).sort()).toEqual(['a', 'c']);
+
+    const writing = (await (
+      await fetch(`${baseUrl}/api/reports?status=writing`)
+    ).json()) as { reports: { slug: string }[] };
+    expect(writing.reports.map((r) => r.slug).sort()).toEqual(['b', 'c']);
+
+    const byItem = (await (
+      await fetch(`${baseUrl}/api/reports?related_item=T01`)
+    ).json()) as { reports: { slug: string }[] };
+    expect(byItem.reports.map((r) => r.slug).sort()).toEqual(['b', 'c']);
+
+    const limit1 = (await (
+      await fetch(`${baseUrl}/api/reports?limit=1`)
+    ).json()) as { reports: unknown[] };
+    expect(limit1.reports).toHaveLength(1);
+  });
+
+  it('400s an invalid status query', async () => {
+    const res = await fetch(`${baseUrl}/api/reports?status=bogus`);
+    expect(res.status).toBe(400);
+  });
+
+  it('returns the row and body for /api/reports/:id', async () => {
+    const reportsDir = join(tmpRoot, '.kortext/reports');
+    mkdirSync(reportsDir, { recursive: true });
+    const filename = 'test-reports_e2e_2026-05-22-1000.md';
+    writeFileSync(join(reportsDir, filename), '# e2e report\n\nbody\n');
+
+    const created = repos.reports.create({
+      scope: 'test-reports',
+      slug: 'e2e',
+      file_path: `.kortext/reports/${filename}`,
+      status: 'approved',
+    });
+
+    const res = await fetch(`${baseUrl}/api/reports/${created.id}`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      report: { id: number; slug: string };
+      body: string | null;
+    };
+    expect(body.report.id).toBe(created.id);
+    expect(body.body).toContain('# e2e report');
+  });
+
+  it('returns body=null when the file is missing', async () => {
+    const created = repos.reports.create({
+      scope: 'test-reports',
+      slug: 'orphan',
+      file_path: '.kortext/reports/test-reports_orphan_2026-05-22-1000.md',
+    });
+    const res = await fetch(`${baseUrl}/api/reports/${created.id}`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { body: string | null };
+    expect(body.body).toBeNull();
+  });
+
+  it('404s an unknown id', async () => {
+    const res = await fetch(`${baseUrl}/api/reports/9999`);
+    expect(res.status).toBe(404);
+  });
+
+  it('400s an invalid id', async () => {
+    const res = await fetch(`${baseUrl}/api/reports/abc`);
+    expect(res.status).toBe(400);
   });
 });
 
