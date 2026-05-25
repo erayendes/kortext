@@ -96,10 +96,12 @@ function splitList(value: string): string[] {
 }
 
 /**
- * Workflow files live at `<projectRoot>/workflows/<id>.md` and author paths
- * relative to that location — e.g. `../workspace/foo.md`. The engine executes
- * steps with cwd = project root (or a worktree of it), so we strip exactly
- * one leading `../` per entry so the path resolves correctly under cwd.
+ * Workflow files live at `<paket-kökü>/workflows/<id>.md` (v3.1: global
+ * runtime) and author paths relative to that location — e.g.
+ * `../.kortext/references/foo.md` (or legacy `../workspace/foo.md` until
+ * Faz 13 rewrites the workflow content). The engine executes steps with
+ * cwd = project root (or a worktree of it), so we strip exactly one
+ * leading `../` per entry so the path resolves correctly under cwd.
  * Non-path entries (free-text "Inputs: existing codebase…") are unaffected
  * because they don't start with `../`.
  */

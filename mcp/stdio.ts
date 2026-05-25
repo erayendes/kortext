@@ -5,9 +5,9 @@
  * besides MCP frames may go to stdout — every log line is routed to stderr.
  * The CLI sets `console.log = console.error` defensively before this loads.
  */
-import { resolve } from 'node:path';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { getDb } from '../server/db/client.ts';
+import { runtimeLayout } from '../server/paths.ts';
 import { loadWorkflowsFromDir } from '../server/engine/workflow-loader.ts';
 import { loadPersonasFromDir } from '../server/engine/persona-registry.ts';
 import { ApprovalQueue } from '../server/orchestrator/approval-queue.ts';
@@ -20,8 +20,11 @@ export async function runStdioServer(opts: { cwd?: string } = {}): Promise<void>
   const { schemaVersion, repositories: repos } = getDb();
   log(`db ready (schema v${schemaVersion})`);
 
-  const workflowsDir = resolve(cwd, 'workflows');
-  const agentsDir = resolve(cwd, 'agents');
+  // v3.1: load workflows + personas from the kortext npm package itself,
+  // not from the project's cwd.
+  const runtime = runtimeLayout();
+  const workflowsDir = runtime.workflowsDir;
+  const agentsDir = runtime.agentsDir;
   const workflows = loadWorkflowsFromDir(workflowsDir);
   const personas = loadPersonasFromDir(agentsDir);
   log(

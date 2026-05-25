@@ -12,6 +12,20 @@ import { openDb } from '../db/client.ts';
 /**
  * `kortext init` — scaffold a fresh project so the orchestrator can run.
  *
+ * v3.1 encapsulation: the project gets the `.kortext/` framework folder
+ * (think `.git/`) plus a handful of root-level files that AI tools and node
+ * conventions expect at the top (`AGENTS.md`, `.gitignore`, `.env.example`).
+ *
+ * The runtime sources for personas, workflows, and rules now live inside
+ * the npm package itself (`<paket-kökü>/agents`, `/workflows`, `/rules`)
+ * and are loaded directly from there — they are NOT copied per-project.
+ *
+ * Init copies:
+ *   - root templates: AGENTS.md, .gitignore, .env.example
+ *   - `.kortext/references/`, `.kortext/reports/`, `.kortext/memory/`
+ *     (seeded from `<paket-kökü>/templates/` when present)
+ *   - `.kortext/data/` (empty; SQLite + worktrees + logs land here at runtime)
+ *
  * Idempotent: per-entry checks skip anything already on disk unless `force`
  * is true. Returns a list of created vs skipped paths (relative to target)
  * for the CLI to render — no console.log here so the command stays
@@ -35,7 +49,16 @@ export type InitCommandResult =
     }
   | { ok: false; errorMessage: string };
 
-const SCAFFOLD_DIRS = ['agents', 'workflows', 'rules', 'workspace'] as const;
+/**
+ * Directories scaffolded under `.kortext/`. Each one is seeded from
+ * `<paket-kökü>/templates/<name>/` when that exists; otherwise the empty
+ * directory is created so the engine has something to write into at
+ * runtime.
+ */
+const KORTEXT_SCAFFOLD_DIRS = ['references', 'reports', 'memory'] as const;
+
+/** Root-level files copied verbatim from `<paket-kökü>/templates/`. */
+const ROOT_TEMPLATE_FILES = ['AGENTS.md', '.gitignore', '.env.example'] as const;
 
 const DEFAULT_AGENTS_MD = `# AGENTS.md
 
@@ -53,12 +76,34 @@ kortext doctor    # workflow / persona / lock consistency scan
 
 ## Where things live
 
-- \`agents/\` — persona definitions (one markdown file per role)
-- \`workflows/\` — pipeline definitions, executed via the worker pool
-- \`rules/\` — project-wide behavior, branching, commands, models, emergency
-- \`workspace/references/blueprint.md\` — product blueprint; approving it
+- \`.kortext/references/blueprint.md\` — product blueprint; approving it
   triggers the analysis → planning → development pipeline chain
-- \`.kortext/runtime/kortext.db\` — SQLite state (runs, items, audit log)
+- \`.kortext/references/\` — team-shared references (auth, db schema, …)
+- \`.kortext/reports/\` — per-file engine + persona reports
+- \`.kortext/memory/\` — handover.md, decisions.md, learned.md
+- \`.kortext/data/\` — SQLite + worktrees + raw logs (git-ignored)
+
+Persona, workflow, and rule definitions live inside the kortext npm
+package itself and are loaded directly from there — no per-project copy.
+`;
+
+const DEFAULT_GITIGNORE = `.kortext/data/
+.env
+node_modules/
+.DS_Store
+`;
+
+const DEFAULT_ENV_EXAMPLE = `# Kortext environment variables. Copy to .env and fill in real values.
+# See _docbase/kortext/docs/internal/v3.1-architecture-proposal.md for details.
+
+# Where the engine will spawn the dashboard + REST API.
+KORTEXT_PORT=3200
+
+# Optional notification webhooks (see server/notifications/).
+# SLACK_WEBHOOK_URL=
+# SLACK_CHANNEL=
+# TELEGRAM_BOT_TOKEN=
+# TELEGRAM_CHAT_ID=
 `;
 
 function packageRootFromHere(): string {
@@ -77,26 +122,59 @@ function packageRootFromHere(): string {
   return resolve(here, '..', '..');
 }
 
-function copyTemplateDir(
-  sourceRoot: string,
+function copyTemplateDirInto(
+  templateRoot: string,
   targetRoot: string,
-  relPath: string,
+  /** Path *within* `<paket-kökü>/templates/`, e.g. `references`. */
+  templateRel: string,
+  /** Path *within* the target project, e.g. `.kortext/references`. */
+  targetRel: string,
   force: boolean,
   created: string[],
   skipped: string[],
 ): void {
-  const source = join(sourceRoot, relPath);
-  const target = join(targetRoot, relPath);
-  if (!existsSync(source)) {
-    // Templates dir lacks this entry — nothing to scaffold.
-    return;
-  }
+  const source = join(templateRoot, 'templates', templateRel);
+  const target = join(targetRoot, targetRel);
+
   if (existsSync(target) && !force) {
-    skipped.push(relPath);
+    skipped.push(targetRel);
     return;
   }
-  cpSync(source, target, { recursive: true, force });
-  created.push(relPath);
+
+  if (existsSync(source)) {
+    cpSync(source, target, { recursive: true, force });
+    created.push(targetRel);
+    return;
+  }
+
+  // Templates directory missing or no seed for this subdir — create an empty
+  // dir so the engine has something to write into later. Faz 12.3 will
+  // populate `<paket-kökü>/templates/` with real seeds; until then this is
+  // the graceful fallback.
+  mkdirSync(target, { recursive: true });
+  created.push(targetRel);
+}
+
+function copyRootTemplateFile(
+  templateRoot: string,
+  targetRoot: string,
+  filename: string,
+  fallbackContent: string,
+  force: boolean,
+  created: string[],
+  skipped: string[],
+): void {
+  const targetPath = join(targetRoot, filename);
+  if (existsSync(targetPath) && !force) {
+    skipped.push(filename);
+    return;
+  }
+  const sourcePath = join(templateRoot, 'templates', filename);
+  const content = existsSync(sourcePath)
+    ? readFileSync(sourcePath, 'utf8')
+    : fallbackContent;
+  writeFileSync(targetPath, content, 'utf8');
+  created.push(filename);
 }
 
 export function initCommand(input: InitCommandInput): InitCommandResult {
@@ -117,29 +195,52 @@ export function initCommand(input: InitCommandInput): InitCommandResult {
   const skipped: string[] = [];
   const force = input.force === true;
 
-  for (const rel of SCAFFOLD_DIRS) {
-    copyTemplateDir(templatesDir, targetDir, rel, force, created, skipped);
+  // 1. Root-level template files (AGENTS.md, .gitignore, .env.example).
+  //    Each falls back to a built-in default when the template is missing
+  //    (Faz 12.3 will replace these defaults with the canonical templates).
+  const ROOT_FALLBACKS: Record<string, string> = {
+    'AGENTS.md': DEFAULT_AGENTS_MD,
+    '.gitignore': DEFAULT_GITIGNORE,
+    '.env.example': DEFAULT_ENV_EXAMPLE,
+  };
+  for (const filename of ROOT_TEMPLATE_FILES) {
+    copyRootTemplateFile(
+      templatesDir,
+      targetDir,
+      filename,
+      ROOT_FALLBACKS[filename] ?? '',
+      force,
+      created,
+      skipped,
+    );
   }
 
-  // AGENTS.md: prefer the template's copy when present, otherwise write a
-  // minimal default so `claude` / `codex` agents can discover the project.
-  const agentsMdPath = join(targetDir, 'AGENTS.md');
-  if (existsSync(agentsMdPath) && !force) {
-    skipped.push('AGENTS.md');
+  // 2. `.kortext/<scaffold>` directories (references / reports / memory).
+  for (const rel of KORTEXT_SCAFFOLD_DIRS) {
+    copyTemplateDirInto(
+      templatesDir,
+      targetDir,
+      rel,
+      join('.kortext', rel),
+      force,
+      created,
+      skipped,
+    );
+  }
+
+  // 3. `.kortext/data/` — SQLite + worktrees + logs live here. Empty on
+  //    init; engine creates subdirs as needed.
+  const dataDir = join(targetDir, '.kortext', 'data');
+  const dataRel = join('.kortext', 'data');
+  if (existsSync(dataDir) && !force) {
+    skipped.push(dataRel);
   } else {
-    const templateAgentsMd = join(templatesDir, 'AGENTS.md');
-    const content = existsSync(templateAgentsMd)
-      ? readFileSync(templateAgentsMd, 'utf8')
-      : DEFAULT_AGENTS_MD;
-    writeFileSync(agentsMdPath, content, 'utf8');
-    created.push('AGENTS.md');
+    mkdirSync(dataDir, { recursive: true });
+    created.push(dataRel);
   }
 
-  // Runtime dir + DB (migrations run inside openDb).
-  const runtimeDir = join(targetDir, '.kortext', 'runtime');
-  mkdirSync(runtimeDir, { recursive: true });
-
-  const dbPath = join(runtimeDir, 'kortext.db');
+  // 4. DB + migrations.
+  const dbPath = join(dataDir, 'kortext.db');
   const dbExisted = existsSync(dbPath);
 
   let schemaVersion = 0;

@@ -268,7 +268,7 @@ describe('markdown sync', () => {
       body_md: '## Context\nSome context.\n',
       tags: ['storage'],
     });
-    expect(written.markdown_path).toContain('workspace/memory/decisions');
+    expect(written.markdown_path).toContain('.kortext/memory/decisions');
     const indexed = repos.decisions.get('ADR-001');
     expect(indexed?.status).toBe('accepted');
     expect(indexed?.tags).toEqual(['storage']);

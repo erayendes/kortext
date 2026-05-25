@@ -8,7 +8,13 @@ import globals from 'globals';
 
 export default [
   {
-    ignores: ['dist/**', 'node_modules/**', '.kortext/**'],
+    ignores: [
+      'dist/**',
+      'node_modules/**',
+      '.kortext/**',
+      '.claude/**',
+      'templates/**',
+    ],
   },
   js.configs.recommended,
   {

@@ -41,7 +41,7 @@ export type KortextMcpDeps = {
   workspaceRoot: string;
   /** Where workflow markdown lives, used by start_pipeline. Defaults to <root>/workflows. */
   workflowsDir?: string;
-  /** Blueprint absolute path. Defaults to <root>/workspace/references/blueprint.md. */
+  /** Blueprint absolute path. Defaults to <root>/.kortext/references/blueprint.md. */
   blueprintPath?: string;
 };
 
@@ -104,7 +104,7 @@ export function createKortextMcpServer(deps: KortextMcpDeps): McpServer {
   const root = deps.workspaceRoot;
   const workflowsDir = deps.workflowsDir ?? resolve(root, 'workflows');
   const blueprintPath =
-    deps.blueprintPath ?? resolve(root, 'workspace/references/blueprint.md');
+    deps.blueprintPath ?? resolve(root, '.kortext/references/blueprint.md');
 
   registerWorkflowTools(server, deps);
   registerBacklogTools(server, deps);
@@ -597,7 +597,7 @@ function registerBlueprintTools(
     {
       title: 'Read the blueprint markdown',
       description:
-        'Returns the parsed frontmatter + body of workspace/references/blueprint.md.',
+        'Returns the parsed frontmatter + body of .kortext/references/blueprint.md.',
       inputSchema: {},
     },
     async () => {

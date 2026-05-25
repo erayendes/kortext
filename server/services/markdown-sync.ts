@@ -16,12 +16,12 @@ import type { Repositories } from '../db/repositories/index.ts';
  */
 
 export type WorkspaceLayout = {
-  /** Project root (where .kortext/ and workspace/ live). */
+  /** Project root (where .kortext/ lives). */
   root: string;
 };
 
-const DECISIONS_SUBDIR = 'workspace/memory/decisions';
-const HANDOVERS_SUBDIR = 'workspace/memory/handovers';
+const DECISIONS_SUBDIR = '.kortext/memory/decisions';
+const HANDOVERS_SUBDIR = '.kortext/memory/handovers';
 
 function writeAtomic(path: string, content: string): void {
   mkdirSync(dirname(path), { recursive: true });
