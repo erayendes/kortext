@@ -6,8 +6,8 @@ temp/
 .env
 .env.local
 coverage/
-.kortext/runtime/
-.kortext/worktrees/
+.kortext/
+*.tgz
 
 # Editor / IDE / AI tooling — local to each developer's machine
 .claude/
