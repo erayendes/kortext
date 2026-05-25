@@ -4,7 +4,7 @@ import type { PendingQuestion, Run } from '../db/schemas.ts';
 import { loadWorkflowsFromDir } from '../engine/workflow-loader.ts';
 import { loadPersonasFromDir } from '../engine/persona-registry.ts';
 import { buildGraph } from '../engine/dag.ts';
-import { runWorkflow } from '../engine/worker-pool.ts';
+import { runWorkflow, type SafetyGuards } from '../engine/worker-pool.ts';
 import { createExecutor, type ExecutorKind } from './executor-factory.ts';
 import type { ApprovalQueue } from '../orchestrator/approval-queue.ts';
 import { runtimeLayout } from '../paths.ts';
@@ -24,6 +24,12 @@ export type StartCommandInput = {
   agentsDir?: string;
   logsDir?: string;
   concurrency?: number;
+  /**
+   * Optional safety guards (secret scanner, harmful filter, reports index
+   * back-fill). Boot wires this in `server/index.ts`; CLI invocations
+   * (`kortext start`) leave it undefined unless extended later.
+   */
+  safety?: SafetyGuards;
 };
 
 export type StartCommandResult =
@@ -74,6 +80,7 @@ export async function startCommand(input: StartCommandInput): Promise<StartComma
   const result = await runWorkflow(graph, executor, input.repos, {
     concurrency: input.concurrency ?? 3,
     triggeredBy: 'cli',
+    safety: input.safety,
   });
 
   return {
