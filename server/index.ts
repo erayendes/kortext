@@ -27,6 +27,7 @@ import { resumeOrphanedRuns } from './orchestrator/resume.ts';
 import { loadWorkflowsFromDir } from './engine/workflow-loader.ts';
 import { loadPersonasFromDir } from './engine/persona-registry.ts';
 import { findUnknownPersonas } from './engine/consistency.ts';
+import { syncRegistriesToDb } from './engine/index-sync.ts';
 
 // Open DB + run migrations before the HTTP server starts accepting traffic.
 const { schemaVersion, repositories: repos } = getDb();
@@ -67,6 +68,23 @@ if (unknownPersonas.length > 0) {
   }
 }
 
+// Faz 12.8: project personas + workflow steps into SQL so the dashboard
+// can run cross-cut queries. Parse-time validation lives here — an
+// unknown persona handle in a workflow step throws and stops boot.
+const indexSync = syncRegistriesToDb(
+  { personas: personaRegistry, workflows: workflowRegistry },
+  repos,
+);
+console.log(
+  `[kortext] sql index: ${indexSync.personasUpserted} persona(s), ` +
+    `${indexSync.workflowStepsUpserted} workflow step(s) upserted`,
+);
+if (indexSync.stepsWithoutPersona.length > 0) {
+  console.log(
+    `[kortext] sql index: ${indexSync.stepsWithoutPersona.length} step(s) skipped — no persona handle`,
+  );
+}
+
 // Reconcile zombie runs left behind by a previous crash/restart.
 const resumed = resumeOrphanedRuns(repos);
 if (resumed.recovered.length > 0) {
@@ -100,8 +118,8 @@ app.use('/api', handoversRouter({ repos }));
 app.use('/api', decisionsRouter({ repos }));
 app.use('/api', reportsRouter({ repos, projectRoot: layout.root }));
 app.use('/api', backlogRouter({ repos }));
-app.use('/api', personasRouter({ personas: personaRegistry, agentsDir }));
-app.use('/api', workflowsRouter({ workflows: workflowRegistry }));
+app.use('/api', personasRouter({ personas: personaRegistry, agentsDir, repos }));
+app.use('/api', workflowsRouter({ workflows: workflowRegistry, repos }));
 app.use('/api', doctorRouter({ repos, workflows: workflowRegistry, personas: personaRegistry }));
 app.use(
   '/api',

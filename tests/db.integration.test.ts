@@ -44,6 +44,7 @@ describe('migrations', () => {
         'locks',
         'notifications_sent',
         'pending_questions',
+        'personas',
         'reports_index',
         'run_steps',
         'runs',
@@ -51,8 +52,18 @@ describe('migrations', () => {
         'schema_migrations',
         'secrets_scan_results',
         'sessions',
+        'workflow_steps',
       ]),
     );
+  });
+
+  it('records migration 004 (workflow / persona index) in schema_migrations', () => {
+    const row = db
+      .prepare('SELECT id, name FROM schema_migrations WHERE id = 4')
+      .get() as { id: number; name: string } | undefined;
+    expect(row).toBeDefined();
+    expect(row?.name).toMatch(/workflow_persona_index/);
+    expect(schemaVersion).toBeGreaterThanOrEqual(4);
   });
 
   it('is idempotent when re-opened', () => {

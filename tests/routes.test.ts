@@ -10,6 +10,7 @@ import { openDb } from '../server/db/client.ts';
 import type { Repositories } from '../server/db/repositories/index.ts';
 import { loadPersonasFromDir, type PersonaRegistry } from '../server/engine/persona-registry.ts';
 import { loadWorkflowsFromDir, type WorkflowRegistry } from '../server/engine/workflow-loader.ts';
+import { syncRegistriesToDb } from '../server/engine/index-sync.ts';
 import { runsRouter } from '../server/routes/runs.ts';
 import { handoversRouter } from '../server/routes/handovers.ts';
 import { doctorRouter } from '../server/routes/doctor.ts';
@@ -47,18 +48,20 @@ beforeEach(async () => {
   );
   writeFileSync(
     join(workflowsDir, '99-test-pipeline.md'),
-    '# 99 — Test Pipeline `!start test`\n\n## Phase one\n\n**+backend-developer:** ship\n\n1. Implement the thing\n   - inputs: src\n   - outputs: dist\n',
+    '# 99 — Test Pipeline `!start test`\n\n## Phase one\n\n1. **+backend-developer:** Implement the thing.\n   - Inputs: `src`\n   - Outputs: `dist`\n',
   );
   personas = loadPersonasFromDir(personasDir);
   workflows = loadWorkflowsFromDir(workflowsDir);
+  // Mirror engine boot so Faz 12.8 cross-cut endpoints have data to read.
+  syncRegistriesToDb({ personas, workflows }, repos);
 
   const app = express();
   app.use(express.json());
   app.use('/api', runsRouter({ repos }));
   app.use('/api', handoversRouter({ repos }));
   app.use('/api', backlogRouter({ repos }));
-  app.use('/api', personasRouter({ personas, agentsDir: personasDir }));
-  app.use('/api', workflowsRouter({ workflows }));
+  app.use('/api', personasRouter({ personas, agentsDir: personasDir, repos }));
+  app.use('/api', workflowsRouter({ workflows, repos }));
   app.use('/api', doctorRouter({ repos, workflows, personas }));
   app.use('/api', docsRouter({ scopes: { refs: docsDir } }));
   app.use('/api', reportsRouter({ repos, projectRoot: tmpRoot }));
@@ -229,6 +232,47 @@ describe('GET /api/workflows', () => {
     expect(body.workflows).toHaveLength(1);
     expect(body.workflows[0]?.id).toBe('99-test-pipeline');
     expect(body.workflows[0]?.stepCount).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('GET /api/personas/usage (Faz 12.8)', () => {
+  it('returns step counts grouped by persona handle', async () => {
+    const res = await fetch(`${baseUrl}/api/personas/usage`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      usage: { handle: string; step_count: number }[];
+    };
+    // The fixture workflow has one step assigned to +backend-developer.
+    const backend = body.usage.find((u) => u.handle === '+backend-developer');
+    expect(backend).toBeDefined();
+    expect(backend?.step_count).toBe(1);
+    // Synthetic +prime is part of the personas table but has 0 steps here.
+    const prime = body.usage.find((u) => u.handle === '+prime');
+    expect(prime).toBeDefined();
+    expect(prime?.step_count).toBe(0);
+  });
+});
+
+describe('GET /api/workflows/:id/dependencies (Faz 12.8)', () => {
+  it('returns deduplicated inputs and outputs for a workflow', async () => {
+    const res = await fetch(
+      `${baseUrl}/api/workflows/99-test-pipeline/dependencies`,
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      workflow_id: string;
+      inputs: string[];
+      outputs: string[];
+    };
+    expect(body.workflow_id).toBe('99-test-pipeline');
+    // Fixture step: "- inputs: src" / "- outputs: dist".
+    expect(body.inputs).toEqual(['src']);
+    expect(body.outputs).toEqual(['dist']);
+  });
+
+  it('returns 404 for an unknown workflow id', async () => {
+    const res = await fetch(`${baseUrl}/api/workflows/no-such-workflow/dependencies`);
+    expect(res.status).toBe(404);
   });
 });
 

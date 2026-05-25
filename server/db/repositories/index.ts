@@ -12,6 +12,8 @@ import { RuntimeArtifactsRepository } from './runtime-artifacts.ts';
 import { NotificationsRepository } from './notifications.ts';
 import { SecretsRepository } from './secrets.ts';
 import { AuditLogRepository } from './audit-log.ts';
+import { PersonasRepository } from './personas.ts';
+import { WorkflowStepsRepository } from './workflow-steps.ts';
 
 export {
   BacklogRepository,
@@ -27,6 +29,8 @@ export {
   NotificationsRepository,
   SecretsRepository,
   AuditLogRepository,
+  PersonasRepository,
+  WorkflowStepsRepository,
 };
 
 export type Repositories = {
@@ -43,6 +47,8 @@ export type Repositories = {
   notifications: NotificationsRepository;
   secrets: SecretsRepository;
   auditLog: AuditLogRepository;
+  personas: PersonasRepository;
+  workflowSteps: WorkflowStepsRepository;
 };
 
 export function createRepositories(db: Database.Database): Repositories {
@@ -60,5 +66,7 @@ export function createRepositories(db: Database.Database): Repositories {
     notifications: new NotificationsRepository(db),
     secrets: new SecretsRepository(db),
     auditLog: new AuditLogRepository(db),
+    personas: new PersonasRepository(db),
+    workflowSteps: new WorkflowStepsRepository(db),
   };
 }
