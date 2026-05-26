@@ -182,6 +182,7 @@ app.use(
   '/api',
   docsRouter({
     scopes: {
+      foundation: layout.foundation,
       references: layout.references,
       reports: layout.reports,
       memory: layout.memory,

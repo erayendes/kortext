@@ -48,6 +48,10 @@ describe('workflow-parser', () => {
     // Parser strips one leading `../` from each workflow path so they resolve
     // under the run's cwd (project root / worktree). See normalizeWorkflowPath.
     expect(pm?.outputs).toContain('workspace/reports/product-requirements.md');
+    // NOTE: this assertion follows the *current* 01a workflow body
+    // (legacy `../workspace/...` paths). Task #2 (Faz 13) rewrites the
+    // workflow to `.kortext/foundation/BRD.md` — when that lands, flip
+    // this expectation to `.kortext/foundation/BRD.md`.
     expect(pm?.inputs).toContain('workspace/references/blueprint.md');
     expect(pm?.approver).toBe('+prime');
 

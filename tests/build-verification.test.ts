@@ -151,7 +151,7 @@ describe('build verification', () => {
 
         // Spot-check one well-known reference + a memory file so a future
         // refactor that copies empty dirs would still fail loudly.
-        expect(existsSync(join(targetDir, '.kortext', 'references', 'blueprint.md'))).toBe(true);
+        expect(existsSync(join(targetDir, '.kortext', 'foundation', 'BRD.md'))).toBe(true);
         expect(existsSync(join(targetDir, '.kortext', 'memory', 'handover.md'))).toBe(true);
       } finally {
         rmSync(targetDir, { recursive: true, force: true });

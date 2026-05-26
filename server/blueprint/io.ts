@@ -24,7 +24,11 @@ export type BlueprintPaths = {
   projectJsonPath: string;
 };
 
-const DEFAULT_BLUEPRINT_REL = '.kortext/references/blueprint.md';
+// Faz 13: blueprint is the Business Requirements Document (BRD) — first
+// of the four foundation documents (BRD/PRD/TRD/PFD). Lives under
+// `.kortext/foundation/`, not `.kortext/references/`, so it's not co-
+// mingled with the living references the team keeps editing post-analysis.
+const DEFAULT_BLUEPRINT_REL = '.kortext/foundation/BRD.md';
 const DEFAULT_PROJECT_JSON_REL = '.kortext/project.json';
 
 export function resolveBlueprintPaths(workspaceRoot: string): BlueprintPaths {

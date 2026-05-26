@@ -16,7 +16,7 @@ describe('isPatternedPath', () => {
     expect(isPatternedPath('.kortext/reports/foo_bar_<ts>.md')).toBe(true);
   });
   it('false for static path', () => {
-    expect(isPatternedPath('.kortext/references/blueprint.md')).toBe(false);
+    expect(isPatternedPath('.kortext/foundation/BRD.md')).toBe(false);
   });
 });
 
@@ -24,10 +24,10 @@ describe('resolveDeclaredOutput', () => {
   const worktree = '/tmp/wt';
 
   it('returns static for paths without placeholders', () => {
-    const r = resolveDeclaredOutput('.kortext/references/blueprint.md', worktree);
+    const r = resolveDeclaredOutput('.kortext/foundation/BRD.md', worktree);
     expect(r.kind).toBe('static');
     if (r.kind === 'static') {
-      expect(r.absolutePath).toBe('/tmp/wt/.kortext/references/blueprint.md');
+      expect(r.absolutePath).toBe('/tmp/wt/.kortext/foundation/BRD.md');
     }
   });
 
@@ -80,14 +80,14 @@ describe('findActualOutputFiles', () => {
   });
 
   it('static: returns the file when it exists', () => {
-    const file = join(tmp, '.kortext/references/blueprint.md');
-    mkdirSync(join(tmp, '.kortext/references'), { recursive: true });
+    const file = join(tmp, '.kortext/foundation/BRD.md');
+    mkdirSync(join(tmp, '.kortext/foundation'), { recursive: true });
     writeFileSync(file, 'hi');
-    expect(findActualOutputFiles('.kortext/references/blueprint.md', tmp)).toEqual([file]);
+    expect(findActualOutputFiles('.kortext/foundation/BRD.md', tmp)).toEqual([file]);
   });
 
   it('static: returns empty when file missing', () => {
-    expect(findActualOutputFiles('.kortext/references/blueprint.md', tmp)).toEqual([]);
+    expect(findActualOutputFiles('.kortext/foundation/BRD.md', tmp)).toEqual([]);
   });
 
   it('pattern: returns matching files in directory', () => {

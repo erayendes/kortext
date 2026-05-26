@@ -52,9 +52,9 @@ describe('GET /api/blueprint/status', () => {
   });
 
   it('returns approved + project meta when both files exist', async () => {
-    mkdirSync(join(tmpRoot, '.kortext', 'references'), { recursive: true });
+    mkdirSync(join(tmpRoot, '.kortext', 'foundation'), { recursive: true });
     writeFileSync(
-      join(tmpRoot, '.kortext', 'references', 'blueprint.md'),
+      join(tmpRoot, '.kortext', 'foundation', 'BRD.md'),
       '---\nstatus: approved\nowner: +prime\n---\n\n# Hello\n',
     );
     mkdirSync(join(tmpRoot, '.kortext'), { recursive: true });
@@ -107,7 +107,7 @@ describe('POST /api/blueprint', () => {
     expect(body.ok).toBe(true);
     expect(body.triggerWorkflowId).toBe('01a-analysis-pipeline');
 
-    const blueprintPath = join(tmpRoot, '.kortext', 'references', 'blueprint.md');
+    const blueprintPath = join(tmpRoot, '.kortext', 'foundation', 'BRD.md');
     expect(existsSync(blueprintPath)).toBe(true);
     const written = readFileSync(blueprintPath, 'utf8');
     expect(written).toMatch(/status: approved/);

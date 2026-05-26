@@ -19,10 +19,10 @@ beforeEach(() => {
   // v3.1 minimal template tree: only the things init still copies. Personas,
   // workflows, and rules now live in the npm package itself and are loaded
   // from there, so they no longer appear under templates/.
-  mkdirSync(join(templatesDir, 'templates', 'references'), { recursive: true });
+  mkdirSync(join(templatesDir, 'templates', 'foundation'), { recursive: true });
   writeFileSync(
-    join(templatesDir, 'templates', 'references', 'blueprint.md'),
-    '---\nstatus: uninitialized\n---\n# Blueprint\n',
+    join(templatesDir, 'templates', 'foundation', 'BRD.md'),
+    '---\nstatus: uninitialized\n---\n# BRD\n',
     'utf8',
   );
   mkdirSync(join(templatesDir, 'templates', 'reports'), { recursive: true });
@@ -78,7 +78,7 @@ describe('initCommand', () => {
     expect(result.skipped).toEqual([]);
 
     // Files copied from templates/.
-    expect(existsSync(join(targetDir, '.kortext', 'references', 'blueprint.md'))).toBe(true);
+    expect(existsSync(join(targetDir, '.kortext', 'foundation', 'BRD.md'))).toBe(true);
     expect(existsSync(join(targetDir, '.kortext', 'reports', 'test-reports.md'))).toBe(true);
     expect(existsSync(join(targetDir, '.kortext', 'memory', 'handover.md'))).toBe(true);
     expect(existsSync(join(targetDir, '.gitignore'))).toBe(true);
@@ -142,7 +142,7 @@ describe('initCommand', () => {
 
     // User edited a scaffolded file; --force should overwrite.
     writeFileSync(
-      join(targetDir, '.kortext', 'references', 'blueprint.md'),
+      join(targetDir, '.kortext', 'foundation', 'BRD.md'),
       '# Edited\n',
       'utf8',
     );
@@ -150,10 +150,10 @@ describe('initCommand', () => {
     const result = initCommand({ targetDir, templatesDir, force: true });
     expect(result.ok).toBe(true);
     const restored = readFileSync(
-      join(targetDir, '.kortext', 'references', 'blueprint.md'),
+      join(targetDir, '.kortext', 'foundation', 'BRD.md'),
       'utf8',
     );
-    expect(restored).toMatch(/^---\nstatus: uninitialized\n---\n# Blueprint/);
+    expect(restored).toMatch(/^---\nstatus: uninitialized\n---\n# BRD/);
   });
 
   it('refuses to init into the templates dir itself without --force', () => {
