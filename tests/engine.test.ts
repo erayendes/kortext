@@ -45,14 +45,12 @@ describe('workflow-parser', () => {
     // Specific anchor: +product-manager step in Product Analysis has 3 inputs and 1 output.
     const pm = wf.steps.find((s) => s.persona === '+product-manager');
     expect(pm).toBeDefined();
-    // Parser strips one leading `../` from each workflow path so they resolve
-    // under the run's cwd (project root / worktree). See normalizeWorkflowPath.
-    expect(pm?.outputs).toContain('workspace/reports/product-requirements.md');
-    // NOTE: this assertion follows the *current* 01a workflow body
-    // (legacy `../workspace/...` paths). Task #2 (Faz 13) rewrites the
-    // workflow to `.kortext/foundation/BRD.md` — when that lands, flip
-    // this expectation to `.kortext/foundation/BRD.md`.
-    expect(pm?.inputs).toContain('workspace/references/blueprint.md');
+    // Faz 13: per-file outputs live in foundation/ for the three "phase
+    // documents" (BRD/PRD/TRD/PFD). Parser preserves paths verbatim when
+    // they don't start with `../` — `.kortext/...` resolves directly under
+    // the run's cwd (project root / worktree).
+    expect(pm?.outputs).toContain('.kortext/foundation/PRD.md');
+    expect(pm?.inputs).toContain('.kortext/foundation/BRD.md');
     expect(pm?.approver).toBe('+prime');
 
     // Gates: at least one approval gate detected (RAPOR HAZIR notes).
