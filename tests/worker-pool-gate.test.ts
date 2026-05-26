@@ -19,16 +19,15 @@ let tmpRoot: string;
 let db: Database.Database;
 let repos: Repositories;
 
-// Two-step workflow with a gate between them.
+// Two-step workflow with a gate between them. Faz 13: gate signal comes
+// from `approver: +prime` on the step itself — no more `> [!NOTE]` callouts.
 const wfWithGate = parseWorkflowMarkdown(
   `# Two-Step Gated
 
 ## Phase 1
 1. **+a:** first
    - Outputs: a.md
-
-> [!NOTE] RAPOR HAZIR
-> +prime, lütfen onayla. !approve next
+   - approver: +prime
 
 ## Phase 2
 2. **+b:** second

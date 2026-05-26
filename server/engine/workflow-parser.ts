@@ -76,7 +76,6 @@ const SUB_BULLET_RE = /^\s*[-*]\s+([A-Za-z]+):\s*(.+?)\s*$/;
 const NOTE_OPEN_RE = /^>\s*\[!(NOTE|TIP|INFO|WARNING)\]/i;
 const NEXT_WORKFLOW_RE = /\*\*Sonraki akış[^:]*:\*\*\s*(?:onay sonrası\s+)?`([^`]+)`/i;
 const START_COMMAND_RE = /`!start\s+([\w-]+)`/i;
-const PERSONA_HANDLE_RE = /(\+[\w-]+)/;
 
 function slugifyPhase(phase: string): string {
   return phase
@@ -126,9 +125,22 @@ export function parseWorkflowMarkdown(source: string, fileId: string): WorkflowD
   // Cursor state while consuming a step's sub-bullets.
   let activeStep: WorkflowStep | null = null;
 
+  // Faz 13: gates are derived directly from `approver: +prime` sub-bullets
+  // — every step that names +prime as approver opens a runtime gate after
+  // it. The previous `> [!NOTE] RAPOR HAZIR` callout convention is gone
+  // (cosmetic markdown noise that AI agents had to skip); semantic intent
+  // already lives in the sub-bullet.
   const flushStep = () => {
     if (activeStep) {
       steps.push(activeStep);
+      if (activeStep.approver === '+prime') {
+        gates.push({
+          phase: activeStep.phase === '__preamble__' ? '(preamble)' : activeStep.phase,
+          afterStepIndex: activeStep.index,
+          body: `${activeStep.persona ?? '(no persona)'} step in ${activeStep.phase}: ${activeStep.description}`,
+          approver: '+prime',
+        });
+      }
       activeStep = null;
     }
   };
@@ -166,20 +178,14 @@ export function parseWorkflowMarkdown(source: string, fileId: string): WorkflowD
       continue;
     }
 
+    // Callout blocks are still consumed (so they don't bleed into the next
+    // step) but no longer produce gates — see flushStep() above for the new
+    // approver-based gate derivation.
     const noteMatch = line.match(NOTE_OPEN_RE);
     if (noteMatch) {
       flushStep();
       const block = noteCollect(i);
       i = block.consumedTo;
-      if (/RAPOR HAZIR|ANALİZ TAMAMLANDI|!approve/i.test(block.body)) {
-        const approverMatch = block.body.match(PERSONA_HANDLE_RE);
-        gates.push({
-          phase: currentPhase === '__preamble__' ? '(preamble)' : currentPhase,
-          afterStepIndex: stepCounter - 1,
-          body: block.body,
-          approver: approverMatch?.[1] ?? null,
-        });
-      }
       continue;
     }
 
