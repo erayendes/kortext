@@ -22,6 +22,8 @@ import { openDb } from '../db/client.ts';
  *
  * Init copies:
  *   - root templates: AGENTS.md, .gitignore, .env.example
+ *   - `.kortext/foundation/` (BRD/PRD/TRD/PFD skeletons — produced once
+ *     by the analysis pipeline, then frozen)
  *   - `.kortext/references/`, `.kortext/reports/`, `.kortext/memory/`
  *     (seeded from `<paket-kökü>/templates/` when present)
  *   - `.kortext/data/` (empty; SQLite + worktrees + logs land here at runtime)
@@ -55,7 +57,7 @@ export type InitCommandResult =
  * directory is created so the engine has something to write into at
  * runtime.
  */
-const KORTEXT_SCAFFOLD_DIRS = ['references', 'reports', 'memory'] as const;
+const KORTEXT_SCAFFOLD_DIRS = ['foundation', 'references', 'reports', 'memory'] as const;
 
 /** Root-level files copied verbatim from `<paket-kökü>/templates/`. */
 const ROOT_TEMPLATE_FILES = ['AGENTS.md', '.gitignore', '.env.example'] as const;
@@ -76,9 +78,11 @@ kortext doctor    # workflow / persona / lock consistency scan
 
 ## Where things live
 
-- \`.kortext/references/blueprint.md\` — product blueprint; approving it
-  triggers the analysis → planning → development pipeline chain
-- \`.kortext/references/\` — team-shared references (auth, db schema, …)
+- \`.kortext/foundation/BRD.md\` — business requirements (product blueprint);
+  approving it triggers the analysis → planning → development pipeline chain
+- \`.kortext/foundation/\` — BRD/PRD/TRD/PFD (frozen after analysis)
+- \`.kortext/references/\` — team-shared living references (ACCESS, API,
+  STACK, SECURITY, …) in ALL-CAPS for canonical-source discoverability
 - \`.kortext/reports/\` — per-file engine + persona reports
 - \`.kortext/memory/\` — handover.md, decisions.md, learned.md
 - \`.kortext/data/\` — SQLite + worktrees + raw logs (git-ignored)

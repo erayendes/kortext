@@ -11,8 +11,13 @@ import { fileURLToPath } from 'node:url';
  *     from there. No per-project copy.
  *   - Per-project data lives under `.kortext/` in the project root:
  *       .kortext/data/          → SQLite + worktrees + raw logs (git-ignored)
- *       .kortext/references/    → team-shared references
- *       .kortext/reports/       → per-file engine + persona reports
+ *       .kortext/foundation/    → BRD/PRD/TRD/PFD (Faz 13: produced once
+ *                                 during analysis, then frozen — never
+ *                                 read as input by later workflows)
+ *       .kortext/references/    → team-shared living references (ALL-CAPS
+ *                                 filenames: ACCESS.md, API.md, ...)
+ *       .kortext/reports/       → per-file run-specific reports
+ *                                 (<scope>_<slug>_<ts>.md)
  *       .kortext/memory/        → handover.md, decisions.md, learned.md
  */
 
@@ -62,6 +67,7 @@ export type ProjectLayout = {
   root: string;
   dotKortext: string;
   data: string;
+  foundation: string;
   references: string;
   reports: string;
   memory: string;
@@ -76,6 +82,7 @@ export function projectLayout(projectRoot: string): ProjectLayout {
     root,
     dotKortext,
     data: join(dotKortext, 'data'),
+    foundation: join(dotKortext, 'foundation'),
     references: join(dotKortext, 'references'),
     reports: join(dotKortext, 'reports'),
     memory: join(dotKortext, 'memory'),

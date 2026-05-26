@@ -52,7 +52,7 @@ const PATTERN_WORKFLOW = `# Indexer Smoke (\`!start indexer-smoke\`)
 const STATIC_WORKFLOW = `# Static Smoke (\`!start static-smoke\`)
 ## A
 1. **+qa:** write a non-report file
-   - outputs: .kortext/references/blueprint.md
+   - outputs: .kortext/foundation/BRD.md
 `;
 
 const NON_REPORT_PATTERN_WORKFLOW = `# Stray File (\`!start stray\`)
@@ -114,8 +114,8 @@ describe('runWorkflow + outputIndexer wiring', () => {
     class ProducingExecutor implements Executor {
       readonly name = 'producing';
       async execute(_step: WorkflowStep, _ctx: ExecutorContext): Promise<ExecutorResult> {
-        mkdirSync(join(workdir, '.kortext/references'), { recursive: true });
-        writeFileSync(join(workdir, '.kortext/references/blueprint.md'), '# bp\n');
+        mkdirSync(join(workdir, '.kortext/foundation'), { recursive: true });
+        writeFileSync(join(workdir, '.kortext/foundation/BRD.md'), '# bp\n');
         return { ok: true, outputSummary: 'wrote bp' };
       }
     }

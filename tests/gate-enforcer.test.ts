@@ -18,7 +18,7 @@ function makeGraph() {
     `# Test (\`!start test\`)
 ## A
 1. **+a:** make foo
-   - Inputs: references/blueprint.md
+   - Inputs: foundation/BRD.md
    - Outputs: foo.md
 2. **+b:** make bar
    - Inputs: foo.md, references/dictionary.md
@@ -53,7 +53,7 @@ afterEach(() => {
 
 describe('GateEnforcer', () => {
   it('passes when every external input has status: approved frontmatter', async () => {
-    writeFrontmatter(join(tmpRoot, 'references/blueprint.md'), { status: 'approved' });
+    writeFrontmatter(join(tmpRoot, 'foundation/BRD.md'), { status: 'approved' });
     writeFrontmatter(join(tmpRoot, 'references/dictionary.md'), { status: 'approved' });
 
     const enforcer = new GateEnforcer({ repoRoot: tmpRoot, runs: repos.runs });
@@ -64,7 +64,7 @@ describe('GateEnforcer', () => {
   });
 
   it('fails when a required external input file is missing', async () => {
-    writeFrontmatter(join(tmpRoot, 'references/blueprint.md'), { status: 'approved' });
+    writeFrontmatter(join(tmpRoot, 'foundation/BRD.md'), { status: 'approved' });
     // dictionary.md not created
 
     const enforcer = new GateEnforcer({ repoRoot: tmpRoot, runs: repos.runs });
@@ -76,7 +76,7 @@ describe('GateEnforcer', () => {
   });
 
   it('fails when an external input exists but status is not approved', async () => {
-    writeFrontmatter(join(tmpRoot, 'references/blueprint.md'), { status: 'draft' });
+    writeFrontmatter(join(tmpRoot, 'foundation/BRD.md'), { status: 'draft' });
     writeFrontmatter(join(tmpRoot, 'references/dictionary.md'), { status: 'approved' });
 
     const enforcer = new GateEnforcer({ repoRoot: tmpRoot, runs: repos.runs });
@@ -84,13 +84,14 @@ describe('GateEnforcer', () => {
 
     expect(result.ok).toBe(false);
     const unapproved = result.failures.find((f) => f.kind === 'unapproved-input');
-    expect(unapproved?.path).toContain('blueprint.md');
+    expect(unapproved?.path).toContain('BRD.md');
   });
 
   it('fails when frontmatter is absent on a required input', async () => {
     // file exists but has no frontmatter at all
     mkdirSync(join(tmpRoot, 'references'), { recursive: true });
-    writeFileSync(join(tmpRoot, 'references/blueprint.md'), '# blueprint, no frontmatter\n');
+    mkdirSync(join(tmpRoot, 'foundation'), { recursive: true });
+    writeFileSync(join(tmpRoot, 'foundation/BRD.md'), '# blueprint, no frontmatter\n');
     writeFrontmatter(join(tmpRoot, 'references/dictionary.md'), { status: 'approved' });
 
     const enforcer = new GateEnforcer({ repoRoot: tmpRoot, runs: repos.runs });
@@ -101,7 +102,7 @@ describe('GateEnforcer', () => {
   });
 
   it('passes prior-workflow check when previous workflow has succeeded', async () => {
-    writeFrontmatter(join(tmpRoot, 'references/blueprint.md'), { status: 'approved' });
+    writeFrontmatter(join(tmpRoot, 'foundation/BRD.md'), { status: 'approved' });
     writeFrontmatter(join(tmpRoot, 'references/dictionary.md'), { status: 'approved' });
 
     // simulate a successful prior run
@@ -121,7 +122,7 @@ describe('GateEnforcer', () => {
   });
 
   it('fails prior-workflow check when no prior run has succeeded', async () => {
-    writeFrontmatter(join(tmpRoot, 'references/blueprint.md'), { status: 'approved' });
+    writeFrontmatter(join(tmpRoot, 'foundation/BRD.md'), { status: 'approved' });
     writeFrontmatter(join(tmpRoot, 'references/dictionary.md'), { status: 'approved' });
 
     // a prior run exists but it failed
@@ -142,7 +143,7 @@ describe('GateEnforcer', () => {
   });
 
   it('fails prior-workflow check when no prior run exists at all', async () => {
-    writeFrontmatter(join(tmpRoot, 'references/blueprint.md'), { status: 'approved' });
+    writeFrontmatter(join(tmpRoot, 'foundation/BRD.md'), { status: 'approved' });
     writeFrontmatter(join(tmpRoot, 'references/dictionary.md'), { status: 'approved' });
 
     const enforcer = new GateEnforcer({ repoRoot: tmpRoot, runs: repos.runs });
@@ -152,9 +153,9 @@ describe('GateEnforcer', () => {
   });
 
   it('resolves relative input paths against the repo root', async () => {
-    // The graph's external inputs are "references/blueprint.md" — relative.
+    // The graph's external inputs are "foundation/BRD.md" — relative.
     // GateEnforcer must resolve them against repoRoot.
-    writeFrontmatter(join(tmpRoot, 'references/blueprint.md'), { status: 'approved' });
+    writeFrontmatter(join(tmpRoot, 'foundation/BRD.md'), { status: 'approved' });
     writeFrontmatter(join(tmpRoot, 'references/dictionary.md'), { status: 'approved' });
 
     const enforcer = new GateEnforcer({ repoRoot: tmpRoot, runs: repos.runs });
