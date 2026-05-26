@@ -62,19 +62,23 @@ Faz 12.8 (workflow/persona SQL index + FK validation) sayesinde engine boot'ta `
 
 ```bash
 ls workflows/
-# 00-blueprint-creation.md
+# 00-kortext-setup.md
 # 01a-analysis-pipeline.md
-# 01b-blueprint-update-pipeline.md
+# 01b-onboarding-pipeline.md
 # 02-planning-pipeline.md
-# 03-pre-development.md
+# 02b-spike-workflow.md
+# 03-environment-setup.md
 # 04-development-cycle.md
-# 05-release-cycle.md
-# 06-test-cycle.md
-# 07-incident-response.md
-# 08-debt-cleanup.md
+# 05-test-cycle.md
+# 06-deployment-cycle.md
+# 07-rollback-pipeline.md
+# 08-hotfix-pipeline.md
 # 09-maintenance-cycle.md
-# 10-handover-cycle.md   (var mı?)
 ```
+
+> Bu dosyanın ilk taslağında inventory yanlıştı (`00-blueprint-creation`,
+> `01b-blueprint-update`, `03-pre-development`, vb. — uydurma isimler).
+> Gerçek liste yukarıda; Faz 13 rewrite turunda doğrulandı.
 
 Her workflow için sırayla:
 1. Mevcut content'i oku (full file)
