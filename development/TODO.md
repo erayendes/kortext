@@ -7,7 +7,7 @@ Açık iş listesi. Yapılan her şey [DECISIONS.md](./DECISIONS.md) tarihçesin
 ## Sırada (Faz 13 kapanışı)
 
 - [ ] **Manuel UAT** — Eray makinesinde clean `kortext-uat/` klasörü, `npm pack` + `npm install -g ./kortext-3.X.X.tgz` + `kortext init` + `kortext serve` + Onboarding wizard'da blueprint kabul + 01a-analysis-pipeline gerçek Claude executor ile koşma. Beklenen: foundation/references/reports doluyor, `pending_questions`'a +prime gate'leri düşüyor, log mesajında "0 step skipped — no persona handle".
-- [ ] **Release flow** — `package.json` 3.0.0 → ?.?.?, CHANGELOG, tag, npm publish. **Versiyon numarası belirsiz** — bkz. Açık sorular (CLI redesign ile çakışıyor).
+- [ ] **v3.1.0 release flow** — `package.json` 3.0.0 → 3.1.0, CHANGELOG `[Unreleased]` → `[3.1.0] — <tarih>` + yeni `[Unreleased]` aç, `git tag v3.1.0`, npm publish (otomatik tetik). Sıralama: Manuel UAT (her iki tur) pass + CLI redesign 11 adım kuyruk pass + v3.0.1 EADDRINUSE fix sonrası.
 
 ---
 
@@ -81,11 +81,11 @@ Yön kararı [DECISIONS Bölüm 0](./DECISIONS.md)'da onaylandı. Sıralı imple
 
 ## Açık sorular (Eray ile konuşulacak)
 
-- **Versiyon numarası çatışması** — Mevcut TODO "v3.2.0 release flow" = Faz 11-13 biriken çalışmanın ilk publish'i diyor (çünkü v3.0.0 broken, v3.1.x hiç çıkmadı). Ama [DECISIONS Bölüm 0](./DECISIONS.md) "v3.2 CLI redesign" diyor — multi-project + 9 komut + postinstall. İkisi aynı sürüme sığar mı, yoksa: (A) önce v3.1.0 = biriken iş + EADDRINUSE fix, sonra v3.2.0 = CLI redesign, ya da (B) v3.2.0 = biriken + redesign hepsi tek atış, ya da (C) başka şema?
 - **`scripts/` rename mi tutalım mı** — yanıltıcı ad ama tek dosya, marjinal fayda
-- **v3.0.1 borç (app.listen)** — bu sıraya ne zaman alınır
-- **Manuel UAT zamanı** — şimdi mi yarına mı
-- **v3.2 CLI redesign sırası** — Manuel UAT geçince mi başlanır, yoksa UAT ile paralel mi tasarlanır
+- **v3.0.1 borç (app.listen)** — bu sıraya ne zaman alınır (v3.1 release öncesi şart, EADDRINUSE bug fix)
+- **Manuel UAT 1. tur zamanı** — şimdi mi (mevcut `init/serve` ile) yoksa CLI redesign sonrası tek tur mu
+
+> **Karar verildi (2026-05-27):** v3.1 = devasa sürüm = Faz 11-13 birikmiş iş + CLI redesign hepsi tek atışta. Bkz. [DECISIONS Bölüm 0](./DECISIONS.md).
 
 ---
 

@@ -15,7 +15,7 @@
 
 **Açık PR:** yok.
 
-**npm registry:** `kortext@3.0.0` broken (EADDRINUSE silent fail bug). v3.2.0 release lokal tgz UAT geçtikten sonra.
+**npm registry:** `kortext@3.0.0` broken (EADDRINUSE silent fail bug). v3.1.0 release (devasa sürüm: Faz 11-13 + CLI redesign) lokal tgz UAT geçtikten sonra yapılacak.
 
 ## 2. Geçmiş özet
 
@@ -55,16 +55,16 @@ Bilinen risk noktaları (Faz 13 hızlı yazımdan):
 - `07-rollback-pipeline.md` — workflow gate yok kararı (incident-driven), sorgulanabilir
 - `09-maintenance-cycle.md` — engine bookkeeping step #2 yeni semantik, test edilmedi
 
-## 5. Bekleyen — v3.2 CLI/onboarding redesign
+## 5. Bekleyen — v3.1 CLI/onboarding redesign (devasa sürüm parçası)
 
-[DECISIONS.md Bölüm 0](./DECISIONS.md)'da yön belirlendi: multi-project daemon, postinstall otomatik onboard, native folder picker, 9 komutluk yeni CLI (`start/stop/pause/list/remove/purge/update/doctor/help`), `remove` ve `purge` ayrı komut. Implementation TODO.md'ye geçecek; v3.1 `init/serve` modeli bu sürede üretimde kalacak.
+[DECISIONS.md Bölüm 0](./DECISIONS.md)'da yön belirlendi: multi-project daemon, postinstall otomatik onboard, native folder picker, 9 komutluk yeni CLI (`start/stop/pause/list/remove/purge/update/doctor/help`), `remove` ve `purge` ayrı komut. Implementation [TODO.md](./TODO.md)'deki sıralı 11 adımlı kuyrukta. v3.0 `init/serve` modeli implementation tamamlanana kadar mevcut kalacak; v3.1.0 release ile tek atışta clean break.
 
 ## 6. Açık konular
 
 Detaylı liste [TODO.md](./TODO.md)'de. Kritik üçü:
 - Manuel UAT (Eray makinesinde clean `kortext-uat/` üzerinde tgz + init + serve + analysis çalıştır)
 - v3.0.1 borç: `app.listen()` EADDRINUSE silent-fail handler
-- v3.2 implementation (CLI redesign — DECISIONS Bölüm 0)
+- v3.1 CLI redesign implementation (DECISIONS Bölüm 0, TODO sıralı kuyruk)
 
 ## 7. Linkler
 

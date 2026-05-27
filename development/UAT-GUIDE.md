@@ -1,7 +1,7 @@
-# Kortext — UAT Test Rehberi (Eray)
+# Kortext v3.1.0 — UAT Test Rehberi (Eray)
 
-> Bu dosya **Faz 11-13'ün** (onboarding wizard + dashboard polish + foundation/ kategorisi + ALL-CAPS references + 12 workflow rewrite) lokal kullanıcı doğrulamasıdır. main HEAD `6dc2fb6`. Bu UAT npm publish'ten **önce** koşulur; pass ederse release flow tetiklenir.
-> **Versiyon numarası belirsiz** — [TODO Açık sorular](./TODO.md) v3.2 CLI redesign ile çatışmayı çözüyor. Bu sebeple başlıktan versiyon kaldırıldı.
+> Bu dosya **Faz 11-13'ün** (onboarding wizard + dashboard polish + foundation/ kategorisi + ALL-CAPS references + 12 workflow rewrite) **+ CLI redesign**'ın lokal kullanıcı doğrulamasıdır. main HEAD `6dc2fb6`+. Bu UAT npm publish'ten **önce** koşulur; pass ederse v3.1.0 release flow tetiklenir.
+> **Not:** CLI redesign implementation tamamlanana kadar UAT iki turda koşulur: (1) mevcut `init/serve` ile dashboard + foundation/ + workflow akışı, (2) v3.1 CLI redesign sonrası `start/stop/list/...` yeni komutlar + onboard akışı + multi-project. Aşağıdaki §1-§10 birinci turdur.
 > Hedef: yeni `.kortext/` mimari'sinin gerçek kurulumda çalıştığını + ekranların açıldığını + temel akışların kırılmadığını teyit etmek.
 > Süre: ~30-45 dakika.
 > **Test klasörü:** `/Users/erayendes/Documents/_codebase/kortext-uat` (Eray'ın belirlediği)
@@ -107,7 +107,7 @@ kortext --help
 ```
 Beklenen: `init / serve / start / approve / status / logs / cleanup / archive / doctor / mcp` listede. `archive` subcommand'i v3.1 ile geldi (Faz 12.6) — listede görüyorsan **Faz 12 doğru paketlenmiş** demektir.
 
-> **v3.2 redesign uyarısı:** Yukarıdaki komut listesi v3.1 production durumudur. v3.2'de CLI 9 komutluk yeni yüzeye geçecek (`start/stop/pause/list/remove/purge/update/doctor/help`) — bu UAT geçtikten sonra redesign başlar. Bkz. [DECISIONS Bölüm 0](./DECISIONS.md).
+> **v3.1 CLI redesign uyarısı:** Yukarıdaki komut listesi v3.0 production durumudur. v3.1 implementation sırasında CLI 9 komutluk yeni yüzeye geçecek (`start/stop/pause/list/remove/purge/update/doctor/help`). UAT'ın ikinci turu redesign tamamlandıktan sonra koşulacak. Bkz. [DECISIONS Bölüm 0](./DECISIONS.md).
 
 > ⚠️ **`npm install -g` izin hatası alırsan:** macOS'ta global npm dizini bazen root sahipliğinde olur. `sudo` kullanma yerine `npm config get prefix` ile yolu kontrol et; Eray'ın daha önceki kurulumunda muhtemelen düzeltilmiş olarak çalışıyor. Sorun çıkarsa `nvm` veya `npm config set prefix ~/.npm-global` ile user-local prefix kullan.
 

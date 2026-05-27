@@ -241,7 +241,7 @@ Lucide icons (24px). `tx-disabled` dim section title. Flex-spacer ile Danger sti
 
 ## 8. Routes (TanStack Router, hash history)
 
-> **v3.2 redesign uyarısı:** Aşağıdaki route şeması **v3.1 production** durumudur. v3.2'de multi-project routing gelecek (`/[proje]/dashboard`, `/[proje]/board` vb.) — daemon birden fazla projeye URL bazında hizmet edecek. `/onboarding` route'u da postinstall'la otomatik açılan `/onboard` ekranına dönüşecek. Yön kararı: [DECISIONS.md Bölüm 0](./DECISIONS.md). v3.2 implementation başlayana kadar bu bölüm canlıdır.
+> **v3.1 CLI redesign uyarısı:** Aşağıdaki route şeması **v3.0 production** durumudur. v3.1'de multi-project routing gelecek (`/[proje]/dashboard`, `/[proje]/board` vb.) — daemon birden fazla projeye URL bazında hizmet edecek. `/onboarding` route'u da postinstall'la otomatik açılan `/onboard` ekranına dönüşecek. Yön kararı: [DECISIONS.md Bölüm 0](./DECISIONS.md). v3.1 implementation tamamlanana kadar bu bölüm canlıdır.
 
 | Path | Ekran | Ana özellik |
 |---|---|---|

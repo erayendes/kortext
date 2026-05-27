@@ -6,7 +6,7 @@ Bu dosya Kortext'in **tüm mimari, workflow ve tasarım kararlarının** kronolo
 
 ## Bölüm 0 — CLI/Onboarding redesign (2026-05-27)
 
-**Status:** Eray onayladı (design level) — implementation v3.2'ye dönük yön kararı, henüz koda dökülmedi. v3.1 `init/serve` modeli production'da kalmaya devam edecek.
+**Status:** Eray onayladı (design level) — **v3.1 devasa sürümünün CLI redesign parçası**, henüz koda dökülmedi. v3.0 `init/serve` modeli implementation tamamlanana kadar mevcut; v3.1.0 release ile clean break.
 
 ### 0.1 Multi-project daemon mimarisi
 
@@ -77,9 +77,9 @@ kortext help             komut listesi (--help, -h alias)
 
 `kortext command` (proje-içi komutları listele) önerildi, reddedildi — UI'da zaten butonlar olacak; CLI'da paralel surface tutmak bakım yükü + Eray GUI-first.
 
-### 0.7 v3.1 → v3.2 geçiş
+### 0.7 v3.0 → v3.1 geçiş
 
-v3.1 `init/serve` production'da kullanıcı yok, geriye dönük destek derdi yok. v3.2 clean break: argv parser yeniden, postinstall script, registry servisi, folder picker endpoint, onboard route, engine'in `projectId`-aware'leştirilmesi. Bu bölüm yön belgesidir; sıralı implementation TODO.md'de işlenecek.
+v3.0 `init/serve` production'da kullanıcı yok (npm `kortext@3.0.0` EADDRINUSE bug ile broken), geriye dönük destek derdi yok. v3.1 clean break: argv parser yeniden, postinstall script, registry servisi, folder picker endpoint, onboard route, engine'in `projectId`-aware'leştirilmesi. Bu bölüm yön belgesidir; sıralı implementation [TODO.md](./TODO.md)'de işlenecek. v3.1 = devasa sürüm = Faz 11-13 birikmiş iş + bu redesign tek atışta yayımlanır.
 
 ---
 
@@ -339,7 +339,7 @@ v3.0/v3.1 production'da kullanıcı yok. Geriye dönük destek gerekmiyor:
 | Hedef kullanıcı | Kod bilmeyen herkes (PM, founder, ürün sahibi) | Kortext'in misyonu |
 | Görsel stil | **Mission control / dark theme** | Multi-agent orchestration için doğru ton |
 | Dil | İngilizce UI (i18n layer sonra) | Global hedef kitle |
-| ~~Multi-project~~ ⚠️ | ~~YOK — her kurulum tek proje~~ | **Bölüm 0'da (2026-05-27) geri çevrildi** — v3.2 tek-daemon-çok-proje mimarisine geçecek |
+| ~~Multi-project~~ ⚠️ | ~~YOK — her kurulum tek proje~~ | **Bölüm 0'da (2026-05-27) geri çevrildi** — v3.1 tek-daemon-çok-proje mimarisine geçecek |
 | Light theme | v0.2'ye ertelendi | Şimdilik dark only |
 
 ### 4.2 Renk paleti — v2 indigo → v3 vibrant purple (2026-05-21)
@@ -482,7 +482,7 @@ Bu maddeleri ne kadar mantıklı görünseler de tekrar gündeme getirme:
 - **Settings/Agents YAZMA editor'ü** — readonly, yazma v3.2'ye
 - **Workflow gate callout'ları** (`> [!NOTE] RAPOR HAZIR`) — approver tek sinyal
 - **Reviewer-as-step runtime** — Faz 13 scope dışı, v3.2'de
-- ~~**Multi-project switcher** — her kurulum tek proje paradigması~~ → **Bölüm 0'da (2026-05-27) reddedilme geri çevrildi:** v3.2 multi-project daemon mimarisine geçecek.
+- ~~**Multi-project switcher** — her kurulum tek proje paradigması~~ → **Bölüm 0'da (2026-05-27) reddedilme geri çevrildi:** v3.1 multi-project daemon mimarisine geçecek.
 - **Lineer workflow progress** — loops var (review → fail → back to dev)
 - **4-tab Deep Dive** — Live'a merge edildi
 - **Circle nodes in Orbit** — 3 iterasyon sonra dikdörtgene geçildi

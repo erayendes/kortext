@@ -303,7 +303,7 @@ Visual spec: [concepts/wireframe-v4-final.html](./concepts/wireframe-v4-final.ht
 
 ## 9. CLI
 
-> **v3.2 redesign uyarısı:** Aşağıdaki komut listesi **v3.1 production** durumudur. v3.2'de CLI yüzeyi yeniden tasarlanacak (multi-project daemon + 9 komutluk konsolide arayüz: `start/stop/pause/list/remove/purge/update/doctor/help`). Yön kararı: [DECISIONS.md Bölüm 0](./DECISIONS.md). v3.2 implementation başlayana kadar bu bölüm canlıdır.
+> **v3.1 CLI redesign uyarısı:** Aşağıdaki komut listesi **v3.0 production** durumudur. v3.1'de CLI yüzeyi yeniden tasarlanacak (multi-project daemon + 9 komutluk konsolide arayüz: `start/stop/pause/list/remove/purge/update/doctor/help`). Yön kararı: [DECISIONS.md Bölüm 0](./DECISIONS.md). v3.1 implementation tamamlanana kadar bu bölüm canlıdır.
 
 ```
 bin/kortext.js (dual-mode shim)
