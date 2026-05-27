@@ -116,7 +116,7 @@ kortext --help | --version
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-See [docs/architecture.md](./docs/architecture.md) for the long form (SQLite
+See [docs/architecture.md](https://github.com/erayendes/kortext/blob/main/development/ARCHITECTURE.md) for the long form (SQLite
 schema, DAG semantics, worker-pool concurrency rules).
 
 ---
@@ -169,7 +169,7 @@ your environment. The dispatcher dedupes notifications and posts on:
 ## Documentation
 
 - [User Guide](./USER-GUIDE.md) — full walkthrough of the autonomous flow
-- [Architecture](./docs/architecture.md) — schema, engine, MCP, dashboard
+- [Architecture](https://github.com/erayendes/kortext/blob/main/development/ARCHITECTURE.md) — schema, engine, MCP, dashboard
 - [Changelog](./CHANGELOG.md) — release notes
 
 ---

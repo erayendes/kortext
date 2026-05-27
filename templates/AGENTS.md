@@ -24,7 +24,11 @@ Inspect, in order:
 ## Where things live (v3.1+)
 
 - Persona / workflow / rule definitions: **global npm package** (`node_modules/kortext/{agents,workflows,rules}/`) — never copied here.
-- Project sources: `.kortext/references/*.md`, `.kortext/reports/*.md`, `.kortext/memory/*.md` (git-tracked).
+- Project sources:
+  - `.kortext/foundation/{BRD,PRD,TRD,PFD}.md` — analysis phase outputs, produced once and then frozen (git-tracked).
+  - `.kortext/references/*.md` — living references in ALL-CAPS (ACCESS, API, CONTENT, DATABASE, DESIGN, ENVIRONMENT, GLOSSARY, GROWTH, LEGAL, SECURITY, STACK, STRUCTURE, TEST).
+  - `.kortext/reports/*.md` — per-file engine + persona reports (`<scope>_<slug>_<ts>.md`).
+  - `.kortext/memory/*.md` — handover, decisions, learned.
 - Engine state: `.kortext/data/` (git-ignored — SQLite + worktrees + logs).
 - Backlog items: SQL (`backlog_items` table), not files. Templates in the npm package seed `body_md` when creating a new item.
 
