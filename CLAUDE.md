@@ -52,6 +52,7 @@ Detaylı mimari için [development/ARCHITECTURE.md](development/ARCHITECTURE.md)
 - Eray approves big architectural decisions via AskUserQuestion — don't choose unilaterally.
 - Verify before claiming done: screenshot, run tests, show file paths.
 - Never edit `agents/ rules/ workflows/ skills/ workspace/` in this folder — synced from `_docbase`.
+- **Never push to `origin/main` without Eray explicitly saying so.** Local commits on `main` stay local until Eray says "push" (or equivalent). `Bash(git push origin main)` is permission-allowed for technical reasons, but the behavioral rule overrides: ask first, push second.
 
 ## Build / dev / test commands
 
