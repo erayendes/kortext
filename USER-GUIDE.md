@@ -4,7 +4,7 @@ This guide is for the **person running Kortext on a project** — not the
 person hacking on Kortext itself. It assumes you can use a terminal, but not
 that you know TypeScript.
 
-For the architecture under the hood, see [docs/architecture.md](./docs/architecture.md).
+For the architecture under the hood, see [docs/architecture.md](https://github.com/erayendes/kortext/blob/main/development/ARCHITECTURE.md).
 
 ## Table of contents
 
@@ -484,7 +484,7 @@ so installed users always get the fast path.
 ### "Where's the database?"
 
 `.kortext/kortext.db`. Set `KORTEXT_DB_PATH` to override. The schema is
-documented in [docs/architecture.md](./docs/architecture.md).
+documented in [docs/architecture.md](https://github.com/erayendes/kortext/blob/main/development/ARCHITECTURE.md).
 
 ### "I edited a persona but the change didn't apply"
 
@@ -498,7 +498,7 @@ validates parsing before writing).
 
 ## Where next
 
-- [Architecture](./docs/architecture.md) — schema, engine internals
+- [Architecture](https://github.com/erayendes/kortext/blob/main/development/ARCHITECTURE.md) — schema, engine internals
 - [Changelog](./CHANGELOG.md) — release notes
 
 For bug reports and feature requests, open an issue on
