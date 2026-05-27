@@ -303,6 +303,8 @@ Visual spec: [concepts/wireframe-v4-final.html](./concepts/wireframe-v4-final.ht
 
 ## 9. CLI
 
+> **v3.2 redesign uyarısı:** Aşağıdaki komut listesi **v3.1 production** durumudur. v3.2'de CLI yüzeyi yeniden tasarlanacak (multi-project daemon + 9 komutluk konsolide arayüz: `start/stop/pause/list/remove/purge/update/doctor/help`). Yön kararı: [DECISIONS.md Bölüm 0](./DECISIONS.md). v3.2 implementation başlayana kadar bu bölüm canlıdır.
+
 ```
 bin/kortext.js (dual-mode shim)
   ├── dist/bin/kortext.js → in-process import (fast)
@@ -408,3 +410,34 @@ flowchart LR
 | MCP SSE | `mcp/sse.ts` |
 | CLI | `bin/kortext.ts`, `bin/kortext.js` |
 | Dashboard | `src/router.tsx`, `src/routes/*`, `src/components/*` |
+
+---
+
+## 15. v2 archive references
+
+v3 öncesi v2 (Python + Bash) implementasyonu kaldırıldı ama git geçmişinde tutuluyor:
+
+| Ne | Erişim |
+|---|---|
+| v2 final state (Türkçe) | tag `tr-archive` (commit `942a83c`) |
+| v2 original main | tag `v2-original` (commit `0594741`) |
+| v2 English translation | branch `en` (tag `en-archive`) |
+| WIP refactor (terkedilmiş) | branch `wip/v2-refactor` |
+
+Karakterizasyon testleri pin edilene kadar `legacy/` altında referans olarak duruyor.
+
+---
+
+## 16. Known gotchas / footguns
+
+Kortext kod tabanında geliştirici ısırılan runtime quirks. Yeni katkı yapan / refactor eden için zorunlu pre-flight.
+
+- **PreToolUse Write hook string-match yanlış pozitif:** regex'lerde `.match()` API, batch SQL alias, `cp.<name>` ile sync spawn — string-match hook'larını yanlış tetikler, maskele.
+- **HTML inject + sanitize:** `MarkdownViewer` marked + DOMPurify ile sanitize ediyor; **doğrudan HTML inject yasak** (XSS riski).
+- **TanStack Router HMR:** route değişikliğinde full reload gerekli (`Cmd+Shift+R`) — router instance reset için.
+- **MCP stdio'da `console.log` ölümcül:** stdout = JSONRPC kanalı; `bin/kortext.ts mcp` modunda **ilk iş** `console.log = console.error` monkey-patch.
+- **Foreign key sırası:** `runs.item_id → backlog_items.id`; önce backlog item insert, sonra run.
+- **Hash router:** derin link formatı `http://localhost:5173/#/board` (history mode değil).
+- **Worktree quarantine branch'leri:** failure sonrası `kortext/run-<id>` branch'i postmortem için korunur — manuel cleanup gerekir.
+- **Frontend bundle tip mirror:** `src/lib/api-types.ts` server tipini elden mirror ediyor; schema değişikliğinde **iki yer** güncellenmeli.
+- **`serve` child cwd ≠ kortext kaynak dizini:** prod modda Express `dist/web`'i kendi serve eder (Node 26 spawn race önlemek için).

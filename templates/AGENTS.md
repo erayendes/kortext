@@ -1,44 +1,59 @@
-# Kortext Agent Bootstrap
+# Kortext Ajan Bootstrap
 
-> Project-root entry point for AI tools (Claude Code, Cursor, Codex). Discovery file — keep at repo root.
+> AI araçları (Claude Code, Cursor, Codex) için proje kökü giriş noktası. Keşif dosyası — repo kökünde tut.
 
 ## Boot Persona
 
-Every new session starts as `+operation-manager`.
+Her yeni oturum `+operation-manager` olarak başlar.
 
-## Initial Checks
+## İlk Kontroller
 
-Inspect, in order:
+Sırayla incele:
 
-- `.kortext/data/` — SQL engine state (contexts, runs, locks). Engine reads, agent does not parse directly.
-- `.kortext/memory/handover.md` — latest devir notu (entry-level frontmatter blocks).
-- `.kortext/memory/decisions.md` — ADR TOC; selective read.
-- `.kortext/memory/learned.md` — Knowledge Base TOC; selective read.
+- `.kortext/data/` — SQL motor durumu (contexts, runs, locks). Motor okur, ajan doğrudan parse etmez.
+- `.kortext/memory/handover.md` — son devir notu (entry-level frontmatter blokları).
+- `.kortext/memory/decisions.md` — ADR TOC; seçici okuma.
+- `.kortext/memory/learned.md` — Knowledge Base TOC; seçici okuma.
 
-## Bootstrap Decision
+## Bootstrap Kararı
 
-- If engine reports an active context for the session, `+operation-manager` resumes the referenced persona.
-- Else if `handover.md` has a `## Handover: …` block whose `Next Steps` are open, `+operation-manager` organizes the next step.
-- Else `+operation-manager` triggers `workflows/00-kortext-setup.md` (workflows live in the global package — not in this repo).
+- Motor oturum için aktif bir context bildiriyorsa, `+operation-manager` referans verilen persona'yı resume eder.
+- Aksi durumda `handover.md`'de `Next Steps`'i açık bir `## Handover: …` bloğu varsa, `+operation-manager` sıradaki adımı organize eder.
+- Aksi durumda `+operation-manager` `workflows/00-kortext-setup.md`'yi tetikler (workflow'lar global pakette yaşar — bu repo'da değil).
 
-## Where things live (v3.1+)
+Onay gate'leri (`approver: +prime`) dashboard inbox üzerinden kullanıcıya (`+prime`) düşer — ajanlar kendilerini onaylamaz.
 
-- Persona / workflow / rule definitions: **global npm package** (`node_modules/kortext/{agents,workflows,rules}/`) — never copied here.
-- Project sources:
-  - `.kortext/foundation/{BRD,PRD,TRD,PFD}.md` — analysis phase outputs, produced once and then frozen (git-tracked).
-  - `.kortext/references/*.md` — living references in ALL-CAPS (ACCESS, API, CONTENT, DATABASE, DESIGN, ENVIRONMENT, GLOSSARY, GROWTH, LEGAL, SECURITY, STACK, STRUCTURE, TEST).
-  - `.kortext/reports/*.md` — per-file engine + persona reports (`<scope>_<slug>_<ts>.md`).
+## Kurallar
+
+npm paketi `node_modules/kortext/rules/` altında altı rule dosyası taşır:
+
+- `behavior.md` — ton, otonomi sınırları, escalation disiplini.
+- `branching.md` — git worktree + branch isimlendirme konvansiyonları.
+- `commands.md` — shell-free spawn disiplini, izinli CLI desenleri.
+- `emergency.md` — kill-switch + rollback kuralları.
+- `mcp.md` — MCP tool envelope ve stdio disiplini.
+- `models.md` — persona → executor (Claude / Codex / Gemini / Antigravity) yönlendirmesi.
+
+Kurallar motor tarafından boot'ta yüklenir ve runtime'da enforce edilir — ajanlar her adımda okumaz, ama her persona bu kurallara bağlıdır. Bir disiplinden emin değilsen ilgili rule dosyasına bak (ör. yıkıcı bir komut çalıştırmadan önce `rules/commands.md`).
+
+## Şeyler nerede yaşar (v3.1+)
+
+- Persona / workflow / rule tanımları: **global npm paketi** (`node_modules/kortext/{agents,workflows,rules}/`) — buraya asla kopyalanmaz.
+- Proje kaynakları:
+  - `.kortext/foundation/{BRD,PRD,TRD,PFD}.md` — analiz fazı çıktıları, bir kez üretilir sonra donar (git-tracked).
+  - `.kortext/references/*.md` — ALL-CAPS canlı referanslar (ACCESS, API, CONTENT, DATABASE, DESIGN, ENVIRONMENT, GLOSSARY, GROWTH, LEGAL, SECURITY, STACK, STRUCTURE, TEST).
+  - `.kortext/reports/*.md` — per-file engine + persona raporları (`<scope>_<slug>_<ts>.md`).
   - `.kortext/memory/*.md` — handover, decisions, learned.
-- Engine state: `.kortext/data/` (git-ignored — SQLite + worktrees + logs).
-- Backlog items: SQL (`backlog_items` table), not files. Templates in the npm package seed `body_md` when creating a new item.
+- Motor durumu: `.kortext/data/` (git-ignored — SQLite + worktrees + logs).
+- Backlog item'lar: SQL (`backlog_items` tablosu), dosya değil. Yeni bir backlog item oluşturulurken `body_md` `node_modules/kortext/templates/backlogs/<type>.md`'den seed edilir.
 
-## Frontmatter discipline
+## Frontmatter disiplini
 
-Every reference / report / memory file carries YAML frontmatter (single source of truth — no `> [!INFO]` callout duplication):
+Her reference / report / memory dosyası YAML frontmatter taşır (tek doğru kaynak):
 
 - `references/` — `status, author, reviewer, approver`
 - `reports/` — `status, author, reviewer, updated_at`
-- `memory/handover.md` — **entry-level** (each `## Handover: …` block has its own frontmatter)
+- `memory/handover.md` — **entry-level** (her `## Handover: …` bloğunun kendi frontmatter'ı vardır)
 - `memory/decisions.md` / `memory/learned.md` — section-level header pattern + TOC
 
-Engine maintains TOC entries in `decisions.md` / `learned.md` automatically.
+Engine `decisions.md` / `learned.md`'deki TOC girdilerini otomatik olarak korur.

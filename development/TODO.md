@@ -7,8 +7,7 @@ Açık iş listesi. Yapılan her şey [DECISIONS.md](./DECISIONS.md) tarihçesin
 ## Sırada (Faz 13 kapanışı)
 
 - [ ] **Manuel UAT** — Eray makinesinde clean `kortext-uat/` klasörü, `npm pack` + `npm install -g ./kortext-3.X.X.tgz` + `kortext init` + `kortext serve` + Onboarding wizard'da blueprint kabul + 01a-analysis-pipeline gerçek Claude executor ile koşma. Beklenen: foundation/references/reports doluyor, `pending_questions`'a +prime gate'leri düşüyor, log mesajında "0 step skipped — no persona handle".
-- [ ] **PR aç + main'e merge** — `feat/v3.1-workflow-content` branch'i (~30 commit) → main. Squash vs merge tercih Eray.
-- [ ] **v3.2.0 release flow** — `package.json` 3.1.0 → 3.2.0, CHANGELOG, tag, npm publish (otomatik tetik).
+- [ ] **Release flow** — `package.json` 3.0.0 → ?.?.?, CHANGELOG, tag, npm publish. **Versiyon numarası belirsiz** — bkz. Açık sorular (CLI redesign ile çakışıyor).
 
 ---
 
@@ -30,6 +29,24 @@ Açık iş listesi. Yapılan her şey [DECISIONS.md](./DECISIONS.md) tarihçesin
 ## v3.0.1 borç (HANDOVER #51)
 
 - [ ] **`app.listen()` error handler** — EADDRINUSE durumunda Express sessizce listening callback'i atlayıp exit ediyor. Kullanıcı "Cannot GET /" görüyor, gerçek hatayı görmüyor. UAT'ta 6 saat dev server zombie process bu sebeple yanılttı.
+
+---
+
+## CLI/Onboarding redesign — implementation kuyruğu
+
+Yön kararı [DECISIONS Bölüm 0](./DECISIONS.md)'da onaylandı. Sıralı implementation adımları (versiyon numarası Açık sorular'da belirlenecek):
+
+- [ ] **`bin/kortext.ts` argv parser yeniden yaz** — 9 komut: `start [proje]` / `stop` / `pause [proje]` / `list` / `remove [proje]` / `purge [proje]` / `update` / `doctor` / `help`. `init` ve `serve` `start` içine konsolide edilir.
+- [ ] **Global registry servisi** — `~/.kortext/projects.json` okuma/yazma + lock; `server/registry/` modülü
+- [ ] **Postinstall script** — `scripts/postinstall.mjs`; `detached: true` + `stdio: 'ignore'` + `unref()` ile daemon spawn + tarayıcı aç. Fallback mesajı: "Kortext kuruldu — `kortext start` yaz."
+- [ ] **Native folder picker endpoint** — `POST /api/system/pick-folder`; macOS `osascript -e 'choose folder'`, Windows PowerShell `FolderBrowserDialog`, Linux `zenity --file-selection --directory` (yedek `kdialog`)
+- [ ] **Onboard route** — `src/routes/onboard.tsx`; proje adı + dizin seç + executor seçimi; submit → backend `initCommand({ targetDir })` çağrı + registry insert + dashboard'a yönlen
+- [ ] **Proje listesi ekranı** — registry doluysa açılan ilk ekran: kayıtlı projeler + "Yeni proje başlat" butonu (onboard'a gider)
+- [ ] **Multi-project routing** — engine'i `projectId`-aware yap (her proje kendi `.kortext/data/kortext.db` ve worktrees'i kullanır); React Router `/[proje]/dashboard`, `/[proje]/board`, vb.
+- [ ] **Daemon lifecycle** — `kortext stop` daemon shutdown (clean), `kortext pause [proje]` worker pool'a "bu proje için yeni step alma" sinyali
+- [ ] **`purge` confirmation** — interactive `Are you sure? [y/N]` + dizindeki `.kortext/` rm; readline tabanlı
+- [ ] **`kortext update`** — `npm update -g kortext` wrapper + sonra daemon restart
+- [ ] **Migration kararı** — v3.1 `init/serve` kullanıcıları yok (clean break, DECISIONS Bölüm 2.9), migration tooling yazılmaz
 
 ---
 
@@ -58,19 +75,17 @@ Açık iş listesi. Yapılan her şey [DECISIONS.md](./DECISIONS.md) tarihçesin
 
 ### Klasör + dosya
 
-- [ ] **`development/internal/` kalıntıları temizle** — `ROADMAP-v3.md` (Faz 0-10 donmuş; DECISIONS.md §5 tarihçesinde özet var). Eğer history dokümantasyonu için kalsın diyorsan `development/archive/`'e taşı.
-- [ ] **CLAUDE.md (proje kökü)** — Faz 13 cleanup'ında "bayat" işaretlendi (skills/, workspace/, legacy/, _docbase sync mantığı atıl). v3.1 disipline ile güncellenecek.
 - [ ] **`v3.1-uat-guide.md` → `UAT-GUIDE.md`** rename oldu, içerik güncellenmeli (foundation/ + ALL-CAPS + new test count 382).
-- [ ] **HANDOVER-v3.md → HANDOVER.md** rename oldu, sonraki turun içeriğiyle güncellenmeli (Faz 13 + UAT durumu).
 
 ---
 
 ## Açık sorular (Eray ile konuşulacak)
 
+- **Versiyon numarası çatışması** — Mevcut TODO "v3.2.0 release flow" = Faz 11-13 biriken çalışmanın ilk publish'i diyor (çünkü v3.0.0 broken, v3.1.x hiç çıkmadı). Ama [DECISIONS Bölüm 0](./DECISIONS.md) "v3.2 CLI redesign" diyor — multi-project + 9 komut + postinstall. İkisi aynı sürüme sığar mı, yoksa: (A) önce v3.1.0 = biriken iş + EADDRINUSE fix, sonra v3.2.0 = CLI redesign, ya da (B) v3.2.0 = biriken + redesign hepsi tek atış, ya da (C) başka şema?
 - **`scripts/` rename mi tutalım mı** — yanıltıcı ad ama tek dosya, marjinal fayda
-- **`internal/ROADMAP-v3.md`** — sil mi (DECISIONS.md tarihçesi yeterli), arşivle mi (`archive/` klasör)
 - **v3.0.1 borç (app.listen)** — bu sıraya ne zaman alınır
 - **Manuel UAT zamanı** — şimdi mi yarına mı
+- **v3.2 CLI redesign sırası** — Manuel UAT geçince mi başlanır, yoksa UAT ile paralel mi tasarlanır
 
 ---
 

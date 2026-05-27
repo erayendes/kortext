@@ -241,6 +241,8 @@ Lucide icons (24px). `tx-disabled` dim section title. Flex-spacer ile Danger sti
 
 ## 8. Routes (TanStack Router, hash history)
 
+> **v3.2 redesign uyarısı:** Aşağıdaki route şeması **v3.1 production** durumudur. v3.2'de multi-project routing gelecek (`/[proje]/dashboard`, `/[proje]/board` vb.) — daemon birden fazla projeye URL bazında hizmet edecek. `/onboarding` route'u da postinstall'la otomatik açılan `/onboard` ekranına dönüşecek. Yön kararı: [DECISIONS.md Bölüm 0](./DECISIONS.md). v3.2 implementation başlayana kadar bu bölüm canlıdır.
+
 | Path | Ekran | Ana özellik |
 |---|---|---|
 | `/` | Dashboard | RunsTable + PendingQuestionsCard + Timeline sidebar |
@@ -312,33 +314,19 @@ Submit → `POST /api/blueprint` → `.kortext/foundation/BRD.md` + `.kortext/pr
 
 ## 11. Kritik UI kuralları
 
+Yalnızca **görsel/UX ile bağı olan** kod kuralları burada. Saf backend/runtime kuralları için: [ARCHITECTURE.md §8 Dashboard + §16 Gotchas](./ARCHITECTURE.md), pure code lint kuralları için: [DECISIONS.md #24, #25, #57, #64](./DECISIONS.md).
+
 ### 11.1 Markdown render (XSS koruma)
 
 Tüm markdown render `marked` + `DOMPurify` ile sanitize edilir (`MarkdownViewer.tsx`). Doğrudan HTML inject **yasak** — PreToolUse hook block'lar. Eğer React'in raw-HTML inject prop'u (sanitize edilmiş içerikle) gerekiyorsa, dosyayı `cat > file <<EOF` heredoc ile yaz (sanitization katmanı zaten yerinde).
 
-### 11.2 `React.ReactNode` namespace yasak
+### 11.2 Tek polling kaynağı
 
-`no-undef` ESLint kuralı React namespace görmüyor:
-```ts
-import { useState, type ReactNode } from 'react';
-```
-`React.ReactNode` kullanma.
+`PendingQuestionsProvider` Header bell + Dashboard card + Toast emitter için tek `/api/questions` poll'ünü yürütür. Toast "yeni-id signal": `useRef<Set<number>>` ile "az önce gördüğüm" id'leri tut. UX prensibi: kullanıcı aynı yenilik için iki kez bildirim almasın.
 
-### 11.3 Tek polling kaynağı
+### 11.3 Overlay pattern
 
-`PendingQuestionsProvider` Header bell + Dashboard card + Toast emitter için tek `/api/questions` poll'ünü yürütür. Toast "yeni-id signal": `useRef<Set<number>>` ile "az önce gördüğüm" id'leri tut.
-
-### 11.4 Overlay pattern
-
-TerminalPanel + TimelinePanel + Toasts `position: fixed` + RootShell altında — route değişimleri etkilemiyor.
-
-### 11.5 Validate-before-write
-
-PUT `/api/personas/:handle` önce `parsePersonaMarkdown` ile geçici parse yapar, handle değişmişse 400 — disk hiç dokunmadan.
-
-### 11.6 PersonaRegistry hot-reload
-
-`reload()` Map'i in-place mutate eder; route handler referansı değişmeden taze veri. Yarış koşulu farkında ol.
+TerminalPanel + TimelinePanel + Toasts `position: fixed` + RootShell altında — route değişimleri etkilemiyor. Route geçişinde Terminal kapanmaz, Timeline kaymaz.
 
 ---
 

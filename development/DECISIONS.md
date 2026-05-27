@@ -4,6 +4,85 @@ Bu dosya Kortext'in **tüm mimari, workflow ve tasarım kararlarının** kronolo
 
 ---
 
+## Bölüm 0 — CLI/Onboarding redesign (2026-05-27)
+
+**Status:** Eray onayladı (design level) — implementation v3.2'ye dönük yön kararı, henüz koda dökülmedi. v3.1 `init/serve` modeli production'da kalmaya devam edecek.
+
+### 0.1 Multi-project daemon mimarisi
+
+v3.1'in **tek-proje-tek-süreç** modeli yerine **tek-daemon-çok-proje** modeli.
+
+- Global registry: `~/.kortext/projects.json` → `{ "acme-crm": "/Users/eray/Projects/acme-crm", "saas-app": "/Users/eray/Projects/saas-app" }`
+- Tek daemon `localhost:3200`'de ayakta kalır, projeleri URL ile ayırır (`/acme-crm/dashboard`, `/saas-app/dashboard`).
+- Paralel çalıştırma norm: birden fazla proje aynı sunucuya bağlı, aynı anda dashboard'da.
+
+**Sebep:** Eray birden fazla projeyi paralel yürütüyor; "her proje için yeni terminal" akışı kırıcı. Bilgisayar yeniden başlatıldıktan sonra `kortext start acme-crm` ile aynı yere dönmek gerekiyor.
+
+### 0.2 Postinstall otomatik onboarding
+
+`npm install -g kortext` biter bitmez:
+1. Postinstall script detached daemon spawn eder (`localhost:3200`).
+2. Tarayıcı otomatik açılır: `localhost:3200/onboard`.
+3. Registry boşsa direkt onboard ekranı; doluysa proje listesi + üstte "Yeni proje başlat" butonu (onboard akışına gider).
+
+**Risk notu:** Postinstall'da background process spawn etmek bazı npm versiyonlarında izin/ortam sorunlu. `detached: true, stdio: 'ignore'` + `unref()` zorunlu. Spawn başarısız olursa fallback: "Kortext kuruldu — `kortext start` yaz" mesajı.
+
+### 0.3 Native OS folder picker (backend API)
+
+Onboard sırasında "Proje dizini seç" butonu browser'dan native OS diyaloğunu açar:
+- macOS: `osascript -e 'choose folder'`
+- Windows: PowerShell `[System.Windows.Forms.FolderBrowserDialog]`
+- Linux: `zenity --file-selection --directory` (yedek: `kdialog`)
+
+Backend endpoint: `POST /api/system/pick-folder` → child_process spawn → seçilen path döner.
+
+**Sebep:** Browser `<input type="file" webkitdirectory>` güvenlik nedeniyle native path açıklamaz. Localhost daemon + native dialog browser kısıtını byp etmenin tek temiz yolu.
+
+### 0.4 CLI yüzeyi: 9 komut (v3.1'in 10+ komutunu konsolide)
+
+```
+kortext start [proje]    daemon + proje aç; proje yoksa onboard'a git;
+                         aynı komut "devam et" işlevini görür
+kortext stop             tüm sistemi kapat (daemon shutdown)
+kortext pause [proje]    bir projeyi duraklat (diğer projeler çalışmaya devam)
+kortext list             kayıtlı projeleri göster
+kortext remove [proje]   sadece registry'den çıkar; .kortext/ proje dizininde kalır
+kortext purge [proje]    registry'den çıkar + .kortext/ klasörünü sil (onay sorusu)
+kortext update           kortext'i npm üzerinden güncelle
+kortext doctor           sağlık kontrolü
+kortext help             komut listesi (--help, -h alias)
+```
+
+**Disiplin:**
+- `start` her şeyi başlatır (daemon, proje, tarayıcı). Tek ana giriş.
+- v3.1'in `init` ve `serve` komutları kalkar — `start` ikisini absorb eder.
+- `approve/status/logs/cleanup/archive` dashboard'a taşınır. UI varken CLI'da paralel surface tutmak bakım yükü.
+- Imperative kip tutarlılığı (`start/stop/pause/list/remove/purge`) — Docker/git/kubectl convention.
+
+### 0.5 `remove` vs `purge`: ayrı komut (flag değil)
+
+İki seçenek değerlendirildi:
+- **A:** `kortext remove --purge` (flag pattern, Unix standardı)
+- **B:** `kortext remove` + `kortext purge` (iki ayrı komut) ← seçilen
+
+**Sebep:** Eray non-coder. Flag yazımı tipo riski yüksek; "remove yazıp yanlışlıkla `--purge`" senaryosu mümkün. İki ayrı kelime = bilinçli yazım. `kortext help` listesinde ikisi de ayrı uyarıyla görünür. Linux `rm` vs `shred` ayrımıyla aynı destructive-by-design kalıbı.
+
+- **`remove`** (yumuşak): `~/.kortext/projects.json`'dan kaydı sil. `.kortext/` proje dizininde duruyor. Sonra `start <yol>` ile yeniden eklenebilir.
+- **`purge`** (sert): kayıt + dizindeki `.kortext/` klasörü silinir. Interactive onay zorunlu (`Are you sure? [y/N]`).
+
+### 0.6 CLI/UI sorumluluk ayrımı
+
+- **CLI = sistem kontrolü:** daemon ayağa kaldırma, proje kayıt yönetimi, güncelleme, sağlık kontrolü. Eray buraya sadece "Kortext'i başlatmak/durdurmak" için gelir.
+- **Dashboard = proje operasyonu:** workflow tetikleme, ajan kontrolü, run görüntüleme, approval queue, raporlar. Eray'ın asıl çalıştığı yüzey.
+
+`kortext command` (proje-içi komutları listele) önerildi, reddedildi — UI'da zaten butonlar olacak; CLI'da paralel surface tutmak bakım yükü + Eray GUI-first.
+
+### 0.7 v3.1 → v3.2 geçiş
+
+v3.1 `init/serve` production'da kullanıcı yok, geriye dönük destek derdi yok. v3.2 clean break: argv parser yeniden, postinstall script, registry servisi, folder picker endpoint, onboard route, engine'in `projectId`-aware'leştirilmesi. Bu bölüm yön belgesidir; sıralı implementation TODO.md'de işlenecek.
+
+---
+
 ## Bölüm 1 — Faz 13 kararları (2026-05-27)
 
 ### 1.1 Foundation / references / reports ayrımı (Eray'ın A kararı)
@@ -168,7 +247,7 @@ v3.0/v3.1 production'da kullanıcı yok. Geriye dönük destek gerekmiyor:
 
 ## Bölüm 3 — v3.0 → v3.1.x kararları (Faz 0-12 özeti, HANDOVER §1-§64)
 
-> 64 numaralı tasarım kararı toplam. Aşağıda kategorize özet — tam liste için `git log HANDOVER-v3.md` veya bu doc'un Bölüm 3.1-3.4'üne bak.
+> 64 numaralı tasarım kararı toplam. Aşağıdaki kategorize özet **bu maddelerin kanonik kaydıdır** (eski `HANDOVER-v3.md` docs/ → development/ konsolidasyonunda silindi). Komit-bazlı tarihçe için `git log development/DECISIONS.md`.
 
 ### 3.1 Stack + core (#1-#18 — Faz 0-5)
 
@@ -224,7 +303,7 @@ v3.0/v3.1 production'da kullanıcı yok. Geriye dönük destek gerekmiyor:
 44. **Mock executor + tmp tmp dir E2E pattern** — `mkdtempSync` + CI deterministik.
 45. **`npm publish --provenance`** — OIDC ile cryptographic attestation.
 46. **Publish gate = CI gate'in aynısı** — lint + typecheck + test + build + smoke publish'ten önce tekrar.
-47. **HANDOVER-v3.md pakete dahil** (eski karar — v3.2'de temizlik).
+47. ~~**HANDOVER-v3.md pakete dahil**~~ → Faz 13'te docs/ → development/ konsolidasyonunda silindi; `development/HANDOVER.md` artık pakete dahil değil (`.npmignore`).
 48. **Express dist/web'i kendi serve eder** (prod). Node 26 spawn race fix.
 49. **Prod mod = in-process import**, dev mod = spawn. Node 26 spawn() + stdio:inherit child immediate exit.
 50. **Walk-up `packageRoot()` pattern her yerde tutarlı** — 4 modülde aynı pattern.
@@ -260,7 +339,7 @@ v3.0/v3.1 production'da kullanıcı yok. Geriye dönük destek gerekmiyor:
 | Hedef kullanıcı | Kod bilmeyen herkes (PM, founder, ürün sahibi) | Kortext'in misyonu |
 | Görsel stil | **Mission control / dark theme** | Multi-agent orchestration için doğru ton |
 | Dil | İngilizce UI (i18n layer sonra) | Global hedef kitle |
-| Multi-project | YOK — her kurulum tek proje | Switcher gereksiz |
+| ~~Multi-project~~ ⚠️ | ~~YOK — her kurulum tek proje~~ | **Bölüm 0'da (2026-05-27) geri çevrildi** — v3.2 tek-daemon-çok-proje mimarisine geçecek |
 | Light theme | v0.2'ye ertelendi | Şimdilik dark only |
 
 ### 4.2 Renk paleti — v2 indigo → v3 vibrant purple (2026-05-21)
@@ -403,7 +482,7 @@ Bu maddeleri ne kadar mantıklı görünseler de tekrar gündeme getirme:
 - **Settings/Agents YAZMA editor'ü** — readonly, yazma v3.2'ye
 - **Workflow gate callout'ları** (`> [!NOTE] RAPOR HAZIR`) — approver tek sinyal
 - **Reviewer-as-step runtime** — Faz 13 scope dışı, v3.2'de
-- **Multi-project switcher** — her kurulum tek proje paradigması
+- ~~**Multi-project switcher** — her kurulum tek proje paradigması~~ → **Bölüm 0'da (2026-05-27) reddedilme geri çevrildi:** v3.2 multi-project daemon mimarisine geçecek.
 - **Lineer workflow progress** — loops var (review → fail → back to dev)
 - **4-tab Deep Dive** — Live'a merge edildi
 - **Circle nodes in Orbit** — 3 iterasyon sonra dikdörtgene geçildi
