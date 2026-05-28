@@ -214,7 +214,7 @@ Onboarding ekranında:
 Beklenen:
 - [ ] Form yeşil geçer, `Initializing…` durduktan sonra dashboard'a yönlendirilir
 - [ ] `.kortext/foundation/BRD.md` status'u `approved` olur (`head -8` ile teyit) — Faz 13 ile blueprint artık `foundation/` altında, eski `references/blueprint.md` lokasyonunda DEĞİL
-- [ ] `.kortext/data/kortext.db`'de yeni `run` satırı oluşur (mock executor 01a-analysis-pipeline tetikler)
+- [ ] `.kortext/data/kortext.db`'de yeni `run` satırı oluşur (mock executor new-project-analysis tetikler)
 - [ ] Dashboard'da "Active work" tablosu yeni run'ı gösterir
 
 ⚠️ **Mock executor sahte success döner — gerçek dosya yazılmaz.** Foundation/references/reports dolduğunu doğrulamak için Claude executor ile yeniden koşman gerek (TODO Sırada §1).
@@ -259,7 +259,7 @@ Workflows ve Rules pane'lerinde aynı pattern.
 
 ```bash
 # Onboarding'i Claude executor ile yeniden yap, ya da:
-kortext start 01a-analysis-pipeline --executor claude
+kortext start new-project-analysis --executor claude
 # Log dosyasında token usage'ı oku:
 tail -20 .kortext/data/logs/run-*-step-*.log | grep -i "token"
 ```

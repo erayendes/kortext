@@ -57,7 +57,7 @@ export type ApprovalGate = {
 };
 
 export type WorkflowDefinition = {
-  /** Filename stem (e.g. '01a-analysis-pipeline'). */
+  /** Filename stem (e.g. 'new-project-analysis'). */
   id: string;
   /** First H1 in the file. */
   title: string;

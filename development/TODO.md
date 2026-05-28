@@ -6,7 +6,7 @@ Açık iş listesi. Yapılan her şey [DECISIONS.md](./DECISIONS.md) tarihçesin
 
 ## Sırada (Faz 13 kapanışı)
 
-- [ ] **Manuel UAT** — Eray makinesinde clean `kortext-uat/` klasörü, `npm pack` + `npm install -g ./kortext-3.X.X.tgz` + `kortext init` + `kortext serve` + Onboarding wizard'da blueprint kabul + 01a-analysis-pipeline gerçek Claude executor ile koşma. Beklenen: foundation/references/reports doluyor, `pending_questions`'a +prime gate'leri düşüyor, log mesajında "0 step skipped — no persona handle".
+- [ ] **Manuel UAT** — Eray makinesinde clean `kortext-uat/` klasörü, `npm pack` + `npm install -g ./kortext-3.X.X.tgz` + `kortext init` + `kortext serve` + Onboarding wizard'da blueprint kabul + new-project-analysis gerçek Claude executor ile koşma. Beklenen: foundation/references/reports doluyor, `pending_questions`'a +prime gate'leri düşüyor, log mesajında "0 step skipped — no persona handle".
 - [ ] **v3.1.0 release flow** — `package.json` 3.0.0 → 3.1.0, CHANGELOG `[Unreleased]` → `[3.1.0] — <tarih>` + yeni `[Unreleased]` aç, `git tag v3.1.0`, npm publish (otomatik tetik). Sıralama: Manuel UAT (her iki tur) pass + CLI redesign 11 adım kuyruk pass + v3.0.1 EADDRINUSE fix sonrası.
 
 ---

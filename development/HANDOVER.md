@@ -46,7 +46,7 @@ Eray + Claude `development/` altındaki kanonik dokümanları tek tek temizliyor
 3. `rules/*.md` — 6 rule (behavior, branching, commands, emergency, mcp, models)
 4. `workflows/*.md` — 12 workflow (00 → 09)
 5. `templates/{foundation,references,reports,memory,backlogs}/*.md` — kullanıcı projesine kopyalanan iskelet
-6. **`agents/` ve `workflows/` dosyaları `_docbase/kortext/`'ten sync'leniyor** — düzenleme orada yapılır, burada değil.
+6. **`agents/` ve `workflows/` artık `_codebase` tarafında düzenlenir** (eski `_docbase` sync mekanizması kaldırıldı; tek kaynak burası).
 
 Bilinen risk noktaları (Faz 13 hızlı yazımdan):
 - `01b-onboarding-pipeline.md` — pattern apply (~30 sn yazıldı), kalibre gerek

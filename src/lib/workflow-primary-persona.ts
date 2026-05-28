@@ -9,8 +9,7 @@
  */
 
 const WORKFLOW_PERSONA: Record<string, string> = {
-  '00-kortext-setup': '+operation-manager',
-  '01a-analysis-pipeline': '+operation-manager',
+  'new-project-analysis': '+operation-manager',
   '01b-onboarding-pipeline': '+engineering-manager',
   '02-planning-pipeline': '+operation-manager',
   '02b-spike-workflow': '+engineering-manager',

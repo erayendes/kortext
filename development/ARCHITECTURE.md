@@ -258,10 +258,8 @@ sequenceDiagram
     participant N as Slack/Telegram
 
     File->>W: status: draft → approved
-    W->>O: triggerWorkflow(00-kortext-setup)
-    O->>E: runWorkflow(graph)
-    E->>O: routing → 01a or 01b
-    O->>E: runWorkflow(01a-analysis)
+    W->>O: triggerWorkflow (projectType routing in blueprint/io.ts)
+    O->>E: runWorkflow(new-project-analysis or 01b-onboarding-pipeline)
     E-->>Q: gate barrier (approver:+prime)
     Q-->>N: notify
     Q->>E: decision: approve
