@@ -1,6 +1,6 @@
 # Existing Project Analysis
 
-> **Disiplin:** Bu workflow **mevcut teknik gerçekliği belgeler**, yeni standart dayatmaz. "İyileştirme" değil "keşif". Borç tespiti TRD'de toplanır; planlama akışında ele alınır.
+> **Bu dosyada:** Mevcut bir projenin codebase'i incelenir, gerçek durumu reference + foundation dosyalarında belgelenir.
 
 ## Teknik Keşif
 
