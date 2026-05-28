@@ -172,7 +172,7 @@ describe('locks repository', () => {
 describe('runs + run_steps + pending_questions', () => {
   it('tracks lifecycle and answers questions', () => {
     const run = repos.runs.createRun({
-      workflow_id: '01a-analysis-pipeline',
+      workflow_id: 'new-project-analysis',
       item_id: null,
       status: 'queued',
       worktree_path: null,

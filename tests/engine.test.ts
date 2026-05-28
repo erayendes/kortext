@@ -31,13 +31,13 @@ afterEach(() => {
 });
 
 describe('workflow-parser', () => {
-  it('parses the real 01a-analysis-pipeline.md', () => {
+  it('parses the real new-project-analysis.md', () => {
     const wf = loadWorkflowFromFile(
-      resolve(process.cwd(), 'workflows/01a-analysis-pipeline.md'),
+      resolve(process.cwd(), 'workflows/new-project-analysis.md'),
     );
-    expect(wf.id).toBe('01a-analysis-pipeline');
+    expect(wf.id).toBe('new-project-analysis');
     expect(wf.title.toLowerCase()).toContain('analysis');
-    expect(wf.startCommand).toBe('analysis');
+    expect(wf.startCommand).toBeNull();
 
     // ≥ 8 numbered steps across phases.
     expect(wf.steps.length).toBeGreaterThanOrEqual(8);
