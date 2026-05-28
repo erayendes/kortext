@@ -53,7 +53,7 @@ Gizli anahtarlar ve kimlik bilgileri için ihlali mümkün olmayan kurallar:
 - **Şablon Zorunluluğu:** Her `.env` için bir `.env.example` dosyası oluşturulur. Anahtarlar listelenir, değerler boş bırakılır.
 - **Commit Öncesi Kontrol:** Commit atmadan önce değiştirilen dosyaların gizli anahtar içermediğini doğrula. Şüphe varsa işlemi durdur ve +prime'a eskalasyon başlat.
 - **Sızıntı Tespiti:** Bir gizli anahtarın yanlışlıkla commit edildiği tespit edilirse derhal +prime'a bildir. Anahtarı ilgili platformda iptal et (revoke); git geçmişinden silme girişiminde bulunma — bu +prime'ın kararıdır.
-- **Scanning Zorunluluğu:** Her projede `workflows/03-environment-setup.md` kapsamında pre-commit hook veya CI secrets taraması kurulur.
+- **Scanning Zorunluluğu:** Her projede `workflows/environment-setup.md` kapsamında pre-commit hook veya CI secrets taraması kurulur.
 
 ## AI Ajan Ortam Değişkenleri
 

@@ -47,4 +47,4 @@
    - outputs: `.kortext/reports/planning-reports_<slug>_<ts>.md`
    - approver: +prime
 
-**Sonraki akış:** `03-environment-setup`
+**Sonraki akış:** `environment-setup`

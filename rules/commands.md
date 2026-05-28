@@ -12,7 +12,7 @@ Bu tablo Faz 2 (glue layer) kapsamında eklendi. Her komutun hangi persona taraf
 | `!start onboard` | +operation-manager | workflows/existing-project-analysis.md | `kortext-session-start.py` |
 | `!start planning` | +operation-manager | workflows/planning-pipeline.md | `kortext-bulk-plan.py` |
 | `!start spike` | +engineering-manager | workflows/02b-spike-workflow.md | `kortext-backlog-add.py --type spike` |
-| `!setup environment` | +devops-engineer | workflows/03-environment-setup.md | — |
+| `!setup environment` | +devops-engineer | workflows/environment-setup.md | — |
 | `!start development` | +engineering-manager | workflows/04-development-cycle.md | `kortext-item-start.py` |
 | `!start test` | +qa-engineer | workflows/05-test-cycle.md | `kortext-item-transition.py` |
 | `!deploy prod` | +delivery-manager | workflows/06-deployment-cycle.md | — (manuel git tag + CI) |
@@ -42,7 +42,7 @@ Bu tablo Faz 2 (glue layer) kapsamında eklendi. Her komutun hangi persona taraf
 
 | Komut | Parametre | Tetiklediği Akış | Ana Çıktı | Kullanım |
 | :--- | :--- | :--- | :--- | :--- |
-| `!setup` | `environment` | `workflows/03-environment-setup.md` | Çalışan ortam ve test kaydı | Analiz ve planlama sonrası ortam kurulumunu başlatır. |
+| `!setup` | `environment` | `workflows/environment-setup.md` | Çalışan ortam ve test kaydı | Analiz ve planlama sonrası ortam kurulumunu başlatır. |
 | `!start` | `analysis` | `workflows/new-project-analysis.md` | `workspace/reports/analysis-reports.md` | Yeni proje analizini başlatır. |
 | `!start` | `onboard` | `workflows/existing-project-analysis.md` | `workspace/reports/analysis-reports.md` | Mevcut projeyi Kortext'e dahil eder. |
 | `!start` | `planning` | `workflows/planning-pipeline.md` | `workspace/memory/backlog/` | Onaylı analizden düz backlog üretir. |
