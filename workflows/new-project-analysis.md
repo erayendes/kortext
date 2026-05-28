@@ -1,5 +1,7 @@
 # New Project Analysis
 
+> **Bu dosyada:** Yeni bir proje için reference + foundation dosyaları üretilir.
+
 ## Product Analysis
 
 1. **+compliance-expert:** `LEGAL.md` üret. Kapsam: BRD'ye göre uygulanan regülasyonlar (KVKK, GDPR, CCPA, sektörel) + veri yaşam döngüsü kuralları (gizlilik, aydınlatma, rıza, saklama, silme, 3. taraf paylaşımı).
