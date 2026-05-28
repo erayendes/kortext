@@ -264,8 +264,8 @@ sequenceDiagram
     Q-->>N: notify
     Q->>E: decision: approve
     E-->>O: workflow complete
-    O->>C: chain(02-planning-pipeline)
-    C->>O: triggerWorkflow(02-planning)
+    O->>C: chain(planning-pipeline)
+    C->>O: triggerWorkflow(planning-pipeline)
 ```
 
 - **Pipeline chainer:** `nextWorkflowId` → bir sonraki run
