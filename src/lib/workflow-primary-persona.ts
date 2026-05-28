@@ -10,7 +10,7 @@
 
 const WORKFLOW_PERSONA: Record<string, string> = {
   'new-project-analysis': '+operation-manager',
-  '01b-onboarding-pipeline': '+engineering-manager',
+  'existing-project-analysis': '+engineering-manager',
   '02-planning-pipeline': '+operation-manager',
   '02b-spike-workflow': '+engineering-manager',
   '03-environment-setup': '+devops-engineer',

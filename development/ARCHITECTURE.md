@@ -259,7 +259,7 @@ sequenceDiagram
 
     File->>W: status: draft → approved
     W->>O: triggerWorkflow (projectType routing in blueprint/io.ts)
-    O->>E: runWorkflow(new-project-analysis or 01b-onboarding-pipeline)
+    O->>E: runWorkflow(new-project-analysis or existing-project-analysis)
     E-->>Q: gate barrier (approver:+prime)
     Q-->>N: notify
     Q->>E: decision: approve

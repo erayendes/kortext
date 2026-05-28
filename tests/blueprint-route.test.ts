@@ -145,8 +145,8 @@ describe('POST /api/blueprint', () => {
     });
     expect(res.status).toBe(201);
     const body = (await res.json()) as { triggerWorkflowId: string };
-    expect(body.triggerWorkflowId).toBe('01b-onboarding-pipeline');
-    expect(triggered).toEqual(['01b-onboarding-pipeline']);
+    expect(body.triggerWorkflowId).toBe('existing-project-analysis');
+    expect(triggered).toEqual(['existing-project-analysis']);
   });
 
   it('rejects malformed github repos', async () => {

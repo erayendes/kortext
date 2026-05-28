@@ -49,7 +49,7 @@ Eray + Claude `development/` altındaki kanonik dokümanları tek tek temizliyor
 6. **`agents/` ve `workflows/` artık `_codebase` tarafında düzenlenir** (eski `_docbase` sync mekanizması kaldırıldı; tek kaynak burası).
 
 Bilinen risk noktaları (Faz 13 hızlı yazımdan):
-- `01b-onboarding-pipeline.md` — pattern apply (~30 sn yazıldı), kalibre gerek
+- `existing-project-analysis.md` — pattern apply (~30 sn yazıldı), kalibre gerek
 - `02b-spike-workflow.md` — dinamik persona oversimplification
 - `04-development-cycle.md` — `item.approver` dinamik gate engine destek belirsiz
 - `07-rollback-pipeline.md` — workflow gate yok kararı (incident-driven), sorgulanabilir
