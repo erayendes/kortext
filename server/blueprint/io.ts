@@ -136,5 +136,5 @@ export function writeProjectMeta(projectJsonPath: string, meta: ProjectMeta): vo
 }
 
 export function triggerWorkflowIdFor(type: ProjectType): string {
-  return type === 'new' ? 'new-project-analysis' : '01b-onboarding-pipeline';
+  return type === 'new' ? 'new-project-analysis' : 'existing-project-analysis';
 }

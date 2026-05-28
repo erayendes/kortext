@@ -9,7 +9,7 @@ Bu tablo Faz 2 (glue layer) kapsamında eklendi. Her komutun hangi persona taraf
 | Komut | Tetikleyen Persona | Açılan Workflow | Çağrılan Script |
 |---|---|---|---|
 | `!start analysis` | +operation-manager | workflows/new-project-analysis.md | `kortext-session-start.py` |
-| `!start onboard` | +operation-manager | workflows/01b-onboarding-pipeline.md | `kortext-session-start.py` |
+| `!start onboard` | +operation-manager | workflows/existing-project-analysis.md | `kortext-session-start.py` |
 | `!start planning` | +operation-manager | workflows/02-planning-pipeline.md | `kortext-bulk-plan.py` |
 | `!start spike` | +engineering-manager | workflows/02b-spike-workflow.md | `kortext-backlog-add.py --type spike` |
 | `!setup environment` | +devops-engineer | workflows/03-environment-setup.md | — |
@@ -44,7 +44,7 @@ Bu tablo Faz 2 (glue layer) kapsamında eklendi. Her komutun hangi persona taraf
 | :--- | :--- | :--- | :--- | :--- |
 | `!setup` | `environment` | `workflows/03-environment-setup.md` | Çalışan ortam ve test kaydı | Analiz ve planlama sonrası ortam kurulumunu başlatır. |
 | `!start` | `analysis` | `workflows/new-project-analysis.md` | `workspace/reports/analysis-reports.md` | Yeni proje analizini başlatır. |
-| `!start` | `onboard` | `workflows/01b-onboarding-pipeline.md` | `workspace/reports/analysis-reports.md` | Mevcut projeyi Kortext'e dahil eder. |
+| `!start` | `onboard` | `workflows/existing-project-analysis.md` | `workspace/reports/analysis-reports.md` | Mevcut projeyi Kortext'e dahil eder. |
 | `!start` | `planning` | `workflows/02-planning-pipeline.md` | `workspace/memory/backlog/` | Onaylı analizden düz backlog üretir. |
 | `!start` | `spike` | `workflows/02b-spike-workflow.md` | `workspace/memory/decisions.md` ADR veya yeni Task | Teknik belirsizliği gidermek için time-boxed araştırma başlatır. |
 | `!start` | `development` | `workflows/04-development-cycle.md` | Aktif item akışı | Backlog'daki uygun item üzerinde geliştirmeyi başlatır. |
