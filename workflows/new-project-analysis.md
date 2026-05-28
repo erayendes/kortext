@@ -63,4 +63,4 @@
    - outputs: `.kortext/foundation/PFD.md`
    - approver: +prime
 
-**Sonraki akış:** `02-planning-pipeline`
+**Sonraki akış:** `planning-pipeline`

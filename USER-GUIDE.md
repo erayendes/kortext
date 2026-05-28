@@ -294,8 +294,8 @@ which CLI runs steps assigned to this persona.
 ### Workflows
 
 ```
-workflows/01-analysis.md
-workflows/02-planning.md
+workflows/new-project-analysis.md
+workflows/planning-pipeline.md
 …
 ```
 
