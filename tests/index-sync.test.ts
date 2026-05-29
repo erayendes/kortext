@@ -65,8 +65,8 @@ describe('syncRegistriesToDb', () => {
       repos,
     );
 
-    // 2 file personas + synthetic +prime.
-    expect(result.personasUpserted).toBe(3);
+    // 2 file personas + 3 synthetic handles (+prime/+assignee/+approver).
+    expect(result.personasUpserted).toBe(5);
     expect(result.workflowStepsUpserted).toBe(1);
     const backend = repos.personas.get('+backend-developer');
     expect(backend?.purpose).toBe('Do backend-developer work.');
@@ -176,7 +176,7 @@ describe('syncRegistriesToDb', () => {
     syncRegistriesToDb(registries, repos);
     syncRegistriesToDb(registries, repos);
 
-    expect(repos.personas.list()).toHaveLength(2); // +backend-developer + +prime
+    expect(repos.personas.list()).toHaveLength(4); // +backend-developer + 3 synthetic
     expect(repos.workflowSteps.list('wf-1')).toHaveLength(1);
   });
 });

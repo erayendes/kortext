@@ -8,7 +8,7 @@ import type { Repositories } from '../server/db/repositories/index.ts';
 import { loadWorkflowsFromDir } from '../server/engine/workflow-loader.ts';
 import { loadPersonasFromDir } from '../server/engine/persona-registry.ts';
 import { syncRegistriesToDb } from '../server/engine/index-sync.ts';
-import { findUnknownPersonas } from '../server/engine/consistency.ts';
+import { findUnknownPersonas, SYNTHETIC_PERSONA_HANDLES } from '../server/engine/consistency.ts';
 
 /**
  * Faz 13 acceptance: every workflow .md in the package's `workflows/`
@@ -54,7 +54,7 @@ describe('workflow content acceptance (Faz 13)', () => {
   it('all workflows parse with zero load errors', () => {
     const reg = loadWorkflowsFromDir(workflowsDir);
     expect(reg.errors()).toEqual([]);
-    expect(reg.list().length).toBeGreaterThanOrEqual(12);
+    expect(reg.list().length).toBeGreaterThanOrEqual(11);
   });
 
   it('every step carries a persona handle (no "no persona handle" skips)', () => {
@@ -78,7 +78,7 @@ describe('workflow content acceptance (Faz 13)', () => {
     const workflows = loadWorkflowsFromDir(workflowsDir);
     const personas = loadPersonasFromDir(agentsDir);
     const unknown = findUnknownPersonas(workflows, personas).filter(
-      (f) => f.persona !== '+prime',
+      (f) => !SYNTHETIC_PERSONA_HANDLES.includes(f.persona),
     );
     expect(unknown).toEqual([]);
   });

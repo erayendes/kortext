@@ -28,7 +28,7 @@ import { mcpSseRouter } from '../mcp/sse.ts';
 import { resumeOrphanedRuns } from './orchestrator/resume.ts';
 import { loadWorkflowsFromDir } from './engine/workflow-loader.ts';
 import { loadPersonasFromDir } from './engine/persona-registry.ts';
-import { findUnknownPersonas } from './engine/consistency.ts';
+import { findUnknownPersonas, SYNTHETIC_PERSONA_HANDLES } from './engine/consistency.ts';
 import { syncRegistriesToDb } from './engine/index-sync.ts';
 
 // Open DB + run migrations before the HTTP server starts accepting traffic.
@@ -58,9 +58,10 @@ for (const err of personaErrors) {
   console.warn(`[kortext]   - ${err.file}: ${err.reason}`);
 }
 // Cross-validate: every persona handle used in workflows must resolve.
-// '+prime' is the human-in-the-loop and is allowed to be missing.
+// Synthetic handles (+prime human approver, +assignee/+approver dynamic
+// tokens) have no agents/*.md file and are allowed to be missing.
 const unknownPersonas = findUnknownPersonas(workflowRegistry, personaRegistry)
-  .filter((f) => f.persona !== '+prime');
+  .filter((f) => !SYNTHETIC_PERSONA_HANDLES.includes(f.persona));
 if (unknownPersonas.length > 0) {
   console.warn(
     `[kortext] consistency: ${unknownPersonas.length} unknown persona reference(s):`,

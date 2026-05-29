@@ -1,7 +1,7 @@
 import type { Repositories } from '../db/repositories/index.ts';
 import type { WorkflowRegistry } from '../engine/workflow-loader.ts';
 import type { PersonaRegistry } from '../engine/persona-registry.ts';
-import { findUnknownPersonas } from '../engine/consistency.ts';
+import { findUnknownPersonas, SYNTHETIC_PERSONA_HANDLES } from '../engine/consistency.ts';
 
 /**
  * `kortext doctor` — health snapshot across registries and runtime state.
@@ -52,7 +52,7 @@ export type DoctorOptions = {
   allowedMissingPersonas?: string[];
 };
 
-const DEFAULT_ALLOWED_MISSING = ['+prime'];
+const DEFAULT_ALLOWED_MISSING = [...SYNTHETIC_PERSONA_HANDLES];
 
 export function runDoctor(opts: DoctorOptions): DoctorReport {
   const allowedMissing = new Set(opts.allowedMissingPersonas ?? DEFAULT_ALLOWED_MISSING);

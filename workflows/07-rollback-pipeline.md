@@ -43,4 +43,4 @@
 
 1. **+engineering-manager:** Kök neden analizi `write_learned` MCP tool ile learned.md'ye eklenir (tetikleyici eşiği, tespit süresi, toplam etki süresi, kök neden, tespit, rollback kararı gerekçesi, staging'de yakalama önlemi). Rollback'e sebep olan hata için `add_backlog_item --type bug` ile yeni Bug item aç: status `to_do`, assignee +engineering-manager tarafından belirlenir, review_gates en az `code_review` + `quality_control` (güvenlik/veri etkisi varsa `security_check`), ilgili Epic ile ilişkilendir.
 
-**Sonraki akış:** Bug normal döngüye → `04-development-cycle`; P0/P1 etki devam ediyorsa → `08-hotfix-pipeline`.
+**Sonraki akış:** Bug normal döngüye → `development-cycle`; P0/P1 etki devam ediyorsa → `08-hotfix-pipeline`.

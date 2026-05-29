@@ -1,6 +1,7 @@
 import type { PersonaRegistry } from './persona-registry.ts';
 import type { WorkflowRegistry } from './workflow-loader.ts';
 import type { Repositories } from '../db/repositories/index.ts';
+import { SYNTHETIC_PERSONA_HANDLES } from './consistency.ts';
 
 /**
  * Faz 12.8 — engine-boot synchronization of the markdown registries into
@@ -24,7 +25,27 @@ import type { Repositories } from '../db/repositories/index.ts';
  *     row so FK doesn't reject those references.
  */
 
-const HUMAN_HANDLE = '+prime';
+/**
+ * Display metadata for the synthetic handles (those with no agents/*.md).
+ * The canonical handle list is SYNTHETIC_PERSONA_HANDLES in consistency.ts.
+ */
+const SYNTHETIC_PERSONA_META: Record<
+  string,
+  { purpose: string; whenToUse: string }
+> = {
+  '+prime': {
+    purpose: 'Human approver. Final decision authority on gates.',
+    whenToUse: 'Used as approver / reviewer on critical workflow gates.',
+  },
+  '+assignee': {
+    purpose: "Dynamic token. Resolves at runtime to the backlog item's assignee developer.",
+    whenToUse: 'Development-cycle implementation/closing; bound per run from item.assignee.',
+  },
+  '+approver': {
+    purpose: "Dynamic token. Resolves at runtime to the backlog item's approver.",
+    whenToUse: 'Development-cycle final review; gate opens when it resolves to +prime.',
+  },
+};
 
 /**
  * Extract a section body keyed by an H2 heading (e.g. `## purpose`).
@@ -94,14 +115,17 @@ export function syncRegistriesToDb(
     personasUpserted += 1;
   }
 
-  // Synthesize a row for '+prime' (the human handle). Workflows reference
-  // it as approver/reviewer and occasionally as a step persona; FK would
-  // otherwise reject those rows.
-  if (!repos.personas.get(HUMAN_HANDLE)) {
+  // Synthesize rows for handles that have no agents/*.md file — the human
+  // approver (+prime) and the dynamic tokens (+assignee/+approver) resolved
+  // at runtime from the run's item. FK would otherwise reject workflow steps
+  // that reference them. (Runtime resolution: DECISIONS Bölüm 5.9 #2.)
+  for (const handle of SYNTHETIC_PERSONA_HANDLES) {
+    if (repos.personas.get(handle)) continue;
+    const meta = SYNTHETIC_PERSONA_META[handle];
     repos.personas.upsert({
-      handle: HUMAN_HANDLE,
-      purpose: 'Human approver. Final decision authority on gates.',
-      when_to_use: 'Used as approver / reviewer on critical workflow gates.',
+      handle,
+      purpose: meta?.purpose ?? null,
+      when_to_use: meta?.whenToUse ?? null,
       capabilities: [],
       model_default: null,
       source_path: '(synthetic)',

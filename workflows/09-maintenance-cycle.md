@@ -34,4 +34,4 @@
    - outputs: `.kortext/reports/status-reports_<slug>_<ts>.md`
    - approver: +prime
 
-**Sonraki akış:** Aksiyona alınacak item varsa `04-development-cycle`; yoksa bakım kapanır.
+**Sonraki akış:** Aksiyona alınacak item varsa `development-cycle`; yoksa bakım kapanır.

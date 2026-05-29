@@ -105,7 +105,7 @@ describe('POST /api/blueprint', () => {
     expect(res.status).toBe(201);
     const body = (await res.json()) as { ok: boolean; triggerWorkflowId: string };
     expect(body.ok).toBe(true);
-    expect(body.triggerWorkflowId).toBe('01a-analysis-pipeline');
+    expect(body.triggerWorkflowId).toBe('new-project-analysis');
 
     const blueprintPath = join(tmpRoot, '.kortext', 'foundation', 'BRD.md');
     expect(existsSync(blueprintPath)).toBe(true);
@@ -127,7 +127,7 @@ describe('POST /api/blueprint', () => {
     expect(meta.platforms).toEqual(['Web']);
     expect(meta.githubRepo).toBe('github.com/acme/acme-crm');
 
-    expect(triggered).toEqual(['01a-analysis-pipeline']);
+    expect(triggered).toEqual(['new-project-analysis']);
   });
 
   it('routes existing projects to the onboarding pipeline', async () => {
@@ -145,8 +145,8 @@ describe('POST /api/blueprint', () => {
     });
     expect(res.status).toBe(201);
     const body = (await res.json()) as { triggerWorkflowId: string };
-    expect(body.triggerWorkflowId).toBe('01b-onboarding-pipeline');
-    expect(triggered).toEqual(['01b-onboarding-pipeline']);
+    expect(body.triggerWorkflowId).toBe('existing-project-analysis');
+    expect(triggered).toEqual(['existing-project-analysis']);
   });
 
   it('rejects malformed github repos', async () => {
