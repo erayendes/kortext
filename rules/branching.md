@@ -75,7 +75,7 @@ Refs: T01
 
 ## Workflow Referansları
 
-- Normal geliştirme: `workflows/04-development-cycle.md`
+- Normal geliştirme: `workflows/development-cycle.md`
 - Test ve doğrulama: `workflows/05-test-cycle.md`
 - Production deployment: `workflows/06-deployment-cycle.md`
 - Rollback: `workflows/07-rollback-pipeline.md`

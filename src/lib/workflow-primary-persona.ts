@@ -14,7 +14,7 @@ const WORKFLOW_PERSONA: Record<string, string> = {
   'planning-pipeline': '+operation-manager',
   '02b-spike-workflow': '+engineering-manager',
   'environment-setup': '+devops-engineer',
-  '04-development-cycle': '+backend-developer',
+  'development-cycle': '+backend-developer',
   '05-test-cycle': '+qa-engineer',
   '06-deployment-cycle': '+devops-engineer',
   '07-rollback-pipeline': '+devops-engineer',

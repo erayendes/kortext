@@ -97,7 +97,7 @@ describe('loadWorkflowsFromDir', () => {
     const reg = loadWorkflowsFromDir(resolve(process.cwd(), 'workflows'));
     expect(reg.errors()).toEqual([]);
     expect(reg.list().length).toBeGreaterThanOrEqual(10);
-    // Anchor: 04-development-cycle must be loadable.
-    expect(reg.get('04-development-cycle')).not.toBeNull();
+    // Anchor: development-cycle must be loadable.
+    expect(reg.get('development-cycle')).not.toBeNull();
   });
 });

@@ -43,4 +43,4 @@
    - inputs: `.kortext/references/TEST.md`, `.kortext/references/STACK.md`, `backend-ready`, `frontend-ready`, `db-deployed`
    - outputs: `.kortext/reports/test-reports_<slug>_<ts>.md`
 
-**Sonraki akış:** `04-development-cycle`
+**Sonraki akış:** `development-cycle`

@@ -46,4 +46,4 @@
 3. **+delivery-manager:** Release notes yaz. Kullanıcıya yönelik yeni özellikler, bug düzeltmeleri, breaking changes, upgrade notları.
    - outputs: `.kortext/reports/release-notes_<slug>_<ts>.md`
 
-**Sonraki akış:** Yeni release döngüsü için `04-development-cycle`; hotfix gerekirse `08-hotfix-pipeline`.
+**Sonraki akış:** Yeni release döngüsü için `development-cycle`; hotfix gerekirse `08-hotfix-pipeline`.
