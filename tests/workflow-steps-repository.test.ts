@@ -41,7 +41,7 @@ afterEach(() => {
 describe('WorkflowStepsRepository', () => {
   it('upserts a step and round-trips JSON columns', () => {
     const step = repos.workflowSteps.upsert({
-      workflow_id: '04-development-cycle',
+      workflow_id: 'development-cycle',
       step_no: 0,
       step_name: 'implementation.1',
       persona_handle: '+backend-developer',
@@ -49,10 +49,10 @@ describe('WorkflowStepsRepository', () => {
       outputs: ['dist/api.js'],
       gate_kind: null,
       parallel_with: [],
-      source_path: 'workflows/04-development-cycle.md',
+      source_path: 'workflows/development-cycle.md',
     });
     expect(step.id).toBeGreaterThan(0);
-    expect(step.workflow_id).toBe('04-development-cycle');
+    expect(step.workflow_id).toBe('development-cycle');
     expect(step.step_no).toBe(0);
     expect(step.step_name).toBe('implementation.1');
     expect(step.persona_handle).toBe('+backend-developer');

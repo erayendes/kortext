@@ -51,7 +51,7 @@ Eray + Claude `development/` altındaki kanonik dokümanları tek tek temizliyor
 Bilinen risk noktaları (Faz 13 hızlı yazımdan):
 - `existing-project-analysis.md` — pattern apply (~30 sn yazıldı), kalibre gerek
 - `02b-spike-workflow.md` — dinamik persona oversimplification
-- `04-development-cycle.md` — `item.approver` dinamik gate engine destek belirsiz
+- `development-cycle.md` — yeniden tasarlandı + rename edildi (DECISIONS Bölüm 5: kolon modeli, dinamik `+assignee`/`+approver`, engine-owns-mechanics). Motor/şema desteği (lifecycle geçişleri, dinamik persona, merge hedefi, blocker temizleme, comments) implementation bekliyor
 - `07-rollback-pipeline.md` — workflow gate yok kararı (incident-driven), sorgulanabilir
 - `09-maintenance-cycle.md` — engine bookkeeping step #2 yeni semantik, test edilmedi
 
@@ -69,7 +69,7 @@ Detaylı liste [TODO.md](./TODO.md)'de. Kritik üçü:
 ## 7. Linkler
 
 - Mimari: [ARCHITECTURE.md](./ARCHITECTURE.md) (gotcha'lar §16'da)
-- Kararlar: [DECISIONS.md](./DECISIONS.md) (Bölüm 0 = CLI redesign, Bölüm 1 = Faz 13, Bölüm 2 = v3.1 refactor)
+- Kararlar: [DECISIONS.md](./DECISIONS.md) (Bölüm 0 = CLI redesign, Bölüm 1 = Faz 13, Bölüm 2 = v3.1 refactor, Bölüm 5 = Development Lifecycle redesign)
 - Tasarım: [DESIGN.md](./DESIGN.md)
 - UAT rehberi: [UAT-GUIDE.md](./UAT-GUIDE.md)
 - Açık iş listesi: [TODO.md](./TODO.md)

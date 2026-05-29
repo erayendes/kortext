@@ -245,6 +245,79 @@ v3.0/v3.1 production'da kullanıcı yok. Geriye dönük destek gerekmiyor:
 
 ---
 
+## Bölüm 5 — Development Lifecycle redesign (2026-05-29)
+
+**Status:** Eray onayladı (design level). `workflows/development-cycle.md` AI-directive olarak yeniden yazıldı + rename edildi (`04-development-cycle.md` → `development-cycle.md`). Motor/şema implementation'ı bekliyor (5.9 iş listesi).
+
+### 5.1 Engine-owns-mechanics ilkesi
+
+Workflow metinleri **ajan niyetini** anlatır (ne üretilecek, ne doğrulanacak, hangi durum değişecek); git/branch/worktree/merge gibi **mekanik işleri motor üstlenir**. Eski development-cycle bir insan ekibinin elle yaptığını (feature branch aç, PR aç, merge et) tarif ediyordu — motorun zaten otomatik yaptığı işi elle anlatmak hem tekrar hem çelişkiydi. Markdown'dan elle git komutları çıkarıldı.
+
+**Sebep:** Motor #10/#17 (worktree-per-run), #18/#24 (persona-routed executor), #7 (pull-ready scheduler) zaten kurulu. Markdown bunları tarif etmek yerine kullanmalı.
+
+### 5.2 Kolon modeli + lifecycle geçişleri
+
+```
+to_do → in_progress → test → review → merge → done
+            ↑ fail/reject (+ yorum) ┘
+  herhangi non-terminal → blocked → (unblock) in_progress
+  done, cancelled = terminal
+```
+
+- `test` = qa/security/designer paralel kontrol · `review` = prime onayı (sadece `approver=+prime`) · `merge` = devops kontrol+merge · `done` = development'a merge edilmiş & terminal.
+- **Yeni `merge` kolonu** — `done`'ın terminal kalması için (devops merge öncesi kontrol burada; sorun → in_progress). Eray'ın "devops done'da çalışır + geri yollar" modeli terminal-done ile çelişiyordu; `merge` kolonu çözdü.
+- `test` status'u Faz 11'de board için eklenmiş (#53) ama `item-lifecycle.ts` durum makinesinde geçişi yoktu (in_progress→review direkt). Bu redesign'da `test` ve `merge` lifecycle'a bağlanır.
+
+**Eklenecek geçişler** (`item-lifecycle.ts`): in_progress→test, test→{review, merge, in_progress}, review→{merge, in_progress}, merge→{done, in_progress}.
+
+### 5.3 +engineering-manager development-cycle'dan çıktı
+
+Sürücü artık **assignee-developer** (planning'de atanmış uzman). Tek "yönetici darboğazı" yerine item'ı atanan persona kendi sürer. Daha otonom, daha paralel (worker pool eşzamanlı run'lar, her biri kendi worktree'sinde).
+
+### 5.4 Dinamik persona token'ları (`+assignee`, `+approver`)
+
+Implementation `+assignee`, Final Review `+approver` olarak yazılır; motor bunları run'ın `item.assignee` / `item.approver` alanından **çalışma anında** çözer. Gate, çözülen approver `+prime` ise açılır. Bu, eski "`item.approver` dinamik gate desteği belirsiz" riskini kapatır — `+assignee` ve `+approver` aynı "item alanından persona çöz" mekanizması (DRY).
+
+**Sebep:** Atama planning'de yapılır; development-cycle ayrı atama yapmaz. Parser bugün persona'yı sabit string alıyor; dinamik çözüm motor işi (5.9 #2).
+
+### 5.5 Inputs: references-only, role-relevant, foundation ASLA
+
+- **Foundation → references devri:** analysis/setup PRD/TRD okur, reference'ları üretir. O andan sonra source-of-truth references'tır. Downstream workflow'lar (development, test, deployment) references okur, foundation'a dönmez (gereksiz token + iki-kaynak tutarsızlığı). Bu ilke tüm downstream rewrite'larında uygulanır.
+- Implementation `inputs:` = **core-5**: STACK, STRUCTURE, GLOSSARY, SECURITY, TEST. Rol-bağımlı olanlar metin yönlendirmesiyle: backend → API+DATABASE, frontend → DESIGN+API.
+- Developer **okumaz**: ACCESS, CONTENT, GROWTH, LEGAL, ENVIRONMENT, foundation. (ACCESS+ENVIRONMENT'i Merge adımında +devops-engineer okur.)
+
+### 5.6 Ortamlar + veri politikası → ACCESS.md
+
+ACCESS.md'ye "Ortamlar" bölümü: staging = **test verisi**, preprod = **canlı veri**, prod = **canlı veri**. Developer ACCESS okumaz (ops/devops/prime konusu) — 5.5 kararıyla tutarlı.
+
+**Güvenlik notu:** preprod canlı veri tuttuğu için prod-seviyesi koruma gerekir (KVKK/GDPR). ACCESS.md'de veri sınıfı yazılırken SECURITY.md/LEGAL.md çapraz referansı.
+
+### 5.7 Prime lokal preview + epic-close staging
+
+- **Final Review:** Item UI/UX/UAT gerektiriyorsa + proje lokal çalışabiliyorsa, motor worktree'den lokal test ortamı ayağa kaldırır, prime'a local URL verir (gerçek deneyerek onay). **Test verisi** kullanır.
+- **Merge & Closing:** Epic'in son item'ı done olunca → `06-deployment-cycle` staging deploy tetiklenir + staging URL paylaşılır.
+
+### 5.8 test-cycle ayrı reusable modül, paralel gate'ler
+
+test-cycle development-cycle'a gömülmez (hotfix/rollback/deployment de kullanır — DRY). Kolon sahipliği: test-cycle = `test` kolonu (code review + qa/security/designer + karar), development-cycle = implement/verify/review/merge.
+
+**Gelecek test-cycle rewrite'ında:** gate'ler paralel (fan-out/fan-in), her gate kendi raporunu yazar, gerekmiyorsa no-op (join hep bekleyebilsin). Çift `review` set'i temizlenir (test→review geçişinin tek sahibi test-cycle).
+
+### 5.9 Motor / şema iş listesi (implementation bekliyor)
+
+1. `schemas.ts` + `item-lifecycle.ts`: `merge` status ekle, `test`'i bağla, 5.2 geçişlerini ekle.
+2. `workflow-parser.ts` + executor: dinamik `+assignee`/`+approver` çözümü; gate çözülen approver `+prime` ise.
+3. worktree/orchestrator: development-cycle run base=`development`; başarıda development'a merge.
+4. closing/engine: merge→done'da `blocked_by` referanslarını temizle.
+5. schema: hafif `comments` mekanizması (bulguların evi — item'da `comment`/`work_log` alanı yok; öneri `comments(item_id, author, body, ts)`).
+6. orchestrator: block tetiği → run cancel (ajanları durdur) + status=blocked + sebep + prime'a ata.
+7. orchestrator: hazır item'lar için paralel per-item run (sınırlı eşzamanlılık).
+8. worktree: lokal preview ayağa kaldırma (prime test ortamı).
+9. closing: epic-completion tespiti → staging deploy tetikleme.
+10. `AGENTS.md`/`behavior.md`: kesişen kural — karar→`write_decision`, öğrenim→`write_learned` (her persona).
+
+---
+
 ## Bölüm 3 — v3.0 → v3.1.x kararları (Faz 0-12 özeti, HANDOVER §1-§64)
 
 > 64 numaralı tasarım kararı toplam. Aşağıdaki kategorize özet **bu maddelerin kanonik kaydıdır** (eski `HANDOVER-v3.md` docs/ → development/ konsolidasyonunda silindi). Komit-bazlı tarihçe için `git log development/DECISIONS.md`.

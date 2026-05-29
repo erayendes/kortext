@@ -12,9 +12,9 @@
 ## Karar
 
 1. **+engineering-manager:** Spike sonucuna göre çıktı üret. Üç olası dal:
-   - Hipotez doğrulandı → `write_decision` MCP tool ile ADR yaz (decision_id, title, status=accepted, body: hipotez + bulgular + seçilen yol + reddedilen alternatifler), sonraki akış `04-development-cycle`.
+   - Hipotez doğrulandı → `write_decision` MCP tool ile ADR yaz (decision_id, title, status=accepted, body: hipotez + bulgular + seçilen yol + reddedilen alternatifler), sonraki akış `development-cycle`.
    - Kapsam belirsizleşti → `add_backlog_item --type spike` ile yeni Task aç + neden netleşmediğini açıkla, sonraki akış `planning-pipeline`.
    - Hipotez reddedildi → `+prime`'a alternatif yol için `pending_question` aç, karar bekle.
    - approver: +prime
 
-**Sonraki akış:** `04-development-cycle`
+**Sonraki akış:** `development-cycle`

@@ -22,6 +22,6 @@
 
 ## Karar
 
-1. **+engineering-manager:** Tüm zorunlu kontroller pass ise item status'unu `review` yap (`update_backlog_item` MCP tool); 04-development-cycle Final Review step'ine sinyal ver. Herhangi bir gate fail ise item zaten `in_progress`'tedir; bu workflow burada biter.
+1. **+engineering-manager:** Tüm zorunlu kontroller pass ise item status'unu `review` yap (`update_backlog_item` MCP tool); development-cycle Final Review step'ine sinyal ver. Herhangi bir gate fail ise item zaten `in_progress`'tedir; bu workflow burada biter.
 
-**Sonraki akış:** `04-development-cycle` (Final Review)
+**Sonraki akış:** `development-cycle` (Final Review)

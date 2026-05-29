@@ -13,7 +13,7 @@ Bu tablo Faz 2 (glue layer) kapsamında eklendi. Her komutun hangi persona taraf
 | `!start planning` | +operation-manager | workflows/planning-pipeline.md | `kortext-bulk-plan.py` |
 | `!start spike` | +engineering-manager | workflows/02b-spike-workflow.md | `kortext-backlog-add.py --type spike` |
 | `!setup environment` | +devops-engineer | workflows/environment-setup.md | — |
-| `!start development` | +engineering-manager | workflows/04-development-cycle.md | `kortext-item-start.py` |
+| `!start development` | +engineering-manager | workflows/development-cycle.md | `kortext-item-start.py` |
 | `!start test` | +qa-engineer | workflows/05-test-cycle.md | `kortext-item-transition.py` |
 | `!deploy prod` | +delivery-manager | workflows/06-deployment-cycle.md | — (manuel git tag + CI) |
 | `!trigger-rollback` | +delivery-manager | workflows/07-rollback-pipeline.md | (manuel git revert) |
@@ -32,7 +32,7 @@ Bu tablo Faz 2 (glue layer) kapsamında eklendi. Her komutun hangi persona taraf
 
 - `!trigger-rollback` — +delivery-manager tarafından son güvenli sürüme geri dönüş akışını başlatır. `workflows/07-rollback-pipeline.md` üzerinden ilerler; manuel git revert sonrası rollback kayıtları işlenir.
 - `!start-hotfix` — +delivery-manager tarafından kritik production hatası için hotfix akışı başlatır. `kortext-backlog-add.py --type hotfix` ile backlog'a `HXX-` prefix'li item eklenir.
-- `!continue` — +prime tarafından checkpoint onayı olarak verilir. Workflow açmaz, ajanın bir sonraki adıma geçmesini onaylar. `04-development-cycle.md`'deki checkpoint mekanizmasında kullanılır.
+- `!continue` — +prime tarafından checkpoint onayı olarak verilir. Workflow açmaz, ajanın bir sonraki adıma geçmesini onaylar. `development-cycle.md`'deki checkpoint mekanizmasında kullanılır.
 - `!approve` — +prime tarafından gate onayı olarak verilir. `Review` statüsündeki bir item'ı `Done`'a taşımak için `kortext-item-transition.py` tetikler.
 - `!handover` — Herhangi bir ajan tarafından ara devir için kullanılabilir. `kortext-handover.py` ile `workspace/memory/handover.md`'ye yeni devir kaydı eklenir.
 - `!add task` / `!add bug` / `!add debt` — Sırasıyla +engineering-manager, +qa-engineer ve +engineering-manager tarafından direkt backlog girişi için. `kortext-backlog-add.py --type <task|bug|debt>` çağırır.
@@ -47,7 +47,7 @@ Bu tablo Faz 2 (glue layer) kapsamında eklendi. Her komutun hangi persona taraf
 | `!start` | `onboard` | `workflows/existing-project-analysis.md` | `workspace/reports/analysis-reports.md` | Mevcut projeyi Kortext'e dahil eder. |
 | `!start` | `planning` | `workflows/planning-pipeline.md` | `workspace/memory/backlog/` | Onaylı analizden düz backlog üretir. |
 | `!start` | `spike` | `workflows/02b-spike-workflow.md` | `workspace/memory/decisions.md` ADR veya yeni Task | Teknik belirsizliği gidermek için time-boxed araştırma başlatır. |
-| `!start` | `development` | `workflows/04-development-cycle.md` | Aktif item akışı | Backlog'daki uygun item üzerinde geliştirmeyi başlatır. |
+| `!start` | `development` | `workflows/development-cycle.md` | Aktif item akışı | Backlog'daki uygun item üzerinde geliştirmeyi başlatır. |
 | `!deploy` | `prod` | `workflows/06-deployment-cycle.md` | `workspace/reports/delivery-reports.md` | Production deployment akışını başlatır. |
 | `!rollback` | `[version]` | `workflows/07-rollback-pipeline.md` | Rollback kayıtları | Son güvenli sürüme geri dönüş akışını başlatır. |
 | `!hotfix` | `[issue-id]` | `workflows/08-hotfix-pipeline.md` | Hotfix kayıtları | Kritik production hatası için hotfix akışını başlatır. |

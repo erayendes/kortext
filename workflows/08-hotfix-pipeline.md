@@ -56,4 +56,4 @@
 2. **+delivery-manager:** Kullanıcıya yönelik kısa release notes yaz.
    - outputs: `.kortext/reports/release-notes_<slug>_<ts>.md`
 
-**Sonraki akış:** Sorun çözüldü → kapanış; deploy sonrası sorun → `07-rollback-pipeline`; kalıcı düzeltme gerekiyor → `04-development-cycle`.
+**Sonraki akış:** Sorun çözüldü → kapanış; deploy sonrası sorun → `07-rollback-pipeline`; kalıcı düzeltme gerekiyor → `development-cycle`.
