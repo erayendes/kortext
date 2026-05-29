@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { loadWorkflowsFromDir } from '../server/engine/workflow-loader.ts';
 import { loadPersonasFromDir } from '../server/engine/persona-registry.ts';
-import { findUnknownPersonas } from '../server/engine/consistency.ts';
+import { findUnknownPersonas, SYNTHETIC_PERSONA_HANDLES } from '../server/engine/consistency.ts';
 
 let tmpRoot: string;
 let wfDir: string;
@@ -74,8 +74,11 @@ describe('findUnknownPersonas', () => {
     const personas = loadPersonasFromDir(resolve(process.cwd(), 'agents'));
 
     const findings = findUnknownPersonas(wfs, personas);
-    // +prime is the human in the loop — it's allowed to be missing from agents/.
-    const nonPrime = findings.filter((f) => f.persona !== '+prime');
-    expect(nonPrime).toEqual([]);
+    // Synthetic handles (+prime + dynamic +assignee/+approver) are allowed
+    // to be missing from agents/.
+    const unexpected = findings.filter(
+      (f) => !SYNTHETIC_PERSONA_HANDLES.includes(f.persona),
+    );
+    expect(unexpected).toEqual([]);
   });
 });

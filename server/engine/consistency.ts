@@ -15,6 +15,22 @@ export type UnknownPersonaFinding = {
 };
 
 /**
+ * Persona handles that may legitimately appear in workflow steps without a
+ * corresponding `agents/*.md` file. Callers use this as their "allowed
+ * missing" policy (findUnknownPersonas itself stays policy-free):
+ *   - '+prime'    — human approver (workflow gates).
+ *   - '+assignee' — dynamic token; resolved at runtime to the backlog item's
+ *                   assignee developer (DECISIONS Bölüm 5.4).
+ *   - '+approver' — dynamic token; resolved at runtime to the item's approver
+ *                   (gate opens when it resolves to '+prime').
+ */
+export const SYNTHETIC_PERSONA_HANDLES: readonly string[] = [
+  '+prime',
+  '+assignee',
+  '+approver',
+];
+
+/**
  * For every step.persona referenced across all workflows in `workflows`,
  * verify that `personas` knows about it. Steps with no persona handle
  * are ignored. The human handle '+prime' is intentionally NOT special-

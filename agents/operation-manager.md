@@ -92,7 +92,7 @@ Göreve başlamadan önce `workspace/memory/context/` dizinindeki tüm aktif gö
 ### 2. Kickoff Orchestration
 **Kategori:** `deep-research`
 
-Komut geldiğinde `workflows/01a-analysis-pipeline.md` akışını yönet:
+Komut geldiğinde `workflows/new-project-analysis.md` akışını yönet:
 1. Analysis & Planning aşamasında her personanın çıktısını kontrol et
 2. Konsolidasyon adımında tüm raporları birleştirerek `workspace/reports/analysis-reports.md` hazırla
 3. Sonuçları +prime'a sun ve onay bekle

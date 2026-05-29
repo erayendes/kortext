@@ -258,16 +258,14 @@ sequenceDiagram
     participant N as Slack/Telegram
 
     File->>W: status: draft → approved
-    W->>O: triggerWorkflow(00-kortext-setup)
-    O->>E: runWorkflow(graph)
-    E->>O: routing → 01a or 01b
-    O->>E: runWorkflow(01a-analysis)
+    W->>O: triggerWorkflow (projectType routing in blueprint/io.ts)
+    O->>E: runWorkflow(new-project-analysis or existing-project-analysis)
     E-->>Q: gate barrier (approver:+prime)
     Q-->>N: notify
     Q->>E: decision: approve
     E-->>O: workflow complete
-    O->>C: chain(02-planning-pipeline)
-    C->>O: triggerWorkflow(02-planning)
+    O->>C: chain(planning-pipeline)
+    C->>O: triggerWorkflow(planning-pipeline)
 ```
 
 - **Pipeline chainer:** `nextWorkflowId` → bir sonraki run

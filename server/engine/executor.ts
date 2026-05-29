@@ -7,7 +7,7 @@ import type { WorkflowStep } from './workflow-parser.ts';
  */
 
 export type ExecutorContext = {
-  /** Workflow id ('01a-analysis-pipeline') for logging + persona prompt assembly. */
+  /** Workflow id ('new-project-analysis') for logging + persona prompt assembly. */
   workflowId: string;
   /** Run id from the runs table. */
   runId: number;

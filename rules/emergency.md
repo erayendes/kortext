@@ -29,7 +29,7 @@ Production ortamında kritik hata tespit edilirse aşağıdaki karar kuralı uyg
 | Son deployment kaynaklı ve güvenli şekilde geri alınabilir | `workflows/07-rollback-pipeline.md` |
 | Rollback veri kaybı, irreversible migration veya daha büyük risk doğuruyorsa | `workflows/08-hotfix-pipeline.md` |
 | Hata eski sürümde de vardı veya izole bir modülde hızlı düzeltilebilir | `workflows/08-hotfix-pipeline.md` |
-| Etki sınırlı ve workaround varsa | `workflows/04-development-cycle.md` içinde Bug/Debt olarak planlanır |
+| Etki sınırlı ve workaround varsa | `workflows/development-cycle.md` içinde Bug/Debt olarak planlanır |
 
 P0 durumda +devops-engineer veya ilgili sorumlu ajan +prime onayını beklemeden güvenli rollback/hotfix hazırlığını başlatabilir. +prime bilgilendirmesi eş zamanlı yapılır.
 
