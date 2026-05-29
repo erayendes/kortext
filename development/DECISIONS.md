@@ -245,46 +245,69 @@ v3.0/v3.1 production'da kullanıcı yok. Geriye dönük destek gerekmiyor:
 
 ---
 
-## Bölüm 5 — Development Lifecycle redesign (2026-05-29)
+## Bölüm 5 — Development + Test Lifecycle redesign (2026-05-29 → 2026-05-30)
 
-**Status:** Eray onayladı (design level). `workflows/development-cycle.md` AI-directive olarak yeniden yazıldı + rename edildi (`04-development-cycle.md` → `development-cycle.md`). Motor/şema implementation'ı bekliyor (5.9 iş listesi).
+**Status:** Eray onayladı (design level). development-cycle **kısaltıldı**, test-cycle **yeniden tasarlandı** (5 gate, paralel, gate-run modeli). `merge` kolonu **kaldırıldı**; devops-control per-item gate'lerden **çıkarıldı** (A kararı). Workflow markdown'ları bu modele göre yazılacak; motor/şema implementation'ı bekliyor (5.9). Süreç: **önce tüm workflow dizini, sonra motor** (5.10).
 
-### 5.1 Engine-owns-mechanics ilkesi
+### 5.1 Engine-owns-mechanics + iki katman (substrat vs agent gate)
 
-Workflow metinleri **ajan niyetini** anlatır (ne üretilecek, ne doğrulanacak, hangi durum değişecek); git/branch/worktree/merge gibi **mekanik işleri motor üstlenir**. Eski development-cycle bir insan ekibinin elle yaptığını (feature branch aç, PR aç, merge et) tarif ediyordu — motorun zaten otomatik yaptığı işi elle anlatmak hem tekrar hem çelişkiydi. Markdown'dan elle git komutları çıkarıldı.
+Workflow metinleri **ajan niyetini** anlatır (ne üretilecek, ne doğrulanacak, hangi durum değişecek); git/branch/worktree/merge/CI gibi **mekanik işleri motor üstlenir**. Eski development-cycle bir insan ekibinin elle yaptığını (branch aç, PR aç, merge et) tarif ediyordu — motorun zaten otomatik yaptığını elle anlatmak tekrar + çelişki.
 
-**Sebep:** Motor #10/#17 (worktree-per-run), #18/#24 (persona-routed executor), #7 (pull-ready scheduler) zaten kurulu. Markdown bunları tarif etmek yerine kullanmalı.
+**Turnusol (iki katman):** bir adım, ancak bir **agent otomasyonun ötesinde yargı/akıl** kattığında "gate" (persona işi) olur. Aksi halde **motor substratıdır**.
+- **Substrat (motor, her zaman, agent YOK):** worktree/branch, lint, type-check, unit/integration test koşumu, SAST/CVE/secret tarama, merge mekaniği, conflict tespiti, blocker temizleme, handover üretimi, worktree/preview teardown, epic-close tespiti, deployment tetikleme.
+- **Agent gate (yargı, planning seçer):** code-review, quality-control, security-control, design-review, UAT (insan).
 
-### 5.2 Kolon modeli + lifecycle geçişleri
+**Sebep:** Motor #10/#17 (worktree-per-run), #18/#24 (persona-routed executor), #7 (pull-ready scheduler) zaten kurulu. "Her zaman otomasyon olan" şeye agent koymak boş maliyet — örn. security-engineer'a "secret'leri grep'le" dedirtmeyiz (tarayıcı yapar), ona "bu authz mantığı doğru mu?" sorulur.
+
+### 5.2 Kolon modeli
 
 ```
-to_do → in_progress → test → review → merge → done
-            ↑ fail/reject (+ yorum) ┘
+to_do → in_progress → test → review → done
+              ↑ fail/reject (+ bulgu bölümü) ┘
   herhangi non-terminal → blocked → (unblock) in_progress
   done, cancelled = terminal
 ```
 
-- `test` = qa/security/designer paralel kontrol · `review` = prime onayı (sadece `approver=+prime`) · `merge` = devops kontrol+merge · `done` = development'a merge edilmiş & terminal.
-- **Yeni `merge` kolonu** — `done`'ın terminal kalması için (devops merge öncesi kontrol burada; sorun → in_progress). Eray'ın "devops done'da çalışır + geri yollar" modeli terminal-done ile çelişiyordu; `merge` kolonu çözdü.
-- `test` status'u Faz 11'de board için eklenmiş (#53) ama `item-lifecycle.ts` durum makinesinde geçişi yoktu (in_progress→review direkt). Bu redesign'da `test` ve `merge` lifecycle'a bağlanır.
+- `in_progress` = assignee geliştirir · `test` = seçili gate'ler PARALEL · `review` = UAT (prime, seçiliyse) · `done` = development'a merge edilmiş & terminal.
+- **`merge` kolonu KALDIRILDI** (önceki tasarımda eklenmişti). Merge artık ayrı kolon/insan adımı değil — `review` geçince **motorun mekanik kapanış işi**. devops per-item'da yok (5.3).
+- `test` status'u Faz 11'de board için eklenmiş (#53) ama lifecycle'da geçişi yoktu. Bu redesign'da bağlanır.
 
-**Eklenecek geçişler** (`item-lifecycle.ts`): in_progress→test, test→{review, merge, in_progress}, review→{merge, in_progress}, merge→{done, in_progress}.
+**Eklenecek geçişler** (`item-lifecycle.ts`): in_progress→test, test→{review, in_progress}, review→{done, in_progress}. (`merge` status EKLENMEZ.)
 
-### 5.3 +engineering-manager development-cycle'dan çıktı
+### 5.3 Gate modeli — 5 gate, planning-seçimli
 
-Sürücü artık **assignee-developer** (planning'de atanmış uzman). Tek "yönetici darboğazı" yerine item'ı atanan persona kendi sürer. Daha otonom, daha paralel (worker pool eşzamanlı run'lar, her biri kendi worktree'sinde).
+development sonrası tüm yaşam döngüsü = **seçilebilir gate'ler kümesi**. Her gate aynı sözleşme: **pass → ilerle · fail → in_progress + assignee + o gate'in bulgu bölümü.** Hangi gate'lerin uygulanacağı **planning-pipeline'da** item'a işlenir (0–N). "Her gate her zaman olmaz."
 
-### 5.4 Dinamik persona token'ları (`+assignee`, `+approver`)
+| Gate etiketi | Persona | Faz | Okur (references-only) |
+|---|---|---|---|
+| `code_review` | `+engineering-manager` | test (paralel) | STACK, STRUCTURE, GLOSSARY, API, DATABASE, SECURITY |
+| `quality_control` | `+qa-engineer` | test (paralel) | TEST |
+| `security_control` | `+security-engineer` | test (paralel) | SECURITY |
+| `design_review` | `+designer` | test (paralel) | DESIGN |
+| `uat` | `+prime` (insan) | review (test'ten sonra) | — |
 
-Implementation `+assignee`, Final Review `+approver` olarak yazılır; motor bunları run'ın `item.assignee` / `item.approver` alanından **çalışma anında** çözer. Gate, çözülen approver `+prime` ise açılır. Bu, eski "`item.approver` dinamik gate desteği belirsiz" riskini kapatır — `+assignee` ve `+approver` aynı "item alanından persona çöz" mekanizması (DRY).
+- **+engineering-manager** development-cycle'ın sürücüsü DEĞİL artık — planning-seçimli bir gate. Eski "tek yönetici darboğazı" kalktı; sürücü = assignee-developer (5.8). EM diğer workflow'larda (planning/analysis/hotfix/rollback/maintenance) hâlâ geçerli.
+- **`security_check` → `security_control`** rename (quality-control / devops-control ile tutarlı).
+- **devops-control per-item gate'lerden ÇIKARILDI (A kararı):** merge mekaniği zaten motorun (CI+conflict, her zaman). devops-engineer'ın gerçek yargısı (deploy/migration/infra/rollback) **deployment-cycle'a** ait. Kapanışın tamamı mekanik (merge/blocker/handover/worktree/tespit/tetik = motor); tek yargı parçası staging deploy → o da deployment-cycle. Yani devops'un per-item rolü yok.
+- **UAT neden test'ten sonra (paralel değil):** prime en pahalı kaynak (insan); makine/uzman gate'leri geçmemiş build'i prime'a göstermek boşa zaman.
 
-**Sebep:** Atama planning'de yapılır; development-cycle ayrı atama yapmaz. Parser bugün persona'yı sabit string alıyor; dinamik çözüm motor işi (5.9 #2).
+### 5.4 Sahiplik: developer sabit + "sıra kimde" türetilir
+
+İki kavram tek alana sığmaz, ayrıldı:
+- **Sahip (`assignee`)** = işi yapan developer. **Sabit** — item'ın ömrü boyunca (done dahil) değişmez. Hesap verebilirlik/handover/tarihçe bunun için. Bounce'ta bile aynı developer'a döner.
+- **"Sıra kimde"** = şu an kimin aksiyon alacağı. Ayrı saklanmaz; **kolon + bayraklardan türetilir** (in_progress→developer · test→seçili gate'ler · review+uat→prime · done→kimse).
+
+Motor **asla sahibi prime/devops ile ezmez** — yoksa biten her görevin sahibi son dokunan persona (devops) olurdu, "kim yaptı" kaybolurdu.
+
+**Paralel gate'lerde "aynı item çok persona'da" sorunu:** sahip developer sabit kalır; gate'ler "atama" değil **ayrı izlenen kontrol koşuları (gate-run)** — her birinin kendi persona'sı + durumu + **kendi bulgu bölümü**. Board'da item `test`'te durur, üstünde paralel rozetler.
+
+> Sadeleşme: bu, eski `+approver` dinamik token'ını gereksiz kılar — "`uat` gate açık" = "prime onayı gerekli". Ayrı `approver` alanı yerine `uat` gate bayrağı.
 
 ### 5.5 Inputs: references-only, role-relevant, foundation ASLA
 
 - **Foundation → references devri:** analysis/setup PRD/TRD okur, reference'ları üretir. O andan sonra source-of-truth references'tır. Downstream workflow'lar (development, test, deployment) references okur, foundation'a dönmez (gereksiz token + iki-kaynak tutarsızlığı). Bu ilke tüm downstream rewrite'larında uygulanır.
 - Implementation `inputs:` = **core-5**: STACK, STRUCTURE, GLOSSARY, SECURITY, TEST. Rol-bağımlı olanlar metin yönlendirmesiyle: backend → API+DATABASE, frontend → DESIGN+API.
-- Developer **okumaz**: ACCESS, CONTENT, GROWTH, LEGAL, ENVIRONMENT, foundation. (ACCESS+ENVIRONMENT'i Merge adımında +devops-engineer okur.)
+- Developer **okumaz**: ACCESS, CONTENT, GROWTH, LEGAL, ENVIRONMENT, foundation. (ACCESS+ENVIRONMENT'i **deployment-cycle'da** +devops-engineer okur — per-item merge'de değil.)
 
 ### 5.6 Ortamlar + veri politikası → ACCESS.md
 
@@ -292,29 +315,37 @@ ACCESS.md'ye "Ortamlar" bölümü: staging = **test verisi**, preprod = **canlı
 
 **Güvenlik notu:** preprod canlı veri tuttuğu için prod-seviyesi koruma gerekir (KVKK/GDPR). ACCESS.md'de veri sınıfı yazılırken SECURITY.md/LEGAL.md çapraz referansı.
 
-### 5.7 Prime lokal preview + epic-close staging
+### 5.7 Local test URL (PR-open) + epic-close staging
 
-- **Final Review:** Item UI/UX/UAT gerektiriyorsa + proje lokal çalışabiliyorsa, motor worktree'den lokal test ortamı ayağa kaldırır, prime'a local URL verir (gerçek deneyerek onay). **Test verisi** kullanır.
-- **Merge & Closing:** Epic'in son item'ı done olunca → `06-deployment-cycle` staging deploy tetiklenir + staging URL paylaşılır.
+- **Test girişinde:** assignee `test`'e çekip PR açınca, çalıştırılabilir/UI'lı görevse motor worktree'den **local test URL** ayağa kaldırır. Gate'ler (qa davranışsal, design görsel) **ve** sonra prime UAT bu URL üzerinde test eder. **Test verisi** kullanır; worktree silinince URL kapanır. (Eski "Final Review'da preview" → artık PR-open'da, gate'ler de kullanır.)
+- **Epic kapanışı:** item bir epic'i bitirdiyse → motor `06-deployment-cycle` staging deploy tetikler + staging URL paylaşılır. (Per-item merge'de ayrı kalıcı deploy YOK.)
 
-### 5.8 test-cycle ayrı reusable modül, paralel gate'ler
+### 5.8 development-cycle kısaldı + test-cycle paralel gate-run
 
-test-cycle development-cycle'a gömülmez (hotfix/rollback/deployment de kullanır — DRY). Kolon sahipliği: test-cycle = `test` kolonu (code review + qa/security/designer + karar), development-cycle = implement/verify/review/merge.
-
-**Gelecek test-cycle rewrite'ında:** gate'ler paralel (fan-out/fan-in), her gate kendi raporunu yazar, gerekmiyorsa no-op (join hep bekleyebilsin). Çift `review` set'i temizlenir (test→review geçişinin tek sahibi test-cycle).
+- **development-cycle = sadece implement → `test`'e taşı.** assignee `test`'e çekince **biter**. Eski "verify/review/merge bekle-bekle" adımları kalktı (bounce zaten akışı baştan tetikler). Bu, "item'ı kim taşır" çift-sahiplik çatışmasını **kökten** çözer (dev-cycle artık test'i geçmiyor).
+- **test-cycle = `test` kolonu sahibi**, ayrı reusable modül (hotfix/rollback/deployment de kullanır — DRY).
+  - Motor **seçili gate'leri PARALEL** fan-out eder (gate-run kayıtları).
+  - **Join motorun işi:** paralelde "son persona" yok — motor "hepsi pass mi?"yi görür. Hepsi pass (veya 0 test-gate) → `review`. ≥1 fail → motor `in_progress`'e döndürür, **her gate kendi bulgu bölümünü** yazar (tek karışık blok değil), assignee'ye atar → dev-cycle baştan.
+  - `review`: `uat` seçiliyse prime onayı (reject→in_progress); sonra motor mekanik kapanış: CI+conflict → merge→development → blocker temizle → handover üret → worktree/preview kapat → `done`.
+- Eski "Karar adımı" ve çift `review` set'i kalktı (test→review tek sahip: motorun join'i).
 
 ### 5.9 Motor / şema iş listesi (implementation bekliyor)
 
-1. `schemas.ts` + `item-lifecycle.ts`: `merge` status ekle, `test`'i bağla, 5.2 geçişlerini ekle.
-2. `workflow-parser.ts` + executor: dinamik `+assignee`/`+approver` çözümü; gate çözülen approver `+prime` ise.
-3. worktree/orchestrator: development-cycle run base=`development`; başarıda development'a merge.
-4. closing/engine: merge→done'da `blocked_by` referanslarını temizle.
-5. schema: hafif `comments` mekanizması (bulguların evi — item'da `comment`/`work_log` alanı yok; öneri `comments(item_id, author, body, ts)`).
-6. orchestrator: block tetiği → run cancel (ajanları durdur) + status=blocked + sebep + prime'a ata.
-7. orchestrator: hazır item'lar için paralel per-item run (sınırlı eşzamanlılık).
-8. worktree: lokal preview ayağa kaldırma (prime test ortamı).
-9. closing: epic-completion tespiti → staging deploy tetikleme.
-10. `AGENTS.md`/`behavior.md`: kesişen kural — karar→`write_decision`, öğrenim→`write_learned` (her persona).
+1. `item-lifecycle.ts`: `test`'i bağla + 5.2 geçişleri (in_progress→test, test→{review,in_progress}, review→{done,in_progress}). `merge` status EKLENMEZ.
+2. schema: item'a **gate seçimi** alanı (`code_review`/`quality_control`/`security_control`/`design_review`/`uat`; frontmatter ya da kolon). planning-pipeline yazar.
+3. **gate-run modeli:** `gate_runs(item_id, gate, persona, status, findings, ts)` — paralel kontrollerin + gate-başına bulgu bölümlerinin evi. Ayrıca genel item yorumu (block sebebi vb.) için hafif comment alanı.
+4. orchestrator: `test`'e giren item için seçili gate'leri **paralel fan-out** + **join** (hepsi pass→review · ≥1 fail→in_progress + bulgular).
+5. "sıra kimde" türetimi (kolon+bayrak) board göstergesi için; `assignee` (sahip) alanı sabit kalır, motor ezmez.
+6. worktree/orchestrator: development-cycle run base=`development`; `review` sonrası mekanik kapanış (CI+conflict → merge → blocker temizle → handover üret → worktree/preview kapat → done).
+7. worktree: **local test URL** PR-open'da ayağa kaldırma (gate'ler + prime kullanır); worktree silinince kapat.
+8. closing: epic-completion tespiti → `06-deployment-cycle` (staging deploy) tetikleme. devops yargısı orada.
+9. orchestrator: block tetiği → run cancel (ajanları durdur) + status=blocked + sebep + prime'a ata.
+10. orchestrator: hazır item'lar için paralel per-item run (sınırlı eşzamanlılık, her biri kendi worktree).
+11. `AGENTS.md`/`behavior.md`: kesişen kural — karar→`write_decision`, öğrenim→`write_learned` (her persona, iş sırasında).
+
+### 5.10 Süreç: önce workflow dizini, sonra motor
+
+Tüm workflow markdown'ları **önce** bu modele göre yazılır/düzeltilir; **motor işi (5.9) sona** bırakılır. Sebep: markdown ucuz — tasarım kayarsa öncekiler kolay düzeltilir; motor kodu erken yazılırsa tasarım kayınca çöpe gider. Bitmiş workflow dizini + bu bölüm = **motorun donmuş spec'i**. Sıra: test-cycle → planning-pipeline (gate seçimi) → hotfix/rollback/deployment/maintenance tutarlılık → spike/maintenance rename. Workflow yazarken yalnızca **parse/yeşil** kalması için minimal motor dokunuşu olabilir; davranışsal motor işi ertelenir.
 
 ---
 

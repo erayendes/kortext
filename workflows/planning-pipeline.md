@@ -1,10 +1,10 @@
 # Planning Pipeline
 
-> **Bu dosyada:** Analiz çıktıları backlog'a dönüştürülür: item'lar üretilir, Epic'lere bağlanır, versiyonlara dağıtılır, atamalar (persona + model) yapılır.
+> **Bu dosyada:** Analiz çıktıları backlog'a dönüştürülür: item'lar üretilir, doğrulama gate'leri seçilir, Epic'lere bağlanır, versiyonlara dağıtılır, atamalar (persona + model) yapılır.
 
 ## Backlog Tanımı
 
-1. **+engineering-manager:** Backlog item adaylarını çıkar (`add_backlog_item` MCP tool). Kapsam: ürün özellikleri → task, açık hatalar → bug, teknik borçlar → debt. Disiplin: atomik (tek başına anlaşılabilir, bağımsız geliştirilebilir, ayrı doğrulanabilir). Bağımlılık: `blocks` / `blocked_by` alanları.
+1. **+engineering-manager:** Backlog item adaylarını çıkar (`add_backlog_item` MCP tool). Kapsam: ürün özellikleri → task, açık hatalar → bug, teknik borçlar → debt. Disiplin: atomik (tek başına anlaşılabilir, bağımsız geliştirilebilir, ayrı doğrulanabilir). Bağımlılık: `blocks` / `blocked_by` alanları. Gate seçimi: karmaşık veya mimariye dokunan item'lara `review_gates: code_review`; insan (prime) kabulü gereken item'lara (kullanıcıya dönük kritik akış, iş/bütçe kararı, geri alınamaz işlem) `review_gates: uat` ekle.
    - inputs: `.kortext/foundation/PRD.md`, `.kortext/foundation/TRD.md`
    - outputs: `backlog-items-defined`
 
@@ -12,7 +12,7 @@
    - inputs: `.kortext/foundation/PRD.md`, `.kortext/references/TEST.md`, `backlog-items-defined`
    - outputs: `backlog-acceptance-set`
 
-3. **+security-engineer:** Auth, secret, veri işleme, erişim kontrolü, compliance riski taşıyan item'lara `review_gates: security_check` ekle (`update_backlog_item` MCP).
+3. **+security-engineer:** Auth, secret, veri işleme, erişim kontrolü, compliance riski taşıyan item'lara `review_gates: security_control` ekle (`update_backlog_item` MCP).
    - inputs: `.kortext/foundation/TRD.md`, `.kortext/references/SECURITY.md`, `backlog-acceptance-set`
    - outputs: `backlog-security-marked`
 

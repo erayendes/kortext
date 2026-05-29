@@ -5,15 +5,15 @@
 
 ---
 
-## 1. Şu an (2026-05-27)
+## 1. Şu an (2026-05-30)
 
-**main HEAD:** `6dc2fb6` (Faz 13 — workflow content rewrite + foundation/ category + docs konsolidasyon + repo housekeeping)
+**Branch:** `feat/v3.1-workflow-rewrites` (workflow lifecycle redesign turu). `main` HEAD `6dc2fb6` (Faz 13) — bu branch onun üzerine workflow rewrite'larını taşıyor.
+
+**Açık PR:** [#4](https://github.com/erayendes/kortext/pull/4) — workflow rewrite'ları, Eray review/merge bekliyor. (Bu branch'teki sonraki commit'ler de aynı PR'a akıyor.)
 
 | Test | Lint | Typecheck | Build |
 |---|---|---|---|
 | 382/382 ✅ | 0 hata · 4 pre-existing warning | 0 hata | temiz |
-
-**Açık PR:** yok.
 
 **npm registry:** `kortext@3.0.0` broken (EADDRINUSE silent fail bug). v3.1.0 release (devasa sürüm: Faz 11-13 + CLI redesign) lokal tgz UAT geçtikten sonra yapılacak.
 
@@ -21,21 +21,24 @@
 
 Faz 13 tamamlandı: engine output-resolver, callout → approver-based gate, `.kortext/foundation/` kategorisi, 13 reference ALL-CAPS rename, 12 workflow rewrite (AI-odaklı imperative ton), `docs/ → development/` konsolidasyon. Detaylar [DECISIONS.md Bölüm 1](./DECISIONS.md).
 
-## 3. Aktif iş — development/ docs cleanup turu
+## 3. Aktif iş — Development + Test lifecycle redesign
 
-Eray + Claude `development/` altındaki kanonik dokümanları tek tek temizliyor. Hedef: duplikasyonları sil, ölü linkleri düzelt, her dosyaya net bir sorumluluk ver.
+Spec: [DECISIONS.md Bölüm 5](./DECISIONS.md) (design level, Eray onayladı). Süreç §5.10: **önce tüm workflow dizini, sonra motor** — markdown ucuz, motor kodu tasarım donunca yazılır. Bitmiş workflow dizini + Bölüm 5 = motorun donmuş spec'i.
 
-| Dosya | Durum |
+**Karar özeti:** kolonlar `to_do → in_progress → test → review → done` (`merge` kolonu YOK). 5 planning-seçimli gate (code_review/quality_control/security_control/design_review/uat); `test`'tekiler PARALEL, join motorun. Sahip (assignee=developer) sabit kalır, "sıra kimde" kolon+bayraktan türetilir. devops per-item'dan çıktı (merge+kapanış motorun; devops → deployment-cycle). İki katman: substrat (motor, her zaman) vs agent gate (yargı, planning seçer).
+
+| Adım | Durum |
 |---|---|
-| `CLAUDE.md` | ✅ tamamlandı — dosya haritası eklendi, ölü linkler temizlendi, mimari/sample/v2-archive bölümleri taşındı |
-| `development/HANDOVER.md` | 🔄 bu commit'te |
-| `development/DECISIONS.md` | ⏳ bekliyor (Bölüm 0 CLI/onboarding redesign zaten eklendi) |
-| `development/ARCHITECTURE.md` | ⏳ bekliyor (v2 archive + gotchas bölümleri yeni eklendi) |
-| `development/DESIGN.md` | ⏳ bekliyor |
-| `development/TODO.md` | ⏳ bekliyor |
-| `development/UAT-GUIDE.md` | ⏳ bekliyor |
+| DECISIONS Bölüm 5 (spec) | ✅ son haline yazıldı |
+| `development-cycle.md` | ✅ kısaltıldı — sadece implement → `test`'e taşı, orada biter |
+| `planning-pipeline.md` gate seçimi | ✅ `code_review`+`uat` eklendi, `security_check→security_control` |
+| `05-test-cycle.md` | ⏳ SIRADAKİ — 5 gate, paralel gate-run, motor join |
+| hotfix / rollback / deployment / maintenance tutarlılık | ⏳ bekliyor |
+| `02b-spike-workflow`→`spike-pipeline`, `09-maintenance-cycle`→`maintenance-pipeline` rename | ⏳ bekliyor |
+| ACCESS.md "Ortamlar" bölümü (§5.6) | ⏳ bekliyor |
+| Motor/şema epic (§5.9, 11 madde) | ⏳ EN SON (workflow dizini bitince) |
 
-**Disipline:** her dosya için → mevcut içeriği tara → duplikasyon/ölü/yanlış-yerli olanları işaretle → öneri planı sun → Eray onaylar → uygula → bir sonrakine geç.
+**Disipline:** workflow markdown'ları planning ile aynı ev-stilinde (normal cümle, `## Faz`+`1. **+persona:**`), parser'a dokunma; her dosyada netleştir: kim hangi reference'ı okur, foundation OKUMA. Motor implikasyonları çıktıkça §5.9'a biriktir.
 
 ## 4. Bekleyen — content review turu
 
@@ -51,7 +54,7 @@ Eray + Claude `development/` altındaki kanonik dokümanları tek tek temizliyor
 Bilinen risk noktaları (Faz 13 hızlı yazımdan):
 - `existing-project-analysis.md` — pattern apply (~30 sn yazıldı), kalibre gerek
 - `02b-spike-workflow.md` — dinamik persona oversimplification
-- `development-cycle.md` — yeniden tasarlandı + rename edildi (DECISIONS Bölüm 5: kolon modeli, dinamik `+assignee`/`+approver`, engine-owns-mechanics). Motor/şema desteği (lifecycle geçişleri, dinamik persona, merge hedefi, blocker temizleme, comments) implementation bekliyor
+- `development-cycle.md` + `05-test-cycle.md` — lifecycle redesign aktif turu, bkz. §3 (DECISIONS Bölüm 5 spec). Motor/şema desteği §5.9'da listeli, en sona bırakıldı
 - `07-rollback-pipeline.md` — workflow gate yok kararı (incident-driven), sorgulanabilir
 - `09-maintenance-cycle.md` — engine bookkeeping step #2 yeni semantik, test edilmedi
 
@@ -69,7 +72,7 @@ Detaylı liste [TODO.md](./TODO.md)'de. Kritik üçü:
 ## 7. Linkler
 
 - Mimari: [ARCHITECTURE.md](./ARCHITECTURE.md) (gotcha'lar §16'da)
-- Kararlar: [DECISIONS.md](./DECISIONS.md) (Bölüm 0 = CLI redesign, Bölüm 1 = Faz 13, Bölüm 2 = v3.1 refactor, Bölüm 5 = Development Lifecycle redesign)
+- Kararlar: [DECISIONS.md](./DECISIONS.md) (Bölüm 0 = CLI redesign, Bölüm 1 = Faz 13, Bölüm 2 = v3.1 refactor, Bölüm 5 = Development + Test Lifecycle redesign)
 - Tasarım: [DESIGN.md](./DESIGN.md)
 - UAT rehberi: [UAT-GUIDE.md](./UAT-GUIDE.md)
 - Açık iş listesi: [TODO.md](./TODO.md)
