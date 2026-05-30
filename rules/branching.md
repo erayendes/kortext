@@ -40,7 +40,7 @@
 - `hotfix/*` önce `main` hedefine alınır, sonra aynı değişiklik `development` hattına geri taşınır.
 - Production release `development` içeriğinin `main` hattına kontrollü alınmasıdır.
 - `main` ve `development` branch'leri hiçbir durumda yer değiştirmez.
-- Production sorunu çıkarsa çözüm `incident-pipeline.md` üzerinden yapılır (triaj rollback/hotfix yolunu seçer); branch geçmişi yeniden yazılmaz.
+- Production sorunu çıkarsa çözüm severity'e göre `rollback-pipeline.md` (`!rollback`) veya `hotfix-pipeline.md` (`!hotfix`) üzerinden yapılır; branch geçmişi yeniden yazılmaz.
 - Merge yöntemi proje ayarına bağlıdır; varsayılan tercih `Squash and Merge` ile item geçmişini sade tutmaktır.
 
 ## PR ve Onay Kuralları
@@ -78,4 +78,5 @@ Refs: T01
 - Normal geliştirme: `workflows/development-cycle.md`
 - Test ve doğrulama: `workflows/test-cycle.md`
 - Production deployment: `workflows/deployment-cycle.md`
-- Production incident (rollback/hotfix): `workflows/incident-pipeline.md`
+- Production rollback: `workflows/rollback-pipeline.md`
+- Production hotfix: `workflows/hotfix-pipeline.md`

@@ -47,7 +47,7 @@
 
 > Motor `main`'e merge etti; prod deploy bu fazda yürür.
 
-1. **+devops-engineer:** Prod artifact'ı release version ile build et, rollback referansı olarak son kararlı artifact'ı işaretle. Migration varsa prod'da uygula (fail → `incident-pipeline`). Traffic geçişini (Blue/Green, Rolling, VM) proje altyapısına göre uygula; strateji + komutları rapora yaz.
+1. **+devops-engineer:** Prod artifact'ı release version ile build et, rollback referansı olarak son kararlı artifact'ı işaretle. Migration varsa prod'da uygula (fail → `rollback-pipeline`). Traffic geçişini (Blue/Green, Rolling, VM) proje altyapısına göre uygula; strateji + komutları rapora yaz.
    - inputs: `.kortext/references/ACCESS.md`, `.kortext/references/DATABASE.md`, preprod-approved
    - outputs: `.kortext/reports/delivery-reports.md`, prod-deployed
 
@@ -55,8 +55,8 @@
    - inputs: `.kortext/references/TEST.md`, prod-deployed
    - outputs: `.kortext/reports/test-reports.md`, prod-verified
 
-3. **+devops-engineer:** İzleme eşiklerini ve alarmları tanımla (5xx +%5, p95 2x/SLA, kritik akış hatası); motor deploy sonrası gecikmeli doğrulama planlar — eşik aşımı/alarm ⇒ `incident-pipeline` (P0'da onay beklemeden). Sorunsuz pencere sonunda motor semantik versiyon tag'i oluşturur + push eder; sen release notes yaz (yeni özellikler, düzeltmeler, breaking changes, upgrade notları).
+3. **+devops-engineer:** İzleme eşiklerini ve alarmları tanımla (5xx +%5, p95 2x/SLA, kritik akış hatası); motor deploy sonrası gecikmeli doğrulama planlar — eşik aşımı/alarm ⇒ severity'e göre `rollback-pipeline` veya `hotfix-pipeline` (P0'da onay beklemeden). Sorunsuz pencere sonunda motor semantik versiyon tag'i oluşturur + push eder; sen release notes yaz (yeni özellikler, düzeltmeler, breaking changes, upgrade notları).
    - inputs: `.kortext/references/ACCESS.md`, prod-verified
    - outputs: `.kortext/reports/release-notes.md`
 
-**Sonraki akış:** Yeni version için `development-cycle`; prod'da sorun çıkarsa `incident-pipeline`.
+**Sonraki:** Yeni version'da motor `development-cycle`'ı tetikler; prod'da sorun çıkarsa severity'e göre `rollback-pipeline` veya `hotfix-pipeline` — koşullu, motor işi (§5.9); otomatik zincir değil.

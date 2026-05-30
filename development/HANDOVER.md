@@ -25,9 +25,9 @@ Faz 13 tamamlandı: engine output-resolver, callout → approver-based gate, `.k
 
 Spec: [DECISIONS.md Bölüm 5](./DECISIONS.md) (design level, Eray onayladı). Süreç §5.10: **önce tüm workflow dizini, sonra motor** — markdown ucuz, motor kodu tasarım donunca yazılır. Bitmiş workflow dizini + Bölüm 5 = motorun donmuş spec'i.
 
-**Karar özeti:** kolonlar `to_do → in_progress → test → review → done` (`merge` kolonu YOK). 5 planning-seçimli gate; `test`'tekiler PARALEL, join motorun. Sahip (assignee=developer) sabit, "sıra kimde" kolon+bayraktan türetilir. Deployment = ortam merdiveni (item→dev, epic→staging, version→preprod, onay→prod). spike otonom+her-zaman-gate. maintenance silindi. rollback+hotfix→incident.
+**Karar özeti:** kolonlar `to_do → in_progress → test → review → done` (`merge` kolonu YOK). 5 planning-seçimli gate; `test`'tekiler PARALEL, join motorun. Sahip (assignee=developer) sabit, "sıra kimde" kolon+bayraktan türetilir. Deployment = ortam merdiveni (item→dev, epic→staging, version→preprod, onay→prod). spike otonom+her-zaman-gate. maintenance silindi. rollback + hotfix AYRI düz akışlar (§5.12 deadlock dersi).
 
-**Workflow turu TAMAMLANDI** — 9 workflow (rakamsız), 382/382 test + typecheck yeşil, tüm DAG'lar elle+motorla doğrulandı.
+**Workflow turu TAMAMLANDI + adversarial doğrulandı (2026-05-30)** — 10 workflow (rakamsız), 382/382 test + typecheck yeşil. 15-ajan adversarial doğrulama 2 gerçek kırık buldu, ikisi de düzeltildi: (1) zincir-dikiş — 4 workflow'un "Sonraki akış" satırı parser'a uymuyordu → dürüst `**Sonraki:**` biçimine çevrildi; (2) incident deadlock — birleşik incident-pipeline'da koşullu-dal motorca ifade edilemiyordu → `rollback-pipeline` + `hotfix-pipeline` olarak AYRILDI.
 
 | Workflow | Durum |
 |---|---|
@@ -35,10 +35,12 @@ Spec: [DECISIONS.md Bölüm 5](./DECISIONS.md) (design level, Eray onayladı). S
 | `test-cycle` | ✅ 5 gate paralel + UAT fan-in; gate-run kaydı (rapor yazmaz); code-review SECURITY okumaz |
 | `planning-pipeline` | ✅ gate seçimi (`code_review`+`uat`, `security_check→security_control`) |
 | `deployment-cycle` | ✅ ortam merdiveni (epic→staging 5 paralel rapor, version→preprod, onay→main+prod); red→bug |
-| `incident-pipeline` | ✅ rollback+hotfix birleşik (triaj→dal→ortak kapanış) |
+| `rollback-pipeline` | ✅ AYRI düz akış (triaj→kod+migration rollback→kapanış); fan-in yok |
+| `hotfix-pipeline` | ✅ AYRI düz akış (triaj→minimal fix+test→kapanış); fan-in yok |
 | `spike-pipeline` | ✅ otonom tetik + her-zaman prime gate + sade rapor |
 | `environment-setup` | ✅ ACCESS "Ortamlar" bölümü (§5.6/§5.11) |
 | `new/existing-project-analysis` | ✅ tutarlı (foundation üretici, dokunulmadı) |
+| ~~`incident-pipeline`~~ | ✅ AYRILDI → rollback + hotfix (§5.12 — deadlock) |
 | ~~`maintenance-cycle`~~ | ✅ SİLİNDİ (§5.12 — çıktısı planning/backlog'a eriyor) |
 | Motor/şema epic (§5.9) | ⏳ SIRADAKİ — workflow dizini donmuş spec |
 
@@ -51,7 +53,7 @@ Spec: [DECISIONS.md Bölüm 5](./DECISIONS.md) (design level, Eray onayladı). S
 1. `templates/AGENTS.md` — kullanıcının ilk gördüğü AI bootstrap
 2. `agents/*.md` — 14 persona
 3. `rules/*.md` — 6 rule (behavior, branching, commands, emergency, mcp, models)
-4. `workflows/*.md` — 12 workflow (00 → 09)
+4. `workflows/*.md` — 10 workflow (rakamsız)
 5. `templates/{foundation,references,reports,memory,backlogs}/*.md` — kullanıcı projesine kopyalanan iskelet
 6. **`agents/` ve `workflows/` artık `_codebase` tarafında düzenlenir** (eski `_docbase` sync mekanizması kaldırıldı; tek kaynak burası).
 
@@ -59,8 +61,7 @@ Bilinen risk noktaları (Faz 13 hızlı yazımdan):
 - `existing-project-analysis.md` — pattern apply (~30 sn yazıldı), kalibre gerek
 - `02b-spike-workflow.md` — dinamik persona oversimplification
 - `development-cycle.md` + `test-cycle.md` — lifecycle redesign aktif turu, bkz. §3 (DECISIONS Bölüm 5 spec). Motor/şema desteği §5.9'da listeli, en sona bırakıldı
-- `07-rollback-pipeline.md` — workflow gate yok kararı (incident-driven), sorgulanabilir
-- `09-maintenance-cycle.md` — engine bookkeeping step #2 yeni semantik, test edilmedi
+- ~~`07-rollback-pipeline.md` / `09-maintenance-cycle.md`~~ — çözüldü (§5.12: rollback ayrı düz akış; maintenance silindi)
 
 ## 5. Bekleyen — v3.1 CLI/onboarding redesign (devasa sürüm parçası)
 
