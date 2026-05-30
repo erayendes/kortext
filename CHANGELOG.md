@@ -84,6 +84,29 @@ Implementation queue: [development/TODO.md](development/TODO.md).
 
 ### Changed
 
+- **Workflow lifecycle redesign** (DECISIONS Bölüm 5). The development/test
+  lifecycle was reworked around an engine-owns-mechanics model: columns
+  `to_do → in_progress → test → review → done` (no `merge` column); 5
+  planning-selected gates (`code_review`, `quality_control`, `security_control`,
+  `design_review`, `uat`) run in parallel in `test`, the engine joins them;
+  `assignee` (developer) stays fixed for the item's whole life. `development-cycle`
+  shortened to end at `test`; `deployment-cycle` reframed as an environment
+  ladder (item→dev, epic→staging, version→preprod, approval→main+prod).
+  Engine/schema implementation deferred (DECISIONS §5.9).
+- **`incident-pipeline` split into `rollback-pipeline` + `hotfix-pipeline`.**
+  The merged pipeline used mutually-exclusive paths joined at a shared closing
+  step via multi-producer fan-in; since the engine only counts `succeeded`
+  steps as done, the non-selected path stayed skipped and the closure
+  deadlocked. Split into two independent straight-line flows (no conditional
+  branch needed); path chosen by `!rollback` / `!hotfix`. Found by 15-agent
+  adversarial verification (DECISIONS §5.12).
+- **Honest workflow chain markers.** Four workflows (`test-cycle`,
+  `deployment-cycle`, `spike-pipeline`, former `incident`) had `Sonraki akış`
+  lines the parser silently dropped (prose before the backtick → null). Their
+  transitions are conditional by design (milestone/approval-gated), so they were
+  rewritten as `**Sonraki:**` notes stating "conditional, engine job (§5.9), not
+  auto-chain". Working autonomous chain unchanged: analysis → planning →
+  environment-setup → development-cycle → test-cycle.
 - **Workflow gate detection** (Faz 13). Replaced `> [!NOTE] RAPOR HAZIR`
   callout-based gates with approver-based detection. Parser now reads
   `step.approver === '+prime'` from the step's sub-bullets and auto-generates
@@ -113,6 +136,13 @@ Implementation queue: [development/TODO.md](development/TODO.md).
 
 ### Removed
 
+- **`maintenance-cycle` workflow** (DECISIONS §5.12). Its outputs (debt review,
+  new debt/bug, dependency/security scan results) all flow into planning +
+  backlog + development; a standalone "maintenance mode" is an anti-pattern in
+  an autonomous system where the backlog is always live.
+- **`merge` board column** (DECISIONS §5.2). Merge is now the engine's
+  mechanical closing step after `review` passes, not a separate human-facing
+  column.
 - **`skills/` category** (Faz 11.4). Persona body's `capabilities` field
   covers the same ground — removed `templates/skills/` and
   `required-skills.md`.
