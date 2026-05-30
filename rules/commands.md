@@ -11,14 +11,13 @@ Bu tablo Faz 2 (glue layer) kapsamında eklendi. Her komutun hangi persona taraf
 | `!start analysis` | +operation-manager | workflows/new-project-analysis.md | `kortext-session-start.py` |
 | `!start onboard` | +operation-manager | workflows/existing-project-analysis.md | `kortext-session-start.py` |
 | `!start planning` | +operation-manager | workflows/planning-pipeline.md | `kortext-bulk-plan.py` |
-| `!start spike` | +engineering-manager | workflows/02b-spike-workflow.md | `kortext-backlog-add.py --type spike` |
+| `!start spike` | +engineering-manager | workflows/spike-pipeline.md | `kortext-backlog-add.py --type spike` |
 | `!setup environment` | +devops-engineer | workflows/environment-setup.md | — |
 | `!start development` | +engineering-manager | workflows/development-cycle.md | `kortext-item-start.py` |
-| `!start test` | +qa-engineer | workflows/05-test-cycle.md | `kortext-item-transition.py` |
-| `!deploy prod` | +delivery-manager | workflows/06-deployment-cycle.md | — (manuel git tag + CI) |
-| `!trigger-rollback` | +delivery-manager | workflows/07-rollback-pipeline.md | (manuel git revert) |
-| `!start-hotfix` | +delivery-manager | workflows/08-hotfix-pipeline.md | `kortext-backlog-add.py --type hotfix` |
-| `!maintenance` | +operation-manager | workflows/09-maintenance-cycle.md | `kortext-backlog-health.py` |
+| `!start test` | +qa-engineer | workflows/test-cycle.md | `kortext-item-transition.py` |
+| `!deploy prod` | +delivery-manager | workflows/deployment-cycle.md | — (manuel git tag + CI) |
+| `!trigger-rollback` | +delivery-manager | workflows/incident-pipeline.md | (manuel git revert) |
+| `!start-hotfix` | +delivery-manager | workflows/incident-pipeline.md | `kortext-backlog-add.py --type hotfix` |
 | `!status` | +operation-manager | — | `kortext-session-start.py` + `kortext-context-check.py` |
 | `!continue` | +prime | — (checkpoint onayı) | — |
 | `!approve` | +prime | — (gate onayı) | `kortext-item-transition.py` |
@@ -30,7 +29,7 @@ Bu tablo Faz 2 (glue layer) kapsamında eklendi. Her komutun hangi persona taraf
 
 ### Yeni Komutlar (Faz 2'de Tanıtılan)
 
-- `!trigger-rollback` — +delivery-manager tarafından son güvenli sürüme geri dönüş akışını başlatır. `workflows/07-rollback-pipeline.md` üzerinden ilerler; manuel git revert sonrası rollback kayıtları işlenir.
+- `!trigger-rollback` — +delivery-manager tarafından son güvenli sürüme geri dönüş akışını başlatır. `workflows/incident-pipeline.md` üzerinden ilerler; manuel git revert sonrası rollback kayıtları işlenir.
 - `!start-hotfix` — +delivery-manager tarafından kritik production hatası için hotfix akışı başlatır. `kortext-backlog-add.py --type hotfix` ile backlog'a `HXX-` prefix'li item eklenir.
 - `!continue` — +prime tarafından checkpoint onayı olarak verilir. Workflow açmaz, ajanın bir sonraki adıma geçmesini onaylar. `development-cycle.md`'deki checkpoint mekanizmasında kullanılır.
 - `!approve` — +prime tarafından gate onayı olarak verilir. `Review` statüsündeki bir item'ı `Done`'a taşımak için `kortext-item-transition.py` tetikler.
@@ -46,12 +45,11 @@ Bu tablo Faz 2 (glue layer) kapsamında eklendi. Her komutun hangi persona taraf
 | `!start` | `analysis` | `workflows/new-project-analysis.md` | `workspace/reports/analysis-reports.md` | Yeni proje analizini başlatır. |
 | `!start` | `onboard` | `workflows/existing-project-analysis.md` | `workspace/reports/analysis-reports.md` | Mevcut projeyi Kortext'e dahil eder. |
 | `!start` | `planning` | `workflows/planning-pipeline.md` | `workspace/memory/backlog/` | Onaylı analizden düz backlog üretir. |
-| `!start` | `spike` | `workflows/02b-spike-workflow.md` | `workspace/memory/decisions.md` ADR veya yeni Task | Teknik belirsizliği gidermek için time-boxed araştırma başlatır. |
+| `!start` | `spike` | `workflows/spike-pipeline.md` | `workspace/memory/decisions.md` ADR veya yeni Task | Teknik belirsizliği gidermek için time-boxed araştırma başlatır. |
 | `!start` | `development` | `workflows/development-cycle.md` | Aktif item akışı | Backlog'daki uygun item üzerinde geliştirmeyi başlatır. |
-| `!deploy` | `prod` | `workflows/06-deployment-cycle.md` | `workspace/reports/delivery-reports.md` | Production deployment akışını başlatır. |
-| `!rollback` | `[version]` | `workflows/07-rollback-pipeline.md` | Rollback kayıtları | Son güvenli sürüme geri dönüş akışını başlatır. |
-| `!hotfix` | `[issue-id]` | `workflows/08-hotfix-pipeline.md` | Hotfix kayıtları | Kritik production hatası için hotfix akışını başlatır. |
-| `!maintenance` | — | `workflows/09-maintenance-cycle.md` | `workspace/reports/status-reports.md` | Rutin bakım döngüsünü başlatır (bağımlılık, teknik borç, güvenlik). |
+| `!deploy` | `prod` | `workflows/deployment-cycle.md` | `workspace/reports/delivery-reports.md` | Production deployment akışını başlatır. |
+| `!rollback` | `[version]` | `workflows/incident-pipeline.md` | Rollback kayıtları | Son güvenli sürüme geri dönüş akışını başlatır. |
+| `!hotfix` | `[issue-id]` | `workflows/incident-pipeline.md` | Hotfix kayıtları | Kritik production hatası için hotfix akışını başlatır. |
 | `!status` | — | `scripts/kortext-backlog-health.py` + `context-check.py` | Hızlı durum özeti | Backlog sağlığı, aktif ajanlar ve blokerları özetler. |
 | `!status` | `full` | Tüm rapor dosyaları | Tam sistem raporu | Deployment durumu, test coverage ve maliyet dahil tam rapor. |
 | `!request` | `[açıklama]` | Talep alım süreci | `workspace/memory/backlog/` adayı | Yeni feature, improvement, bug veya debt talebini sisteme alır. |

@@ -54,7 +54,7 @@ describe('workflow content acceptance (Faz 13)', () => {
   it('all workflows parse with zero load errors', () => {
     const reg = loadWorkflowsFromDir(workflowsDir);
     expect(reg.errors()).toEqual([]);
-    expect(reg.list().length).toBeGreaterThanOrEqual(11);
+    expect(reg.list().length).toBeGreaterThanOrEqual(9);
   });
 
   it('every step carries a persona handle (no "no persona handle" skips)', () => {
@@ -95,7 +95,7 @@ describe('workflow content acceptance (Faz 13)', () => {
   it('every workflow has at least one approval gate OR every step succeeds without one', () => {
     // Sanity: gate detection still works post-callout-removal — at least
     // half the workflows should have a +prime gate (analysis, planning,
-    // env setup, deployment, hotfix, maintenance all do).
+    // env setup, deployment, incident, spike all do).
     const reg = loadWorkflowsFromDir(workflowsDir);
     const workflowsWithGates = reg.list().filter((w) => w.gates.length > 0);
     expect(workflowsWithGates.length).toBeGreaterThanOrEqual(5);

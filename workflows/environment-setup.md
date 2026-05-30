@@ -4,7 +4,7 @@
 
 ## Servis Envanteri ve Credentials
 
-1. **+devops-engineer:** STACK + SECURITY + DATABASE'i tara; harici servisleri tespit et. Kategoriler: (a) yapılandırma bilgisi (URL, proje adı, public key, platform/ortam) → `ACCESS.md`, VCS'e dahil; (b) gizli anahtar (API key, secret, token, connection string) → `.env.example`'da sadece anahtar adı + sade açıklama, gerçek değer `.env`'de (asla VCS'e). `ENVIRONMENT.md`: yerel kurulum rehberi (Node sürümü, paket yöneticisi, install adımları, OS-specific notlar). `.env.example` her satırı +prime'ın teknik bilgisi olmadığı varsayımıyla yazılır (değişken ne, nereden temin edilir, neden gerekli).
+1. **+devops-engineer:** STACK + SECURITY + DATABASE'i tara; harici servisleri tespit et. Kategoriler: (a) yapılandırma bilgisi (URL, proje adı, public key, platform/ortam) → `ACCESS.md`, VCS'e dahil; (b) gizli anahtar (API key, secret, token, connection string) → `.env.example`'da sadece anahtar adı + sade açıklama, gerçek değer `.env`'de (asla VCS'e). `ENVIRONMENT.md`: yerel kurulum rehberi (Node sürümü, paket yöneticisi, install adımları, OS-specific notlar). `ACCESS.md`'ye **Ortamlar** bölümü ekle: staging = test verisi · preprod = canlı veri · prod = canlı veri; her ortamın URL/instance bilgisi + veri sınıfı. preprod/prod canlı veri tuttuğu için prod-seviyesi koruma (KVKK/GDPR) — SECURITY/LEGAL çapraz referansı. `.env.example` her satırı +prime'ın teknik bilgisi olmadığı varsayımıyla yazılır (değişken ne, nereden temin edilir, neden gerekli).
    - inputs: `.kortext/references/STACK.md`, `.kortext/references/SECURITY.md`, `.kortext/references/DATABASE.md`
    - outputs: `.kortext/references/ACCESS.md`, `.kortext/references/ENVIRONMENT.md`
    - approver: +prime
@@ -19,7 +19,7 @@
    - inputs: `.kortext/references/STRUCTURE.md`, `.kortext/references/STACK.md`, `.kortext/references/DESIGN.md`
    - outputs: `frontend-scaffolded`
 
-2. **+devops-engineer:** Repoyu başlat (`rules/branching.md` uyarınca), `.gitignore` hazırla, main branch'e doğrudan push'u engelleyen branch protection kurallarını uygula, staging/production ortamlarını `ACCESS`'e göre ayarla, CI/CD pipeline'larını `06-deployment-cycle` uyarınca aktif et.
+2. **+devops-engineer:** Repoyu başlat (`rules/branching.md` uyarınca), `.gitignore` hazırla, main branch'e doğrudan push'u engelleyen branch protection kurallarını uygula, staging/production ortamlarını `ACCESS`'e göre ayarla, CI/CD pipeline'larını `deployment-cycle` uyarınca aktif et.
    - inputs: `.kortext/references/ACCESS.md`, `.kortext/references/STACK.md`
    - outputs: `repo-initialized`
 
@@ -41,6 +41,6 @@
 
 1. **+qa-engineer:** Kurulum smoke testi çalıştır: build, run, DB connection, API health endpoint, temel UI açılışı. Sonuçları per-file rapora yaz. Herhangi bir aşama hata verirse step fail eder; engine pipeline'ı durdurur.
    - inputs: `.kortext/references/TEST.md`, `.kortext/references/STACK.md`, `backend-ready`, `frontend-ready`, `db-deployed`
-   - outputs: `.kortext/reports/test-reports_<slug>_<ts>.md`
+   - outputs: `.kortext/reports/test-reports.md`
 
 **Sonraki akış:** `development-cycle`

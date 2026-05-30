@@ -96,7 +96,7 @@ describe('loadWorkflowsFromDir', () => {
   it('loads the real workflows/ directory without errors', () => {
     const reg = loadWorkflowsFromDir(resolve(process.cwd(), 'workflows'));
     expect(reg.errors()).toEqual([]);
-    expect(reg.list().length).toBeGreaterThanOrEqual(10);
+    expect(reg.list().length).toBeGreaterThanOrEqual(9);
     // Anchor: development-cycle must be loadable.
     expect(reg.get('development-cycle')).not.toBeNull();
   });
