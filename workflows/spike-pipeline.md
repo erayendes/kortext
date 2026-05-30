@@ -4,7 +4,7 @@
 
 ## Araştırma
 
-1. **+engineering-manager:** Spike item'ının hipotezini ölçülebilir biçimde netleştir ("X yöntemi Y'yi çözer", başarı kriteri ölçülebilir, time-box: kısa araştırma / PoC / mimari araştırma). Hipotezi test et — dokümantasyon + kaynak tara, gerekirse production'a gitmeyecek küçük PoC yaz. Bulguları, kısıtları ve denenen alternatifleri not al. Time-box dolunca dur, mevcut bilgiyle karar ver.
+1. **+engineering-manager:** Spike item'ının hipotezini ölçülebilir biçimde netleştir ("X yöntemi Y'yi çözer", başarı kriteri ölçülebilir). Hipotezi test et — dokümantasyon + kaynak tara, gerekirse production'a gitmeyecek küçük PoC yaz. Bulguları, kısıtları ve denenen alternatifleri not al. Karar verecek kadar bilgi toplandığında dur; kapsamı genişletme.
    - inputs: `.kortext/references/STACK.md`, `.kortext/references/STRUCTURE.md`
    - outputs: spike-explored
 
