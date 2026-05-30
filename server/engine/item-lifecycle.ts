@@ -24,9 +24,11 @@ import type { PersonaRegistry } from './persona-registry.ts';
 
 export type ItemTransition =
   | 'start'    // to_do → in_progress
-  | 'review'   // in_progress → review
+  | 'test'     // in_progress → test             (dev-cycle exit; §5.8)
+  | 'review'   // test → review                  (gate-join all-pass / 0-gate; §5.8)
+  | 'bounce'   // test | review → in_progress     (gate fail OR uat reject; §5.8)
   | 'done'     // review → done
-  | 'block'    // in_progress | review → blocked
+  | 'block'    // in_progress | test | review → blocked
   | 'unblock'  // blocked → in_progress
   | 'cancel';  // any non-terminal → cancelled
 
@@ -47,11 +49,13 @@ export type ItemLifecycleOptions = {
 
 const TRANSITIONS: Record<ItemTransition, { from: BacklogStatus[]; to: BacklogStatus }> = {
   start:   { from: ['to_do'], to: 'in_progress' },
-  review:  { from: ['in_progress'], to: 'review' },
+  test:    { from: ['in_progress'], to: 'test' },
+  review:  { from: ['test'], to: 'review' },
+  bounce:  { from: ['test', 'review'], to: 'in_progress' },
   done:    { from: ['review'], to: 'done' },
-  block:   { from: ['in_progress', 'review'], to: 'blocked' },
+  block:   { from: ['in_progress', 'test', 'review'], to: 'blocked' },
   unblock: { from: ['blocked'], to: 'in_progress' },
-  cancel:  { from: ['to_do', 'in_progress', 'review', 'blocked'], to: 'cancelled' },
+  cancel:  { from: ['to_do', 'in_progress', 'test', 'review', 'blocked'], to: 'cancelled' },
 };
 
 const TERMINAL_STATES: ReadonlySet<BacklogStatus> = new Set(['done', 'cancelled']);
