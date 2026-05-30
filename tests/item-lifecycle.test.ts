@@ -75,11 +75,12 @@ describe('ItemLifecycle.transition — happy paths', () => {
     expect(after.status).toBe('in_progress');
   });
 
-  it('full chain: to_do → start → review → done', () => {
+  it('full chain: to_do → start → test → review → done', () => {
     const lc = makeLifecycle();
     lc.create({ id: 'T', type: 'task', title: 't' });
     lc.transition('T', 'start', '+backend-developer');
-    expect(lc.transition('T', 'review', '+backend-developer').status).toBe('review');
+    expect(lc.transition('T', 'test', '+backend-developer').status).toBe('test');
+    expect(lc.transition('T', 'review', '+qa-engineer').status).toBe('review');
     expect(lc.transition('T', 'done', '+qa-engineer').status).toBe('done');
   });
 
@@ -100,6 +101,88 @@ describe('ItemLifecycle.transition — happy paths', () => {
     expect(lc.transition('T1', 'cancel', '+backend-developer').status).toBe('cancelled');
     expect(lc.transition('T2', 'cancel', '+backend-developer').status).toBe('cancelled');
   });
+
+  it('in_progress → test → review (gate-join all-pass path)', () => {
+    const lc = makeLifecycle();
+    lc.create({ id: 'T', type: 'task', title: 't' });
+    lc.transition('T', 'start', '+backend-developer');
+    expect(lc.transition('T', 'test', '+backend-developer').status).toBe('test');
+    expect(lc.transition('T', 'review', '+qa-engineer').status).toBe('review');
+  });
+
+  it('test → bounce → in_progress (gate fail), then re-test → review → done', () => {
+    const lc = makeLifecycle();
+    lc.create({ id: 'T', type: 'task', title: 't' });
+    lc.transition('T', 'start', '+backend-developer');
+    lc.transition('T', 'test', '+backend-developer');
+    expect(
+      lc.transition('T', 'bounce', '+qa-engineer', 'code_review failed').status,
+    ).toBe('in_progress');
+    lc.transition('T', 'test', '+backend-developer');
+    expect(lc.transition('T', 'review', '+qa-engineer').status).toBe('review');
+    expect(lc.transition('T', 'done', '+qa-engineer').status).toBe('done');
+  });
+
+  it('review → bounce → in_progress (UAT reject), then test → review → done', () => {
+    const lc = makeLifecycle();
+    lc.create({ id: 'T', type: 'task', title: 't' });
+    lc.transition('T', 'start', '+backend-developer');
+    lc.transition('T', 'test', '+backend-developer');
+    lc.transition('T', 'review', '+qa-engineer');
+    expect(lc.transition('T', 'bounce', '+prime', 'uat reject').status).toBe(
+      'in_progress',
+    );
+    lc.transition('T', 'test', '+backend-developer');
+    expect(lc.transition('T', 'review', '+qa-engineer').status).toBe('review');
+    expect(lc.transition('T', 'done', '+qa-engineer').status).toBe('done');
+  });
+
+  it('0-gate item still routes through test (mandatory test column, §5.8)', () => {
+    // Even with no gates selected, the orchestrator runs the join from `test`
+    // and moves test → review. There is no in_progress → review shortcut.
+    const lc = makeLifecycle();
+    lc.create({ id: 'T', type: 'task', title: 't' });
+    lc.transition('T', 'start', '+backend-developer');
+    expect(lc.transition('T', 'test', '+backend-developer').status).toBe('test');
+    expect(lc.transition('T', 'review', '+qa-engineer').status).toBe('review');
+  });
+
+  it('block from test: in_progress → test → block → blocked → unblock → in_progress', () => {
+    const lc = makeLifecycle();
+    lc.create({ id: 'T', type: 'task', title: 't' });
+    lc.transition('T', 'start', '+backend-developer');
+    lc.transition('T', 'test', '+backend-developer');
+    expect(lc.transition('T', 'block', '+qa-engineer', 'flaky env').status).toBe(
+      'blocked',
+    );
+    expect(lc.transition('T', 'unblock', '+backend-developer').status).toBe(
+      'in_progress',
+    );
+  });
+
+  it('cancel works from test', () => {
+    const lc = makeLifecycle();
+    lc.create({ id: 'T', type: 'task', title: 't' });
+    lc.transition('T', 'start', '+backend-developer');
+    lc.transition('T', 'test', '+backend-developer');
+    expect(lc.transition('T', 'cancel', '+backend-developer').status).toBe(
+      'cancelled',
+    );
+  });
+
+  it('full bounce loop reaches done: start→test→bounce→test→review→bounce→test→review→done', () => {
+    const lc = makeLifecycle();
+    lc.create({ id: 'T', type: 'task', title: 't' });
+    lc.transition('T', 'start', '+backend-developer');
+    lc.transition('T', 'test', '+backend-developer');
+    lc.transition('T', 'bounce', '+qa-engineer', 'gate fail'); // back to dev
+    lc.transition('T', 'test', '+backend-developer');
+    lc.transition('T', 'review', '+qa-engineer');
+    lc.transition('T', 'bounce', '+prime', 'uat reject'); // back to dev
+    lc.transition('T', 'test', '+backend-developer');
+    lc.transition('T', 'review', '+qa-engineer');
+    expect(lc.transition('T', 'done', '+qa-engineer').status).toBe('done');
+  });
 });
 
 describe('ItemLifecycle.transition — illegal moves', () => {
@@ -115,7 +198,8 @@ describe('ItemLifecycle.transition — illegal moves', () => {
     const lc = makeLifecycle();
     lc.create({ id: 'T', type: 'task', title: 't' });
     lc.transition('T', 'start', '+backend-developer');
-    lc.transition('T', 'review', '+backend-developer');
+    lc.transition('T', 'test', '+backend-developer');
+    lc.transition('T', 'review', '+qa-engineer');
     lc.transition('T', 'done', '+qa-engineer');
     expect(() => lc.transition('T', 'start', '+backend-developer')).toThrow(
       IllegalTransitionError,
@@ -134,6 +218,62 @@ describe('ItemLifecycle.transition — illegal moves', () => {
   it('throws a clear error for an unknown item id', () => {
     const lc = makeLifecycle();
     expect(() => lc.transition('NOPE', 'start', '+backend-developer')).toThrow(/not found/i);
+  });
+
+  it('rejects in_progress → review (must go through test)', () => {
+    const lc = makeLifecycle();
+    lc.create({ id: 'T', type: 'task', title: 't' });
+    lc.transition('T', 'start', '+backend-developer');
+    expect(() => lc.transition('T', 'review', '+backend-developer')).toThrow(
+      IllegalTransitionError,
+    );
+  });
+
+  it('rejects in_progress → done', () => {
+    const lc = makeLifecycle();
+    lc.create({ id: 'T', type: 'task', title: 't' });
+    lc.transition('T', 'start', '+backend-developer');
+    expect(() => lc.transition('T', 'done', '+qa-engineer')).toThrow(
+      IllegalTransitionError,
+    );
+  });
+
+  it('rejects test → done (must pass review first)', () => {
+    const lc = makeLifecycle();
+    lc.create({ id: 'T', type: 'task', title: 't' });
+    lc.transition('T', 'start', '+backend-developer');
+    lc.transition('T', 'test', '+backend-developer');
+    expect(() => lc.transition('T', 'done', '+qa-engineer')).toThrow(
+      IllegalTransitionError,
+    );
+  });
+
+  it('rejects to_do → test (must start first)', () => {
+    const lc = makeLifecycle();
+    lc.create({ id: 'T', type: 'task', title: 't' });
+    expect(() => lc.transition('T', 'test', '+backend-developer')).toThrow(
+      IllegalTransitionError,
+    );
+  });
+
+  it('rejects bounce from in_progress (only from test or review)', () => {
+    const lc = makeLifecycle();
+    lc.create({ id: 'T', type: 'task', title: 't' });
+    lc.transition('T', 'start', '+backend-developer');
+    expect(() => lc.transition('T', 'bounce', '+backend-developer')).toThrow(
+      IllegalTransitionError,
+    );
+  });
+
+  it('rejects review → test (re-test only via bounce → in_progress)', () => {
+    const lc = makeLifecycle();
+    lc.create({ id: 'T', type: 'task', title: 't' });
+    lc.transition('T', 'start', '+backend-developer');
+    lc.transition('T', 'test', '+backend-developer');
+    lc.transition('T', 'review', '+qa-engineer');
+    expect(() => lc.transition('T', 'test', '+backend-developer')).toThrow(
+      IllegalTransitionError,
+    );
   });
 });
 
@@ -169,7 +309,8 @@ describe('ItemLifecycle.listOpen', () => {
     lc.create({ id: 'T4', type: 'task', title: 't4' });
     lc.transition('T2', 'start', '+backend-developer'); // in_progress
     lc.transition('T3', 'start', '+backend-developer');
-    lc.transition('T3', 'review', '+backend-developer');
+    lc.transition('T3', 'test', '+backend-developer');
+    lc.transition('T3', 'review', '+qa-engineer');
     lc.transition('T3', 'done', '+qa-engineer'); // done — terminal
     lc.transition('T4', 'cancel', '+backend-developer'); // cancelled — terminal
 
