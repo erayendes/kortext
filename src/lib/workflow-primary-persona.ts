@@ -17,7 +17,8 @@ const WORKFLOW_PERSONA: Record<string, string> = {
   'development-cycle': '+backend-developer',
   'test-cycle': '+qa-engineer',
   'deployment-cycle': '+devops-engineer',
-  'incident-pipeline': '+devops-engineer',
+  'rollback-pipeline': '+devops-engineer',
+  'hotfix-pipeline': '+assignee',
 };
 
 export function primaryPersonaFor(workflowId: string): string {

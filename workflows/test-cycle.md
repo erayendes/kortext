@@ -27,4 +27,6 @@
    - approver: +prime
    - outputs: item-accepted
 
-**Sonraki akış:** Seçili gate'ler + (varsa) UAT pass → motor değişikliği `development`'a merge eder, item `done`; item bir epic'i bitirdiyse `deployment-cycle` (staging) tetiklenir ve gate sonuçlarından toplu denetim raporu üretilir.
+Seçili gate'ler + (varsa) UAT pass → motor değişikliği `development`'a merge eder, item `done`. Gate sonuçlarından toplu denetim raporu üretilir.
+
+**Sonraki:** Item burada biter. Item bir epic'i kapatıyorsa motor `deployment-cycle`'ı staging milestone'u olarak tetikler — koşullu, motor işi (§5.9); otomatik zincir değil.
