@@ -91,4 +91,4 @@ Yön kararı [DECISIONS Bölüm 0](./DECISIONS.md)'da onaylandı. Sıralı imple
 
 ## Yapılanlar (referans)
 
-[DECISIONS.md §5 — Tarihçe](./DECISIONS.md#bölüm-5--tarihçe-özet) tüm fazların özetini içerir. Detay için `git log development/HANDOVER.md`.
+[DECISIONS.md Bölüm 8 — Tarihçe](./DECISIONS.md#bölüm-8--tarihçe-özet) tüm fazların özetini içerir. Detay için `git log development/HANDOVER.md`.

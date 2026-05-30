@@ -381,11 +381,11 @@ ortam:  local      staging        preprod      prod
 
 ---
 
-## Bölüm 3 — v3.0 → v3.1.x kararları (Faz 0-12 özeti, HANDOVER §1-§64)
+## Bölüm 6 — v3.0 → v3.1.x kararları (Faz 0-12 özeti, HANDOVER §1-§64)
 
 > 64 numaralı tasarım kararı toplam. Aşağıdaki kategorize özet **bu maddelerin kanonik kaydıdır** (eski `HANDOVER-v3.md` docs/ → development/ konsolidasyonunda silindi). Komit-bazlı tarihçe için `git log development/DECISIONS.md`.
 
-### 3.1 Stack + core (#1-#18 — Faz 0-5)
+### 6.1 Stack + core (#1-#18 — Faz 0-5)
 
 1. **`KORTEXT_PORT` ≠ `PORT`** — Preview tooling `PORT=5173` enjekte ediyor; backend kendi env değişkenini kullanır.
 2. **better-sqlite3 ≥ 12.x** — Node 26 V8 ABI değişiklikleri.
@@ -406,7 +406,7 @@ ortam:  local      staging        preprod      prod
 17. **İş başına 1 worktree, paralel iş = paralel worktree**.
 18. **Persona-routed executor**: persona handle → executor map.
 
-### 3.2 React Dashboard + MCP (#19-#33 — Faz 6-7)
+### 6.2 React Dashboard + MCP (#19-#33 — Faz 6-7)
 
 19. **TanStack Router + hash history** — Express SPA fallback gerekmiyor.
 20. **Tailwind v4 `@theme inline` + CSS variables** — palette tek kaynak.
@@ -424,7 +424,7 @@ ortam:  local      staging        preprod      prod
 32. **Tool envelope = JSON text + structuredContent** — eski + yeni client uyumu.
 33. **`approve_blueprint` = frontmatter rewrite** — BlueprintWatcher'ın izlediği dosyaya `status: approved` yaz.
 
-### 3.3 CLI + Test + Yayın (#34-#52 — Faz 8-10 + Post-10)
+### 6.3 CLI + Test + Yayın (#34-#52 — Faz 8-10 + Post-10)
 
 34. **Üç pure command modülü + ince bin layer** — `server/cli/*` console-free.
 35. **`buildServeCommands` DI ile testlenebilir** — `existsImpl` parametresi spawn-free unit test.
@@ -446,7 +446,7 @@ ortam:  local      staging        preprod      prod
 51. **app.listen() error handler eksik (v3.0.1 borç)** — EADDRINUSE sessiz fail.
 52. **Lokal install pattern UAT için** — `npm pack` + `npm install -g ./kortext-X.Y.Z.tgz`.
 
-### 3.4 UI v4 wireframe alignment + onboarding (#53-#58 — Faz 11)
+### 6.4 UI v4 wireframe alignment + onboarding (#53-#58 — Faz 11)
 
 53. **`test` status additive migration** — SQLite ALTER CHECK desteklemediği için backlog_items rebuild pattern.
 54. **`/api/decisions` minimal endpoint** — Memory Decisions tab tek tüketici.
@@ -455,7 +455,7 @@ ortam:  local      staging        preprod      prod
 57. **`React.ReactNode` yerine named import** — `import { type ReactNode } from 'react'` (lint kuralı).
 58. **Heredoc fallback Write hook için** — sanitization katmanı (marked + DOMPurify) zaten yerinde.
 
-### 3.5 Faz 12 mimari refactor (#59-#64)
+### 6.5 Faz 12 mimari refactor (#59-#64)
 
 59. **`outputIndexer` callback slot** = engine-adapter ayrımı — worker-pool reports indexer'ı doğrudan import etmek yerine `SafetyGuards`'a opsiyonel callback.
 60. **Prompt cache disipline'i = stable prefix** — cache hit'in temeli `--append-system-prompt`'a byte-identical içerik.
@@ -466,9 +466,9 @@ ortam:  local      staging        preprod      prod
 
 ---
 
-## Bölüm 4 — Tasarım kararları (Faz 6 + v3 palette geçişi)
+## Bölüm 7 — Tasarım kararları (Faz 6 + v3 palette geçişi)
 
-### 4.1 Proje-seviyesi tasarım kararları
+### 7.1 Proje-seviyesi tasarım kararları
 
 | Karar | Seçim | Gerekçe |
 |---|---|---|
@@ -478,7 +478,7 @@ ortam:  local      staging        preprod      prod
 | ~~Multi-project~~ ⚠️ | ~~YOK — her kurulum tek proje~~ | **Bölüm 0'da (2026-05-27) geri çevrildi** — v3.1 tek-daemon-çok-proje mimarisine geçecek |
 | Light theme | v0.2'ye ertelendi | Şimdilik dark only |
 
-### 4.2 Renk paleti — v2 indigo → v3 vibrant purple (2026-05-21)
+### 7.2 Renk paleti — v2 indigo → v3 vibrant purple (2026-05-21)
 
 **Eski v2 (indigo + cyan signal):**
 ```css
@@ -496,7 +496,7 @@ ortam:  local      staging        preprod      prod
 
 Felsefe: **Vibrant accent + Enterprise discipline**. Linear, Stripe Dashboard, Notion referansı. "Karnaval değil, control panel."
 
-### 4.3 Orbit ekranı — 4 iterasyon sonrası bulunan paradigm
+### 7.3 Orbit ekranı — 4 iterasyon sonrası bulunan paradigm
 
 1. **v1 — Radyal SVG circle graph**: node'lar küçük, generic AI mind map hissi → reddedildi
 2. **v2 — Mission Floor pod layout**: 3 squad sütun → orbit metaforu kayboldu, kanban hissi → reddedildi
@@ -505,7 +505,7 @@ Felsefe: **Vibrant accent + Enterprise discipline**. Linear, Stripe Dashboard, N
 
 **Anahtar prensip:** Radyal yerleşim hiyerarşiyi anlatır, dikdörtgen kartlar durumu anlatır.
 
-### 4.4 v4 wireframe = TEK visual spec (2026-05-22)
+### 7.4 v4 wireframe = TEK visual spec (2026-05-22)
 
 `development/concepts/wireframe-v4-final.html` aktif visual spec (~2400 satır). Eski mockup'lar (`mockup-v2`, `mockup-v3-palette-preview`, `wireframe-v3-ops`) **artık referans değil** — `development/concepts/` altında arşiv olarak duruyor.
 
@@ -517,7 +517,7 @@ Vercel discipline:
 - 200ms ease-out only
 - No glow, no constant pulse, no fancy graphs
 
-### 4.5 14 ajan persona renkleri (v3 palette)
+### 7.5 14 ajan persona renkleri (v3 palette)
 
 `src/lib/persona-colors.ts` — 14 persona handle → hex + initials:
 
@@ -540,7 +540,7 @@ Vercel discipline:
 
 `+prime` (Eray, sentetik) — amber `#F59E0B` (cortex/sun metaforu).
 
-### 4.6 Memory + Inbox + Reports tasarım kararları
+### 7.6 Memory + Inbox + Reports tasarım kararları
 
 | Karar | Detay |
 |---|---|
@@ -551,11 +551,11 @@ Vercel discipline:
 | Reports 3 mod | view / edit / revise (sibling div'ler display:none ile toggle) |
 | Reports revise form | Required feedback (5+ char) |
 
-### 4.7 Settings — 8 pane
+### 7.7 Settings — 8 pane
 
 Project / Agents (+models merged) / Rules / Workflows / Hooks / Integrations / Environment / Danger zone. Spec §10: Settings/Agents/Workflows/Rules **readonly** (paket içi `.md` render; yazma v3.2'ye).
 
-### 4.8 Backlog kararları
+### 7.8 Backlog kararları
 
 | Karar | Detay |
 |---|---|
@@ -567,7 +567,7 @@ Project / Agents (+models merged) / Rules / Workflows / Hooks / Integrations / E
 
 ---
 
-## Bölüm 5 — Tarihçe (özet)
+## Bölüm 8 — Tarihçe (özet)
 
 **v3.0 Roadmap — Faz 0-10 (2026-05-21 → 2026-05-22):**
 | Faz | Tag | Sonuç |
@@ -603,7 +603,7 @@ Project / Agents (+models merged) / Rules / Workflows / Hooks / Integrations / E
 
 ---
 
-## Bölüm 6 — Reddedilenler
+## Bölüm 9 — Reddedilenler
 
 Bu maddeleri ne kadar mantıklı görünseler de tekrar gündeme getirme:
 

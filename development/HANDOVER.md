@@ -77,7 +77,7 @@ Detaylı liste [TODO.md](./TODO.md)'de. Kritik üçü:
 ## 7. Linkler
 
 - Mimari: [ARCHITECTURE.md](./ARCHITECTURE.md) (gotcha'lar §16'da)
-- Kararlar: [DECISIONS.md](./DECISIONS.md) (Bölüm 0 = CLI redesign, Bölüm 1 = Faz 13, Bölüm 2 = v3.1 refactor, Bölüm 5 = Development + Test Lifecycle redesign)
+- Kararlar: [DECISIONS.md](./DECISIONS.md) (Bölüm 0 = CLI redesign, Bölüm 1 = Faz 13, Bölüm 2 = v3.1 refactor, Bölüm 5 = Development + Test Lifecycle redesign, Bölüm 6 = Faz 0-12 özeti, Bölüm 7 = tasarım, Bölüm 8 = tarihçe, Bölüm 9 = reddedilenler)
 - Tasarım: [DESIGN.md](./DESIGN.md)
 - UAT rehberi: [UAT-GUIDE.md](./UAT-GUIDE.md)
 - Açık iş listesi: [TODO.md](./TODO.md)
