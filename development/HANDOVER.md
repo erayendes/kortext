@@ -25,20 +25,24 @@ Faz 13 tamamlandı: engine output-resolver, callout → approver-based gate, `.k
 
 Spec: [DECISIONS.md Bölüm 5](./DECISIONS.md) (design level, Eray onayladı). Süreç §5.10: **önce tüm workflow dizini, sonra motor** — markdown ucuz, motor kodu tasarım donunca yazılır. Bitmiş workflow dizini + Bölüm 5 = motorun donmuş spec'i.
 
-**Karar özeti:** kolonlar `to_do → in_progress → test → review → done` (`merge` kolonu YOK). 5 planning-seçimli gate (code_review/quality_control/security_control/design_review/uat); `test`'tekiler PARALEL, join motorun. Sahip (assignee=developer) sabit kalır, "sıra kimde" kolon+bayraktan türetilir. devops per-item'dan çıktı (merge+kapanış motorun; devops → deployment-cycle). İki katman: substrat (motor, her zaman) vs agent gate (yargı, planning seçer).
+**Karar özeti:** kolonlar `to_do → in_progress → test → review → done` (`merge` kolonu YOK). 5 planning-seçimli gate; `test`'tekiler PARALEL, join motorun. Sahip (assignee=developer) sabit, "sıra kimde" kolon+bayraktan türetilir. Deployment = ortam merdiveni (item→dev, epic→staging, version→preprod, onay→prod). spike otonom+her-zaman-gate. maintenance silindi. rollback+hotfix→incident.
 
-| Adım | Durum |
+**Workflow turu TAMAMLANDI** — 9 workflow (rakamsız), 382/382 test + typecheck yeşil, tüm DAG'lar elle+motorla doğrulandı.
+
+| Workflow | Durum |
 |---|---|
-| DECISIONS Bölüm 5 (spec) | ✅ son haline yazıldı |
-| `development-cycle.md` | ✅ kısaltıldı — sadece implement → `test`'e taşı, orada biter |
-| `planning-pipeline.md` gate seçimi | ✅ `code_review`+`uat` eklendi, `security_check→security_control` |
-| `05-test-cycle.md` | ⏳ SIRADAKİ — 5 gate, paralel gate-run, motor join |
-| hotfix / rollback / deployment / maintenance tutarlılık | ⏳ bekliyor |
-| `02b-spike-workflow`→`spike-pipeline`, `09-maintenance-cycle`→`maintenance-pipeline` rename | ⏳ bekliyor |
-| ACCESS.md "Ortamlar" bölümü (§5.6) | ⏳ bekliyor |
-| Motor/şema epic (§5.9, 11 madde) | ⏳ EN SON (workflow dizini bitince) |
+| `development-cycle` | ✅ implement → `test`'e taşı, orada biter |
+| `test-cycle` | ✅ 5 gate paralel + UAT fan-in; gate-run kaydı (rapor yazmaz); code-review SECURITY okumaz |
+| `planning-pipeline` | ✅ gate seçimi (`code_review`+`uat`, `security_check→security_control`) |
+| `deployment-cycle` | ✅ ortam merdiveni (epic→staging 5 paralel rapor, version→preprod, onay→main+prod); red→bug |
+| `incident-pipeline` | ✅ rollback+hotfix birleşik (triaj→dal→ortak kapanış) |
+| `spike-pipeline` | ✅ otonom tetik + her-zaman prime gate + sade rapor |
+| `environment-setup` | ✅ ACCESS "Ortamlar" bölümü (§5.6/§5.11) |
+| `new/existing-project-analysis` | ✅ tutarlı (foundation üretici, dokunulmadı) |
+| ~~`maintenance-cycle`~~ | ✅ SİLİNDİ (§5.12 — çıktısı planning/backlog'a eriyor) |
+| Motor/şema epic (§5.9) | ⏳ SIRADAKİ — workflow dizini donmuş spec |
 
-**Disipline:** workflow markdown'ları planning ile aynı ev-stilinde (normal cümle, `## Faz`+`1. **+persona:**`), parser'a dokunma; her dosyada netleştir: kim hangi reference'ı okur, foundation OKUMA. Motor implikasyonları çıktıkça §5.9'a biriktir.
+**Disipline:** workflow markdown'ları ev-stilinde (normal cümle, `## Faz`+`1. **+persona:**`), parser'a dokunma; `inputs:` tam path (`.kortext/references/X.md`), prose'da çıplak rozet (`STACK`); foundation OKUMA (analiz hariç). Motor implikasyonları §5.9'a biriktir.
 
 ## 4. Bekleyen — content review turu
 
@@ -54,7 +58,7 @@ Spec: [DECISIONS.md Bölüm 5](./DECISIONS.md) (design level, Eray onayladı). S
 Bilinen risk noktaları (Faz 13 hızlı yazımdan):
 - `existing-project-analysis.md` — pattern apply (~30 sn yazıldı), kalibre gerek
 - `02b-spike-workflow.md` — dinamik persona oversimplification
-- `development-cycle.md` + `05-test-cycle.md` — lifecycle redesign aktif turu, bkz. §3 (DECISIONS Bölüm 5 spec). Motor/şema desteği §5.9'da listeli, en sona bırakıldı
+- `development-cycle.md` + `test-cycle.md` — lifecycle redesign aktif turu, bkz. §3 (DECISIONS Bölüm 5 spec). Motor/şema desteği §5.9'da listeli, en sona bırakıldı
 - `07-rollback-pipeline.md` — workflow gate yok kararı (incident-driven), sorgulanabilir
 - `09-maintenance-cycle.md` — engine bookkeeping step #2 yeni semantik, test edilmedi
 

@@ -12,14 +12,12 @@ const WORKFLOW_PERSONA: Record<string, string> = {
   'new-project-analysis': '+operation-manager',
   'existing-project-analysis': '+engineering-manager',
   'planning-pipeline': '+operation-manager',
-  '02b-spike-workflow': '+engineering-manager',
+  'spike-pipeline': '+engineering-manager',
   'environment-setup': '+devops-engineer',
   'development-cycle': '+backend-developer',
-  '05-test-cycle': '+qa-engineer',
-  '06-deployment-cycle': '+devops-engineer',
-  '07-rollback-pipeline': '+devops-engineer',
-  '08-hotfix-pipeline': '+backend-developer',
-  '09-maintenance-cycle': '+engineering-manager',
+  'test-cycle': '+qa-engineer',
+  'deployment-cycle': '+devops-engineer',
+  'incident-pipeline': '+devops-engineer',
 };
 
 export function primaryPersonaFor(workflowId: string): string {

@@ -10,4 +10,4 @@
    - inputs: `.kortext/references/STACK.md`, `.kortext/references/STRUCTURE.md`, `.kortext/references/GLOSSARY.md`, `.kortext/references/SECURITY.md`, `.kortext/references/TEST.md`
    - outputs: item-in-test
 
-**Sonraki akış:** `05-test-cycle`
+**Sonraki akış:** `test-cycle`

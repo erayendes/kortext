@@ -247,7 +247,7 @@ v3.0/v3.1 production'da kullanıcı yok. Geriye dönük destek gerekmiyor:
 
 ## Bölüm 5 — Development + Test Lifecycle redesign (2026-05-29 → 2026-05-30)
 
-**Status:** Eray onayladı (design level). development-cycle **kısaltıldı**, test-cycle **yeniden tasarlandı** (5 gate, paralel, gate-run modeli). `merge` kolonu **kaldırıldı**; devops-control per-item gate'lerden **çıkarıldı** (A kararı). Workflow markdown'ları bu modele göre yazılacak; motor/şema implementation'ı bekliyor (5.9). Süreç: **önce tüm workflow dizini, sonra motor** (5.10).
+**Status:** Eray onayladı (design level). **Tüm workflow dizini bu modele göre yazıldı/yeniden adlandırıldı** (9 workflow); motor/şema implementation'ı bekliyor (5.9). development-cycle kısaltıldı, test-cycle 5-gate paralel gate-run, deployment ortam merdiveni, incident birleşik, spike otonom+gate, maintenance silindi. Süreç: **önce tüm workflow dizini, sonra motor** (5.10).
 
 ### 5.1 Engine-owns-mechanics + iki katman (substrat vs agent gate)
 
@@ -280,7 +280,7 @@ development sonrası tüm yaşam döngüsü = **seçilebilir gate'ler kümesi**.
 
 | Gate etiketi | Persona | Faz | Okur (references-only) |
 |---|---|---|---|
-| `code_review` | `+engineering-manager` | test (paralel) | STACK, STRUCTURE, GLOSSARY, API, DATABASE, SECURITY |
+| `code_review` | `+engineering-manager` | test (paralel) | STACK, STRUCTURE, GLOSSARY (+rol: API, DATABASE, DESIGN) |
 | `quality_control` | `+qa-engineer` | test (paralel) | TEST |
 | `security_control` | `+security-engineer` | test (paralel) | SECURITY |
 | `design_review` | `+designer` | test (paralel) | DESIGN |
@@ -328,6 +328,9 @@ ACCESS.md'ye "Ortamlar" bölümü: staging = **test verisi**, preprod = **canlı
   - **Join motorun işi:** paralelde "son persona" yok — motor "hepsi pass mi?"yi görür. Hepsi pass (veya 0 test-gate) → `review`. ≥1 fail → motor `in_progress`'e döndürür, **her gate kendi bulgu bölümünü** yazar (tek karışık blok değil), assignee'ye atar → dev-cycle baştan.
   - `review`: `uat` seçiliyse prime onayı (reject→in_progress); sonra motor mekanik kapanış: CI+conflict → merge→development → blocker temizle → handover üret → worktree/preview kapat → `done`.
 - Eski "Karar adımı" ve çift `review` set'i kalktı (test→review tek sahip: motorun join'i).
+- **Gate çıktısı = check, rapor değil (Eray kararı 2026-05-30):** her gate item'da bir **gate-run kaydı** bırakır (DB: pass/fail + kısa bulgu; fail'de developer onu görür). Gate başına markdown rapor dosyası ÜRETİLMEZ — her item'da 4 ayrı `*-reports` çoğu okunmayan gürültü + token. test-cycle gate'lerinin `outputs` = sadece `item-tested`. **Toplu denetim raporu** epic kapanışında motor tarafından üretilir (tüm item gate sonuçlarının özeti, tek okunan belge). gate-run şeması §5.9 #3; epic-close rapor üretimi §5.9 #8'e bağlı.
+- **code-review SECURITY okumaz:** EM gate'i `STACK`+`STRUCTURE`+`GLOSSARY` (+rol: API/DATABASE/DESIGN) okur; güvenlik ayrı gate (`security_control` → +security-engineer). Dar okuma = keskin rol = temiz paralel gate (5.1 turnusol).
+- **test-cycle dosya rename:** `05-test-cycle.md` → `test-cycle.md` (rakam-önek kaldırıldı; spike/maintenance rename'leriyle aynı sadeleştirme).
 
 ### 5.9 Motor / şema iş listesi (implementation bekliyor)
 
@@ -345,7 +348,35 @@ ACCESS.md'ye "Ortamlar" bölümü: staging = **test verisi**, preprod = **canlı
 
 ### 5.10 Süreç: önce workflow dizini, sonra motor
 
-Tüm workflow markdown'ları **önce** bu modele göre yazılır/düzeltilir; **motor işi (5.9) sona** bırakılır. Sebep: markdown ucuz — tasarım kayarsa öncekiler kolay düzeltilir; motor kodu erken yazılırsa tasarım kayınca çöpe gider. Bitmiş workflow dizini + bu bölüm = **motorun donmuş spec'i**. Sıra: test-cycle → planning-pipeline (gate seçimi) → hotfix/rollback/deployment/maintenance tutarlılık → spike/maintenance rename. Workflow yazarken yalnızca **parse/yeşil** kalması için minimal motor dokunuşu olabilir; davranışsal motor işi ertelenir.
+Tüm workflow markdown'ları **önce** bu modele göre yazılır/düzeltilir; **motor işi (5.9) sona** bırakılır. Sebep: markdown ucuz — tasarım kayarsa öncekiler kolay düzeltilir; motor kodu erken yazılırsa tasarım kayınca çöpe gider. Bitmiş workflow dizini + bu bölüm = **motorun donmuş spec'i**. Workflow yazarken yalnızca **parse/yeşil** kalması için minimal motor dokunuşu olabilir; davranışsal motor işi ertelenir.
+
+### 5.11 Deployment = ortam merdiveni (item→dev, epic→staging, version→preprod, onay→prod)
+
+Branch modeli **sıralı tek-trunk** (git-flow eksi release branch, artı ortam merdiveni; version'lar sıralı, örtüşmez):
+
+```
+feature worktree → development → main
+       ↑               ↑           ↑
+   her item      (entegrasyon)  preprod onayı
+ortam:  local      staging        preprod      prod
+        (item)     (epic done)    (version done)(onay)
+```
+
+- **item done** → motor feature worktree'yi `development`'a merge eder (test-cycle kapanışı).
+- **epic done** → motor `development`'ı **staging**'e (test verisi) deploy eder; o epic'te gate koşmuş personalar tek-dosya rapor yazar (qa/security/designer/EM/devops, paralel), motor prime'a **staging onayı** sorar.
+- **version done** (tüm epic'ler staging onaylı) → motor **preprod**'a (canlı veri, KVKK/GDPR) deploy eder; devops doğrular, motor prime'a **preprod onayı** sorar.
+- **preprod onayı** → motor `development`'ı `main`'e merge eder + **prod** deploy + tag. `main` = release-only (canlıda ne var).
+- **Red (staging/preprod)** → motor gerekçeyle bug açar, epic owner'a atar; bug çözülmeden ilerlemez.
+- **`main` nedir:** sadece prod release hedefi. Tüm entegrasyon `development`'ta; ortamlar (staging/preprod/prod) ayrı branch değil, `development`/`main`'in deploy fotoğrafı.
+- **Monitoring:** ajan "15 dk izle" YAPMAZ (insan davranışı; ajan bloke bekleyemez). Ajan ölçülebilir eşik + alarm **tanımlar**; motor deploy sonrası gecikmeli kontrolü planlar (5.1 turnusol: ajan=yargı, motor=zaman).
+
+### 5.12 spike otonom+gate · maintenance silindi · rollback+hotfix → incident
+
+- **maintenance-pipeline SİLİNDİ:** ürettiği her şey (debt gözden geçirme, yeni debt/bug, bağımlılık/güvenlik taraması çıktısı) zaten **planning + backlog girişi + development**'a eriyor. "Bakım modu" otonom sistemde anti-pattern — backlog sürekli canlı; periyodiklik bir tetikleme/zamanlama meselesi, ayrı workflow değil. Tek "kendine ait" üreticisi yoktu.
+- **spike-pipeline TUTULDU + yeniden modellendi:** tek "karar/bilgi (ADR) üreten" workflow. Non-coder prime teknik kararı veremez → silmek belirsizliği çözülemez yere iter. Model: **otonom tetik** (planning'de planlı / development'ta runtime tespiti — prime "çalıştırayım mı" sorusu YOK) → otonom koş → **her zaman** prime'a sade rapor + `+prime` gate (belirsizlik/araştırma/seçim/gerekçe/elenenler/maliyet). Onay gelmeden karara bağlı geliştirme başlamaz. Gate "haber" değil **kapı** — "sessiz pahalı commitment" riskini kapatır. spike nadir olduğu için her-zaman-gate darboğaz değil.
+- **rollback + hotfix → incident-pipeline (BİRLEŞTİ):** triaj severity + yol (rollback/hotfix) seçer → seçilen yol koşar (DAG'da ikisi paralel-hazır, motor seçilmeyeni no-op geçer) → ortak kapanış (prod smoke → prime onayı → post-mortem `write_learned` + bug done). Ortak yarı (triaj/severity/bildirim/kök-neden) tek yerde, DRY. `!trigger-rollback`/`!start-hotfix` ikisi de bu pipeline'a girer.
+- **rename (rakam-önek kaldırıldı):** `04→development-cycle`, `05→test-cycle`, `06→deployment-cycle`, `02b→spike-pipeline`; `07-rollback`+`08-hotfix`→`incident-pipeline`; `09-maintenance` silindi. Sonuç: **9 workflow**, hepsi rakamsız.
+- **Raporlar tek-dosya:** per-file `_<slug>_<ts>` yerine `test-reports.md`/`security-reports.md`/... (üste eklenir, insan okuru için). Frontmatter/append-mode motor işi (5.9 #3'e bağlı).
 
 ---
 

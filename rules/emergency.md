@@ -26,9 +26,7 @@ Production ortamında kritik hata tespit edilirse aşağıdaki karar kuralı uyg
 
 | Durum | Akış |
 | :--- | :--- |
-| Son deployment kaynaklı ve güvenli şekilde geri alınabilir | `workflows/07-rollback-pipeline.md` |
-| Rollback veri kaybı, irreversible migration veya daha büyük risk doğuruyorsa | `workflows/08-hotfix-pipeline.md` |
-| Hata eski sürümde de vardı veya izole bir modülde hızlı düzeltilebilir | `workflows/08-hotfix-pipeline.md` |
+| Production incident (rollback veya hotfix gerektiren) | `workflows/incident-pipeline.md` (triaj yolu seçer) |
 | Etki sınırlı ve workaround varsa | `workflows/development-cycle.md` içinde Bug/Debt olarak planlanır |
 
 P0 durumda +devops-engineer veya ilgili sorumlu ajan +prime onayını beklemeden güvenli rollback/hotfix hazırlığını başlatabilir. +prime bilgilendirmesi eş zamanlı yapılır.
@@ -61,7 +59,7 @@ Sistem kesintilerinde ajan aşağıdaki adımları sırayla uygular. Adım tüke
 
 **Kategori bazlı yönlendirme:**
 - **Network / auth hatası** (403, 401, SSH): +devops-engineer → credentials kontrol
-- **Merge conflict**: +devops-engineer → `07-rollback-pipeline.md`'ye bak, çözülmezse +engineering-manager
+- **Merge conflict**: +devops-engineer → `incident-pipeline.md`'ye bak, çözülmezse +engineering-manager
 - **Permission denied**: +prime → repo access kontrol
 - **Repository corrupt / object hatası**: +devops-engineer → +prime
 

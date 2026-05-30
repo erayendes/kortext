@@ -40,12 +40,12 @@
 - `hotfix/*` önce `main` hedefine alınır, sonra aynı değişiklik `development` hattına geri taşınır.
 - Production release `development` içeriğinin `main` hattına kontrollü alınmasıdır.
 - `main` ve `development` branch'leri hiçbir durumda yer değiştirmez.
-- Production sorunu çıkarsa çözüm `07-rollback-pipeline.md` veya `08-hotfix-pipeline.md` üzerinden yapılır; branch geçmişi yeniden yazılmaz.
+- Production sorunu çıkarsa çözüm `incident-pipeline.md` üzerinden yapılır (triaj rollback/hotfix yolunu seçer); branch geçmişi yeniden yazılmaz.
 - Merge yöntemi proje ayarına bağlıdır; varsayılan tercih `Squash and Merge` ile item geçmişini sade tutmaktır.
 
 ## PR ve Onay Kuralları
 
-- PR açıldığında doğrulama süreci `workflows/05-test-cycle.md` standardına göre yürütülür.
+- PR açıldığında doğrulama süreci `workflows/test-cycle.md` standardına göre yürütülür.
 - `main` hedefine giden PR'larda +prime onayı zorunludur.
 - Teknik inceleme +engineering-manager tarafından yapılır.
 - Gerekli Review Gates varsa +qa-engineer, +security-engineer ve +designer kontrolleri tamamlanmadan merge yapılmaz.
@@ -71,12 +71,11 @@ Refs: T01
 - Release candidate gerekiyorsa format: `vA.B.C-rcN`.
 - Build metadata gerekiyorsa format: `vA.B.C+build.N`.
 - Hotfix patch numarasını artırır: `v1.0.0` -> `v1.0.1`.
-- Release tag'i production doğrulaması başarıyla tamamlandıktan sonra `workflows/06-deployment-cycle.md` kapsamında +devops-engineer tarafından oluşturulur.
+- Release tag'i production doğrulaması başarıyla tamamlandıktan sonra `workflows/deployment-cycle.md` kapsamında +devops-engineer tarafından oluşturulur.
 
 ## Workflow Referansları
 
 - Normal geliştirme: `workflows/development-cycle.md`
-- Test ve doğrulama: `workflows/05-test-cycle.md`
-- Production deployment: `workflows/06-deployment-cycle.md`
-- Rollback: `workflows/07-rollback-pipeline.md`
-- Hotfix: `workflows/08-hotfix-pipeline.md`
+- Test ve doğrulama: `workflows/test-cycle.md`
+- Production deployment: `workflows/deployment-cycle.md`
+- Production incident (rollback/hotfix): `workflows/incident-pipeline.md`
