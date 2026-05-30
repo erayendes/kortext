@@ -7,6 +7,7 @@ import { HandoversRepository } from './handovers.ts';
 import { DecisionsRepository } from './decisions.ts';
 import { ReportsRepository } from './reports.ts';
 import { RunsRepository } from './runs.ts';
+import { GateRunsRepository } from './gate-runs.ts';
 import { PendingQuestionsRepository } from './pending-questions.ts';
 import { RuntimeArtifactsRepository } from './runtime-artifacts.ts';
 import { NotificationsRepository } from './notifications.ts';
@@ -24,6 +25,7 @@ export {
   DecisionsRepository,
   ReportsRepository,
   RunsRepository,
+  GateRunsRepository,
   PendingQuestionsRepository,
   RuntimeArtifactsRepository,
   NotificationsRepository,
@@ -42,6 +44,7 @@ export type Repositories = {
   decisions: DecisionsRepository;
   reports: ReportsRepository;
   runs: RunsRepository;
+  gateRuns: GateRunsRepository;
   pendingQuestions: PendingQuestionsRepository;
   runtimeArtifacts: RuntimeArtifactsRepository;
   notifications: NotificationsRepository;
@@ -61,6 +64,7 @@ export function createRepositories(db: Database.Database): Repositories {
     decisions: new DecisionsRepository(db),
     reports: new ReportsRepository(db),
     runs: new RunsRepository(db),
+    gateRuns: new GateRunsRepository(db),
     pendingQuestions: new PendingQuestionsRepository(db),
     runtimeArtifacts: new RuntimeArtifactsRepository(db),
     notifications: new NotificationsRepository(db),
