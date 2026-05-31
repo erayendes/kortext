@@ -4,6 +4,8 @@ import type { Executor } from '../engine/executor.ts';
 import type { WorkflowGraph } from '../engine/dag.ts';
 import type { ItemLifecycle } from '../engine/item-lifecycle.ts';
 import type { RunRegistry } from '../engine/run-registry.ts';
+import type { WorktreeHandle } from '../engine/worktree.ts';
+import type { ResolutionRegistry } from './resolution-registry.ts';
 import { runWorkflow } from '../engine/worker-pool.ts';
 
 /**
@@ -13,12 +15,22 @@ import { runWorkflow } from '../engine/worker-pool.ts';
  */
 export type WorktreeLease = {
   path: string;
+  /**
+   * The real WorktreeManager handle backing this lease — recorded in the
+   * resolution ledger so GitMerger (C2) can merge+tear down the item's worktree.
+   * null for mock acquirers (tests) that have no real handle.
+   */
+  handle?: WorktreeHandle | null;
   /** Tear down the worktree. failure → quarantine (kept for postmortem). */
   release: (opts: { success: boolean }) => Promise<void> | void;
 };
 
-/** Acquire a per-item worktree. Injected so tests mock git; real impl forks `development`. */
-export type AcquireItemWorktree = (itemId: string) => Promise<WorktreeLease>;
+/**
+ * Acquire a per-item worktree, keyed by the item's (pre-created) run id so the
+ * worktree branch/dir line up with the real run. Injected so tests mock git; the
+ * real impl forks `development` via WorktreeManager.
+ */
+export type AcquireItemWorktree = (itemId: string, runId: number) => Promise<WorktreeLease>;
 
 export type RunItemDeps = {
   repos: Repositories;
@@ -30,6 +42,13 @@ export type RunItemDeps = {
   acquireWorktree: AcquireItemWorktree;
   /** Live-cancellation registry (W1) so `block` can stop this item-run. */
   registry: RunRegistry;
+  /**
+   * The item→run ledger the real adapters resolve through (§5.14). When set,
+   * runItem records the spawned run's id + worktree (handle) so GitMerger (C2),
+   * QueueReviewApprover (C3) and AgentGateExecutor (C5) can resolve the item.
+   * Optional so the keystone's own unit tests can run without the composition.
+   */
+  resolution?: ResolutionRegistry;
   /** Actor recorded on lifecycle transitions/audit. Default 'orchestrator'. */
   by?: string;
 };
@@ -61,7 +80,7 @@ const READY: ReadonlySet<string> = new Set(['to_do', 'in_progress']);
  * Mock-first: the worktree acquirer is injected (real git lands in C-slices).
  */
 export async function runItem(itemId: string, deps: RunItemDeps): Promise<RunItemResult> {
-  const { repos, lifecycle, executor, graph, acquireWorktree, registry } = deps;
+  const { repos, lifecycle, executor, graph, acquireWorktree, registry, resolution } = deps;
   const by = deps.by ?? 'orchestrator';
 
   const item = repos.backlog.get(itemId);
@@ -78,32 +97,58 @@ export async function runItem(itemId: string, deps: RunItemDeps): Promise<RunIte
     lifecycle.transition(itemId, 'start', by);
   }
 
-  const lease = await acquireWorktree(itemId);
+  // Pre-create the item's dev-cycle run FIRST (FK closes: item_id is set) so the
+  // worktree — and the resolution ledger — key off a real run id. This is where
+  // the run/item impedance actually closes (§5.14); the engine then executes the
+  // dev-cycle steps against this same run (existingRun), so there's one run row.
+  const run0 = repos.runs.createRun({
+    workflow_id: graph.workflowId,
+    item_id: itemId,
+    status: 'queued',
+    worktree_path: null,
+    triggered_by: by,
+  });
+
+  // Per-item worktree (base=`development`), keyed by the run id; injected so tests mock git.
+  const lease = await acquireWorktree(itemId, run0.id);
+  repos.runs.setWorktreePath(run0.id, lease.path);
+  // Fill the ledger the real adapters resolve through (GitMerger handle C2, uat
+  // run id C3, gate run-context C5). Closure forgets it after a clean merge.
+  resolution?.record(itemId, {
+    runId: run0.id,
+    worktreePath: lease.path,
+    handle: lease.handle ?? null,
+  });
 
   let run: Run;
   try {
     const result = await runWorkflow(graph, executor, repos, {
-      itemId, // ← FK closure: the run row carries this item
+      existingRun: run0, // ← run pre-created above; the engine reuses it (no orphan)
+      itemId, // ← keep so the registry tags the run with this item (W1 block)
       worktreePath: lease.path,
       registry, // ← block can cancel the live run by item (W1)
       triggeredBy: by,
     });
     run = result.run;
   } catch (err) {
-    // The engine threw (e.g. a misconfigured gate) — quarantine, then rethrow.
+    // The engine threw (e.g. a misconfigured gate) — quarantine, drop the stale
+    // ledger entry, then rethrow.
     await lease.release({ success: false });
+    resolution?.forget(itemId);
     throw err;
   }
 
   if (run.status === 'succeeded') {
     // Development-cycle exit (§5.8): in_progress → test. Worktree is kept alive —
-    // closure (C2) merges it to development and releases it then.
+    // closure (C2) merges it to development and releases it then (ledger kept).
     lifecycle.transition(itemId, 'test', by, 'development-cycle complete');
     return { itemId, run, outcome: 'implemented', worktree: lease };
   }
 
-  // Build failed → item stays in_progress (developer retries); quarantine the worktree.
+  // Build failed → item stays in_progress (developer retries); quarantine the
+  // worktree and forget the ledger so no merger resolves a dangling handle.
   await lease.release({ success: false });
+  resolution?.forget(itemId);
   return { itemId, run, outcome: 'failed', worktree: null };
 }
 

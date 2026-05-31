@@ -57,6 +57,7 @@ export class RunsRepository {
   private readonly selectRunStmt;
   private readonly listRunsStmt;
   private readonly transitionRunStmt;
+  private readonly setWorktreePathStmt;
   private readonly insertStepStmt;
   private readonly selectStepStmt;
   private readonly listStepsStmt;
@@ -85,6 +86,9 @@ export class RunsRepository {
         error_message = COALESCE(@error_message, error_message)
       WHERE id = @id
     `);
+    this.setWorktreePathStmt = db.prepare(
+      'UPDATE runs SET worktree_path = @worktree_path WHERE id = @id',
+    );
 
     this.insertStepStmt = db.prepare(`
       INSERT INTO run_steps
@@ -156,6 +160,13 @@ export class RunsRepository {
       is_terminal: TERMINAL_RUN_STATUSES.has(status) ? 1 : 0,
       error_message: opts.error_message ?? null,
     });
+    if (result.changes === 0) throw new Error(`run not found: ${id}`);
+    return this.getRun(id)!;
+  }
+
+  /** Set the run's worktree path once the worktree is provisioned (capstone runItem, §5.14). */
+  setWorktreePath(id: number, worktreePath: string | null): Run {
+    const result = this.setWorktreePathStmt.run({ id, worktree_path: worktreePath });
     if (result.changes === 0) throw new Error(`run not found: ${id}`);
     return this.getRun(id)!;
   }
