@@ -7,15 +7,44 @@
 
 ## 1. Şu an (2026-05-31)
 
-**Branch:** `feat/v3.1-engine` (motor/şema epic §5.9 implementasyonu). `main`'den açıldı (`main` HEAD `b273dae` — workflow turu main'de).
+**Branch:** `main` @ `1d935d5`. Motor/şema epic §5.9 **Madde 1–4 main'e merge edildi** ([PR #5](https://github.com/erayendes/kortext/pull/5)); `feat/v3.1-engine` kapandı.
 
-**Önceki tur:** workflow rewrite turu `main`'e indi. Engine epic ayrı branch'te ilerliyor; **her §5.9 maddesi ayrı onay = ayrı push** (Eray kuralı).
+**Bu turda inen:** §5.9 Layer 0 + test-cycle çekirdeği (Madde 1-4) — lifecycle `test`/`bounce` geçişleri · `review_gates` (gate-checklist seçimi) · `gate_runs` (`attempt` cycle-ayırıcı) · `runTestCycle` (test-cycle mekaniği ÇALIŞIYOR, mock-first). Detay [DECISIONS §5.13](./DECISIONS.md). Sıradaki §5.9 maddeleri yeni branch'te — **her madde ayrı onay = ayrı push** (Eray kuralı).
 
 | Test | Lint | Typecheck | Build |
 |---|---|---|---|
 | 425/425 ✅ | 0 hata · 4 pre-existing warning | 0 hata | temiz |
 
 **npm registry:** `kortext@3.0.0` broken (EADDRINUSE silent fail bug). v3.1.0 release (devasa sürüm: Faz 11-13 + CLI redesign) lokal tgz UAT geçtikten sonra yapılacak.
+
+## ▶ Sonraki oturum — kopyala-yapıştır prompt
+
+> Yeni oturumda şunu yaz (motor epic'ine devam):
+
+```
+HANDOVER.md ve DECISIONS §5.9 + §5.13'ü oku, motor epic'ine devam edelim.
+
+Durum: §5.9 Madde 1-4 main'de (1d935d5) — lifecycle (test/bounce), review_gates,
+gate_runs (attempt ayırıcı), runTestCycle (test-cycle mekaniği mock-first ÇALIŞIYOR).
+425/425 test + typecheck + lint + build yeşil.
+
+Sıradaki adaylar (bağımlılık sırası DECISIONS §5.13 sonunda):
+- uat: review kolonu +prime onayı — Madde 4'ün eşi (approval-queue'ya bağla, review→done/bounce).
+- Madde 6: dev-cycle mekanik kapanış (review→done: CI+conflict→merge→blocker temizle→handover→worktree/preview kapat).
+- Madde 5: "sıra kimde" türetimi (kolon+bayrak; board göstergesi, assignee sabit).
+- Madde 9: block→run cancel — orchestrator'da Map<runId,AbortController> registry GEREKİR (§5.13 notu; salt DB flip değil).
+- Madde 7 (local test URL) · 8 (epic→staging) · 10 (per-item orchestrator, capstone) · 11 (AGENTS.md write_decision/write_learned, bağımsız docs).
+
+ÖNCE PLAN, onaylamadan koda geçme. §5.9 bir iş listesi, plan değil. En küçük test-edilebilir dilimi öner + nasıl test edileceğini söyle.
+
+Sabit kurallar (bu epic'te öğrenildi):
+- MİMARİ PRENSİP (§5.13): koşullu mantık ORCHESTRATOR katmanında (DB durumu üzerinde düz TS fold), DAG (dag.ts/worker-pool.ts) saf AND-join kalır. Gate'ler gate_runs satırı, DAG fan-in DEĞİL — §5.12 deadlock'u (skipped yol join'i sonsuza kilitler) böyle önlenir. "engine-owns-mechanics ancak engine DESTEKLİYORSA."
+- TDD zorunlu: önce başarısız test (RED, doğru sebeple), sonra minimal kod (GREEN). Gerçek fonksiyonları (transition/readyKeys/runTestCycle) çalıştır, paralel kopya yazma.
+- "tamam" demeden önce npm test + npm run typecheck YEŞİL olmalı — iddia etme, ölç.
+- mock-first: gate yürütmesi GateExecutor arayüzü (MockGateExecutor testlerde); gerçek AI-agent impl'i sonra.
+- Büyük mimari kararları AskUserQuestion ile sor. main'e SORMADAN push/merge YOK. Her madde ayrı onay = ayrı commit; push/merge'i Eray söyleyince.
+- Eray non-coder, Türkçe iletişim, kod/commit İngilizce. Somut artefakt göster (dosya yolu, test sonucu).
+```
 
 ## 2. Geçmiş özet
 
