@@ -89,6 +89,13 @@ export type RunWorkflowOptions = {
    * on every exit path so a finished run leaves no stale cancellable entry.
    */
   registry?: RunRegistry;
+  /**
+   * Reuse an already-created run instead of creating a new one. The capstone's
+   * runItem pre-creates the item's run so its worktree (and the resolution
+   * ledger) key off the run id (§5.14); it hands that run here to execute the
+   * dev-cycle steps against, keeping one run row per item (no orphan).
+   */
+  existingRun?: Run;
 };
 
 export type RunWorkflowResult = {
@@ -160,13 +167,15 @@ export async function runWorkflow(
   const concurrency = Math.max(1, options.concurrency ?? 3);
   const triggeredBy = options.triggeredBy ?? 'system';
 
-  const run = repos.runs.createRun({
-    workflow_id: graph.workflowId,
-    item_id: options.itemId ?? null,
-    status: 'queued',
-    worktree_path: options.worktreePath ?? null,
-    triggered_by: triggeredBy,
-  });
+  const run =
+    options.existingRun ??
+    repos.runs.createRun({
+      workflow_id: graph.workflowId,
+      item_id: options.itemId ?? null,
+      status: 'queued',
+      worktree_path: options.worktreePath ?? null,
+      triggered_by: triggeredBy,
+    });
   repos.runs.transitionRun(run.id, 'running');
   repos.auditLog.append({
     actor: 'system',

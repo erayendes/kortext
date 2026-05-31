@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, mkdirSync, writeFileSync, existsSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type Database from 'better-sqlite3';
@@ -12,6 +13,8 @@ import { parseWorkflowMarkdown } from '../server/engine/workflow-parser.ts';
 import { buildGraph } from '../server/engine/dag.ts';
 import { RunRegistry } from '../server/engine/run-registry.ts';
 import { runItem, runReadyItems } from '../server/orchestrator/run-item.ts';
+import { WorktreeManager } from '../server/engine/worktree.ts';
+import { ResolutionRegistry } from '../server/orchestrator/resolution-registry.ts';
 
 let tmpRoot: string;
 let agentsDir: string;
@@ -254,5 +257,108 @@ describe('runReadyItems — bounded-concurrency scheduler (capstone B1, §5.9 #1
     expect(acq.calls).toEqual(['T1']); // only the to_do item
     expect(repos.backlog.get('IP')?.status).toBe('in_progress'); // untouched
     expect(repos.backlog.get('TS')?.status).toBe('test'); // untouched
+  });
+});
+
+describe('runItem — real worktree + resolution ledger wiring (capstone composition, §5.14 step 1)', () => {
+  /** A git repo with main + a `development` integration branch (the item-worktree base, §5.11). */
+  function initRepo(root: string) {
+    const git = (...a: string[]) => execFileSync('git', a, { cwd: root, encoding: 'utf8' });
+    git('init', '--initial-branch=main');
+    git('config', 'user.email', 'test@kortext.dev');
+    git('config', 'user.name', 'Kortext Test');
+    git('config', 'commit.gpgsign', 'false');
+    writeFileSync(join(root, 'README.md'), '# initial\n');
+    git('add', 'README.md');
+    git('commit', '-m', 'initial');
+    git('branch', 'development');
+  }
+
+  /** A real per-item worktree acquirer: keyed by the item's run id, forked from development. */
+  function realAcquirer(mgr: WorktreeManager) {
+    return async (_itemId: string, runId: number) => {
+      const handle = mgr.acquire(runId);
+      return {
+        path: handle.path,
+        handle,
+        release: ({ success }: { success: boolean }) => mgr.release(handle, { success }),
+      };
+    };
+  }
+
+  it('spawns the item run in a real worktree (base=development) and fills the resolution ledger', async () => {
+    const repoRoot = join(tmpRoot, 'repo');
+    mkdirSync(repoRoot, { recursive: true });
+    initRepo(repoRoot);
+
+    const mgr = new WorktreeManager({ repoRoot, baseBranch: 'development' });
+    const resolution = new ResolutionRegistry();
+    const lc = makeLifecycle();
+    lc.create({ id: 'W1', type: 'task', title: 'W1' });
+
+    const result = await runItem('W1', {
+      repos,
+      lifecycle: lc,
+      executor: new MockExecutor(() => ({ durationMs: 1 })),
+      graph: buildGraph(devCycleWf),
+      acquireWorktree: realAcquirer(mgr),
+      registry: new RunRegistry(),
+      resolution,
+    });
+
+    expect(result.outcome).toBe('implemented');
+    // Ledger: the item resolves to its real run id (QueueReviewApprover anchor, C3).
+    expect(resolution.resolveRunId('W1')).toBe(result.run.id);
+    // Exactly one run row — runItem pre-creates it and the engine reuses it (no orphan).
+    expect(repos.runs.listRuns({ limit: 100 })).toHaveLength(1);
+
+    // Ledger: the worktree handle resolves for the item (GitMerger merge+teardown, C2).
+    const handle = resolution.resolveHandle('W1');
+    expect(handle).not.toBeNull();
+    expect(handle!.runId).toBe(result.run.id);
+    expect(handle!.branch).toBe(`kortext/run-${result.run.id}`);
+    expect(handle!.baseBranch).toBe('development');
+    // The run row records its real worktree path.
+    expect(result.run.worktree_path).toBe(handle!.path);
+    // Ledger: the run-context resolves for the item (AgentGateExecutor, C5).
+    expect(resolution.runContextFor('W1')).toEqual({
+      runId: result.run.id,
+      worktreePath: handle!.path,
+    });
+
+    // The worktree really exists on disk and survives for closure (NOT released on success).
+    expect(existsSync(handle!.path)).toBe(true);
+    expect(repos.backlog.get('W1')?.status).toBe('test');
+
+    // Release the live worktree so afterEach's rmSync doesn't trip on git metadata.
+    mgr.release(handle!, { success: true, merge: false });
+  });
+
+  it('a failed item run forgets the ledger entry (no stale handle is ever resolved)', async () => {
+    const repoRoot = join(tmpRoot, 'repo2');
+    mkdirSync(repoRoot, { recursive: true });
+    initRepo(repoRoot);
+
+    const mgr = new WorktreeManager({ repoRoot, baseBranch: 'development' });
+    const resolution = new ResolutionRegistry();
+    const lc = makeLifecycle();
+    lc.create({ id: 'W2', type: 'task', title: 'W2' });
+
+    const result = await runItem('W2', {
+      repos,
+      lifecycle: lc,
+      executor: new MockExecutor(() => ({ fail: true })), // build fails → quarantine
+      graph: buildGraph(devCycleWf),
+      acquireWorktree: realAcquirer(mgr),
+      registry: new RunRegistry(),
+      resolution,
+    });
+
+    expect(result.outcome).toBe('failed');
+    // The worktree was quarantined, so its ledger entry is forgotten — a later
+    // resolve must not hand a merger a dangling handle.
+    expect(resolution.resolveRunId('W2')).toBeNull();
+    expect(resolution.resolveHandle('W2')).toBeNull();
+    expect(repos.backlog.get('W2')?.status).toBe('in_progress');
   });
 });
