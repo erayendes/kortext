@@ -10,6 +10,7 @@ import { loadPersonasFromDir } from '../server/engine/persona-registry.ts';
 import { MockReviewApprover } from '../server/engine/executors/mock-review-approver.ts';
 import { MockGateExecutor } from '../server/engine/executors/mock-gate-executor.ts';
 import { MockMerger } from '../server/engine/executors/mock-merger.ts';
+import { MockDeployer } from '../server/engine/executors/mock-deployer.ts';
 import { runReviewCycle } from '../server/orchestrator/review-cycle.ts';
 import { runTestCycle } from '../server/orchestrator/test-cycle.ts';
 import type { Gate } from '../server/db/schemas.ts';
@@ -56,7 +57,7 @@ describe('runReviewCycle — uat gate (§5.9, Madde 4 eşi)', () => {
   it('uat selected + approved → item moves to done', async () => {
     const lc = seedItemInReview('R01', ['uat']);
     const approver = new MockReviewApprover(); // default: approve
-    const result = await runReviewCycle('R01', { repos, lifecycle: lc, approver, merger: new MockMerger() });
+    const result = await runReviewCycle('R01', { repos, lifecycle: lc, approver, merger: new MockMerger(), deployer: new MockDeployer() });
     expect(result.outcome).toBe('done');
     expect(result.uatRequired).toBe(true);
     expect(result.verdict?.approved).toBe(true);
@@ -70,7 +71,7 @@ describe('runReviewCycle — uat gate (§5.9, Madde 4 eşi)', () => {
       reject: true,
       reason: 'checkout flow broken on mobile',
     }));
-    const result = await runReviewCycle('R02', { repos, lifecycle: lc, approver, merger: new MockMerger() });
+    const result = await runReviewCycle('R02', { repos, lifecycle: lc, approver, merger: new MockMerger(), deployer: new MockDeployer() });
     expect(result.outcome).toBe('bounced');
     expect(result.verdict?.approved).toBe(false);
     expect(repos.backlog.get('R02')?.status).toBe('in_progress');
@@ -86,7 +87,7 @@ describe('runReviewCycle — uat gate (§5.9, Madde 4 eşi)', () => {
   it('uat not selected → done without consulting approver (vacuous, §5.8)', async () => {
     const lc = seedItemInReview('R03', ['code_review']); // checklist has no uat
     const approver = new MockReviewApprover();
-    const result = await runReviewCycle('R03', { repos, lifecycle: lc, approver, merger: new MockMerger() });
+    const result = await runReviewCycle('R03', { repos, lifecycle: lc, approver, merger: new MockMerger(), deployer: new MockDeployer() });
     expect(result.outcome).toBe('done');
     expect(result.uatRequired).toBe(false);
     expect(result.verdict).toBeNull();
@@ -102,7 +103,7 @@ describe('runReviewCycle — uat gate (§5.9, Madde 4 eşi)', () => {
     lc.transition('R04', 'test', '+backend-developer'); // stops in test, never reaches review
     const approver = new MockReviewApprover();
     await expect(
-      runReviewCycle('R04', { repos, lifecycle: lc, approver, merger: new MockMerger() }),
+      runReviewCycle('R04', { repos, lifecycle: lc, approver, merger: new MockMerger(), deployer: new MockDeployer() }),
     ).rejects.toThrow(/requires item in 'review'/);
     expect(approver.ranFor).toEqual([]); // guard fires before any approval
   });
@@ -110,7 +111,7 @@ describe('runReviewCycle — uat gate (§5.9, Madde 4 eşi)', () => {
   it('approver throws → item bounces (crash is a non-approval, not a hang)', async () => {
     const lc = seedItemInReview('R05', ['uat']);
     const approver = new MockReviewApprover(() => ({ throws: true, reason: 'prime queue offline' }));
-    const result = await runReviewCycle('R05', { repos, lifecycle: lc, approver, merger: new MockMerger() });
+    const result = await runReviewCycle('R05', { repos, lifecycle: lc, approver, merger: new MockMerger(), deployer: new MockDeployer() });
     expect(result.outcome).toBe('bounced');
     expect(result.verdict?.approved).toBe(false);
     expect(repos.backlog.get('R05')?.status).toBe('in_progress');
@@ -136,6 +137,7 @@ describe('runReviewCycle — uat gate (§5.9, Madde 4 eşi)', () => {
       lifecycle: lc,
       approver: new MockReviewApprover(),
       merger: new MockMerger(),
+      deployer: new MockDeployer(),
     });
     expect(rc.outcome).toBe('done');
     expect(rc.uatRequired).toBe(true);
@@ -149,6 +151,7 @@ describe('runReviewCycle — uat gate (§5.9, Madde 4 eşi)', () => {
       lifecycle: lc,
       approver: new MockReviewApprover(), // prime approves
       merger: new MockMerger(() => ({ conflict: true, reason: 'package-lock.json' })),
+      deployer: new MockDeployer(),
     });
     expect(result.verdict?.approved).toBe(true); // the approval happened
     expect(result.outcome).toBe('bounced'); // but closure bounced it
