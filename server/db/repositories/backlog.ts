@@ -1,12 +1,15 @@
+import { z } from 'zod';
 import type Database from 'better-sqlite3';
 import {
   BacklogItemInsertSchema,
   BacklogItemSchema,
   BacklogStatusSchema,
+  GateSchema,
   type BacklogItem,
   type BacklogItemInsert,
   type BacklogStatus,
   type BacklogItemType,
+  type Gate,
 } from '../schemas.ts';
 import { packJson, unpackJson } from '../json.ts';
 
@@ -18,6 +21,7 @@ type Row = {
   owner: string | null;
   parent_id: string | null;
   version: string | null;
+  review_gates: string;
   frontmatter: string;
   body_md: string;
   created_at: number;
@@ -27,6 +31,7 @@ type Row = {
 function rowToItem(row: Row): BacklogItem {
   return BacklogItemSchema.parse({
     ...row,
+    review_gates: unpackJson<Gate[]>(row.review_gates, []),
     frontmatter: unpackJson<Record<string, unknown>>(row.frontmatter, {}),
   });
 }
@@ -37,15 +42,16 @@ export class BacklogRepository {
   private readonly listStmt;
   private readonly updateStatusStmt;
   private readonly updateBodyStmt;
+  private readonly updateReviewGatesStmt;
   private readonly deleteStmt;
   private readonly countStmt;
 
   constructor(private readonly db: Database.Database) {
     this.insertStmt = db.prepare(`
       INSERT INTO backlog_items
-        (id, type, title, status, owner, parent_id, version, frontmatter, body_md, created_at, updated_at)
+        (id, type, title, status, owner, parent_id, version, review_gates, frontmatter, body_md, created_at, updated_at)
       VALUES
-        (@id, @type, @title, @status, @owner, @parent_id, @version, @frontmatter, @body_md, @ts, @ts)
+        (@id, @type, @title, @status, @owner, @parent_id, @version, @review_gates, @frontmatter, @body_md, @ts, @ts)
     `);
     this.selectByIdStmt = db.prepare('SELECT * FROM backlog_items WHERE id = ?');
     this.listStmt = db.prepare(`
@@ -62,6 +68,9 @@ export class BacklogRepository {
     );
     this.updateBodyStmt = db.prepare(
       'UPDATE backlog_items SET body_md = @body, updated_at = @ts WHERE id = @id',
+    );
+    this.updateReviewGatesStmt = db.prepare(
+      'UPDATE backlog_items SET review_gates = @review_gates, updated_at = @ts WHERE id = @id',
     );
     this.deleteStmt = db.prepare('DELETE FROM backlog_items WHERE id = ?');
     this.countStmt = db.prepare(
@@ -80,6 +89,7 @@ export class BacklogRepository {
       owner: parsed.owner,
       parent_id: parsed.parent_id,
       version: parsed.version,
+      review_gates: packJson(parsed.review_gates),
       frontmatter: packJson(parsed.frontmatter),
       body_md: parsed.body_md,
       ts,
@@ -126,6 +136,25 @@ export class BacklogRepository {
   updateBody(id: string, body: string): BacklogItem {
     const ts = Date.now();
     this.updateBodyStmt.run({ id, body, ts });
+    return this.get(id)!;
+  }
+
+  /**
+   * Replace the item's gate checklist selection (§5.9 #2). planning-pipeline
+   * calls this to set which gates run in the test-cycle; orchestrator (§5.9 #4)
+   * reads it to fan out. An empty list = 0-gate item (join → review, §5.8).
+   */
+  setReviewGates(id: string, gates: Gate[]): BacklogItem {
+    const parsed = z.array(GateSchema).parse(gates);
+    const ts = Date.now();
+    const result = this.updateReviewGatesStmt.run({
+      id,
+      review_gates: packJson(parsed),
+      ts,
+    });
+    if (result.changes === 0) {
+      throw new Error(`backlog item not found: ${id}`);
+    }
     return this.get(id)!;
   }
 

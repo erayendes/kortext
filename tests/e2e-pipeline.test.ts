@@ -245,7 +245,7 @@ describe('E2E — approval queue mock answer', () => {
 });
 
 describe('E2E — backlog item lifecycle + audit log', () => {
-  it('walks an item to_do → in_progress → review → done with audit trail', () => {
+  it('walks an item to_do → in_progress → test → review → done with audit trail', () => {
     initCommand({ targetDir: tmpRoot });
     openProjectDb(tmpRoot);
 
@@ -273,6 +273,9 @@ describe('E2E — backlog item lifecycle + audit log', () => {
     const started = lifecycle.transition('T01', 'start', '+prime');
     expect(started.status).toBe('in_progress');
 
+    const tested = lifecycle.transition('T01', 'test', '+backend-developer');
+    expect(tested.status).toBe('test');
+
     const reviewed = lifecycle.transition('T01', 'review', '+backend-developer');
     expect(reviewed.status).toBe('review');
 
@@ -282,11 +285,11 @@ describe('E2E — backlog item lifecycle + audit log', () => {
     const transitions = repos.auditLog
       .list({ resource_id: 'T01' })
       .filter((e) => e.action === 'item_transition');
-    expect(transitions).toHaveLength(3);
+    expect(transitions).toHaveLength(4);
     const path = transitions
       .map((e) => (e.payload as { transition: string }).transition)
       .reverse();
-    expect(path).toEqual(['start', 'review', 'done']);
+    expect(path).toEqual(['start', 'test', 'review', 'done']);
   });
 });
 

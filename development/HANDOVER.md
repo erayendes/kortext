@@ -5,15 +5,15 @@
 
 ---
 
-## 1. Şu an (2026-05-30)
+## 1. Şu an (2026-05-31)
 
-**Branch:** `feat/v3.1-workflow-rewrites` (workflow lifecycle redesign turu). `main` HEAD `6dc2fb6` (Faz 13) — bu branch onun üzerine workflow rewrite'larını taşıyor.
+**Branch:** `feat/v3.1-engine` (motor/şema epic §5.9 implementasyonu). `main`'den açıldı (`main` HEAD `b273dae` — workflow turu main'de).
 
-**Açık PR:** [#4](https://github.com/erayendes/kortext/pull/4) — workflow rewrite'ları, Eray review/merge bekliyor. (Bu branch'teki sonraki commit'ler de aynı PR'a akıyor.)
+**Önceki tur:** workflow rewrite turu `main`'e indi. Engine epic ayrı branch'te ilerliyor; **her §5.9 maddesi ayrı onay = ayrı push** (Eray kuralı).
 
 | Test | Lint | Typecheck | Build |
 |---|---|---|---|
-| 382/382 ✅ | 0 hata · 4 pre-existing warning | 0 hata | temiz |
+| 425/425 ✅ | 0 hata · 4 pre-existing warning | 0 hata | temiz |
 
 **npm registry:** `kortext@3.0.0` broken (EADDRINUSE silent fail bug). v3.1.0 release (devasa sürüm: Faz 11-13 + CLI redesign) lokal tgz UAT geçtikten sonra yapılacak.
 
@@ -42,9 +42,11 @@ Spec: [DECISIONS.md Bölüm 5](./DECISIONS.md) (design level, Eray onayladı). S
 | `new/existing-project-analysis` | ✅ tutarlı (foundation üretici, dokunulmadı) |
 | ~~`incident-pipeline`~~ | ✅ AYRILDI → rollback + hotfix (§5.12 — deadlock) |
 | ~~`maintenance-cycle`~~ | ✅ SİLİNDİ (§5.12 — çıktısı planning/backlog'a eriyor) |
-| Motor/şema epic (§5.9) | ⏳ SIRADAKİ — workflow dizini donmuş spec |
+| Motor/şema epic (§5.9) | 🚧 **Madde 1–4 ✅** — lifecycle (`test`/`bounce`) · `review_gates` · `gate_runs` · **`runTestCycle` (test-cycle mekaniği ÇALIŞIYOR, mock-first)** — §5.13. Test-cycle ilk kez koşuyor (fan-out→join→review/bounce). Sıradaki adaylar: uat (review +prime) · Madde 6 (closure ←açık) · Madde 5 (whose-turn) · Madde 9 (block). (Madde 11 bağımsız docs, beklemede.) |
 
-**Disipline:** workflow markdown'ları ev-stilinde (normal cümle, `## Faz`+`1. **+persona:**`), parser'a dokunma; `inputs:` tam path (`.kortext/references/X.md`), prose'da çıplak rozet (`STACK`); foundation OKUMA (analiz hariç). Motor implikasyonları §5.9'a biriktir.
+**Disipline:** workflow markdown'ları ev-stilinde (normal cümle, `## Faz`+`1. **+persona:**`), parser'a dokunma; `inputs:` tam path (`.kortext/references/X.md`), prose'da çıplak rozet (`STACK`); foundation OKUMA (analiz hariç).
+
+**Motor disiplini (§5.13, sabit):** koşullu mantık **orchestrator katmanında** (DB durumu üzerinde düz TS), DAG (`dag.ts`/`worker-pool.ts`) **saf AND-join** kalır — §5.12 deadlock'unun çözümü. Gate'ler `gate_runs` satırı (DAG fan-in DEĞİL); join = satırlar üzerinde TS fold. Doğrulama: gerçek `transition()`/`readyKeys()` çalıştır, paralel kopya yazma; `npm test`+`typecheck` yeşil olmadan "tamam" deme.
 
 ## 4. Bekleyen — content review turu
 
