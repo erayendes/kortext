@@ -8,6 +8,7 @@ import type { Repositories } from '../server/db/repositories/index.ts';
 import { ItemLifecycle } from '../server/engine/item-lifecycle.ts';
 import { loadPersonasFromDir } from '../server/engine/persona-registry.ts';
 import { MockMerger } from '../server/engine/executors/mock-merger.ts';
+import { MockDeployer } from '../server/engine/executors/mock-deployer.ts';
 import { runClosure } from '../server/orchestrator/closure.ts';
 
 let tmpRoot: string;
@@ -37,10 +38,10 @@ function makeLifecycle() {
   return new ItemLifecycle({ repos, personas: loadPersonasFromDir(agentsDir) });
 }
 
-/** Create an item and walk it to the `review` column (closure's precondition). */
-function seedItemInReview(id: string): ItemLifecycle {
+/** Create an item (optionally under an epic) and walk it to `review`. */
+function seedItemInReview(id: string, parentId?: string): ItemLifecycle {
   const lc = makeLifecycle();
-  lc.create({ id, type: 'task', title: id });
+  lc.create({ id, type: 'task', title: id, parent_id: parentId ?? null });
   lc.transition(id, 'start', '+backend-developer');
   lc.transition(id, 'test', '+backend-developer');
   lc.transition(id, 'review', 'orchestrator');
@@ -51,7 +52,7 @@ describe('runClosure — mechanical closure (§5.9 #6, mock-first)', () => {
   it('merge ok → item moves to done', async () => {
     const lc = seedItemInReview('C01');
     const merger = new MockMerger(); // default: ok
-    const result = await runClosure('C01', { repos, lifecycle: lc, merger });
+    const result = await runClosure('C01', { repos, lifecycle: lc, merger, deployer: new MockDeployer() });
     expect(result.outcome).toBe('done');
     expect(result.merge.ok).toBe(true);
     expect(repos.backlog.get('C01')?.status).toBe('done');
@@ -61,7 +62,7 @@ describe('runClosure — mechanical closure (§5.9 #6, mock-first)', () => {
   it('merge conflict → item bounces to in_progress with reason in audit', async () => {
     const lc = seedItemInReview('C02');
     const merger = new MockMerger(() => ({ conflict: true, reason: 'config.ts both modified' }));
-    const result = await runClosure('C02', { repos, lifecycle: lc, merger });
+    const result = await runClosure('C02', { repos, lifecycle: lc, merger, deployer: new MockDeployer() });
     expect(result.outcome).toBe('bounced');
     expect(result.merge.ok).toBe(false);
     expect(repos.backlog.get('C02')?.status).toBe('in_progress');
@@ -77,7 +78,7 @@ describe('runClosure — mechanical closure (§5.9 #6, mock-first)', () => {
   it('merger throws → item bounces (crash is a failed merge, not a hang)', async () => {
     const lc = seedItemInReview('C03');
     const merger = new MockMerger(() => ({ throws: true, reason: 'git binary missing' }));
-    const result = await runClosure('C03', { repos, lifecycle: lc, merger });
+    const result = await runClosure('C03', { repos, lifecycle: lc, merger, deployer: new MockDeployer() });
     expect(result.outcome).toBe('bounced');
     expect(result.merge.ok).toBe(false);
     expect(repos.backlog.get('C03')?.status).toBe('in_progress');
@@ -89,9 +90,57 @@ describe('runClosure — mechanical closure (§5.9 #6, mock-first)', () => {
     lc.transition('C04', 'start', '+backend-developer');
     lc.transition('C04', 'test', '+backend-developer'); // stops in test
     const merger = new MockMerger();
-    await expect(runClosure('C04', { repos, lifecycle: lc, merger })).rejects.toThrow(
+    const deployer = new MockDeployer();
+    await expect(runClosure('C04', { repos, lifecycle: lc, merger, deployer })).rejects.toThrow(
       /requires item in 'review'/,
     );
     expect(merger.closedFor).toEqual([]); // guard fires before any merge
+  });
+});
+
+describe('runClosure → epic-completion seam (capstone W2, §5.9 #8)', () => {
+  it('closing the last child fires the staging-deploy seam for the epic', async () => {
+    // Epic with two children: a sibling already done + the child we now close.
+    repos.backlog.create({ id: 'EP1', type: 'epic', title: 'EP1' });
+    repos.backlog.create({ id: 'EP1-sib', type: 'task', title: 'sib', parent_id: 'EP1' });
+    repos.backlog.transitionStatus('EP1-sib', 'done');
+
+    const lc = seedItemInReview('EP1-last', 'EP1');
+    const deployer = new MockDeployer();
+    const result = await runClosure('EP1-last', { repos, lifecycle: lc, merger: new MockMerger(), deployer });
+
+    expect(result.outcome).toBe('done');
+    expect(result.epic?.epicComplete).toBe(true);
+    expect(deployer.deployedFor).toContain('EP1'); // staging deploy triggered
+  });
+
+  it('closing a child that leaves a sibling unfinished does not deploy', async () => {
+    repos.backlog.create({ id: 'EP2', type: 'epic', title: 'EP2' });
+    repos.backlog.create({ id: 'EP2-sib', type: 'task', title: 'sib', parent_id: 'EP2' });
+    repos.backlog.transitionStatus('EP2-sib', 'in_progress');
+
+    const lc = seedItemInReview('EP2-last', 'EP2');
+    const deployer = new MockDeployer();
+    const result = await runClosure('EP2-last', { repos, lifecycle: lc, merger: new MockMerger(), deployer });
+
+    expect(result.outcome).toBe('done');
+    expect(result.epic?.epicComplete).toBe(false);
+    expect(deployer.deployedFor).toEqual([]);
+  });
+
+  it('a merge-conflict bounce never reaches the epic-completion seam', async () => {
+    repos.backlog.create({ id: 'EP3', type: 'epic', title: 'EP3' });
+    const lc = seedItemInReview('EP3-last', 'EP3');
+    const deployer = new MockDeployer();
+    const result = await runClosure('EP3-last', {
+      repos,
+      lifecycle: lc,
+      merger: new MockMerger(() => ({ conflict: true, reason: 'x' })),
+      deployer,
+    });
+
+    expect(result.outcome).toBe('bounced');
+    expect(result.epic).toBeNull(); // seam not entered on a bounce
+    expect(deployer.deployedFor).toEqual([]);
   });
 });

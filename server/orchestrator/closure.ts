@@ -1,18 +1,28 @@
 import type { Repositories } from '../db/repositories/index.ts';
 import type { ItemLifecycle } from '../engine/item-lifecycle.ts';
 import type { Merger, MergeOutcome } from '../engine/merger.ts';
+import type { Deployer } from '../engine/deployer.ts';
+import { runEpicCompletion, type EpicCompletionResult } from './epic-completion.ts';
 
 export type ClosureResult = {
   itemId: string;
   /** 'done' = merged cleanly; 'bounced' = conflict/failure → in_progress. */
   outcome: 'done' | 'bounced';
   merge: MergeOutcome;
+  /** Epic-completion seam result when the item closed `done`; null on a bounce. */
+  epic: EpicCompletionResult | null;
 };
 
 export type ClosureDeps = {
   repos: Repositories;
   lifecycle: ItemLifecycle;
   merger: Merger;
+  /**
+   * Staging-deploy substrate for the epic-completion seam (§5.9 #8). Required —
+   * like {@link Merger} — so the capstone can't wire closure and silently skip
+   * the epic→staging trigger.
+   */
+  deployer: Deployer;
   /** Actor recorded on lifecycle transitions/audit. Default 'orchestrator'. */
   by?: string;
 };
@@ -28,7 +38,7 @@ export type ClosureDeps = {
  * (Madde 10). Handover-on-close and blocker clearing are deferred (TODO §5.9).
  */
 export async function runClosure(itemId: string, deps: ClosureDeps): Promise<ClosureResult> {
-  const { repos, lifecycle, merger } = deps;
+  const { repos, lifecycle, merger, deployer } = deps;
   const by = deps.by ?? 'orchestrator';
 
   const item = repos.backlog.get(itemId);
@@ -52,7 +62,11 @@ export async function runClosure(itemId: string, deps: ClosureDeps): Promise<Clo
 
   if (merge.ok) {
     lifecycle.transition(itemId, 'done', by, 'closure: merged to development');
-    return { itemId, outcome: 'done', merge };
+    // Seam (W2, §5.9 #8): a fresh `done` may have completed the parent epic —
+    // check + (if so) trigger the staging deploy. The item is already `done`
+    // regardless of the epic outcome; this is the downstream trigger only.
+    const epic = await runEpicCompletion(itemId, { repos, deployer, by });
+    return { itemId, outcome: 'done', merge, epic };
   }
 
   lifecycle.transition(
@@ -61,5 +75,5 @@ export async function runClosure(itemId: string, deps: ClosureDeps): Promise<Clo
     by,
     merge.reason ? `merge conflict: ${merge.reason}` : 'merge conflict',
   );
-  return { itemId, outcome: 'bounced', merge };
+  return { itemId, outcome: 'bounced', merge, epic: null };
 }
