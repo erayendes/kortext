@@ -3,6 +3,7 @@ import type { ItemLifecycle } from '../engine/item-lifecycle.ts';
 import type { ReviewApprover, ReviewVerdict } from '../engine/review-approver.ts';
 import type { Merger } from '../engine/merger.ts';
 import type { Deployer } from '../engine/deployer.ts';
+import type { PreviewManager } from './test-preview.ts';
 import { runClosure } from './closure.ts';
 
 export type ReviewCycleResult = {
@@ -23,6 +24,8 @@ export type ReviewCycleDeps = {
   merger: Merger;
   /** Threaded into closure for the epic-completion → staging seam (§5.9 #8). */
   deployer: Deployer;
+  /** Threaded into closure to stop the item's local test preview (§5.7). */
+  previewManager?: PreviewManager;
   /** Actor recorded on lifecycle transitions/audit. Default 'orchestrator'. */
   by?: string;
 };
@@ -35,7 +38,7 @@ export type ReviewCycleDeps = {
  * injected {@link ReviewApprover} owns the approve/reject judgment.
  */
 export async function runReviewCycle(itemId: string, deps: ReviewCycleDeps): Promise<ReviewCycleResult> {
-  const { repos, lifecycle, approver, merger, deployer } = deps;
+  const { repos, lifecycle, approver, merger, deployer, previewManager } = deps;
   const by = deps.by ?? 'orchestrator';
 
   const item = repos.backlog.get(itemId);
@@ -52,7 +55,7 @@ export async function runReviewCycle(itemId: string, deps: ReviewCycleDeps): Pro
   // (mirrors test-cycle's 0-gate → review, §5.8).
   if (!uatRequired) {
     // No human approval needed → straight into mechanical closure (§5.9 #6).
-    const closure = await runClosure(itemId, { repos, lifecycle, merger, deployer, by });
+    const closure = await runClosure(itemId, { repos, lifecycle, merger, deployer, previewManager, by });
     return { itemId, outcome: closure.outcome, uatRequired: false, verdict: null };
   }
 
@@ -69,7 +72,7 @@ export async function runReviewCycle(itemId: string, deps: ReviewCycleDeps): Pro
 
   if (verdict.approved) {
     // Prime approved → mechanical closure decides done vs bounce (merge conflict).
-    const closure = await runClosure(itemId, { repos, lifecycle, merger, deployer, by });
+    const closure = await runClosure(itemId, { repos, lifecycle, merger, deployer, previewManager, by });
     return { itemId, outcome: closure.outcome, uatRequired, verdict };
   }
 
