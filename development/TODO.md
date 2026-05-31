@@ -15,6 +15,13 @@ Açık iş listesi. Yapılan her şey [DECISIONS.md](./DECISIONS.md) tarihçesin
 
 **Kaynak doğruluk:** numaralı maddeler [DECISIONS §5.9](./DECISIONS.md) + bağımlılık sırası §5.13 sonunda (Madde 1–4 ✅ main'de). Burada yalnızca **dilim-içi ertelenen alt-işler** (numaralı maddeye girmeyen) izlenir ki kaybolmasın.
 
+### Madde 10 capstone — sıralı plan (Eray onayı 2026-05-31: "sırayla hepsini yap")
+
+Bağımlılık sırası: **W1** worker-pool↔RunRegistry → **W2** closure→epic dikişi → **B1** per-item run+worktree (keystone) → **C1-C5** gerçek PreviewServer/Merger/ReviewApprover/Deployer/GateExecutor → **D1** Madde 11 docs. Her biri ayrı TDD + ayrı commit.
+
+- [ ] **W1 — worker-pool ↔ RunRegistry** (HAZIR SPEC, ilk dilim): `RunRegistry.unregister(runId)` (abort'suz `entries.delete`) + `runWorkflow`'a `registry?` opt → `aborter` (worker-pool.ts:227) sonrası `register(run.id, itemId, aborter)`, gate-throw (≈356) + son return (≈453) öncesi `unregister`. Testler: run-registry.test.ts + yeni worker-pool-registry.test.ts.
+  - ⚠️ **FK BULGUSU (2026-05-31):** `runs.item_id` → `backlog_items(id)` FK'lı (`runs.ts:113`). Per-item run açmak için **item DB'de var olmalı** → W1 testinde önce `repos.backlog.create(...)` ile seed et (closure.test.ts şablonu). Bu, **B1'in (per-item run+worktree) neden keystone olduğunun somut kanıtı** — run/item impedance şema seviyesinde FK ile zorlanıyor.
+
 ### uat review-cycle diliminden ertelenenler (tasarım onaylı 2026-05-31, mock-first)
 
 - [ ] **Gerçek approval-queue bağlantısı (uat)** — mock-first `ReviewApprover`'ın gerçek impl'i: `review`'deki item için prime'a dashboard onay sorusu düşür + cevabı bekle. **Engel (impedance):** `pending_questions` `item_id` taşımıyor (yalnız nullable `run_id`); item-cycle'lar workflow `run`'ı yaratmıyor; `enqueue`/`waitForAnswer`'ın motor tarafında **hiç üreticisi yok** (sadece insan-`answer` ucu CLI+route'ta). → ya `pending_questions`'a item adresleme ekle, ya enqueue/resolve ayrımı tasarla. (Madde 4'ün "gerçek GateExecutor" follow-up'ının eşi.)

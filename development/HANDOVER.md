@@ -7,7 +7,7 @@
 
 ## 1. Şu an (2026-05-31)
 
-**Branch:** `main` (`feat/uat-review-cycle` 6-slice batch merge edildi, [PR #7](https://github.com/erayendes/kortext/pull/7)). Motor/şema epic §5.9 **TÜM FEATURE DİLİMLERİ TAMAM** — geriye yalnız **Madde 10 (capstone)** + **Madde 11 (bağımsız docs)** kaldı.
+**Branch:** `main` (`feat/uat-review-cycle` 6-slice batch merge edildi, [PR #7](https://github.com/erayendes/kortext/pull/7)). Motor/şema epic §5.9 **TÜM FEATURE DİLİMLERİ TAMAM** — geriye **Madde 10 (capstone)** + **Madde 11 (bağımsız docs)** kaldı. **Capstone BAŞLADI (2026-05-31 #2):** sıralı plan çıkarıldı + Eray onayı "sırayla hepsini yap"; **W1 tam tasarlandı + kritik FK bulgusu** (`runs.item_id` → `backlog_items` FK'lı → per-item run için item DB'de var olmalı; B1'in keystone olduğunun kanıtı). Kod **commit EDİLMEDİ** — oturum boyunca tool sonuçları ağır gecikmeyle döndü, iteratif TDD pratik olmadı; çalışma ağacı temiz (W1 RED testleri revert edildi, 465/465 baseline korundu). W1 birebir spec aşağıdaki prompt'ta.
 
 **Bu oturumda inen (6 slice, hepsi TDD + mock-first, ayrı commit):** `uat review-cycle` (review→done/bounce, prime onayı) · `whose-turn` (board "sıra kimde" türetimi) · `closure` (review→merge→done/bounce iskelet) · `epic-completion` (item done→epic bitti→staging tetik) · `block` (block→run cancel, `RunRegistry`) · `local test-URL` (`PreviewManager`). Detay [DECISIONS §5.13](./DECISIONS.md). **Beş mock-first arayüz** (`gate-executor`/`review-approver`/`merger`/`deployer`/`preview-server`) + `RunRegistry` + `PreviewManager` hazır; tümü Madde 10'da gerçeğe bağlanır. Üretim blast-radius **sıfır** (yalnız testler sürüyor — lifecycle henüz orchestrator'dan sürülmüyor).
 
@@ -22,7 +22,7 @@
 > Yeni oturumda şunu yaz (motor epic capstone'una geç):
 
 ```
-HANDOVER.md ve DECISIONS §5.9 + §5.13'ü oku, motor epic capstone'una (Madde 10) geçelim.
+DECISIONS §5.9 + §5.13'ü oku, capstone'u (Madde 10) W1'den SÜRDÜR (Eray onayı: "sırayla hepsini yap").
 
 Durum: §5.9'un TÜM feature dilimleri main'de (PR #7) — 1-9 + uat + whose-turn + local-preview.
 Tek-item yaşam döngüsü (test→review→merge→done/bounce) + epic→staging + block→cancel +
@@ -39,9 +39,28 @@ KALAN sadece iki madde:
   "ertelenenler" başlıkları altında HEPSİ listeli — capstone'un iş listesi orası.
 - Madde 11 (bağımsız docs): AGENTS.md/behavior.md karar→write_decision, öğrenim→write_learned.
 
-ÖNCE PLAN, onaylamadan koda geçme. Madde 10 TEK dilim DEĞİL — alt-dilimlere böl (önce
-en küçük + en az riskli wiring, örn. worker-pool→RunRegistry), her birini ayrı TDD + ayrı
-commit. En küçük test-edilebilir dilimi öner + nasıl test edileceğini söyle.
+SIRA (Eray onayı — plan tekrar SORMA, uygula): W1 → W2 → B1 → C1-C5 → D1. Her biri ayrı
+TDD (RED→GREEN, gerçek sebeple kırılan test ÖNCE) + ayrı commit.
+
+W1 (BURADAN BAŞLA — hazır spec, dakikalar içinde iner):
+- run-registry.ts: cancelForItem'dan sonra ekle:
+    unregister(runId: number): boolean { return this.entries.delete(runId); }  // abort ETMEZ
+- worker-pool.ts: RunWorkflowOptions'a `registry?: RunRegistry`; `const aborter` (≈227) sonrası
+  `options.registry?.register(run.id, options.itemId ?? null, aborter)`; gate-no-controller
+  throw'undan (≈356) ÖNCE ve son return'den (≈453) ÖNCE `options.registry?.unregister(run.id)`.
+- Testler: tests/run-registry.test.ts (unregister: abort'suz siler + unknown→false) + yeni
+  tests/worker-pool-registry.test.ts.
+  ⚠️ FK BULGUSU: `runs.item_id` → `backlog_items` FK'lı (runs.ts:113). Testte item'ı ÖNCE
+  `repos.backlog.create(...)` ile seed et (closure.test.ts'deki şablonu kopyala). register
+  kanıtı = yavaş step + mid-run `cancelForItem`→len 1 + run 'failed'; unregister kanıtı =
+  normal biten run sonrası `cancelForItem`→[].
+
+W2: closure `done` → `runEpicCompletion` dikişi (deployer dep'i thread'le).
+B1 (keystone): §5.9 #10 per-item run + worktree — FK + worktree impedance burada kapanır.
+  ⚠️ mimari karar → AskUserQuestion (item-cycle run'ı nasıl doğurur, worktree base=development).
+C1-C5: 5 mock'u gerçeğe bağla (PreviewServer/Merger+handover-on-close/ReviewApprover/Deployer/
+  GateExecutor) — hepsi B1'e dayanır. D1: Madde 11 docs.
+ÖNCE PLAN demeye gerek yok — plan onaylı; doğrudan W1 RED testiyle başla.
 
 Sabit kurallar (bu epic'te öğrenildi):
 - MİMARİ PRENSİP (§5.13): koşullu mantık ORCHESTRATOR katmanında (DB durumu üzerinde düz TS
