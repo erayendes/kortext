@@ -15,16 +15,32 @@ Açık iş listesi. Yapılan her şey [DECISIONS.md](./DECISIONS.md) tarihçesin
 
 **Kaynak doğruluk:** numaralı maddeler [DECISIONS §5.9](./DECISIONS.md) + bağımlılık sırası §5.13 sonunda (Madde 1–4 ✅ main'de). Burada yalnızca **dilim-içi ertelenen alt-işler** (numaralı maddeye girmeyen) izlenir ki kaybolmasın.
 
-### Madde 10 capstone — sıralı plan (Eray onayı 2026-05-31: "sırayla hepsini yap")
+### Madde 10 + 11 capstone — ✅ 9 TDD dilimi indi (2026-05-31 #3)
 
-Bağımlılık sırası: **W1** worker-pool↔RunRegistry → **W2** closure→epic dikişi → **B1** per-item run+worktree (keystone) → **C1-C5** gerçek PreviewServer/Merger/ReviewApprover/Deployer/GateExecutor → **D1** Madde 11 docs. Her biri ayrı TDD + ayrı commit.
+**Plan TAMAM (Eray onayı "sırayla hepsini yap"):** `W1→W2→B1→C2→C5→C3→C1→C4→D1`, 9 commit (`39953ad`→`c692223`), **465→499 test**, typecheck+lint temiz. Per-dilim detay [DECISIONS §5.14](./DECISIONS.md). İnen:
 
-- [ ] **W1 — worker-pool ↔ RunRegistry** (HAZIR SPEC, ilk dilim): `RunRegistry.unregister(runId)` (abort'suz `entries.delete`) + `runWorkflow`'a `registry?` opt → `aborter` (worker-pool.ts:227) sonrası `register(run.id, itemId, aborter)`, gate-throw (≈356) + son return (≈453) öncesi `unregister`. Testler: run-registry.test.ts + yeni worker-pool-registry.test.ts.
-  - ⚠️ **FK BULGUSU (2026-05-31):** `runs.item_id` → `backlog_items(id)` FK'lı (`runs.ts:113`). Per-item run açmak için **item DB'de var olmalı** → W1 testinde önce `repos.backlog.create(...)` ile seed et (closure.test.ts şablonu). Bu, **B1'in (per-item run+worktree) neden keystone olduğunun somut kanıtı** — run/item impedance şema seviyesinde FK ile zorlanıyor.
+- [x] **W1** worker-pool ↔ RunRegistry register/unregister (`39953ad`) — block canlı ajanı durdurur; FK bulgusu doğrulandı.
+- [x] **W2** closure done → epic-completion dikişi (`f338f15`) — `deployer` zorunlu dep.
+- [x] **B1 (keystone)** per-item run + worktree (`0491171`) — item gerçek run+worktree'yle doğar, FK kapanır. Mimari: Eray "standalone fonksiyon" seçti.
+- [x] **C2** gerçek `GitMerger` (git) (`3fec38a`) — worktree→development merge + gerçek conflict.
+- [x] **C5** gerçek `AgentGateExecutor` (AI ajan) (`02bc2e4`).
+- [x] **C3** gerçek `QueueReviewApprover` (ApprovalQueue) (`5ae1478`) — uat sorusu item'ın son run'ına bağlı.
+- [x] **C1** gerçek `DevServerPreviewServer` (process spawn) (`dff79a6`).
+- [x] **C4** gerçek `WorkflowDeployer` (deployment-cycle run) (`f70125b`).
+- [x] **D1** Madde 11 kesişen karar/öğrenim kuralı (`c692223`) — ⚠️ `write_decision`/`write_learned` tool'ları YOK, dosya-tabanlı kullanıldı.
+
+> **NOT:** 5 gerçek adapter + W1/W2 dikişleri + keystone tek tek **gerçek + test edildi**, ama orchestrator kompozisyonuna **takılmadı**. Aşağıdaki eski "Gerçek X impl'i" maddeleri = ADAPTER ✅ indi; geriye yalnız **wiring** kaldı (↓ "son montaj").
+
+### KALAN — uçtan-uca "son montaj" (sonraki faz, §5.14)
+
+- [ ] **1 — Resolution registry'ler + B1'i gerçek worktree'ye bağla:** item→worktree handle (C2 `resolveHandle`), item→run-context (C5), item→run-id (C3). `runItem` şu an `acquireWorktree`'yi **enjekte mock**'la alıyor → gerçek `WorktreeManager` (base=development) + gerçek run ile doldur. (run/item impedance'ın asıl gerçek kapanışı.)
+- [ ] **2 — Composition root:** gerçek adapter'ları kurup `runClosure`/`runTestCycle`/`runReviewCycle`/`runEpicCompletion` dep'lerinde mock'ların yerine koy.
+- [ ] **3 — Preview dikişi:** item `test`'e girince `previewManager.startFor`, closure'da `stopFor` (C1 substratı hazır).
+- [ ] **4 — Driver + e2e:** `runReadyItems`'i süren entry point (mimari karar → AskUserQuestion) + uçtan-uca test (to_do → … → done/staging; gerçek git + mock agent).
 
 ### uat review-cycle diliminden ertelenenler (tasarım onaylı 2026-05-31, mock-first)
 
-- [ ] **Gerçek approval-queue bağlantısı (uat)** — mock-first `ReviewApprover`'ın gerçek impl'i: `review`'deki item için prime'a dashboard onay sorusu düşür + cevabı bekle. **Engel (impedance):** `pending_questions` `item_id` taşımıyor (yalnız nullable `run_id`); item-cycle'lar workflow `run`'ı yaratmıyor; `enqueue`/`waitForAnswer`'ın motor tarafında **hiç üreticisi yok** (sadece insan-`answer` ucu CLI+route'ta). → ya `pending_questions`'a item adresleme ekle, ya enqueue/resolve ayrımı tasarla. (Madde 4'ün "gerçek GateExecutor" follow-up'ının eşi.)
+- [x] **Gerçek approval-queue bağlantısı (uat)** ✅ adapter `QueueReviewApprover` indi (C3, `5ae1478`) — uat sorusu item'ın son run'ına bağlanır; **wiring → son montaj**. (Eski not:) mock-first `ReviewApprover`'ın gerçek impl'i: `review`'deki item için prime'a dashboard onay sorusu düşür + cevabı bekle. **Engel (impedance):** `pending_questions` `item_id` taşımıyor (yalnız nullable `run_id`); item-cycle'lar workflow `run`'ı yaratmıyor; `enqueue`/`waitForAnswer`'ın motor tarafında **hiç üreticisi yok** (sadece insan-`answer` ucu CLI+route'ta). → ya `pending_questions`'a item adresleme ekle, ya enqueue/resolve ayrımı tasarla. (Madde 4'ün "gerçek GateExecutor" follow-up'ının eşi.)
 - [ ] **uat verdict'i `gate_runs` satırı olarak kaydet** — şimdilik red sebebi `audit_log`'da (§5.13 "comment alanı ERTELENDİ" ile tutarlı). gate_runs'a yazmak için **`attempt` tuzağı** çözülmeli: 0-test-gate + tekrarlı-bounce'ta `UNIQUE(item_id, attempt, gate='uat')` çakışır. → `attempt`'i item alanı yap **veya** test-cycle her cycle'da marker üretsin.
 - [x] **Madde 6 dikiş notu** — ✅ YAPILDI (2026-05-31): `runReviewCycle`'ın onay+vacuous dalları `runClosure`'a delege ediyor; `done` öncesi merge adımı araya eklendi. Detay DECISIONS §5.13 "Madde 6 ✅". Kapanışın *gerçek* git'i + handover + blocker aşağıda.
 
@@ -36,7 +52,7 @@ Bağımlılık sırası: **W1** worker-pool↔RunRegistry → **W2** closure→e
 
 İskelet hazır (`runClosure` + `Merger` arayüzü, mock-first); gerçek mekanik bekliyor:
 
-- [ ] **Gerçek git `Merger` impl'i** — `MockMerger` yerine `WorktreeManager`'ı süren gerçek merger: CI+conflict kontrolü → feature worktree'yi `development`'a merge (`--no-ff`) → worktree/preview teardown. **Engel:** `WorktreeManager` `runId` ile çalışıyor + per-item worktree'yi **Madde 10** kuruyor → Madde 10 ile birlikte bağlanır.
+- [x] **Gerçek git `Merger` impl'i** ✅ `GitMerger` indi (C2, `3fec38a`) — worktree→development merge + gerçek conflict; **wiring (resolveHandle) → son montaj**. (Eski not:) `MockMerger` yerine `WorktreeManager`'ı süren gerçek merger: CI+conflict kontrolü → feature worktree'yi `development`'a merge (`--no-ff`) → worktree/preview teardown. **Engel:** `WorktreeManager` `runId` ile çalışıyor + per-item worktree'yi **Madde 10** kuruyor → Madde 10 ile birlikte bağlanır.
 - [ ] **Handover-on-close** — kapanış başarılıysa (merge ok) `HandoverEngine.record()` ile kapanış handover'ı üret (developer→prime, completed/next). Mock-merge üzerine handover boş kaçtığı için gerçek Merger'la birlikte eklenir.
 - [ ] **blocker-temizle (§5.9 #6)** — ŞU AN KARŞILIKSIZ: item bağımlılık modeli (`blocked_on`/`blocks`) şemada yok, motor "X'i bekleyen item" bilmiyor. Bir bağımlılık modeli tasarlanırsa kapanışta downstream item'ları unblock et. (Eray: şimdilik ertele.)
 
@@ -44,23 +60,23 @@ Bağımlılık sırası: **W1** worker-pool↔RunRegistry → **W2** closure→e
 
 Tespit + tetik hazır (`runEpicCompletion` + `Deployer` arayüzü, mock-first); gerçek deploy + §5.11 zinciri bekliyor:
 
-- [ ] **Gerçek `Deployer` impl'i** — `MockDeployer` yerine `development`'ı staging ortamına (test verisi, §5.11) deploy eden gerçek deployer.
+- [x] **Gerçek `Deployer` impl'i** ✅ `WorkflowDeployer` indi (C4, `f70125b`) — staging deploy = deployment-cycle workflow run'ı (§5.11); **wiring → son montaj**. (Eski not:) `MockDeployer` yerine `development`'ı staging ortamına (test verisi, §5.11) deploy eden gerçek deployer.
 - [ ] **Gate-persona staging raporları (§5.11)** — epic'te gate koşmuş personalar (qa/security/designer/EM/devops) tek-dosya rapor yazar (paralel), motor toplar.
 - [ ] **Prime staging onayı (§5.11)** — staging deploy sonrası motor prime'a "staging onayı" sorar; onay→version ilerler, red→bug açılır.
 - [ ] **Epic-status-flip** — epic bittiğinde epic item'ını board'da `done` göster. Epic'ler review→done yolundan geçmiyor → container-completion için ayrı lifecycle geçişi (veya türetilmiş done) tasarlanmalı. (Eray: Madde 8'de sadece tespit+tetik seçildi, flip ertelendi.)
-- [ ] **closure→epic-check dikişi (Madde 10 capstone)** — `runClosure` `done` verince `runEpicCompletion` çağrılmalı. Deployer'ı `review-cycle→closure` zincirinden geçirmemek için capstone'da bağlanır.
+- [x] **closure→epic-check dikişi** ✅ YAPILDI (W2, `f338f15`) — `runClosure` `done` verince `runEpicCompletion` çağrılıyor; `deployer` zorunlu dep olarak review-cycle'dan geçirildi.
 
 ### Madde 9 (block→cancel) diliminden ertelenen
 
 Mekanizma hazır (`RunRegistry` + `blockItem`, gerçek); worker-pool köprüsü bekliyor:
 
-- [ ] **worker-pool → RunRegistry wiring (Madde 10 capstone)** — `runWorkflow`'daki lokal `aborter` (worker-pool.ts:227) run başlarken `registry.register(runId, itemId, aborter)`, run settle olunca `registry.unregister(runId)` etmeli. O zaman `blockItem` gerçek çalışan ajanı durdurur. (Şu an per-item run yok → iptal edilecek canlı run yok; capstone'da bağlanır. `RunRegistry`'ye `unregister` o noktada eklenir — şu an YAGNI.)
+- [x] **worker-pool → RunRegistry wiring** ✅ YAPILDI (W1, `39953ad`) — `runWorkflow` `aborter` oluşunca `register(run.id, itemId, aborter)`, iki çıkışta da `unregister`. `RunRegistry.unregister` eklendi. `blockItem` artık canlı ajanı durdurur.
 
 ### Madde 7 (local test URL) diliminden ertelenenler
 
 Mekanizma hazır (`PreviewServer` arayüzü + `PreviewManager`, mock-first); gerçek spawn + wiring bekliyor:
 
-- [ ] **Gerçek `PreviewServer` impl'i** — `MockPreviewServer` yerine worktree'den projenin dev komutunu (vite vb.) spawn eden + URL döndüren + stop'ta process'i öldüren gerçek server. Worktree'ye bağlı → Madde 10.
+- [x] **Gerçek `PreviewServer` impl'i** ✅ `DevServerPreviewServer` indi (C1, `dff79a6`) — worktree'den dev komutu spawn + URL parse + stop'ta kill; **wiring → son montaj**. (Eski not:) `MockPreviewServer` yerine worktree'den projenin dev komutunu (vite vb.) spawn eden gerçek server.
 - [ ] **Preview wiring (Madde 10 capstone)** — item `test`'e girince `previewManager.startFor(itemId, worktreePath)`; worktree teardown'da (closure) `stopFor(itemId)`.
 - [ ] **"Çalıştırılabilir/UI görev mi?" koşulu** — §5.7: yalnız çalıştırılabilir/UI görevler preview alır. Şu an koşul yok (her item denenebilir). Bir flag (frontmatter/type) ile gate'le.
 - [ ] **Preview URL persistence + sunma** — URL'i gate'ler + prime UAT'a sun. `runtime_artifacts` `run_id`'e bağlı + `preview` kind'ı yok → ya `preview` artifact kind'ı ekle (migration) ya item-merkezli sakla. Madde 10'da per-item run ile çözülür.

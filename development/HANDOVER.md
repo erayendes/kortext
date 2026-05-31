@@ -17,6 +17,23 @@
 
 **npm registry:** `kortext@3.0.0` broken (EADDRINUSE silent fail bug). v3.1.0 release (devasa sürüm: Faz 11-13 + CLI redesign) lokal tgz UAT geçtikten sonra yapılacak.
 
+## 🟢 Sonraki oturumda ne yapılacak — sade anlatım (Eray için)
+
+**Benzetme:** Bir arabanın tüm parçalarını tek tek yaptım ve her birini ayrı ayrı test ettim — motor, fren, direksiyon çalışıyor. Kalan tek şey: parçaları **arabaya monte edip anahtarı çevirip yola çıkmak**. Buna "son montaj" diyorum. Üretim etkisi şu an **sıfır** çünkü parçalar daha takılmadı.
+
+4 adım, sırayla:
+
+1. **Her işe gerçek bir çalışma alanı ver.** Şu an sistem işin kod kopyasını "taklit" olarak alıyor. Bunu gerçek (git) çalışma alanına çevir + "hangi iş nerede çalışıyor" diye hatırlayan küçük bir defter tut.
+2. **Gerçek parçaları taklitlerin yerine tak.** Bu oturumda yaptığım 5 gerçek parçayı (git birleştirme · AI denetçi · insan onayı · önizleme · deploy) tek bir yerde kurup şimdiki taklitlerin yerine koy.
+3. **Önizleme otomatik açılıp kapansın.** İş test aşamasına gelince önizleme penceresi (URL) kendiliğinden açılsın, iş bitince kapansın.
+4. **Ana düğmeyi ekle + tam test.** Hepsini başlatan döngüyü ekle; sonra bir işi baştan sona (yapılacak → … → bitti / yayında) çalıştırıp gerçekten yürüdüğünü kanıtlayan bir test yaz.
+
+> 4. adımda bir mimari karar çıkacak (ana düğme nereye konsun) — onu sana **basit dille** soracağım.
+
+Bunlar bittiğinde sistem **ilk kez bir işi baştan sona, insan müdahalesi olmadan** yürütüyor olacak. Her adım yine ayrı ayrı test edilip ayrı commit'lenecek; bittikçe `npm test` yeşil kalacak.
+
+---
+
 ## ▶ Sonraki oturum — kopyala-yapıştır prompt
 
 > Yeni oturumda şunu yaz (capstone "son montaj" fazına geç):
