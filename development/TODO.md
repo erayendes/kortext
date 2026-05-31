@@ -33,6 +33,16 @@ Açık iş listesi. Yapılan her şey [DECISIONS.md](./DECISIONS.md) tarihçesin
 - [ ] **Handover-on-close** — kapanış başarılıysa (merge ok) `HandoverEngine.record()` ile kapanış handover'ı üret (developer→prime, completed/next). Mock-merge üzerine handover boş kaçtığı için gerçek Merger'la birlikte eklenir.
 - [ ] **blocker-temizle (§5.9 #6)** — ŞU AN KARŞILIKSIZ: item bağımlılık modeli (`blocked_on`/`blocks`) şemada yok, motor "X'i bekleyen item" bilmiyor. Bir bağımlılık modeli tasarlanırsa kapanışta downstream item'ları unblock et. (Eray: şimdilik ertele.)
 
+### Madde 8 (epic→staging) diliminden ertelenenler
+
+Tespit + tetik hazır (`runEpicCompletion` + `Deployer` arayüzü, mock-first); gerçek deploy + §5.11 zinciri bekliyor:
+
+- [ ] **Gerçek `Deployer` impl'i** — `MockDeployer` yerine `development`'ı staging ortamına (test verisi, §5.11) deploy eden gerçek deployer.
+- [ ] **Gate-persona staging raporları (§5.11)** — epic'te gate koşmuş personalar (qa/security/designer/EM/devops) tek-dosya rapor yazar (paralel), motor toplar.
+- [ ] **Prime staging onayı (§5.11)** — staging deploy sonrası motor prime'a "staging onayı" sorar; onay→version ilerler, red→bug açılır.
+- [ ] **Epic-status-flip** — epic bittiğinde epic item'ını board'da `done` göster. Epic'ler review→done yolundan geçmiyor → container-completion için ayrı lifecycle geçişi (veya türetilmiş done) tasarlanmalı. (Eray: Madde 8'de sadece tespit+tetik seçildi, flip ertelendi.)
+- [ ] **closure→epic-check dikişi (Madde 10 capstone)** — `runClosure` `done` verince `runEpicCompletion` çağrılmalı. Deployer'ı `review-cycle→closure` zincirinden geçirmemek için capstone'da bağlanır.
+
 ---
 
 ## v3.1.x follow-up (blocker değil — release sonrası)
