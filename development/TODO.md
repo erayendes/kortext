@@ -49,6 +49,15 @@ Mekanizma hazır (`RunRegistry` + `blockItem`, gerçek); worker-pool köprüsü 
 
 - [ ] **worker-pool → RunRegistry wiring (Madde 10 capstone)** — `runWorkflow`'daki lokal `aborter` (worker-pool.ts:227) run başlarken `registry.register(runId, itemId, aborter)`, run settle olunca `registry.unregister(runId)` etmeli. O zaman `blockItem` gerçek çalışan ajanı durdurur. (Şu an per-item run yok → iptal edilecek canlı run yok; capstone'da bağlanır. `RunRegistry`'ye `unregister` o noktada eklenir — şu an YAGNI.)
 
+### Madde 7 (local test URL) diliminden ertelenenler
+
+Mekanizma hazır (`PreviewServer` arayüzü + `PreviewManager`, mock-first); gerçek spawn + wiring bekliyor:
+
+- [ ] **Gerçek `PreviewServer` impl'i** — `MockPreviewServer` yerine worktree'den projenin dev komutunu (vite vb.) spawn eden + URL döndüren + stop'ta process'i öldüren gerçek server. Worktree'ye bağlı → Madde 10.
+- [ ] **Preview wiring (Madde 10 capstone)** — item `test`'e girince `previewManager.startFor(itemId, worktreePath)`; worktree teardown'da (closure) `stopFor(itemId)`.
+- [ ] **"Çalıştırılabilir/UI görev mi?" koşulu** — §5.7: yalnız çalıştırılabilir/UI görevler preview alır. Şu an koşul yok (her item denenebilir). Bir flag (frontmatter/type) ile gate'le.
+- [ ] **Preview URL persistence + sunma** — URL'i gate'ler + prime UAT'a sun. `runtime_artifacts` `run_id`'e bağlı + `preview` kind'ı yok → ya `preview` artifact kind'ı ekle (migration) ya item-merkezli sakla. Madde 10'da per-item run ile çözülür.
+
 ---
 
 ## v3.1.x follow-up (blocker değil — release sonrası)
