@@ -43,6 +43,12 @@ Tespit + tetik hazır (`runEpicCompletion` + `Deployer` arayüzü, mock-first); 
 - [ ] **Epic-status-flip** — epic bittiğinde epic item'ını board'da `done` göster. Epic'ler review→done yolundan geçmiyor → container-completion için ayrı lifecycle geçişi (veya türetilmiş done) tasarlanmalı. (Eray: Madde 8'de sadece tespit+tetik seçildi, flip ertelendi.)
 - [ ] **closure→epic-check dikişi (Madde 10 capstone)** — `runClosure` `done` verince `runEpicCompletion` çağrılmalı. Deployer'ı `review-cycle→closure` zincirinden geçirmemek için capstone'da bağlanır.
 
+### Madde 9 (block→cancel) diliminden ertelenen
+
+Mekanizma hazır (`RunRegistry` + `blockItem`, gerçek); worker-pool köprüsü bekliyor:
+
+- [ ] **worker-pool → RunRegistry wiring (Madde 10 capstone)** — `runWorkflow`'daki lokal `aborter` (worker-pool.ts:227) run başlarken `registry.register(runId, itemId, aborter)`, run settle olunca `registry.unregister(runId)` etmeli. O zaman `blockItem` gerçek çalışan ajanı durdurur. (Şu an per-item run yok → iptal edilecek canlı run yok; capstone'da bağlanır. `RunRegistry`'ye `unregister` o noktada eklenir — şu an YAGNI.)
+
 ---
 
 ## v3.1.x follow-up (blocker değil — release sonrası)
