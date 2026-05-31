@@ -7,76 +7,59 @@
 
 ## 1. Şu an (2026-05-31)
 
-**Branch:** `main`. Motor/şema epic §5.9 **MADDE 10 (CAPSTONE) + MADDE 11 TAMAM — 9 TDD dilimi indi (2026-05-31 #3):** `W1 → W2 → B1(keystone) → C2 → C5 → C3 → C1 → C4 → D1`, her biri ayrı RED→GREEN (gerçek sebeple kırılan test ÖNCE) + ayrı commit (**9 commit, `39953ad`→`c692223`**). **465→499 test (+34)**, typecheck + lint temiz, her commit'te yeşil. Teslim: 5 mock arayüzün **GERÇEK substrat adapter'ları** (git `GitMerger` · AI-ajan `AgentGateExecutor` · ApprovalQueue `QueueReviewApprover` · process-spawn `DevServerPreviewServer` · deployment-cycle `WorkflowDeployer`) + **keystone** `runItem`/`runReadyItems` (FK'yı GERÇEKTEN kapatır: item artık `item_id`'li gerçek run + kendi worktree'siyle doğar) + 2 dikiş (W1 block→cancel, W2 closure→epic) + Madde 11 kesişen karar/öğrenim kuralı. **Mimari karar (B1): Eray AskUserQuestion ile "yeni, küçük, temiz parça" (standalone fonksiyon) seçti.** Detay [DECISIONS §5.14](./DECISIONS.md). Üretim blast-radius hâlâ **sıfır** — adapter'lar izole/unit-test; **KALAN = uçtan-uca KOMPOZİSYON** (composition root + resolution registry'ler + preview dikişi + driver — §5.14 "ne kaldı"). ⚠️ Tüm commit'ler **LOKAL** — main'e push EDİLMEDİ, Eray onayı bekliyor.
+**Branch:** `main`. Motor/şema epic §5.9 **MADDE 10+11 CAPSTONE + SON MONTAJ TAMAM.** Önce 9 TDD dilimi (adapter'lar+keystone, `39953ad`→`c692223`, 465→499 test), sonra **4 kompozisyon dilimi — "son montaj" (2026-05-31 #4):** `1 ResolutionRegistry+runItem→gerçek-worktree → 2 composition-root → 3 preview-dikişi → 4 driver+e2e`, her biri ayrı RED→GREEN + ayrı commit (**4 commit, `8cbd5e1`→`86ddaeb`**). **499→521 test**, typecheck + lint temiz, her commit'te yeşil. **SONUÇ: sistem ilk kez bir işi `to_do → done`'a kadar insan-döngüsü olmadan, GERÇEK git ile yürütüyor** — uçtan-uca test (`driver-e2e.test.ts`) gerçek worktree + development'a gerçek merge commit + gate + epic→staging deploy zincirini kanıtlıyor. `driveReadyItems` = "başlat düğmesi" (tek-tur, 3 orchestrator-katmanı faz; **mimari karar: Eray sade-dille "ayrı, temiz, yeni parça" seçti** = B1 çizgisi). Detay [DECISIONS §5.15](./DECISIONS.md). Üretim blast-radius hâlâ **sıfır** — driver henüz hiçbir loop/HTTP girişinden sürülmüyor (`server/index.ts` montajı + zamanlayıcı bilinçle sonraya bırakıldı). ⚠️ **13 commit LOKAL** (`39953ad`→`86ddaeb`) — main'e push EDİLMEDİ, Eray onayı bekliyor.
+
+> **Süreç dersi (kayıtlı):** son montaj 4. diliminde, worktree'ye yazan bir test executor'ının guard'ı (`worktreePath !== repoRoot`) deployment adımında host repo'ya düşüp 2 stray commit + 1 çöp dosya yarattı. `--mixed reset` (reflog ile sıfır kayıp) + guard'ı pozitif/dar yaptım (`workflowId==='development-cycle' && path.startsWith(...)`). Ders: worktree-mutasyonlu test executor'ı asla `process.cwd()`'e düşebilecek negatif guard kullanmamalı.
 
 **Bu oturumda inen (6 slice, hepsi TDD + mock-first, ayrı commit):** `uat review-cycle` (review→done/bounce, prime onayı) · `whose-turn` (board "sıra kimde" türetimi) · `closure` (review→merge→done/bounce iskelet) · `epic-completion` (item done→epic bitti→staging tetik) · `block` (block→run cancel, `RunRegistry`) · `local test-URL` (`PreviewManager`). Detay [DECISIONS §5.13](./DECISIONS.md). **Beş mock-first arayüz** (`gate-executor`/`review-approver`/`merger`/`deployer`/`preview-server`) + `RunRegistry` + `PreviewManager` hazır; tümü Madde 10'da gerçeğe bağlanır. Üretim blast-radius **sıfır** (yalnız testler sürüyor — lifecycle henüz orchestrator'dan sürülmüyor).
 
 | Test | Lint | Typecheck | Build |
 |---|---|---|---|
-| 499/499 ✅ | 0 hata · 4 pre-existing warning | 0 hata | temiz |
+| 521/521 ✅ | 0 hata · 4 pre-existing warning | 0 hata | temiz |
 
 **npm registry:** `kortext@3.0.0` broken (EADDRINUSE silent fail bug). v3.1.0 release (devasa sürüm: Faz 11-13 + CLI redesign) lokal tgz UAT geçtikten sonra yapılacak.
 
-## 🟢 Sonraki oturumda ne yapılacak — sade anlatım (Eray için)
+## 🟢 Son montaj BİTTİ — sade anlatım (Eray için)
 
-**Benzetme:** Bir arabanın tüm parçalarını tek tek yaptım ve her birini ayrı ayrı test ettim — motor, fren, direksiyon çalışıyor. Kalan tek şey: parçaları **arabaya monte edip anahtarı çevirip yola çıkmak**. Buna "son montaj" diyorum. Üretim etkisi şu an **sıfır** çünkü parçalar daha takılmadı.
+**Benzetme:** Arabanın tüm parçalarını tek tek yapıp ayrı ayrı test etmiştim (motor, fren, direksiyon). Bu oturumda parçaları **arabaya monte edip anahtarı çevirdim** — araba ilk kez baştan sona, kendi kendine yürüdü. 4 adımın **dördü de bitti:**
 
-4 adım, sırayla:
+1. ✅ **Her işe gerçek çalışma alanı verildi** — sistem artık her işi gerçek (git) bir çalışma alanında yürütüyor + "hangi iş nerede" defterini tutuyor.
+2. ✅ **Gerçek parçalar taklitlerin yerine takıldı** — 5 gerçek parça (git birleştirme · AI denetçi · insan onayı · önizleme · deploy) tek yerde (`composition`) kuruldu.
+3. ✅ **Önizleme otomatik açılıp kapanıyor** — iş test aşamasına gelince URL açılıyor, iş bitince/geri dönünce kapanıyor.
+4. ✅ **Ana düğme eklendi + tam test** — "başlat" (`driveReadyItems`) bir işi yapılacak → test → onay → **bitti**'ye kadar yürütüyor; uçtan-uca test **gerçek git ile** kanıtlıyor (gerçek birleştirme commit'i dahil). **Mimari karar:** sana sade dille sordum, "ayrı, temiz, yeni parça"yı seçtin — öyle yapıldı.
 
-1. **Her işe gerçek bir çalışma alanı ver.** Şu an sistem işin kod kopyasını "taklit" olarak alıyor. Bunu gerçek (git) çalışma alanına çevir + "hangi iş nerede çalışıyor" diye hatırlayan küçük bir defter tut.
-2. **Gerçek parçaları taklitlerin yerine tak.** Bu oturumda yaptığım 5 gerçek parçayı (git birleştirme · AI denetçi · insan onayı · önizleme · deploy) tek bir yerde kurup şimdiki taklitlerin yerine koy.
-3. **Önizleme otomatik açılıp kapansın.** İş test aşamasına gelince önizleme penceresi (URL) kendiliğinden açılsın, iş bitince kapansın.
-4. **Ana düğmeyi ekle + tam test.** Hepsini başlatan döngüyü ekle; sonra bir işi baştan sona (yapılacak → … → bitti / yayında) çalıştırıp gerçekten yürüdüğünü kanıtlayan bir test yaz.
+> **Önemli:** Üretim etkisi hâlâ **sıfır** — "başlat" düğmesi henüz hiçbir otomatik yerden (uygulama açılışı / zamanlayıcı) çağrılmıyor; elle çağrılıyor. Onu uygulamaya bağlamak + (istersen) periyodik otomatik çalıştırmak **ayrı, sonraki bir iş** (sen "otomatik zamanlayıcı"yı henüz seçmedin).
 
-> 4. adımda bir mimari karar çıkacak (ana düğme nereye konsun) — onu sana **basit dille** soracağım.
-
-Bunlar bittiğinde sistem **ilk kez bir işi baştan sona, insan müdahalesi olmadan** yürütüyor olacak. Her adım yine ayrı ayrı test edilip ayrı commit'lenecek; bittikçe `npm test` yeşil kalacak.
+**Şu an mümkün olan:** Bir iş listesi verildiğinde sistem o işi **ilk kez baştan sona, insan müdahalesi olmadan** yürütebiliyor (testte kanıtlandı). Sıradaki: bunu uygulamadan tetikleyip canlı dashboard'da göstermek.
 
 ---
 
 ## ▶ Sonraki oturum — kopyala-yapıştır prompt
 
-> Yeni oturumda şunu yaz (capstone "son montaj" fazına geç):
+> Yeni oturumda şunu yaz (driver'ı bir girişe bağla + ertelenenler):
 
 ```
-DECISIONS §5.14'ü oku, capstone'un SON MONTAJINI yap (uçtan-uca kompozisyon).
+DECISIONS §5.15'i oku. Capstone motoru BİTTİ: 13 TDD dilimi LOKAL main'de
+(39953ad→86ddaeb), 521 test + typecheck + lint yeşil. Sistem bir işi to_do→done'a
+kadar gerçek git'le yürütüyor (driveReadyItems = "başlat düğmesi", driver-e2e.test.ts
+kanıtlıyor). Driver standalone fonksiyon (Eray "ayrı, temiz, yeni parça" seçti).
+Üretim blast-radius hâlâ sıfır — driver hiçbir girişten sürülmüyor.
 
-Durum: Madde 10+11'in 9 TDD dilimi indi (W1→W2→B1→C2→C5→C3→C1→C4→D1; main'de LOKAL,
-9 commit 39953ad→c692223, 499 test + typecheck + lint yeşil). 5 mock arayüzün GERÇEK
-substrat adapter'ları (GitMerger/AgentGateExecutor/QueueReviewApprover/DevServerPreviewServer/
-WorkflowDeployer) + keystone runItem/runReadyItems (FK kapatır) + W1/W2 dikişleri + Madde 11
-docs HAZIR — ama hepsi izole/unit-test, orchestrator kompozisyonuna takılmadı. Blast-radius sıfır.
+KALAN (öncelik sırası, her biri ayrı TDD + ayrı commit):
+1. DRIVER'I BİR GİRİŞE BAĞLA: server/index.ts composition'ı (createComposition) kurup
+   driveReadyItems'i çağırsın — önce HTTP tetiği (örn. POST /api/drive) veya manuel
+   komut; periyodik otomatik zamanlayıcı AYRI iş (Eray henüz seçmedi, sorma-bekle).
+   Bu, blast-radius'u sıfırdan çıkaran ilk dilim → DİKKAT + Eray onayı.
+2. Ertelenenler (§5.14/§5.15, sıra Eray'a sorulabilir): handover-on-close (C2 — gerçek
+   merge'le HandoverEngine.record), gate_runs'a uat verdict (attempt tuzağı çöz),
+   board whose-turn rozeti (src/ UI), staging raporları/onayı (§5.11), epic-status-flip,
+   blocker-temizle (bağımlılık modeli gerekir).
 
-KALAN = son montaj (§5.14 "ne kaldı"):
-1. RESOLUTION REGISTRY'LER + B1'i gerçek worktree'ye bağla: item→worktree handle (C2
-   GitMerger.resolveHandle), item→run-context (C5), item→run-id (C3). runItem şu an
-   acquireWorktree'yi ENJEKTE mock'la alıyor → gerçek WorktreeManager (base=development) +
-   gerçek run ile bu kayıtları doldur. (run/item impedance'ın asıl gerçek kapanışı burada.)
-2. COMPOSITION ROOT: gerçek adapter'ları kurup orchestrator fonksiyonlarının (runClosure/
-   runTestCycle/runReviewCycle/runEpicCompletion) dep'lerinde mock'ların yerine koy.
-3. PREVIEW DİKİŞİ: review-cycle/closure → PreviewManager.startFor (test-girişinde URL) /
-   stopFor (teardown). C1 substratı hazır, dikiş kaldı (Madde 10 kalemi).
-4. DRIVER + E2E: runReadyItems'i süren entry point (Orchestrator'a mı / ayrı loop mu →
-   mimari karar, AskUserQuestion) + uçtan-uca test (item to_do → … → done/staging; gerçek
-   git + mock agent).
-
-SIRA: 1 (registry'ler + gerçek worktree) → 2 (composition root) → 3 (preview dikişi) →
-4 (driver + e2e). Her biri ayrı TDD (RED→GREEN, gerçek sebeple kırılan test ÖNCE) + ayrı commit.
-
-Sabit kurallar (epic boyunca öğrenildi):
-- MİMARİ PRENSİP (§5.13): koşullu mantık ORCHESTRATOR katmanında (DB durumu üzerinde düz TS
-  fold), DAG (dag.ts/worker-pool.ts) saf AND-join. Gate'ler gate_runs satırı, fan-in DEĞİL —
-  §5.12 deadlock böyle önlenir.
-- MOCK→GERÇEK deseni: her adapter enjekte bir alt-substrat alır (WorktreeManager/Executor/
-  ApprovalQueue/child_process/workflow) — testte mock, prod'da gerçek. Composition root bu
-  enjeksiyonu yapar; adapter'lar §5.14'te commit'li.
-- TDD zorunlu: önce başarısız test (RED, doğru sebeple), sonra minimal kod (GREEN). Gerçek
-  fonksiyonları çalıştır, paralel kopya yazma.
-- "tamam" demeden önce npm test + npm run typecheck YEŞİL — iddia etme, ölç.
-- Büyük mimari kararları AskUserQuestion ile sor (driver şekli = aday). main'e SORMADAN
-  push/merge YOK; her dilim ayrı commit. Eray non-coder/Türkçe, kod+commit İngilizce, somut artefakt.
-- ⚠️ Bilinçli ertelemeler (§5.14 kayıtlı): handover-on-close (C2 — içerik/konum spec'i lazım);
-  write_decision/write_learned MCP tool'ları YOK (D1 dosya-tabanlı kullandı).
+Sabit kurallar: koşullu mantık ORCHESTRATOR'da, DAG saf AND-join (§5.13). Mock→gerçek
+deseni (composition root enjekte eder). TDD zorunlu (RED→GREEN, gerçek sebep). "tamam"
+demeden npm test + typecheck YEŞİL. main'e SORMADAN push YOK. Eray non-coder/Türkçe,
+kod+commit İngilizce, somut artefakt göster. ⚠️ TEST EXECUTOR'LARI worktree'ye yazarken
+host repo'ya düşebilecek negatif guard KULLANMA (§5.15 dersi — 2 stray commit yaşandı).
 ```
 
 ## 2. Geçmiş özet

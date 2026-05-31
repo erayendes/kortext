@@ -31,12 +31,18 @@ Açık iş listesi. Yapılan her şey [DECISIONS.md](./DECISIONS.md) tarihçesin
 
 > **NOT:** 5 gerçek adapter + W1/W2 dikişleri + keystone tek tek **gerçek + test edildi**, ama orchestrator kompozisyonuna **takılmadı**. Aşağıdaki eski "Gerçek X impl'i" maddeleri = ADAPTER ✅ indi; geriye yalnız **wiring** kaldı (↓ "son montaj").
 
-### KALAN — uçtan-uca "son montaj" (sonraki faz, §5.14)
+### SON MONTAJ — ✅ 4 kompozisyon dilimi indi (2026-05-31 #4, §5.15)
 
-- [ ] **1 — Resolution registry'ler + B1'i gerçek worktree'ye bağla:** item→worktree handle (C2 `resolveHandle`), item→run-context (C5), item→run-id (C3). `runItem` şu an `acquireWorktree`'yi **enjekte mock**'la alıyor → gerçek `WorktreeManager` (base=development) + gerçek run ile doldur. (run/item impedance'ın asıl gerçek kapanışı.)
-- [ ] **2 — Composition root:** gerçek adapter'ları kurup `runClosure`/`runTestCycle`/`runReviewCycle`/`runEpicCompletion` dep'lerinde mock'ların yerine koy.
-- [ ] **3 — Preview dikişi:** item `test`'e girince `previewManager.startFor`, closure'da `stopFor` (C1 substratı hazır).
-- [ ] **4 — Driver + e2e:** `runReadyItems`'i süren entry point (mimari karar → AskUserQuestion) + uçtan-uca test (to_do → … → done/staging; gerçek git + mock agent).
+`8cbd5e1`→`86ddaeb` (4 commit), **499→521 test**, typecheck+lint temiz. Sistem ilk kez bir işi `to_do→done`'a GERÇEK git'le yürütüyor.
+
+- [x] **1 — ResolutionRegistry + runItem→gerçek worktree** (`8cbd5e1`) — item→{handle,runId,worktree} defteri; `runItem` önce gerçek run yaratır, worktree'yi run id'siyle alır, defteri doldurur, workflow'u `existingRun`'la sürer (tek run, orphan yok). +7 test.
+- [x] **2 — Composition root** (`cda0818`) — `createComposition`: 5 gerçek adapter + resolver'ları ResolutionRegistry'ye bağlar (saf wiring, §5.13). +6 test.
+- [x] **3 — Preview dikişi** (`8193ac9`) — `runItem` test-girişinde `startFor`, `runClosure` (done/bounce) `stopFor`; ikisi de soft. +5 test.
+- [x] **4 — Driver + e2e** (`86ddaeb`) — `driveReadyItems` = "başlat düğmesi" (tek-tur, 3 faz); **Eray "ayrı temiz yeni parça" seçti**. Uçtan-uca test gerçek git repo (gerçek merge commit). +4 test. ⚠️ Süreç dersi: test executor guard'ı host repo'ya düşüp 2 stray commit yarattı → `--mixed reset` + dar guard (§5.15).
+
+### KALAN — driver'ı bir girişe bağla (sonraki faz, blast-radius'u açar)
+
+- [ ] **Driver'ı sür:** `server/index.ts` `createComposition` kurup `driveReadyItems`'i HTTP tetiği/manuel komuttan çağırsın. **Periyodik otomatik zamanlayıcı AYRI iş** (Eray henüz seçmedi). Bu, üretim blast-radius'u sıfırdan çıkaran ilk dilim → Eray onayı + dikkat.
 
 ### uat review-cycle diliminden ertelenenler (tasarım onaylı 2026-05-31, mock-first)
 
