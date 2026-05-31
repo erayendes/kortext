@@ -13,7 +13,7 @@
 
 | Test | Lint | Typecheck | Build |
 |---|---|---|---|
-| 415/415 ✅ | 0 hata · 4 pre-existing warning | 0 hata | temiz |
+| 425/425 ✅ | 0 hata · 4 pre-existing warning | 0 hata | temiz |
 
 **npm registry:** `kortext@3.0.0` broken (EADDRINUSE silent fail bug). v3.1.0 release (devasa sürüm: Faz 11-13 + CLI redesign) lokal tgz UAT geçtikten sonra yapılacak.
 
@@ -42,7 +42,7 @@ Spec: [DECISIONS.md Bölüm 5](./DECISIONS.md) (design level, Eray onayladı). S
 | `new/existing-project-analysis` | ✅ tutarlı (foundation üretici, dokunulmadı) |
 | ~~`incident-pipeline`~~ | ✅ AYRILDI → rollback + hotfix (§5.12 — deadlock) |
 | ~~`maintenance-cycle`~~ | ✅ SİLİNDİ (§5.12 — çıktısı planning/backlog'a eriyor) |
-| Motor/şema epic (§5.9) | 🚧 Layer 0 TAMAM — **Madde 1 ✅** (lifecycle `test`/`bounce`) · **Madde 2 ✅** (`review_gates` kolon+repo) · **Madde 3 ✅** (`gate_runs` tablo+repo) — §5.13. Sıradaki **Madde 4 (gate fan-out + join)** = sistemin ilk kez test-cycle'ı *koştuğu* an. (Madde 11 bağımsız docs kuralı, beklemede.) |
+| Motor/şema epic (§5.9) | 🚧 **Madde 1–4 ✅** — lifecycle (`test`/`bounce`) · `review_gates` · `gate_runs` · **`runTestCycle` (test-cycle mekaniği ÇALIŞIYOR, mock-first)** — §5.13. Test-cycle ilk kez koşuyor (fan-out→join→review/bounce). Sıradaki adaylar: uat (review +prime) · Madde 6 (closure ←açık) · Madde 5 (whose-turn) · Madde 9 (block). (Madde 11 bağımsız docs, beklemede.) |
 
 **Disipline:** workflow markdown'ları ev-stilinde (normal cümle, `## Faz`+`1. **+persona:**`), parser'a dokunma; `inputs:` tam path (`.kortext/references/X.md`), prose'da çıplak rozet (`STACK`); foundation OKUMA (analiz hariç).
 
