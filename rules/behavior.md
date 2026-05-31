@@ -14,6 +14,7 @@
 - **Blokaj:** Mantıksal çelişki veya uygulanamazlık durumunda işlemi durdur ve Chain of Command üzerinden raporla.
 - **Paralel Çalışma:** Ajanlar birbirlerini etkilemeyen görevlerde paralel çalışır.
 - **Otorite Zinciri:** +prime > yönetici ajanlar > diğer ajanlar. Çatışmalarda üst otorite geçerlidir.
+- **Karar ve Öğrenim Kaydı (kesişen kural — her persona, iş sırasında):** Önemli kararlar ve öğrenimler teslime bırakılmaz; oluştuğu anda kalıcılaştırılır. Sürece yön veren bir teknik / ürün / tasarım / güvenlik kararı verildiğinde → `workspace/memory/decisions.md` (ADR; [Decision Classification](#decision-classification) seviyesiyle etiketle). Bir hatadan ders veya tekrar-önleme bilgisi çıktığında → `workspace/memory/learned.md`. Read-before-Write; kayıt **en üste** eklenir, öncekiler silinmez. Böylece bir sonraki ajan kararı/dersi hazır bulur, gerekçe işin akışında kaybolmaz.
 
 ## Source of Truth Map
 
@@ -41,8 +42,8 @@
 ### Görev Tamamlandığında
 1. **Raporla:** `kortext-handover.py` aracıyla `workspace/memory/handover.md` dosyasının **en üstüne** devir raporu ekle (öncekiler silinmez). Bu adım atlanamaz.
 2. **Kontrol Et:** `kortext-item-check.py` aracıyla kapanış koşullarını doğrula.
-3. **Kapat:** `kortext-item-transition.py` aracıyla item'ı `Done` yap, `kortext-backlog-sync.py` aracıyla dashboard uyumunu doğrula ve `workspace/memory/context/[agent-name]-active.md` dosyanı güvenle sil.
-3. **Öğrenim:** Hata veya kritik çözümleri `workspace/memory/learned.md` dosyasına işle.
+3. **Öğrenim:** Kalan ders veya kritik çözümleri `workspace/memory/learned.md` dosyasına işle. (Kesişen kural gereği büyük kararlar/dersler iş sırasında zaten kaydedildi; burada son dersleri tamamla.)
+4. **Kapat:** `kortext-item-transition.py` aracıyla item'ı `Done` yap, `kortext-backlog-sync.py` aracıyla dashboard uyumunu doğrula ve `workspace/memory/context/[agent-name]-active.md` dosyanı güvenle sil.
 
 ## Secrets Safety Rules
 

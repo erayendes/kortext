@@ -30,8 +30,8 @@ Her zaman bu kaynaklardan referans ve proje durumu al:
 - **Task listesi (backlog)** — sıradaki görev burada. SQL'de `backlog_items` tablosunda; MCP tool'larıyla eriş (`list_backlog`, `get_backlog_item`).
 - `.kortext/memory/`
   - `handover.md` — önceki ajanların ne yaptığını anlamak için (bağlam kaynağı).
-  - `decisions.md` — ADR TOC; seçici okuma.
-  - `learned.md` — Knowledge Base TOC; seçici okuma.
+  - `decisions.md` — ADR TOC; seçici okuma. **Önemli bir karar verdiğinde iş sırasında buraya da işlersin** (kesişen kural, `rules/behavior.md`).
+  - `learned.md` — Knowledge Base TOC; seçici okuma. **Bir ders çıktığında iş sırasında buraya da işlersin** (kesişen kural, `rules/behavior.md`).
 - `.kortext/references/` — ALL-CAPS canlı kaynaklar (ACCESS, API, CONTENT, DATABASE, DESIGN, ENVIRONMENT, GLOSSARY, GROWTH, LEGAL, SECURITY, STACK, STRUCTURE, TEST).
 
 Yazma alanları (`foundation/`, `reports/`) görev workflow'unda söylenir.
