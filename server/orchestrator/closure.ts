@@ -2,6 +2,7 @@ import type { Repositories } from '../db/repositories/index.ts';
 import type { ItemLifecycle } from '../engine/item-lifecycle.ts';
 import type { Merger, MergeOutcome } from '../engine/merger.ts';
 import type { Deployer } from '../engine/deployer.ts';
+import type { PreviewManager } from './test-preview.ts';
 import { runEpicCompletion, type EpicCompletionResult } from './epic-completion.ts';
 
 export type ClosureResult = {
@@ -23,6 +24,13 @@ export type ClosureDeps = {
    * the epic→staging trigger.
    */
   deployer: Deployer;
+  /**
+   * Local test-preview manager (§5.7/§5.9 #7). When set, the item's preview is
+   * torn down here — the worktree it ran from is being merged/quarantined, so the
+   * URL is stopped on both done and bounce (the developer gets a fresh one on the
+   * next test entry). Optional + soft: a stop failure never fails the closure.
+   */
+  previewManager?: PreviewManager;
   /** Actor recorded on lifecycle transitions/audit. Default 'orchestrator'. */
   by?: string;
 };
@@ -38,7 +46,7 @@ export type ClosureDeps = {
  * (Madde 10). Handover-on-close and blocker clearing are deferred (TODO §5.9).
  */
 export async function runClosure(itemId: string, deps: ClosureDeps): Promise<ClosureResult> {
-  const { repos, lifecycle, merger, deployer } = deps;
+  const { repos, lifecycle, merger, deployer, previewManager } = deps;
   const by = deps.by ?? 'orchestrator';
 
   const item = repos.backlog.get(itemId);
@@ -58,6 +66,17 @@ export async function runClosure(itemId: string, deps: ClosureDeps): Promise<Clo
       ok: false,
       reason: `merger error: ${err instanceof Error ? err.message : String(err)}`,
     };
+  }
+
+  // Preview seam (§5.7): the worktree the preview ran from is gone now (merged on
+  // ok, quarantined on conflict), so tear the URL down either way. Soft — a stop
+  // failure must not turn a clean merge into a bounce.
+  if (previewManager) {
+    try {
+      await previewManager.stopFor(itemId);
+    } catch {
+      // best-effort teardown
+    }
   }
 
   if (merge.ok) {

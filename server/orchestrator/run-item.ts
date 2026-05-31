@@ -6,6 +6,7 @@ import type { ItemLifecycle } from '../engine/item-lifecycle.ts';
 import type { RunRegistry } from '../engine/run-registry.ts';
 import type { WorktreeHandle } from '../engine/worktree.ts';
 import type { ResolutionRegistry } from './resolution-registry.ts';
+import type { PreviewManager } from './test-preview.ts';
 import { runWorkflow } from '../engine/worker-pool.ts';
 
 /**
@@ -49,6 +50,13 @@ export type RunItemDeps = {
    * Optional so the keystone's own unit tests can run without the composition.
    */
   resolution?: ResolutionRegistry;
+  /**
+   * Local test-preview manager (§5.7/§5.9 #7). When set, a successful item-run
+   * brings up a preview from its worktree on `test`-entry so gates + prime UAT
+   * can open the live URL. Optional + soft: a preview that fails to spawn never
+   * fails the build (the item still reaches `test`). Closure stops it.
+   */
+  previewManager?: PreviewManager;
   /** Actor recorded on lifecycle transitions/audit. Default 'orchestrator'. */
   by?: string;
 };
@@ -80,7 +88,8 @@ const READY: ReadonlySet<string> = new Set(['to_do', 'in_progress']);
  * Mock-first: the worktree acquirer is injected (real git lands in C-slices).
  */
 export async function runItem(itemId: string, deps: RunItemDeps): Promise<RunItemResult> {
-  const { repos, lifecycle, executor, graph, acquireWorktree, registry, resolution } = deps;
+  const { repos, lifecycle, executor, graph, acquireWorktree, registry, resolution, previewManager } =
+    deps;
   const by = deps.by ?? 'orchestrator';
 
   const item = repos.backlog.get(itemId);
@@ -142,6 +151,15 @@ export async function runItem(itemId: string, deps: RunItemDeps): Promise<RunIte
     // Development-cycle exit (§5.8): in_progress → test. Worktree is kept alive —
     // closure (C2) merges it to development and releases it then (ledger kept).
     lifecycle.transition(itemId, 'test', by, 'development-cycle complete');
+    // Preview seam (§5.7): bring up the local test URL from the worktree so gates
+    // + prime UAT can open it. Soft — a failed spawn must not fail a clean build.
+    if (previewManager) {
+      try {
+        await previewManager.startFor(itemId, lease.path);
+      } catch {
+        // preview is best-effort; the item is on `test` regardless
+      }
+    }
     return { itemId, run, outcome: 'implemented', worktree: lease };
   }
 
