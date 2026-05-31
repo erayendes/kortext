@@ -11,6 +11,18 @@ Açık iş listesi. Yapılan her şey [DECISIONS.md](./DECISIONS.md) tarihçesin
 
 ---
 
+## Motor epic (§5.9) — aktif
+
+**Kaynak doğruluk:** numaralı maddeler [DECISIONS §5.9](./DECISIONS.md) + bağımlılık sırası §5.13 sonunda (Madde 1–4 ✅ main'de). Burada yalnızca **dilim-içi ertelenen alt-işler** (numaralı maddeye girmeyen) izlenir ki kaybolmasın.
+
+### uat review-cycle diliminden ertelenenler (tasarım onaylı 2026-05-31, mock-first)
+
+- [ ] **Gerçek approval-queue bağlantısı (uat)** — mock-first `ReviewApprover`'ın gerçek impl'i: `review`'deki item için prime'a dashboard onay sorusu düşür + cevabı bekle. **Engel (impedance):** `pending_questions` `item_id` taşımıyor (yalnız nullable `run_id`); item-cycle'lar workflow `run`'ı yaratmıyor; `enqueue`/`waitForAnswer`'ın motor tarafında **hiç üreticisi yok** (sadece insan-`answer` ucu CLI+route'ta). → ya `pending_questions`'a item adresleme ekle, ya enqueue/resolve ayrımı tasarla. (Madde 4'ün "gerçek GateExecutor" follow-up'ının eşi.)
+- [ ] **uat verdict'i `gate_runs` satırı olarak kaydet** — şimdilik red sebebi `audit_log`'da (§5.13 "comment alanı ERTELENDİ" ile tutarlı). gate_runs'a yazmak için **`attempt` tuzağı** çözülmeli: 0-test-gate + tekrarlı-bounce'ta `UNIQUE(item_id, attempt, gate='uat')` çakışır. → `attempt`'i item alanı yap **veya** test-cycle her cycle'da marker üretsin.
+- [ ] **Madde 6 dikiş notu** — mekanik kapanış (CI+conflict→merge→blocker temizle→handover→worktree/preview kapat) `runReviewCycle`'ın onay dalındaki `done` geçişinin **ÖNÜNE** eklenecek; `done` satırı yerinde kalır (yeniden-yazım değil, araya-ekleme). [§5.9 #6 olarak zaten izleniyor — burada yalnız dikiş yeri not edildi.]
+
+---
+
 ## v3.1.x follow-up (blocker değil — release sonrası)
 
 | Madde | Yer | Durum |
