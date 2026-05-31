@@ -1,0 +1,139 @@
+import type { Repositories } from '../db/repositories/index.ts';
+import type { Run } from '../db/schemas.ts';
+import type { Executor } from '../engine/executor.ts';
+import type { WorkflowGraph } from '../engine/dag.ts';
+import type { ItemLifecycle } from '../engine/item-lifecycle.ts';
+import type { RunRegistry } from '../engine/run-registry.ts';
+import { runWorkflow } from '../engine/worker-pool.ts';
+
+/**
+ * A per-item worktree lease — the item's isolated working copy (base=`development`,
+ * §5.11). Kept alive across the whole item-cycle: the dev-cycle run builds in it,
+ * and closure (Madde 10 C2) merges it back to `development` and releases it.
+ */
+export type WorktreeLease = {
+  path: string;
+  /** Tear down the worktree. failure → quarantine (kept for postmortem). */
+  release: (opts: { success: boolean }) => Promise<void> | void;
+};
+
+/** Acquire a per-item worktree. Injected so tests mock git; real impl forks `development`. */
+export type AcquireItemWorktree = (itemId: string) => Promise<WorktreeLease>;
+
+export type RunItemDeps = {
+  repos: Repositories;
+  lifecycle: ItemLifecycle;
+  executor: Executor;
+  /** The development-cycle graph the ready item runs. */
+  graph: WorkflowGraph;
+  /** Per-item worktree (base=`development`); injected so tests mock git. */
+  acquireWorktree: AcquireItemWorktree;
+  /** Live-cancellation registry (W1) so `block` can stop this item-run. */
+  registry: RunRegistry;
+  /** Actor recorded on lifecycle transitions/audit. Default 'orchestrator'. */
+  by?: string;
+};
+
+export type RunItemResult = {
+  itemId: string;
+  run: Run;
+  /**
+   * 'implemented' = dev-cycle ran clean → item at `test`, worktree kept for closure.
+   * 'failed'      = dev-cycle run failed → item stays in_progress, worktree quarantined.
+   */
+  outcome: 'implemented' | 'failed';
+  /** The live worktree lease on success (closure merges + releases it); null on failure. */
+  worktree: WorktreeLease | null;
+};
+
+const READY: ReadonlySet<string> = new Set(['to_do', 'in_progress']);
+
+/**
+ * Spawn the development-cycle run for a ready backlog item (§5.9 #10 — the
+ * capstone keystone that closes the run/item impedance).
+ *
+ * The item finally gets a real `run` row with `item_id` set (FK closes), runs in
+ * its own worktree forked from `development`, and is registered for cancellation
+ * (W1, so `block` reaches the live agent). Per §5.13 the run itself stays a pure
+ * AND-join build; the conditional `in_progress → test` exit is an orchestrator-
+ * layer transition applied here on success.
+ *
+ * Mock-first: the worktree acquirer is injected (real git lands in C-slices).
+ */
+export async function runItem(itemId: string, deps: RunItemDeps): Promise<RunItemResult> {
+  const { repos, lifecycle, executor, graph, acquireWorktree, registry } = deps;
+  const by = deps.by ?? 'orchestrator';
+
+  const item = repos.backlog.get(itemId);
+  if (!item) throw new Error(`backlog item not found: ${itemId}`);
+  if (!READY.has(item.status)) {
+    throw new Error(
+      `runItem requires a ready item (to_do|in_progress), got '${item.status}' for ${itemId}`,
+    );
+  }
+
+  // Ensure the item is in_progress before the build (a fresh to_do is started;
+  // an in_progress item resumed after a bounce is left where it is).
+  if (item.status === 'to_do') {
+    lifecycle.transition(itemId, 'start', by);
+  }
+
+  const lease = await acquireWorktree(itemId);
+
+  let run: Run;
+  try {
+    const result = await runWorkflow(graph, executor, repos, {
+      itemId, // ← FK closure: the run row carries this item
+      worktreePath: lease.path,
+      registry, // ← block can cancel the live run by item (W1)
+      triggeredBy: by,
+    });
+    run = result.run;
+  } catch (err) {
+    // The engine threw (e.g. a misconfigured gate) — quarantine, then rethrow.
+    await lease.release({ success: false });
+    throw err;
+  }
+
+  if (run.status === 'succeeded') {
+    // Development-cycle exit (§5.8): in_progress → test. Worktree is kept alive —
+    // closure (C2) merges it to development and releases it then.
+    lifecycle.transition(itemId, 'test', by, 'development-cycle complete');
+    return { itemId, run, outcome: 'implemented', worktree: lease };
+  }
+
+  // Build failed → item stays in_progress (developer retries); quarantine the worktree.
+  await lease.release({ success: false });
+  return { itemId, run, outcome: 'failed', worktree: null };
+}
+
+export type RunReadyItemsDeps = RunItemDeps & {
+  /** Max simultaneous item-runs. Default 3. */
+  maxConcurrent?: number;
+};
+
+/**
+ * Kick off a development-cycle run for every ready (to_do) item, with bounded
+ * concurrency (§5.9 #10). Each item runs via {@link runItem} in its own worktree.
+ * in_progress items are already being worked — only fresh to_do items are picked.
+ *
+ * The conditional "which items are ready" is a plain orchestrator-layer query
+ * over DB status (§5.13), not anything the engine decides.
+ */
+export async function runReadyItems(deps: RunReadyItemsDeps): Promise<RunItemResult[]> {
+  const max = Math.max(1, deps.maxConcurrent ?? 3);
+  const ready = deps.repos.backlog.list({ status: 'to_do', limit: 1000 });
+
+  const results: RunItemResult[] = [];
+  let cursor = 0;
+  // A fixed pool of workers drains a shared cursor. The `cursor++` claim is
+  // atomic (no await between read and increment), so no item is run twice.
+  const worker = async (): Promise<void> => {
+    while (cursor < ready.length) {
+      const item = ready[cursor++]!; // in-bounds per the while-guard
+      results.push(await runItem(item.id, deps));
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(max, ready.length) }, () => worker()));
+  return results;
+}
