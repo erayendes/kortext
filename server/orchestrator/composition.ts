@@ -11,6 +11,7 @@ import {
   DevServerPreviewServer,
   type DevServerConfig,
 } from '../engine/executors/dev-server-preview-server.ts';
+import type { PreviewServer } from '../engine/preview-server.ts';
 import { PreviewManager } from './test-preview.ts';
 import { ApprovalQueue } from './approval-queue.ts';
 import { ResolutionRegistry } from './resolution-registry.ts';
@@ -32,8 +33,16 @@ export type CompositionDeps = {
   baseBranch?: string;
   /** Resolve the deployment-cycle workflow the staging deploy drives (C4). */
   loadDeploymentWorkflow: () => WorkflowDefinition | null;
-  /** Dev-server config the preview substrate spawns per item worktree (C1). */
-  preview: DevServerConfig;
+  /**
+   * Dev-server config the real preview substrate spawns per item worktree (C1).
+   * Used when {@link previewServer} is not injected. Defaults to `npm run dev`.
+   */
+  preview?: DevServerConfig;
+  /**
+   * Override the preview substrate (tests inject a MockPreviewServer; prod uses
+   * the real {@link DevServerPreviewServer} built from {@link preview}).
+   */
+  previewServer?: PreviewServer;
   /** Max simultaneous worktrees. Default 10. */
   maxConcurrentWorktrees?: number;
 };
@@ -126,7 +135,12 @@ export function createComposition(deps: CompositionDeps): Composition {
   });
 
   // C1 — preview spawns the project's dev command in the item's worktree.
-  const previewManager = new PreviewManager(new DevServerPreviewServer(deps.preview));
+  // Injectable so tests use a deterministic MockPreviewServer; prod builds the
+  // real spawner from the dev-server config.
+  const previewServer =
+    deps.previewServer ??
+    new DevServerPreviewServer(deps.preview ?? { command: 'npm', args: ['run', 'dev'] });
+  const previewManager = new PreviewManager(previewServer);
 
   // The per-item worktree acquirer runItem injects: provision a real worktree
   // keyed by the (pre-created) run id and surface its handle so the ledger can
