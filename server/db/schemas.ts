@@ -9,6 +9,20 @@ import { z } from 'zod';
 const Timestamp = z.number().int().nonnegative();
 const PersonaHandle = z.string().min(1); // e.g. '+frontend-engineer'
 
+/**
+ * The 5 planning-selectable gates (§5.3 / §5.9 #2). Shared by
+ * backlog_items.review_gates (the per-item checklist selection) and gate_runs
+ * (per-test-cycle execution + findings).
+ */
+export const GateSchema = z.enum([
+  'code_review',
+  'quality_control',
+  'security_control',
+  'design_review',
+  'uat',
+]);
+export type Gate = z.infer<typeof GateSchema>;
+
 // ---------- backlog_items ----------
 
 export const BacklogItemTypeSchema = z.enum([
@@ -40,6 +54,7 @@ export const BacklogItemSchema = z.object({
   owner: PersonaHandle.nullable(),
   parent_id: z.string().nullable(),
   version: z.string().nullable(),
+  review_gates: z.array(GateSchema),
   frontmatter: z.record(z.unknown()),
   body_md: z.string(),
   created_at: Timestamp,
@@ -57,6 +72,7 @@ export const BacklogItemInsertSchema = BacklogItemSchema.omit({
   owner: PersonaHandle.nullable().default(null),
   parent_id: z.string().nullable().default(null),
   version: z.string().nullable().default(null),
+  review_gates: z.array(GateSchema).default([]),
 });
 export type BacklogItemInsert = z.input<typeof BacklogItemInsertSchema>;
 
@@ -409,16 +425,6 @@ export const SecretScanResultInsertSchema = z.object({
 export type SecretScanResultInsert = z.input<typeof SecretScanResultInsertSchema>;
 
 // ---------- gate_runs ----------
-
-/** The 5 planning-selectable gates (§5.3 / §5.9 #2). */
-export const GateSchema = z.enum([
-  'code_review',
-  'quality_control',
-  'security_control',
-  'design_review',
-  'uat',
-]);
-export type Gate = z.infer<typeof GateSchema>;
 
 export const GateRunStatusSchema = z.enum(['pending', 'running', 'pass', 'fail']);
 export type GateRunStatus = z.infer<typeof GateRunStatusSchema>;

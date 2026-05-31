@@ -13,7 +13,7 @@
 
 | Test | Lint | Typecheck | Build |
 |---|---|---|---|
-| 407/407 ✅ | 0 hata · 4 pre-existing warning | 0 hata | temiz |
+| 415/415 ✅ | 0 hata · 4 pre-existing warning | 0 hata | temiz |
 
 **npm registry:** `kortext@3.0.0` broken (EADDRINUSE silent fail bug). v3.1.0 release (devasa sürüm: Faz 11-13 + CLI redesign) lokal tgz UAT geçtikten sonra yapılacak.
 
@@ -42,7 +42,7 @@ Spec: [DECISIONS.md Bölüm 5](./DECISIONS.md) (design level, Eray onayladı). S
 | `new/existing-project-analysis` | ✅ tutarlı (foundation üretici, dokunulmadı) |
 | ~~`incident-pipeline`~~ | ✅ AYRILDI → rollback + hotfix (§5.12 — deadlock) |
 | ~~`maintenance-cycle`~~ | ✅ SİLİNDİ (§5.12 — çıktısı planning/backlog'a eriyor) |
-| Motor/şema epic (§5.9) | 🚧 BAŞLADI — **Madde 1 ✅** (lifecycle `test`/`bounce`) + **Madde 3 ✅** (`gate_runs` tablo+repo, `attempt` ayırıcı), §5.13; sıradaki Madde 2 (gate seçimi) → Madde 4 (gate join) |
+| Motor/şema epic (§5.9) | 🚧 Layer 0 TAMAM — **Madde 1 ✅** (lifecycle `test`/`bounce`) · **Madde 2 ✅** (`review_gates` kolon+repo) · **Madde 3 ✅** (`gate_runs` tablo+repo) — §5.13. Sıradaki **Madde 4 (gate fan-out + join)** = sistemin ilk kez test-cycle'ı *koştuğu* an. (Madde 11 bağımsız docs kuralı, beklemede.) |
 
 **Disipline:** workflow markdown'ları ev-stilinde (normal cümle, `## Faz`+`1. **+persona:**`), parser'a dokunma; `inputs:` tam path (`.kortext/references/X.md`), prose'da çıplak rozet (`STACK`); foundation OKUMA (analiz hariç).
 
