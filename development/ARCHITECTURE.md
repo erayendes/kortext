@@ -272,6 +272,7 @@ sequenceDiagram
 - **Approval queue:** `pending_questions` + 3 REST endpoint + MCP eşdeğeri
 - **Notification dispatcher:** Slack + Telegram fan-out, dedup `(channel, kind, resource_id)`
 - **Resume:** boot'ta `runs.status: running` → `cancelled (orphaned)`; `retryRun` orphaned'leri kaldığı gate'ten
+- **v3.1 item-lifecycle engine (§5.9 — mock-first, capstone Madde 10 bekliyor):** workflow-run engine'in yanına paralel **item-seviyesi yaşam döngüsü** katmanı: `item-lifecycle` (durum geçişleri: to_do→in_progress→test→review→done, +bounce/block/cancel) + orchestrator fold'ları — `test-cycle` (gate fan-out/join), `review-cycle` (uat), `closure` (merge→done), `epic-completion` (→staging), `block` (→cancel), `whose-turn` (board göstergesi), `test-preview` (local URL). **Koşullu mantık orchestrator katmanında düz TS** (DB durumu üzerinde fold); DAG saf AND-join kalır → §5.12 deadlock yapısal olarak imkânsız (karar §5.13). Beş mock-first arayüz (`gate-executor`/`review-approver`/`merger`/`deployer`/`preview-server`) + `run-registry` capstone'da (Madde 10) gerçeğe bağlanır; şu an üretimden sürülmüyor (blast-radius sıfır, yalnız testler çağırıyor).
 
 ---
 
@@ -398,8 +399,11 @@ flowchart LR
 | Gate enforcer | `server/engine/gate-enforcer.ts` |
 | Output resolver | `server/engine/output-resolver.ts` |
 | Index sync | `server/engine/index-sync.ts` |
+| Item lifecycle (§5.9) | `server/engine/item-lifecycle.ts` |
+| Lifecycle mock-first seams (§5.9) | `server/engine/{gate-executor,review-approver,merger,deployer,preview-server,run-registry}.ts` + `executors/mock-*.ts` |
 | Output safety | `server/safety/{secret-scanner,harmful-output-filter}.ts` |
 | Orchestrator | `server/orchestrator/{orchestrator,blueprint-watcher,pipeline-chainer,approval-queue,resume}.ts` |
+| Lifecycle orchestrator (§5.9) | `server/orchestrator/{test-cycle,review-cycle,closure,epic-completion,block,whose-turn,test-preview}.ts` |
 | Notifications | `server/notifications/{dispatcher,slack,telegram}.ts` |
 | Services | `server/services/{markdown-sync,toc-updater,handover-rotation}.ts` |
 | Blueprint IO | `server/blueprint/io.ts` |
