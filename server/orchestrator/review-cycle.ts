@@ -1,6 +1,8 @@
 import type { Repositories } from '../db/repositories/index.ts';
 import type { ItemLifecycle } from '../engine/item-lifecycle.ts';
 import type { ReviewApprover, ReviewVerdict } from '../engine/review-approver.ts';
+import type { Merger } from '../engine/merger.ts';
+import { runClosure } from './closure.ts';
 
 export type ReviewCycleResult = {
   itemId: string;
@@ -16,6 +18,8 @@ export type ReviewCycleDeps = {
   repos: Repositories;
   lifecycle: ItemLifecycle;
   approver: ReviewApprover;
+  /** Drives the mechanical closure (merge → development) once review passes (§5.9 #6). */
+  merger: Merger;
   /** Actor recorded on lifecycle transitions/audit. Default 'orchestrator'. */
   by?: string;
 };
@@ -28,7 +32,7 @@ export type ReviewCycleDeps = {
  * injected {@link ReviewApprover} owns the approve/reject judgment.
  */
 export async function runReviewCycle(itemId: string, deps: ReviewCycleDeps): Promise<ReviewCycleResult> {
-  const { repos, lifecycle, approver } = deps;
+  const { repos, lifecycle, approver, merger } = deps;
   const by = deps.by ?? 'orchestrator';
 
   const item = repos.backlog.get(itemId);
@@ -44,8 +48,9 @@ export async function runReviewCycle(itemId: string, deps: ReviewCycleDeps): Pro
   // uat unselected → no human approval needed; vacuous pass straight to done
   // (mirrors test-cycle's 0-gate → review, §5.8).
   if (!uatRequired) {
-    lifecycle.transition(itemId, 'done', by, 'no uat gate — auto-approved');
-    return { itemId, outcome: 'done', uatRequired: false, verdict: null };
+    // No human approval needed → straight into mechanical closure (§5.9 #6).
+    const closure = await runClosure(itemId, { repos, lifecycle, merger, by });
+    return { itemId, outcome: closure.outcome, uatRequired: false, verdict: null };
   }
 
   let verdict: ReviewVerdict;
@@ -60,8 +65,9 @@ export async function runReviewCycle(itemId: string, deps: ReviewCycleDeps): Pro
   }
 
   if (verdict.approved) {
-    lifecycle.transition(itemId, 'done', by, 'uat approved');
-    return { itemId, outcome: 'done', uatRequired, verdict };
+    // Prime approved → mechanical closure decides done vs bounce (merge conflict).
+    const closure = await runClosure(itemId, { repos, lifecycle, merger, by });
+    return { itemId, outcome: closure.outcome, uatRequired, verdict };
   }
 
   lifecycle.transition(

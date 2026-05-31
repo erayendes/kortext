@@ -19,11 +19,19 @@ Açık iş listesi. Yapılan her şey [DECISIONS.md](./DECISIONS.md) tarihçesin
 
 - [ ] **Gerçek approval-queue bağlantısı (uat)** — mock-first `ReviewApprover`'ın gerçek impl'i: `review`'deki item için prime'a dashboard onay sorusu düşür + cevabı bekle. **Engel (impedance):** `pending_questions` `item_id` taşımıyor (yalnız nullable `run_id`); item-cycle'lar workflow `run`'ı yaratmıyor; `enqueue`/`waitForAnswer`'ın motor tarafında **hiç üreticisi yok** (sadece insan-`answer` ucu CLI+route'ta). → ya `pending_questions`'a item adresleme ekle, ya enqueue/resolve ayrımı tasarla. (Madde 4'ün "gerçek GateExecutor" follow-up'ının eşi.)
 - [ ] **uat verdict'i `gate_runs` satırı olarak kaydet** — şimdilik red sebebi `audit_log`'da (§5.13 "comment alanı ERTELENDİ" ile tutarlı). gate_runs'a yazmak için **`attempt` tuzağı** çözülmeli: 0-test-gate + tekrarlı-bounce'ta `UNIQUE(item_id, attempt, gate='uat')` çakışır. → `attempt`'i item alanı yap **veya** test-cycle her cycle'da marker üretsin.
-- [ ] **Madde 6 dikiş notu** — mekanik kapanış (CI+conflict→merge→blocker temizle→handover→worktree/preview kapat) `runReviewCycle`'ın onay dalındaki `done` geçişinin **ÖNÜNE** eklenecek; `done` satırı yerinde kalır (yeniden-yazım değil, araya-ekleme). [§5.9 #6 olarak zaten izleniyor — burada yalnız dikiş yeri not edildi.]
+- [x] **Madde 6 dikiş notu** — ✅ YAPILDI (2026-05-31): `runReviewCycle`'ın onay+vacuous dalları `runClosure`'a delege ediyor; `done` öncesi merge adımı araya eklendi. Detay DECISIONS §5.13 "Madde 6 ✅". Kapanışın *gerçek* git'i + handover + blocker aşağıda.
 
 ### Madde 5 (whose-turn) tüketiminden ertelenen
 
 - [ ] **Board "sıra kimde" rozetini bağla (src/)** — `whoseTurn(item)` türetimi hazır (`server/orchestrator/whose-turn.ts`) ama tüketen UI yok. Board kartlarının üstüne dönen persona rozetlerini render et (test→paralel rozetler, review→+prime, in_progress→owner). Backend derivation saf + DB'siz; UI tarafı ayrı iş.
+
+### Madde 6 (mekanik kapanış) diliminden ertelenenler
+
+İskelet hazır (`runClosure` + `Merger` arayüzü, mock-first); gerçek mekanik bekliyor:
+
+- [ ] **Gerçek git `Merger` impl'i** — `MockMerger` yerine `WorktreeManager`'ı süren gerçek merger: CI+conflict kontrolü → feature worktree'yi `development`'a merge (`--no-ff`) → worktree/preview teardown. **Engel:** `WorktreeManager` `runId` ile çalışıyor + per-item worktree'yi **Madde 10** kuruyor → Madde 10 ile birlikte bağlanır.
+- [ ] **Handover-on-close** — kapanış başarılıysa (merge ok) `HandoverEngine.record()` ile kapanış handover'ı üret (developer→prime, completed/next). Mock-merge üzerine handover boş kaçtığı için gerçek Merger'la birlikte eklenir.
+- [ ] **blocker-temizle (§5.9 #6)** — ŞU AN KARŞILIKSIZ: item bağımlılık modeli (`blocked_on`/`blocks`) şemada yok, motor "X'i bekleyen item" bilmiyor. Bir bağımlılık modeli tasarlanırsa kapanışta downstream item'ları unblock et. (Eray: şimdilik ertele.)
 
 ---
 
