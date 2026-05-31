@@ -7,77 +7,59 @@
 
 ## 1. Şu an (2026-05-31)
 
-**Branch:** `main` (`feat/uat-review-cycle` 6-slice batch merge edildi, [PR #7](https://github.com/erayendes/kortext/pull/7)). Motor/şema epic §5.9 **TÜM FEATURE DİLİMLERİ TAMAM** — geriye **Madde 10 (capstone)** + **Madde 11 (bağımsız docs)** kaldı. **Capstone BAŞLADI (2026-05-31 #2):** sıralı plan çıkarıldı + Eray onayı "sırayla hepsini yap"; **W1 tam tasarlandı + kritik FK bulgusu** (`runs.item_id` → `backlog_items` FK'lı → per-item run için item DB'de var olmalı; B1'in keystone olduğunun kanıtı). Kod **commit EDİLMEDİ** — oturum boyunca tool sonuçları ağır gecikmeyle döndü, iteratif TDD pratik olmadı; çalışma ağacı temiz (W1 RED testleri revert edildi, 465/465 baseline korundu). W1 birebir spec aşağıdaki prompt'ta.
+**Branch:** `main`. Motor/şema epic §5.9 **MADDE 10 (CAPSTONE) + MADDE 11 TAMAM — 9 TDD dilimi indi (2026-05-31 #3):** `W1 → W2 → B1(keystone) → C2 → C5 → C3 → C1 → C4 → D1`, her biri ayrı RED→GREEN (gerçek sebeple kırılan test ÖNCE) + ayrı commit (**9 commit, `39953ad`→`c692223`**). **465→499 test (+34)**, typecheck + lint temiz, her commit'te yeşil. Teslim: 5 mock arayüzün **GERÇEK substrat adapter'ları** (git `GitMerger` · AI-ajan `AgentGateExecutor` · ApprovalQueue `QueueReviewApprover` · process-spawn `DevServerPreviewServer` · deployment-cycle `WorkflowDeployer`) + **keystone** `runItem`/`runReadyItems` (FK'yı GERÇEKTEN kapatır: item artık `item_id`'li gerçek run + kendi worktree'siyle doğar) + 2 dikiş (W1 block→cancel, W2 closure→epic) + Madde 11 kesişen karar/öğrenim kuralı. **Mimari karar (B1): Eray AskUserQuestion ile "yeni, küçük, temiz parça" (standalone fonksiyon) seçti.** Detay [DECISIONS §5.14](./DECISIONS.md). Üretim blast-radius hâlâ **sıfır** — adapter'lar izole/unit-test; **KALAN = uçtan-uca KOMPOZİSYON** (composition root + resolution registry'ler + preview dikişi + driver — §5.14 "ne kaldı"). ⚠️ Tüm commit'ler **LOKAL** — main'e push EDİLMEDİ, Eray onayı bekliyor.
 
 **Bu oturumda inen (6 slice, hepsi TDD + mock-first, ayrı commit):** `uat review-cycle` (review→done/bounce, prime onayı) · `whose-turn` (board "sıra kimde" türetimi) · `closure` (review→merge→done/bounce iskelet) · `epic-completion` (item done→epic bitti→staging tetik) · `block` (block→run cancel, `RunRegistry`) · `local test-URL` (`PreviewManager`). Detay [DECISIONS §5.13](./DECISIONS.md). **Beş mock-first arayüz** (`gate-executor`/`review-approver`/`merger`/`deployer`/`preview-server`) + `RunRegistry` + `PreviewManager` hazır; tümü Madde 10'da gerçeğe bağlanır. Üretim blast-radius **sıfır** (yalnız testler sürüyor — lifecycle henüz orchestrator'dan sürülmüyor).
 
 | Test | Lint | Typecheck | Build |
 |---|---|---|---|
-| 465/465 ✅ | 0 hata · 4 pre-existing warning | 0 hata | temiz |
+| 499/499 ✅ | 0 hata · 4 pre-existing warning | 0 hata | temiz |
 
 **npm registry:** `kortext@3.0.0` broken (EADDRINUSE silent fail bug). v3.1.0 release (devasa sürüm: Faz 11-13 + CLI redesign) lokal tgz UAT geçtikten sonra yapılacak.
 
 ## ▶ Sonraki oturum — kopyala-yapıştır prompt
 
-> Yeni oturumda şunu yaz (motor epic capstone'una geç):
+> Yeni oturumda şunu yaz (capstone "son montaj" fazına geç):
 
 ```
-DECISIONS §5.9 + §5.13'ü oku, capstone'u (Madde 10) W1'den SÜRDÜR (Eray onayı: "sırayla hepsini yap").
+DECISIONS §5.14'ü oku, capstone'un SON MONTAJINI yap (uçtan-uca kompozisyon).
 
-Durum: §5.9'un TÜM feature dilimleri main'de (PR #7) — 1-9 + uat + whose-turn + local-preview.
-Tek-item yaşam döngüsü (test→review→merge→done/bounce) + epic→staging + block→cancel +
-local-URL mekanikleri ÇALIŞIYOR, hepsi mock-first. 465/465 test + typecheck + lint + build yeşil.
+Durum: Madde 10+11'in 9 TDD dilimi indi (W1→W2→B1→C2→C5→C3→C1→C4→D1; main'de LOKAL,
+9 commit 39953ad→c692223, 499 test + typecheck + lint yeşil). 5 mock arayüzün GERÇEK
+substrat adapter'ları (GitMerger/AgentGateExecutor/QueueReviewApprover/DevServerPreviewServer/
+WorkflowDeployer) + keystone runItem/runReadyItems (FK kapatır) + W1/W2 dikişleri + Madde 11
+docs HAZIR — ama hepsi izole/unit-test, orchestrator kompozisyonuna takılmadı. Blast-radius sıfır.
 
-KALAN sadece iki madde:
-- Madde 10 (CAPSTONE): beş mock-first arayüzü + RunRegistry'yi GERÇEĞE bağla + per-item
-  run/worktree kur + tüm dikişler:
-  · worker-pool → RunRegistry register/unregister (block gerçek çalışan ajanı durdursun)
-  · closure done → epic-completion (item done → epic bitti mi → staging)
-  · review-cycle/closure → preview startFor/stopFor (test-girişinde URL, teardown'da kapat)
-  Gerçek impl'ler: AI-agent GateExecutor · git Merger (WorktreeManager→development) ·
-  Deployer (staging deploy) · PreviewServer (worktree'den dev-server spawn). TODO §5.9'da
-  "ertelenenler" başlıkları altında HEPSİ listeli — capstone'un iş listesi orası.
-- Madde 11 (bağımsız docs): AGENTS.md/behavior.md karar→write_decision, öğrenim→write_learned.
+KALAN = son montaj (§5.14 "ne kaldı"):
+1. RESOLUTION REGISTRY'LER + B1'i gerçek worktree'ye bağla: item→worktree handle (C2
+   GitMerger.resolveHandle), item→run-context (C5), item→run-id (C3). runItem şu an
+   acquireWorktree'yi ENJEKTE mock'la alıyor → gerçek WorktreeManager (base=development) +
+   gerçek run ile bu kayıtları doldur. (run/item impedance'ın asıl gerçek kapanışı burada.)
+2. COMPOSITION ROOT: gerçek adapter'ları kurup orchestrator fonksiyonlarının (runClosure/
+   runTestCycle/runReviewCycle/runEpicCompletion) dep'lerinde mock'ların yerine koy.
+3. PREVIEW DİKİŞİ: review-cycle/closure → PreviewManager.startFor (test-girişinde URL) /
+   stopFor (teardown). C1 substratı hazır, dikiş kaldı (Madde 10 kalemi).
+4. DRIVER + E2E: runReadyItems'i süren entry point (Orchestrator'a mı / ayrı loop mu →
+   mimari karar, AskUserQuestion) + uçtan-uca test (item to_do → … → done/staging; gerçek
+   git + mock agent).
 
-SIRA (Eray onayı — plan tekrar SORMA, uygula): W1 → W2 → B1 → C1-C5 → D1. Her biri ayrı
-TDD (RED→GREEN, gerçek sebeple kırılan test ÖNCE) + ayrı commit.
+SIRA: 1 (registry'ler + gerçek worktree) → 2 (composition root) → 3 (preview dikişi) →
+4 (driver + e2e). Her biri ayrı TDD (RED→GREEN, gerçek sebeple kırılan test ÖNCE) + ayrı commit.
 
-W1 (BURADAN BAŞLA — hazır spec, dakikalar içinde iner):
-- run-registry.ts: cancelForItem'dan sonra ekle:
-    unregister(runId: number): boolean { return this.entries.delete(runId); }  // abort ETMEZ
-- worker-pool.ts: RunWorkflowOptions'a `registry?: RunRegistry`; `const aborter` (≈227) sonrası
-  `options.registry?.register(run.id, options.itemId ?? null, aborter)`; gate-no-controller
-  throw'undan (≈356) ÖNCE ve son return'den (≈453) ÖNCE `options.registry?.unregister(run.id)`.
-- Testler: tests/run-registry.test.ts (unregister: abort'suz siler + unknown→false) + yeni
-  tests/worker-pool-registry.test.ts.
-  ⚠️ FK BULGUSU: `runs.item_id` → `backlog_items` FK'lı (runs.ts:113). Testte item'ı ÖNCE
-  `repos.backlog.create(...)` ile seed et (closure.test.ts'deki şablonu kopyala). register
-  kanıtı = yavaş step + mid-run `cancelForItem`→len 1 + run 'failed'; unregister kanıtı =
-  normal biten run sonrası `cancelForItem`→[].
-
-W2: closure `done` → `runEpicCompletion` dikişi (deployer dep'i thread'le).
-B1 (keystone): §5.9 #10 per-item run + worktree — FK + worktree impedance burada kapanır.
-  ⚠️ mimari karar → AskUserQuestion (item-cycle run'ı nasıl doğurur, worktree base=development).
-C1-C5: 5 mock'u gerçeğe bağla (PreviewServer/Merger+handover-on-close/ReviewApprover/Deployer/
-  GateExecutor) — hepsi B1'e dayanır. D1: Madde 11 docs.
-ÖNCE PLAN demeye gerek yok — plan onaylı; doğrudan W1 RED testiyle başla.
-
-Sabit kurallar (bu epic'te öğrenildi):
+Sabit kurallar (epic boyunca öğrenildi):
 - MİMARİ PRENSİP (§5.13): koşullu mantık ORCHESTRATOR katmanında (DB durumu üzerinde düz TS
-  fold), DAG (dag.ts/worker-pool.ts) saf AND-join kalır. Gate'ler gate_runs satırı, DAG
-  fan-in DEĞİL — §5.12 deadlock böyle önlenir. "engine-owns-mechanics ancak engine DESTEKLİYORSA."
-- MOCK-FIRST deseni (bu oturumun ana dersi): her dış bağımlılık bir arayüz + Mock(test);
-  gerçek impl ayrı/sonra. Beş arayüz kuruldu (GateExecutor/ReviewApprover/Merger/Deployer/
-  PreviewServer) + RunRegistry/PreviewManager. Capstone = bu mock'ları gerçeğe çevirmek.
-- run/item IMPEDANCE (capstone'un göbeği): ApprovalQueue + WorktreeManager + runtime_artifacts
-  hepsi run_id ile çalışıyor; item-cycle'lar itemId ile + henüz run/worktree YARATMIYOR.
-  Madde 10 per-item run + worktree kurup bu köprüyü kapatır (RunRegistry deseni: itemId etiketli).
+  fold), DAG (dag.ts/worker-pool.ts) saf AND-join. Gate'ler gate_runs satırı, fan-in DEĞİL —
+  §5.12 deadlock böyle önlenir.
+- MOCK→GERÇEK deseni: her adapter enjekte bir alt-substrat alır (WorktreeManager/Executor/
+  ApprovalQueue/child_process/workflow) — testte mock, prod'da gerçek. Composition root bu
+  enjeksiyonu yapar; adapter'lar §5.14'te commit'li.
 - TDD zorunlu: önce başarısız test (RED, doğru sebeple), sonra minimal kod (GREEN). Gerçek
   fonksiyonları çalıştır, paralel kopya yazma.
-- "tamam" demeden önce npm test + npm run typecheck YEŞİL olmalı — iddia etme, ölç.
-- Büyük mimari kararları AskUserQuestion ile sor. main'e SORMADAN push/merge YOK. Her dilim
-  ayrı commit; push/merge'i Eray söyleyince.
-- Eray non-coder, Türkçe iletişim, kod/commit İngilizce. Somut artefakt göster (dosya yolu, test sonucu).
+- "tamam" demeden önce npm test + npm run typecheck YEŞİL — iddia etme, ölç.
+- Büyük mimari kararları AskUserQuestion ile sor (driver şekli = aday). main'e SORMADAN
+  push/merge YOK; her dilim ayrı commit. Eray non-coder/Türkçe, kod+commit İngilizce, somut artefakt.
+- ⚠️ Bilinçli ertelemeler (§5.14 kayıtlı): handover-on-close (C2 — içerik/konum spec'i lazım);
+  write_decision/write_learned MCP tool'ları YOK (D1 dosya-tabanlı kullandı).
 ```
 
 ## 2. Geçmiş özet
@@ -105,7 +87,7 @@ Spec: [DECISIONS.md Bölüm 5](./DECISIONS.md) (design level, Eray onayladı). S
 | `new/existing-project-analysis` | ✅ tutarlı (foundation üretici, dokunulmadı) |
 | ~~`incident-pipeline`~~ | ✅ AYRILDI → rollback + hotfix (§5.12 — deadlock) |
 | ~~`maintenance-cycle`~~ | ✅ SİLİNDİ (§5.12 — çıktısı planning/backlog'a eriyor) |
-| Motor/şema epic (§5.9) | 🚧 **TÜM feature dilimleri ✅** (1-9 + uat + 5 + 7) — tek-item lifecycle (test→review→merge→done/bounce) + epic→staging + block→cancel + local-preview, hepsi mock-first, 465/465 yeşil. **KALAN: Madde 10 (capstone — 5 mock-first arayüzü + `RunRegistry`'yi gerçeğe bağla + per-item run/worktree + tüm dikişler) · Madde 11 (bağımsız docs).** Detay §5.13. |
+| Motor/şema epic (§5.9) | 🚧 **TÜM feature dilimleri + Madde 10/11 capstone ✅** (1-11) — tek-item lifecycle + epic→staging + block→cancel + local-preview + **9 capstone TDD dilimi** (5 mock arayüzün gerçek adapter'ları + keystone `runItem`/`runReadyItems` + W1/W2 dikiş + Madde 11 docs), 499/499 yeşil. **KALAN: yalnız uçtan-uca KOMPOZİSYON** (composition root + resolution registry'ler + preview dikişi + driver). Detay §5.14. |
 
 **Disipline:** workflow markdown'ları ev-stilinde (normal cümle, `## Faz`+`1. **+persona:**`), parser'a dokunma; `inputs:` tam path (`.kortext/references/X.md`), prose'da çıplak rozet (`STACK`); foundation OKUMA (analiz hariç).
 
