@@ -34,4 +34,22 @@ describe('RunRegistry — cancellation registry (§5.9 #9)', () => {
     expect(other.signal.aborted).toBe(false); // ITEM-2 untouched
     expect(reg.cancel(1)).toBe(false); // forgotten after cancelForItem
   });
+
+  it('unregister(runId) forgets a finished run WITHOUT aborting its controller', () => {
+    const reg = new RunRegistry();
+    const ac = new AbortController();
+    reg.register(1, 'ITEM-1', ac);
+
+    const removed = reg.unregister(1);
+    expect(removed).toBe(true);
+    // Clean finish, not cancellation — the controller must stay un-aborted.
+    expect(ac.signal.aborted).toBe(false);
+    // ...and the entry is gone from the live index, so a later block is a no-op.
+    expect(reg.cancelForItem('ITEM-1')).toEqual([]);
+  });
+
+  it('unregister(unknown runId) → false', () => {
+    const reg = new RunRegistry();
+    expect(reg.unregister(999)).toBe(false);
+  });
 });

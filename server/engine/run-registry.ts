@@ -41,4 +41,14 @@ export class RunRegistry {
     ids.forEach((id) => this.cancel(id));
     return ids;
   }
+
+  /**
+   * Forget a run that finished on its own — does NOT abort the controller.
+   * The cleanup counterpart of `cancel`: a completed run must drop out of the
+   * live index so a later block can't try to cancel an already-done run.
+   * Returns true if an entry was present.
+   */
+  unregister(runId: number): boolean {
+    return this.entries.delete(runId);
+  }
 }

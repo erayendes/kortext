@@ -6,6 +6,7 @@ import type { Run } from '../db/schemas.ts';
 import type { SecretScanner } from '../safety/secret-scanner.ts';
 import type { HarmfulOutputFilter } from '../safety/harmful-output-filter.ts';
 import type { ApprovalGate } from './workflow-parser.ts';
+import type { RunRegistry } from './run-registry.ts';
 import { findActualOutputFiles } from './output-resolver.ts';
 
 export type GatePauseContext = {
@@ -82,6 +83,12 @@ export type RunWorkflowOptions = {
    * and added to the `done` set, so the scheduler picks up from the next layer.
    */
   preCompletedStepKeys?: ReadonlySet<string>;
+  /**
+   * Live cancellation registry (§5.9 #9). When set, the run registers its
+   * AbortController on start so `block` can cancel it by item, and unregisters
+   * on every exit path so a finished run leaves no stale cancellable entry.
+   */
+  registry?: RunRegistry;
 };
 
 export type RunWorkflowResult = {
@@ -225,6 +232,8 @@ export async function runWorkflow(
   const done = new Set<string>(preCompleted);
   const running = new Map<string, Promise<void>>();
   const aborter = new AbortController();
+  // Register this run's controller so an external block can cancel it by item.
+  options.registry?.register(run.id, options.itemId ?? null, aborter);
   let failedStepKey: string | null = null;
   let firstError: string | null = null;
 
@@ -353,6 +362,9 @@ export async function runWorkflow(
     const gateToProcess: ApprovalGate | null = pendingGate;
     if (gateToProcess && running.size === 0 && !failedStepKey && !rejectionReason) {
       if (!options.gateController) {
+        // Exceptional exit — drop the run from the registry before throwing so
+        // a misconfigured run never leaks a stale cancellable entry.
+        options.registry?.unregister(run.id);
         throw new Error(
           `gate encountered but no gateController provided (phase: ${(gateToProcess as ApprovalGate).phase})`,
         );
@@ -449,6 +461,10 @@ export async function runWorkflow(
       rejection_reason: rejectionReason,
     },
   });
+
+  // Normal exit — the run finished (succeeded/failed/cancelled) and is no longer
+  // live, so forget it WITHOUT aborting (the DB row is the durable record).
+  options.registry?.unregister(run.id);
 
   return { run: finalRun, failedStepKey };
 }
