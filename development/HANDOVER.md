@@ -7,6 +7,8 @@
 
 ## 1. Şu an (2026-06-01)
 
+**UI TRACK — bu oturumda ilerledi:** ✅ Ekran 1 **Onboarding** + ✅ Ekran 2 **Dashboard** bitti. 2 ayrı LOCAL commit `main`'de (**HENÜZ PUSH EDİLMEDİ** — Eray "push" deyince): `8712b43` dashboard tam-birebir (gerçek persona/iş-başlığı/adım-ilerlemesi, header +p avatar) · `fc707e8` onboarding (dizin seçimi yaz/Browse + Model A "başka klasöre kur" + Codex executor + platform Desktop/ön-seçimsiz + executor Antigravity-alfabetik-2×2 ızgara + Mock netleşti/ön-seçimsiz). **554/554 test yeşil**, typecheck temiz, demo geri yüklendi (Demo CRM). Onboarding'de Eray onayıyla **backend de genişletildi** (`normalizeExecutor`+codex, `resolveBlueprintTarget`+`projectDir`, `POST /api/pick-directory`) — yani "BACKEND'E DOKUNMA" Eray-onaylı esnetilebilir (gerekirse sor, onaylarsa TDD ile yap). **Sıradaki = Ekran 3 Board** (güncel kopyala-yapıştır prompt aşağıda). Açık izler: (a) native Browse osascript önizlemede çalışmaz → Eray terminalde test etmeli; (b) success-panel "kortext serve" komutu teyit edilmeli; (c) dashboard fixture'ı (`.kortext/seed-dashboard.ts`) daemon restart'ında reconcile olur → dolu görünüm için yeniden çalıştır.
+
 **Branch:** `main`. Motor/şema epic §5.9 **CAPSTONE + SON MONTAJ + DRIVER GİRİŞE BAĞLANDI.** Capstone (9 TDD adapter/keystone dilimi `39953ad`→`c692223`) + son montaj (4 kompozisyon dilimi `8cbd5e1`→`86ddaeb`, `driveReadyItems` = "başlat düğmesi", `driver-e2e.test.ts` gerçek git'le to_do→done kanıtlıyor) **artık origin/main'de — bu oturumda PUSH edildi (6 commit).** Bu oturumda ayrıca **§5.16 indi: driver bir HTTP girişine bağlandı** — `POST /api/drive` `driveReadyItems`'i tek-tur sürüyor, **ama varsayılan KAPALI bir güvenlik anahtarının (`KORTEXT_DRIVE_ENABLED`) arkasında.** **Mimari karar: Eray sade-dille "kilitli dursun, anahtarla açılır" seçti.** 3 parça, her biri TDD: env fail-safe anahtar (`server/config/env.ts`, yalnız `"1"`/`"true"` açar) · `driveRouter` (`server/routes/drive.ts`, 403 kapalı / 409 uçuşta / 202 başladı, fire-and-forget) · `makeServerDrive` (`server/orchestrator/server-drive.ts`, runtime lazy-once montaj). **521→535 test**, typecheck + lint temiz. Gerçek-sunucu smoke İKİ yön: KAPALI→403, AÇIK+boş backlog→202 temiz no-op (repo kirlenmedi). Detay [DECISIONS §5.16](./DECISIONS.md). **Blast-radius:** bu, etkiyi sıfırdan çıkarabilecek **İLK** slice — ama anahtar varsayılan kapalı → merge'de etki **pratikte hâlâ sıfır**; Eray `KORTEXT_DRIVE_ENABLED=1` set edip (yeniden) başlatana kadar düğme atıl. ✅ **Bu slice (`de653f5`) origin/main'e PUSH edildi** (2026-06-01) — motor track'inin tamamı artık uzakta. **Sıradaki = UI track** (ekran-ekran, ilk ekrandan; aşağıdaki kopyala-yapıştır prompt). Backend ertelenenleri (§5.16) UI'a paralel, sonraki iş.
 
 > **Süreç dersi (kayıtlı):** son montaj 4. diliminde, worktree'ye yazan bir test executor'ının guard'ı (`worktreePath !== repoRoot`) deployment adımında host repo'ya düşüp 2 stray commit + 1 çöp dosya yarattı. `--mixed reset` (reflog ile sıfır kayıp) + guard'ı pozitif/dar yaptım (`workflowId==='development-cycle' && path.startsWith(...)`). Ders: worktree-mutasyonlu test executor'ı asla `process.cwd()`'e düşebilecek negatif guard kullanmamalı.
@@ -39,13 +41,14 @@
 > **Motor track BİTTİ + tamamı origin/main'de** (capstone+montaj+§5.16 driver tetiği, `de653f5` dahil). Sıradaki oturum **UI** — ekran-ekran, ilk ekrandan. Yeni oturumda şunu yaz:
 
 ```
-KORTEXT — UI OTURUMU (ekran-ekran, İLK EKRANDAN)
+KORTEXT — UI OTURUMU (ekran-ekran, BOARD'DAN devam)
 
-DURUM: Backend/motor BİTTİ, origin/main'de (535 test yeşil). Sistem bir işi
-to_do→done'a gerçek git'le, insan-döngüsü olmadan yürütüyor — POST /api/drive
-tetiği, varsayılan KAPALI KORTEXT_DRIVE_ENABLED anahtarının arkasında. Tüm /api/*
-hazır. Artık UI'a geçiyoruz: BACKEND'E DOKUNMA (UI sadece /api'yi çağırır, motoru
-bozma). Detay: DECISIONS §5.16.
+DURUM: Backend/motor BİTTİ (origin/main). UI track BAŞLADI — bu oturumda ✅ Ekran 1
+(Onboarding) + ✅ Ekran 2 (Dashboard) bitti, 2 LOCAL commit main'de (8712b43 dashboard,
+fc707e8 onboarding) — HENÜZ PUSH EDİLMEDİ (Eray "push" deyince). 554 test yeşil. Sıradaki:
+EKRAN 3 = Board. BACKEND'E DOKUNMA prensibi sürer AMA Eray onayıyla esnetilebilir
+(onboarding'de öyle yaptık: Codex executor + projectDir + POST /api/pick-directory, hepsi
+TDD'li). Gerekirse Eray'a sade-dille sor, onaylarsa TDD ile yap. Detay: DECISIONS §5.16.
 
 GÖRSEL SPEC — TEK KAYNAK, BİREBİR UY: development/concepts/wireframe-v4-final.html.
 Her ekranı buna birebir uydur. mockup-v3-palette-preview.html ARTIK referans DEĞİL.
@@ -53,21 +56,27 @@ Renk/tipografi: development/DESIGN.md. UI kodu: src/ (React + TanStack Router +
 Tailwind v4).
 
 CANLI GÖRMEK:
-- Dashboard: preview_start "kortext-dev" (5173). Demo verisi yüklü (Demo CRM, 6 iş,
-  gitignored .kortext/). Yoksa: POST /api/blueprint init + `npx tsx .kortext/seed.ts`.
-- Spec yan yana: preview_start "kortext-wireframe" (8092).
+- Dashboard: preview_start "kortext-dev" (5173). Demo yüklü (Demo CRM, backlog + dashboard
+  fixture). Backlog seed: `npx tsx .kortext/seed.ts`. Dolu dashboard ("aktif iş" tablosu):
+  `npx tsx .kortext/seed-dashboard.ts` (gitignored; daemon restart'ında reconcile olur →
+  yeniden çalıştır).
+- Spec yan yana: preview_start "kortext-wireframe" (8092) → /wireframe-v4-final.html
+  (launch.json düzeltildi: development/concepts/ servis edilir).
 
 YÖNTEM (her ekran için, sırayla): (1) canlı UI + wireframe-v4 spec'i yan yana göster
 (screenshot), (2) fark/eksikleri Eray'la SADE-DİLLE konuş (brainstorming/frontend-design
 skill), (3) onay alınca src/'de uygula, (4) preview screenshot ile doğrula, (5)
 ekran-başına ayrı commit. Bir ekran bitmeden diğerine geçme.
 
-EKRAN SIRASI (sidebar): 1.Onboarding (ilk açılış) → 2.Dashboard → 3.Board → 4.Memory
-→ 5.Reports → 6.References → 7.Project settings → 8.Agents → 9.Rules → 10.Workflows
-→ 11.Hooks → 12.Integrations → 13.Environment → 14.Danger zone.
+EKRAN SIRASI: ✅1.Onboarding ✅2.Dashboard → 3.Board → 4.Memory → 5.Reports →
+6.References → 7.Project settings → 8.Agents → 9.Rules → 10.Workflows → 11.Hooks →
+12.Integrations → 13.Environment → 14.Danger zone.
 
 İLK ADIM: DESIGN.md oku + wireframe-v4-final.html'i preview'da aç + dashboard'ı başlat.
-Sonra 1. EKRAN'dan (Onboarding) başla: canlı vs spec karşılaştır, Eray'la konuş.
+Sonra 3. EKRAN'dan (Board) başla: canlı /#/board vs wireframe Board'u yan yana karşılaştır,
+Eray'ın ekran-ekran KENDİ yorumlarını al (bu yöntem iyi işledi). Açık izler: onboarding native
+Browse dialog (osascript) önizlemede çalışmaz — Eray terminalde test etmeli; "created elsewhere"
+ekranındaki "kortext serve" komutu teyit edilmeli.
 
 SABİT: Eray non-coder/Türkçe, kod+commit İngilizce, GUI-first, somut artefakt
 (screenshot). UX/mimari kararı AskUserQuestion ile sade-dille sor (öneri başa). main'e
