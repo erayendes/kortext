@@ -212,6 +212,7 @@ body {
 .dot-accent  { background: var(--accent); }
 .dot-signal  { background: var(--signal); }
 .dot-muted   { background: var(--tx-3); }
+.dot-neutral { background: var(--tx-disabled); }
 
 /* Subtle pulse for "live" indicators only — single 200ms ease-out */
 @keyframes signal-pulse {
