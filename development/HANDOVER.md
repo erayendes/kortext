@@ -7,7 +7,7 @@
 
 ## 1. Şu an (2026-06-01)
 
-**Branch:** `main`. Motor/şema epic §5.9 **CAPSTONE + SON MONTAJ + DRIVER GİRİŞE BAĞLANDI.** Capstone (9 TDD adapter/keystone dilimi `39953ad`→`c692223`) + son montaj (4 kompozisyon dilimi `8cbd5e1`→`86ddaeb`, `driveReadyItems` = "başlat düğmesi", `driver-e2e.test.ts` gerçek git'le to_do→done kanıtlıyor) **artık origin/main'de — bu oturumda PUSH edildi (6 commit).** Bu oturumda ayrıca **§5.16 indi: driver bir HTTP girişine bağlandı** — `POST /api/drive` `driveReadyItems`'i tek-tur sürüyor, **ama varsayılan KAPALI bir güvenlik anahtarının (`KORTEXT_DRIVE_ENABLED`) arkasında.** **Mimari karar: Eray sade-dille "kilitli dursun, anahtarla açılır" seçti.** 3 parça, her biri TDD: env fail-safe anahtar (`server/config/env.ts`, yalnız `"1"`/`"true"` açar) · `driveRouter` (`server/routes/drive.ts`, 403 kapalı / 409 uçuşta / 202 başladı, fire-and-forget) · `makeServerDrive` (`server/orchestrator/server-drive.ts`, runtime lazy-once montaj). **521→535 test**, typecheck + lint temiz. Gerçek-sunucu smoke İKİ yön: KAPALI→403, AÇIK+boş backlog→202 temiz no-op (repo kirlenmedi). Detay [DECISIONS §5.16](./DECISIONS.md). **Blast-radius:** bu, etkiyi sıfırdan çıkarabilecek **İLK** slice — ama anahtar varsayılan kapalı → merge'de etki **pratikte hâlâ sıfır**; Eray `KORTEXT_DRIVE_ENABLED=1` set edip (yeniden) başlatana kadar düğme atıl. ⚠️ **Bu slice 1 commit LOKAL** (kod+test+docs bir arada), `origin/main`'den 1 önde, push EDİLMEDİ — Eray onayı bekliyor.
+**Branch:** `main`. Motor/şema epic §5.9 **CAPSTONE + SON MONTAJ + DRIVER GİRİŞE BAĞLANDI.** Capstone (9 TDD adapter/keystone dilimi `39953ad`→`c692223`) + son montaj (4 kompozisyon dilimi `8cbd5e1`→`86ddaeb`, `driveReadyItems` = "başlat düğmesi", `driver-e2e.test.ts` gerçek git'le to_do→done kanıtlıyor) **artık origin/main'de — bu oturumda PUSH edildi (6 commit).** Bu oturumda ayrıca **§5.16 indi: driver bir HTTP girişine bağlandı** — `POST /api/drive` `driveReadyItems`'i tek-tur sürüyor, **ama varsayılan KAPALI bir güvenlik anahtarının (`KORTEXT_DRIVE_ENABLED`) arkasında.** **Mimari karar: Eray sade-dille "kilitli dursun, anahtarla açılır" seçti.** 3 parça, her biri TDD: env fail-safe anahtar (`server/config/env.ts`, yalnız `"1"`/`"true"` açar) · `driveRouter` (`server/routes/drive.ts`, 403 kapalı / 409 uçuşta / 202 başladı, fire-and-forget) · `makeServerDrive` (`server/orchestrator/server-drive.ts`, runtime lazy-once montaj). **521→535 test**, typecheck + lint temiz. Gerçek-sunucu smoke İKİ yön: KAPALI→403, AÇIK+boş backlog→202 temiz no-op (repo kirlenmedi). Detay [DECISIONS §5.16](./DECISIONS.md). **Blast-radius:** bu, etkiyi sıfırdan çıkarabilecek **İLK** slice — ama anahtar varsayılan kapalı → merge'de etki **pratikte hâlâ sıfır**; Eray `KORTEXT_DRIVE_ENABLED=1` set edip (yeniden) başlatana kadar düğme atıl. ✅ **Bu slice (`de653f5`) origin/main'e PUSH edildi** (2026-06-01) — motor track'inin tamamı artık uzakta. **Sıradaki = UI track** (ekran-ekran, ilk ekrandan; aşağıdaki kopyala-yapıştır prompt). Backend ertelenenleri (§5.16) UI'a paralel, sonraki iş.
 
 > **Süreç dersi (kayıtlı):** son montaj 4. diliminde, worktree'ye yazan bir test executor'ının guard'ı (`worktreePath !== repoRoot`) deployment adımında host repo'ya düşüp 2 stray commit + 1 çöp dosya yarattı. `--mixed reset` (reflog ile sıfır kayıp) + guard'ı pozitif/dar yaptım (`workflowId==='development-cycle' && path.startsWith(...)`). Ders: worktree-mutasyonlu test executor'ı asla `process.cwd()`'e düşebilecek negatif guard kullanmamalı.
 
@@ -34,40 +34,49 @@
 
 ---
 
-## ▶ Sonraki oturum — kopyala-yapıştır prompt
+## ▶ Sonraki oturum — UI track (kopyala-yapıştır prompt)
 
-> Yeni oturumda şunu yaz (driver girişe bağlandı; sıradaki = UI düğmesi / zamanlayıcı / ertelenenler):
+> **Motor track BİTTİ + tamamı origin/main'de** (capstone+montaj+§5.16 driver tetiği, `de653f5` dahil). Sıradaki oturum **UI** — ekran-ekran, ilk ekrandan. Yeni oturumda şunu yaz:
 
 ```
-DECISIONS §5.16'yı oku. Driver bir HTTP girişine bağlandı: POST /api/drive
-driveReadyItems'i tek-tur sürüyor, varsayılan KAPALI bir güvenlik anahtarının
-(KORTEXT_DRIVE_ENABLED) arkasında — Eray "kilitli dursun, anahtarla açılır" seçti.
-535 test + typecheck + lint yeşil. Gerçek-sunucu smoke iki yön kanıtladı
-(KAPALI→403, AÇIK+boş backlog→202 temiz no-op). Blast-radius: anahtar kapalı
-olduğundan merge'de etki pratikte hâlâ SIFIR; KORTEXT_DRIVE_ENABLED=1 + restart
-ile armed olur.
+KORTEXT — UI OTURUMU (ekran-ekran, İLK EKRANDAN)
 
-ÖNCE: Bu slice 1 commit LOKAL (kod+test+docs), origin/main'den 1 önde, push
-EDİLMEDİ. Eray'a "bu commit'i push edeyim mi?" diye SOR — onaysız push YOK.
-(Capstone + son montaj 6 commit'i bu oturumda zaten push edildi.)
+DURUM: Backend/motor BİTTİ, origin/main'de (535 test yeşil). Sistem bir işi
+to_do→done'a gerçek git'le, insan-döngüsü olmadan yürütüyor — POST /api/drive
+tetiği, varsayılan KAPALI KORTEXT_DRIVE_ENABLED anahtarının arkasında. Tüm /api/*
+hazır. Artık UI'a geçiyoruz: BACKEND'E DOKUNMA (UI sadece /api'yi çağırır, motoru
+bozma). Detay: DECISIONS §5.16.
 
-SONRA KALAN (öncelik Eray'a sorulabilir, her biri ayrı TDD + ayrı commit):
-1. DASHBOARD "BAŞLAT" DÜĞMESİ (src/ UI, Eray GUI-first): POST /api/drive'ı çağıran
-   görsel düğme + sonuç/durum gösterimi; anahtar kapalıysa "kilitli" UI.
-2. PERİYODİK OTOMATİK ZAMANLAYICI: driveReadyItems'i loop'ta çağıran zamanlayıcı.
-   AYRI iş — Eray HENÜZ SEÇMEDİ → kendiliğinden yapma, ÖNCE sade-dille sor.
-3. §5.14 ürün-katmanı listesi: handover-on-close (C2 — gerçek merge'le
-   HandoverEngine.record), gate_runs'a uat verdict (attempt tuzağı çöz), board
-   whose-turn rozeti (src/ UI), staging raporları/onayı (§5.11), epic-status-flip,
-   blocker-temizle (bağımlılık modeli gerekir).
+GÖRSEL SPEC — TEK KAYNAK, BİREBİR UY: development/concepts/wireframe-v4-final.html.
+Her ekranı buna birebir uydur. mockup-v3-palette-preview.html ARTIK referans DEĞİL.
+Renk/tipografi: development/DESIGN.md. UI kodu: src/ (React + TanStack Router +
+Tailwind v4).
 
-Sabit kurallar: koşullu mantık ORCHESTRATOR'da, DAG saf AND-join (§5.13). Mock→gerçek
-deseni (composition root / makeServerDrive enjekte eder). TDD zorunlu (RED→GREEN,
-gerçek sebep). "tamam" demeden npm test + typecheck YEŞİL. main'e SORMADAN push YOK.
-Eray non-coder/Türkçe, kod+commit İngilizce, somut artefakt göster. Güvenlik anahtarı
-gibi kritik parse'ları FAIL-SAFE yaz + test et (§5.16 — naif coerce footgun'u). ⚠️ TEST
-EXECUTOR'LARI worktree'ye yazarken host repo'ya düşebilecek negatif guard KULLANMA
-(§5.15 dersi — 2 stray commit yaşandı).
+CANLI GÖRMEK:
+- Dashboard: preview_start "kortext-dev" (5173). Demo verisi yüklü (Demo CRM, 6 iş,
+  gitignored .kortext/). Yoksa: POST /api/blueprint init + `npx tsx .kortext/seed.ts`.
+- Spec yan yana: preview_start "kortext-wireframe" (8092).
+
+YÖNTEM (her ekran için, sırayla): (1) canlı UI + wireframe-v4 spec'i yan yana göster
+(screenshot), (2) fark/eksikleri Eray'la SADE-DİLLE konuş (brainstorming/frontend-design
+skill), (3) onay alınca src/'de uygula, (4) preview screenshot ile doğrula, (5)
+ekran-başına ayrı commit. Bir ekran bitmeden diğerine geçme.
+
+EKRAN SIRASI (sidebar): 1.Onboarding (ilk açılış) → 2.Dashboard → 3.Board → 4.Memory
+→ 5.Reports → 6.References → 7.Project settings → 8.Agents → 9.Rules → 10.Workflows
+→ 11.Hooks → 12.Integrations → 13.Environment → 14.Danger zone.
+
+İLK ADIM: DESIGN.md oku + wireframe-v4-final.html'i preview'da aç + dashboard'ı başlat.
+Sonra 1. EKRAN'dan (Onboarding) başla: canlı vs spec karşılaştır, Eray'la konuş.
+
+SABİT: Eray non-coder/Türkçe, kod+commit İngilizce, GUI-first, somut artefakt
+(screenshot). UX/mimari kararı AskUserQuestion ile sade-dille sor (öneri başa). main'e
+SORMADAN push YOK. Saf görsel iterasyon screenshot'la doğrulanır; component mantığı
+varsa TDD.
+
+PARALEL TRACK (sonraya, UI öncelikli): backend ertelenenleri — handover-on-close,
+gate_runs uat verdict, blocker-temizle, epic-status-flip, staging raporları, periyodik
+zamanlayıcı (DECISIONS §5.16). Ayrıca: gerçek AI ajanıyla canlı UAT henüz yapılmadı.
 ```
 
 ## 2. Geçmiş özet
