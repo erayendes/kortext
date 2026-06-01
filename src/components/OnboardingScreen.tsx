@@ -1,9 +1,10 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Copy,
   Download,
   FileCheck,
   FileText,
+  FolderOpen,
   Rocket,
   Sparkles,
   X,
@@ -24,8 +25,9 @@ function GithubMark({ size = 14, className }: { size?: number; className?: strin
     </svg>
   );
 }
-import { apiPost, type ApiPostError } from '../lib/api.ts';
+import { apiGet, apiPost, type ApiPostError } from '../lib/api.ts';
 import type {
+  BlueprintStatusResponse,
   BlueprintSubmitInput,
   BlueprintSubmitResponse,
   ExecutorChoice,
@@ -82,7 +84,7 @@ Project information:
 
 Output only the .md content, no extra explanation.`;
 
-const PLATFORM_OPTIONS = ['Web', 'iOS', 'Android'] as const;
+const PLATFORM_OPTIONS = ['Web', 'iOS', 'Android', 'Desktop'] as const;
 type PlatformOption = (typeof PLATFORM_OPTIONS)[number];
 
 type FormState = {
@@ -93,7 +95,7 @@ type FormState = {
   githubRepo: string;
   blueprintFile: File | null;
   blueprintBody: string;
-  executor: ExecutorChoice;
+  executor: ExecutorChoice | null;
   executorBinary: string;
 };
 
@@ -101,18 +103,19 @@ const INITIAL_STATE: FormState = {
   projectName: '',
   projectCode: '',
   projectType: 'new',
-  platforms: ['Web'],
+  platforms: [],
   githubRepo: '',
   blueprintFile: null,
   blueprintBody: '',
-  executor: 'mock',
+  executor: null,
   executorBinary: '',
 };
 
 const EXECUTOR_OPTIONS: { value: ExecutorChoice; label: string; desc: string }[] = [
-  { value: 'mock', label: 'Mock', desc: 'No-op simulator · zero cost, instant' },
+  { value: 'antigravity', label: 'Antigravity', desc: 'agy CLI · Google Antigravity' },
   { value: 'claude', label: 'Claude', desc: 'claude CLI · real Anthropic agents' },
-  { value: 'antigravity', label: 'AGY', desc: 'agy CLI · Google Antigravity' },
+  { value: 'codex', label: 'Codex', desc: 'codex CLI · OpenAI agents' },
+  { value: 'mock', label: 'Mock', desc: 'Demo only · simulates steps, no real work' },
 ];
 
 const PROJECT_CODE_PATTERN = /^[A-Z0-9]{2,6}$/;
@@ -128,6 +131,39 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [projectDir, setProjectDir] = useState('');
+  const [browsing, setBrowsing] = useState(false);
+  const [initializedAt, setInitializedAt] = useState<string | null>(null);
+
+  // Prefill with the daemon's own workspace (where .kortext/ goes by default).
+  // blueprintPath is "<root>/.kortext/foundation/BRD.md".
+  useEffect(() => {
+    let alive = true;
+    apiGet<BlueprintStatusResponse>('/api/blueprint/status')
+      .then((res) => {
+        if (!alive) return;
+        const root = (res.blueprintPath ?? '').split('/.kortext/')[0];
+        if (root) setProjectDir((cur) => cur || root);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // Open a native folder picker (macOS); on other platforms / cancel the user
+  // just types the path. The daemon opens the dialog and returns the path.
+  const browseDirectory = async () => {
+    setBrowsing(true);
+    try {
+      const res = await apiPost<{ path: string | null }>('/api/pick-directory', {});
+      if (res.path) setProjectDir(res.path);
+    } catch {
+      /* native picker unavailable — typing the path still works */
+    } finally {
+      setBrowsing(false);
+    }
+  };
 
   const nameError =
     state.projectName.length > 0 &&
@@ -148,6 +184,7 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
     state.projectName.trim().length <= 60 &&
     PROJECT_CODE_PATTERN.test(state.projectCode) &&
     state.platforms.length > 0 &&
+    state.executor !== null &&
     state.blueprintBody.trim().length >= 10 &&
     (state.githubRepo.trim().length === 0 || GITHUB_PATTERN.test(state.githubRepo.trim())) &&
     !submitting;
@@ -198,6 +235,7 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
 
   const submit = async () => {
     if (!canSubmit) return;
+    if (state.executor === null) return;
     setSubmitting(true);
     setSubmitError(null);
     const payload: BlueprintSubmitInput = {
@@ -210,12 +248,19 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
       executor: state.executor,
       executorBinary:
         state.executorBinary.trim().length > 0 ? state.executorBinary.trim() : null,
+      projectDir: projectDir.trim().length > 0 ? projectDir.trim() : null,
     };
     try {
-      await apiPost<BlueprintSubmitResponse>('/api/blueprint', payload);
+      const res = await apiPost<BlueprintSubmitResponse>('/api/blueprint', payload);
       // Reset the spinner state before navigating — otherwise on slow systems
       // the screen flashes "Initializing…" while the guard re-checks status.
       setSubmitting(false);
+      if (res.initializedElsewhere) {
+        // Project written to a different folder — the running daemon doesn't
+        // serve it, so show "run Kortext there" instead of navigating.
+        setInitializedAt(res.projectDir);
+        return;
+      }
       if (onDone) {
         onDone();
       } else {
@@ -243,6 +288,37 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
   const setCode = (v: string) => {
     setState((s) => ({ ...s, projectCode: v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6) }));
   };
+
+  if (initializedAt) {
+    return (
+      <div className="min-h-screen bg-bg-0 text-tx-1 flex items-center justify-center py-12 px-6">
+        <div className="w-full max-w-[560px] text-center">
+          <div className="flex items-center justify-center mb-4">
+            <FileCheck size={32} style={{ color: 'var(--success)' }} />
+          </div>
+          <h2 className="text-[22px] font-semibold mb-2">Project created</h2>
+          <p className="text-tx-2 text-[14px] mb-5">
+            Kortext set up{' '}
+            <span className="mono" style={{ color: 'var(--accent-soft)' }}>
+              {initializedAt}/.kortext/
+            </span>
+            . The running daemon serves a different folder — start Kortext in your
+            project to run it:
+          </p>
+          <pre
+            className="mono text-[13px] text-left px-4 py-3 rounded-md m-0"
+            style={{
+              background: 'var(--bg-2)',
+              border: '1px solid var(--border-default)',
+              color: 'var(--tx-1)',
+            }}
+          >
+            {`cd ${initializedAt}\nkortext serve`}
+          </pre>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-bg-0 text-tx-1 flex items-start justify-center py-12 px-6">
@@ -284,6 +360,31 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
                 title="Existing codebase"
                 desc="Adapt to Kortext — onboarding pipeline"
               />
+            </div>
+          </Field>
+
+          <Field
+            label="Project Directory"
+            hint="Where .kortext/ is created. Browse or type an absolute path — a different folder is set up there (then you run Kortext in it)."
+          >
+            <div className="flex gap-2">
+              <input
+                className="input flex-1 mono"
+                style={{ fontSize: 13 }}
+                value={projectDir}
+                placeholder="/Users/you/projects/acme"
+                spellCheck={false}
+                onChange={(e) => setProjectDir(e.target.value)}
+              />
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={browseDirectory}
+                disabled={browsing}
+              >
+                <FolderOpen size={14} />
+                {browsing ? 'Opening…' : 'Browse'}
+              </button>
             </div>
           </Field>
 
@@ -433,14 +534,18 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
           <Field
             label="AI Executor"
             hint={
-              state.executor === 'mock'
-                ? 'Mock = simulation only, no real AI calls. Pick Claude or AGY for real autonomous work.'
+              state.executor === null
+                ? 'Pick how your agents run. Mock is demo-only — no real work.'
+                : state.executor === 'mock'
+                ? 'Mock = simulation only, no real AI calls. Pick Claude, Codex, or Antigravity for real autonomous work.'
                 : state.executor === 'claude'
                 ? 'Uses your local `claude` CLI. Make sure you are logged in (claude login).'
+                : state.executor === 'codex'
+                ? 'Uses your local `codex` CLI. Make sure you are logged in (codex login).'
                 : 'Uses your local `agy` CLI (Antigravity). Make sure you are logged in (agy install).'
             }
           >
-            <div className="flex gap-2 flex-wrap">
+            <div className="grid grid-cols-2 gap-2">
               {EXECUTOR_OPTIONS.map((opt) => (
                 <ExecutorChip
                   key={opt.value}
@@ -451,13 +556,15 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
                 />
               ))}
             </div>
-            {state.executor !== 'mock' && (
+            {state.executor !== null && state.executor !== 'mock' && (
               <input
                 className="input w-full mono mt-2"
                 style={{ fontSize: 12 }}
                 placeholder={
                   state.executor === 'claude'
                     ? 'Optional: binary path (default: claude on PATH)'
+                    : state.executor === 'codex'
+                    ? 'Optional: binary path (default: codex on PATH)'
                     : 'Optional: binary path (default: agy on PATH)'
                 }
                 value={state.executorBinary}
@@ -625,7 +732,7 @@ function ExecutorChip({
     <button
       type="button"
       onClick={onClick}
-      className="flex-1 min-w-[140px] text-left px-3 py-2.5 rounded-md transition-all"
+      className="text-left px-3 py-2.5 rounded-md transition-all"
       style={{
         background: 'var(--bg-2)',
         border: active

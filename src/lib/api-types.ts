@@ -173,7 +173,7 @@ export type BlueprintStatus =
 
 export type ProjectType = 'new' | 'existing';
 
-export type ExecutorChoice = 'mock' | 'claude' | 'antigravity';
+export type ExecutorChoice = 'mock' | 'claude' | 'codex' | 'antigravity';
 
 export type ProjectMeta = {
   name: string;
@@ -201,10 +201,13 @@ export type BlueprintSubmitInput = {
   githubRepo: string | null;
   executor: ExecutorChoice;
   executorBinary: string | null;
+  projectDir: string | null;
 };
 
 export type BlueprintSubmitResponse = {
   ok: true;
   triggerWorkflowId: string;
   project: ProjectMeta;
+  projectDir: string;
+  initializedElsewhere: boolean;
 };

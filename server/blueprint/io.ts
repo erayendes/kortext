@@ -5,7 +5,23 @@ export type BlueprintStatus = 'uninitialized' | 'draft' | 'approved' | 'unknown'
 
 export type ProjectType = 'new' | 'existing';
 
-export type ExecutorChoice = 'mock' | 'claude' | 'antigravity';
+export type ExecutorChoice = 'mock' | 'claude' | 'codex' | 'antigravity';
+
+// Executors onboarding offers. Gemini is engine-supported (see ExecutorKind in
+// cli/executor-factory.ts) but intentionally not exposed in the wizard yet.
+const EXECUTOR_CHOICES: readonly ExecutorChoice[] = [
+  'mock',
+  'claude',
+  'codex',
+  'antigravity',
+];
+
+/** Normalize an untrusted executor value to a valid choice; unknown → 'mock'. */
+export function normalizeExecutor(raw: unknown): ExecutorChoice {
+  return EXECUTOR_CHOICES.includes(raw as ExecutorChoice)
+    ? (raw as ExecutorChoice)
+    : 'mock';
+}
 
 export type ProjectMeta = {
   name: string;
@@ -37,6 +53,36 @@ export function resolveBlueprintPaths(workspaceRoot: string): BlueprintPaths {
     workspaceRoot: root,
     blueprintPath: join(root, DEFAULT_BLUEPRINT_REL),
     projectJsonPath: join(root, DEFAULT_PROJECT_JSON_REL),
+  };
+}
+
+export type BlueprintTarget = {
+  root: string;
+  paths: BlueprintPaths;
+  /** True when the target differs from the running daemon's workspace. */
+  isElsewhere: boolean;
+};
+
+/**
+ * Resolve where to write the project: the daemon's own workspace by default, or
+ * a user-chosen `projectDir`. When `isElsewhere` is true the caller writes the
+ * files but skips the workflow trigger — that folder's own daemon picks it up
+ * when started there (Model A: "create here, then run Kortext there").
+ */
+export function resolveBlueprintTarget(
+  projectDir: string | null | undefined,
+  workspaceRoot: string,
+): BlueprintTarget {
+  const daemonRoot = resolve(workspaceRoot);
+  const trimmed = typeof projectDir === 'string' ? projectDir.trim() : '';
+  if (trimmed.length === 0) {
+    return { root: daemonRoot, paths: resolveBlueprintPaths(daemonRoot), isElsewhere: false };
+  }
+  const target = resolve(trimmed);
+  return {
+    root: target,
+    paths: resolveBlueprintPaths(target),
+    isElsewhere: target !== daemonRoot,
   };
 }
 
@@ -108,10 +154,7 @@ export function readProjectMeta(projectJsonPath: string): ProjectMeta | null {
       Array.isArray(parsed.platforms) &&
       typeof parsed.createdAt === 'number'
     ) {
-      const exec: ExecutorChoice =
-        parsed.executor === 'claude' || parsed.executor === 'antigravity'
-          ? parsed.executor
-          : 'mock';
+      const exec: ExecutorChoice = normalizeExecutor(parsed.executor);
       return {
         name: parsed.name,
         code: parsed.code,
