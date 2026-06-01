@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Filter, Plus, X } from 'lucide-react';
 import { PageHeader } from '../components/PageHeader.tsx';
+import { TaskDrawer, EpicDrawer } from '../components/BoardDrawers.tsx';
 import { apiPost, usePolling } from '../lib/api.ts';
 import type { ApiPostError } from '../lib/api.ts';
 import type { BacklogItem, PersonaSummary } from '../lib/api-types.ts';
@@ -9,7 +10,7 @@ import { personaColor } from '../lib/persona-colors.ts';
 type ColumnStatus = 'to_do' | 'in_progress' | 'test' | 'review' | 'done';
 
 const COLUMNS: { status: ColumnStatus; label: string; tone: string; addable: boolean }[] = [
-  { status: 'to_do', label: 'To do', tone: 'dot-muted', addable: true },
+  { status: 'to_do', label: 'To do', tone: 'dot-neutral', addable: true },
   { status: 'in_progress', label: 'In progress', tone: 'dot-signal dot-pulse', addable: true },
   { status: 'test', label: 'Test', tone: 'dot-info', addable: true },
   { status: 'review', label: 'Review', tone: 'dot-warning', addable: true },
@@ -48,6 +49,14 @@ export function BoardRoute() {
   const [agentFilter, setAgentFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [modalOpen, setModalOpen] = useState(false);
+  const [modalParent, setModalParent] = useState<string | undefined>(undefined);
+  const [openItem, setOpenItem] = useState<BacklogItem | null>(null);
+  const [openEpic, setOpenEpic] = useState<BacklogItem | null>(null);
+
+  function openNewItemModal(parentId?: string) {
+    setModalParent(parentId);
+    setModalOpen(true);
+  }
 
   const agents = useMemo(() => {
     const set = new Set<string>();
@@ -132,7 +141,7 @@ export function BoardRoute() {
             <button
               type="button"
               className="btn btn-primary btn-xs"
-              onClick={() => setModalOpen(true)}
+              onClick={() => openNewItemModal()}
             >
               <Plus className="w-3 h-3" /> New task
             </button>
@@ -145,7 +154,7 @@ export function BoardRoute() {
         {loading && !data && <div className="text-[13px] text-tx-3">loading backlog…</div>}
 
         <div className="flex gap-3 h-full items-stretch pb-3">
-          <EpicColumn epics={epics} stats={epicStats} />
+          <EpicColumn epics={epics} stats={epicStats} onOpenEpic={setOpenEpic} />
           {COLUMNS.map((col) => (
             <StatusColumn
               key={col.status}
@@ -154,7 +163,8 @@ export function BoardRoute() {
               addable={col.addable}
               items={buckets.get(col.status) ?? []}
               isDone={col.status === 'done'}
-              onAdd={() => setModalOpen(true)}
+              onAdd={() => openNewItemModal()}
+              onOpen={setOpenItem}
             />
           ))}
         </div>
@@ -163,10 +173,31 @@ export function BoardRoute() {
       {modalOpen && (
         <NewItemModal
           epics={epics}
+          defaultParentId={modalParent}
           onClose={() => setModalOpen(false)}
           onCreated={() => {
             setModalOpen(false);
             refresh();
+          }}
+        />
+      )}
+
+      {openItem && (
+        <TaskDrawer
+          item={openItem}
+          epicTitle={epics.find((e) => e.id === openItem.parent_id)?.title ?? null}
+          onClose={() => setOpenItem(null)}
+        />
+      )}
+
+      {openEpic && (
+        <EpicDrawer
+          epic={openEpic}
+          items={nonEpics}
+          onClose={() => setOpenEpic(null)}
+          onAddTask={(epicId) => {
+            setOpenEpic(null);
+            openNewItemModal(epicId);
           }}
         />
       )}
@@ -202,9 +233,11 @@ function FilterSelect({
 function EpicColumn({
   epics,
   stats,
+  onOpenEpic,
 }: {
   epics: BacklogItem[];
   stats: Map<string, { total: number; done: number }>;
+  onOpenEpic: (epic: BacklogItem) => void;
 }) {
   return (
     <section className="w-[240px] shrink-0 border border-border-default rounded-lg p-2.5 flex flex-col gap-2 min-h-0">
@@ -225,7 +258,16 @@ function EpicColumn({
           return (
             <article
               key={epic.id}
-              className="border border-border-default rounded-md p-3 bg-bg-0 cursor-pointer hover:border-border-strong transition-colors duration-200"
+              role="button"
+              tabIndex={0}
+              onClick={() => onOpenEpic(epic)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onOpenEpic(epic);
+                }
+              }}
+              className="border border-border-default rounded-md p-3 bg-bg-0 cursor-pointer hover:border-border-strong transition-colors duration-200 focus:outline-none focus-visible:border-accent"
             >
               <div className="flex items-center gap-1.5 mb-1">
                 <span className="mono text-[10px] text-tx-3">{epic.id}</span>
@@ -267,6 +309,7 @@ function StatusColumn({
   items,
   isDone,
   onAdd,
+  onOpen,
 }: {
   label: string;
   tone: string;
@@ -274,9 +317,10 @@ function StatusColumn({
   items: BacklogItem[];
   isDone: boolean;
   onAdd: () => void;
+  onOpen: (item: BacklogItem) => void;
 }) {
   return (
-    <section className="w-[286px] shrink-0 bg-bg-1 border border-border-default rounded-lg p-2.5 flex flex-col gap-2 min-h-0">
+    <section className="w-[286px] shrink-0 bg-bg-1 border border-border-default rounded-lg pt-2.5 px-2.5 pb-3 flex flex-col gap-2 min-h-0">
       <header className="flex items-center gap-2 px-1 pt-1 pb-2 border-b border-border-subtle">
         <span className={`dot ${tone}`} />
         <span className="flex-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-tx-3">
@@ -299,14 +343,22 @@ function StatusColumn({
           <p className="text-[11px] text-tx-disabled px-2 py-3">empty</p>
         )}
         {items.map((it) => (
-          <Card key={it.id} item={it} dimmed={isDone} />
+          <Card key={it.id} item={it} dimmed={isDone} onOpen={onOpen} />
         ))}
       </div>
     </section>
   );
 }
 
-function Card({ item, dimmed }: { item: BacklogItem; dimmed: boolean }) {
+function Card({
+  item,
+  dimmed,
+  onOpen,
+}: {
+  item: BacklogItem;
+  dimmed: boolean;
+  onOpen: (item: BacklogItem) => void;
+}) {
   const blocked = item.status === 'blocked';
   const mark = TYPE_MARK[item.type];
   const titleStyle = dimmed ? 'line-through' : '';
@@ -317,8 +369,17 @@ function Card({ item, dimmed }: { item: BacklogItem; dimmed: boolean }) {
 
   return (
     <article
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpen(item)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onOpen(item);
+        }
+      }}
       className={[
-        'border border-border-default rounded-md px-3 py-2.5 bg-bg-0 cursor-pointer transition-colors duration-200 hover:border-border-strong relative',
+        'border border-border-default rounded-md px-3 py-2.5 bg-bg-0 cursor-pointer transition-colors duration-200 hover:border-border-strong relative focus:outline-none focus-visible:border-accent',
         blocked ? 'border-l-2 border-l-danger' : '',
         dimmed ? 'opacity-55' : '',
       ].join(' ')}
@@ -402,10 +463,12 @@ function CardTail({
 
 function NewItemModal({
   epics,
+  defaultParentId,
   onClose,
   onCreated,
 }: {
   epics: BacklogItem[];
+  defaultParentId?: string;
   onClose: () => void;
   onCreated: () => void;
 }) {
@@ -414,7 +477,7 @@ function NewItemModal({
 
   const [type, setType] = useState<BacklogItem['type']>('task');
   const [title, setTitle] = useState('');
-  const [parentId, setParentId] = useState<string>('');
+  const [parentId, setParentId] = useState<string>(defaultParentId ?? '');
   const [owner, setOwner] = useState<string>('');
   const [acceptance, setAcceptance] = useState('');
   const [blocks, setBlocks] = useState('');
