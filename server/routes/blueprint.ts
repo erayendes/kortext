@@ -3,13 +3,17 @@ import {
   readBlueprintStatus,
   readProjectMeta,
   resolveBlueprintPaths,
+  resolveBlueprintTarget,
   triggerWorkflowIdFor,
   writeBlueprint,
   writeProjectMeta,
+  normalizeExecutor,
   type ExecutorChoice,
   type ProjectMeta,
   type ProjectType,
 } from '../blueprint/io.ts';
+import { pickDirectoryNative } from '../blueprint/pick-directory.ts';
+import { existsSync, statSync } from 'node:fs';
 
 export type BlueprintRouterDeps = {
   workspaceRoot: string;
@@ -34,6 +38,18 @@ export function blueprintRouter(deps: BlueprintRouterDeps): Router {
     });
   });
 
+  r.post('/pick-directory', async (_req, res) => {
+    try {
+      const path = await pickDirectoryNative();
+      res.json({ path });
+    } catch (err) {
+      res.status(500).json({
+        error: 'pick_failed',
+        message: err instanceof Error ? err.message : String(err),
+      });
+    }
+  });
+
   r.post('/blueprint', async (req, res) => {
     const body = req.body as Partial<{
       projectName: string;
@@ -44,6 +60,7 @@ export function blueprintRouter(deps: BlueprintRouterDeps): Router {
       githubRepo: string | null;
       executor: string;
       executorBinary: string | null;
+      projectDir: string | null;
     }>;
 
     const errors: string[] = [];
@@ -82,14 +99,19 @@ export function blueprintRouter(deps: BlueprintRouterDeps): Router {
       }
     }
 
-    const executor: ExecutorChoice =
-      body.executor === 'claude' || body.executor === 'antigravity'
-        ? body.executor
-        : 'mock';
+    const executor: ExecutorChoice = normalizeExecutor(body.executor);
     const executorBinary: string | null =
       typeof body.executorBinary === 'string' && body.executorBinary.trim().length > 0
         ? body.executorBinary.trim()
         : null;
+
+    const target = resolveBlueprintTarget(body.projectDir, deps.workspaceRoot);
+    if (
+      target.isElsewhere &&
+      (!existsSync(target.root) || !statSync(target.root).isDirectory())
+    ) {
+      errors.push('projectDir does not exist or is not a directory');
+    }
 
     if (errors.length > 0 || projectType === null) {
       res.status(422).json({ error: 'validation_failed', details: errors });
@@ -97,7 +119,7 @@ export function blueprintRouter(deps: BlueprintRouterDeps): Router {
     }
 
     try {
-      writeBlueprint(paths.blueprintPath, { blueprintBody });
+      writeBlueprint(target.paths.blueprintPath, { blueprintBody });
     } catch (err) {
       res.status(500).json({
         error: 'write_failed',
@@ -117,7 +139,7 @@ export function blueprintRouter(deps: BlueprintRouterDeps): Router {
       createdAt: Date.now(),
     };
     try {
-      writeProjectMeta(paths.projectJsonPath, meta);
+      writeProjectMeta(target.paths.projectJsonPath, meta);
     } catch (err) {
       res.status(500).json({
         error: 'write_failed',
@@ -127,7 +149,9 @@ export function blueprintRouter(deps: BlueprintRouterDeps): Router {
     }
 
     const triggerWorkflowId = triggerWorkflowIdFor(projectType);
-    if (deps.onApproved) {
+    // Only trigger when initializing the daemon's own workspace. A project
+    // created elsewhere is run by that folder's own daemon when started there.
+    if (!target.isElsewhere && deps.onApproved) {
       try {
         await deps.onApproved(triggerWorkflowId);
       } catch (err) {
@@ -143,6 +167,8 @@ export function blueprintRouter(deps: BlueprintRouterDeps): Router {
       ok: true,
       triggerWorkflowId,
       project: meta,
+      projectDir: target.root,
+      initializedElsewhere: target.isElsewhere,
     });
   });
 
