@@ -7,7 +7,7 @@
 
 ## 1. Şu an (2026-05-31)
 
-**Branch:** `main`. Motor/şema epic §5.9 **MADDE 10+11 CAPSTONE + SON MONTAJ TAMAM.** Önce 9 TDD dilimi (adapter'lar+keystone, `39953ad`→`c692223`, 465→499 test), sonra **4 kompozisyon dilimi — "son montaj" (2026-05-31 #4):** `1 ResolutionRegistry+runItem→gerçek-worktree → 2 composition-root → 3 preview-dikişi → 4 driver+e2e`, her biri ayrı RED→GREEN + ayrı commit (**4 commit, `8cbd5e1`→`86ddaeb`**). **499→521 test**, typecheck + lint temiz, her commit'te yeşil. **SONUÇ: sistem ilk kez bir işi `to_do → done`'a kadar insan-döngüsü olmadan, GERÇEK git ile yürütüyor** — uçtan-uca test (`driver-e2e.test.ts`) gerçek worktree + development'a gerçek merge commit + gate + epic→staging deploy zincirini kanıtlıyor. `driveReadyItems` = "başlat düğmesi" (tek-tur, 3 orchestrator-katmanı faz; **mimari karar: Eray sade-dille "ayrı, temiz, yeni parça" seçti** = B1 çizgisi). Detay [DECISIONS §5.15](./DECISIONS.md). Üretim blast-radius hâlâ **sıfır** — driver henüz hiçbir loop/HTTP girişinden sürülmüyor (`server/index.ts` montajı + zamanlayıcı bilinçle sonraya bırakıldı). ⚠️ **13 commit LOKAL** (`39953ad`→`86ddaeb`) — main'e push EDİLMEDİ, Eray onayı bekliyor.
+**Branch:** `main`. Motor/şema epic §5.9 **MADDE 10+11 CAPSTONE + SON MONTAJ TAMAM.** Önce 9 TDD dilimi (adapter'lar+keystone, `39953ad`→`c692223`, 465→499 test), sonra **4 kompozisyon dilimi — "son montaj" (2026-05-31 #4):** `1 ResolutionRegistry+runItem→gerçek-worktree → 2 composition-root → 3 preview-dikişi → 4 driver+e2e`, her biri ayrı RED→GREEN + ayrı commit (**4 commit, `8cbd5e1`→`86ddaeb`**). **499→521 test**, typecheck + lint temiz, her commit'te yeşil. **SONUÇ: sistem ilk kez bir işi `to_do → done`'a kadar insan-döngüsü olmadan, GERÇEK git ile yürütüyor** — uçtan-uca test (`driver-e2e.test.ts`) gerçek worktree + development'a gerçek merge commit + gate + epic→staging deploy zincirini kanıtlıyor. `driveReadyItems` = "başlat düğmesi" (tek-tur, 3 orchestrator-katmanı faz; **mimari karar: Eray sade-dille "ayrı, temiz, yeni parça" seçti** = B1 çizgisi). Detay [DECISIONS §5.15](./DECISIONS.md). Üretim blast-radius hâlâ **sıfır** — driver henüz hiçbir loop/HTTP girişinden sürülmüyor (`server/index.ts` montajı + zamanlayıcı bilinçle sonraya bırakıldı). ⚠️ **Bu oturumun 5 commit'i LOKAL** (`8cbd5e1`→`4d38bdf` = 4 montaj dilimi + bu docs) — `origin/main`'den 5 önde, push EDİLMEDİ, Eray onayı bekliyor. (Önceki 9 capstone commit'i `39953ad`→`c692223` zaten origin/main'de.)
 
 > **Süreç dersi (kayıtlı):** son montaj 4. diliminde, worktree'ye yazan bir test executor'ının guard'ı (`worktreePath !== repoRoot`) deployment adımında host repo'ya düşüp 2 stray commit + 1 çöp dosya yarattı. `--mixed reset` (reflog ile sıfır kayıp) + guard'ı pozitif/dar yaptım (`workflowId==='development-cycle' && path.startsWith(...)`). Ders: worktree-mutasyonlu test executor'ı asla `process.cwd()`'e düşebilecek negatif guard kullanmamalı.
 
@@ -39,17 +39,20 @@
 > Yeni oturumda şunu yaz (driver'ı bir girişe bağla + ertelenenler):
 
 ```
-DECISIONS §5.15'i oku. Capstone motoru BİTTİ: 13 TDD dilimi LOKAL main'de
-(39953ad→86ddaeb), 521 test + typecheck + lint yeşil. Sistem bir işi to_do→done'a
-kadar gerçek git'le yürütüyor (driveReadyItems = "başlat düğmesi", driver-e2e.test.ts
-kanıtlıyor). Driver standalone fonksiyon (Eray "ayrı, temiz, yeni parça" seçti).
-Üretim blast-radius hâlâ sıfır — driver hiçbir girişten sürülmüyor.
+DECISIONS §5.15'i oku. Capstone motoru + SON MONTAJ BİTTİ: sistem bir işi
+to_do→done'a kadar GERÇEK git'le, insan-döngüsü olmadan yürütüyor (driveReadyItems
+= "başlat düğmesi", driver-e2e.test.ts kanıtlıyor). 521 test + typecheck + lint yeşil.
+Driver standalone fonksiyon (Eray "ayrı, temiz, yeni parça" seçti). Üretim blast-radius
+hâlâ SIFIR — driver hiçbir girişten sürülmüyor.
 
-KALAN (öncelik sırası, her biri ayrı TDD + ayrı commit):
-1. DRIVER'I BİR GİRİŞE BAĞLA: server/index.ts composition'ı (createComposition) kurup
-   driveReadyItems'i çağırsın — önce HTTP tetiği (örn. POST /api/drive) veya manuel
-   komut; periyodik otomatik zamanlayıcı AYRI iş (Eray henüz seçmedi, sorma-bekle).
-   Bu, blast-radius'u sıfırdan çıkaran ilk dilim → DİKKAT + Eray onayı.
+ÖNCE: Bu oturumun 5 commit'i LOKAL (8cbd5e1→4d38bdf, origin/main'den 5 önde),
+push EDİLMEDİ. Eray'a "bu 5 commit'i push edeyim mi?" diye SOR — onaysız push YOK.
+
+SONRA KALAN (öncelik sırası, her biri ayrı TDD + ayrı commit):
+1. DRIVER'I BİR GİRİŞE BAĞLA (blast-radius'u sıfırdan çıkaran ilk dilim → DİKKAT + Eray
+   onayı): server/index.ts composition'ı (createComposition) kurup driveReadyItems'i
+   çağırsın — önce HTTP tetiği (örn. POST /api/drive) veya manuel komut. Periyodik
+   otomatik zamanlayıcı AYRI iş (Eray henüz seçmedi → sorma-bekle).
 2. Ertelenenler (§5.14/§5.15, sıra Eray'a sorulabilir): handover-on-close (C2 — gerçek
    merge'le HandoverEngine.record), gate_runs'a uat verdict (attempt tuzağı çöz),
    board whose-turn rozeti (src/ UI), staging raporları/onayı (§5.11), epic-status-flip,
