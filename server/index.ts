@@ -17,6 +17,7 @@ import { workflowsRouter } from './routes/workflows.ts';
 import { backlogRouter } from './routes/backlog.ts';
 import { docsRouter } from './routes/docs.ts';
 import { blueprintRouter } from './routes/blueprint.ts';
+import { driveRouter } from './routes/drive.ts';
 import { startCommand } from './cli/commands.ts';
 import { readProjectMeta, resolveBlueprintPaths } from './blueprint/io.ts';
 import type { ExecutorKind } from './cli/executor-factory.ts';
@@ -26,6 +27,7 @@ import { MarkdownSyncService } from './services/markdown-sync.ts';
 import type { SafetyGuards } from './engine/worker-pool.ts';
 import { mcpSseRouter } from '../mcp/sse.ts';
 import { resumeOrphanedRuns } from './orchestrator/resume.ts';
+import { makeServerDrive } from './orchestrator/server-drive.ts';
 import { loadWorkflowsFromDir } from './engine/workflow-loader.ts';
 import { loadPersonasFromDir } from './engine/persona-registry.ts';
 import { findUnknownPersonas, SYNTHETIC_PERSONA_HANDLES } from './engine/consistency.ts';
@@ -179,6 +181,28 @@ app.use(
     },
   }),
 );
+// §5.16 — the manual "start button": POST /api/drive runs one autonomous driver
+// pass (to_do → done for ready items, real git). Locked behind
+// KORTEXT_DRIVE_ENABLED (OFF by default), so mounting it keeps production
+// blast-radius at zero — the runtime is built lazily on the first ARMED drive,
+// nothing happens at boot. Executor is resolved from project.json exactly like
+// the blueprint trigger (mock fallback).
+const serverDrive = makeServerDrive({
+  repos,
+  personas: personaRegistry,
+  workflows: workflowRegistry,
+  queue: approvalQueue,
+  repoRoot: process.cwd(),
+  agentsDir,
+  enabled: () => env.KORTEXT_DRIVE_ENABLED,
+  resolveExecutor: () => {
+    const meta = readProjectMeta(resolveBlueprintPaths(process.cwd()).projectJsonPath);
+    const kind = meta?.executor ?? 'mock';
+    return { kind, binary: meta?.executorBinary ?? defaultBinaryFor(kind) };
+  },
+});
+app.use('/api', driveRouter({ enabled: serverDrive.enabled, drive: serverDrive.drive }));
+
 app.use(
   '/api',
   docsRouter({
