@@ -1,12 +1,14 @@
 import { usePolling, formatElapsed } from '../lib/api.ts';
-import type { Run } from '../lib/api-types.ts';
+import type { BacklogItem, Run, RunStep } from '../lib/api-types.ts';
 import { personaColor } from '../lib/persona-colors.ts';
 import { primaryPersonaFor } from '../lib/workflow-primary-persona.ts';
+import { resolveActiveRun } from '../lib/active-run.ts';
 
 const ACTIVE: Run['status'][] = ['queued', 'running', 'awaiting_approval'];
 
 export function RunsTable() {
   const { data, error, loading } = usePolling<{ runs: Run[] }>('/api/runs', 3000);
+  const { data: backlog } = usePolling<{ items: BacklogItem[] }>('/api/backlog', 10000);
 
   if (loading && !data) {
     return <Skeleton label="loading runs…" />;
@@ -15,6 +17,7 @@ export function RunsTable() {
     return <Skeleton label={`error: ${error}`} tone="danger" />;
   }
   const runs = data?.runs ?? [];
+  const items = backlog?.items ?? [];
   const active = runs.filter((r) => ACTIVE.includes(r.status));
 
   return (
@@ -32,7 +35,7 @@ export function RunsTable() {
         <div>
           <RowHeader />
           {active.map((r) => (
-            <RunRow key={r.id} run={r} />
+            <RunRow key={r.id} run={r} items={items} />
           ))}
         </div>
       )}
@@ -57,13 +60,23 @@ function RowHeader() {
   );
 }
 
-function RunRow({ run }: { run: Run }) {
-  const persona = primaryPersonaFor(run.workflow_id);
+function RunRow({ run, items }: { run: Run; items: BacklogItem[] }) {
+  // Enrich the lean list row with its ordered steps so we can show the real
+  // current actor + step progress (the list endpoint carries neither).
+  const { data: detail } = usePolling<{ run: Run; steps: RunStep[] }>(
+    `/api/runs/${run.id}`,
+    3000,
+  );
+  const view = resolveActiveRun(run, detail?.steps ?? [], items);
+
+  const persona = view.persona ?? primaryPersonaFor(run.workflow_id);
   const color = personaColor(persona);
+  const taskLabel = view.taskTitle ?? describeRun(run);
+  const stepLabel = view.step ? `${view.step.current}/${view.step.total}` : '–';
   const elapsedFrom = run.started_at ?? run.created_at;
   const dot = dotForStatus(run.status);
-  const stepLabel = run.status === 'queued' || run.status === 'awaiting_approval' ? '–' : '–';
   const tail = tailForStatus(run.status);
+
   return (
     <div
       className="grid items-center gap-3 px-4 py-3 text-[13px] cursor-pointer border-b hover:bg-bg-1 transition-colors"
@@ -77,17 +90,14 @@ function RunRow({ run }: { run: Run }) {
         <span className="mono" style={{ color }}>
           {persona}
         </span>{' '}
-        <span className="text-tx-3">{describeRun(run)}</span>{' '}
+        <span className="text-tx-2">{taskLabel}</span>{' '}
         {run.item_id ? (
           <span className="mono text-[12px] text-tx-3">{run.item_id}</span>
         ) : null}
       </div>
       <span className="mono text-[12px] text-tx-2">{stepLabel}</span>
       {tail ? (
-        <span
-          className="text-[12px]"
-          style={{ color: tail.color }}
-        >
+        <span className="text-[12px]" style={{ color: tail.color }}>
           {tail.text}
         </span>
       ) : (

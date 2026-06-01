@@ -1,6 +1,7 @@
 import { PanelRight, RefreshCw } from 'lucide-react';
 import { usePolling } from '../lib/api.ts';
-import type { Run } from '../lib/api-types.ts';
+import type { Run, RunStep } from '../lib/api-types.ts';
+import { stepProgress } from '../lib/active-run.ts';
 import { RunsTable } from '../components/RunsTable.tsx';
 import { TimelineSidebar } from '../components/TimelineSidebar.tsx';
 import { useShell } from '../lib/shell-store.tsx';
@@ -29,17 +30,13 @@ function DashboardHeader() {
     <div className="flex items-start justify-between gap-4 mb-6">
       <div className="min-w-0">
         <h1 className="text-[22px] font-semibold text-tx-1">Dashboard</h1>
-        <p className="mt-1 text-[13px] text-tx-3">
-          {active ? (
-            <>
-              <span className="mono">{active.workflow_id}</span>
-              <span> · </span>
-              <span>run #{active.id}</span>
-            </>
-          ) : (
-            <span>idle — no workflow currently running</span>
-          )}
-        </p>
+        {active ? (
+          <ActiveSubtitle run={active} />
+        ) : (
+          <p className="mt-1 text-[13px] text-tx-3">
+            idle — no workflow currently running
+          </p>
+        )}
       </div>
       <div className="flex items-center gap-2">
         <button
@@ -59,5 +56,26 @@ function DashboardHeader() {
         </button>
       </div>
     </div>
+  );
+}
+
+function ActiveSubtitle({ run }: { run: Run }) {
+  const { data } = usePolling<{ run: Run; steps: RunStep[] }>(
+    `/api/runs/${run.id}`,
+    3000,
+  );
+  const step = stepProgress(data?.steps ?? []);
+  return (
+    <p className="mt-1 text-[13px] text-tx-3">
+      <span className="mono">{run.workflow_id}</span>
+      <span> · </span>
+      {step ? (
+        <span>
+          step {step.current}/{step.total}
+        </span>
+      ) : (
+        <span>run #{run.id}</span>
+      )}
+    </p>
   );
 }
