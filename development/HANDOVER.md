@@ -5,9 +5,9 @@
 
 ---
 
-## 1. Şu an (2026-05-31)
+## 1. Şu an (2026-06-01)
 
-**Branch:** `main`. Motor/şema epic §5.9 **MADDE 10+11 CAPSTONE + SON MONTAJ TAMAM.** Önce 9 TDD dilimi (adapter'lar+keystone, `39953ad`→`c692223`, 465→499 test), sonra **4 kompozisyon dilimi — "son montaj" (2026-05-31 #4):** `1 ResolutionRegistry+runItem→gerçek-worktree → 2 composition-root → 3 preview-dikişi → 4 driver+e2e`, her biri ayrı RED→GREEN + ayrı commit (**4 commit, `8cbd5e1`→`86ddaeb`**). **499→521 test**, typecheck + lint temiz, her commit'te yeşil. **SONUÇ: sistem ilk kez bir işi `to_do → done`'a kadar insan-döngüsü olmadan, GERÇEK git ile yürütüyor** — uçtan-uca test (`driver-e2e.test.ts`) gerçek worktree + development'a gerçek merge commit + gate + epic→staging deploy zincirini kanıtlıyor. `driveReadyItems` = "başlat düğmesi" (tek-tur, 3 orchestrator-katmanı faz; **mimari karar: Eray sade-dille "ayrı, temiz, yeni parça" seçti** = B1 çizgisi). Detay [DECISIONS §5.15](./DECISIONS.md). Üretim blast-radius hâlâ **sıfır** — driver henüz hiçbir loop/HTTP girişinden sürülmüyor (`server/index.ts` montajı + zamanlayıcı bilinçle sonraya bırakıldı). ⚠️ **Bu oturumun 5 commit'i LOKAL** (`8cbd5e1`→`4d38bdf` = 4 montaj dilimi + bu docs) — `origin/main`'den 5 önde, push EDİLMEDİ, Eray onayı bekliyor. (Önceki 9 capstone commit'i `39953ad`→`c692223` zaten origin/main'de.)
+**Branch:** `main`. Motor/şema epic §5.9 **CAPSTONE + SON MONTAJ + DRIVER GİRİŞE BAĞLANDI.** Capstone (9 TDD adapter/keystone dilimi `39953ad`→`c692223`) + son montaj (4 kompozisyon dilimi `8cbd5e1`→`86ddaeb`, `driveReadyItems` = "başlat düğmesi", `driver-e2e.test.ts` gerçek git'le to_do→done kanıtlıyor) **artık origin/main'de — bu oturumda PUSH edildi (6 commit).** Bu oturumda ayrıca **§5.16 indi: driver bir HTTP girişine bağlandı** — `POST /api/drive` `driveReadyItems`'i tek-tur sürüyor, **ama varsayılan KAPALI bir güvenlik anahtarının (`KORTEXT_DRIVE_ENABLED`) arkasında.** **Mimari karar: Eray sade-dille "kilitli dursun, anahtarla açılır" seçti.** 3 parça, her biri TDD: env fail-safe anahtar (`server/config/env.ts`, yalnız `"1"`/`"true"` açar) · `driveRouter` (`server/routes/drive.ts`, 403 kapalı / 409 uçuşta / 202 başladı, fire-and-forget) · `makeServerDrive` (`server/orchestrator/server-drive.ts`, runtime lazy-once montaj). **521→535 test**, typecheck + lint temiz. Gerçek-sunucu smoke İKİ yön: KAPALI→403, AÇIK+boş backlog→202 temiz no-op (repo kirlenmedi). Detay [DECISIONS §5.16](./DECISIONS.md). **Blast-radius:** bu, etkiyi sıfırdan çıkarabilecek **İLK** slice — ama anahtar varsayılan kapalı → merge'de etki **pratikte hâlâ sıfır**; Eray `KORTEXT_DRIVE_ENABLED=1` set edip (yeniden) başlatana kadar düğme atıl. ⚠️ **Bu slice 1 commit LOKAL** (kod+test+docs bir arada), `origin/main`'den 1 önde, push EDİLMEDİ — Eray onayı bekliyor.
 
 > **Süreç dersi (kayıtlı):** son montaj 4. diliminde, worktree'ye yazan bir test executor'ının guard'ı (`worktreePath !== repoRoot`) deployment adımında host repo'ya düşüp 2 stray commit + 1 çöp dosya yarattı. `--mixed reset` (reflog ile sıfır kayıp) + guard'ı pozitif/dar yaptım (`workflowId==='development-cycle' && path.startsWith(...)`). Ders: worktree-mutasyonlu test executor'ı asla `process.cwd()`'e düşebilecek negatif guard kullanmamalı.
 
@@ -15,7 +15,7 @@
 
 | Test | Lint | Typecheck | Build |
 |---|---|---|---|
-| 521/521 ✅ | 0 hata · 4 pre-existing warning | 0 hata | temiz |
+| 535/535 ✅ | 0 hata · 4 pre-existing warning | 0 hata | temiz |
 
 **npm registry:** `kortext@3.0.0` broken (EADDRINUSE silent fail bug). v3.1.0 release (devasa sürüm: Faz 11-13 + CLI redesign) lokal tgz UAT geçtikten sonra yapılacak.
 
@@ -28,41 +28,46 @@
 3. ✅ **Önizleme otomatik açılıp kapanıyor** — iş test aşamasına gelince URL açılıyor, iş bitince/geri dönünce kapanıyor.
 4. ✅ **Ana düğme eklendi + tam test** — "başlat" (`driveReadyItems`) bir işi yapılacak → test → onay → **bitti**'ye kadar yürütüyor; uçtan-uca test **gerçek git ile** kanıtlıyor (gerçek birleştirme commit'i dahil). **Mimari karar:** sana sade dille sordum, "ayrı, temiz, yeni parça"yı seçtin — öyle yapıldı.
 
-> **Önemli:** Üretim etkisi hâlâ **sıfır** — "başlat" düğmesi henüz hiçbir otomatik yerden (uygulama açılışı / zamanlayıcı) çağrılmıyor; elle çağrılıyor. Onu uygulamaya bağlamak + (istersen) periyodik otomatik çalıştırmak **ayrı, sonraki bir iş** (sen "otomatik zamanlayıcı"yı henüz seçmedin).
+> **Önemli (güncel — §5.16):** "Başlat" düğmesi artık uygulamaya bağlı (`POST /api/drive`) — **ama varsayılan KİLİTLİ.** Sen `KORTEXT_DRIVE_ENABLED=1` ile anahtarı açana kadar basınca "kapalı (403)" der; o yüzden üretim etkisi hâlâ **pratikte sıfır.** Periyodik otomatik çalıştırma (zamanlayıcı) + dashboard'a görsel "başlat" düğmesi **ayrı, sonraki işler** (zamanlayıcıyı henüz seçmedin).
 
-**Şu an mümkün olan:** Bir iş listesi verildiğinde sistem o işi **ilk kez baştan sona, insan müdahalesi olmadan** yürütebiliyor (testte kanıtlandı). Sıradaki: bunu uygulamadan tetikleyip canlı dashboard'da göstermek.
+**Şu an mümkün olan:** Bir iş listesi verildiğinde sistem o işi **baştan sona, insan müdahalesi olmadan** yürütebiliyor (testte + gerçek-sunucu smoke'unda kanıtlandı). Anahtarı (`KORTEXT_DRIVE_ENABLED=1`) açıp `POST /api/drive`'a basmak yeterli. Sıradaki: dashboard'a görsel "başlat" düğmesi + (istersen) periyodik otomatik tetik.
 
 ---
 
 ## ▶ Sonraki oturum — kopyala-yapıştır prompt
 
-> Yeni oturumda şunu yaz (driver'ı bir girişe bağla + ertelenenler):
+> Yeni oturumda şunu yaz (driver girişe bağlandı; sıradaki = UI düğmesi / zamanlayıcı / ertelenenler):
 
 ```
-DECISIONS §5.15'i oku. Capstone motoru + SON MONTAJ BİTTİ: sistem bir işi
-to_do→done'a kadar GERÇEK git'le, insan-döngüsü olmadan yürütüyor (driveReadyItems
-= "başlat düğmesi", driver-e2e.test.ts kanıtlıyor). 521 test + typecheck + lint yeşil.
-Driver standalone fonksiyon (Eray "ayrı, temiz, yeni parça" seçti). Üretim blast-radius
-hâlâ SIFIR — driver hiçbir girişten sürülmüyor.
+DECISIONS §5.16'yı oku. Driver bir HTTP girişine bağlandı: POST /api/drive
+driveReadyItems'i tek-tur sürüyor, varsayılan KAPALI bir güvenlik anahtarının
+(KORTEXT_DRIVE_ENABLED) arkasında — Eray "kilitli dursun, anahtarla açılır" seçti.
+535 test + typecheck + lint yeşil. Gerçek-sunucu smoke iki yön kanıtladı
+(KAPALI→403, AÇIK+boş backlog→202 temiz no-op). Blast-radius: anahtar kapalı
+olduğundan merge'de etki pratikte hâlâ SIFIR; KORTEXT_DRIVE_ENABLED=1 + restart
+ile armed olur.
 
-ÖNCE: Bu oturumun 5 commit'i LOKAL (8cbd5e1→4d38bdf, origin/main'den 5 önde),
-push EDİLMEDİ. Eray'a "bu 5 commit'i push edeyim mi?" diye SOR — onaysız push YOK.
+ÖNCE: Bu slice 1 commit LOKAL (kod+test+docs), origin/main'den 1 önde, push
+EDİLMEDİ. Eray'a "bu commit'i push edeyim mi?" diye SOR — onaysız push YOK.
+(Capstone + son montaj 6 commit'i bu oturumda zaten push edildi.)
 
-SONRA KALAN (öncelik sırası, her biri ayrı TDD + ayrı commit):
-1. DRIVER'I BİR GİRİŞE BAĞLA (blast-radius'u sıfırdan çıkaran ilk dilim → DİKKAT + Eray
-   onayı): server/index.ts composition'ı (createComposition) kurup driveReadyItems'i
-   çağırsın — önce HTTP tetiği (örn. POST /api/drive) veya manuel komut. Periyodik
-   otomatik zamanlayıcı AYRI iş (Eray henüz seçmedi → sorma-bekle).
-2. Ertelenenler (§5.14/§5.15, sıra Eray'a sorulabilir): handover-on-close (C2 — gerçek
-   merge'le HandoverEngine.record), gate_runs'a uat verdict (attempt tuzağı çöz),
-   board whose-turn rozeti (src/ UI), staging raporları/onayı (§5.11), epic-status-flip,
+SONRA KALAN (öncelik Eray'a sorulabilir, her biri ayrı TDD + ayrı commit):
+1. DASHBOARD "BAŞLAT" DÜĞMESİ (src/ UI, Eray GUI-first): POST /api/drive'ı çağıran
+   görsel düğme + sonuç/durum gösterimi; anahtar kapalıysa "kilitli" UI.
+2. PERİYODİK OTOMATİK ZAMANLAYICI: driveReadyItems'i loop'ta çağıran zamanlayıcı.
+   AYRI iş — Eray HENÜZ SEÇMEDİ → kendiliğinden yapma, ÖNCE sade-dille sor.
+3. §5.14 ürün-katmanı listesi: handover-on-close (C2 — gerçek merge'le
+   HandoverEngine.record), gate_runs'a uat verdict (attempt tuzağı çöz), board
+   whose-turn rozeti (src/ UI), staging raporları/onayı (§5.11), epic-status-flip,
    blocker-temizle (bağımlılık modeli gerekir).
 
 Sabit kurallar: koşullu mantık ORCHESTRATOR'da, DAG saf AND-join (§5.13). Mock→gerçek
-deseni (composition root enjekte eder). TDD zorunlu (RED→GREEN, gerçek sebep). "tamam"
-demeden npm test + typecheck YEŞİL. main'e SORMADAN push YOK. Eray non-coder/Türkçe,
-kod+commit İngilizce, somut artefakt göster. ⚠️ TEST EXECUTOR'LARI worktree'ye yazarken
-host repo'ya düşebilecek negatif guard KULLANMA (§5.15 dersi — 2 stray commit yaşandı).
+deseni (composition root / makeServerDrive enjekte eder). TDD zorunlu (RED→GREEN,
+gerçek sebep). "tamam" demeden npm test + typecheck YEŞİL. main'e SORMADAN push YOK.
+Eray non-coder/Türkçe, kod+commit İngilizce, somut artefakt göster. Güvenlik anahtarı
+gibi kritik parse'ları FAIL-SAFE yaz + test et (§5.16 — naif coerce footgun'u). ⚠️ TEST
+EXECUTOR'LARI worktree'ye yazarken host repo'ya düşebilecek negatif guard KULLANMA
+(§5.15 dersi — 2 stray commit yaşandı).
 ```
 
 ## 2. Geçmiş özet
@@ -90,7 +95,7 @@ Spec: [DECISIONS.md Bölüm 5](./DECISIONS.md) (design level, Eray onayladı). S
 | `new/existing-project-analysis` | ✅ tutarlı (foundation üretici, dokunulmadı) |
 | ~~`incident-pipeline`~~ | ✅ AYRILDI → rollback + hotfix (§5.12 — deadlock) |
 | ~~`maintenance-cycle`~~ | ✅ SİLİNDİ (§5.12 — çıktısı planning/backlog'a eriyor) |
-| Motor/şema epic (§5.9) | 🚧 **TÜM feature dilimleri + Madde 10/11 capstone ✅** (1-11) — tek-item lifecycle + epic→staging + block→cancel + local-preview + **9 capstone TDD dilimi** (5 mock arayüzün gerçek adapter'ları + keystone `runItem`/`runReadyItems` + W1/W2 dikiş + Madde 11 docs), 499/499 yeşil. **KALAN: yalnız uçtan-uca KOMPOZİSYON** (composition root + resolution registry'ler + preview dikişi + driver). Detay §5.14. |
+| Motor/şema epic (§5.9) | ✅ **TÜM dilimler + capstone + son montaj + driver girişe bağlandı** — tek-item lifecycle + epic→staging + block→cancel + capstone (9 adapter/keystone) + son montaj (composition root + resolution registry + preview dikişi + driver) + **§5.16 driver→`POST /api/drive` (varsayılan kilitli)**, 535/535 yeşil. KALAN: ürün-katmanı (dashboard düğmesi, zamanlayıcı, §5.14 listesi). Detay §5.14–§5.16. |
 
 **Disipline:** workflow markdown'ları ev-stilinde (normal cümle, `## Faz`+`1. **+persona:**`), parser'a dokunma; `inputs:` tam path (`.kortext/references/X.md`), prose'da çıplak rozet (`STACK`); foundation OKUMA (analiz hariç).
 

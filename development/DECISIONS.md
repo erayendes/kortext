@@ -428,6 +428,18 @@ ortam:  local      staging        preprod      prod
 
 **SON MONTAJ SONRASI NE KALDI (bilinçli, sonraki faz):** (a) **driver'ı bir girişten sür** — `server/index.ts` composition'ı kurup `driveReadyItems`'i ya HTTP tetiğinden ya periyodik loop'tan çağırsın (Eray "otomatik zamanlayıcı"yı seçmedi; şimdilik manuel/tek-tur, zamanlayıcı ayrı iş). (b) §5.14'ün eski erteleme listesi hâlâ açık: handover-on-close (C2), gate_runs'a uat verdict, blocker-temizle, staging raporları/onayı (§5.11), epic-status-flip, board whose-turn rozeti (src/). Motor + montaj bitti; kalanlar ürün-katmanı zenginleştirmeler.
 
+### 5.16 Driver bir girişe bağlandı — `POST /api/drive` (kilitli, anahtarla) (2026-06-01)
+
+§5.15'in "ne kaldı (a)" maddesi indi: capstone driver artık `server/index.ts`'ten bir HTTP tetiğiyle sürülüyor — **ama varsayılan KAPALI bir güvenlik anahtarının arkasında**. **Mimari karar: Eray'a sade dille soruldu (AskUserQuestion) → "kilitli dursun, anahtarla açılır"** (blast-radius'u Eray'ın bilinçli açması). 521→535 test (+14), typecheck + lint temiz. Tek TDD slice, ayrı commit. Üç parça, her biri RED→GREEN:
+
+- **Güvenlik anahtarı (`server/config/env.ts`) — fail-safe parse:** `KORTEXT_DRIVE_ENABLED` zod şemasına eklendi; **yalnız `"1"`/`"true"` açar**, unset/`"0"`/`"false"`/`""`/herhangi-junk = KAPALI. Naif `z.coerce.boolean()` `"0"`'ı bile `true` yapardı (footgun — anahtarın tek görevi "kilitli" garantisi olduğu için kritik). `EnvSchema` export edildi → şema üzerinden test edilebilir. +7 test.
+- **Tetik (`server/routes/drive.ts`) — `driveRouter(deps)`:** `POST /api/drive` → anahtar kapalı→`403 drive_disabled` · uçuşta→`409 drive_in_progress` (modül-yerel `inFlight` guard, `finally`'de temizlenir → çöken tur düğmeyi kilitlemez) · boşta+açık→arkada bir tur (fire-and-forget, blueprint-tetik deseni) + hemen `202 started`. `enabled`+`drive` **enjekte** (§5.13 disiplini) → switch/guard/dispatch gerçek git/agent olmadan test edilir. +4 test.
+- **Montaj glue (`server/orchestrator/server-drive.ts`) — `makeServerDrive(deps)`:** `index.ts`'in zaten yüklediği parçalardan (repos, registry'ler, queue) `{enabled, drive}` üretir. Runtime **lazy + bir kez** kurulur (ilk armed drive'da composition+ResolutionRegistry; sonraki turlar yeniden kullanır — defter turlar arası kalmalı). `development-cycle` workflow yoksa **net hata fırlatır** (cryptic null-deref yerine). Executor `project.json`'dan çözülür (mock fallback — blueprint tetiğiyle aynı). `index.ts` ince tutuldu (boot script unit-test edilemez → mantık buraya çıktı). +3 test.
+
+**Doğrulama (gerçek sunucu smoke, iki yön):** boot temiz; **KAPALI → `POST /api/drive` = 403** (route mount + gerçek env varsayılan KAPALI kanıtı); **AÇIK + boş backlog → 202 + "drive pass complete"** (armed yol gerçek composition'ı gerçek paket workflow'undan kurup hatasız no-op koşuyor). İki smoke'ta da `git status` temiz — boş backlog = sıfır git/worktree, repo kirlenmedi.
+
+**Blast-radius:** Bu, üretim etkisini sıfırdan çıkarabilecek **ilk** slice — ama anahtar varsayılan KAPALI olduğundan, merge edilince etki **pratikte hâlâ sıfır**; Eray `KORTEXT_DRIVE_ENABLED=1` set edip (yeniden) başlatana kadar düğme atıl. §5.13 korundu (saf wiring, koşullu mantık yok). **Hâlâ ertelenen:** periyodik otomatik zamanlayıcı (Eray seçmedi → ayrı iş), dashboard "başlat" düğmesi (UI bu endpoint'i çağıracak), §5.14 ürün-katmanı listesi.
+
 ---
 
 ## Bölüm 6 — v3.0 → v3.1.x kararları (Faz 0-12 özeti, HANDOVER §1-§64)
