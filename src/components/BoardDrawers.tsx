@@ -166,25 +166,52 @@ function SectionLabel({ children, extra }: { children: ReactNode; extra?: ReactN
   );
 }
 
-function AcRow({ done, children }: { done?: boolean; children: ReactNode }) {
+function AcRow({
+  done,
+  children,
+  onToggle,
+  busy,
+}: {
+  done?: boolean;
+  children: ReactNode;
+  /** When provided, the row is a clickable checkbox that toggles `done`. */
+  onToggle?: () => void;
+  busy?: boolean;
+}) {
+  const Icon = done ? CircleCheck : Circle;
+  const iconColor = done ? 'var(--success)' : 'var(--tx-disabled)';
+  const textColor = done ? 'var(--tx-3)' : 'var(--tx-2)';
+  const inner = (
+    <>
+      <Icon style={{ width: 14, height: 14, color: iconColor, flexShrink: 0 }} />
+      <span style={{ flex: 1 }}>{children}</span>
+    </>
+  );
+
+  // Static row (read-only) — review gates, epic child items.
+  if (!onToggle) {
+    return (
+      <div
+        className="flex items-center gap-2 px-2.5 py-1.5 rounded-[5px] border border-border-default text-[13px]"
+        style={{ color: textColor }}
+      >
+        {inner}
+      </div>
+    );
+  }
+
+  // Interactive row — click toggles the acceptance criterion (human override).
   return (
-    <div
-      className="flex items-center gap-2"
-      style={{
-        padding: '6px 10px',
-        border: '1px solid var(--border-default)',
-        borderRadius: 5,
-        fontSize: 13,
-        color: done ? 'var(--tx-3)' : 'var(--tx-2)',
-      }}
+    <button
+      type="button"
+      onClick={onToggle}
+      disabled={busy}
+      title={done ? 'Mark not done' : 'Mark done'}
+      className="flex items-center gap-2 px-2.5 py-1.5 rounded-[5px] border border-border-default text-[13px] text-left w-full bg-transparent cursor-pointer transition-colors duration-150 hover:border-border-strong disabled:opacity-60 disabled:cursor-default focus:outline-none focus-visible:border-accent"
+      style={{ color: textColor }}
     >
-      {done ? (
-        <CircleCheck style={{ width: 14, height: 14, color: 'var(--success)', flexShrink: 0 }} />
-      ) : (
-        <Circle style={{ width: 14, height: 14, color: 'var(--tx-disabled)', flexShrink: 0 }} />
-      )}
-      {children}
-    </div>
+      {inner}
+    </button>
   );
 }
 
@@ -227,6 +254,16 @@ function Activity({ itemId, created }: { itemId: string; created: number }) {
 
 // ───────────────────────── task drawer
 
+/** Pull a human-readable message out of an apiPost error (or any throwable). */
+function errMessage(e: unknown): string {
+  const err = e as ApiPostError | Error;
+  return 'message' in err && typeof err.message === 'string'
+    ? err.message
+    : 'error' in err && typeof err.error === 'string'
+      ? err.error
+      : String(err);
+}
+
 export function TaskDrawer({
   item,
   epicTitle,
@@ -250,6 +287,7 @@ export function TaskDrawer({
   const transitions = availableTransitions(item.status);
 
   const [busy, setBusy] = useState<BoardTransition | null>(null);
+  const [acBusy, setAcBusy] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function runTransition(action: BoardTransition) {
@@ -264,16 +302,28 @@ export function TaskDrawer({
       );
       onChanged(updated);
     } catch (e) {
-      const err = e as ApiPostError | Error;
-      setError(
-        'message' in err && typeof err.message === 'string'
-          ? err.message
-          : 'error' in err && typeof err.error === 'string'
-            ? err.error
-            : String(err),
-      );
+      setError(errMessage(e));
     } finally {
       setBusy(null);
+    }
+  }
+
+  // Human override — mark/unmark a single acceptance criterion. The backend
+  // persists the per-item flag and logs it to the activity feed; onChanged
+  // refreshes the drawer + board with the updated item.
+  async function toggleAc(index: number, done: boolean) {
+    setAcBusy(index);
+    setError(null);
+    try {
+      const { item: updated } = await apiPost<{ item: BacklogItem }>(
+        `/api/backlog/${item.id}/ac`,
+        { index, done, by: '+prime' },
+      );
+      onChanged(updated);
+    } catch (e) {
+      setError(errMessage(e));
+    } finally {
+      setAcBusy(null);
     }
   }
 
@@ -340,7 +390,12 @@ export function TaskDrawer({
                 </SectionLabel>
                 <div className="flex flex-col gap-1.5" style={{ marginBottom: 22 }}>
                   {checklist.map((c, i) => (
-                    <AcRow key={i} done={c.done}>
+                    <AcRow
+                      key={i}
+                      done={c.done}
+                      busy={acBusy !== null}
+                      onToggle={() => toggleAc(i, !c.done)}
+                    >
                       {c.text}
                     </AcRow>
                   ))}
