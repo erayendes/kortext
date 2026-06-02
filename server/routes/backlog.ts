@@ -11,10 +11,7 @@ import {
   IllegalTransitionError,
   type ItemTransition,
 } from '../engine/item-lifecycle.ts';
-import {
-  readAcceptanceCriteria,
-  setCriterionDone,
-} from '../engine/acceptance-criteria.ts';
+import { applyCriterionToggle } from '../engine/acceptance-criteria.ts';
 import type { PersonaRegistry } from '../engine/persona-registry.ts';
 
 /**
@@ -295,38 +292,22 @@ export function backlogRouter(deps: BacklogRouterDeps): Router {
       return;
     }
 
-    const item = deps.repos.backlog.get(id);
-    if (!item) {
-      res.status(404).json({ error: 'not_found' });
-      return;
-    }
-
-    const criteria = readAcceptanceCriteria(item.frontmatter);
-    if (body.index >= criteria.length) {
-      res.status(400).json({
-        error: 'index_out_of_range',
-        message: `index ${body.index} is out of range (item has ${criteria.length} criteria)`,
+    const by = typeof body.by === 'string' && body.by.length > 0 ? body.by : '+prime';
+    const result = applyCriterionToggle(deps.repos, {
+      id,
+      index: body.index,
+      done: body.done,
+      by,
+    });
+    if (!result.ok) {
+      res.status(result.error === 'not_found' ? 404 : 400).json({
+        error: result.error,
+        message: result.message,
       });
       return;
     }
 
-    const by = typeof body.by === 'string' && body.by.length > 0 ? body.by : '+prime';
-    const nextFrontmatter = setCriterionDone(item.frontmatter, body.index, body.done);
-    const updated = deps.repos.backlog.updateFrontmatter(id, nextFrontmatter);
-
-    deps.repos.auditLog.append({
-      actor: by,
-      action: 'item_ac_toggle',
-      resource_type: 'backlog_item',
-      resource_id: id,
-      payload: {
-        index: body.index,
-        text: criteria[body.index]!.text,
-        done: body.done,
-      },
-    });
-
-    res.json({ item: updated });
+    res.json({ item: result.item });
   });
 
   return r;

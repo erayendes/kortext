@@ -11,6 +11,9 @@
  * via `setCriterionDone()`, which always writes the NEW shape — so toggling a
  * legacy item migrates it on write (and retires the ac_done/ac_total counters).
  */
+import type { Repositories } from '../db/repositories/index.ts';
+import type { BacklogItem } from '../db/schemas.ts';
+
 export type AcItem = { text: string; done: boolean };
 
 /** Read an item's acceptance criteria (either stored shape) into a canonical list. */
@@ -52,4 +55,48 @@ export function setCriterionDone(
   delete out.ac_total;
   out.acceptance_criteria = next;
   return out;
+}
+
+export type ToggleCriterionResult =
+  | { ok: true; item: BacklogItem }
+  | { ok: false; error: 'not_found' | 'index_out_of_range'; message: string };
+
+/**
+ * Apply a single acceptance-criterion toggle end to end: read the item,
+ * bounds-check the index, persist the new [{text, done}] frontmatter, and
+ * append one `item_ac_toggle` audit entry. Both entry points — the HTTP route
+ * (human override, +prime) and the MCP tool (agent, +persona) — go through
+ * here, so their marks share one activity feed and can't drift on the audit
+ * shape. Input-type validation (index is an int, done is a bool) belongs to
+ * each entry point; this owns the domain rules + the write.
+ */
+export function applyCriterionToggle(
+  repos: Repositories,
+  args: { id: string; index: number; done: boolean; by: string },
+): ToggleCriterionResult {
+  const item = repos.backlog.get(args.id);
+  if (!item) {
+    return { ok: false, error: 'not_found', message: `backlog item not found: ${args.id}` };
+  }
+
+  const criteria = readAcceptanceCriteria(item.frontmatter);
+  if (args.index >= criteria.length) {
+    return {
+      ok: false,
+      error: 'index_out_of_range',
+      message: `index ${args.index} is out of range (item has ${criteria.length} criteria)`,
+    };
+  }
+
+  const nextFrontmatter = setCriterionDone(item.frontmatter, args.index, args.done);
+  const updated = repos.backlog.updateFrontmatter(args.id, nextFrontmatter);
+  repos.auditLog.append({
+    actor: args.by,
+    action: 'item_ac_toggle',
+    resource_type: 'backlog_item',
+    resource_id: args.id,
+    payload: { index: args.index, text: criteria[args.index]!.text, done: args.done },
+  });
+
+  return { ok: true, item: updated };
 }

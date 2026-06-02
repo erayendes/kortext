@@ -2,7 +2,7 @@
  * Kortext MCP server — programmatic interface to the runtime.
  *
  * The factory `createKortextMcpServer({...})` builds and returns an
- * `McpServer` instance with all 15 tools registered. Transports (stdio for
+ * `McpServer` instance with all 17 tools registered. Transports (stdio for
  * `kortext mcp`, SSE for dashboard) connect to it via `.connect(transport)`.
  *
  * Why factory + deps? Tests, CLI, and HTTP host all share the same surface
@@ -31,6 +31,10 @@ import {
   BacklogItemTypeSchema,
   BacklogStatusSchema,
 } from '../server/db/schemas.ts';
+import {
+  readAcceptanceCriteria,
+  applyCriterionToggle,
+} from '../server/engine/acceptance-criteria.ts';
 
 export type KortextMcpDeps = {
   repos: Repositories;
@@ -314,6 +318,51 @@ function registerBacklogTools(server: McpServer, deps: KortextMcpDeps): void {
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }
+    },
+  );
+
+  server.registerTool(
+    'get_acceptance_criteria',
+    {
+      title: "Get an item's acceptance criteria",
+      description:
+        'Returns the acceptance-criteria checklist for a backlog item — each with its index, text, and done flag. Pass the index to mark_acceptance_criterion to tick one off.',
+      inputSchema: {
+        id: z.string().min(1),
+      },
+    },
+    async ({ id }) => {
+      const item = deps.repos.backlog.get(id);
+      if (!item) return errorResult(`backlog item not found: ${id}`);
+      const criteria = readAcceptanceCriteria(item.frontmatter).map((c, index) => ({
+        index,
+        text: c.text,
+        done: c.done,
+      }));
+      return jsonResult({ id, criteria });
+    },
+  );
+
+  server.registerTool(
+    'mark_acceptance_criterion',
+    {
+      title: 'Mark an acceptance criterion done/undone',
+      description:
+        'Set the done flag on a single acceptance criterion, addressed by its index (from get_acceptance_criteria). Persists the per-item flag and logs it to the item activity feed. Pass `by` with your persona handle for attribution.',
+      inputSchema: {
+        id: z.string().min(1),
+        index: z.number().int().nonnegative(),
+        done: z.boolean(),
+        by: z
+          .string()
+          .optional()
+          .describe('Persona handle, e.g. "+backend-developer" (default "mcp").'),
+      },
+    },
+    async ({ id, index, done, by }) => {
+      const result = applyCriterionToggle(deps.repos, { id, index, done, by: by ?? 'mcp' });
+      if (!result.ok) return errorResult(result.message);
+      return jsonResult({ item: result.item });
     },
   );
 }

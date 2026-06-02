@@ -87,13 +87,14 @@ afterEach(async () => {
 });
 
 describe('MCP tool surface', () => {
-  it('exposes all 15 tools', async () => {
+  it('exposes all 17 tools', async () => {
     const { tools } = await client.listTools();
     const names = tools.map((t) => t.name).sort();
     expect(names).toEqual(
       [
         'add_backlog_item',
         'approve_blueprint',
+        'get_acceptance_criteria',
         'get_context',
         'get_logs',
         'get_pipeline',
@@ -104,6 +105,7 @@ describe('MCP tool surface', () => {
         'list_personas',
         'list_pipelines',
         'list_workflows',
+        'mark_acceptance_criterion',
         'read_blueprint',
         'respond_to_question',
         'start_pipeline',
@@ -160,6 +162,91 @@ describe('backlog tools', () => {
       arguments: { id: 'T-dup', type: 'bug', title: 'B' },
     });
     expect(res.isError).toBe(true);
+  });
+});
+
+describe('acceptance-criteria tools', () => {
+  it('get_acceptance_criteria returns each criterion with its index, text, and done flag', async () => {
+    repos.backlog.create({
+      id: 'T-AC1',
+      type: 'task',
+      title: 'x',
+      status: 'to_do',
+      frontmatter: {
+        acceptance_criteria: [
+          { text: 'first', done: true },
+          { text: 'second', done: false },
+        ],
+      },
+    });
+    const out = await callJson('get_acceptance_criteria', { id: 'T-AC1' });
+    expect(out.criteria).toEqual([
+      { index: 0, text: 'first', done: true },
+      { index: 1, text: 'second', done: false },
+    ]);
+  });
+
+  it('get_acceptance_criteria reads a legacy string[] + ac_done item with indexes', async () => {
+    repos.backlog.create({
+      id: 'T-AC2',
+      type: 'task',
+      title: 'x',
+      status: 'to_do',
+      frontmatter: { acceptance_criteria: ['a', 'b'], ac_done: 1 },
+    });
+    const out = await callJson('get_acceptance_criteria', { id: 'T-AC2' });
+    expect(out.criteria).toEqual([
+      { index: 0, text: 'a', done: true },
+      { index: 1, text: 'b', done: false },
+    ]);
+  });
+
+  it('mark_acceptance_criterion sets a flag, persists it, and logs the persona to the activity feed', async () => {
+    repos.backlog.create({
+      id: 'T-AC3',
+      type: 'task',
+      title: 'x',
+      status: 'to_do',
+      frontmatter: { acceptance_criteria: [{ text: 'ship it', done: false }] },
+    });
+    const out = await callJson('mark_acceptance_criterion', {
+      id: 'T-AC3',
+      index: 0,
+      done: true,
+      by: '+backend-developer',
+    });
+    expect(out.item.frontmatter.acceptance_criteria).toEqual([{ text: 'ship it', done: true }]);
+    expect(repos.backlog.get('T-AC3')?.frontmatter.acceptance_criteria).toEqual([
+      { text: 'ship it', done: true },
+    ]);
+    const log = repos.auditLog.list({
+      resource_type: 'backlog_item',
+      resource_id: 'T-AC3',
+      limit: 5,
+    });
+    expect(log[0]?.action).toBe('item_ac_toggle');
+    expect(log[0]?.actor).toBe('+backend-developer');
+    expect(log[0]?.payload).toMatchObject({ index: 0, text: 'ship it', done: true });
+  });
+
+  it('mark_acceptance_criterion errors on an unknown item or an out-of-range index', async () => {
+    repos.backlog.create({
+      id: 'T-AC4',
+      type: 'task',
+      title: 'x',
+      status: 'to_do',
+      frontmatter: { acceptance_criteria: [{ text: 'only one', done: false }] },
+    });
+    const unknown = await client.callTool({
+      name: 'mark_acceptance_criterion',
+      arguments: { id: 'NOPE', index: 0, done: true },
+    });
+    expect(unknown.isError).toBe(true);
+    const oor = await client.callTool({
+      name: 'mark_acceptance_criterion',
+      arguments: { id: 'T-AC4', index: 9, done: true },
+    });
+    expect(oor.isError).toBe(true);
   });
 });
 
