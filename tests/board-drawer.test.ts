@@ -8,6 +8,7 @@ import {
   descriptionFromBody,
   availableTransitions,
   describeActivity,
+  checklistFromSection,
 } from '../src/lib/board-drawer.ts';
 import type { BacklogItem } from '../src/lib/api-types.ts';
 
@@ -194,6 +195,28 @@ describe('descriptionFromBody', () => {
       expect(
         describeActivity({ actor: '+backend-developer', action: 'created', payload: {} }),
       ).toBe('+backend-developer created');
+    });
+  });
+
+  describe('checklistFromSection', () => {
+    const body =
+      '# T\n\n## Review Gates\n\n- [ ] Code review\n- [x] Quality control\n- [ ] Security check\n\n## Notes\n\n- [ ] ignored\n';
+
+    it('parses the markdown checklist under the named section (done from [x])', () => {
+      expect(checklistFromSection(body, 'Review Gates')).toEqual([
+        { text: 'Code review', done: false },
+        { text: 'Quality control', done: true },
+        { text: 'Security check', done: false },
+      ]);
+    });
+
+    it('stops at the next heading (does not bleed into other sections)', () => {
+      expect(checklistFromSection(body, 'Review Gates')).toHaveLength(3);
+    });
+
+    it('returns [] when the section is absent or body is empty', () => {
+      expect(checklistFromSection(body, 'Acceptance Criteria')).toEqual([]);
+      expect(checklistFromSection('', 'Review Gates')).toEqual([]);
     });
   });
 

@@ -172,3 +172,29 @@ export function describeActivity(entry: {
   }
   return `${entry.actor} ${entry.action}`;
 }
+
+/**
+ * Extract a markdown checklist ("- [ ] item" / "- [x] item") from under a named
+ * `## Section` heading, stopping at the next heading. Used to surface the
+ * template body's Review Gates in the drawer the same way other content shows.
+ * Returns [] when the section is absent.
+ */
+export function checklistFromSection(
+  md: string,
+  section: string,
+): { text: string; done: boolean }[] {
+  const lines = md.split('\n');
+  const escaped = section.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const headingRe = new RegExp(`^#{1,6}\\s+${escaped}\\s*$`, 'i');
+  const start = lines.findIndex((l) => headingRe.test(l.trim()));
+  if (start === -1) return [];
+
+  const out: { text: string; done: boolean }[] = [];
+  for (let i = start + 1; i < lines.length; i++) {
+    const line = (lines[i] ?? '').trim();
+    if (/^#{1,6}\s/.test(line)) break; // next heading ends the section
+    const m = line.match(/^[-*]\s*\[([ xX])\]\s+(.*)$/);
+    if (m) out.push({ text: (m[2] ?? '').trim(), done: (m[1] ?? '').toLowerCase() === 'x' });
+  }
+  return out;
+}
