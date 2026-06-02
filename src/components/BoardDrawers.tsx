@@ -2,11 +2,12 @@ import { useCallback, useEffect, useState, type CSSProperties, type ReactNode } 
 import { Circle, CircleCheck, X } from 'lucide-react';
 import { Badge } from './Badge.tsx';
 import { personaColor } from '../lib/persona-colors.ts';
-import { apiPost, type ApiPostError } from '../lib/api.ts';
+import { apiPost, usePolling, type ApiPostError } from '../lib/api.ts';
 import {
   acChecklist,
   availableTransitions,
   childrenOf,
+  describeActivity,
   descriptionFromBody,
   epicProgress,
   formatDate,
@@ -186,18 +187,39 @@ function AcRow({ done, children }: { done?: boolean; children: ReactNode }) {
   );
 }
 
-function Activity({ created, updated }: { created: number; updated: number }) {
-  // The data model has no event log; we surface the two timestamps we truly
-  // have rather than fabricate the wireframe's rich (static) activity feed.
-  const rows: { ts: number; label: string }[] = [{ ts: created, label: 'created' }];
-  if (updated > created) rows.push({ ts: updated, label: 'last updated' });
+type AuditEntry = {
+  id: number;
+  actor: string;
+  action: string;
+  payload: Record<string, unknown>;
+  created_at: number;
+};
+
+function activityTs(ms: number): string {
+  const d = new Date(ms);
+  const p = (n: number) => n.toString().padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function Activity({ itemId, created }: { itemId: string; created: number }) {
+  // Real "who did what, when" — the item's audit trail (transitions etc.),
+  // newest-first, plus the create event we always know. Polls so a transition
+  // shows up here shortly after it happens.
+  const { data } = usePolling<{ activity: AuditEntry[] }>(
+    `/api/backlog/${itemId}/activity`,
+    5000,
+  );
+  const entries = data?.activity ?? [];
   return (
     <div className="flex flex-col gap-1.5" style={{ fontSize: 12, color: 'var(--tx-3)' }}>
-      {rows.map((r, i) => (
-        <div key={i}>
-          <span className="mono">{formatDate(r.ts)}</span> · {r.label}
+      {entries.map((e) => (
+        <div key={e.id}>
+          <span className="mono">{activityTs(e.created_at)}</span> · {describeActivity(e)}
         </div>
       ))}
+      <div>
+        <span className="mono">{activityTs(created)}</span> · created
+      </div>
     </div>
   );
 }
@@ -318,7 +340,7 @@ export function TaskDrawer({
             )}
 
             <SectionLabel>Activity</SectionLabel>
-            <Activity created={item.created_at} updated={item.updated_at} />
+            <Activity itemId={item.id} created={item.created_at} />
           </DrawerBody>
 
           {error && (
@@ -440,7 +462,7 @@ export function EpicDrawer({
             </div>
 
             <SectionLabel>Activity</SectionLabel>
-            <Activity created={epic.created_at} updated={epic.updated_at} />
+            <Activity itemId={epic.id} created={epic.created_at} />
           </DrawerBody>
 
           <DrawerFooter>

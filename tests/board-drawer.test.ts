@@ -7,6 +7,7 @@ import {
   formatDate,
   descriptionFromBody,
   availableTransitions,
+  describeActivity,
 } from '../src/lib/board-drawer.ts';
 import type { BacklogItem } from '../src/lib/api-types.ts';
 
@@ -175,6 +176,24 @@ describe('descriptionFromBody', () => {
     it('terminal states offer no transitions', () => {
       expect(availableTransitions('done')).toEqual([]);
       expect(availableTransitions('cancelled')).toEqual([]);
+    });
+  });
+
+  describe('describeActivity', () => {
+    it('humanizes a status transition with readable status labels', () => {
+      expect(
+        describeActivity({
+          actor: '+prime',
+          action: 'item_transition',
+          payload: { from: 'to_do', to: 'in_progress' },
+        }),
+      ).toBe('+prime moved To do → In progress');
+    });
+
+    it('falls back to "actor action" for non-transition entries', () => {
+      expect(
+        describeActivity({ actor: '+backend-developer', action: 'created', payload: {} }),
+      ).toBe('+backend-developer created');
     });
   });
 
