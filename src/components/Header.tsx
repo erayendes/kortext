@@ -125,14 +125,6 @@ export function Header() {
       </button>
 
       <InboxButton hasPending={hasPending} pendingCount={questions.filter((q) => q.status === 'open').length} />
-
-      <div
-        className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold ml-1.5 select-none"
-        style={{ background: 'var(--prime)', color: 'var(--bg-0)' }}
-        title="+prime (you)"
-      >
-        +p
-      </div>
     </header>
   );
 }
