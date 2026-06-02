@@ -11,6 +11,10 @@ import {
   IllegalTransitionError,
   type ItemTransition,
 } from '../engine/item-lifecycle.ts';
+import {
+  readAcceptanceCriteria,
+  setCriterionDone,
+} from '../engine/acceptance-criteria.ts';
 import type { PersonaRegistry } from '../engine/persona-registry.ts';
 
 /**
@@ -265,6 +269,64 @@ export function backlogRouter(deps: BacklogRouterDeps): Router {
       limit: 50,
     });
     res.json({ activity });
+  });
+
+  // Mark / unmark a single acceptance criterion (human override). AC lives in
+  // frontmatter; the toggle reads through both stored shapes and persists the
+  // new [{text, done}] shape (migrating legacy items on write). One audit entry
+  // per toggle feeds the drawer's Activity feed.
+  r.post('/backlog/:id/ac', (req, res) => {
+    const id = req.params.id;
+    if (typeof id !== 'string' || id.length === 0) {
+      res.status(400).json({ error: 'invalid_id' });
+      return;
+    }
+
+    const body = (req.body ?? {}) as { index?: unknown; done?: unknown; by?: unknown };
+    if (typeof body.index !== 'number' || !Number.isInteger(body.index) || body.index < 0) {
+      res.status(400).json({
+        error: 'invalid_index',
+        message: 'index must be a non-negative integer',
+      });
+      return;
+    }
+    if (typeof body.done !== 'boolean') {
+      res.status(400).json({ error: 'invalid_done', message: 'done must be a boolean' });
+      return;
+    }
+
+    const item = deps.repos.backlog.get(id);
+    if (!item) {
+      res.status(404).json({ error: 'not_found' });
+      return;
+    }
+
+    const criteria = readAcceptanceCriteria(item.frontmatter);
+    if (body.index >= criteria.length) {
+      res.status(400).json({
+        error: 'index_out_of_range',
+        message: `index ${body.index} is out of range (item has ${criteria.length} criteria)`,
+      });
+      return;
+    }
+
+    const by = typeof body.by === 'string' && body.by.length > 0 ? body.by : '+prime';
+    const nextFrontmatter = setCriterionDone(item.frontmatter, body.index, body.done);
+    const updated = deps.repos.backlog.updateFrontmatter(id, nextFrontmatter);
+
+    deps.repos.auditLog.append({
+      actor: by,
+      action: 'item_ac_toggle',
+      resource_type: 'backlog_item',
+      resource_id: id,
+      payload: {
+        index: body.index,
+        text: criteria[body.index]!.text,
+        done: body.done,
+      },
+    });
+
+    res.json({ item: updated });
   });
 
   return r;

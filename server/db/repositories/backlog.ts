@@ -42,6 +42,7 @@ export class BacklogRepository {
   private readonly listStmt;
   private readonly updateStatusStmt;
   private readonly updateBodyStmt;
+  private readonly updateFrontmatterStmt;
   private readonly updateReviewGatesStmt;
   private readonly deleteStmt;
   private readonly countStmt;
@@ -68,6 +69,9 @@ export class BacklogRepository {
     );
     this.updateBodyStmt = db.prepare(
       'UPDATE backlog_items SET body_md = @body, updated_at = @ts WHERE id = @id',
+    );
+    this.updateFrontmatterStmt = db.prepare(
+      'UPDATE backlog_items SET frontmatter = @frontmatter, updated_at = @ts WHERE id = @id',
     );
     this.updateReviewGatesStmt = db.prepare(
       'UPDATE backlog_items SET review_gates = @review_gates, updated_at = @ts WHERE id = @id',
@@ -136,6 +140,24 @@ export class BacklogRepository {
   updateBody(id: string, body: string): BacklogItem {
     const ts = Date.now();
     this.updateBodyStmt.run({ id, body, ts });
+    return this.get(id)!;
+  }
+
+  /**
+   * Replace the item's frontmatter (the structured key/value block — owner-set
+   * fields, acceptance criteria, dependencies, notes). The mark/unmark AC
+   * endpoint uses this to persist per-item acceptance-criteria flags.
+   */
+  updateFrontmatter(id: string, frontmatter: Record<string, unknown>): BacklogItem {
+    const ts = Date.now();
+    const result = this.updateFrontmatterStmt.run({
+      id,
+      frontmatter: packJson(frontmatter),
+      ts,
+    });
+    if (result.changes === 0) {
+      throw new Error(`backlog item not found: ${id}`);
+    }
     return this.get(id)!;
   }
 

@@ -229,6 +229,114 @@ describe('GET /api/backlog/:id/activity', () => {
   });
 });
 
+describe('POST /api/backlog/:id/ac', () => {
+  async function setAc(id: string, payload: Record<string, unknown>) {
+    return fetch(`${baseUrl}/api/backlog/${id}/ac`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  }
+
+  it('marks a criterion done and persists the new [{text,done}] shape', async () => {
+    repos.backlog.create({
+      id: 'T-AC',
+      type: 'task',
+      title: 'x',
+      status: 'to_do',
+      frontmatter: {
+        acceptance_criteria: [
+          { text: 'a', done: false },
+          { text: 'b', done: false },
+        ],
+      },
+    });
+    const res = await setAc('T-AC', { index: 1, done: true, by: '+prime' });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      item: { frontmatter: { acceptance_criteria: { text: string; done: boolean }[] } };
+    };
+    expect(body.item.frontmatter.acceptance_criteria).toEqual([
+      { text: 'a', done: false },
+      { text: 'b', done: true },
+    ]);
+    // persisted to the DB, not just echoed
+    expect(repos.backlog.get('T-AC')?.frontmatter.acceptance_criteria).toEqual([
+      { text: 'a', done: false },
+      { text: 'b', done: true },
+    ]);
+  });
+
+  it('migrates a legacy string[] + ac_done item on toggle and drops the counters', async () => {
+    repos.backlog.create({
+      id: 'T-LEG',
+      type: 'task',
+      title: 'x',
+      status: 'to_do',
+      frontmatter: { acceptance_criteria: ['a', 'b', 'c'], ac_done: 1, ac_total: 3 },
+    });
+    const res = await setAc('T-LEG', { index: 2, done: true });
+    expect(res.status).toBe(200);
+    const fm = repos.backlog.get('T-LEG')?.frontmatter as Record<string, unknown>;
+    expect(fm.acceptance_criteria).toEqual([
+      { text: 'a', done: true },
+      { text: 'b', done: false },
+      { text: 'c', done: true },
+    ]);
+    expect('ac_done' in fm).toBe(false);
+    expect('ac_total' in fm).toBe(false);
+  });
+
+  it('writes an item_ac_toggle audit entry (surfaces in the activity feed)', async () => {
+    repos.backlog.create({
+      id: 'T-AUD',
+      type: 'task',
+      title: 'x',
+      status: 'to_do',
+      frontmatter: { acceptance_criteria: [{ text: 'Logout clears session', done: false }] },
+    });
+    await setAc('T-AUD', { index: 0, done: true, by: '+qa-engineer' });
+    const res = await fetch(`${baseUrl}/api/backlog/T-AUD/activity`);
+    const body = (await res.json()) as {
+      activity: { actor: string; action: string; payload: Record<string, unknown> }[];
+    };
+    expect(body.activity[0]?.action).toBe('item_ac_toggle');
+    expect(body.activity[0]?.actor).toBe('+qa-engineer');
+    expect(body.activity[0]?.payload).toMatchObject({
+      index: 0,
+      text: 'Logout clears session',
+      done: true,
+    });
+  });
+
+  it('400s an out-of-range index', async () => {
+    repos.backlog.create({
+      id: 'T-OOR',
+      type: 'task',
+      title: 'x',
+      status: 'to_do',
+      frontmatter: { acceptance_criteria: [{ text: 'a', done: false }] },
+    });
+    expect((await setAc('T-OOR', { index: 5, done: true })).status).toBe(400);
+  });
+
+  it('400s a non-boolean done or a missing index', async () => {
+    repos.backlog.create({
+      id: 'T-BAD',
+      type: 'task',
+      title: 'x',
+      status: 'to_do',
+      frontmatter: { acceptance_criteria: [{ text: 'a', done: false }] },
+    });
+    expect((await setAc('T-BAD', { index: 0, done: 'yes' })).status).toBe(400);
+    expect((await setAc('T-BAD', { done: true })).status).toBe(400);
+  });
+
+  it('404s an unknown item', async () => {
+    expect((await setAc('NOPE', { index: 0, done: true })).status).toBe(404);
+  });
+});
+
 describe('GET /api/personas', () => {
   it('lists personas with description and prompt length', async () => {
     const res = await fetch(`${baseUrl}/api/personas`);
