@@ -11,6 +11,26 @@ Açık iş listesi. Yapılan her şey [DECISIONS.md](./DECISIONS.md) tarihçesin
 
 ---
 
+## UI track (ekran-ekran) — aktif (2026-06-02)
+
+✅ Ekran 1 Onboarding · ✅ Ekran 2 Dashboard · ✅ Ekran 3 Board (büyük ölçüde; Eray incelemesinin 7/10 maddesi, 5 commit origin/main'de). **Sıra: #4 (aşağıda) → Memory(4) → Reports(5) → References(6) → settings pane'leri(7-14).**
+
+**Board — kalan #4 AC madde-madde işaretleme (en büyük, kendi turu; Eray `[{text, done}]` onayladı):**
+- [ ] Veri modeli — `[{text, done}]`, geriye-uyumlu (eski `string[]+ac_done` → ilk N done). `board-drawer.ts` `acChecklist` + `NewItemModal`.
+- [ ] Endpoint — bir kriteri işaretle/kaldır (insan override), `server/routes/backlog.ts` + TDD.
+- [ ] UI — tıklanabilir AC checkbox (şu an salt-okunur `AcRow`); tıkla → endpoint → paneli+board'u tazele.
+- [ ] Ajan yolu — MCP'den AC işaretleme (`mcp/`, ajan sözleşmesi). Kapsamı Eray'a sor.
+
+**Board — ertelenen (Eray'ın sözüyle):**
+- [ ] #9 global arama (header "SOON")
+- [ ] #10 terminal = komut girişi (şu an salt-okunur run-history timeline)
+- [ ] Canlı gate pass/fail — `gate_runs` panelde (şu an gate'ler body `## Review Gates`'ten statik/boş)
+
+**Uygulama-geneli (paused — Board fonksiyoneli öne geçti, fırsatta; Dashboard'u da etkiler → sonra yeniden screenshot):**
+- [ ] Gerçek font yükleme — Inter + JetBrains Mono bundle (UI stack'inde sistem fontu Inter'in ÖNÜNDE, devreye girmiyor)
+- [ ] Ortak `PageHeader` 22px / items-end + subtitle 13px (wireframe `.route-title`/`.route-sub`)
+- [ ] index.html bayat `bg-neutral-950` → violet token tabanı; base `.dot` 6→7px
+
 ## Motor epic (§5.9) — aktif
 
 **Kaynak doğruluk:** numaralı maddeler [DECISIONS §5.9](./DECISIONS.md) + bağımlılık sırası §5.13 sonunda (Madde 1–4 ✅ main'de). Burada yalnızca **dilim-içi ertelenen alt-işler** (numaralı maddeye girmeyen) izlenir ki kaybolmasın.

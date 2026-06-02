@@ -296,7 +296,14 @@ sequenceDiagram
 - **Marked + DOMPurify** — XSS koruma
 - **Tek polling source** — `PendingQuestionsProvider`
 
-Visual spec: [concepts/wireframe-v4-final.html](./concepts/wireframe-v4-final.html). Tasarım sistemi: [DESIGN.md](./DESIGN.md).
+**Board (Ekran 3, 2026-06-02):**
+- **Detay drawer'lar** — `src/components/BoardDrawers.tsx` (Task + Epic): karta tıklayınca 480px sağ-slide panel. Saf mantık `src/lib/board-drawer.ts`'e ayrı (TDD): `statusBadge / acChecklist / childrenOf / epicProgress / formatDate / descriptionFromBody / availableTransitions / describeActivity / checklistFromSection`.
+- **Kanonik `Badge`** — `src/components/Badge.tsx` (wireframe `.badge`: 11px, kenarlıklı, 7 ton). Eski per-route Badge'ler (settings/memory/references, 9px büyükharf) bunu kullanacak şekilde göç edecek.
+- **Durum geçişleri (insan-override)** — `POST /api/backlog/:id/transition` → `ItemLifecycle` (legal + audit_log). Footer butonları duruma-duyarlı; frontend `availableTransitions()` backend `item-lifecycle.ts` TRANSITIONS'ını **aynalar** (senkron tut).
+- **Aktivite** — `GET /api/backlog/:id/activity` → item bazında `audit_log` (yeni tablo yok). Drawer poll'lar.
+- **Gate'ler** — şimdilik body `## Review Gates`'ten statik (gerçek `review_gates`/`gate_runs` boş; canlı pass/fail sonra).
+
+Visual spec: [concepts/wireframe-v4-final.html](./concepts/wireframe-v4-final.html). Tasarım sistemi: [DESIGN.md](./DESIGN.md). Board kararları: [DECISIONS.md Bölüm 10](./DECISIONS.md).
 
 ---
 

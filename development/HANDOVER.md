@@ -5,9 +5,15 @@
 
 ---
 
-## 1. Şu an (2026-06-01)
+## 1. Şu an (2026-06-02)
 
-**UI TRACK — bu oturumda ilerledi:** ✅ Ekran 1 **Onboarding** + ✅ Ekran 2 **Dashboard** bitti. 2 ayrı LOCAL commit `main`'de (**HENÜZ PUSH EDİLMEDİ** — Eray "push" deyince): `8712b43` dashboard tam-birebir (gerçek persona/iş-başlığı/adım-ilerlemesi, header +p avatar) · `fc707e8` onboarding (dizin seçimi yaz/Browse + Model A "başka klasöre kur" + Codex executor + platform Desktop/ön-seçimsiz + executor Antigravity-alfabetik-2×2 ızgara + Mock netleşti/ön-seçimsiz). **554/554 test yeşil**, typecheck temiz, demo geri yüklendi (Demo CRM). Onboarding'de Eray onayıyla **backend de genişletildi** (`normalizeExecutor`+codex, `resolveBlueprintTarget`+`projectDir`, `POST /api/pick-directory`) — yani "BACKEND'E DOKUNMA" Eray-onaylı esnetilebilir (gerekirse sor, onaylarsa TDD ile yap). **Sıradaki = Ekran 3 Board** (güncel kopyala-yapıştır prompt aşağıda). Açık izler: (a) native Browse osascript önizlemede çalışmaz → Eray terminalde test etmeli; (b) success-panel "kortext serve" komutu teyit edilmeli; (c) dashboard fixture'ı (`.kortext/seed-dashboard.ts`) daemon restart'ında reconcile olur → dolu görünüm için yeniden çalıştır.
+**UI TRACK — Ekran 3 BOARD bu oturumda büyük ölçüde bitti (5 commit, hepsi origin/main'e PUSH edildi).** Eray'ın ekran incelemesindeki **10 maddenin 7'si kapandı**, tümü canlı doğrulandı. Commit'ler: `0ac2d83` **Task + Epic detay panelleri** (480px sağ-slide drawer; header id+durum rozeti, KV grid, açıklama, AC checklist, child items, footer; wireframe-v4 birebir) · `67ca9b2` **r1 temizlik** (Status filtresi + boş "Filter" butonu + header +p avatar kaldırıldı, +prime atanabilir owner) · `b01cc05` **r2 çalışan duruma-duyarlı footer butonları** (`POST /api/backlog/:id/transition` → mevcut `ItemLifecycle` motoru; "ajanlar yürütür + ben override" kararı) · `243bd83` **r3a gerçek aktivite akışı** (`GET /api/backlog/:id/activity`, audit_log'dan "kim ne yaptı") · `aac2b4d` **r3b Review gates** (body `## Review Gates`'ten checklist) + boş KV satırlarını gizle. **590/590 test yeşil, typecheck temiz.** Yeni saf mantık `src/lib/board-drawer.ts` (statusBadge/acChecklist/childrenOf/epicProgress/formatDate/descriptionFromBody/availableTransitions/describeActivity/checklistFromSection) tamamı TDD'li. Yeni bileşenler: `src/components/BoardDrawers.tsx` + kanonik `src/components/Badge.tsx`.
+
+**KALAN aktif madde = #4 AC madde-madde işaretleme** (incelemenin en büyük parçası; Eray `[{text, done}]` modelini onayladı). 4 katman: (1) veri modeli — AC'yi sayı yerine madde-madde durum, eski `string[]+ac_done` ile geriye-uyumlu · (2) işaretle/kaldır endpoint'i · (3) panelde tıklanabilir checkbox (insan override) · (4) ajanların MCP'den tek tek işaretlemesi (ajan sözleşmesi). Kendi turunu hak ediyor — prompt aşağıda. **Ertelenen (Eray'ın sözüyle):** #9 global arama, #10 terminal = komut girişi (şu an salt-okunur run-history). **Paused:** uygulama-geneli font (Inter/JetBrains Mono gerçekten yüklenmiyor — UI stack'inde sistem fontu Inter'in önünde) + ortak PageHeader 22px/items-end rötuşu — Eray "şimdi, ayrı commit" demişti ama Board fonksiyonel geri bildirimi öne geçti; fırsatta yapılır, **Dashboard'u da etkiler → sonra yeniden screenshot.**
+
+**Öncesi (bağlam, hepsi origin/main'de):** Motor/şema epic §5.9 (capstone + son montaj + `POST /api/drive`, varsayılan kilitli) + Ekran 1 Onboarding + Ekran 2 Dashboard. "BACKEND'E DOKUNMA" Eray-onayıyla esnetilebilir — bu oturumda da öyle: transition + activity endpoint'leri TDD'yle eklendi. Demo: Demo CRM yüklü; test için bu oturumda API'den **T06** (priority/points/AC dolu) ve Eray'ın **T07 "DENEME"** item'ları eklendi (gitignored demo DB'de, daemon restart'ında reconcile).
+
+> **Süreç dersi (kayıtlı):** (1) önizleme dev sunucusu (`tsx watch`) **server dosyası her düzenlendiğinde restart** olur, birkaç kez düştü → `preview_start` ile geri kaldır. (2) preview `eval`'leri **reload/animasyon sırasında flaky** ("promise collected"/timeout) → reload'u AYRI çağrıda yap, kısa **senkron** eval'leri tercih et. (3) `preview_screenshot` slide animasyonunu/stale kareyi yakalayabilir → mid-slide görürsen ikinci kez çek; ölçü/font için screenshot'a güvenme, `getComputedStyle` kullan.
 
 **Branch:** `main`. Motor/şema epic §5.9 **CAPSTONE + SON MONTAJ + DRIVER GİRİŞE BAĞLANDI.** Capstone (9 TDD adapter/keystone dilimi `39953ad`→`c692223`) + son montaj (4 kompozisyon dilimi `8cbd5e1`→`86ddaeb`, `driveReadyItems` = "başlat düğmesi", `driver-e2e.test.ts` gerçek git'le to_do→done kanıtlıyor) **artık origin/main'de — bu oturumda PUSH edildi (6 commit).** Bu oturumda ayrıca **§5.16 indi: driver bir HTTP girişine bağlandı** — `POST /api/drive` `driveReadyItems`'i tek-tur sürüyor, **ama varsayılan KAPALI bir güvenlik anahtarının (`KORTEXT_DRIVE_ENABLED`) arkasında.** **Mimari karar: Eray sade-dille "kilitli dursun, anahtarla açılır" seçti.** 3 parça, her biri TDD: env fail-safe anahtar (`server/config/env.ts`, yalnız `"1"`/`"true"` açar) · `driveRouter` (`server/routes/drive.ts`, 403 kapalı / 409 uçuşta / 202 başladı, fire-and-forget) · `makeServerDrive` (`server/orchestrator/server-drive.ts`, runtime lazy-once montaj). **521→535 test**, typecheck + lint temiz. Gerçek-sunucu smoke İKİ yön: KAPALI→403, AÇIK+boş backlog→202 temiz no-op (repo kirlenmedi). Detay [DECISIONS §5.16](./DECISIONS.md). **Blast-radius:** bu, etkiyi sıfırdan çıkarabilecek **İLK** slice — ama anahtar varsayılan kapalı → merge'de etki **pratikte hâlâ sıfır**; Eray `KORTEXT_DRIVE_ENABLED=1` set edip (yeniden) başlatana kadar düğme atıl. ✅ **Bu slice (`de653f5`) origin/main'e PUSH edildi** (2026-06-01) — motor track'inin tamamı artık uzakta. **Sıradaki = UI track** (ekran-ekran, ilk ekrandan; aşağıdaki kopyala-yapıştır prompt). Backend ertelenenleri (§5.16) UI'a paralel, sonraki iş.
 
@@ -15,9 +21,9 @@
 
 **Bu oturumda inen (6 slice, hepsi TDD + mock-first, ayrı commit):** `uat review-cycle` (review→done/bounce, prime onayı) · `whose-turn` (board "sıra kimde" türetimi) · `closure` (review→merge→done/bounce iskelet) · `epic-completion` (item done→epic bitti→staging tetik) · `block` (block→run cancel, `RunRegistry`) · `local test-URL` (`PreviewManager`). Detay [DECISIONS §5.13](./DECISIONS.md). **Beş mock-first arayüz** (`gate-executor`/`review-approver`/`merger`/`deployer`/`preview-server`) + `RunRegistry` + `PreviewManager` hazır; tümü Madde 10'da gerçeğe bağlanır. Üretim blast-radius **sıfır** (yalnız testler sürüyor — lifecycle henüz orchestrator'dan sürülmüyor).
 
-| Test | Lint | Typecheck | Build |
-|---|---|---|---|
-| 535/535 ✅ | 0 hata · 4 pre-existing warning | 0 hata | temiz |
+| Test | Typecheck | Push |
+|---|---|---|
+| 590/590 ✅ | 0 hata | origin/main (bu oturum: 8 commit) |
 
 **npm registry:** `kortext@3.0.0` broken (EADDRINUSE silent fail bug). v3.1.0 release (devasa sürüm: Faz 11-13 + CLI redesign) lokal tgz UAT geçtikten sonra yapılacak.
 
@@ -36,56 +42,75 @@
 
 ---
 
-## ▶ Sonraki oturum — UI track (kopyala-yapıştır prompt)
+## ▶ Sonraki oturum — Board #4 (AC) → Ekran 4+ (kopyala-yapıştır prompt)
 
-> **Motor track BİTTİ + tamamı origin/main'de** (capstone+montaj+§5.16 driver tetiği, `de653f5` dahil). Sıradaki oturum **UI** — ekran-ekran, ilk ekrandan. Yeni oturumda şunu yaz:
+> **Ekran 3 Board büyük ölçüde bitti + origin/main'de** (5 commit; Eray incelemesinin 7/10 maddesi). Kalan tek aktif iş Board'da **#4 (AC madde-madde işaretleme)**, sonra **Ekran 4+ (Memory onward)**. Yeni oturumda şunu yaz:
 
 ```
-KORTEXT — UI OTURUMU (ekran-ekran, BOARD'DAN devam)
+KORTEXT — UI OTURUMU (Ekran 3 BOARD: #4 AC işaretleme → sonra Ekran 4+)
 
-DURUM: Backend/motor BİTTİ (origin/main). UI track BAŞLADI — bu oturumda ✅ Ekran 1
-(Onboarding) + ✅ Ekran 2 (Dashboard) bitti, 2 LOCAL commit main'de (8712b43 dashboard,
-fc707e8 onboarding) — HENÜZ PUSH EDİLMEDİ (Eray "push" deyince). 554 test yeşil. Sıradaki:
-EKRAN 3 = Board. BACKEND'E DOKUNMA prensibi sürer AMA Eray onayıyla esnetilebilir
-(onboarding'de öyle yaptık: Codex executor + projectDir + POST /api/pick-directory, hepsi
-TDD'li). Gerekirse Eray'a sade-dille sor, onaylarsa TDD ile yap. Detay: DECISIONS §5.16.
+DURUM: Motor + Onboarding(1) + Dashboard(2) + Board(3) BÜYÜK ÖLÇÜDE BİTTİ, hepsi
+origin/main'de. Board incelemesindeki 10 maddenin 7'si kapandı (5 commit: 0ac2d83
+paneller · 67ca9b2 temizlik · b01cc05 çalışan butonlar · 243bd83 aktivite · aac2b4d
+gate'ler+KV). 590 test yeşil, typecheck temiz. main'e SORMADAN push YOK.
 
-GÖRSEL SPEC — TEK KAYNAK, BİREBİR UY: development/concepts/wireframe-v4-final.html.
-Her ekranı buna birebir uydur. mockup-v3-palette-preview.html ARTIK referans DEĞİL.
-Renk/tipografi: development/DESIGN.md. UI kodu: src/ (React + TanStack Router +
-Tailwind v4).
+SIRADAKİ TEK AKTİF İŞ = #4 AC madde-madde işaretleme (Board, en büyük parça). Eray
+[{text, done}] modelini onayladı. 4 katman, her biri TDD + Eray'a göstererek + ayrı commit:
+1) VERİ MODELİ — AC'yi "sayı" yerine madde-madde sakla. ŞU AN: frontmatter.acceptance_criteria
+   = string[] + ac_done(sayı), NewItemModal böyle yazıyor; body'de de "## Acceptance Criteria"
+   var. YENİ: [{text, done}] (geriye-uyumlu OKU: eski string[]+ac_done → ilk N done; yeni şekil
+   → doğrudan). board-drawer.ts acChecklist + NewItemModal güncellenir.
+2) ENDPOINT — bir kriteri işaretle/kaldır (insan override). server/routes/backlog.ts'e yeni
+   route + TDD (tests/routes.test.ts deseni; transition/activity endpoint'leri örnek).
+3) UI — panelde AC satırları tıklanabilir checkbox (şu an salt-okunur AcRow, BoardDrawers.tsx).
+   Tıkla → endpoint → paneli+board'u tazele (transition'daki onChanged deseni).
+4) AJAN YOLU — ajanlar MCP'den AC işaretlesin (mcp/ dizini; ajan sözleşmesi). En derin
+   katman; kapsamı Eray'a sade-dille sor.
 
-CANLI GÖRMEK:
-- Dashboard: preview_start "kortext-dev" (5173). Demo yüklü (Demo CRM, backlog + dashboard
-  fixture). Backlog seed: `npx tsx .kortext/seed.ts`. Dolu dashboard ("aktif iş" tablosu):
-  `npx tsx .kortext/seed-dashboard.ts` (gitignored; daemon restart'ında reconcile olur →
-  yeniden çalıştır).
-- Spec yan yana: preview_start "kortext-wireframe" (8092) → /wireframe-v4-final.html
-  (launch.json düzeltildi: development/concepts/ servis edilir).
-
-YÖNTEM (her ekran için, sırayla): (1) canlı UI + wireframe-v4 spec'i yan yana göster
-(screenshot), (2) fark/eksikleri Eray'la SADE-DİLLE konuş (brainstorming/frontend-design
-skill), (3) onay alınca src/'de uygula, (4) preview screenshot ile doğrula, (5)
-ekran-başına ayrı commit. Bir ekran bitmeden diğerine geçme.
-
-EKRAN SIRASI: ✅1.Onboarding ✅2.Dashboard → 3.Board → 4.Memory → 5.Reports →
+#4 bitince EKRAN 4+: ✅1.Onboarding ✅2.Dashboard ✅3.Board → 4.Memory → 5.Reports →
 6.References → 7.Project settings → 8.Agents → 9.Rules → 10.Workflows → 11.Hooks →
 12.Integrations → 13.Environment → 14.Danger zone.
 
-İLK ADIM: DESIGN.md oku + wireframe-v4-final.html'i preview'da aç + dashboard'ı başlat.
-Sonra 3. EKRAN'dan (Board) başla: canlı /#/board vs wireframe Board'u yan yana karşılaştır,
-Eray'ın ekran-ekran KENDİ yorumlarını al (bu yöntem iyi işledi). Açık izler: onboarding native
-Browse dialog (osascript) önizlemede çalışmaz — Eray terminalde test etmeli; "created elsewhere"
-ekranındaki "kortext serve" komutu teyit edilmeli.
+ERTELENEN (Eray'ın sözüyle, Board): #9 global arama (header "SOON"); #10 terminal = komut
+girişi (şu an salt-okunur run-history timeline). PAUSED (uygulama-geneli, fırsatta): gerçek
+font yükleme (Inter/JetBrains Mono — UI stack'inde sistem fontu Inter'in ÖNÜNDE, devreye
+girmiyor) + ortak PageHeader 22px/items-end — Dashboard'u da etkiler → sonra yeniden screenshot.
 
-SABİT: Eray non-coder/Türkçe, kod+commit İngilizce, GUI-first, somut artefakt
-(screenshot). UX/mimari kararı AskUserQuestion ile sade-dille sor (öneri başa). main'e
-SORMADAN push YOK. Saf görsel iterasyon screenshot'la doğrulanır; component mantığı
-varsa TDD.
+GÖRSEL SPEC — TEK KAYNAK: development/concepts/wireframe-v4-final.html (showRoute ile ekran
+değiştirir; Board/Memory/Reports/References + settings pane'leri içerir; onboarding'i KAPSAMAZ).
+Renk/tipografi: development/DESIGN.md. UI: src/ (React + TanStack Router hash-history +
+Tailwind v4). Kanonik Badge: src/components/Badge.tsx (wireframe .badge: 11px, kenarlıklı, 7
+ton — sonraki ekranlar buna geçsin; settings/memory/references'taki eski 9px-büyükharf
+Badge'ler tech-debt).
 
-PARALEL TRACK (sonraya, UI öncelikli): backend ertelenenleri — handover-on-close,
-gate_runs uat verdict, blocker-temizle, epic-status-flip, staging raporları, periyodik
-zamanlayıcı (DECISIONS §5.16). Ayrıca: gerçek AI ajanıyla canlı UAT henüz yapılmadı.
+CANLI GÖRMEK: preview_start "kortext-dev" (5173) → /#/board. Demo CRM yüklü. Spec yan yana:
+preview_start "kortext-wireframe" (8092) → /wireframe-v4-final.html. Viewport ≥1280px
+(DESIGN.md §14). Backlog seed: `npx tsx .kortext/seed.ts`; dolu dashboard:
+`npx tsx .kortext/seed-dashboard.ts`. Test verisi (bu oturumdan): T06 (AC+gate dolu), T07 "DENEME".
+
+YÖNTEM (her iş, sırayla): (1) canlı + wireframe yan yana (screenshot). (2) ESAS: Eray
+ekran-ekran KENDİ yorumlarını verir; sade-dille konuş (öneri başa, AskUserQuestion). (3) onay
+→ src/'de uygula (saf görsel screenshot'la; MANTIK varsa TDD). (4) preview screenshot ile
+doğrula. (5) ayrı LOCAL commit (push YOK, Eray "push"/"origin merge" deyince).
+
+ÖNİZLEME TUZAKLARI (kayıtlı): server dosyası düzenleyince tsx watch RESTART → düşerse
+preview_start. eval reload/animasyon sırasında flaky ("promise collected"/timeout) → reload'u
+AYRI çağrıda, kısa SENKRON eval tercih et. screenshot mid-slide yakalar → ikinci çek; ölçü/font
+için getComputedStyle (screenshot'a güvenme).
+
+BOARD KOD HARİTASI: src/routes/board.tsx (kolon/kart/filtre/modal) · src/components/
+BoardDrawers.tsx (Task/Epic drawer + footer) · src/lib/board-drawer.ts (saf mantık + testler
+tests/board-drawer.test.ts) · server/routes/backlog.ts (GET/POST + transition + activity) ·
+server/engine/item-lifecycle.ts (yasal geçişler — frontend availableTransitions BUNU aynalar) ·
+server/db/schemas.ts (Gate/GateRun).
+
+SABİT: Eray non-coder/Türkçe, kod+commit İngilizce, GUI-first, somut artefakt (screenshot).
+Mimari/UX kararı AskUserQuestion ile SADE-DİLLE (öneri başa). main'e SORMADAN push YOK.
+
+PARALEL TRACK (sonra): backend ertelenenleri — handover-on-close, gate_runs UAT verdict +
+canlı gate pass/fail (şu an gate'ler statik body'den, hep boş/unchecked), blocker-temizle,
+epic-status-flip, staging raporları, periyodik zamanlayıcı (DECISIONS §5.16). Gerçek AI
+ajanıyla canlı UAT henüz yapılmadı.
 ```
 
 ## 2. Geçmiş özet

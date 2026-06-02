@@ -687,3 +687,23 @@ Bu maddeleri ne kadar mantıklı görünseler de tekrar gündeme getirme:
 - **`/AGENTS.md` (repo kökü, v3.0 path'leri ile)** — silindi, `templates/AGENTS.md` kanonik
 - **`templates/AGENTS.md`'de foundation eksik** (v3.1.0'da) — Faz 13'te eklendi
 - **Repo kökü `.env.example`** — duplicate + bayat path, silindi
+
+## Bölüm 10 — Board UI (Ekran 3) kararları (2026-06-02)
+
+UI track Ekran 3. Eray ekranı canlı inceledi, 10 maddelik geri bildirim verdi; 7'si bu oturumda kapandı. Önce wireframe-v4'e birebir paneller kuruldu, sonra Eray'ın fonksiyonel geri bildirimi uygulandı.
+
+**§10.1 Detay drawer'lar (panel) — Board'un imza davranışı.** Wireframe'de karta tıklayınca sağdan 480px detay paneli kayar; `src/`'de hiç yoktu (kartlar atıldı). Kuruldu: `BoardDrawers.tsx` (Task + Epic), wireframe `.drawer*` CSS'ine birebir (250ms slide, backdrop, Esc), gerçek `BacklogItem`'a bağlı. Saf mantık `src/lib/board-drawer.ts`'e ayrıldı (TDD); bileşenler screenshot'la doğrulandı.
+
+**§10.2 Kanonik Badge — wireframe `.badge`, mevcut desenle çakışma.** Analiz `.badge` CSS önerdi; kod tabanında zaten per-route React `Badge` (9px büyükharf, kenarlıksız) vardı. AMA wireframe `.badge` farklı: 11px, cümle-düzeni, kenarlıklı, 7 ton. İkisini körü körüne izlemek tutarsızlık yaratırdı → wireframe'e birebir **kanonik** `src/components/Badge.tsx` kuruldu (sonraki ekranlar buna göçer; eski badge'ler tech-debt).
+
+**§10.3 Durum geçişleri = ajan-güdümlü + insan-override (Eray kararı).** "Kim yürütür?" sorusunda Eray "ajanlar yürütür, ben gerekirse müdahale" seçti. Sonuç: footer butonları **duruma-duyarlı** (yalnız o an YASAL geçişler) — wireframe'in sabit "Move to Review"ı çoğu durumda illegal olurdu. Frontend `availableTransitions(status)` backend `ItemLifecycle` TRANSITIONS'ını **aynalar** (drift'e dikkat). Backend: `POST /api/backlog/:id/transition` mevcut `ItemLifecycle` motorunu kullanır (legal check + audit_log; 409 illegal / 404 / 400). "Add comment" / "Edit epic" backend store gerektirdiği için pasif.
+
+**§10.4 Aktivite = audit_log (yeni tablo yok).** Lifecycle zaten her geçişi `audit_log`'a yazıyor (actor + from→to). `GET /api/backlog/:id/activity` bunu item bazında okur; `describeActivity()` "kim ne yaptı" satırına çevirir. Drawer 5sn'de bir poll'lar.
+
+**§10.5 Gate'ler şimdilik body'den (statik).** `review_gates` (Gate[]) + `gate_runs` (pending/pass/fail) gerçek kaynak ama tüm item'larda BOŞ — gate'ler bir item workflow'a girince dolar. Eray "diğer içerikler nasıl olduysa gate'lerde de olsun, görmek için" dedi → şimdilik body `## Review Gates` checklist'inden (`checklistFromSection`) statik gösterilir. **Canlı gate pass/fail (gate_runs) sonraki iş.**
+
+**§10.6 AC modeli = madde-madde `[{text, done}]` (Eray kararı, HENÜZ YAPILMADI).** Eray "AC sayı değil madde-madde olmalı, nasıl check atılacak?" dedi. Karar: `[{text, done}]`, geriye-uyumlu (eski `string[]+ac_done` → ilk N done). 4 katman (veri modeli + işaretle/kaldır endpoint + tıklanabilir checkbox + ajan MCP yolu) sonraki turun işi.
+
+**§10.7 Görsel temizlik.** Kaldırıldı: Status filtresi (kolonlar zaten durumu gösteriyor — gereksiz), boş "Filter" butonu (dropdown'lar canlı süzüyor), header +p avatarı (gerek yok). Eklendi: +prime atanabilir owner. Boş KV satırları gizlendi (Priority/Points/Epic değeri yoksa satır yok — "—" çöpü).
+
+**Ertelenenler:** #9 global arama (header "SOON"), #10 terminal=komut girişi (şu an salt-okunur run-history). Paused: uygulama-geneli gerçek font yükleme (UI stack'inde sistem fontu Inter'in önünde) + PageHeader 22px — Dashboard'u da etkiler.
