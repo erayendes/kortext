@@ -6,6 +6,7 @@ import { apiPost, usePolling, type ApiPostError } from '../lib/api.ts';
 import {
   acChecklist,
   availableTransitions,
+  checklistFromSection,
   childrenOf,
   describeActivity,
   descriptionFromBody,
@@ -250,6 +251,7 @@ export function TaskDrawer({
   const acDone = typeof fm.ac_done === 'number' ? fm.ac_done : 0;
   const checklist = acChecklist(criteria, acDone);
   const desc = descriptionFromBody(item.body_md);
+  const gates = checklistFromSection(item.body_md, 'Review Gates');
   const transitions = availableTransitions(item.status);
 
   const [busy, setBusy] = useState<BoardTransition | null>(null);
@@ -295,8 +297,12 @@ export function TaskDrawer({
             <DrawerTitle>{item.title}</DrawerTitle>
 
             <Kv>
-              <K>Epic</K>
-              <V>{item.parent_id ? `${item.parent_id}${epicTitle ? ` ${epicTitle}` : ''}` : '—'}</V>
+              {item.parent_id && (
+                <>
+                  <K>Epic</K>
+                  <V>{`${item.parent_id}${epicTitle ? ` ${epicTitle}` : ''}`}</V>
+                </>
+              )}
               <K>Assignee</K>
               {item.owner ? (
                 <V className="mono" style={{ color: personaColor(item.owner) }}>
@@ -305,10 +311,18 @@ export function TaskDrawer({
               ) : (
                 <V style={{ color: 'var(--tx-disabled)' }}>unassigned</V>
               )}
-              <K>Priority</K>
-              <V>{fm.priority ?? '—'}</V>
-              <K>Points</K>
-              <V>{typeof fm.points === 'number' ? fm.points : '—'}</V>
+              {fm.priority && (
+                <>
+                  <K>Priority</K>
+                  <V>{fm.priority}</V>
+                </>
+              )}
+              {typeof fm.points === 'number' && (
+                <>
+                  <K>Points</K>
+                  <V>{fm.points}</V>
+                </>
+              )}
               <K>Created</K>
               <V className="mono" style={{ fontSize: 12, color: 'var(--tx-3)' }}>
                 {formatDate(item.created_at)}
@@ -333,6 +347,21 @@ export function TaskDrawer({
                   {checklist.map((c, i) => (
                     <AcRow key={i} done={c.done}>
                       {c.text}
+                    </AcRow>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {gates.length > 0 && (
+              <>
+                <SectionLabel extra={`${gates.filter((g) => g.done).length}/${gates.length}`}>
+                  Review gates
+                </SectionLabel>
+                <div className="flex flex-col gap-1.5" style={{ marginBottom: 22 }}>
+                  {gates.map((g, i) => (
+                    <AcRow key={i} done={g.done}>
+                      {g.text}
                     </AcRow>
                   ))}
                 </div>
