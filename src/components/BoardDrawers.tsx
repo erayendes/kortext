@@ -242,14 +242,9 @@ export function TaskDrawer({
   const fm = item.frontmatter as {
     priority?: string;
     points?: number;
-    acceptance_criteria?: unknown;
-    ac_done?: number;
   };
-  const criteria = Array.isArray(fm.acceptance_criteria)
-    ? (fm.acceptance_criteria as string[])
-    : [];
-  const acDone = typeof fm.ac_done === 'number' ? fm.ac_done : 0;
-  const checklist = acChecklist(criteria, acDone);
+  const checklist = acChecklist(item.frontmatter);
+  const acDone = checklist.filter((c) => c.done).length;
   const desc = descriptionFromBody(item.body_md);
   const gates = checklistFromSection(item.body_md, 'Review Gates');
   const transitions = availableTransitions(item.status);
@@ -340,7 +335,7 @@ export function TaskDrawer({
 
             {checklist.length > 0 && (
               <>
-                <SectionLabel extra={`${Math.min(acDone, criteria.length)}/${criteria.length}`}>
+                <SectionLabel extra={`${acDone}/${checklist.length}`}>
                   Acceptance criteria
                 </SectionLabel>
                 <div className="flex flex-col gap-1.5" style={{ marginBottom: 22 }}>

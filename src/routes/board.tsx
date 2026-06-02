@@ -6,6 +6,7 @@ import { apiPost, usePolling } from '../lib/api.ts';
 import type { ApiPostError } from '../lib/api.ts';
 import type { BacklogItem, PersonaSummary } from '../lib/api-types.ts';
 import { personaColor } from '../lib/persona-colors.ts';
+import { acChecklist } from '../lib/board-drawer.ts';
 
 type ColumnStatus = 'to_do' | 'in_progress' | 'test' | 'review' | 'done';
 
@@ -352,10 +353,11 @@ function Card({
   const blocked = item.status === 'blocked';
   const mark = TYPE_MARK[item.type];
   const titleStyle = dimmed ? 'line-through' : '';
-  // 'AC X/Y' progress info travels in frontmatter when present.
-  const fm = item.frontmatter as { ac_done?: number; ac_total?: number };
-  const acDone = typeof fm.ac_done === 'number' ? fm.ac_done : null;
-  const acTotal = typeof fm.ac_total === 'number' ? fm.ac_total : null;
+  // 'AC X/Y' progress derived from the canonical acceptance-criteria checklist
+  // (handles both the new [{text,done}] shape and the legacy string[] + ac_done).
+  const ac = acChecklist(item.frontmatter);
+  const acDone = ac.length > 0 ? ac.filter((c) => c.done).length : null;
+  const acTotal = ac.length > 0 ? ac.length : null;
 
   return (
     <article
@@ -507,9 +509,9 @@ function NewItemModal({
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
     if (acceptanceList.length > 0) {
-      frontmatter.acceptance_criteria = acceptanceList;
-      frontmatter.ac_total = acceptanceList.length;
-      frontmatter.ac_done = 0;
+      // New per-item shape: each criterion carries its own done flag (all start
+      // unmarked). Replaces the legacy string[] + ac_total/ac_done counts.
+      frontmatter.acceptance_criteria = acceptanceList.map((text) => ({ text, done: false }));
     }
     const blocksList = parseChips(blocks);
     if (blocksList.length > 0) frontmatter.blocks = blocksList;

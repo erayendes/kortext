@@ -42,14 +42,36 @@ export function statusBadge(status: BacklogItem['status']): { label: string; ton
   }
 }
 
+export type ChecklistItem = { text: string; done: boolean };
+
 /**
- * Turn an acceptance-criteria list + a done COUNT into a per-item checklist.
- * The data model stores `ac_done` as a count (not per-criterion flags), so we
- * mark the first `done` items checked. `done` is clamped into [0, length].
+ * Read an item's acceptance criteria from its frontmatter into a canonical
+ * per-item checklist. Two stored shapes are supported so existing projects keep
+ * working without a migration:
+ *  - NEW   `acceptance_criteria: [{ text, done }]`            → used directly
+ *  - LEGACY `acceptance_criteria: string[]` + `ac_done` count → the first
+ *    `ac_done` items are marked done (count clamped into [0, length])
+ *
+ * Returns [] when the field is absent or not a non-empty array. This is the
+ * single source of truth for AC state — the card, the drawer, and (later) the
+ * mark/unmark endpoint all read through here, so callers never branch on shape.
  */
-export function acChecklist(criteria: string[], done: number): { text: string; done: boolean }[] {
-  const checked = Math.max(0, Math.min(done, criteria.length));
-  return criteria.map((text, i) => ({ text, done: i < checked }));
+export function acChecklist(fm: Record<string, unknown>): ChecklistItem[] {
+  const raw = fm.acceptance_criteria;
+  if (!Array.isArray(raw) || raw.length === 0) return [];
+
+  // New shape: an array of { text, done } objects → take per-item flags.
+  if (typeof raw[0] === 'object' && raw[0] !== null) {
+    return raw.map((el) => {
+      const o = el as { text?: unknown; done?: unknown };
+      return { text: String(o.text ?? ''), done: Boolean(o.done) };
+    });
+  }
+
+  // Legacy shape: an array of strings + an `ac_done` count → mark first N done.
+  const done = typeof fm.ac_done === 'number' ? fm.ac_done : 0;
+  const checked = Math.max(0, Math.min(done, raw.length));
+  return raw.map((text, i) => ({ text: String(text), done: i < checked }));
 }
 
 /** All items parented to the given epic, in their original order. */

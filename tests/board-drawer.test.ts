@@ -50,30 +50,61 @@ describe('statusBadge', () => {
 });
 
 describe('acChecklist', () => {
-  it('marks the first N criteria done (ac_done is a count, not per-item flags)', () => {
-    expect(acChecklist(['a', 'b', 'c'], 2)).toEqual([
+  it('reads the new [{text, done}] shape directly (per-item flags)', () => {
+    expect(
+      acChecklist({
+        acceptance_criteria: [
+          { text: 'a', done: true },
+          { text: 'b', done: false },
+          { text: 'c', done: true },
+        ],
+      }),
+    ).toEqual([
+      { text: 'a', done: true },
+      { text: 'b', done: false },
+      { text: 'c', done: true },
+    ]);
+  });
+
+  it('defaults a missing done flag to false in the new shape', () => {
+    expect(
+      acChecklist({ acceptance_criteria: [{ text: 'a' }, { text: 'b', done: true }] }),
+    ).toEqual([
+      { text: 'a', done: false },
+      { text: 'b', done: true },
+    ]);
+  });
+
+  it('reads the legacy string[] + ac_done count → first N done (backward compatible)', () => {
+    expect(acChecklist({ acceptance_criteria: ['a', 'b', 'c'], ac_done: 2 })).toEqual([
       { text: 'a', done: true },
       { text: 'b', done: true },
       { text: 'c', done: false },
     ]);
   });
 
-  it('treats done <= 0 as nothing checked', () => {
-    expect(acChecklist(['a', 'b'], 0)).toEqual([
+  it('treats a legacy list with no ac_done (or 0) as nothing checked', () => {
+    expect(acChecklist({ acceptance_criteria: ['a', 'b'] })).toEqual([
+      { text: 'a', done: false },
+      { text: 'b', done: false },
+    ]);
+    expect(acChecklist({ acceptance_criteria: ['a', 'b'], ac_done: 0 })).toEqual([
       { text: 'a', done: false },
       { text: 'b', done: false },
     ]);
   });
 
-  it('clamps done above the list length so everything is checked', () => {
-    expect(acChecklist(['a', 'b'], 5)).toEqual([
+  it('clamps a legacy ac_done above the list length so everything is checked', () => {
+    expect(acChecklist({ acceptance_criteria: ['a', 'b'], ac_done: 5 })).toEqual([
       { text: 'a', done: true },
       { text: 'b', done: true },
     ]);
   });
 
-  it('returns [] for empty criteria', () => {
-    expect(acChecklist([], 3)).toEqual([]);
+  it('returns [] when acceptance_criteria is absent, empty, or not an array', () => {
+    expect(acChecklist({})).toEqual([]);
+    expect(acChecklist({ acceptance_criteria: [] })).toEqual([]);
+    expect(acChecklist({ acceptance_criteria: 'nope' })).toEqual([]);
   });
 });
 
