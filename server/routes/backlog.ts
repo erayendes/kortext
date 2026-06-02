@@ -247,6 +247,26 @@ export function backlogRouter(deps: BacklogRouterDeps): Router {
     }
   });
 
+  // Item activity feed — the audit trail (transitions etc.) for the drawer,
+  // newest-first. "Who did what, when" comes straight from audit_log.
+  r.get('/backlog/:id/activity', (req, res) => {
+    const id = req.params.id;
+    if (typeof id !== 'string' || id.length === 0) {
+      res.status(400).json({ error: 'invalid_id' });
+      return;
+    }
+    if (!deps.repos.backlog.get(id)) {
+      res.status(404).json({ error: 'not_found' });
+      return;
+    }
+    const activity = deps.repos.auditLog.list({
+      resource_type: 'backlog_item',
+      resource_id: id,
+      limit: 50,
+    });
+    res.json({ activity });
+  });
+
   return r;
 }
 

@@ -204,6 +204,31 @@ describe('POST /api/backlog/:id/transition', () => {
   });
 });
 
+describe('GET /api/backlog/:id/activity', () => {
+  it('returns the item audit trail (newest first), including transitions', async () => {
+    repos.backlog.create({ id: 'T-7', type: 'task', title: 'x', status: 'to_do' });
+    await fetch(`${baseUrl}/api/backlog/T-7/transition`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'start', by: '+prime' }),
+    });
+    const res = await fetch(`${baseUrl}/api/backlog/T-7/activity`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      activity: { actor: string; action: string; payload: { to?: string } }[];
+    };
+    expect(body.activity.length).toBeGreaterThanOrEqual(1);
+    expect(body.activity[0]?.action).toBe('item_transition');
+    expect(body.activity[0]?.actor).toBe('+prime');
+    expect(body.activity[0]?.payload.to).toBe('in_progress');
+  });
+
+  it('404s an unknown item', async () => {
+    const res = await fetch(`${baseUrl}/api/backlog/NOPE/activity`);
+    expect(res.status).toBe(404);
+  });
+});
+
 describe('GET /api/personas', () => {
   it('lists personas with description and prompt length', async () => {
     const res = await fetch(`${baseUrl}/api/personas`);

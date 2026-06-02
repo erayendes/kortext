@@ -153,3 +153,22 @@ export function availableTransitions(
       return []; // done, cancelled — terminal
   }
 }
+
+/**
+ * Render one audit-log entry as a human activity line for the drawer.
+ * Status transitions get a readable "moved X → Y" form (reusing the status
+ * labels); anything else falls back to "actor action".
+ */
+export function describeActivity(entry: {
+  actor: string;
+  action: string;
+  payload: Record<string, unknown>;
+}): string {
+  if (entry.action === 'item_transition') {
+    const { from, to } = entry.payload;
+    if (typeof from === 'string' && typeof to === 'string') {
+      return `${entry.actor} moved ${statusBadge(from as BacklogItem['status']).label} → ${statusBadge(to as BacklogItem['status']).label}`;
+    }
+  }
+  return `${entry.actor} ${entry.action}`;
+}
