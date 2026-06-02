@@ -711,3 +711,68 @@ UI track Ekran 3. Eray ekranı canlı inceledi, 10 maddelik geri bildirim verdi;
 **§10.7 Görsel temizlik.** Kaldırıldı: Status filtresi (kolonlar zaten durumu gösteriyor — gereksiz), boş "Filter" butonu (dropdown'lar canlı süzüyor), header +p avatarı (gerek yok). Eklendi: +prime atanabilir owner. Boş KV satırları gizlendi (Priority/Points/Epic değeri yoksa satır yok — "—" çöpü).
 
 **Ertelenenler:** #9 global arama (header "SOON"), #10 terminal=komut girişi (şu an salt-okunur run-history). Paused: uygulama-geneli gerçek font yükleme (UI stack'inde sistem fontu Inter'in önünde) + PageHeader 22px — Dashboard'u da etkiler.
+
+---
+
+## Bölüm 11 — v5 IA revizyonu (lo-fi shadcn wireframe, 2026-06-02)
+
+**Status:** Eray onayladı (design-level). **Lo-fi wireframe** olarak canlı doğrulandı: [concepts/wireframe-v5-shadcn.html](./concepts/wireframe-v5-shadcn.html) (default shadcn/ui styling, tek dosya, `.claude/launch.json > wf-v5` → `localhost:8094`). **Henüz koda dökülmedi** — bu, tüm uygulamanın IA/yerleşim revizyonunun KAYNAĞI. v4 wireframe = görsel/palet referansı kalır; **v5 = IA/yerleşim referansı**. Hi-fi pass ikisini birleştirir (v5 yapı + v4 koyu palet).
+
+### 11.1 Mekânsal model — sidebar = proje, footer = motor
+- **Sidebar = proje kapsamı** (seçili proje): Dashboard · Board · References · Memory · Reports · Project settings (Project info / Integrations / Environments / Agent models). Collapse → **56px ikon-rail**.
+- **Footer = motor kapsamı** (tüm projeler / daemon): ⚙ Kortext · tema · daemon `:3200` · ajan durumları ↑ · worktrees ↑ · terminal.
+- **Bağlamsal sidebar:** footer ⚙ → AYNI sidebar proje→motor menüsüne döner (LLM Auth/Agents/Rules/Workflows/Notifications/Hooks/Scripts) + "← <proje>" geri. **İki sidebar DEĞİL.**
+- **Topbar:** proje seçici + version seçici (sürümler önceden planlanır: 1.0/1.1/1.2) + ⌘K arama + bildirim. (+p avatar ve tema toggle topbar'dan KALDIRILDI.)
+
+### 11.2 Tekrar eden desen — "global bağlantı / yerel tercih"
+"Bir kez kur, her projede ayarla." Üç yerde çıktı → kural:
+- **Agents:** persona gövdesi (anayasa) global + read-only (Kortext > Agents); **model ataması projeye göre** (Project settings > Agent models).
+- **Notifications:** Slack/Telegram **bağlantısı global** (Kortext > Notifications); **proje-bazlı aç-kapa/yönlendirme** (Project info > Notifications).
+- **LLM Auth:** CLI auth global (Kortext > LLM Auth, "Use CLI").
+- → Yeni entegrasyonda sor: "bu **bağlantı** mı (global) yoksa **tercih** mi (yerel)?"
+
+### 11.3 Board
+- **Epic = en soldaki FİLTRE kolonu** (workflow durumu DEĞİL). Task/Bug/Debt kolonlarda akar: To Do → In Progress → Test → Review → Done (tam-yükseklik lane'ler).
+- **Kart önü:** gate şeridi (item-bazlı geçerli set) + X/N sayaç + dependency rozeti + assignee (persona ikonu). **Status rozeti YOK** (kolon durumu kodlar).
+- **Kart detayı (sağ sheet):** açıklama · **Acceptance criteria** (içerik checklist) · **Gates** (item-bazlı) · **Dependencies** (item listesi + durum) · Comments · durum-geçiş footer'ı.
+
+### 11.4 Gate modeli (Definition of Done)
+- "Bitti" = item için geçerli **gate'lerin** hepsi geçti. En fazla 5: **AC · Quality control · Security control · Design review · Code review**. **Item-bazlı** (bazısı N/A — ör. debt'te design yok). Front'ta X/N.
+- "Acceptance criteria" (kabul kriteri checklist'i, içerik) ≠ "Gates" (review listesi); gate'lerin ilk maddesi "AC" = kriterlerin karşılanması.
+
+### 11.5 Item tipleri
+- Sadece **Epic / Task / Bug / Debt**. **Hotfix ve Spike item DEĞİL** (hotfix = düzeltip yayınladığın bug; spike = item doğuran/iptal eden araştırma).
+- Tek terim **assignee** (owner/assignee ayrımı bırakıldı).
+
+### 11.6 File-browser deseni (References / Memory / Reports / Kortext Agents·Rules·Workflows)
+- Ortak **2-pane** (sol dosya listesi + sağ md görünüm), tam-sayfa. Gerçek uygulamada = **tek `<FileBrowser>` bileşeni**.
+- **References** editlenebilir; **Memory/Reports/Agents/Rules/Workflows** read-only.
+- **Memory:** read-only, 3 dosya (handover/decisions/learned); "Açıklama iste" → kart-altı inline thread + Activity'ye düşer, memory'yi DEĞİŞTİRMEZ.
+- **Reports:** ajan-üretimi, talep-üzerine ("Request report").
+
+### 11.7 Settings ayrımı
+- **Project settings (sidebar):** Project info (General: name/code immutable · Target platform: iOS/Android/Web/Desktop · Notifications: proje aç-kapa · Danger zone) · Integrations (GitHub[repo+branch+auto-commit+PR-approval] · Stripe · Vercel · Firebase · Sentry) · Environments (dev/staging/prod + maskeli env-var) · Agent models (persona→model, projeye özel).
+- **Kortext settings (footer ⚙, motor):** LLM Auth · Agents · Rules · Workflows · Notifications · Hooks · Scripts. **Sol alt-menü** (sekme değil — Project settings ile tutarlı).
+- **Hooks vs Scripts:** Hooks = olay-tetiklemeli otomasyon; Scripts = elle/talep çalışan hazır yardımcılar.
+
+### 11.8 Dashboard
+- Sağ 1/3 = **Activity timeline** (ters-kron; item/rapor/memory hareketleri; satır tıklanır → detay).
+- Sol 2/3 = **TBD placeholder** (Eray "şimdilik böyle kalsın"; adaylar: aktif iş + bekleyen onay + KPI).
+
+### 11.9 Tema
+- Footer'da **tek buton** (Lucide `contrast` — yarım-dolu daire), light↔dark. Yapı: [erayendes/themeSwitcher](https://github.com/erayendes/themeSwitcher). (auto, tek-buton için düştü.)
+
+### 11.10 Persona ikon/renk sistemi
+- 15 persona = Lucide ikon + renk. Kaynak [PERSONA-ICONS.md](./PERSONA-ICONS.md) / `src/lib/persona-colors.ts`. Yüzeyler: Kortext Agents listesi, footer ajan paneli, board kart assignee, kart detay assignee, memory avatar. **Tek harita** (handle→{ikon,renk}).
+
+### 11.11 Tıklanabilirlik
+- Bildirim merkezi item'leri + Activity timeline satırları → ilgili detaya gider (task/bug drawer, memory, board).
+
+### Reddedilenler (bu tur)
+- Kortext settings için **üst sekmeler** (tutarsız) ve **ikinci sol sidebar** (kalabalık) → yerine bağlamsal sidebar.
+- Tema topbar toggle / Appearance sekmesi → yerine footer tek buton.
+- Hotfix/Spike item tipi.
+
+### Açık (sonraki oturum karar verir)
+- **Version selector** semantiği (proje sürümü mü / snapshot mı / release mi?).
+- Dashboard 2/3 içeriği.

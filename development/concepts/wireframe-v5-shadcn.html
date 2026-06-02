@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kortext v5 — Lo-fi wireframe (shadcn default)</title>
+<!--
+  Kortext v5 — LO-FI WIREFRAME, default shadcn/ui styling. Rev 2 (feedback pass).
+  Changes vs rev1:
+   1 topbar: removed +p avatar
+   2 dashboard: activity = full-height right column, single scroll
+   3 danger zone moved INTO Project info (sub-section); sidebar no longer exposes it
+   4 board: no inner vertical scroll — page scrolls vertically, board scrolls horizontally
+   5 task sheet: Dependencies now LISTS the items + status (not a count)
+   6 References: full-bleed 2-pane (file list + md), fills the page
+   7 Memory: 2-pane like References, 3 files (handover/decisions/learned), read-only + clarify
+   8 Reports: 2-pane like References + Request report
+   9 Project info: target platform = iOS/Android/Web/Desktop; info split into sub-sections
+   10 fixed showRoute() pane-switch bug (invalid '#' selector) → Integrations/Env/Models visible
+   11 Kortext Agents/Rules/Workflows: 2-pane like References (read-only)
+-->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+  tailwind.config = { darkMode:'class', theme:{ extend:{
+    colors:{ background:'var(--background)', foreground:'var(--foreground)',
+      card:{DEFAULT:'var(--card)',foreground:'var(--card-foreground)'},
+      primary:{DEFAULT:'var(--primary)',foreground:'var(--primary-foreground)'},
+      secondary:{DEFAULT:'var(--secondary)',foreground:'var(--secondary-foreground)'},
+      muted:{DEFAULT:'var(--muted)',foreground:'var(--muted-foreground)'},
+      accent:{DEFAULT:'var(--accent)',foreground:'var(--accent-foreground)'},
+      destructive:{DEFAULT:'var(--destructive)',foreground:'var(--destructive-foreground)'},
+      border:'var(--border)', input:'var(--input)', ring:'var(--ring)',
+      sidebar:{DEFAULT:'var(--sidebar)',foreground:'var(--sidebar-foreground)',accent:'var(--sidebar-accent)','accent-foreground':'var(--sidebar-accent-foreground)',border:'var(--sidebar-border)'} },
+    borderRadius:{ lg:'var(--radius)', md:'calc(var(--radius) - 2px)', sm:'calc(var(--radius) - 4px)' },
+    fontFamily:{ sans:['Inter','ui-sans-serif','system-ui','sans-serif'], mono:['"JetBrains Mono"','ui-monospace','monospace'] } } } }
+</script>
+<style>
+  :root{ --radius:.625rem;
+    --background:oklch(1 0 0);--foreground:oklch(.145 0 0);--card:oklch(1 0 0);--card-foreground:oklch(.145 0 0);
+    --popover:oklch(1 0 0);--popover-foreground:oklch(.145 0 0);--primary:oklch(.205 0 0);--primary-foreground:oklch(.985 0 0);
+    --secondary:oklch(.97 0 0);--secondary-foreground:oklch(.205 0 0);--muted:oklch(.97 0 0);--muted-foreground:oklch(.556 0 0);
+    --accent:oklch(.97 0 0);--accent-foreground:oklch(.205 0 0);--destructive:oklch(.577 .245 27.325);--destructive-foreground:oklch(.985 0 0);
+    --border:oklch(.922 0 0);--input:oklch(.922 0 0);--ring:oklch(.708 0 0);--sidebar:oklch(.985 0 0);--sidebar-foreground:oklch(.145 0 0);
+    --sidebar-accent:oklch(.97 0 0);--sidebar-accent-foreground:oklch(.205 0 0);--sidebar-border:oklch(.922 0 0); }
+  .dark{ --background:oklch(.145 0 0);--foreground:oklch(.985 0 0);--card:oklch(.205 0 0);--card-foreground:oklch(.985 0 0);
+    --popover:oklch(.205 0 0);--popover-foreground:oklch(.985 0 0);--primary:oklch(.922 0 0);--primary-foreground:oklch(.205 0 0);
+    --secondary:oklch(.269 0 0);--secondary-foreground:oklch(.985 0 0);--muted:oklch(.269 0 0);--muted-foreground:oklch(.708 0 0);
+    --accent:oklch(.269 0 0);--accent-foreground:oklch(.985 0 0);--destructive:oklch(.704 .191 22.216);--destructive-foreground:oklch(.985 0 0);
+    --border:oklch(1 0 0 / 10%);--input:oklch(1 0 0 / 15%);--ring:oklch(.556 0 0);--sidebar:oklch(.205 0 0);--sidebar-foreground:oklch(.985 0 0);
+    --sidebar-accent:oklch(.269 0 0);--sidebar-accent-foreground:oklch(.985 0 0);--sidebar-border:oklch(1 0 0 / 10%); }
+  *{ border-color:var(--border); box-sizing:border-box; -webkit-font-smoothing:antialiased; }
+  html,body{ height:100%; margin:0; }
+  body{ background:var(--background); color:var(--foreground); font-family:'Inter',sans-serif; font-size:14px; display:flex; flex-direction:column; height:100vh; overflow:hidden; }
+  .mono{ font-family:'JetBrains Mono',monospace; }
+  ::-webkit-scrollbar{ width:8px; height:8px; } ::-webkit-scrollbar-thumb{ background:var(--border); border-radius:4px; } ::-webkit-scrollbar-track{ background:transparent; }
+
+  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:.5rem; white-space:nowrap; border-radius:var(--radius); font-size:13px; font-weight:500; height:36px; padding:0 16px; cursor:pointer; border:1px solid transparent; transition:all .15s; font-family:inherit; }
+  .btn-sm{ height:32px; padding:0 12px; font-size:12px; } .btn-xs{ height:28px; padding:0 10px; font-size:12px; } .btn-icon{ width:36px; height:36px; padding:0; }
+  .btn-default{ background:var(--primary); color:var(--primary-foreground); } .btn-default:hover{ opacity:.9; }
+  .btn-outline{ border-color:var(--input); background:var(--background); color:var(--foreground); } .btn-outline:hover{ background:var(--accent); }
+  .btn-ghost{ color:var(--foreground); } .btn-ghost:hover{ background:var(--accent); }
+  .btn-secondary{ background:var(--secondary); color:var(--secondary-foreground); } .btn-secondary:hover{ opacity:.85; }
+  .btn-destructive{ background:var(--destructive); color:#fff; }
+  .card{ border:1px solid var(--border); background:var(--card); color:var(--card-foreground); border-radius:calc(var(--radius) + 2px); box-shadow:0 1px 2px rgba(0,0,0,.05); }
+  .badge{ display:inline-flex; align-items:center; gap:4px; border:1px solid var(--border); border-radius:var(--radius); padding:1px 8px; font-size:11px; font-weight:500; line-height:1.6; }
+  .badge-secondary{ background:var(--secondary); border-color:transparent; }
+  .input{ display:flex; height:36px; width:100%; border-radius:var(--radius); border:1px solid var(--input); background:transparent; padding:0 12px; font-size:13px; color:var(--foreground); outline:none; font-family:inherit; }
+  .input:focus{ border-color:var(--ring); } textarea.input{ height:auto; padding:12px; resize:vertical; font-family:'JetBrains Mono',monospace; line-height:1.7; }
+  select.input{ cursor:pointer; }
+  .tabs{ display:inline-flex; height:36px; align-items:center; gap:2px; border-radius:var(--radius); background:var(--muted); padding:3px; }
+  .tab{ display:inline-flex; align-items:center; gap:6px; padding:0 12px; height:30px; border-radius:calc(var(--radius) - 2px); font-size:13px; font-weight:500; color:var(--muted-foreground); cursor:pointer; }
+  .tab.active{ background:var(--background); color:var(--foreground); box-shadow:0 1px 2px rgba(0,0,0,.1); }
+  .switch{ width:36px; height:20px; border-radius:999px; background:var(--input); position:relative; cursor:pointer; flex-shrink:0; transition:background .15s; }
+  .switch::after{ content:''; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:#fff; transition:left .15s; }
+  .switch.on{ background:var(--primary); } .switch.on::after{ left:18px; }
+  .chip{ border:1px solid var(--input); border-radius:var(--radius); padding:6px 12px; font-size:13px; color:var(--muted-foreground); display:inline-flex; align-items:center; gap:6px; }
+  .chip.on{ border-color:var(--ring); background:var(--accent); color:var(--foreground); }
+
+  .route{ display:none; height:100%; } .route.active{ display:block; }
+  .knav{ display:flex; align-items:center; gap:12px; padding:8px 14px; margin:0 8px; border-radius:var(--radius); color:var(--muted-foreground); cursor:pointer; font-size:13px; font-weight:500; height:36px; }
+  .knav:hover{ background:var(--sidebar-accent); color:var(--foreground); } .knav.active{ background:var(--sidebar-accent); color:var(--foreground); }
+  .knav i{ width:16px; height:16px; flex-shrink:0; }
+  .kcontent{ height:100%; overflow-y:auto; }
+  .settings-pane{ display:none; } .settings-pane.active{ display:block; }
+  .kpane{ display:none; height:100%; } .kpane.active{ display:block; }
+
+  /* app shell */
+  #shell{ flex:1; display:flex; min-height:0; }
+  #main{ flex:1; overflow-y:auto; min-width:0; }
+  .nav{ display:flex; align-items:center; gap:12px; padding:8px 14px; margin:0 8px; border-radius:var(--radius); color:var(--muted-foreground); cursor:pointer; font-size:13px; font-weight:500; height:36px; }
+  .nav:hover{ background:var(--sidebar-accent); color:var(--foreground); } .nav.active{ background:var(--sidebar-accent); color:var(--foreground); }
+  .nav i{ width:16px; height:16px; flex-shrink:0; } .nav .navhint{ margin-left:auto; font-size:10px; color:var(--muted-foreground); font-weight:400; }
+  #sidebar{ width:230px; transition:width .15s ease; }
+  #sidebar.collapsed{ width:56px; }
+  #sidebar.collapsed .px-3{ display:none; }
+  #sidebar.collapsed .nav > span, #sidebar.collapsed .knav > span, #sidebar.collapsed .navhint{ display:none; }
+  #sidebar.collapsed .nav, #sidebar.collapsed .knav{ justify-content:center; margin:0 6px; padding:8px; }
+
+  /* page title bar */
+  .ptitle{ padding:22px 32px 14px; }
+
+  /* FILE-BROWSER pattern (References / Memory / Reports / Agents / Rules / Workflows) — fills page, 2nd sidebar + md */
+  .filepage{ display:flex; flex-direction:column; height:100%; }
+  .fp-body{ flex:1; display:grid; grid-template-columns:264px 1fr; border-top:1px solid var(--border); min-height:0; }
+  .fp-list{ border-right:1px solid var(--border); overflow-y:auto; background:var(--sidebar); padding:8px; }
+  .fp-grouplabel{ font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted-foreground); font-weight:600; padding:8px 10px 6px; }
+  .fp-item{ padding:9px 11px; border-radius:var(--radius); cursor:pointer; margin-bottom:1px; }
+  .fp-item:hover{ background:var(--accent); } .fp-item.active{ background:var(--accent); }
+  .fp-item .nm{ font-size:12px; font-family:'JetBrains Mono',monospace; color:var(--foreground); }
+  .fp-item .mt{ font-size:10px; color:var(--muted-foreground); margin-top:2px; font-family:'JetBrains Mono',monospace; }
+  .fp-view{ display:flex; flex-direction:column; min-width:0; }
+  .fp-vhead{ height:48px; flex-shrink:0; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 18px; gap:10px; }
+  .fp-md{ flex:1; overflow-y:auto; padding:20px 26px; font-family:'JetBrains Mono',monospace; font-size:13px; line-height:1.8; color:var(--muted-foreground); }
+  .fp-md h1,.fp-md h2{ color:var(--foreground); font-weight:600; }
+
+  /* board */
+  .board-row{ display:flex; gap:12px; overflow-x:auto; padding:0 32px 24px; align-items:flex-start; }
+  .bcol{ width:280px; flex-shrink:0; display:flex; flex-direction:column; gap:8px; background:var(--sidebar); border:1px solid var(--border); border-radius:12px; padding:10px; min-height:calc(100vh - 220px); }
+  .bcol.epic{ width:236px; background:transparent; border:none; padding:0; min-height:0; }
+  .gates{ display:inline-flex; gap:3px; }
+  .gate{ width:18px; height:16px; border-radius:4px; font-size:9px; font-weight:700; display:flex; align-items:center; justify-content:center; border:1px solid var(--border); color:var(--muted-foreground); }
+  .gate.done{ background:rgba(16,185,129,.18); color:#34d399; border-color:rgba(16,185,129,.3); } .gate.pend{ background:var(--muted); } .gate.na{ opacity:.3; text-decoration:line-through; }
+  .t-epic{color:#a855f7}.t-task{color:#3b82f6}.t-bug{color:#ef4444}.t-debt{color:#f59e0b}
+  .bg-epic{background:rgba(168,85,247,.15);color:#c084fc}.bg-task{background:rgba(59,130,246,.15);color:#60a5fa}.bg-bug{background:rgba(239,68,68,.15);color:#f87171}.bg-debt{background:rgba(245,158,11,.15);color:#fbbf24}
+
+  /* sheet / overlays / footer panels / terminal */
+  .sheet-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:50; opacity:0; pointer-events:none; transition:opacity .2s; } .sheet-backdrop.open{ opacity:1; pointer-events:auto; }
+  .sheet{ position:fixed; top:0; right:0; bottom:0; width:480px; max-width:92vw; background:var(--background); border-left:1px solid var(--border); z-index:60; transform:translateX(100%); transition:transform .25s cubic-bezier(.16,1,.3,1); display:flex; flex-direction:column; } .sheet.open{ transform:translateX(0); }
+  .uppanel{ position:fixed; bottom:44px; z-index:45; width:380px; background:var(--popover); border:1px solid var(--border); border-radius:calc(var(--radius) + 2px); box-shadow:0 -8px 30px rgba(0,0,0,.35); transform:translateY(8px); opacity:0; pointer-events:none; transition:all .18s; overflow:hidden; } .uppanel.open{ transform:translateY(0); opacity:1; pointer-events:auto; }
+  .term{ position:fixed; right:16px; bottom:52px; width:460px; height:320px; background:var(--card); border:1px solid var(--border); border-radius:calc(var(--radius) + 2px); z-index:44; display:none; flex-direction:column; box-shadow:0 12px 40px rgba(0,0,0,.4); } .term.open{ display:flex; }
+  .overlay{ position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:80; display:none; align-items:flex-start; justify-content:center; padding-top:120px; } .overlay.open{ display:flex; } .overlay.center{ align-items:center; padding-top:0; }
+  .frow{ display:grid; grid-template-columns:240px 1fr; gap:16px; align-items:center; padding:16px; } .fdesc{ font-size:12px; color:var(--muted-foreground); margin-top:2px; }
+  .aprow{ display:flex; align-items:center; gap:10px; padding:10px 16px; border-bottom:1px solid var(--border); } .aprow:last-child{ border-bottom:none; }
+  .hookrow{ display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 16px; border-bottom:1px solid var(--border); } .hookrow:last-child{ border-bottom:none; }
+  .cmd{ display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:var(--radius); font-size:13px; cursor:pointer; } .cmd:hover{ background:var(--accent); } .cmd i{ color:var(--muted-foreground); }
+  .sec-label{ font-size:10px; text-transform:uppercase; letter-spacing:.07em; color:var(--muted-foreground); font-weight:600; margin-bottom:8px; }
+  .tl-row:hover{ background:var(--accent); }
+  /* themeSwitcher (erayendes/themeSwitcher) — segmented pill in footer */
+  .theme-toggle-container{ display:flex; align-items:center; gap:1px; padding:2px; border-radius:9999px; background:rgba(0,0,0,.06); width:fit-content; }
+  .dark .theme-toggle-container{ background:rgba(255,255,255,.06); }
+  .theme-btn{ padding:3px 10px; font-size:11px; line-height:1.2; border:none; border-radius:9999px; cursor:pointer; font-weight:500; letter-spacing:.02em; color:var(--muted-foreground); background:transparent; font-family:inherit; transition:all .2s ease-in-out; user-select:none; }
+  .theme-btn:not(.active):hover{ background:rgba(120,120,130,.16); }
+  .theme-btn.active{ background:#fff; color:#111; box-shadow:0 1px 2px rgba(0,0,0,.15); }
+  .dark .theme-btn.active{ background:rgba(255,255,255,.16); color:#fff; box-shadow:none; }
+</style>
+</head>
+<body>
+
+<!-- ===================== TOPBAR ===================== -->
+<header class="flex items-center gap-3 px-4 border-b" style="height:48px;flex-shrink:0;">
+  <button class="btn btn-ghost btn-icon" onclick="document.getElementById('sidebar').classList.toggle('collapsed')"><i data-lucide="panel-left" class="w-4 h-4"></i></button>
+  <div class="w-6 h-6 rounded-md flex items-center justify-center text-white font-semibold mono" style="background:linear-gradient(135deg,#a855f7,#ec4899);font-size:12px;">K</div>
+  <span class="font-semibold">Kortext</span>
+  <div class="w-px h-4" style="background:var(--border)"></div>
+  <button class="btn btn-ghost btn-sm" onclick="toggleMenu('proj-menu')"><i data-lucide="box" class="w-4 h-4"></i> Acme CRM <i data-lucide="chevrons-up-down" class="w-3.5 h-3.5 opacity-60"></i></button>
+  <button class="btn btn-outline btn-xs mono" onclick="toggleMenu('ver-menu')">v1.0 <i data-lucide="chevron-down" class="w-3 h-3 opacity-60"></i></button>
+  <button class="btn btn-outline btn-sm" style="margin-left:auto;min-width:320px;justify-content:flex-start;color:var(--muted-foreground);" onclick="openCmdk()">
+    <i data-lucide="search" class="w-4 h-4"></i> Search items, agents, decisions…
+    <kbd class="badge badge-secondary mono" style="margin-left:auto;font-size:10px;">⌘K</kbd>
+  </button>
+  <button class="btn btn-ghost btn-icon relative" onclick="openNotifs()"><i data-lucide="bell" class="w-4 h-4"></i><span style="position:absolute;top:7px;right:8px;width:7px;height:7px;border-radius:50%;background:var(--destructive);"></span></button>
+</header>
+
+<!-- ===================== SHELL ===================== -->
+<div id="shell">
+  <!-- SIDEBAR (project scope) -->
+  <aside id="sidebar" class="flex flex-col py-3 border-r" style="flex-shrink:0;background:var(--sidebar);overflow:hidden;">
+    <!-- project scope -->
+    <div id="sb-project" class="flex flex-col">
+      <div class="px-3 text-[10px] uppercase tracking-wider font-semibold mb-1" style="color:var(--muted-foreground)">Workspace</div>
+      <a class="nav active" data-route="dashboard" onclick="showRoute('dashboard')"><i data-lucide="layout-grid"></i><span>Dashboard</span><span class="navhint">Activity</span></a>
+      <a class="nav" data-route="board" onclick="showRoute('board')"><i data-lucide="kanban"></i><span>Board</span></a>
+      <a class="nav" data-route="references" onclick="showRoute('references')"><i data-lucide="book-open"></i><span>References</span></a>
+      <a class="nav" data-route="memory" onclick="showRoute('memory')"><i data-lucide="brain"></i><span>Memory</span></a>
+      <a class="nav" data-route="reports" onclick="showRoute('reports')"><i data-lucide="file-text"></i><span>Reports</span></a>
+      <div class="px-3 text-[10px] uppercase tracking-wider font-semibold mb-1 mt-4" style="color:var(--muted-foreground)">Project settings</div>
+      <a class="nav" data-route="project" data-pane="info" onclick="showRoute('project','info')"><i data-lucide="info"></i><span>Project info</span></a>
+      <a class="nav" data-route="project" data-pane="integrations" onclick="showRoute('project','integrations')"><i data-lucide="plug"></i><span>Integrations</span></a>
+      <a class="nav" data-route="project" data-pane="environments" onclick="showRoute('project','environments')"><i data-lucide="layers"></i><span>Environments</span></a>
+      <a class="nav" data-route="project" data-pane="models" onclick="showRoute('project','models')"><i data-lucide="cpu"></i><span>Agent models</span></a>
+    </div>
+    <!-- kortext scope (engine) — replaces project nav contextually -->
+    <div id="sb-kortext" class="flex flex-col" style="display:none">
+      <a class="nav" onclick="showRoute('dashboard')" style="color:var(--muted-foreground)"><i data-lucide="arrow-left"></i><span>Acme CRM</span></a>
+      <div class="px-3 text-[10px] uppercase tracking-wider font-semibold mb-1 mt-2" style="color:var(--muted-foreground)">Kortext · motor</div>
+      <a class="knav active" data-k="auth" onclick="switchK('auth')"><i data-lucide="key-round"></i><span>LLM Auth</span></a>
+      <a class="knav" data-k="agents" onclick="switchK('agents')"><i data-lucide="users"></i><span>Agents</span></a>
+      <a class="knav" data-k="rules" onclick="switchK('rules')"><i data-lucide="shield"></i><span>Rules</span></a>
+      <a class="knav" data-k="workflows" onclick="switchK('workflows')"><i data-lucide="git-branch"></i><span>Workflows</span></a>
+      <a class="knav" data-k="notifications" onclick="switchK('notifications')"><i data-lucide="bell-ring"></i><span>Notifications</span></a>
+      <a class="knav" data-k="hooks" onclick="switchK('hooks')"><i data-lucide="zap"></i><span>Hooks</span></a>
+      <a class="knav" data-k="scripts" onclick="switchK('scripts')"><i data-lucide="terminal"></i><span>Scripts</span></a>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main id="main">
+
+    <!-- ===== DASHBOARD ===== -->
+    <section class="route active" data-route="dashboard">
+      <div style="display:flex;height:100%">
+        <div style="flex:1;overflow-y:auto;padding:24px 32px;min-width:0">
+          <div class="flex items-end justify-between mb-6">
+            <div><h1 class="text-2xl font-semibold">Dashboard</h1><p class="text-sm mt-1" style="color:var(--muted-foreground)"><span class="mono">04-development-cycle</span> · step 4/7</p></div>
+            <button class="btn btn-outline btn-sm"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh</button>
+          </div>
+          <div class="card flex flex-col items-center justify-center text-center" style="height:calc(100% - 80px);min-height:340px;border-style:dashed;">
+            <i data-lucide="layout-dashboard" class="w-8 h-8 mb-3" style="color:var(--muted-foreground)"></i>
+            <div class="font-medium">Main panel — planlanıyor</div>
+            <div class="text-sm mt-1" style="color:var(--muted-foreground);max-width:24rem">Bu 2/3 alan henüz tanımlı değil. Adaylar: aktif iş · bekleyen onaylar · KPI.</div>
+          </div>
+        </div>
+        <aside style="width:360px;flex-shrink:0;border-left:1px solid var(--border);display:flex;flex-direction:column">
+          <div class="flex items-center justify-between px-4 border-b" style="height:48px;flex-shrink:0">
+            <div class="flex items-center gap-2 text-xs uppercase tracking-wider font-semibold"><i data-lucide="activity" class="w-3.5 h-3.5" style="color:#a855f7"></i> Activity</div>
+            <select class="input btn-xs mono" style="width:auto;height:28px;font-size:11px;"><option>All</option><option>Items</option><option>Reports</option><option>Memory</option><option>Blockers</option></select>
+          </div>
+          <div id="tl-list" style="flex:1;overflow-y:auto"></div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ===== BOARD (page scrolls vertically; board scrolls horizontally) ===== -->
+    <section class="route" data-route="board">
+      <div class="ptitle flex items-end justify-between">
+        <div><h1 class="text-2xl font-semibold">Board</h1><p class="text-sm mt-1" style="color:var(--muted-foreground)">13 items · 4 epics · <span style="color:#a855f7">E-01</span> filtresi aktif</p></div>
+        <div class="flex gap-2">
+          <select class="input btn-sm" style="width:auto"><option>Assignee: All</option></select>
+          <button class="btn btn-outline btn-sm"><i data-lucide="users" class="w-3.5 h-3.5"></i> Swimlane: Epic</button>
+          <button class="btn btn-default btn-sm"><i data-lucide="plus" class="w-3.5 h-3.5"></i> Create new</button>
+        </div>
+      </div>
+      <div class="board-row">
+        <div class="bcol epic">
+          <div class="flex items-center gap-2 px-1 pb-2 border-b"><span class="w-2 h-2 rounded-full" style="background:#a855f7"></span><span class="text-[11px] uppercase tracking-wider font-semibold" style="color:var(--muted-foreground)">Epics · filter</span><span class="mono text-[11px] ml-auto" style="color:var(--muted-foreground)">4</span></div>
+          <div id="epic-list" class="flex flex-col gap-2"></div>
+        </div>
+        <div id="board-cols" class="flex gap-3" style="align-items:flex-start"></div>
+      </div>
+    </section>
+
+    <!-- ===== REFERENCES (full-page 2-pane) ===== -->
+    <section class="route" data-route="references">
+      <div class="filepage">
+        <div class="ptitle flex items-end justify-between">
+          <div><h1 class="text-2xl font-semibold">References</h1><p class="text-sm mt-1" style="color:var(--muted-foreground)">Canlı kaynaklar — takım sürekli düzenler</p></div>
+        </div>
+        <div class="fp-body">
+          <div class="fp-list" id="fplist-references">
+            <div class="fp-grouplabel">14 files</div>
+            <div class="fp-item active" onclick="fpSelect('references','ACCESS.md',this)"><div class="nm">ACCESS.md</div><div class="mt">edited 2h ago</div></div>
+            <div class="fp-item" onclick="fpSelect('references','API.md',this)"><div class="nm">API.md</div><div class="mt">edited 1d ago</div></div>
+            <div class="fp-item" onclick="fpSelect('references','DATABASE.md',this)"><div class="nm">DATABASE.md</div><div class="mt">edited 3d ago</div></div>
+            <div class="fp-item" onclick="fpSelect('references','SECURITY.md',this)"><div class="nm">SECURITY.md</div><div class="mt">edited 2d ago</div></div>
+            <div class="fp-item" onclick="fpSelect('references','STACK.md',this)"><div class="nm">STACK.md</div><div class="mt">edited 5d ago</div></div>
+            <div class="fp-item" onclick="fpSelect('references','DESIGN.md',this)"><div class="nm">DESIGN.md</div><div class="mt">edited 1d ago</div></div>
+          </div>
+          <div class="fp-view" id="fpview-references">
+            <div class="fp-vhead"><span class="mono text-[13px] fp-name">ACCESS.md</span>
+              <div class="flex gap-2"><button class="btn btn-ghost btn-xs"><i data-lucide="eye" class="w-3.5 h-3.5"></i> View</button><button class="btn btn-outline btn-xs"><i data-lucide="git-pull-request" class="w-3.5 h-3.5"></i> Revise</button><button class="btn btn-default btn-xs"><i data-lucide="save" class="w-3.5 h-3.5"></i> Save</button></div>
+            </div>
+            <div class="fp-md"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== MEMORY (2-pane, 3 files, read-only + clarify) ===== -->
+    <section class="route" data-route="memory">
+      <div class="filepage">
+        <div class="ptitle flex items-end justify-between">
+          <div><h1 class="text-2xl font-semibold">Memory</h1><p class="text-sm mt-1" style="color:var(--muted-foreground)">Ajan hafızası — <span style="color:var(--foreground)">read-only</span> (motor yazar)</p></div>
+        </div>
+        <div class="fp-body">
+          <div class="fp-list" id="fplist-memory">
+            <div class="fp-grouplabel">3 files</div>
+            <div class="fp-item active" onclick="fpSelect('memory','decisions.md',this)"><div class="nm">decisions.md</div><div class="mt">12 ADR · 14:29</div></div>
+            <div class="fp-item" onclick="fpSelect('memory','handover.md',this)"><div class="nm">handover.md</div><div class="mt">5 entry · 14:35</div></div>
+            <div class="fp-item" onclick="fpSelect('memory','learned.md',this)"><div class="nm">learned.md</div><div class="mt">11 note · dün</div></div>
+          </div>
+          <div class="fp-view" id="fpview-memory">
+            <div class="fp-vhead"><span class="mono text-[13px] fp-name">decisions.md</span>
+              <div class="flex gap-2"><span class="badge badge-secondary"><i data-lucide="lock" class="w-3 h-3"></i> read-only</span><button class="btn btn-outline btn-xs" onclick="toggleMemThread()"><i data-lucide="message-circle-question" class="w-3.5 h-3.5"></i> Açıklama iste</button></div>
+            </div>
+            <div class="fp-md"></div>
+            <div id="mem-thread" style="display:none;flex-shrink:0;border-top:1px dashed var(--border);padding:14px 26px;background:var(--card)">
+              <div class="flex gap-2 mb-2"><input class="input" placeholder="ADR-003 hakkında soru sor…"><button class="btn btn-secondary btn-sm">Sor</button></div>
+              <div class="flex gap-2 items-start text-[13px] p-3 rounded-md" style="background:var(--muted)"><span class="w-6 h-6 rounded-full flex items-center justify-center" style="background:rgba(129,140,248,.18);flex-shrink:0"><i data-lucide="server" style="color:#818CF8;width:13px;height:13px"></i></span><div><span class="mono text-[11px]" style="color:var(--muted-foreground)">+backend-developer · cevapladı</span><br>Rotation, replay'i kısa pencereyle sınırlar; DB-state tutmadan revoke verir. Cevap memory'yi değiştirmedi — Activity'ye düştü.</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== REPORTS (2-pane like references + request) ===== -->
+    <section class="route" data-route="reports">
+      <div class="filepage">
+        <div class="ptitle flex items-end justify-between">
+          <div><h1 class="text-2xl font-semibold">Reports</h1><p class="text-sm mt-1" style="color:var(--muted-foreground)">Ajan-üretimi raporlar — istediğin an talep et</p></div>
+          <button class="btn btn-default btn-sm" onclick="openReport()"><i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Request report</button>
+        </div>
+        <div class="fp-body">
+          <div class="fp-list" id="fplist-reports">
+            <div class="fp-grouplabel">reports</div>
+            <div class="fp-item active" onclick="fpSelect('reports','status_2026-06-02.md',this)"><div class="nm">status_…06-02.md</div><div class="mt">+delivery-manager · 14:40</div></div>
+            <div class="fp-item" onclick="fpSelect('reports','security_audit.md',this)"><div class="nm">security_audit.md</div><div class="mt">+security-engineer · dün</div></div>
+            <div class="fp-item" onclick="fpSelect('reports','test_report.md',this)"><div class="nm">test_report.md</div><div class="mt">+qa-engineer · dün</div></div>
+            <div class="fp-item" onclick="fpSelect('reports','release_v0.9.md',this)"><div class="nm">release_v0.9.md</div><div class="mt">+delivery-manager · 3g</div></div>
+          </div>
+          <div class="fp-view" id="fpview-reports">
+            <div class="fp-vhead"><span class="mono text-[13px] fp-name">status_2026-06-02.md</span>
+              <div class="flex gap-2"><button class="btn btn-ghost btn-xs"><i data-lucide="download" class="w-3.5 h-3.5"></i> Export</button></div>
+            </div>
+            <div class="fp-md"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== PROJECT SETTINGS ===== -->
+    <section class="route" data-route="project" style="overflow-y:auto">
+      <div style="padding:24px 32px;max-width:920px">
+        <h1 class="text-2xl font-semibold mb-1">Project settings</h1>
+        <p class="text-sm mb-5" style="color:var(--muted-foreground)">Acme CRM'e özel</p>
+
+        <!-- INFO (sub-sections + danger inside) -->
+        <div class="settings-pane active" data-pane="info">
+          <div class="sec-label">General</div>
+          <div class="card divide-y mb-6">
+            <div class="frow"><div><div class="font-medium text-[13px]">Project name</div><div class="fdesc">init'te belirlendi · değiştirilemez</div></div><input class="input" value="Acme CRM" disabled></div>
+            <div class="frow"><div><div class="font-medium text-[13px]">Project code</div><div class="fdesc">item id öneki (ACME-T01)</div></div><input class="input mono" value="ACME" disabled></div>
+          </div>
+          <div class="sec-label">Target platform</div>
+          <div class="card p-4 mb-6"><div class="flex gap-2 flex-wrap">
+            <span class="chip on"><i data-lucide="globe" class="w-3.5 h-3.5"></i> Web</span>
+            <span class="chip"><i data-lucide="smartphone" class="w-3.5 h-3.5"></i> iOS</span>
+            <span class="chip"><i data-lucide="smartphone" class="w-3.5 h-3.5"></i> Android</span>
+            <span class="chip"><i data-lucide="monitor" class="w-3.5 h-3.5"></i> Desktop</span>
+          </div><div class="fdesc mt-3">Stack profili bu seçimden türetilir (ör. Web → Next.js, iOS → Swift).</div></div>
+          <div class="sec-label">Notifications</div>
+          <div class="card mb-6">
+            <div class="px-4 pt-3 pb-1 text-[12px]" style="color:var(--muted-foreground)">Bağlantı global · <span style="color:var(--foreground)">Kortext &gt; Notifications</span>. Burada bu projenin bildirimlerini aç/kapa.</div>
+            <div class="flex items-center justify-between px-4 py-2.5"><span class="text-[13px]">Slack → <span class="mono text-[12px]">#acme-crm</span></span><div class="switch on" onclick="this.classList.toggle('on')"></div></div>
+            <div class="flex items-center justify-between px-4 py-2.5 pb-3"><span class="text-[13px]">Telegram → <span class="mono text-[12px]">+prime</span></span><div class="switch on" onclick="this.classList.toggle('on')"></div></div>
+          </div>
+          <div class="sec-label" style="color:var(--destructive)">Danger zone</div>
+          <div class="card" style="border-color:var(--destructive)">
+            <div class="flex items-center justify-between p-4 border-b"><div><div class="text-[13px] font-medium">Reset engine state</div><div class="fdesc">SQLite + worktrees temizlenir; markdown korunur</div></div><button class="btn btn-outline btn-sm" style="color:var(--destructive);border-color:var(--destructive)">Reset</button></div>
+            <div class="flex items-center justify-between p-4"><div><div class="text-[13px] font-medium">Remove / purge project</div><div class="fdesc">registry'den çıkar (.kortext/ kalır) veya tamamen sil</div></div><button class="btn btn-destructive btn-sm">Remove…</button></div>
+          </div>
+        </div>
+
+        <!-- INTEGRATIONS -->
+        <div class="settings-pane" data-pane="integrations">
+          <div class="grid gap-3" style="grid-template-columns:1fr 1fr">
+            <div class="card p-4" style="grid-column:1 / -1">
+              <div class="flex items-center gap-3 mb-3"><i data-lucide="github" class="w-5 h-5"></i><span class="font-medium flex-1">GitHub</span><span class="badge" style="color:#34d399;border-color:rgba(16,185,129,.3)">connected</span></div>
+              <div class="grid gap-2.5 mb-3" style="grid-template-columns:auto 1fr auto;align-items:center">
+                <span class="text-[12px]" style="color:var(--muted-foreground)">Repository</span><span class="mono text-[13px]">acme/acme-crm</span><button class="btn btn-outline btn-xs">Change…</button>
+                <span class="text-[12px]" style="color:var(--muted-foreground)">Default branch</span><span class="mono text-[13px]">main</span><span></span>
+              </div>
+              <div style="border-top:1px solid var(--border);padding-top:8px">
+                <div class="flex items-center justify-between py-1.5"><span class="text-[12px]" style="color:var(--muted-foreground)">Auto-commit on transitions</span><div class="switch on" onclick="this.classList.toggle('on')"></div></div>
+                <div class="flex items-center justify-between py-1.5"><span class="text-[12px]" style="color:var(--muted-foreground)">Require approval for PR merges</span><div class="switch on" onclick="this.classList.toggle('on')"></div></div>
+              </div>
+            </div>
+            <div class="card p-4"><div class="flex items-center gap-3"><i data-lucide="credit-card" class="w-5 h-5"></i><span class="font-medium flex-1">Stripe</span><span class="badge" style="color:#34d399;border-color:rgba(16,185,129,.3)">connected</span></div><div class="text-[12px] mt-2" style="color:var(--muted-foreground)">Billing events → webhook</div></div>
+            <div class="card p-4"><div class="flex items-center gap-3"><i data-lucide="triangle" class="w-5 h-5"></i><span class="font-medium flex-1">Vercel</span><span class="badge" style="color:#34d399;border-color:rgba(16,185,129,.3)">connected</span></div><div class="text-[12px] mt-2" style="color:var(--muted-foreground)">Deploy + preview URLs</div></div>
+            <div class="card p-4"><div class="flex items-center gap-3"><i data-lucide="flame" class="w-5 h-5"></i><span class="font-medium flex-1">Firebase</span><button class="btn btn-outline btn-xs">Connect</button></div><div class="text-[12px] mt-2" style="color:var(--muted-foreground)">Auth + push (FCM)</div></div>
+            <div class="card p-4"><div class="flex items-center gap-3"><i data-lucide="bug" class="w-5 h-5"></i><span class="font-medium flex-1">Sentry</span><button class="btn btn-outline btn-xs">Connect</button></div><div class="text-[12px] mt-2" style="color:var(--muted-foreground)">Runtime error → auto-bug</div></div>
+            <div class="card p-4 flex items-center justify-center" style="border-style:dashed;color:var(--muted-foreground)"><i data-lucide="plus" class="w-4 h-4 mr-2"></i> Add integration</div>
+          </div>
+        </div>
+
+        <!-- ENVIRONMENTS -->
+        <div class="settings-pane" data-pane="environments">
+          <div class="flex gap-2 mb-3 items-center"><span class="chip on">dev</span><span class="chip on">staging</span><span class="chip on">production</span><button class="btn btn-outline btn-xs" style="margin-left:auto"><i data-lucide="plus" class="w-3 h-3"></i> Env var</button></div>
+          <div class="card overflow-hidden">
+            <table class="w-full text-[13px]">
+              <thead><tr style="color:var(--muted-foreground)" class="text-[11px] uppercase tracking-wide"><th class="text-left font-medium p-3">Key</th><th class="text-left font-medium p-3">dev</th><th class="text-left font-medium p-3">staging</th><th class="text-left font-medium p-3">production</th></tr></thead>
+              <tbody class="mono">
+                <tr class="border-t"><td class="p-3">DATABASE_URL</td><td class="p-3" style="color:var(--muted-foreground)">postgres://…</td><td class="p-3" style="color:var(--muted-foreground)">••••</td><td class="p-3" style="color:var(--muted-foreground)">••••</td></tr>
+                <tr class="border-t"><td class="p-3">STRIPE_KEY</td><td class="p-3" style="color:var(--muted-foreground)">sk_test_…</td><td class="p-3" style="color:var(--muted-foreground)">sk_test_…</td><td class="p-3" style="color:var(--muted-foreground)">••••</td></tr>
+                <tr class="border-t"><td class="p-3">JWT_SECRET</td><td class="p-3" style="color:var(--muted-foreground)">••••</td><td class="p-3" style="color:var(--muted-foreground)">••••</td><td class="p-3" style="color:var(--muted-foreground)">••••</td></tr>
+                <tr class="border-t"><td class="p-3">NEXT_PUBLIC_URL</td><td class="p-3" style="color:var(--muted-foreground)">localhost:3000</td><td class="p-3" style="color:var(--muted-foreground)">staging.acme…</td><td class="p-3" style="color:var(--muted-foreground)">acme.com</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="text-[12px] mt-2" style="color:var(--muted-foreground)">Secret değerler `.env`'den; dashboard yalnız varlığını gösterir (maskeli).</p>
+        </div>
+
+        <!-- AGENT MODELS -->
+        <div class="settings-pane" data-pane="models">
+          <div class="flex items-center gap-2 mb-3"><span class="badge badge-secondary"><i data-lucide="cpu" class="w-3 h-3"></i> bu projeye özel</span><span class="text-[12px]" style="color:var(--muted-foreground)">Persona gövdeleri Kortext settings'te (read-only); burada yalnız model ataması.</span></div>
+          <div class="card overflow-hidden">
+            <table class="w-full text-[13px]">
+              <thead><tr style="color:var(--muted-foreground)" class="text-[11px] uppercase tracking-wide"><th class="text-left font-medium p-3">Agent</th><th class="text-left font-medium p-3">Model</th></tr></thead>
+              <tbody>
+                <tr class="border-t"><td class="p-3 mono">+engineering-manager</td><td class="p-3"><select class="input btn-sm" style="width:auto"><option>claude-opus-4-8</option><option>claude-sonnet-4-6</option></select></td></tr>
+                <tr class="border-t"><td class="p-3 mono">+backend-developer</td><td class="p-3"><select class="input btn-sm" style="width:auto"><option>claude-opus-4-8</option><option>claude-sonnet-4-6</option></select></td></tr>
+                <tr class="border-t"><td class="p-3 mono">+frontend-developer</td><td class="p-3"><select class="input btn-sm" style="width:auto"><option>claude-sonnet-4-6</option><option>claude-opus-4-8</option></select></td></tr>
+                <tr class="border-t"><td class="p-3 mono">+qa-engineer</td><td class="p-3"><select class="input btn-sm" style="width:auto"><option>claude-haiku-4-5</option><option>claude-sonnet-4-6</option></select></td></tr>
+                <tr class="border-t"><td class="p-3 mono">+copywriter</td><td class="p-3"><select class="input btn-sm" style="width:auto"><option>claude-haiku-4-5</option></select></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== KORTEXT SETTINGS (footer gear) ===== -->
+    <section class="route" id="route-kortext" data-route="kortext">
+      <div class="kcontent">
+        <div class="kpane active" data-k="auth">
+          <div style="padding:24px 32px"><div class="card p-5" style="max-width:520px">
+            <div class="font-medium mb-3">LLM Auth method</div>
+            <label class="flex items-start gap-3 p-3 rounded-md cursor-pointer" style="background:var(--accent)"><input type="radio" name="auth" checked class="mt-1"><div><div class="text-[13px] font-medium">Use CLI</div><div class="fdesc">Claude / Codex / Gemini / Antigravity CLI auth — API key gerekmez</div></div></label>
+            <label class="flex items-start gap-3 p-3 rounded-md cursor-pointer"><input type="radio" name="auth" class="mt-1"><div><div class="text-[13px] font-medium">API key</div><div class="fdesc">.env'den ANTHROPIC_API_KEY</div></div></label>
+            <div class="mt-3 flex gap-2 flex-wrap text-[12px]"><span class="badge"><span class="w-1.5 h-1.5 rounded-full" style="background:#34d399"></span> claude</span><span class="badge"><span class="w-1.5 h-1.5 rounded-full" style="background:#34d399"></span> codex</span><span class="badge"><span class="w-1.5 h-1.5 rounded-full" style="background:#34d399"></span> gemini</span><span class="badge" style="color:var(--muted-foreground)"><span class="w-1.5 h-1.5 rounded-full" style="background:var(--muted-foreground)"></span> antigravity</span></div>
+          </div></div>
+        </div>
+
+        <!-- Agents / Rules / Workflows = file-browser like References -->
+        <div class="kpane" data-k="agents">
+          <div class="filepage"><div class="fp-body" style="border-top:none">
+            <div class="fp-list" id="fplist-agents">
+              <div class="fp-grouplabel">14 personas</div>
+              <div class="fp-item active" onclick="fpSelect('agents','+engineering-manager',this)"><div class="flex items-center gap-2.5"><i data-lucide="code-2" style="color:#C084FC;width:15px;height:15px;flex-shrink:0"></i><div class="nm">+engineering-manager</div></div></div>
+              <div class="fp-item" onclick="fpSelect('agents','+backend-developer',this)"><div class="flex items-center gap-2.5"><i data-lucide="server" style="color:#818CF8;width:15px;height:15px;flex-shrink:0"></i><div class="nm">+backend-developer</div></div></div>
+              <div class="fp-item" onclick="fpSelect('agents','+frontend-developer',this)"><div class="flex items-center gap-2.5"><i data-lucide="monitor" style="color:#F472B6;width:15px;height:15px;flex-shrink:0"></i><div class="nm">+frontend-developer</div></div></div>
+              <div class="fp-item" onclick="fpSelect('agents','+qa-engineer',this)"><div class="flex items-center gap-2.5"><i data-lucide="microscope" style="color:#FACC15;width:15px;height:15px;flex-shrink:0"></i><div class="nm">+qa-engineer</div></div></div>
+              <div class="fp-item" onclick="fpSelect('agents','+security-engineer',this)"><div class="flex items-center gap-2.5"><i data-lucide="shield" style="color:#DC2626;width:15px;height:15px;flex-shrink:0"></i><div class="nm">+security-engineer</div></div></div>
+              <div class="fp-item" onclick="fpSelect('agents','+designer',this)"><div class="flex items-center gap-2.5"><i data-lucide="palette" style="color:#34D399;width:15px;height:15px;flex-shrink:0"></i><div class="nm">+designer</div></div></div>
+            </div>
+            <div class="fp-view" id="fpview-agents">
+              <div class="fp-vhead"><span class="mono text-[13px] fp-name">+engineering-manager.md</span><span class="badge badge-secondary"><i data-lucide="lock" class="w-3 h-3"></i> read-only · pakette tanımlı</span></div>
+              <div class="fp-md"></div>
+            </div>
+          </div></div>
+        </div>
+        <div class="kpane" data-k="rules">
+          <div class="filepage"><div class="fp-body" style="border-top:none">
+            <div class="fp-list" id="fplist-rules">
+              <div class="fp-grouplabel">6 rules</div>
+              <div class="fp-item active" onclick="fpSelect('rules','behavior.md',this)"><div class="nm">behavior.md</div></div>
+              <div class="fp-item" onclick="fpSelect('rules','branching.md',this)"><div class="nm">branching.md</div></div>
+              <div class="fp-item" onclick="fpSelect('rules','commands.md',this)"><div class="nm">commands.md</div></div>
+              <div class="fp-item" onclick="fpSelect('rules','emergency.md',this)"><div class="nm">emergency.md</div></div>
+              <div class="fp-item" onclick="fpSelect('rules','mcp.md',this)"><div class="nm">mcp.md</div></div>
+              <div class="fp-item" onclick="fpSelect('rules','models.md',this)"><div class="nm">models.md</div></div>
+            </div>
+            <div class="fp-view" id="fpview-rules">
+              <div class="fp-vhead"><span class="mono text-[13px] fp-name">behavior.md</span><span class="badge badge-secondary"><i data-lucide="lock" class="w-3 h-3"></i> read-only</span></div>
+              <div class="fp-md"></div>
+            </div>
+          </div></div>
+        </div>
+        <div class="kpane" data-k="workflows">
+          <div class="filepage"><div class="fp-body" style="border-top:none">
+            <div class="fp-list" id="fplist-workflows">
+              <div class="fp-grouplabel">12 workflows</div>
+              <div class="fp-item active" onclick="fpSelect('workflows','04-development-cycle.md',this)"><div class="nm">04-development-cycle.md</div></div>
+              <div class="fp-item" onclick="fpSelect('workflows','01-new-project-analysis.md',this)"><div class="nm">01-new-project-analysis.md</div></div>
+              <div class="fp-item" onclick="fpSelect('workflows','03-planning-pipeline.md',this)"><div class="nm">03-planning-pipeline.md</div></div>
+              <div class="fp-item" onclick="fpSelect('workflows','05-test-cycle.md',this)"><div class="nm">05-test-cycle.md</div></div>
+            </div>
+            <div class="fp-view" id="fpview-workflows">
+              <div class="fp-vhead"><span class="mono text-[13px] fp-name">04-development-cycle.md</span><span class="badge badge-secondary"><i data-lucide="lock" class="w-3 h-3"></i> read-only</span></div>
+              <div class="fp-md"></div>
+            </div>
+          </div></div>
+        </div>
+
+        <div class="kpane" data-k="hooks">
+          <div style="padding:24px 32px"><div class="card overflow-hidden" style="max-width:640px">
+            <div class="hookrow"><div><div class="text-[13px] font-medium mono">PreToolUse · secret-scan</div><div class="fdesc">Write öncesi secret pattern taraması</div></div><div class="switch on" onclick="this.classList.toggle('on')"></div></div>
+            <div class="hookrow"><div><div class="text-[13px] font-medium mono">PostStep · auto-commit</div><div class="fdesc">başarılı step sonrası commit</div></div><div class="switch on" onclick="this.classList.toggle('on')"></div></div>
+            <div class="hookrow"><div><div class="text-[13px] font-medium mono">SessionStart · load-context</div><div class="fdesc">handover + decisions yükle</div></div><div class="switch on" onclick="this.classList.toggle('on')"></div></div>
+            <div class="hookrow"><div><div class="text-[13px] font-medium mono">PostStep · harmful-filter</div><div class="fdesc">banned-phrase çıktı filtresi</div></div><div class="switch" onclick="this.classList.toggle('on')"></div></div>
+          </div></div>
+        </div>
+        <div class="kpane" data-k="scripts">
+          <div style="padding:24px 32px">
+            <p class="text-[12px] mb-3" style="color:var(--muted-foreground)">Hazır yardımcılar — elle / talep üzerine çalışır (Hooks ≠ olay-tetiklemeli).</p>
+            <div class="card overflow-hidden" style="max-width:640px">
+              <div class="hookrow"><div><div class="text-[13px] font-medium mono">test:e2e</div><div class="fdesc">Playwright E2E suite</div></div><div class="flex items-center gap-3"><button class="btn btn-outline btn-xs"><i data-lucide="play" class="w-3 h-3"></i> Run</button><div class="switch on" onclick="this.classList.toggle('on')"></div></div></div>
+              <div class="hookrow"><div><div class="text-[13px] font-medium mono">db:seed</div><div class="fdesc">demo verisi yükle</div></div><div class="flex items-center gap-3"><button class="btn btn-outline btn-xs"><i data-lucide="play" class="w-3 h-3"></i> Run</button><div class="switch on" onclick="this.classList.toggle('on')"></div></div></div>
+              <div class="hookrow"><div><div class="text-[13px] font-medium mono">deploy:preview</div><div class="fdesc">Vercel preview deploy</div></div><div class="flex items-center gap-3"><button class="btn btn-outline btn-xs"><i data-lucide="play" class="w-3 h-3"></i> Run</button><div class="switch" onclick="this.classList.toggle('on')"></div></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="kpane" data-k="notifications">
+          <div style="padding:24px 32px">
+            <p class="text-[12px] mb-3" style="color:var(--muted-foreground)">Bildirim kanalları bir kez bağlanır, tüm projeler kullanır. Proje bazlı aç/kapa: <span style="color:var(--foreground)">Project &gt; Integrations</span>.</p>
+            <div class="grid gap-3" style="grid-template-columns:1fr 1fr;max-width:720px">
+              <div class="card p-4">
+                <div class="flex items-center gap-3 mb-3"><i data-lucide="slack" class="w-5 h-5"></i><span class="font-medium flex-1">Slack</span><span class="badge" style="color:#34d399;border-color:rgba(16,185,129,.3)">connected</span></div>
+                <div class="grid gap-2 text-[13px]" style="grid-template-columns:auto 1fr;align-items:center">
+                  <span class="text-[12px]" style="color:var(--muted-foreground)">Workspace</span><span class="mono">acme-team</span>
+                  <span class="text-[12px]" style="color:var(--muted-foreground)">Default channel</span><span class="mono">#kortext</span>
+                </div>
+                <button class="btn btn-outline btn-xs mt-3">Reconnect</button>
+              </div>
+              <div class="card p-4">
+                <div class="flex items-center gap-3 mb-3"><i data-lucide="send" class="w-5 h-5"></i><span class="font-medium flex-1">Telegram</span><span class="badge" style="color:#34d399;border-color:rgba(16,185,129,.3)">connected</span></div>
+                <div class="grid gap-2 text-[13px]" style="grid-template-columns:auto 1fr;align-items:center">
+                  <span class="text-[12px]" style="color:var(--muted-foreground)">Bot</span><span class="mono">@kortext_bot</span>
+                  <span class="text-[12px]" style="color:var(--muted-foreground)">Chat</span><span class="mono">+prime</span>
+                </div>
+                <button class="btn btn-outline btn-xs mt-3">Reconnect</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ===================== FOOTER (engine scope) ===================== -->
+<footer class="flex items-center gap-3 px-3 border-t text-[12px]" style="height:44px;flex-shrink:0;background:var(--sidebar);color:var(--muted-foreground)">
+  <button class="btn btn-ghost btn-sm" onclick="showRoute('kortext')"><i data-lucide="settings" class="w-4 h-4"></i> Kortext</button>
+  <button class="btn btn-ghost btn-icon" onclick="ktTheme()" title="Tema değiştir (light / dark)"><i data-lucide="contrast" class="w-4 h-4"></i></button>
+  <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full" style="background:#34d399"></span> daemon <span class="mono">:3200</span></span>
+  <div style="flex:1"></div>
+  <button class="btn btn-ghost btn-sm" onclick="toggleUp('up-agents')">
+    <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full" style="background:#34d399"></span> 4</span>
+    <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full" style="background:#fbbf24"></span> 1</span>
+    <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full" style="background:#f87171"></span> 1</span>
+    <span style="color:var(--foreground)">Agents</span> <i data-lucide="chevron-up" class="w-3.5 h-3.5"></i>
+  </button>
+  <div class="w-px h-4" style="background:var(--border)"></div>
+  <button class="btn btn-ghost btn-sm" onclick="toggleUp('up-worktrees')"><i data-lucide="git-branch" class="w-3.5 h-3.5"></i> 3 worktrees <i data-lucide="chevron-up" class="w-3.5 h-3.5"></i></button>
+  <div class="w-px h-4" style="background:var(--border)"></div>
+  <button class="btn btn-ghost btn-sm" onclick="document.getElementById('term').classList.toggle('open')"><i data-lucide="terminal" class="w-3.5 h-3.5"></i> Terminal</button>
+</footer>
+
+<div id="up-agents" class="uppanel" style="right:120px">
+  <div class="flex items-center justify-between px-4 border-b" style="height:44px"><span class="text-[11px] uppercase tracking-wider font-semibold" style="color:var(--foreground)">Agents · 6</span><i data-lucide="x" class="w-4 h-4 cursor-pointer" onclick="toggleUp('up-agents')"></i></div>
+  <div class="max-h-80 overflow-y-auto" id="up-agents-list"></div>
+</div>
+<div id="up-worktrees" class="uppanel" style="right:16px">
+  <div class="flex items-center justify-between px-4 border-b" style="height:44px"><span class="text-[11px] uppercase tracking-wider font-semibold" style="color:var(--foreground)">Active worktrees · 3</span><i data-lucide="x" class="w-4 h-4 cursor-pointer" onclick="toggleUp('up-worktrees')"></i></div>
+  <div class="max-h-80 overflow-y-auto">
+    <div class="aprow"><span class="w-2 h-2 rounded-full" style="background:#34d399"></span><span class="mono text-[12px]">run-101</span><span class="text-[11px]" style="color:var(--muted-foreground)">+backend · T-101</span><i data-lucide="external-link" class="w-3.5 h-3.5 ml-auto" style="color:var(--muted-foreground)"></i></div>
+    <div class="aprow"><span class="w-2 h-2 rounded-full" style="background:#34d399"></span><span class="mono text-[12px]">run-103</span><span class="text-[11px]" style="color:var(--muted-foreground)">+frontend · T-103</span><i data-lucide="external-link" class="w-3.5 h-3.5 ml-auto" style="color:var(--muted-foreground)"></i></div>
+    <div class="aprow"><span class="w-2 h-2 rounded-full" style="background:#f87171"></span><span class="mono text-[12px]">run-013</span><span class="text-[11px]" style="color:#f87171">quarantine · T-013</span><i data-lucide="external-link" class="w-3.5 h-3.5 ml-auto" style="color:var(--muted-foreground)"></i></div>
+  </div>
+</div>
+
+<div id="term" class="term">
+  <div class="flex items-center gap-2 px-3 border-b" style="height:40px"><i data-lucide="terminal" class="w-4 h-4" style="color:#a855f7"></i><span class="mono text-[12px] flex-1">kortext · acme-crm</span><i data-lucide="minus" class="w-4 h-4 cursor-pointer" onclick="document.getElementById('term').classList.remove('open')"></i></div>
+  <div class="flex-1 p-3 mono text-[12px] leading-6 overflow-y-auto" style="color:var(--muted-foreground)">$ kortext status<br>● 4 running · 1 queued · 1 blocked<br>● gate: T-101 awaiting +prime<br>$ <span style="color:var(--foreground)">_</span></div>
+  <div class="flex items-center gap-2 px-3 border-t mono text-[12px]" style="height:40px"><span style="color:#a855f7">$</span><input class="flex-1 bg-transparent outline-none" style="color:var(--foreground)" placeholder="command…"></div>
+</div>
+
+<!-- ===================== CARD SHEET ===================== -->
+<div id="sheet-backdrop" class="sheet-backdrop" onclick="closeSheet()"></div>
+<aside id="sheet" class="sheet">
+  <div class="flex items-center justify-between px-5 border-b" style="height:56px"><div class="flex items-center gap-2"><span id="sheet-id" class="mono text-[12px] t-task">ACME-T101</span><span id="sheet-type" class="badge bg-task" style="font-size:9px">TASK</span></div><i data-lucide="x" class="w-4 h-4 cursor-pointer" onclick="closeSheet()"></i></div>
+  <div id="sheet-body" class="flex-1 overflow-y-auto p-5"></div>
+  <div id="sheet-foot" class="border-t p-4 flex gap-2"></div>
+</aside>
+
+<!-- ===================== CMDK ===================== -->
+<div id="cmdk" class="overlay" onclick="if(event.target===this)closeCmdk()">
+  <div class="card" style="width:580px;overflow:hidden;padding:0">
+    <div class="flex items-center gap-3 px-4 border-b" style="height:48px"><i data-lucide="search" class="w-4 h-4" style="color:var(--muted-foreground)"></i><input class="flex-1 bg-transparent outline-none text-[15px]" style="color:var(--foreground)" placeholder="Search items, agents, decisions…"></div>
+    <div class="p-2 max-h-80 overflow-y-auto">
+      <div class="px-2 py-1 text-[10px] uppercase tracking-wide" style="color:var(--muted-foreground)">Items</div>
+      <div class="cmd"><i data-lucide="square-check" class="w-4 h-4"></i> ACME-T101 · Implement OAuth login flow</div>
+      <div class="cmd"><i data-lucide="bug" class="w-4 h-4"></i> ACME-B203 · Password reset email → spam</div>
+      <div class="px-2 py-1 text-[10px] uppercase tracking-wide mt-1" style="color:var(--muted-foreground)">Go to</div>
+      <div class="cmd" onclick="showRoute('board');closeCmdk()"><i data-lucide="kanban" class="w-4 h-4"></i> Board</div>
+      <div class="cmd" onclick="showRoute('memory');closeCmdk()"><i data-lucide="brain" class="w-4 h-4"></i> Memory</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== REPORT DIALOG ===================== -->
+<div id="report-dialog" class="overlay center" onclick="if(event.target===this)closeReport()">
+  <div class="card p-5" style="width:460px">
+    <div class="font-semibold mb-1">Request a report</div>
+    <div class="text-[13px] mb-4" style="color:var(--muted-foreground)">Bir ajan bunu üretip Reports'a ekler.</div>
+    <label class="text-[12px] font-medium">Type</label>
+    <select class="input mt-1 mb-3"><option>Status report</option><option>Security audit</option><option>Test report</option><option>Release notes</option><option>Growth report</option></select>
+    <label class="text-[12px] font-medium">Scope / notes</label>
+    <textarea class="input mt-1 mb-4" style="min-height:70px" placeholder="örn. son 7 günün ilerlemesi + riskler"></textarea>
+    <div class="flex gap-2 justify-end"><button class="btn btn-outline btn-sm" onclick="closeReport()">Cancel</button><button class="btn btn-default btn-sm" onclick="closeReport()"><i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Generate</button></div>
+  </div>
+</div>
+
+<!-- ===================== NOTIFICATIONS ===================== -->
+<div id="notif-backdrop" class="sheet-backdrop" onclick="closeNotifs()"></div>
+<aside id="notif" class="sheet" style="width:420px">
+  <div class="flex items-center justify-between px-5 border-b" style="height:56px"><span class="font-semibold">Notifications</span><i data-lucide="x" class="w-4 h-4 cursor-pointer" onclick="closeNotifs()"></i></div>
+  <div class="flex-1 overflow-y-auto p-4">
+    <div class="text-[10px] uppercase tracking-wide mb-2" style="color:var(--muted-foreground)">Awaiting approval · 2</div>
+    <div class="card p-3 mb-2" style="border-color:#fbbf24;cursor:pointer" onclick="closeNotifs();openSheet('task','T-101')"><div class="flex items-center gap-2 mb-1"><i data-lucide="shield-check" class="w-4 h-4" style="color:#fbbf24"></i><span class="text-[13px] font-medium flex-1">Gate · T-101 OAuth</span><span class="mono text-[11px]" style="color:var(--muted-foreground)">2m</span></div><div class="text-[12px] mb-2" style="color:var(--muted-foreground)">+prime onayı bekliyor — code review geçti</div><div class="flex gap-2"><button class="btn btn-default btn-xs" onclick="event.stopPropagation()">Approve</button><button class="btn btn-outline btn-xs" onclick="event.stopPropagation()">Reject</button></div></div>
+    <div class="card p-3" style="border-color:#f87171;cursor:pointer" onclick="closeNotifs();openSheet('bug','B-203')"><div class="flex items-center gap-2 mb-1"><i data-lucide="x-circle" class="w-4 h-4" style="color:#f87171"></i><span class="text-[13px] font-medium flex-1">Blocked · B-203</span></div><div class="text-[12px]" style="color:var(--muted-foreground)">DNS config gerekiyor (email deliverability)</div></div>
+  </div>
+</aside>
+
+<div id="proj-menu" class="card" style="display:none;position:fixed;top:48px;left:120px;z-index:90;width:220px;padding:6px"><div class="cmd"><i data-lucide="box" class="w-4 h-4"></i> Acme CRM <i data-lucide="check" class="w-3.5 h-3.5 ml-auto"></i></div><div class="cmd"><i data-lucide="box" class="w-4 h-4"></i> SaaS App</div><div class="cmd" style="color:var(--muted-foreground)"><i data-lucide="plus" class="w-4 h-4"></i> New project…</div></div>
+<div id="ver-menu" class="card" style="display:none;position:fixed;top:48px;left:250px;z-index:90;width:200px;padding:6px"><div class="px-2 py-1 text-[10px] uppercase" style="color:var(--muted-foreground)">Versions</div><div class="cmd mono">v1.0 · current <i data-lucide="check" class="w-3.5 h-3.5 ml-auto"></i></div><div class="cmd mono" style="color:var(--muted-foreground)">v1.1 · planned</div><div class="cmd mono" style="color:var(--muted-foreground)">v1.2 · planned</div><div class="cmd"><i data-lucide="plus" class="w-4 h-4"></i> Plan version…</div></div>
+
+<script>
+  /* ---------- board data ---------- */
+  const TYPE_LABEL={task:'TASK',bug:'BUG',debt:'DEBT',epic:'EPIC'};
+  const GATES_FULL={AC:'Acceptance criteria',QC:'Quality control',SE:'Security control',DS:'Design review',CR:'Code review'};
+  // Persona icons + colors — single source (mirrors development/PERSONA-ICONS.md / src/lib/persona-colors.ts)
+  const PERSONA={
+    '+prime':{i:'compass',c:'#F59E0B'},'+operation-manager':{i:'gauge',c:'#67E8F9'},'+product-manager':{i:'milestone',c:'#60A5FA'},
+    '+engineering-manager':{i:'code-2',c:'#C084FC'},'+delivery-manager':{i:'package',c:'#FB923C'},'+backend-developer':{i:'server',c:'#818CF8'},
+    '+frontend-developer':{i:'monitor',c:'#F472B6'},'+db-admin':{i:'database',c:'#2DD4BF'},'+qa-engineer':{i:'microscope',c:'#FACC15'},
+    '+security-engineer':{i:'shield',c:'#DC2626'},'+devops-engineer':{i:'workflow',c:'#F87171'},'+designer':{i:'palette',c:'#34D399'},
+    '+copywriter':{i:'pen',c:'#A3E635'},'+growth-expert':{i:'trending-up',c:'#FB7185'},'+compliance-expert':{i:'scale',c:'#22D3EE'}
+  };
+  function pIcon(h,sz){ var p=PERSONA[h]; if(!p) return ''; return `<i data-lucide="${p.i}" style="color:${p.c};width:${sz||14}px;height:${sz||14}px;flex-shrink:0"></i>`; }
+  function pColor(h){ return (PERSONA[h]||{}).c || 'var(--muted-foreground)'; }
+  const ST_COLOR={active:'#34d399',idle:'#fbbf24',blocked:'#f87171'};
+  const AGENTS=[
+    {h:'+backend-developer',st:'active',task:'T-101 · OAuth · 4m'},
+    {h:'+qa-engineer',st:'active',task:'T-011 · E2E · 12m'},
+    {h:'+designer',st:'active',task:'T-002 · mocks · 2m'},
+    {h:'+frontend-developer',st:'active',task:'T-006 · widgets · 28m'},
+    {h:'+security-engineer',st:'idle',task:'queued'},
+    {h:'+db-admin',st:'blocked',task:'blocked · T-013'}
+  ];
+  function renderAgents(){ document.getElementById('up-agents-list').innerHTML=AGENTS.map(a=>`<div class="aprow">${pIcon(a.h,16)}<span class="mono text-[12px]" style="color:${pColor(a.h)}">${a.h}</span><span class="ml-auto flex items-center gap-1.5 text-[11px]" style="color:${a.st==='active'?'var(--muted-foreground)':ST_COLOR[a.st]}"><span class="w-1.5 h-1.5 rounded-full" style="background:${ST_COLOR[a.st]}"></span>${a.task}</span></div>`).join(''); }
+  const EPICS=[
+    {id:'E-01',title:'Authentication & Users',pct:40,meta:'5 tasks · 2 done',who:'+pm',sel:true},
+    {id:'E-02',title:'Billing & Subscription',pct:8,meta:'4 tasks · 0 done',who:'+pm'},
+    {id:'E-03',title:'Customer Dashboard',pct:25,meta:'6 tasks · 1 done',who:'+designer'},
+    {id:'E-04',title:'Admin Panel',pct:0,meta:'3 tasks · 0 done',who:'not started'},
+  ];
+  const COLS=[
+    {key:'todo',label:'To do',dot:'#71717a',cards:[
+      {id:'T-102',type:'task',title:'Stripe webhook handler',who:'+backend-developer',epic:'E-02',gset:['AC','QC','SE','CR'],gates:'pppp',deps:[{id:'T-104',t:'DB schema',s:'done'},{id:'T-101',t:'OAuth flow',s:'pending'}]},
+      {id:'B-201',type:'bug',title:'Sign-up button misaligned on mobile',who:'+frontend-developer',epic:'E-03',gset:['AC','QC','DS','CR'],gates:'pppp'},
+      {id:'D-301',type:'debt',title:'Refactor auth middleware',who:'+backend-developer',gset:['AC','QC','CR'],gates:'ppp'},
+    ]},
+    {key:'prog',label:'In progress',dot:'#34d399',cards:[
+      {id:'T-101',type:'task',title:'Implement OAuth login flow',who:'+backend-developer',epic:'E-01',gset:['AC','QC','SE','DS','CR'],gates:'ddpnp',deps:[{id:'B-203',t:'Reset email fix',s:'pending'}]},
+      {id:'T-105',type:'task',title:'Pricing page copy',who:'+copywriter',gset:['AC','QC','DS','CR'],gates:'dppp'},
+      {id:'B-203',type:'bug',title:'Password reset email → spam',who:'+devops-engineer',epic:'E-01',gset:['AC','QC','CR'],gates:'ppp',blocked:true},
+    ]},
+    {key:'test',label:'Test',dot:'#60a5fa',cards:[
+      {id:'T-103',type:'task',title:'Dashboard skeleton component',who:'+frontend-developer',epic:'E-03',gset:['AC','QC','DS','CR'],gates:'ddpp'},
+    ]},
+    {key:'review',label:'Review',dot:'#fbbf24',cards:[
+      {id:'T-106',type:'task',title:'Email transactional templates',who:'+copywriter',gset:['AC','QC','DS','CR'],gates:'ddpp',blocked:true},
+    ]},
+    {key:'done',label:'Done',dot:'#34d399',cards:[
+      {id:'T-104',type:'task',title:'DB schema for users',who:'+db-admin',gset:['AC','QC','CR'],gates:'ddd',done:true},
+      {id:'T-097',type:'task',title:'Project scaffolding',who:'+backend-developer',gset:['AC','CR'],gates:'dd',done:true},
+    ]},
+  ];
+  const gstate=ch=>ch==='d'?'done':ch==='n'?'na':'pend';
+  function gateStrip(c){ return '<span class="gates">'+c.gset.map((g,i)=>`<span class="gate ${gstate(c.gates[i])}" title="${GATES_FULL[g]}">${g[0]}</span>`).join('')+'</span>'; }
+  function gateCount(c){ return c.gates.split('').filter(x=>x==='d').length+'/'+c.gset.length; }
+  function depCount(c){ if(!c.deps) return null; return c.deps.filter(d=>d.s==='done').length+'/'+c.deps.length; }
+
+  function renderEpics(){ document.getElementById('epic-list').innerHTML=EPICS.map(e=>`
+    <div class="card p-3 cursor-pointer" style="${e.sel?'outline:1px solid #a855f7;':''}" onclick="openSheet('epic','${e.id}')">
+      <div class="flex items-center gap-2 mb-1"><span class="mono text-[10px] t-epic">${e.id}</span><span class="badge bg-epic" style="font-size:9px;padding:0 5px">EPIC</span></div>
+      <div class="text-[13px] font-medium mb-2">${e.title}</div>
+      <div class="h-1.5 rounded-full overflow-hidden mb-2" style="background:var(--muted)"><div style="width:${e.pct}%;height:100%;background:#a855f7"></div></div>
+      <div class="flex justify-between text-[11px]" style="color:var(--muted-foreground)"><span>${e.meta}</span><span class="mono">${e.who}</span></div>
+    </div>`).join(''); }
+
+  function renderBoard(){ document.getElementById('board-cols').innerHTML=COLS.map(col=>`
+    <div class="bcol">
+      <div class="flex items-center gap-2 px-1 pb-2 border-b"><span class="w-2 h-2 rounded-full" style="background:${col.dot}"></span><span class="text-[11px] uppercase tracking-wider font-semibold" style="color:var(--muted-foreground)">${col.label}</span><span class="mono text-[11px]" style="color:var(--muted-foreground)">${col.cards.length}</span><i data-lucide="plus" class="w-3.5 h-3.5 ml-auto" style="color:var(--muted-foreground);cursor:pointer"></i></div>
+      ${col.cards.map(c=>`
+        <div class="card p-3 cursor-pointer" style="${c.done?'opacity:.55;':''}${c.blocked?'border-left:2px solid var(--destructive);':''}" onclick="openSheet('${c.type}','${c.id}')">
+          <div class="flex items-center gap-2 mb-1.5"><span class="mono text-[10px] t-${c.type}">${c.id}</span><span class="badge bg-${c.type}" style="font-size:9px;padding:0 5px">${TYPE_LABEL[c.type]}</span>${c.epic?`<span class="mono text-[10px] ml-auto" style="color:var(--muted-foreground)">${c.epic}</span>`:''}</div>
+          <div class="text-[13px] mb-2.5" style="line-height:1.35">${c.title}</div>
+          <div class="flex items-center gap-2">${gateStrip(c)}<span class="mono text-[10px]" style="color:var(--muted-foreground)">${gateCount(c)}</span>${depCount(c)?`<span class="badge badge-secondary" style="font-size:10px;padding:0 6px"><i data-lucide="link" class="w-2.5 h-2.5"></i>${depCount(c)}</span>`:''}<span class="mono text-[11px] ml-auto flex items-center gap-1" style="color:var(--muted-foreground)">${pIcon(c.who,12)}${c.who}</span></div>
+        </div>`).join('')}
+    </div>`).join(''); lucide.createIcons(); }
+
+  function findCard(id){ for(const col of COLS) for(const c of col.cards) if(c.id===id) return c; return null; }
+  function openSheet(type,id){
+    const body=document.getElementById('sheet-body'),foot=document.getElementById('sheet-foot');
+    document.getElementById('sheet-id').textContent='ACME-'+id; document.getElementById('sheet-id').className='mono text-[12px] t-'+type;
+    document.getElementById('sheet-type').textContent=TYPE_LABEL[type]; document.getElementById('sheet-type').className='badge bg-'+type; document.getElementById('sheet-type').style.fontSize='9px';
+    if(type==='epic'){
+      const e=EPICS.find(x=>x.id===id)||EPICS[0];
+      body.innerHTML=`<h2 class="text-lg font-semibold mb-1">${e.title}</h2><p class="text-[13px] mb-5" style="color:var(--muted-foreground)">Kullanıcı kaydı, login, oturum ve yetkilendirme.</p>
+        <div class="grid gap-2.5 mb-4" style="grid-template-columns:auto 1fr;font-size:13px"><span style="color:var(--muted-foreground)">Assignee</span><span class="mono flex items-center gap-1.5">${pIcon('+product-manager',13)}+product-manager</span><span style="color:var(--muted-foreground)">Progress</span><span>${e.pct}% · ${e.meta}</span></div>
+        <div class="h-2 rounded-full overflow-hidden mb-5" style="background:var(--muted)"><div style="width:${e.pct}%;height:100%;background:#a855f7"></div></div>
+        <div class="sec-label">Child items</div><div class="flex flex-col gap-1.5">
+        ${['T-101 OAuth login · in progress','T-104 DB schema · done','T-011 Auth E2E · test','B-203 Reset email → spam · blocked'].map(t=>`<div class="card px-3 py-2 text-[13px] flex items-center gap-2"><span class="mono text-[11px]" style="color:var(--muted-foreground)">${t.split(' ')[0]}</span>${t.split(' ').slice(1).join(' ')}</div>`).join('')}</div>`;
+      foot.innerHTML=`<button class="btn btn-outline btn-sm flex-1">Edit</button><button class="btn btn-default btn-sm flex-1">Move to staging</button>`;
+    } else {
+      const c=findCard(id)||COLS[1].cards[0];
+      const depBadge=s=>s==='done'?'<span class="badge" style="color:#34d399;border-color:rgba(16,185,129,.3);font-size:10px">done</span>':'<span class="badge" style="color:#fbbf24;border-color:rgba(245,158,11,.3);font-size:10px">pending</span>';
+      body.innerHTML=`<h2 class="text-lg font-semibold mb-1">${c.title}</h2><p class="text-[13px] mb-5" style="color:var(--muted-foreground)">${type==='bug'?'Hata: ':type==='debt'?'Teknik borç: ':''}Kısa açıklama — ne, neden, kabul koşulu.</p>
+        <div class="grid gap-2.5 mb-5" style="grid-template-columns:auto 1fr;font-size:13px"><span style="color:var(--muted-foreground)">Assignee</span><span class="mono flex items-center gap-1.5">${pIcon(c.who,13)}${c.who}</span>${c.epic?`<span style="color:var(--muted-foreground)">Parent</span><span class="mono t-epic">${c.epic}</span>`:''}</div>
+        ${type!=='debt'?`<div class="sec-label">Acceptance criteria</div><div class="flex flex-col gap-1.5 mb-5">
+          <label class="flex items-center gap-2 text-[13px] card px-3 py-2"><input type="checkbox" checked> Kullanıcı Google ile giriş yapabilir</label>
+          <label class="flex items-center gap-2 text-[13px] card px-3 py-2"><input type="checkbox" checked> Token refresh otomatik çalışır</label>
+          <label class="flex items-center gap-2 text-[13px] card px-3 py-2"><input type="checkbox"> Hatalı login mesajı gösterilir</label></div>`:''}
+        <div class="sec-label">Gates <span style="text-transform:none;font-weight:400">· bu item için ${c.gset.length} geçerli</span></div>
+        <div class="flex flex-col gap-1.5 mb-5">${c.gset.map((g,i)=>{const st=c.gates[i];const lbl=st==='d'?'<span style="color:#34d399">passed</span>':st==='n'?'<span style="color:var(--muted-foreground)">n/a</span>':'<span style="color:#fbbf24">pending</span>';return `<div class="card px-3 py-2 flex items-center gap-2 text-[13px]"><i data-lucide="${st==='d'?'check-circle-2':st==='n'?'minus-circle':'circle-dashed'}" class="w-4 h-4" style="color:${st==='d'?'#34d399':st==='n'?'var(--muted-foreground)':'#fbbf24'}"></i>${GATES_FULL[g]}<span class="ml-auto">${lbl}</span></div>`;}).join('')}</div>
+        <div class="sec-label">Dependencies${c.deps?` · ${depCount(c)} ready`:''}</div>
+        <div class="flex flex-col gap-1.5 mb-5">${c.deps?c.deps.map(d=>`<div class="card px-3 py-2 flex items-center gap-2 text-[13px]"><span class="mono text-[11px] t-task">${d.id}</span>${d.t}<span class="ml-auto">${depBadge(d.s)}</span></div>`).join(''):'<div class="text-[12px]" style="color:var(--muted-foreground)">Bağımlılık yok</div>'}</div>
+        <div class="sec-label">Comments</div>
+        <div class="flex gap-2 items-start text-[13px] mb-2"><span class="w-6 h-6 rounded-full flex items-center justify-center text-white mono text-[10px]" style="background:#a855f7;flex-shrink:0">+p</span><div class="card px-3 py-2 flex-1">Bu akışı staging'e almadan rate-limit ekleyelim.</div></div>
+        <div class="flex gap-2"><input class="input" placeholder="Yorum ekle…"><button class="btn btn-secondary btn-sm">Send</button></div>`;
+      foot.innerHTML=`<button class="btn btn-outline btn-sm flex-1"><i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Bounce</button><button class="btn btn-default btn-sm flex-1">Move to review <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i></button>`;
+    }
+    document.getElementById('sheet-backdrop').classList.add('open'); document.getElementById('sheet').classList.add('open'); lucide.createIcons();
+  }
+  function closeSheet(){ document.getElementById('sheet').classList.remove('open'); document.getElementById('sheet-backdrop').classList.remove('open'); }
+
+  /* ---------- file-browser content ---------- */
+  const FILES={
+    references:{
+      'ACCESS.md':`## Access & Credentials\n\n- GitHub: org \`acme\`, repo \`acme-crm\` (write via CLI auth)\n- Stripe: test mode keys in \`.env\`\n- Vercel: project linked, prod = main\n\n> Edit + Save serbest; bu dosya canlı referans.`,
+      'API.md':`## API surface\n\n- POST /auth/login → JWT\n- POST /auth/refresh\n- GET /me\n- POST /billing/webhook (Stripe)`,
+      'DATABASE.md':`## Schema\n\n- users(id, email, ...)\n- sessions — YOK (stateless JWT, bkz ADR-003)\n- subscriptions(id, user_id, status)`,
+      'SECURITY.md':`## Security notes\n\n- Rate-limit auth endpoints (T-008 audit)\n- Refresh-token rotation\n- Secret scan PreToolUse hook açık`,
+      'STACK.md':`## Stack\n\n- Next.js + React\n- Postgres\n- Vercel deploy`,
+      'DESIGN.md':`## Design tokens\n\n- shadcn default (lo-fi)\n- v4 dark palette (hi-fi pass)`,
+    },
+    memory:{
+      'decisions.md':`# İçindekiler\n\n- ADR-003 — Auth strategy\n- ADR-002 — DB: stateless\n\n## ADR-003 · Auth strategy: JWT + refresh rotation\n+backend-developer · 14:29\n\n"Stateless JWT seçildi; refresh token rotation ile. Session table maliyeti gereksiz — ölçek henüz düşük."\n\n## ADR-002 · Postgres over Mongo\n+db-admin · dün`,
+      'handover.md':`## Handover: 2026-06-02-1435\n+engineering-manager → +backend-developer\n\n- T-101 OAuth code review hazır\n- B-203 DNS blocker devam ediyor`,
+      'learned.md':`# İçindekiler\n\n- LEARN-011 Stripe idempotency\n\n## LEARN-011 · Stripe webhook idempotency\n+db-admin · dün\n\n"Webhook handler'da event.id ile dedup şart — Stripe retry'leri çift kayıt üretiyordu."`,
+    },
+    reports:{
+      'status_2026-06-02.md':`# Status — Acme CRM\n\n**Sprint:** 04-development-cycle (4/7)\n**Active:** 6 agents · **Blocked:** 1 · **Awaiting approval:** 2\n\n## Progress\n- E-01 Authentication 40% (OAuth in progress)\n- E-02 Billing 8% (Stripe webhook to-do)\n- E-03 Dashboard 25%\n\n## Risks\n- B-203 password-reset email → spam (DNS blocked)`,
+      'security_audit.md':`# Security audit\n+security-engineer · dün\n\n- ✓ Secret scan clean\n- ⚠ Rate-limit eksik (auth) → T-008\n- ✓ Dependency CVE: yok`,
+      'test_report.md':`# Test report\n+qa-engineer · dün\n\n- Regression 24/24 ✓\n- Auth E2E 2/5 (in progress)`,
+      'release_v0.9.md':`# Release notes v0.9\n\n- OAuth login (beta)\n- Dashboard skeleton\n- Stripe webhook (wip)`,
+    },
+    agents:{ _def:n=>`# ${n.replace('+','').replace(/-/g,' ')}\n\nPersona gövdesi (anayasa) burada — pakette tanımlı, read-only.\n\n**Model:** projeye göre → Project settings · Agent models`,
+      '+engineering-manager':`# Engineering Manager\n\nSen ekibin teknik orkestratörüsün. Task'ları kır, bağımlılıkları çöz, code review dispatch et, gate'leri yönet.\n\n**Model:** projeye göre → Project settings · Agent models`,
+      '+backend-developer':`# Backend Developer\n\nAPI, veritabanı, iş mantığı. TDD; secret sızdırma; commit disiplinli.\n\n**Model:** projeye göre → Project settings · Agent models`,
+    },
+    rules:{ _def:n=>`# ${n.replace('.md','')}\n\nKural gövdesi — read-only.`,
+      'behavior.md':`# Behavior rules\n\n- Verify before claiming done\n- Never push to origin/main without approval\n- Provide insight blocks`,
+    },
+    workflows:{ _def:n=>`# ${n.replace('.md','')}\n\nPhase 1 → 2 → 3 → gate(+prime)\n\n(read-only — pakette tanımlı)`,
+      '04-development-cycle.md':`# 04 · Development cycle\n\n1. **+engineering-manager:** plan & split\n2. **+backend-developer:** implement\n3. **+qa-engineer:** test\n4. **+security-engineer:** review  — approver: +prime (gate)\n5. **+engineering-manager:** merge`,
+    },
+  };
+  function defMd(page,n){ const p=FILES[page]; if(p&&p[n])return p[n]; if(p&&p._def)return p._def(n); return '# '+n; }
+  function mdToHtml(md){ return md.split('\n').map(l=>{
+    if(l.startsWith('# '))return '<h1 style="font-size:16px;margin:0 0 8px">'+l.slice(2)+'</h1>';
+    if(l.startsWith('## '))return '<h2 style="font-size:14px;margin:14px 0 6px">'+l.slice(3)+'</h2>';
+    if(l.trim()==='')return '<div style="height:8px"></div>';
+    return '<div>'+l.replace(/\*\*(.+?)\*\*/g,'<b style="color:var(--foreground)">$1</b>').replace(/`(.+?)`/g,'<span style="color:var(--foreground)">$1</span>')+'</div>';
+  }).join(''); }
+  function fpSelect(page,name,el){
+    document.getElementById('fplist-'+page).querySelectorAll('.fp-item').forEach(x=>x.classList.remove('active'));
+    if(el)el.classList.add('active');
+    const v=document.getElementById('fpview-'+page);
+    v.querySelector('.fp-name').textContent=name+(page==='agents'?'.md':'');
+    v.querySelector('.fp-md').innerHTML=mdToHtml(defMd(page,name));
+  }
+  function initFilePages(){ ['references','memory','reports','agents','rules','workflows'].forEach(p=>{ const a=document.querySelector('#fplist-'+p+' .fp-item.active'); if(a){ const oc=a.getAttribute('onclick'); const m=oc.match(/'([^']+)',this/); if(m)fpSelect(p,m[1],a); } }); }
+  function toggleMemThread(){ const t=document.getElementById('mem-thread'); t.style.display=t.style.display==='none'?'block':'none'; lucide.createIcons(); }
+
+  /* ---------- timeline ---------- */
+  const TL=[
+    ['14:35','#60a5fa','<span class="mono" style="color:#818cf8">+backend</span> committed <span class="mono">oauth.ts</span> · T-101',"openSheet('task','T-101')"],
+    ['14:33','#34d399','<span class="mono" style="color:#f472b6">+frontend</span> started T-103 dashboard-skeleton',"openSheet('task','T-103')"],
+    ['14:31','#a855f7','<span class="mono" style="color:#c084fc">+em</span> handover → <span class="mono" style="color:#818cf8">+backend</span> · T-101 review',"openSheet('task','T-101')"],
+    ['14:29','#a855f7','session ended — <span class="mono">ADR-003</span> recorded: auth strategy',"showRoute('memory')"],
+    ['14:25','#f87171','<span class="mono" style="color:#f87171">+devops</span> BLOCKED B-203 — awaiting DNS',"openSheet('bug','B-203')"],
+    ['14:22','#34d399','<span class="mono" style="color:#60a5fa">+pm</span> approved T-105 · moved to Review',"openSheet('task','T-105')"],
+    ['14:18','#34d399','<span class="mono" style="color:#34d399">+designer</span> uploaded dashboard.fig · T-108',"openSheet('task','T-108')"],
+    ['14:10','#60a5fa','<span class="mono" style="color:#67e8f9">+ops</span> workflow 3→4 · deploy gate passed',"showRoute('board')"]
+  ];
+  document.getElementById('tl-list').innerHTML=TL.map(e=>`<div class="tl-row flex gap-3 px-4 py-2.5 border-b text-[12px]" style="cursor:pointer" onclick="${e[3]}"><span class="mono" style="color:var(--muted-foreground)">${e[0]}</span><span class="w-2 h-2 rounded-full mt-1.5" style="background:${e[1]};flex-shrink:0"></span><span style="color:var(--muted-foreground);line-height:1.5">${e[2]}</span></div>`).join('');
+
+  /* ---------- nav ---------- */
+  function showRoute(route,pane){
+    document.querySelectorAll('.route').forEach(r=>r.classList.toggle('active',r.dataset.route===route));
+    document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.route===route&&(!pane||n.dataset.pane===pane)));
+    if(pane){ document.querySelectorAll('[data-route="'+route+'"] .settings-pane').forEach(p=>p.classList.toggle('active',p.dataset.pane===pane)); }
+    var kort = route==='kortext';
+    document.getElementById('sb-project').style.display = kort ? 'none' : 'flex';
+    document.getElementById('sb-kortext').style.display = kort ? 'flex' : 'none';
+    if(route==='board'){ renderEpics(); renderBoard(); }
+    closeAllMenus(); document.getElementById('main').scrollTop=0; lucide.createIcons();
+  }
+  function switchK(k){ document.querySelectorAll('.knav').forEach(t=>t.classList.toggle('active',t.dataset.k===k)); document.querySelectorAll('.kpane').forEach(p=>p.classList.toggle('active',p.dataset.k===k)); document.querySelector('.kcontent').scrollTop=0; lucide.createIcons(); }
+  function ktTheme(){ document.documentElement.classList.toggle('dark'); }
+  function toggleUp(id){ const el=document.getElementById(id); document.querySelectorAll('.uppanel').forEach(p=>{if(p.id!==id)p.classList.remove('open')}); el.classList.toggle('open'); }
+  function openCmdk(){ document.getElementById('cmdk').classList.add('open'); } function closeCmdk(){ document.getElementById('cmdk').classList.remove('open'); }
+  function openReport(){ document.getElementById('report-dialog').classList.add('open'); } function closeReport(){ document.getElementById('report-dialog').classList.remove('open'); }
+  function openNotifs(){ document.getElementById('notif').classList.add('open'); document.getElementById('notif-backdrop').classList.add('open'); } function closeNotifs(){ document.getElementById('notif').classList.remove('open'); document.getElementById('notif-backdrop').classList.remove('open'); }
+  function toggleMenu(id){ const el=document.getElementById(id); const open=el.style.display==='block'; closeAllMenus(); el.style.display=open?'none':'block'; }
+  function closeAllMenus(){ ['proj-menu','ver-menu'].forEach(i=>document.getElementById(i).style.display='none'); }
+  document.addEventListener('keydown',e=>{ if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();openCmdk();} if(e.key==='Escape'){closeCmdk();closeReport();closeSheet();closeNotifs();closeAllMenus();} });
+
+  renderEpics(); renderBoard(); renderAgents(); initFilePages(); lucide.createIcons();
+</script>
+</body>
+</html>

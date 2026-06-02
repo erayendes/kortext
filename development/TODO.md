@@ -26,6 +26,13 @@ Açık iş listesi. Yapılan her şey [DECISIONS.md](./DECISIONS.md) tarihçesin
 - [ ] #10 terminal = komut girişi (şu an salt-okunur run-history timeline)
 - [ ] Canlı gate pass/fail — `gate_runs` panelde (şu an gate'ler body `## Review Gates`'ten statik/boş)
 
+**🎨 Tasarım/IA track — v5 IA revizyonu ✅ (2026-06-02, DECISIONS §11; lo-fi `concepts/wireframe-v5-shadcn.html`, `localhost:8094`):**
+- [x] Tüm uygulama IA'sı elden geçti + lo-fi shadcn wireframe'de doğrulandı (sidebar=proje/footer=motor · bağlamsal sidebar · board epic-filtre + gate şeridi · file-browser deseni · settings ayrımı · persona ikonları · global-bağlantı/yerel-tercih).
+- [ ] **Hi-fi pass** — v5 IA + v4 koyu palet (gerçek shadcn-in-app, ya da v4 token'lı tek dosya).
+- [ ] v5 ekranlarını gerçek app'e (`src/`) implement (mevcut Board/Dashboard üstüne; ekran-ekran).
+- [ ] Dashboard 2/3 içeriği (Eray erteledi — aktif iş + bekleyen onay + KPI adayları).
+- [ ] Version selector semantiği netleştir (proje sürümü / snapshot / release?).
+
 **Uygulama-geneli (paused — Board fonksiyoneli öne geçti, fırsatta; Dashboard'u da etkiler → sonra yeniden screenshot):**
 - [ ] Gerçek font yükleme — Inter + JetBrains Mono bundle (UI stack'inde sistem fontu Inter'in ÖNÜNDE, devreye girmiyor)
 - [ ] Ortak `PageHeader` 22px / items-end + subtitle 13px (wireframe `.route-title`/`.route-sub`)

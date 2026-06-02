@@ -2,6 +2,8 @@
 
 Görsel kontrol katmanının kanonik tasarım referansı. Token, tipografi, component library, ekran-bazlı layout, UI pattern'leri, kritik kod kuralları. Visual spec için [concepts/wireframe-v4-final.html](./concepts/wireframe-v4-final.html), kararların gerekçesi için [DECISIONS.md §4](./DECISIONS.md).
 
+> **İki referans (2026-06-02):** **v4** = görsel/palet (koyu tema, token, component look). **v5** = IA/yerleşim — lo-fi [concepts/wireframe-v5-shadcn.html](./concepts/wireframe-v5-shadcn.html) (default shadcn), kararlar [DECISIONS §11](./DECISIONS.md). **Hi-fi pass ikisini birleştirir** (v5 yapı + v4 palet). Persona ikon/renk: [PERSONA-ICONS.md](./PERSONA-ICONS.md). Sidebar=proje / footer=motor; bağlamsal sidebar; file-browser deseni; "global bağlantı / yerel tercih".
+
 ---
 
 ## 1. Felsefe
