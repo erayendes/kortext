@@ -59,7 +59,7 @@ beforeEach(async () => {
   app.use(express.json());
   app.use('/api', runsRouter({ repos }));
   app.use('/api', handoversRouter({ repos }));
-  app.use('/api', backlogRouter({ repos }));
+  app.use('/api', backlogRouter({ repos, personas }));
   app.use('/api', personasRouter({ personas, agentsDir: personasDir, repos }));
   app.use('/api', workflowsRouter({ workflows, repos }));
   app.use('/api', doctorRouter({ repos, workflows, personas }));
@@ -164,6 +164,43 @@ describe('GET /api/backlog', () => {
     ).json()) as { items: { id: string }[] };
     expect(filtered.items).toHaveLength(1);
     expect(filtered.items[0]?.id).toBe('T-B');
+  });
+});
+
+describe('POST /api/backlog/:id/transition', () => {
+  async function transition(id: string, action: string, extra: Record<string, unknown> = {}) {
+    return fetch(`${baseUrl}/api/backlog/${id}/transition`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action, ...extra }),
+    });
+  }
+
+  it('applies a legal transition (to_do → in_progress via start) and returns the updated item', async () => {
+    repos.backlog.create({ id: 'T-1', type: 'task', title: 'x', status: 'to_do' });
+    const res = await transition('T-1', 'start', { by: '+prime' });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { item: { status: string } };
+    expect(body.item.status).toBe('in_progress');
+    expect(repos.backlog.get('T-1')?.status).toBe('in_progress');
+  });
+
+  it('rejects an illegal transition with 409 and leaves the status unchanged', async () => {
+    repos.backlog.create({ id: 'T-2', type: 'task', title: 'x', status: 'to_do' });
+    const res = await transition('T-2', 'review');
+    expect(res.status).toBe(409);
+    expect(repos.backlog.get('T-2')?.status).toBe('to_do');
+  });
+
+  it('404s an unknown item id', async () => {
+    const res = await transition('NOPE', 'start');
+    expect(res.status).toBe(404);
+  });
+
+  it('400s an unknown action', async () => {
+    repos.backlog.create({ id: 'T-3', type: 'task', title: 'x', status: 'to_do' });
+    const res = await transition('T-3', 'teleport');
+    expect(res.status).toBe(400);
   });
 });
 
