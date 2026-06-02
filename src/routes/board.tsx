@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Filter, Plus, X } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import { PageHeader } from '../components/PageHeader.tsx';
 import { TaskDrawer, EpicDrawer } from '../components/BoardDrawers.tsx';
 import { apiPost, usePolling } from '../lib/api.ts';
@@ -47,7 +47,6 @@ export function BoardRoute() {
 
   const [epicFilter, setEpicFilter] = useState<string>('all');
   const [agentFilter, setAgentFilter] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [modalOpen, setModalOpen] = useState(false);
   const [modalParent, setModalParent] = useState<string | undefined>(undefined);
   const [openItem, setOpenItem] = useState<BacklogItem | null>(null);
@@ -68,12 +67,11 @@ export function BoardRoute() {
     return nonEpics.filter((it) => {
       if (epicFilter !== 'all' && it.parent_id !== epicFilter) return false;
       if (agentFilter !== 'all' && it.owner !== agentFilter) return false;
-      if (statusFilter !== 'all' && it.status !== statusFilter) return false;
       // cancelled items are hidden from the board (v4 has no Cancelled column).
       if (it.status === 'cancelled') return false;
       return true;
     });
-  }, [nonEpics, epicFilter, agentFilter, statusFilter]);
+  }, [nonEpics, epicFilter, agentFilter]);
 
   const buckets = useMemo(() => {
     const m = new Map<ColumnStatus, BacklogItem[]>();
@@ -126,18 +124,6 @@ export function BoardRoute() {
                 ...agents.map((a) => ({ value: a, label: a })),
               ]}
             />
-            <FilterSelect
-              value={statusFilter}
-              onChange={setStatusFilter}
-              options={[
-                { value: 'all', label: 'Status: All' },
-                ...COLUMNS.map((c) => ({ value: c.status, label: c.label })),
-                { value: 'blocked', label: 'Blocked' },
-              ]}
-            />
-            <button className="btn btn-outline btn-xs">
-              <Filter className="w-3 h-3" /> Filter
-            </button>
             <button
               type="button"
               className="btn btn-primary btn-xs"
@@ -631,14 +617,18 @@ function NewItemModal({
               style={{ width: 240, color: owner ? personaColor(owner) : undefined }}
             >
               <option value="">— unassigned —</option>
-              {personaList.map((p) => {
-                const handle = p.handle.startsWith('+') ? p.handle : `+${p.handle}`;
-                return (
-                  <option key={handle} value={handle}>
-                    {handle}
-                  </option>
-                );
-              })}
+              {/* +prime is the human operator (you) — assignable for human-owned work. */}
+              <option value="+prime">+prime (you)</option>
+              {personaList
+                .filter((p) => p.handle !== '+prime' && p.handle !== 'prime')
+                .map((p) => {
+                  const handle = p.handle.startsWith('+') ? p.handle : `+${p.handle}`;
+                  return (
+                    <option key={handle} value={handle}>
+                      {handle}
+                    </option>
+                  );
+                })}
             </select>
           </FormRow>
 
