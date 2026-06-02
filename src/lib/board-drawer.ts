@@ -192,6 +192,12 @@ export function describeActivity(entry: {
       return `${entry.actor} moved ${statusBadge(from as BacklogItem['status']).label} → ${statusBadge(to as BacklogItem['status']).label}`;
     }
   }
+  if (entry.action === 'item_ac_toggle') {
+    const { text, done } = entry.payload;
+    if (typeof text === 'string') {
+      return `${entry.actor} ${done ? 'checked' : 'unchecked'} "${text}"`;
+    }
+  }
   return `${entry.actor} ${entry.action}`;
 }
 

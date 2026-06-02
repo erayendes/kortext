@@ -222,6 +222,26 @@ describe('descriptionFromBody', () => {
       ).toBe('+prime moved To do → In progress');
     });
 
+    it('humanizes an acceptance-criterion check', () => {
+      expect(
+        describeActivity({
+          actor: '+prime',
+          action: 'item_ac_toggle',
+          payload: { index: 0, text: 'Logout clears the session', done: true },
+        }),
+      ).toBe('+prime checked "Logout clears the session"');
+    });
+
+    it('humanizes an acceptance-criterion uncheck', () => {
+      expect(
+        describeActivity({
+          actor: '+qa-engineer',
+          action: 'item_ac_toggle',
+          payload: { index: 0, text: 'Logout clears the session', done: false },
+        }),
+      ).toBe('+qa-engineer unchecked "Logout clears the session"');
+    });
+
     it('falls back to "actor action" for non-transition entries', () => {
       expect(
         describeActivity({ actor: '+backend-developer', action: 'created', payload: {} }),
