@@ -13,13 +13,13 @@ Açık iş listesi. Yapılan her şey [DECISIONS.md](./DECISIONS.md) tarihçesin
 
 ## UI track (ekran-ekran) — aktif (2026-06-02)
 
-✅ Ekran 1 Onboarding · ✅ Ekran 2 Dashboard · ✅ Ekran 3 Board (büyük ölçüde; Eray incelemesinin 7/10 maddesi, 5 commit origin/main'de). **Sıra: #4 (aşağıda) → Memory(4) → Reports(5) → References(6) → settings pane'leri(7-14).**
+✅ Ekran 1 Onboarding · ✅ Ekran 2 Dashboard · ✅ Ekran 3 Board (#4 AC dahil TAM; ertelenenler aşağıda Eray'ın sözüyle). **Sıra: Memory(4) → Reports(5) → References(6) → settings pane'leri(7-14).**
 
-**Board — kalan #4 AC madde-madde işaretleme (en büyük, kendi turu; Eray `[{text, done}]` onayladı):**
-- [ ] Veri modeli — `[{text, done}]`, geriye-uyumlu (eski `string[]+ac_done` → ilk N done). `board-drawer.ts` `acChecklist` + `NewItemModal`.
-- [ ] Endpoint — bir kriteri işaretle/kaldır (insan override), `server/routes/backlog.ts` + TDD.
-- [ ] UI — tıklanabilir AC checkbox (şu an salt-okunur `AcRow`); tıkla → endpoint → paneli+board'u tazele.
-- [ ] Ajan yolu — MCP'den AC işaretleme (`mcp/`, ajan sözleşmesi). Kapsamı Eray'a sor.
+**Board — #4 AC madde-madde işaretleme ✅ BİTTİ (2026-06-02, 4 katman, 612 test yeşil — DECISIONS §10.6; hepsi LOKAL, push YOK):**
+- [x] Veri modeli — `[{text, done}]`, geriye-uyumlu (`acChecklist(fm)` iki şekli okur) — `996cf6f`.
+- [x] Endpoint — `POST /api/backlog/:id/ac` işaretle/kaldır + `item_ac_toggle` audit — `5086373`.
+- [x] UI — tıklanabilir AC checkbox + `describeActivity` humanize — `8ffd061`.
+- [x] Ajan yolu — MCP `get_acceptance_criteria` + `mark_acceptance_criterion` (ortak `applyCriterionToggle`) — `953b6e9`.
 
 **Board — ertelenen (Eray'ın sözüyle):**
 - [ ] #9 global arama (header "SOON")

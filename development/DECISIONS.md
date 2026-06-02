@@ -702,7 +702,11 @@ UI track Ekran 3. Eray ekranı canlı inceledi, 10 maddelik geri bildirim verdi;
 
 **§10.5 Gate'ler şimdilik body'den (statik).** `review_gates` (Gate[]) + `gate_runs` (pending/pass/fail) gerçek kaynak ama tüm item'larda BOŞ — gate'ler bir item workflow'a girince dolar. Eray "diğer içerikler nasıl olduysa gate'lerde de olsun, görmek için" dedi → şimdilik body `## Review Gates` checklist'inden (`checklistFromSection`) statik gösterilir. **Canlı gate pass/fail (gate_runs) sonraki iş.**
 
-**§10.6 AC modeli = madde-madde `[{text, done}]` (Eray kararı, HENÜZ YAPILMADI).** Eray "AC sayı değil madde-madde olmalı, nasıl check atılacak?" dedi. Karar: `[{text, done}]`, geriye-uyumlu (eski `string[]+ac_done` → ilk N done). 4 katman (veri modeli + işaretle/kaldır endpoint + tıklanabilir checkbox + ajan MCP yolu) sonraki turun işi.
+**§10.6 AC modeli = madde-madde `[{text, done}]` (Eray kararı — ✅ BİTTİ 2026-06-02, 4 katman, 612 test yeşil).** Eray "AC sayı değil madde-madde olmalı, nasıl check atılacak?" dedi. Karar: `[{text, done}]`, geriye-uyumlu (eski `string[]+ac_done` → ilk N done; yeni şekil → doğrudan). 4 katman, her biri TDD + ayrı lokal commit (push YOK):
+- **K1 veri modeli** (`996cf6f`): `acChecklist(fm)` artık frontmatter'ı okur, iki şekli de canonical `{text,done}[]`'e çevirir (TEK doğruluk kaynağı); kart + drawer ondan türetir; `NewItemModal` yeni şekli yazar (`ac_total`/`ac_done` sayaçları emekli).
+- **K2 endpoint** (`5086373`): `POST /api/backlog/:id/ac {index, done, by}`. Saf yardımcılar `server/engine/acceptance-criteria.ts` (`readAcceptanceCriteria`/`setCriterionDone`) + yeni repo `updateFrontmatter`. Eski item işaretlenince yeni şekle GÖÇ eder + sayaçları atar. `item_ac_toggle` audit kaydı → aktivite akışı.
+- **K3 UI** (`8ffd061`): drawer'da AC satırı tıklanabilir checkbox (Review Gates / epic child salt-okunur KALIR — onlara toggle endpoint yok); `describeActivity` → "+actor checked/unchecked \"…\"".
+- **K4 ajan yolu** (`953b6e9`): MCP `get_acceptance_criteria` + `mark_acceptance_criterion` (15→17 tool). Ortak `applyCriterionToggle()` servisi (HTTP route da buna refactor edildi) → insan (+prime, HTTP) ve ajan (+persona, MCP) işaretleri AYNI `item_ac_toggle`'ı yazar, tek aktivite akışında görünür (drift imkânsız).
 
 **§10.7 Görsel temizlik.** Kaldırıldı: Status filtresi (kolonlar zaten durumu gösteriyor — gereksiz), boş "Filter" butonu (dropdown'lar canlı süzüyor), header +p avatarı (gerek yok). Eklendi: +prime atanabilir owner. Boş KV satırları gizlendi (Priority/Points/Epic değeri yoksa satır yok — "—" çöpü).
 
