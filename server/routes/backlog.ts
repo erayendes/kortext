@@ -6,6 +6,12 @@ import {
   type BacklogItemType,
 } from '../db/schemas.ts';
 import type { Repositories } from '../db/repositories/index.ts';
+import {
+  ItemLifecycle,
+  IllegalTransitionError,
+  type ItemTransition,
+} from '../engine/item-lifecycle.ts';
+import type { PersonaRegistry } from '../engine/persona-registry.ts';
 
 /**
  * GET  /api/backlog        — list backlog items (filters: type, status, owner, parent_id)
@@ -23,7 +29,24 @@ export type BacklogRouterDeps = {
    * body when missing.
    */
   templatesDir?: string;
+  /**
+   * Optional — required by POST /backlog/:id/transition (the human-override
+   * status moves). ItemLifecycle needs the registry for create(); transitions
+   * themselves don't touch it.
+   */
+  personas?: PersonaRegistry;
 };
+
+const TRANSITION_ACTIONS = new Set<ItemTransition>([
+  'start',
+  'test',
+  'review',
+  'bounce',
+  'done',
+  'block',
+  'unblock',
+  'cancel',
+]);
 
 const TYPE_PREFIX: Record<BacklogItemType, string> = {
   task: 'T',
@@ -175,6 +198,53 @@ export function backlogRouter(deps: BacklogRouterDeps): Router {
     });
 
     res.status(201).json({ item: created });
+  });
+
+  // Human-override status moves (the Board drawer footer). Delegates to the
+  // ItemLifecycle engine so legality + the audit log stay in one place.
+  r.post('/backlog/:id/transition', (req, res) => {
+    const id = req.params.id;
+    if (typeof id !== 'string' || id.length === 0) {
+      res.status(400).json({ error: 'invalid_id' });
+      return;
+    }
+
+    const body = (req.body ?? {}) as { action?: unknown; by?: unknown; reason?: unknown };
+    if (typeof body.action !== 'string' || !TRANSITION_ACTIONS.has(body.action as ItemTransition)) {
+      res.status(400).json({
+        error: 'invalid_action',
+        message: `action must be one of: ${[...TRANSITION_ACTIONS].join(', ')}`,
+      });
+      return;
+    }
+
+    if (!deps.repos.backlog.get(id)) {
+      res.status(404).json({ error: 'not_found' });
+      return;
+    }
+
+    if (!deps.personas) {
+      res.status(500).json({ error: 'personas_unavailable' });
+      return;
+    }
+
+    const lifecycle = new ItemLifecycle({ repos: deps.repos, personas: deps.personas });
+    const by = typeof body.by === 'string' && body.by.length > 0 ? body.by : '+prime';
+    const reason = typeof body.reason === 'string' && body.reason.length > 0 ? body.reason : undefined;
+
+    try {
+      const updated = lifecycle.transition(id, body.action as ItemTransition, by, reason);
+      res.json({ item: updated });
+    } catch (e) {
+      if (e instanceof IllegalTransitionError) {
+        res.status(409).json({ error: 'illegal_transition', message: e.message });
+        return;
+      }
+      res.status(500).json({
+        error: 'transition_failed',
+        message: e instanceof Error ? e.message : String(e),
+      });
+    }
   });
 
   return r;

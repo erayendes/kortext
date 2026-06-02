@@ -6,6 +6,7 @@ import {
   epicProgress,
   formatDate,
   descriptionFromBody,
+  availableTransitions,
 } from '../src/lib/board-drawer.ts';
 import type { BacklogItem } from '../src/lib/api-types.ts';
 
@@ -133,6 +134,48 @@ describe('descriptionFromBody', () => {
   it('returns an empty string for empty/blank input', () => {
     expect(descriptionFromBody('')).toBe('');
     expect(descriptionFromBody('   \n  ')).toBe('');
+  });
+
+  describe('availableTransitions (mirrors the backend ItemLifecycle legal moves)', () => {
+    it('to_do → Start', () => {
+      expect(availableTransitions('to_do')).toEqual([
+        { action: 'start', label: 'Start', primary: true },
+      ]);
+    });
+
+    it('in_progress → Send to test (primary) + Mark blocked', () => {
+      expect(availableTransitions('in_progress')).toEqual([
+        { action: 'test', label: 'Send to test', primary: true },
+        { action: 'block', label: 'Mark blocked', primary: false },
+      ]);
+    });
+
+    it('test → Move to review (primary) + Bounce back + Mark blocked', () => {
+      expect(availableTransitions('test')).toEqual([
+        { action: 'review', label: 'Move to review', primary: true },
+        { action: 'bounce', label: 'Bounce back', primary: false },
+        { action: 'block', label: 'Mark blocked', primary: false },
+      ]);
+    });
+
+    it('review → Mark done (primary) + Bounce back + Mark blocked', () => {
+      expect(availableTransitions('review')).toEqual([
+        { action: 'done', label: 'Mark done', primary: true },
+        { action: 'bounce', label: 'Bounce back', primary: false },
+        { action: 'block', label: 'Mark blocked', primary: false },
+      ]);
+    });
+
+    it('blocked → Unblock', () => {
+      expect(availableTransitions('blocked')).toEqual([
+        { action: 'unblock', label: 'Unblock', primary: true },
+      ]);
+    });
+
+    it('terminal states offer no transitions', () => {
+      expect(availableTransitions('done')).toEqual([]);
+      expect(availableTransitions('cancelled')).toEqual([]);
+    });
   });
 
   it('extracts the "## Description" section from a templated body (up to the next heading)', () => {

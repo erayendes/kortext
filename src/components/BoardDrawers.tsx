@@ -2,13 +2,16 @@ import { useCallback, useEffect, useState, type CSSProperties, type ReactNode } 
 import { Circle, CircleCheck, X } from 'lucide-react';
 import { Badge } from './Badge.tsx';
 import { personaColor } from '../lib/persona-colors.ts';
+import { apiPost, type ApiPostError } from '../lib/api.ts';
 import {
   acChecklist,
+  availableTransitions,
   childrenOf,
   descriptionFromBody,
   epicProgress,
   formatDate,
   statusBadge,
+  type BoardTransition,
 } from '../lib/board-drawer.ts';
 import type { BacklogItem } from '../lib/api-types.ts';
 
@@ -204,10 +207,12 @@ function Activity({ created, updated }: { created: number; updated: number }) {
 export function TaskDrawer({
   item,
   epicTitle,
+  onChanged,
   onClose,
 }: {
   item: BacklogItem;
   epicTitle: string | null;
+  onChanged: (item: BacklogItem) => void;
   onClose: () => void;
 }) {
   const sb = statusBadge(item.status);
@@ -223,6 +228,35 @@ export function TaskDrawer({
   const acDone = typeof fm.ac_done === 'number' ? fm.ac_done : 0;
   const checklist = acChecklist(criteria, acDone);
   const desc = descriptionFromBody(item.body_md);
+  const transitions = availableTransitions(item.status);
+
+  const [busy, setBusy] = useState<BoardTransition | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function runTransition(action: BoardTransition) {
+    setBusy(action);
+    setError(null);
+    try {
+      // Human override — the agent pipeline normally drives status; this lets
+      // the operator force a legal move. The backend re-checks legality.
+      const { item: updated } = await apiPost<{ item: BacklogItem }>(
+        `/api/backlog/${item.id}/transition`,
+        { action, by: '+prime' },
+      );
+      onChanged(updated);
+    } catch (e) {
+      const err = e as ApiPostError | Error;
+      setError(
+        'message' in err && typeof err.message === 'string'
+          ? err.message
+          : 'error' in err && typeof err.error === 'string'
+            ? err.error
+            : String(err),
+      );
+    } finally {
+      setBusy(null);
+    }
+  }
 
   return (
     <DrawerShell onClose={onClose}>
@@ -287,23 +321,26 @@ export function TaskDrawer({
             <Activity created={item.created_at} updated={item.updated_at} />
           </DrawerBody>
 
+          {error && (
+            <div className="shrink-0 text-[12px] text-danger" style={{ padding: '0 22px 4px' }}>
+              {error}
+            </div>
+          )}
           <DrawerFooter>
-            <button
-              type="button"
-              className="btn btn-primary btn-xs"
-              disabled
-              title="Status changes need a backlog action endpoint (deferred)"
-            >
-              Move to Review
-            </button>
-            <button
-              type="button"
-              className="btn btn-outline btn-xs"
-              disabled
-              title="Status changes need a backlog action endpoint (deferred)"
-            >
-              Mark blocked
-            </button>
+            {transitions.length === 0 && (
+              <span className="text-[12px] text-tx-3">No actions — {sb.label.toLowerCase()}.</span>
+            )}
+            {transitions.map((t) => (
+              <button
+                key={t.action}
+                type="button"
+                className={`btn btn-xs ${t.primary ? 'btn-primary' : 'btn-outline'}`}
+                disabled={busy !== null}
+                onClick={() => runTransition(t.action)}
+              >
+                {busy === t.action ? '…' : t.label}
+              </button>
+            ))}
             <button
               type="button"
               className="btn btn-ghost btn-xs"

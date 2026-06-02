@@ -107,3 +107,49 @@ export function descriptionFromBody(md: string): string {
   if (/^\[[\s\S]*\]$/.test(body)) return '';
   return body;
 }
+
+export type BoardTransition =
+  | 'start'
+  | 'test'
+  | 'review'
+  | 'bounce'
+  | 'done'
+  | 'block'
+  | 'unblock';
+
+/**
+ * The legal human-override moves from a given status — mirrors the backend
+ * ItemLifecycle TRANSITIONS so the drawer only ever offers buttons the engine
+ * will accept. `primary` marks the forward move (styled as the primary button);
+ * terminal states (done/cancelled) offer nothing. Keep in sync with
+ * server/engine/item-lifecycle.ts.
+ */
+export function availableTransitions(
+  status: BacklogItem['status'],
+): { action: BoardTransition; label: string; primary: boolean }[] {
+  switch (status) {
+    case 'to_do':
+      return [{ action: 'start', label: 'Start', primary: true }];
+    case 'in_progress':
+      return [
+        { action: 'test', label: 'Send to test', primary: true },
+        { action: 'block', label: 'Mark blocked', primary: false },
+      ];
+    case 'test':
+      return [
+        { action: 'review', label: 'Move to review', primary: true },
+        { action: 'bounce', label: 'Bounce back', primary: false },
+        { action: 'block', label: 'Mark blocked', primary: false },
+      ];
+    case 'review':
+      return [
+        { action: 'done', label: 'Mark done', primary: true },
+        { action: 'bounce', label: 'Bounce back', primary: false },
+        { action: 'block', label: 'Mark blocked', primary: false },
+      ];
+    case 'blocked':
+      return [{ action: 'unblock', label: 'Unblock', primary: true }];
+    default:
+      return []; // done, cancelled — terminal
+  }
+}

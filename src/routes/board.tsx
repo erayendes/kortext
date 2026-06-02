@@ -172,6 +172,10 @@ export function BoardRoute() {
         <TaskDrawer
           item={openItem}
           epicTitle={epics.find((e) => e.id === openItem.parent_id)?.title ?? null}
+          onChanged={(updated) => {
+            setOpenItem(updated);
+            refresh();
+          }}
           onClose={() => setOpenItem(null)}
         />
       )}

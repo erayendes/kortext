@@ -134,7 +134,7 @@ app.use('/api', runsRouter({ repos }));
 app.use('/api', handoversRouter({ repos }));
 app.use('/api', decisionsRouter({ repos }));
 app.use('/api', reportsRouter({ repos, projectRoot: layout.root }));
-app.use('/api', backlogRouter({ repos, templatesDir: runtime.templatesDir }));
+app.use('/api', backlogRouter({ repos, templatesDir: runtime.templatesDir, personas: personaRegistry }));
 app.use('/api', personasRouter({ personas: personaRegistry, agentsDir, repos }));
 app.use('/api', workflowsRouter({ workflows: workflowRegistry, repos }));
 app.use('/api', doctorRouter({ repos, workflows: workflowRegistry, personas: personaRegistry }));
