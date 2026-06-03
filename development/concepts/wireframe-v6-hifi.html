@@ -372,6 +372,19 @@
   .add-card{ border:1px dashed var(--border-strong); border-radius:11px; display:flex; align-items:center; justify-content:center; gap:8px; color:var(--fg-muted); cursor:pointer; font-size:12.5px; min-height:72px; transition:.12s; }
   .add-card:hover{ border-color:var(--accent-line); color:var(--fg-mid); }
   .add-card svg{ width:14px; height:14px; }
+  /* environments matrix */
+  .env-head{ display:flex; align-items:center; gap:8px; margin-bottom:13px; }
+  .env-tag{ display:inline-flex; align-items:center; gap:7px; height:27px; padding:0 11px; border-radius:7px; border:1px solid var(--border); font-size:12px; color:var(--fg-mid); }
+  .env-tag .d{ width:6px; height:6px; border-radius:50%; }
+  .env-table{ width:100%; border-collapse:collapse; }
+  .env-table th{ text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--fg-faint); font-weight:600; padding:11px 15px; border-bottom:1px solid var(--border-strong); }
+  .env-table td{ padding:10px 15px; border-bottom:1px solid var(--border); font-size:12.5px; vertical-align:middle; }
+  .env-table tr:last-child td{ border-bottom:none; }
+  .env-key{ font-family:'Geist Mono',monospace; color:var(--fg-mid); display:inline-flex; align-items:center; gap:7px; }
+  .env-key svg{ width:12px; height:12px; color:var(--fg-faint); flex-shrink:0; }
+  .env-val{ font-family:'Geist Mono',monospace; color:var(--fg-muted); }
+  .env-mask{ font-family:'Geist Mono',monospace; color:var(--fg-faint); letter-spacing:1.5px; }
+  .env-none{ color:var(--fg-faint); }
   /* danger button */
   .btn-danger-line{ color:var(--red); border:1px solid rgba(204,107,107,.4); background:transparent; }
   .btn-danger-line:hover{ background:rgba(204,107,107,.1); }
@@ -418,7 +431,7 @@
     <div class="nav-sec">Project settings</div>
     <div class="nav" data-route="project-info" onclick="go('project-info')"><i data-lucide="flag"></i><span class="nav-lbl">Project info</span></div>
     <div class="nav" data-route="integrations" onclick="go('integrations')"><i data-lucide="unplug"></i><span class="nav-lbl">Integrations</span></div>
-    <div class="nav"><i data-lucide="construction"></i><span class="nav-lbl">Environments</span></div>
+    <div class="nav" data-route="environments" onclick="go('environments')"><i data-lucide="construction"></i><span class="nav-lbl">Environments</span></div>
     <div class="nav"><i data-lucide="bot"></i><span class="nav-lbl">Agent models</span></div>
   </aside>
 
@@ -667,6 +680,38 @@
             </div>
             <div class="add-card" style="grid-column:1/-1"><i data-lucide="plus"></i>Add integration</div>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== ENVIRONMENTS (settings) ===== -->
+    <section class="route" data-route="environments">
+      <div class="set-wrap">
+        <div class="set-inner">
+          <div class="set-title">Environments</div>
+          <div class="set-sub">Variables across <span style="color:var(--fg-mid)">dev / staging / production</span> · secrets masked</div>
+
+          <div class="env-head">
+            <span class="env-tag"><span class="d" style="background:var(--green)"></span>dev</span>
+            <span class="env-tag"><span class="d" style="background:var(--amber)"></span>staging</span>
+            <span class="env-tag"><span class="d" style="background:var(--blue)"></span>production</span>
+            <span style="flex:1"></span>
+            <button class="btn btn-line btn-sm"><i data-lucide="plus" style="width:13px;height:13px"></i>Add variable</button>
+          </div>
+
+          <div class="set-card" style="margin-bottom:10px">
+            <table class="env-table">
+              <thead><tr><th>Key</th><th>dev</th><th>staging</th><th>production</th></tr></thead>
+              <tbody>
+                <tr><td><span class="env-key"><i data-lucide="lock"></i>DATABASE_URL</span></td><td class="env-val">postgres://…</td><td><span class="env-mask">••••••</span></td><td><span class="env-mask">••••••</span></td></tr>
+                <tr><td><span class="env-key"><i data-lucide="lock"></i>STRIPE_SECRET</span></td><td class="env-val">sk_test_…</td><td class="env-val">sk_test_…</td><td><span class="env-mask">••••••</span></td></tr>
+                <tr><td><span class="env-key"><i data-lucide="lock"></i>JWT_SECRET</span></td><td><span class="env-mask">••••••</span></td><td><span class="env-mask">••••••</span></td><td><span class="env-mask">••••••</span></td></tr>
+                <tr><td><span class="env-key"><i data-lucide="lock"></i>SENTRY_DSN</span></td><td class="env-none">— not set</td><td class="env-val">https://…</td><td class="env-val">https://…</td></tr>
+                <tr><td><span class="env-key"><i data-lucide="globe"></i>NEXT_PUBLIC_URL</span></td><td class="env-val">localhost:3000</td><td class="env-val">staging.acme…</td><td class="env-val">acme.com</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="set-note" style="padding-left:2px"><i data-lucide="shield" style="width:12px;height:12px;display:inline;vertical-align:-1px;margin-right:4px"></i>Secret values live in <span class="mono">.env</span> — the dashboard only shows presence, never the value.</div>
         </div>
       </div>
     </section>
