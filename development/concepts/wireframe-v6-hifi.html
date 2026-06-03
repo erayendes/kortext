@@ -251,6 +251,75 @@
   .ec-title{ font-size:13.5px; font-weight:550; margin-bottom:10px; letter-spacing:-0.01em; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
   .ec-foot{ display:flex; align-items:center; gap:8px; padding-top:10px; border-top:1px solid var(--border); font-size:10.5px; color:var(--fg-faint); }
 
+  /* ---------- FILE BROWSER (References / Memory / Reports) ---------- */
+  .fbrowser{ flex:1; min-width:0; display:flex; flex-direction:column; }
+  .fb-body{ flex:1; display:grid; grid-template-columns:300px 1fr; min-height:0; }
+  .fb-list{ border-right:1px solid var(--border); background:var(--panel); display:flex; flex-direction:column; min-height:0; }
+  .fb-search{ margin:12px 12px 4px; height:32px; display:flex; align-items:center; gap:8px; padding:0 11px; border-radius:7px; border:1px solid var(--border); background:rgba(255,255,255,.02); color:var(--fg-faint); font-size:12.5px; flex-shrink:0; cursor:text; }
+  .fb-search:hover{ border-color:var(--border-strong); }
+  .fb-grp{ font-size:10px; text-transform:uppercase; letter-spacing:.07em; color:var(--fg-faint); font-weight:600; padding:10px 16px 7px; }
+  .fb-items{ flex:1; overflow-y:auto; padding:0 8px 10px; display:flex; flex-direction:column; gap:1px; }
+  .fb-item{ padding:8px 10px; border-radius:7px; cursor:pointer; position:relative; transition:background .12s; }
+  .fb-item:hover{ background:var(--hover); }
+  .fb-item.active{ background:var(--hover-strong); }
+  .fb-item.active::before{ content:''; position:absolute; left:-8px; top:8px; bottom:8px; width:2px; border-radius:0 2px 2px 0; background:var(--accent); }
+  .fb-lhead{ height:52px; flex-shrink:0; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 16px; }
+  .fb-lhead .page-title{ font-size:14px; }
+  .fb-nm{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .fb-nm .nm{ font-size:12.5px; font-family:'Geist Mono',monospace; color:var(--fg); }
+  .fb-au{ display:flex; align-items:center; gap:7px; margin-top:6px; font-size:12.5px; color:var(--fg-mid); }
+  /* right view */
+  .fb-view{ display:flex; flex-direction:column; min-width:0; position:relative; }
+  #ref-revise-btn.is-active{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  #ref-revise-btn.is-active:hover{ background:var(--accent-hi); }
+  .fb-vhead{ height:52px; flex-shrink:0; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 22px; gap:12px; }
+  .fb-vname{ font-size:13px; font-family:'Geist Mono',monospace; color:var(--fg); }
+  .fb-meta{ flex-shrink:0; display:flex; align-items:center; gap:26px; padding:14px 22px; border-bottom:1px solid var(--border); background:var(--panel); flex-wrap:wrap; }
+  .fb-mfield{ display:flex; flex-direction:column; gap:5px; }
+  .fb-mlbl{ font-size:9.5px; text-transform:uppercase; letter-spacing:.07em; color:var(--fg-faint); font-weight:600; }
+  .fb-mval{ display:flex; align-items:center; gap:6px; font-size:12px; color:var(--fg-mid); }
+  .fb-md{ flex:1; overflow-y:auto; padding:26px 30px 70px; }
+  .fb-md > *{ max-width:760px; }
+  .fb-md h1{ font-size:18px; font-weight:600; color:var(--fg); margin:0 0 5px; letter-spacing:-0.01em; }
+  .fb-md h2{ font-size:14px; font-weight:600; color:var(--fg); margin:24px 0 9px; letter-spacing:-0.005em; }
+  .fb-md .l{ font-size:13px; color:var(--fg-muted); line-height:1.72; }
+  .fb-md .bullet{ display:flex; gap:9px; }
+  .fb-md .bull{ color:var(--fg-faint); flex-shrink:0; }
+  .fb-md code{ font-family:'Geist Mono',monospace; font-size:11.5px; color:var(--fg-mid); background:var(--hover-strong); padding:1.5px 5px; border-radius:4px; }
+  .fb-md b{ color:var(--fg-mid); font-weight:600; }
+  .fb-md blockquote{ border-left:2px solid var(--accent-line); padding:3px 0 3px 14px; color:var(--fg-faint); font-size:12.5px; font-style:italic; }
+  /* inline revise: selectable lines + committed annotation groups */
+  .fb-md .rline{ padding:3px 8px; margin-left:-8px; margin-right:-8px; border-radius:7px; }
+  .fb-md.revising .rline{ cursor:pointer; transition:background .1s; }
+  .fb-md.revising .rline:hover{ background:var(--hover); }
+  .fb-md .rline.rsel{ background:var(--accent-soft); box-shadow:inset 2px 0 0 var(--accent); }
+  .fb-md .rline.rgrp{ background:rgba(94,106,210,.08); box-shadow:inset 2px 0 0 var(--accent-line); }
+  .rgrp-tag{ display:inline-flex; align-items:center; justify-content:center; min-width:15px; height:15px; padding:0 4px; margin-left:7px; border-radius:5px; background:var(--accent); color:#fff; font-size:9px; font-weight:600; font-family:'Geist Mono',monospace; vertical-align:middle; }
+  .revise-bar{ position:absolute; left:50%; bottom:22px; transform:translateX(-50%) translateY(14px); display:flex; align-items:center; gap:10px; width:560px; max-width:calc(100% - 48px); padding:9px 11px; border-radius:11px; background:var(--bg-elev); border:1px solid var(--border-strong); box-shadow:0 10px 34px rgba(0,0,0,.4); opacity:0; pointer-events:none; transition:.18s cubic-bezier(.16,1,.3,1); z-index:20; }
+  .revise-bar.show{ opacity:1; pointer-events:auto; transform:translateX(-50%) translateY(0); }
+  .rb-notes{ font-size:11.5px; color:var(--fg-muted); font-family:'Geist Mono',monospace; white-space:nowrap; flex-shrink:0; padding-left:5px; }
+  .rb-input{ flex:1; min-width:120px; height:28px; border:1px solid var(--border); background:var(--card); border-radius:7px; padding:0 10px; color:var(--fg); font-family:inherit; font-size:12.5px; outline:none; transition:border-color .12s; }
+  .rb-input:focus{ border-color:var(--accent-line); }
+  .rb-input:disabled{ opacity:.45; }
+  .rb-div{ width:1px; height:20px; background:var(--border); flex-shrink:0; }
+  /* status badge */
+  .stbadge{ display:inline-flex; align-items:center; gap:5px; height:21px; padding:0 9px; border-radius:6px; font-size:10.5px; font-weight:600; letter-spacing:.02em; flex-shrink:0; }
+  .stbadge .d{ width:5px; height:5px; border-radius:50%; }
+  .stbadge.sm{ height:17px; padding:0 6px; font-size:9.5px; gap:4px; }
+  .stbadge.sm .d{ width:4px; height:4px; }
+  .stbadge.approved{ color:var(--green); background:rgba(76,183,130,.12); }
+  .stbadge.review{ color:var(--amber); background:rgba(210,162,76,.13); }
+  .stbadge.draft{ color:var(--fg-muted); background:var(--hover-strong); }
+  .stbadge.ro{ color:var(--fg-muted); background:var(--hover-strong); }
+
+  /* memory markdown metadata line (Author/Status/Approver) */
+  .fb-md h3{ font-size:11px; font-weight:600; color:var(--fg-faint); text-transform:uppercase; letter-spacing:.06em; margin:18px 0 7px; }
+  .fb-md h2 + .l, .fb-md .meta-line{ color:var(--fg-faint); font-size:12px; }
+
+  /* toast (clarification confirmation) */
+  .toast{ position:fixed; bottom:50px; left:50%; transform:translateX(-50%) translateY(10px); display:flex; align-items:center; gap:7px; padding:9px 14px; border-radius:9px; background:var(--bg-elev); border:1px solid var(--border-strong); box-shadow:0 10px 30px rgba(0,0,0,.4); font-size:12.5px; color:var(--green); opacity:0; pointer-events:none; transition:.2s cubic-bezier(.16,1,.3,1); z-index:90; }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
   /* ---------- footer ---------- */
   .footer{ height:34px; flex-shrink:0; display:flex; align-items:center; gap:12px; padding:0 12px; border-top:1px solid var(--border); background:var(--panel); font-size:11.5px; color:var(--fg-muted); position:relative; z-index:5; }
   .f-item{ display:flex; align-items:center; gap:7px; height:24px; padding:0 8px; border-radius:6px; cursor:pointer; }
@@ -281,8 +350,8 @@
     <div class="nav-sec">Workspace</div>
     <div class="nav active" data-route="dashboard" onclick="go('dashboard')"><i data-lucide="layout-dashboard"></i><span class="nav-lbl">Dashboard</span></div>
     <div class="nav" data-route="board" onclick="go('board')"><i data-lucide="square-kanban"></i><span class="nav-lbl">Board</span></div>
-    <div class="nav" data-route="references"><i data-lucide="book-marked"></i><span class="nav-lbl">References</span></div>
-    <div class="nav" data-route="memory"><i data-lucide="brain"></i><span class="nav-lbl">Memory</span></div>
+    <div class="nav" data-route="references" onclick="go('references')"><i data-lucide="book-marked"></i><span class="nav-lbl">References</span></div>
+    <div class="nav" data-route="memory" onclick="go('memory')"><i data-lucide="brain"></i><span class="nav-lbl">Memory</span></div>
     <div class="nav" data-route="reports"><i data-lucide="book-check"></i><span class="nav-lbl">Reports</span></div>
     <div class="nav-sec">Project settings</div>
     <div class="nav"><i data-lucide="flag"></i><span class="nav-lbl">Project info</span></div>
@@ -347,6 +416,69 @@
       </div>
     </section>
 
+    <!-- ===== REFERENCES (2-pane file browser) ===== -->
+    <section class="route" data-route="references">
+      <div class="fbrowser">
+        <div class="fb-body">
+          <div class="fb-list">
+            <div class="fb-lhead"><span class="page-title">References</span><span class="fb-grp" id="ref-grp" style="padding:0"></span></div>
+            <div class="fb-items" id="ref-list"></div>
+          </div>
+          <div class="fb-view">
+            <div class="fb-vhead">
+              <div style="display:flex;align-items:center;gap:10px">
+                <span class="fb-vname" id="ref-vname">ACCESS.md</span>
+                <span id="ref-vstatus"></span>
+              </div>
+              <div style="display:flex;gap:7px">
+                <button class="btn btn-line btn-sm" id="ref-revise-btn" onclick="annoToggle('ref')"><i data-lucide="pen-line" style="width:13px;height:13px"></i>Revise</button>
+                <button class="btn btn-sm btn-approve" onclick="approveRef()"><i data-lucide="check" style="width:13px;height:13px"></i>Approve</button>
+              </div>
+            </div>
+            <div class="fb-md" id="ref-md"></div>
+            <div class="revise-bar" id="revise-bar">
+              <span class="rb-notes" id="rb-notes">0 notes</span>
+              <input class="rb-input" id="rb-input" placeholder="Select lines to annotate…" disabled onkeydown="if(event.key==='Enter')annoAdd('ref')">
+              <button class="btn btn-line btn-sm" id="rb-add" onclick="annoAdd('ref')" disabled><i data-lucide="plus" style="width:13px;height:13px"></i>Add</button>
+              <span class="rb-div"></span>
+              <button class="btn btn-pri btn-sm" id="rb-submit" onclick="annoSubmit('ref')" disabled><i data-lucide="git-pull-request" style="width:13px;height:13px"></i>Request changes</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== MEMORY (read-only, clarify threads) ===== -->
+    <section class="route" data-route="memory">
+      <div class="fbrowser">
+        <div class="fb-body">
+          <div class="fb-list">
+            <div class="fb-lhead"><span class="page-title">Memory</span><span class="fb-grp" id="mem-grp" style="padding:0"></span></div>
+            <div class="fb-items" id="mem-list"></div>
+          </div>
+          <div class="fb-view">
+            <div class="fb-vhead">
+              <div style="display:flex;align-items:center;gap:10px">
+                <span class="fb-vname" id="mem-vname">decisions.md</span>
+                <span class="stbadge ro"><i data-lucide="lock" style="width:11px;height:11px"></i>Read-only · engine writes</span>
+              </div>
+              <div style="display:flex;gap:7px">
+                <button class="btn btn-line btn-sm" id="mem-clarify-btn" onclick="annoToggle('mem')"><i data-lucide="message-circle-question" style="width:13px;height:13px"></i>Clarify</button>
+              </div>
+            </div>
+            <div class="fb-md" id="mem-md"></div>
+            <div class="revise-bar" id="clarify-bar">
+              <span class="rb-notes" id="cb-notes">0 questions</span>
+              <input class="rb-input" id="cb-input" placeholder="Select lines to clarify…" disabled onkeydown="if(event.key==='Enter')annoAdd('mem')">
+              <button class="btn btn-line btn-sm" id="cb-add" onclick="annoAdd('mem')" disabled><i data-lucide="plus" style="width:13px;height:13px"></i>Add</button>
+              <span class="rb-div"></span>
+              <button class="btn btn-pri btn-sm" id="cb-submit" onclick="annoSubmit('mem')" disabled><i data-lucide="send" style="width:13px;height:13px"></i>Ask agents</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
   </main>
 </div>
 
@@ -381,7 +513,8 @@
     '+designer':{c:'#34D399',p:`<circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>`},
     '+copywriter':{c:'#A3E635',p:`<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>`},
     '+growth-expert':{c:'#FB7185',p:`<path d="M7 20h10"/><path d="M10 20c5.5-2.5.8-6.4 3-10"/><path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z"/><path d="M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z"/>`},
-    '+compliance-expert':{c:'#22D3EE',p:`<path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/>`}
+    '+compliance-expert':{c:'#22D3EE',p:`<path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/>`},
+    '+you':{c:'#878B92',p:`<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>`}
   };
   // colour=true → identity surfaces; false → muted (calm/board)
   function short(h){ return h.replace('+',''); }
@@ -564,6 +697,379 @@
       </div>`).join('');
   }
 
+  /* ---------- references (file browser) ---------- */
+  const REF_ST={
+    approved:{l:'Approved',c:'var(--green)',cls:'approved'},
+    review:{l:'Waiting',c:'var(--amber)',cls:'review'},
+    draft:{l:'Draft',c:'var(--fg-muted)',cls:'draft'},
+  };
+  const REFS=[
+    {f:'ACCESS.md',st:'approved',au:'+devops-engineer',rv:'+security-engineer',ap:'+prime',ed:'2h',md:`# Access & Credentials
+
+Canonical source for where things live and how agents authenticate.
+
+## Repositories
+- GitHub org \`acme\`, repo \`acme-crm\` — write access via CLI auth
+- Default branch \`main\` · protected, PR + 1 approval required
+
+## Services
+- **Stripe** — test-mode keys in \`.env\`, live keys in Vercel project settings
+- **Vercel** — project linked, production = \`main\`
+- **Sentry** — DSN in ENVIRONMENT.md
+
+> Edit + Save is open to the team — this file is a living reference, not frozen foundation.`},
+    {f:'API.md',st:'review',au:'+backend-developer',rv:'+engineering-manager',ap:'+prime',ed:'1d',md:`# API Surface
+
+Public + internal HTTP endpoints. Update when a route ships.
+
+## Auth
+- \`POST /auth/login\` → returns JWT (15m) + refresh cookie
+- \`POST /auth/refresh\` → rotates refresh token (see SECURITY.md)
+- \`GET /me\` → current user profile
+
+## Billing
+- \`POST /billing/webhook\` — Stripe events (idempotent on \`event.id\`)
+- \`GET /billing/subscription\` → current plan + status
+
+## Conventions
+- All responses \`application/json\`
+- Errors: \`{ error: { code, message } }\` — never leak stack traces`},
+    {f:'DATABASE.md',st:'approved',au:'+db-admin',rv:'+backend-developer',ap:'+prime',ed:'3d',md:`# Database Schema
+
+Postgres. Migrations live in \`db/migrations\`. Stateless by design — see ADR-003.
+
+## Tables
+- **users** — \`id, email, password_hash, created_at\`
+- **subscriptions** — \`id, user_id, status, plan, current_period_end\`
+- **sessions** — intentionally absent (stateless JWT, ADR-003)
+
+## Indexes
+- \`users.email\` unique
+- \`subscriptions.user_id\` btree
+
+> Sessions table was rejected: refresh-token rotation covers revocation at lower cost.`},
+    {f:'SECURITY.md',st:'review',au:'+security-engineer',rv:'+engineering-manager',ap:'+prime',ed:'2d',md:`# Security Notes
+
+Owned by +security-engineer. Reviewed at every phase gate.
+
+## Controls
+- Rate-limit on all \`/auth/*\` endpoints — tracked in T-008
+- Refresh-token rotation on every use; reuse → full session revoke
+- Secret-scan \`PreToolUse\` hook is enabled (blocks commits carrying keys)
+
+## Open items
+- T-008 rate-limit audit in progress
+- Dependency CVE scan clean as of last run`},
+    {f:'STACK.md',st:'approved',au:'+engineering-manager',rv:'+backend-developer',ap:'+prime',ed:'5d',md:`# Technology Stack
+
+What we build on and why. Changes here need EM + approver sign-off.
+
+## Runtime
+- **Next.js** (App Router) + React
+- **Postgres** primary datastore
+- **Vercel** hosting + preview deploys
+
+## Tooling
+- TypeScript strict mode
+- Vitest for tests
+- Biome for lint + format`},
+    {f:'STRUCTURE.md',st:'approved',au:'+engineering-manager',rv:'+backend-developer',ap:'+prime',ed:'4d',md:`# Project Structure
+
+How the repo is laid out. Keep in sync with reality.
+
+## Top level
+- \`src/\` — runtime + React dashboard
+- \`agents/\` \`workflows/\` \`rules/\` — persona system (markdown)
+- \`db/\` — schema + migrations
+- \`mcp/\` — agent tool surface
+
+## Conventions
+- One component per file, colocated styles
+- Tests live next to source as \`*.test.ts\``},
+    {f:'DESIGN.md',st:'draft',au:'+designer',rv:'+frontend-developer',ap:'+prime',ed:'1d',md:`# Design System
+
+Tokens, palette, and component rules. Source of truth for UI work.
+
+## Palette
+- Near-monochrome neutral base + one indigo accent \`#5E6AD2\`
+- Persona colour reserved for identity surfaces only
+
+## Typography
+- **Geist** for UI · **Geist Mono** for ids, code, metrics
+
+> Draft — migrating from shadcn defaults to the v6 hi-fi palette.`},
+    {f:'TEST.md',st:'review',au:'+qa-engineer',rv:'+engineering-manager',ap:'+prime',ed:'6h',md:`# Test Strategy
+
+Owned by +qa-engineer. The QC gate reads this file.
+
+## Layers
+- **Unit** — Vitest, colocated \`*.test.ts\`
+- **E2E** — auth + billing critical paths
+- **Regression** — 24-case suite, must stay green
+
+## Status
+- Regression 24/24
+- Auth E2E 2/5 (in progress)`},
+    {f:'ENVIRONMENT.md',st:'approved',au:'+devops-engineer',rv:'+backend-developer',ap:'+prime',ed:'1w',md:`# Environments
+
+dev / staging / prod. Variable values are masked in the dashboard.
+
+## Targets
+- **dev** — local, \`.env.local\`
+- **staging** — Vercel preview per PR
+- **prod** — \`main\` → acme-crm.vercel.app
+
+## Variables
+- \`DATABASE_URL\`, \`STRIPE_SECRET\`, \`JWT_SECRET\`, \`SENTRY_DSN\``},
+    {f:'CONTENT.md',st:'draft',au:'+copywriter',rv:'+growth-expert',ap:'+prime',ed:'2d',md:`# Content & Copy
+
+Voice, tone, and primary strings. Owned by +copywriter.
+
+## Voice
+- Plain, confident, no jargon
+- Active verbs; short sentences
+
+## Key strings
+- Pricing tiers + CTAs — see T-105
+- Transactional emails: welcome / reset / receipt
+
+> Draft — pricing copy pending +growth-expert review.`},
+  ];
+  function refInline(s){ return s.replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/`(.+?)`/g,'<code>$1</code>'); }
+  function mdToHtml(md){
+    return md.split('\n').map(l=>{
+      if(l.trim()==='')        return '<div style="height:9px"></div>';
+      if(l.startsWith('### ')) return '<h3 class="rline" onclick="lineClick(this)">'+refInline(l.slice(4))+'</h3>';
+      if(l.startsWith('## '))  return '<h2 class="rline" onclick="lineClick(this)">'+refInline(l.slice(3))+'</h2>';
+      if(l.startsWith('# '))   return '<h1 class="rline" onclick="lineClick(this)">'+refInline(l.slice(2))+'</h1>';
+      if(l.startsWith('> '))  return '<blockquote class="rline" onclick="lineClick(this)">'+refInline(l.slice(2))+'</blockquote>';
+      if(l.startsWith('- '))  return '<div class="l bullet rline" onclick="lineClick(this)"><span class="bull">•</span><span>'+refInline(l.slice(2))+'</span></div>';
+      return '<div class="l rline" onclick="lineClick(this)">'+refInline(l)+'</div>';
+    }).join('');
+  }
+  let refCur=0;
+  function renderRefList(){
+    document.getElementById('ref-grp').textContent=REFS.length+' files';
+    document.getElementById('ref-list').innerHTML=REFS.map((r,i)=>{
+      const st=REF_ST[r.st];
+      return `
+      <div class="fb-item ${i===refCur?'active':''}" onclick="refSelect(${i},this)">
+        <div class="fb-nm"><span class="nm">${r.f}</span><span class="stbadge sm ${st.cls}"><span class="d" style="background:${st.c}"></span>${st.l}</span></div>
+        <div class="fb-au">${pAvatar(r.au,16)}<span>${short(r.au)}</span></div>
+      </div>`;
+    }).join('');
+  }
+  function renderRefs(){ refCur=0; renderRefList(); refShow(0); }
+  function refSelect(i,el){
+    refCur=i;
+    document.querySelectorAll('#ref-list .fb-item').forEach(x=>x.classList.remove('active'));
+    if(el) el.classList.add('active');
+    refShow(i);
+  }
+  function refShow(i){
+    refCur=i;
+    const r=REFS[i], st=REF_ST[r.st];
+    document.getElementById('ref-vname').textContent=r.f;
+    document.getElementById('ref-vstatus').innerHTML=`<span class="stbadge ${st.cls}"><span class="d" style="background:${st.c}"></span>${st.l}</span>`;
+    document.getElementById('ref-md').innerHTML=mdToHtml(r.md);
+    annoExit('ref');          // reset annotation mode on file switch
+    lucide.createIcons();
+  }
+  function approveRef(){
+    REFS[refCur].st='approved';
+    renderRefList(); refShow(refCur);
+  }
+
+  /* ---- generic inline-annotation engine (shared by References "Revise" + Memory "Clarify") ---- */
+  const ANNO_CFG={
+    ref:{ mdId:'ref-md', btnId:'ref-revise-btn', barId:'revise-bar', notesId:'rb-notes', inputId:'rb-input', addId:'rb-add', submitId:'rb-submit',
+      offLabel:'<i data-lucide="pen-line" style="width:13px;height:13px"></i>Revise',
+      onLabel:'<i data-lucide="x" style="width:13px;height:13px"></i>Cancel',
+      emptyPh:'Select lines to annotate…', selPh:n=>`Describe the change for ${n} line(s)…`,
+      noun:'note', tagWord:'Revision',
+      submit(){ REFS[refCur].st='review'; renderRefList(); refShow(refCur); } },
+    mem:{ mdId:'mem-md', btnId:'mem-clarify-btn', barId:'clarify-bar', notesId:'cb-notes', inputId:'cb-input', addId:'cb-add', submitId:'cb-submit',
+      offLabel:'<i data-lucide="message-circle-question" style="width:13px;height:13px"></i>Clarify',
+      onLabel:'<i data-lucide="x" style="width:13px;height:13px"></i>Cancel',
+      emptyPh:'Select lines to clarify…', selPh:n=>`Ask the author about ${n} line(s)…`,
+      noun:'question', tagWord:'Question',
+      submit(){ const g=ANNO.mem.groups.length; annoExit('mem'); toast(`${g} clarification${g===1?'':'s'} sent to Activity · memory unchanged`); } },
+  };
+  const ANNO={ ref:{on:false,groups:[]}, mem:{on:false,groups:[]} };
+  function annoKey(el){ return el.closest('#mem-md') ? 'mem' : 'ref'; }
+  function annoToggle(k){ ANNO[k].on ? annoExit(k) : annoEnter(k); }
+  function annoEnter(k){
+    const c=ANNO_CFG[k]; ANNO[k].on=true;
+    document.getElementById(c.mdId).classList.add('revising');
+    const b=document.getElementById(c.btnId); b.classList.add('is-active'); b.innerHTML=c.onLabel;
+    annoBar(k); lucide.createIcons();
+  }
+  function annoExit(k){
+    const c=ANNO_CFG[k]; ANNO[k].on=false; ANNO[k].groups=[];
+    const md=document.getElementById(c.mdId);
+    md.classList.remove('revising');
+    md.querySelectorAll('.rsel').forEach(x=>x.classList.remove('rsel'));
+    md.querySelectorAll('.rgrp').forEach(x=>{ x.classList.remove('rgrp'); x.removeAttribute('title'); const t=x.querySelector('.rgrp-tag'); if(t)t.remove(); });
+    const b=document.getElementById(c.btnId); b.classList.remove('is-active'); b.innerHTML=c.offLabel;
+    annoBar(k); lucide.createIcons();
+  }
+  function lineClick(el){ const k=annoKey(el); if(!ANNO[k].on || el.classList.contains('rgrp')) return; el.classList.toggle('rsel'); annoBar(k); }
+  function annoAdd(k){
+    const c=ANNO_CFG[k];
+    const sel=[...document.querySelectorAll('#'+c.mdId+' .rsel')];
+    if(!sel.length) return;
+    const comment=(document.getElementById(c.inputId).value||'').trim()||'(no description)';
+    const n=ANNO[k].groups.length+1;
+    sel.forEach(el=>{
+      el.classList.remove('rsel'); el.classList.add('rgrp'); el.title=c.tagWord+' '+n+': '+comment;
+      const tag=document.createElement('span'); tag.className='rgrp-tag'; tag.textContent=n; el.appendChild(tag);
+    });
+    ANNO[k].groups.push({n, comment, count:sel.length});
+    document.getElementById(c.inputId).value='';
+    annoBar(k);
+  }
+  function annoBar(k){
+    const c=ANNO_CFG[k];
+    document.getElementById(c.barId).classList.toggle('show', ANNO[k].on);
+    const n=document.querySelectorAll('#'+c.mdId+' .rsel').length;
+    const inp=document.getElementById(c.inputId), add=document.getElementById(c.addId);
+    inp.disabled=(n===0); add.disabled=(n===0);
+    inp.placeholder = n>0 ? c.selPh(n) : c.emptyPh;
+    if(n===0) inp.value='';
+    const g=ANNO[k].groups.length;
+    document.getElementById(c.notesId).textContent = g+' '+c.noun+(g===1?'':'s');
+    document.getElementById(c.submitId).disabled=(g===0);
+  }
+  function annoSubmit(k){ if(!ANNO[k].groups.length) return; ANNO_CFG[k].submit(); }
+  function toast(msg){
+    let t=document.getElementById('toast');
+    if(!t){ t=document.createElement('div'); t.id='toast'; t.className='toast'; document.body.appendChild(t); }
+    t.innerHTML='<i data-lucide="check" style="width:14px;height:14px"></i>'+msg;
+    t.classList.add('show'); lucide.createIcons();
+    clearTimeout(window._tt); window._tt=setTimeout(()=>t.classList.remove('show'),2800);
+  }
+
+  /* ---------- memory (read-only markdown · inline clarification) ---------- */
+  const MEMORY=[
+    {f:'decisions.md', icon:'scale', sub:'2 ADRs', md:`# Architectural Decision Records
+
+## ADR-003: Auth strategy — JWT + refresh rotation
+**Author:** +backend-developer | **Status:** Approved | 2026-06-02-14:29 | **Approver:** +prime
+
+### Context
+- Auth must scale without a session store; the refresh flow still needs a revocation path.
+
+### Decision
+- Stateless JWT (15m) with refresh-token rotation on every use.
+
+### Consequences
+- No session table — lower cost at the current scale.
+- Reusing a refresh token triggers a full session revoke.
+
+## ADR-002: Postgres over MongoDB
+**Author:** +db-admin | **Status:** Approved | 2026-06-01-17:40 | **Approver:** +prime
+
+### Context
+- Billing needs transactional integrity across related records.
+
+### Decision
+- Postgres as the primary datastore over a document store.
+
+### Consequences
+- Relational guarantees for subscriptions and users.
+- Event-sourcing, if added later, lives in a separate append-only table.`},
+    {f:'handover.md', icon:'arrow-right-left', sub:'2 sessions', md:`# Handover Reports
+
+## Handover: T-101 — OAuth login flow
+- **To:** +backend-developer
+- **Date:** 02.06.26-14:35
+- **Status:** Partially complete
+
+### Completed
+- OAuth code review prepared; refresh-token rotation implemented.
+
+### Changed Files
+- \`src/auth/jwt.ts\` — rotation + revoke
+- \`src/auth/routes.ts\` — /auth/refresh endpoint
+
+### Kritik Bağlam
+- B-203 DNS blocker still open — reset emails flagged as spam, waiting on infra.
+
+### Last Commit
+- \`9f2a1c4\` — feat(auth): refresh-token rotation
+
+### Next Steps
+- Wire rate-limit on /auth/* (T-008) before merge.
+
+## Handover: sprint scope — 04-development-cycle
+- **To:** +engineering-manager
+- **Date:** 01.06.26-18:10
+- **Status:** Complete
+
+### Completed
+- Sprint scope locked: auth + the billing webhook are must-ship.
+
+### Kritik Bağlam
+- Dashboard polish is a stretch goal — drop it if capacity is tight.
+
+### Next Steps
+- Split T-101 into review-ready chunks.`},
+    {f:'learned.md', icon:'lightbulb', sub:'2 learnings', md:`# Knowledge Base
+
+## Öğrenim: Stripe webhook idempotency
+**Author:** +db-admin | **Status:** Approved | 2026-06-01-11:20 | **Approver:** +prime
+
+### Problem
+- Stripe retries produced duplicate billing records.
+
+### Root Cause
+- The webhook handler was not deduping on event.id.
+
+### Solution
+- Persist each processed event.id; skip if already seen.
+
+### Prevention
+- Idempotency rule added to the API.md webhook conventions.
+
+## Öğrenim: Flaky auth E2E from clock skew
+**Author:** +qa-engineer | **Status:** Approved | 2026-05-30-09:05 | **Approver:** +prime
+
+### Problem
+- JWT-expiry tests failed intermittently in CI.
+
+### Root Cause
+- Tests slept on real time; CI clock skew crossed the expiry boundary.
+
+### Solution
+- Freeze the clock in tests instead of sleeping.
+
+### Prevention
+- TEST.md now mandates fake timers for time-dependent specs.`},
+  ];
+  let memCur=0;
+  function renderMemList(){
+    document.getElementById('mem-grp').textContent=MEMORY.length+' files';
+    document.getElementById('mem-list').innerHTML=MEMORY.map((m,i)=>`
+      <div class="fb-item ${i===memCur?'active':''}" onclick="memSelect(${i},this)">
+        <div class="fb-nm"><span class="nm">${m.f}</span></div>
+        <div class="fb-au" style="font-size:11.5px;color:var(--fg-faint)"><i data-lucide="${m.icon}" style="width:13px;height:13px"></i><span>${m.sub}</span></div>
+      </div>`).join('');
+  }
+  function renderMemory(){ memCur=0; renderMemList(); memShow(0); }
+  function memSelect(i,el){
+    memCur=i;
+    document.querySelectorAll('#mem-list .fb-item').forEach(x=>x.classList.remove('active'));
+    if(el) el.classList.add('active');
+    memShow(i);
+  }
+  function memShow(i){
+    memCur=i;
+    document.getElementById('mem-vname').textContent=MEMORY[i].f;
+    document.getElementById('mem-md').innerHTML=mdToHtml(MEMORY[i].md);
+    annoExit('mem');          // reset clarify mode on file switch
+    lucide.createIcons();
+  }
+
   function go(r){
     document.querySelectorAll('.route').forEach(x=>x.classList.toggle('active',x.dataset.route===r));
     document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.route===r));
@@ -584,7 +1090,7 @@
   function cycleTheme(){ themeMode = themeMode==='dark'?'light':themeMode==='light'?'auto':'dark'; applyTheme(); }
 
   renderStats(); renderWork(); renderEpicRings(); renderTl(); renderFooterAgents();
-  renderEpicRail(); renderCols();
+  renderEpicRail(); renderCols(); renderRefs(); renderMemory();
   applyTheme();
   lucide.createIcons();
 </script>
