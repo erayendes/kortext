@@ -353,6 +353,25 @@
   .switch::after{ content:''; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:#fff; transition:transform .15s; box-shadow:0 1px 2px rgba(0,0,0,.3); }
   .switch.on{ background:var(--accent); }
   .switch.on::after{ transform:translateX(14px); }
+  /* integration cards */
+  .intg-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:24px; }
+  .intg-card{ border:1px solid var(--border); border-radius:11px; background:var(--card); padding:15px 16px; }
+  .intg-head{ display:flex; align-items:center; gap:11px; }
+  .intg-ico{ width:34px; height:34px; border-radius:8px; display:flex; align-items:center; justify-content:center; background:var(--bg-elev); border:1px solid var(--border); flex-shrink:0; color:var(--fg-mid); }
+  .intg-ico svg{ width:17px; height:17px; }
+  .intg-name{ font-size:13.5px; font-weight:550; flex:1; }
+  .intg-desc{ font-size:11.5px; color:var(--fg-muted); margin-top:10px; }
+  .badge-ok{ display:inline-flex; align-items:center; gap:5px; height:21px; padding:0 9px; border-radius:6px; font-size:10.5px; font-weight:600; color:var(--green); background:rgba(76,183,130,.12); }
+  .badge-ok .d{ width:5px; height:5px; border-radius:50%; background:var(--green); }
+  .intg-rows{ margin-top:13px; border-top:1px solid var(--border); padding-top:4px; }
+  .intg-row{ display:flex; align-items:center; gap:12px; padding:8px 0; }
+  .intg-row .k{ font-size:12px; color:var(--fg-muted); width:160px; flex-shrink:0; }
+  .intg-row .v{ font-size:12.5px; color:var(--fg-mid); flex:1; }
+  .intg-toggle{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 0; border-top:1px solid var(--border); }
+  .intg-toggle .k{ font-size:12.5px; color:var(--fg-mid); }
+  .add-card{ border:1px dashed var(--border-strong); border-radius:11px; display:flex; align-items:center; justify-content:center; gap:8px; color:var(--fg-muted); cursor:pointer; font-size:12.5px; min-height:72px; transition:.12s; }
+  .add-card:hover{ border-color:var(--accent-line); color:var(--fg-mid); }
+  .add-card svg{ width:14px; height:14px; }
   /* danger button */
   .btn-danger-line{ color:var(--red); border:1px solid rgba(204,107,107,.4); background:transparent; }
   .btn-danger-line:hover{ background:rgba(204,107,107,.1); }
@@ -398,7 +417,7 @@
     <div class="nav" data-route="reports" onclick="go('reports')"><i data-lucide="book-check"></i><span class="nav-lbl">Reports</span></div>
     <div class="nav-sec">Project settings</div>
     <div class="nav" data-route="project-info" onclick="go('project-info')"><i data-lucide="flag"></i><span class="nav-lbl">Project info</span></div>
-    <div class="nav"><i data-lucide="unplug"></i><span class="nav-lbl">Integrations</span></div>
+    <div class="nav" data-route="integrations" onclick="go('integrations')"><i data-lucide="unplug"></i><span class="nav-lbl">Integrations</span></div>
     <div class="nav"><i data-lucide="construction"></i><span class="nav-lbl">Environments</span></div>
     <div class="nav"><i data-lucide="bot"></i><span class="nav-lbl">Agent models</span></div>
   </aside>
@@ -603,6 +622,50 @@
               <div class="set-rl"><div class="set-lbl">Remove project</div><div class="set-desc">Unregister (keeps <span class="mono">.kortext/</span>) or delete entirely</div></div>
               <button class="btn btn-sm btn-danger">Remove…</button>
             </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== INTEGRATIONS (settings) ===== -->
+    <section class="route" data-route="integrations">
+      <div class="set-wrap">
+        <div class="set-inner">
+          <div class="set-title">Integrations</div>
+          <div class="set-sub">Services connected to <span style="color:var(--fg-mid)">Acme CRM</span></div>
+
+          <div class="intg-card" style="margin-bottom:12px">
+            <div class="intg-head">
+              <span class="intg-ico"><i data-lucide="git-branch"></i></span>
+              <span class="intg-name">GitHub</span>
+              <span class="badge-ok"><span class="d"></span>Connected</span>
+            </div>
+            <div class="intg-rows">
+              <div class="intg-row"><span class="k">Repository</span><span class="v mono">acme/acme-crm</span><button class="btn btn-line btn-sm">Change…</button></div>
+              <div class="intg-row"><span class="k">Default branch</span><span class="v mono">main</span></div>
+              <div class="intg-toggle"><span class="k">Auto-commit on transitions</span><div class="switch on" onclick="this.classList.toggle('on')"></div></div>
+              <div class="intg-toggle"><span class="k">Require approval for PR merges</span><div class="switch on" onclick="this.classList.toggle('on')"></div></div>
+            </div>
+          </div>
+
+          <div class="intg-grid">
+            <div class="intg-card">
+              <div class="intg-head"><span class="intg-ico"><i data-lucide="credit-card"></i></span><span class="intg-name">Stripe</span><span class="badge-ok"><span class="d"></span>Connected</span></div>
+              <div class="intg-desc">Billing events → webhook</div>
+            </div>
+            <div class="intg-card">
+              <div class="intg-head"><span class="intg-ico"><i data-lucide="triangle"></i></span><span class="intg-name">Vercel</span><span class="badge-ok"><span class="d"></span>Connected</span></div>
+              <div class="intg-desc">Deploy + preview URLs</div>
+            </div>
+            <div class="intg-card">
+              <div class="intg-head"><span class="intg-ico"><i data-lucide="flame"></i></span><span class="intg-name">Firebase</span><button class="btn btn-line btn-sm">Connect</button></div>
+              <div class="intg-desc">Auth + push (FCM)</div>
+            </div>
+            <div class="intg-card">
+              <div class="intg-head"><span class="intg-ico"><i data-lucide="bug"></i></span><span class="intg-name">Sentry</span><button class="btn btn-line btn-sm">Connect</button></div>
+              <div class="intg-desc">Runtime error → auto-bug</div>
+            </div>
+            <div class="add-card" style="grid-column:1/-1"><i data-lucide="plus"></i>Add integration</div>
           </div>
         </div>
       </div>
