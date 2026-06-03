@@ -499,20 +499,19 @@
             <div class="fb-vhead">
               <div style="display:flex;align-items:center;gap:10px">
                 <span class="fb-vname" id="rep-vname"></span>
-                <span id="rep-vstatus"></span>
+                <span class="stbadge ro"><i data-lucide="lock" style="width:11px;height:11px"></i>Read-only · engine writes</span>
               </div>
               <div style="display:flex;gap:7px">
-                <button class="btn btn-line btn-sm" id="rep-revise-btn" onclick="annoToggle('rep')"><i data-lucide="pen-line" style="width:13px;height:13px"></i>Revise</button>
-                <button class="btn btn-sm btn-approve" onclick="approveRep()"><i data-lucide="check" style="width:13px;height:13px"></i>Approve</button>
+                <button class="btn btn-line btn-sm" id="rep-clarify-btn" onclick="annoToggle('rep')"><i data-lucide="message-circle-question" style="width:13px;height:13px"></i>Clarify</button>
               </div>
             </div>
             <div class="fb-md" id="rep-md"></div>
             <div class="revise-bar" id="rep-bar">
-              <span class="rb-notes" id="pb-notes">0 notes</span>
-              <input class="rb-input" id="pb-input" placeholder="Select lines to annotate…" disabled onkeydown="if(event.key==='Enter')annoAdd('rep')">
+              <span class="rb-notes" id="pb-notes">0 questions</span>
+              <input class="rb-input" id="pb-input" placeholder="Select lines to clarify…" disabled onkeydown="if(event.key==='Enter')annoAdd('rep')">
               <button class="btn btn-line btn-sm" id="pb-add" onclick="annoAdd('rep')" disabled><i data-lucide="plus" style="width:13px;height:13px"></i>Add</button>
               <span class="rb-div"></span>
-              <button class="btn btn-pri btn-sm" id="pb-submit" onclick="annoSubmit('rep')" disabled><i data-lucide="git-pull-request" style="width:13px;height:13px"></i>Request changes</button>
+              <button class="btn btn-pri btn-sm" id="pb-submit" onclick="annoSubmit('rep')" disabled><i data-lucide="send" style="width:13px;height:13px"></i>Ask agents</button>
             </div>
           </div>
         </div>
@@ -953,12 +952,12 @@ Voice, tone, and primary strings. Owned by +copywriter.
       emptyPh:'Select lines to clarify…', selPh:n=>`Ask the author about ${n} line(s)…`,
       noun:'question', tagWord:'Question',
       submit(){ const g=ANNO.mem.groups.length; annoExit('mem'); toast(`${g} clarification${g===1?'':'s'} sent to Activity · memory unchanged`); } },
-    rep:{ mdId:'rep-md', btnId:'rep-revise-btn', barId:'rep-bar', notesId:'pb-notes', inputId:'pb-input', addId:'pb-add', submitId:'pb-submit',
-      offLabel:'<i data-lucide="pen-line" style="width:13px;height:13px"></i>Revise',
+    rep:{ mdId:'rep-md', btnId:'rep-clarify-btn', barId:'rep-bar', notesId:'pb-notes', inputId:'pb-input', addId:'pb-add', submitId:'pb-submit',
+      offLabel:'<i data-lucide="message-circle-question" style="width:13px;height:13px"></i>Clarify',
       onLabel:'<i data-lucide="x" style="width:13px;height:13px"></i>Cancel',
-      emptyPh:'Select lines to annotate…', selPh:n=>`Describe the change for ${n} line(s)…`,
-      noun:'note', tagWord:'Revision',
-      submit(){ REPORTS[repCur].st='review'; renderRepList(); repShow(repCur); } },
+      emptyPh:'Select lines to clarify…', selPh:n=>`Ask the author about ${n} line(s)…`,
+      noun:'question', tagWord:'Question',
+      submit(){ const g=ANNO.rep.groups.length; annoExit('rep'); toast(`${g} clarification${g===1?'':'s'} sent to Activity · report unchanged`); } },
   };
   const ANNO={ ref:{on:false,groups:[]}, mem:{on:false,groups:[]}, rep:{on:false,groups:[]} };
   function annoKey(el){ return el.closest('#mem-md') ? 'mem' : el.closest('#rep-md') ? 'rep' : 'ref'; }
@@ -1135,14 +1134,10 @@ Voice, tone, and primary strings. Owned by +copywriter.
     lucide.createIcons();
   }
 
-  /* ---------- reports (per-file agent reports · view / revise) ---------- */
-  const REP_SCOPE={
-    status:{l:'Status',c:'#5E84D2'}, test:{l:'Test',c:'#4CB782'}, security:{l:'Security',c:'#CC6B6B'},
-    release:{l:'Release',c:'#9B82CE'}, delivery:{l:'Delivery',c:'#D2A24C'}, growth:{l:'Growth',c:'#F472B6'},
-  };
+  /* ---------- reports (per-file agent reports · read-only · clarify) ---------- */
   const REPORTS=[
-    {f:'status_2026-06-02-1435.md', scope:'status', au:'+operation-manager', time:'14:35', st:'review', md:`# Project Status Report
-**Author:** +operation-manager | **Status:** Waiting | 2026-06-02-14:35 | **Reviewer:** +prime
+    {f:'status-report.md', au:'+operation-manager', md:`# Project Status Report
+**Author:** +operation-manager
 
 ## Executive Summary
 - **Current Phase:** Active development — 04-development-cycle, step 4/7
@@ -1162,8 +1157,8 @@ Voice, tone, and primary strings. Owned by +copywriter.
 | QA | 2 | 0 | Auth E2E 2/5 |
 | DevOps | 1 | 1 | B-203 DNS blocker |
 | Designer | 3 | 0 | login mocks v3 done |`},
-    {f:'test_2026-06-02-1210.md', scope:'test', au:'+qa-engineer', time:'12:10', st:'approved', md:`# Test Report
-**Author:** +qa-engineer | **Status:** Approved | 2026-06-02-12:10 | **Reviewer:** +engineering-manager
+    {f:'test-report.md', au:'+qa-engineer', md:`# Test Report
+**Author:** +qa-engineer
 
 ## Summary
 - Regression suite green; auth E2E still in progress.
@@ -1176,8 +1171,8 @@ Voice, tone, and primary strings. Owned by +copywriter.
 
 ## Notes
 - Fixed the flaky clock-skew test — see learned.md.`},
-    {f:'security_2026-06-01-1730.md', scope:'security', au:'+security-engineer', time:'yesterday', st:'approved', md:`# Security Audit
-**Author:** +security-engineer | **Status:** Approved | 2026-06-01-17:30 | **Reviewer:** +engineering-manager
+    {f:'security-audit.md', au:'+security-engineer', md:`# Security Audit
+**Author:** +security-engineer
 
 ## Scope
 - Auth endpoints, dependency CVEs, secret scanning.
@@ -1190,30 +1185,91 @@ Voice, tone, and primary strings. Owned by +copywriter.
 
 ## Recommendation
 - Ship the rate-limit (T-008) before the billing launch.`},
-    {f:'release_v0.9.md', scope:'release', au:'+delivery-manager', time:'2d', st:'draft', md:`# Release Notes — v0.9
-**Author:** +delivery-manager | **Status:** Draft | 2026-06-01 | **Reviewer:** +prime
+    {f:'delivery-report.md', au:'+delivery-manager', md:`# Delivery Report
+**Author:** +delivery-manager
 
-## Highlights
+## Deployment Overview
+- Preview deploys green on every PR; production tracks \`main\`.
+
+## CI/CD Pipeline
+| Stage | State | Duration |
+| Lint + typecheck | Pass | 38s |
+| Unit + integration | Pass | 1m12s |
+| Build | Pass | 54s |
+
+## Infrastructure
+- Vercel project linked; Postgres on a managed instance.
+
+## Rollback Plan
+- Revert \`main\` to the last green tag; deploys auto-trigger.`},
+    {f:'growth-report.md', au:'+growth-expert', md:`# Growth & Analytics Report
+**Author:** +growth-expert
+
+## Period
+- 2026-05-26 → 2026-06-02
+
+## Key Metrics
+| Metric | Value | Δ WoW |
+| Sign-ups | 412 | +18% |
+| Activation | 63% | +4pt |
+| Trial → paid | 9.1% | +1.2pt |
+
+## Funnel
+- Drop-off concentrates at email verification — see B-203.
+
+## Recommendations
+- Fix reset-email deliverability before the next campaign.`},
+    {f:'content-report.md', au:'+copywriter', md:`# Content Report
+**Author:** +copywriter
+
+## Brand Voice & Tone
+- Plain, confident, active verbs; no jargon.
+
+## Microcopy
+| Surface | String |
+| Primary CTA | Start free trial |
+| Empty board | No items yet — create your first task |
+| Reset sent | Check your inbox for the reset link |
+
+## Email Templates
+- Welcome / reset / receipt drafted; pending +growth-expert review.`},
+    {f:'legal-report.md', au:'+compliance-expert', md:`# Legal & Compliance Report
+**Author:** +compliance-expert
+
+## Compliance Scope
+- GDPR data handling, Stripe PCI boundary, ToS + privacy policy.
+
+## Identified Risks
+| Risk | Severity | State |
+| PII in logs | High | Mitigated — scrubber added |
+| Cookie consent | Medium | Pending banner |
+
+## Required Approvals
+- Privacy-policy sign-off before public launch.`},
+    {f:'release-notes.md', au:'+delivery-manager', md:`# Release Notes — v0.9
+**Author:** +delivery-manager
+
+## New Features
 - OAuth login (beta)
 - Dashboard skeleton + first-paint loaders
-- Stripe webhook (work in progress)
+
+## Enhancements
+- Faster board render via column virtualization
+
+## Bug Fixes
+- Sign-up button alignment on mobile (B-201)
 
 ## Known Issues
-- Password-reset emails may land in spam (B-203)
-
-> Draft — pending sign-off before tagging v0.9.`},
+- Password-reset emails may land in spam (B-203)`},
   ];
   let repCur=0;
   function renderRepList(){
     document.getElementById('rep-grp').textContent=REPORTS.length+' reports';
-    document.getElementById('rep-list').innerHTML=REPORTS.map((r,i)=>{
-      const sc=REP_SCOPE[r.scope], st=REF_ST[r.st];
-      return `
+    document.getElementById('rep-list').innerHTML=REPORTS.map((r,i)=>`
       <div class="fb-item ${i===repCur?'active':''}" onclick="repSelect(${i},this)">
-        <div class="fb-nm"><span class="ty-pill" style="color:${sc.c};background:${sc.c}1a"><span class="d" style="background:${sc.c}"></span>${sc.l}</span><span class="stbadge sm ${st.cls}"><span class="d" style="background:${st.c}"></span>${st.l}</span></div>
-        <div class="fb-au" style="margin-top:7px">${pAvatar(r.au,16)}<span>${short(r.au)}</span><span style="flex:1"></span><span class="mono" style="font-size:10.5px;color:var(--fg-faint)">${r.time}</span></div>
-      </div>`;
-    }).join('');
+        <div class="fb-nm"><span class="nm">${r.f}</span></div>
+        <div class="fb-au">${pAvatar(r.au,16)}<span>${short(r.au)}</span></div>
+      </div>`).join('');
   }
   function renderReports(){ repCur=0; renderRepList(); repShow(0); }
   function repSelect(i,el){
@@ -1224,14 +1280,11 @@ Voice, tone, and primary strings. Owned by +copywriter.
   }
   function repShow(i){
     repCur=i;
-    const r=REPORTS[i], st=REF_ST[r.st];
-    document.getElementById('rep-vname').textContent=r.f;
-    document.getElementById('rep-vstatus').innerHTML=`<span class="stbadge ${st.cls}"><span class="d" style="background:${st.c}"></span>${st.l}</span>`;
-    document.getElementById('rep-md').innerHTML=mdToHtml(r.md);
+    document.getElementById('rep-vname').textContent=REPORTS[i].f;
+    document.getElementById('rep-md').innerHTML=mdToHtml(REPORTS[i].md);
     annoExit('rep');
     lucide.createIcons();
   }
-  function approveRep(){ REPORTS[repCur].st='approved'; renderRepList(); repShow(repCur); }
   function requestReport(){ toast('Report requested · an agent is generating it'); }
 
   function go(r){
