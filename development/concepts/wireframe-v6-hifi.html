@@ -71,7 +71,6 @@
 
   /* ---------- shell ---------- */
   #shell{ flex:1; display:flex; min-height:0; position:relative; z-index:1; }
-  .sidebar{ width:212px; flex-shrink:0; background:var(--panel); border-right:1px solid var(--border); display:flex; flex-direction:column; padding:10px 0; gap:1px; }
   .nav-sec{ font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--fg-faint); font-weight:550; padding:12px 18px 5px; }
   .nav{ display:flex; align-items:center; gap:10px; height:36px; margin:0 8px; padding:0 8px; border-radius:7px; color:var(--fg-muted); cursor:pointer; font-weight:450; font-size:13px; transition:.12s; position:relative; }
   .nav:hover{ background:var(--hover); color:var(--fg-mid); }
@@ -113,27 +112,39 @@
   /* ---------- DASHBOARD ---------- */
   .dash{ flex:1; min-width:0; display:flex; }
   .dash-main{ flex:1; min-width:0; overflow-y:auto; padding:22px 24px 32px; }
-  /* stats — distinct cards: status donut + metric tiles */
-  .stats{ display:grid; grid-template-columns:repeat(6,1fr); gap:10px; margin-bottom:20px; }
-  .stat-card{ border:1px solid var(--border); border-radius:11px; background:var(--card); padding:14px 16px; }
-  .donut-card{ grid-column:span 2; display:flex; align-items:center; gap:18px; }
-  .donut{ width:72px; height:72px; border-radius:50%; position:relative; flex-shrink:0; }
-  .donut-hole{ position:absolute; inset:12px; border-radius:50%; background:var(--card); display:flex; flex-direction:column; align-items:center; justify-content:center; }
-  .donut-hole b{ font-size:16px; font-family:'Geist Mono',monospace; font-weight:600; line-height:1; }
-  .donut-hole span{ font-size:8.5px; color:var(--fg-muted); margin-top:2px; }
-  .legend{ display:grid; gap:5px; flex:1; }
-  .legend > div{ font-size:11px; color:var(--fg-mid); display:flex; align-items:center; gap:7px; }
-  .legend b{ color:var(--fg); font-family:'Geist Mono',monospace; font-weight:500; margin-left:auto; }
-  .metric{ display:flex; flex-direction:column; gap:7px; justify-content:center; }
-  .metric-l{ font-size:11px; color:var(--fg-muted); }
-  .metric-v{ font-size:21px; font-weight:600; font-family:'Geist Mono',monospace; letter-spacing:-0.02em; line-height:1; }
-  .metric-v span{ font-size:11px; color:var(--fg-faint); font-weight:400; font-family:'Geist',sans-serif; }
-  .bd{ display:flex; gap:8px; font-size:10px; color:var(--fg-faint); }
-  .bd b{ color:var(--fg-mid); font-weight:550; }
+
+  /* stats — 2-card grid: 1:1 */
+  .stats{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:22px; }
+  .stat-card{ border:1px solid var(--border); border-radius:11px; background:var(--card); padding:16px 18px; }
+  .stat-lbl{ font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.07em; color:var(--fg-faint); margin-bottom:14px; }
+
+  /* status bars */
+  .sbar-row{ display:flex; align-items:center; gap:9px; margin-bottom:8px; }
+  .sbar-row:last-child{ margin-bottom:0; }
+  .sbar-name{ font-size:12px; color:var(--fg-muted); width:80px; flex-shrink:0; }
+  .sbar-track{ flex:1; height:5px; border-radius:3px; background:var(--border); overflow:hidden; }
+  .sbar-fill{ height:100%; border-radius:3px; }
+  .sbar-n{ font-size:11.5px; color:var(--fg-mid); font-family:'Geist Mono',monospace; width:16px; text-align:right; flex-shrink:0; }
+  .sbar-pct{ font-size:10.5px; color:var(--fg-faint); font-family:'Geist Mono',monospace; width:30px; text-align:right; flex-shrink:0; }
+
+  /* epic summary rows */
+  .epic-sum-rows{ display:flex; flex-direction:column; gap:9px; }
+  .epic-sum-row{ display:flex; align-items:center; gap:9px; }
+  .epic-sum-id{ font-size:10px; color:var(--fg-faint); font-family:'Geist Mono',monospace; width:28px; flex-shrink:0; }
+  .epic-sum-name{ font-size:11px; color:var(--fg-muted); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .epic-sum-bar{ flex:1; min-width:40px; max-width:160px; height:4px; border-radius:2px; background:var(--border); overflow:hidden; }
+  .epic-sum-fill{ height:100%; border-radius:2px; background:var(--accent); }
+  .epic-sum-pct{ font-size:10px; color:var(--fg-faint); font-family:'Geist Mono',monospace; width:26px; text-align:right; flex-shrink:0; }
+
+  /* metric cards */
+  .metric-big{ font-size:32px; font-weight:600; font-family:'Geist Mono',monospace; letter-spacing:-0.03em; line-height:1; margin:8px 0 6px; }
+  .metric-sub{ font-size:11.5px; color:var(--fg-muted); }
+
   /* persona avatar — profile-style coloured circle */
   .avatar{ display:inline-flex; align-items:center; justify-content:center; border-radius:50%; flex-shrink:0; box-sizing:border-box; }
   .avatar i{ width:52%; height:52%; }
-  /* epic progress-ring cards (dashboard alt presentation) */
+
+  /* epic ring cards (dashboard) */
   .rings{ display:grid; grid-template-columns:repeat(2,1fr); gap:9px; }
   .ring-card{ display:flex; align-items:center; gap:12px; border:1px solid var(--border); border-radius:10px; padding:10px 13px; background:var(--card); cursor:pointer; transition:.13s; }
   .ring-card:hover{ background:var(--card-hover); border-color:var(--border-strong); }
@@ -150,25 +161,44 @@
   .sec-c{ font-size:11.5px; color:var(--fg-faint); }
 
   .work{ border:1px solid var(--border); border-radius:10px; overflow:hidden; background:var(--card); }
-  .work-row{ display:grid; grid-template-columns:8px 22px 1fr 44px 60px 54px; align-items:center; gap:10px; height:33px; padding:0 13px; border-bottom:1px solid var(--border); cursor:pointer; transition:background .12s; }
+  .work-row{ display:flex; align-items:center; gap:10px; height:36px; padding:0 13px; border-bottom:1px solid var(--border); cursor:pointer; transition:background .12s; }
   .work-row:last-child{ border-bottom:none; }
   .work-row:hover{ background:var(--hover); }
-  .w-task{ display:flex; align-items:center; gap:9px; min-width:0; }
-  .w-who{ display:flex; align-items:center; gap:6px; flex-shrink:0; }
-  .w-name{ font-size:12.5px; color:var(--fg-mid); white-space:nowrap; }
-  .w-desc{ font-size:12.5px; color:var(--fg-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .w-id{ font-size:11px; color:var(--fg-faint); }
-  .w-step{ font-size:11.5px; color:var(--fg-muted); }
-  .w-time{ font-size:11.5px; color:var(--fg-faint); text-align:right; }
-  .tag{ font-size:11px; padding:1px 7px; border-radius:5px; font-weight:500; }
+  .w-left{ flex:1; display:flex; align-items:center; gap:8px; min-width:0; }
+  .w-right{ display:flex; align-items:center; gap:8px; flex-shrink:0; }
+  .w-name{ font-size:12px; color:var(--fg-muted); white-space:nowrap; }
+  .w-desc{ font-size:12.5px; color:var(--fg-mid); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .w-id{ font-size:11px; color:var(--fg-faint); flex-shrink:0; }
+  .w-step{ font-size:11px; color:var(--fg-faint); font-family:'Geist Mono',monospace; }
+  .tag{ font-size:10.5px; padding:1px 7px; border-radius:5px; font-weight:500; flex-shrink:0; }
+  .tag-live{ color:var(--green); background:rgba(76,183,130,.10); }
   .tag-warn{ color:var(--amber); background:rgba(210,162,76,.10); }
   .tag-block{ color:var(--red); background:rgba(204,107,107,.10); }
+  .w-gates{ display:flex; gap:3px; flex-shrink:0; }
+  .wg{ font-size:9px; padding:0 4px; height:14px; border-radius:3px; display:inline-flex; align-items:center; font-weight:600; letter-spacing:.02em; color:var(--fg-faint); background:rgba(255,255,255,.05); }
+  .wg.done{ color:var(--green); background:rgba(76,183,130,.13); }
+  /* prime review queue */
+  .prime-q{ border:1px solid var(--border); border-radius:10px; overflow:hidden; background:var(--card); }
+  .prime-row{ display:flex; align-items:center; gap:10px; height:40px; padding:0 14px; border-bottom:1px solid var(--border); transition:background .12s; }
+  .prime-row:last-child{ border-bottom:none; }
+  .prime-row:hover{ background:var(--hover); }
+  .prime-title{ flex:1; font-size:13px; color:var(--fg-mid); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+  .prime-age{ font-size:11px; color:var(--fg-faint); font-family:'Geist Mono',monospace; flex-shrink:0; }
+  .prime-acts{ display:flex; gap:6px; flex-shrink:0; }
+  .btn-approve{ color:var(--green); background:rgba(76,183,130,.13); border:1px solid rgba(76,183,130,.25); }
+  .btn-approve:hover{ background:rgba(76,183,130,.22); }
+  /* sidebar collapse */
+  .sidebar{ width:212px; flex-shrink:0; background:var(--panel); border-right:1px solid var(--border); display:flex; flex-direction:column; padding:10px 0; gap:1px; transition:width .18s; overflow:hidden; }
+  .sidebar.collapsed{ width:52px; }
+  .sidebar.collapsed .nav-sec{ display:none; }
+  .sidebar.collapsed .nav-lbl{ display:none; }
+  .sidebar.collapsed .nav{ justify-content:center; padding:0; margin:0 7px; }
 
   .prog{ height:4px; border-radius:3px; background:rgba(255,255,255,.06); overflow:hidden; }
   .prog > i{ display:block; height:100%; background:var(--accent); border-radius:3px; }
 
   /* timeline */
-  .tl{ width:312px; flex-shrink:0; border-left:1px solid var(--border); background:var(--panel); display:flex; flex-direction:column; }
+  .tl{ width:360px; flex-shrink:0; border-left:1px solid var(--border); background:var(--panel); display:flex; flex-direction:column; }
   .tl-h{ height:44px; flex-shrink:0; display:flex; align-items:center; justify-content:space-between; padding:0 16px; border-bottom:1px solid var(--border); }
   .tl-t{ font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--fg-mid); }
   .tl-list{ flex:1; overflow-y:auto; padding:4px 0; }
@@ -217,7 +247,7 @@
   .epic-card.sel{ border-color:var(--accent-line); background:var(--card); }
   .ec-top{ display:flex; align-items:center; gap:7px; margin-bottom:9px; }
   .ec-mark{ width:6px; height:6px; border-radius:2px; background:var(--accent); }
-  .ec-id{ font-size:10.5px; color:var(--fg-faint); }
+  .ec-id{ margin-left:auto; font-size:11px; color:var(--fg-muted); }
   .ec-title{ font-size:13.5px; font-weight:550; margin-bottom:10px; letter-spacing:-0.01em; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
   .ec-foot{ display:flex; align-items:center; gap:8px; padding-top:10px; border-top:1px solid var(--border); font-size:10.5px; color:var(--fg-faint); }
 
@@ -235,6 +265,7 @@
 
 <!-- ============ TOPBAR ============ -->
 <header class="topbar">
+  <div class="iconbtn" onclick="toggleSidebar()" title="Toggle sidebar"><i data-lucide="panel-left" style="width:15px;height:15px"></i></div>
   <div class="logo">K</div>
   <div class="tb-proj"><span style="font-weight:500;color:var(--fg)">Acme CRM</span><i data-lucide="chevrons-up-down" style="width:13px;height:13px;opacity:.6"></i></div>
   <span class="tb-sep" style="font-size:11px">/</span>
@@ -248,16 +279,16 @@
 <div id="shell">
   <aside class="sidebar">
     <div class="nav-sec">Workspace</div>
-    <div class="nav active" data-route="dashboard" onclick="go('dashboard')"><i data-lucide="layout-dashboard"></i>Dashboard</div>
-    <div class="nav" data-route="board" onclick="go('board')"><i data-lucide="square-kanban"></i>Board</div>
-    <div class="nav" data-route="references"><i data-lucide="book-marked"></i>References</div>
-    <div class="nav" data-route="memory"><i data-lucide="brain"></i>Memory</div>
-    <div class="nav" data-route="reports"><i data-lucide="book-check"></i>Reports</div>
+    <div class="nav active" data-route="dashboard" onclick="go('dashboard')"><i data-lucide="layout-dashboard"></i><span class="nav-lbl">Dashboard</span></div>
+    <div class="nav" data-route="board" onclick="go('board')"><i data-lucide="square-kanban"></i><span class="nav-lbl">Board</span></div>
+    <div class="nav" data-route="references"><i data-lucide="book-marked"></i><span class="nav-lbl">References</span></div>
+    <div class="nav" data-route="memory"><i data-lucide="brain"></i><span class="nav-lbl">Memory</span></div>
+    <div class="nav" data-route="reports"><i data-lucide="book-check"></i><span class="nav-lbl">Reports</span></div>
     <div class="nav-sec">Project settings</div>
-    <div class="nav"><i data-lucide="flag"></i>Project info</div>
-    <div class="nav"><i data-lucide="unplug"></i>Integrations</div>
-    <div class="nav"><i data-lucide="construction"></i>Environments</div>
-    <div class="nav"><i data-lucide="bot"></i>Agent models</div>
+    <div class="nav"><i data-lucide="flag"></i><span class="nav-lbl">Project info</span></div>
+    <div class="nav"><i data-lucide="unplug"></i><span class="nav-lbl">Integrations</span></div>
+    <div class="nav"><i data-lucide="construction"></i><span class="nav-lbl">Environments</span></div>
+    <div class="nav"><i data-lucide="bot"></i><span class="nav-lbl">Agent models</span></div>
   </aside>
 
   <main id="main">
@@ -279,8 +310,8 @@
           <div class="sec-h"><span class="sec-t">Active work</span><span class="sec-c">6 agents running</span></div>
           <div class="work" id="work"></div>
 
-          <div class="sec-h" style="margin-top:22px"><span class="sec-t">Epics</span><span class="sec-c">4 · 18 items · progress-ring gösterimi</span></div>
-          <div class="rings" id="epic-rings"></div>
+          <div class="sec-h" style="margin-top:22px"><span class="sec-t">For review</span><span class="sec-c" style="color:var(--accent)">+prime · 2 items</span></div>
+          <div class="prime-q" id="epic-rings"></div>
         </div>
 
         <aside class="tl">
@@ -366,10 +397,10 @@
   const STATUS={todo:'#7B7F87',prog:'#D2A24C',test:'#5E84D2',review:'#9B82CE',done:'#4CB782'};
 
   const EPICS=[
-    {id:'E-01',t:'Authentication & Users',pct:40,n:'5 · 2 done',who:'+product-manager',sel:true},
-    {id:'E-02',t:'Billing & Subscription',pct:8,n:'4 · 0 done',who:'+product-manager'},
-    {id:'E-03',t:'Customer Dashboard',pct:25,n:'6 · 1 done',who:'+designer'},
-    {id:'E-04',t:'Admin Panel',pct:0,n:'3 · 0 done',who:'+engineering-manager'},
+    {id:'E-01',t:'Authentication & Users',pct:40,n:5,dn:2,who:'+product-manager',sel:true},
+    {id:'E-02',t:'Billing & Subscription',pct:8,n:4,dn:0,who:'+product-manager'},
+    {id:'E-03',t:'Customer Dashboard',pct:25,n:6,dn:1,who:'+designer'},
+    {id:'E-04',t:'Admin Panel',pct:0,n:3,dn:0,who:'+engineering-manager'},
   ];
   const COLS=[
     {k:'todo',name:'To do',cards:[
@@ -394,12 +425,12 @@
     ]},
   ];
   const WORK=[
-    {who:'+backend-developer',desc:'implementing JWT middleware',id:'T-101',step:'4/7',pct:57,time:'4m',st:'live'},
-    {who:'+qa-engineer',desc:'running auth E2E suite',id:'T-011',step:'2/5',pct:40,time:'12m',st:'live'},
-    {who:'+designer',desc:'login screen mocks v3',id:'T-002',step:'3/3',pct:100,time:'2m',st:'live'},
-    {who:'+frontend-developer',desc:'analytics widget grid',id:'T-006',step:'5/8',pct:62,time:'28m',st:'live'},
-    {who:'+security-engineer',desc:'rate-limit audit',id:'T-008',step:'—',pct:0,time:'queued',st:'queued'},
-    {who:'+db-admin',desc:'subscription schema migration',id:'T-013',step:'—',pct:0,time:'blocked',st:'blocked'},
+    {who:'+backend-developer',desc:'implementing JWT middleware',id:'T-101',st:'live',gs:['AC','QC','SE','CR'],g:'ddpp'},
+    {who:'+qa-engineer',desc:'running auth E2E suite',id:'T-011',st:'live',gs:['AC','QC'],g:'dp'},
+    {who:'+designer',desc:'login screen mocks v3',id:'T-002',st:'live',gs:['AC','QC','DS'],g:'ddd'},
+    {who:'+frontend-developer',desc:'analytics widget grid',id:'T-006',st:'live',gs:['AC','QC','DS','CR'],g:'ddpp'},
+    {who:'+security-engineer',desc:'rate-limit audit',id:'T-008',st:'queued',gs:['AC','QC'],g:'pp'},
+    {who:'+db-admin',desc:'subscription schema migration',id:'T-013',st:'blocked',gs:['AC'],g:'p'},
   ];
   const TL=[
     ['14:35','#5E84D2','<span class="ac mono">+backend</span> committed <span class="mono">oauth.ts</span> · T-101'],
@@ -418,45 +449,80 @@
 
   function renderStats(){
     const seg=[
-      {k:'To do',c:'#7B7F87',n:4},{k:'In progress',c:'#D2A24C',n:3},{k:'Test',c:'#5E84D2',n:2},{k:'Review',c:'#9B82CE',n:2},{k:'Done',c:'#4CB782',n:2}
+      {k:'To do',    c:'#7B7F87',n:4},
+      {k:'In progress',c:'#D2A24C',n:3},
+      {k:'Test',     c:'#5E84D2',n:2},
+      {k:'Review',   c:'#9B82CE',n:2},
+      {k:'Done',     c:'#4CB782',n:2}
     ];
-    const total=seg.reduce((a,s)=>a+s.n,0); let acc=0;
-    const stops=seg.map(s=>{ const f=acc/total*100; acc+=s.n; const t=acc/total*100; return `${s.c} ${f}% ${t}%`; }).join(', ');
-    const legend=seg.map(s=>`<div><span class="dot" style="width:7px;height:7px;background:${s.c}"></span>${s.k}<b>${s.n}</b></div>`).join('');
-    const metrics=[
-      {l:'Epics',v:'4',s:'· 25%'},
-      {l:'Items',v:'13',bd:'<div class="bd"><span><b>8</b> task</span><span><b>3</b> bug</span><span><b>2</b> debt</span></div>'},
-      {l:'Awaiting approval',v:'2',col:'var(--accent-hi)',s:'+prime'},
-      {l:'Blocked',v:'1',col:'var(--red)',s:'B-203'},
-    ].map(m=>`<div class="stat-card metric"><div class="metric-l">${m.l}</div><div class="metric-v" style="${m.col?`color:${m.col}`:''}">${m.v}${m.s?`<span> ${m.s}</span>`:''}</div>${m.bd||''}</div>`).join('');
+    const total=seg.reduce((a,s)=>a+s.n,0);
+    const maxN=Math.max(...seg.map(s=>s.n));
+
+    const bars=seg.map(s=>`
+      <div class="sbar-row">
+        <span class="sbar-name">${s.k}</span>
+        <div class="sbar-track"><div class="sbar-fill" style="width:${Math.round(s.n/maxN*100)}%;background:${s.c}"></div></div>
+        <span class="sbar-n">${s.n}</span>
+        <span class="sbar-pct">${Math.round(s.n/total*100)}%</span>
+      </div>`).join('');
+
+    const epicRows=EPICS.map(e=>`
+      <div class="epic-sum-row">
+        <span class="epic-sum-id">${e.id}</span>
+        <span class="epic-sum-name">${e.t}</span>
+        <div class="epic-sum-bar"><div class="epic-sum-fill" style="width:${e.pct}%"></div></div>
+        <span class="epic-sum-pct">${e.pct}%</span>
+      </div>`).join('');
+
     document.getElementById('stats').innerHTML=`
-      <div class="stat-card donut-card rise"><div class="donut" style="background:conic-gradient(${stops})"><div class="donut-hole"><b>${total}</b><span>items</span></div></div><div class="legend">${legend}</div></div>
-      ${metrics}`;
+      <div class="stat-card rise" style="animation-delay:0ms">
+        <div class="stat-lbl">Epic progress · 4 epics</div>
+        <div class="epic-sum-rows" style="margin-top:4px">${epicRows}</div>
+      </div>
+      <div class="stat-card rise" style="animation-delay:35ms">
+        <div class="stat-lbl">Item status · ${total} total</div>
+        ${bars}
+      </div>`;
   }
   function renderWork(){
     document.getElementById('work').innerHTML=WORK.map((w,i)=>{
-      const dotc=w.st==='live'?'var(--green)':w.st==='queued'?'var(--amber)':'var(--red)';
-      const right=w.st==='queued'?'<span class="tag tag-warn">queued</span>':w.st==='blocked'?'<span class="tag tag-block">blocked</span>':`<span class="w-time mono">${w.time}</span>`;
+      const pill=w.st==='live'?'<span class="tag tag-live">Live</span>':w.st==='queued'?'<span class="tag tag-warn">Queued</span>':'<span class="tag tag-block">Blocked</span>';
+      const gates=w.gs?'<div class="w-gates">'+w.gs.map((l,j)=>`<span class="wg ${w.g[j]==='d'?'done':''}">${l}</span>`).join('')+'</div>':'';
       return `<div class="work-row rise" style="animation-delay:${i*30}ms">
-        <span class="dot ${w.st==='live'?'live':''}" style="background:${dotc}"></span>
-        ${pAvatar(w.who,18)}
-        <div class="w-task"><span class="w-name">${short(w.who)}</span><span class="w-desc">${w.desc}</span><span class="w-id mono">${w.id}</span></div>
-        <span class="w-step mono">${w.step}</span>
-        <div class="prog"><i style="width:${w.pct}%"></i></div>
-        ${right}
+        <div class="w-left">
+          ${pill}
+          <span class="w-id mono">${w.id}</span>
+          <span class="w-desc">${w.desc}</span>
+          ${gates}
+        </div>
+        <div class="w-right">
+          ${pAvatar(w.who,18)}
+          <span class="w-name">${short(w.who)}</span>
+        </div>
       </div>`;
     }).join('');
   }
   function renderEpicRings(){
-    document.getElementById('epic-rings').innerHTML=EPICS.map((e,i)=>`
-      <div class="ring-card rise" style="animation-delay:${i*35}ms">
-        <div class="ring" style="background:conic-gradient(var(--accent) ${e.pct}%, var(--border-strong) 0)"><div class="ring-hole">${e.pct}%</div></div>
-        <div class="ring-info">
-          <div class="ring-id"><span class="mono">${e.id}</span>${pAvatar(e.who,16)}</div>
-          <div class="ring-t">${e.t}</div>
-          <div class="ring-m">${e.n}</div>
+    const items=[
+      {id:'T-105',ty:'task',t:'Pricing page copy',who:'+copywriter',ep:'E-03',age:'2h'},
+      {id:'T-103',ty:'task',t:'Dashboard skeleton component',who:'+frontend-developer',ep:'E-03',age:'5h'},
+    ];
+    document.getElementById('epic-rings').innerHTML=items.map((it,i)=>`
+      <div class="prime-row rise" style="animation-delay:${i*25}ms">
+        <span class="ty-pill" style="color:${TYPE[it.ty].c};background:${TYPE[it.ty].c}1a;flex-shrink:0"><span class="d" style="background:${TYPE[it.ty].c}"></span>${TYPE[it.ty].l}</span>
+        <span class="mono" style="font-size:11px;color:var(--fg-faint);flex-shrink:0">${it.id}</span>
+        <span class="prime-title">${it.t}</span>
+        ${pAvatar(it.who,18)}
+        <span class="w-name">${short(it.who)}</span>
+        <span class="prime-age">${it.age}</span>
+        <div class="prime-acts">
+          <button class="btn btn-sm btn-approve">Approve</button>
+          <button class="btn btn-line btn-sm">Request changes</button>
         </div>
       </div>`).join('');
+  }
+  function toggleSidebar(){
+    document.querySelector('.sidebar').classList.toggle('collapsed');
   }
   function renderTl(){
     document.getElementById('tl').innerHTML=TL.map(e=>`
@@ -472,7 +538,7 @@
         <div class="ec-top"><span class="ty-pill" style="color:${TYPE.epic.c};background:${TYPE.epic.c}1a"><span class="d" style="background:${TYPE.epic.c}"></span>Epic</span><span class="ec-id mono">${e.id}</span></div>
         <div class="ec-title">${e.t}</div>
         <div class="prog" style="margin-bottom:0"><i style="width:${e.pct}%"></i></div>
-        <div class="ec-foot"><span>${e.n}</span><span class="mono" style="font-size:10px">${e.pct}%</span><span style="flex:1"></span>${pAvatar(e.who,18)}</div>
+        <div class="ec-foot"><span class="mono" style="font-size:11px;color:var(--fg-muted)">${e.n}/${e.dn}</span><span style="flex:1"></span>${pAvatar(e.who,24)}</div>
       </div>`).join('');
   }
   function renderCols(){
