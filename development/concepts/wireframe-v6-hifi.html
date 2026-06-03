@@ -337,8 +337,8 @@
   .set-rl{ min-width:0; }
   .set-lbl{ font-size:13px; font-weight:500; color:var(--fg); }
   .set-desc{ font-size:11.5px; color:var(--fg-muted); margin-top:2px; }
-  .set-input{ height:32px; min-width:200px; border:1px solid var(--border); background:var(--bg-elev); border-radius:7px; padding:0 11px; color:var(--fg-mid); font-size:12.5px; font-family:inherit; text-align:right; }
-  .set-input:disabled{ opacity:.75; cursor:not-allowed; }
+  .set-val{ font-size:13px; color:var(--fg-mid); }
+  .chip.static{ cursor:default; }
   .set-pad{ padding:14px 16px; }
   .set-note{ font-size:11.5px; color:var(--fg-muted); padding:12px 16px 4px; }
   .set-note b{ color:var(--fg-mid); font-weight:500; }
@@ -565,25 +565,16 @@
           <div class="set-card">
             <div class="set-row">
               <div class="set-rl"><div class="set-lbl">Project name</div><div class="set-desc">Set at init · immutable</div></div>
-              <input class="set-input" value="Acme CRM" disabled>
+              <span class="set-val">Acme CRM</span>
             </div>
             <div class="set-row">
               <div class="set-rl"><div class="set-lbl">Project code</div><div class="set-desc">Item id prefix — e.g. <span class="mono">ACME-T01</span></div></div>
-              <input class="set-input mono" value="ACME" disabled>
+              <span class="set-val mono">ACME</span>
             </div>
-          </div>
-
-          <div class="set-sec">Target platform</div>
-          <div class="set-card">
-            <div class="set-pad">
-              <div class="chips">
-                <span class="chip on" onclick="pickPlatform(this)"><i data-lucide="globe"></i>Web</span>
-                <span class="chip" onclick="pickPlatform(this)"><i data-lucide="smartphone"></i>iOS</span>
-                <span class="chip" onclick="pickPlatform(this)"><i data-lucide="tablet-smartphone"></i>Android</span>
-                <span class="chip" onclick="pickPlatform(this)"><i data-lucide="monitor"></i>Desktop</span>
-              </div>
+            <div class="set-row">
+              <div class="set-rl"><div class="set-lbl">Target platform</div><div class="set-desc">Set at init · stack derived → <span class="mono">Next.js</span></div></div>
+              <span class="chip on static"><i data-lucide="globe"></i>Web</span>
             </div>
-            <div class="set-note" style="padding-bottom:14px">The stack profile is derived from this choice — <b>Web → Next.js</b>, <b>iOS → Swift</b>.</div>
           </div>
 
           <div class="set-sec">Notifications</div>
@@ -1382,7 +1373,6 @@ Voice, tone, and primary strings. Owned by +copywriter.
     lucide.createIcons();
   }
   function requestReport(){ toast('Report requested · an agent is generating it'); }
-  function pickPlatform(el){ el.parentElement.querySelectorAll('.chip').forEach(c=>c.classList.remove('on')); el.classList.add('on'); }
 
   function go(r){
     document.querySelectorAll('.route').forEach(x=>x.classList.toggle('active',x.dataset.route===r));
