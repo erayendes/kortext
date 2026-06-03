@@ -385,6 +385,18 @@
   .env-val{ font-family:'Geist Mono',monospace; color:var(--fg-muted); }
   .env-mask{ font-family:'Geist Mono',monospace; color:var(--fg-faint); letter-spacing:1.5px; }
   .env-none{ color:var(--fg-faint); }
+  /* agent models */
+  .am-banner{ display:flex; align-items:center; gap:9px; margin-bottom:14px; font-size:12px; color:var(--fg-muted); }
+  .am-pill{ display:inline-flex; align-items:center; gap:6px; height:23px; padding:0 9px; border-radius:6px; border:1px solid var(--accent-line); background:var(--accent-soft); color:var(--accent-hi); font-size:11px; font-weight:500; }
+  .am-pill svg{ width:12px; height:12px; }
+  .am-row{ display:flex; align-items:center; gap:12px; padding:10px 16px; border-bottom:1px solid var(--border); }
+  .am-row:last-child{ border-bottom:none; }
+  .am-who{ display:flex; align-items:center; gap:9px; flex:1; min-width:0; }
+  .am-name{ font-size:12.5px; color:var(--fg-mid); }
+  .am-role{ font-size:11px; color:var(--fg-faint); }
+  .set-select{ height:30px; border:1px solid var(--border); background:var(--bg-elev); border-radius:7px; padding:0 30px 0 11px; color:var(--fg-mid); font-size:12px; font-family:'Geist Mono',monospace; cursor:pointer; appearance:none; -webkit-appearance:none; background-image:url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23878B92' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; }
+  .set-select:hover{ border-color:var(--border-strong); }
+  .set-select:focus{ outline:none; border-color:var(--accent-line); }
   /* danger button */
   .btn-danger-line{ color:var(--red); border:1px solid rgba(204,107,107,.4); background:transparent; }
   .btn-danger-line:hover{ background:rgba(204,107,107,.1); }
@@ -432,7 +444,7 @@
     <div class="nav" data-route="project-info" onclick="go('project-info')"><i data-lucide="flag"></i><span class="nav-lbl">Project info</span></div>
     <div class="nav" data-route="integrations" onclick="go('integrations')"><i data-lucide="unplug"></i><span class="nav-lbl">Integrations</span></div>
     <div class="nav" data-route="environments" onclick="go('environments')"><i data-lucide="construction"></i><span class="nav-lbl">Environments</span></div>
-    <div class="nav"><i data-lucide="bot"></i><span class="nav-lbl">Agent models</span></div>
+    <div class="nav" data-route="agent-models" onclick="go('agent-models')"><i data-lucide="bot"></i><span class="nav-lbl">Agent models</span></div>
   </aside>
 
   <main id="main">
@@ -712,6 +724,23 @@
             </table>
           </div>
           <div class="set-note" style="padding-left:2px"><i data-lucide="shield" style="width:12px;height:12px;display:inline;vertical-align:-1px;margin-right:4px"></i>Secret values live in <span class="mono">.env</span> — the dashboard only shows presence, never the value.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== AGENT MODELS (settings) ===== -->
+    <section class="route" data-route="agent-models">
+      <div class="set-wrap">
+        <div class="set-inner">
+          <div class="set-title">Agent models</div>
+          <div class="set-sub">Which model each agent runs — specific to <span style="color:var(--fg-mid)">Acme CRM</span></div>
+
+          <div class="am-banner">
+            <span class="am-pill"><i data-lucide="cpu"></i>Project-specific</span>
+            <span>Persona bodies are read-only in <b style="color:var(--fg-mid);font-weight:500">Kortext &gt; Agents</b>; here you only assign the model.</span>
+          </div>
+
+          <div class="set-card" id="am-list"></div>
         </div>
       </div>
     </section>
@@ -1485,6 +1514,34 @@ Voice, tone, and primary strings. Owned by +copywriter.
   }
   function requestReport(){ toast('Report requested · an agent is generating it'); }
 
+  /* ---------- agent models (persona → model, project-specific) ---------- */
+  const MODELS=['claude-opus-4-8','claude-sonnet-4-6','claude-haiku-4-5'];
+  const AGENT_MODELS=[
+    {h:'+prime',role:'Orchestrator',m:'claude-opus-4-8'},
+    {h:'+operation-manager',role:'Ops lead',m:'claude-opus-4-8'},
+    {h:'+product-manager',role:'Product',m:'claude-sonnet-4-6'},
+    {h:'+engineering-manager',role:'Eng lead',m:'claude-opus-4-8'},
+    {h:'+delivery-manager',role:'Delivery',m:'claude-sonnet-4-6'},
+    {h:'+backend-developer',role:'Backend',m:'claude-sonnet-4-6'},
+    {h:'+frontend-developer',role:'Frontend',m:'claude-sonnet-4-6'},
+    {h:'+db-admin',role:'Database',m:'claude-sonnet-4-6'},
+    {h:'+qa-engineer',role:'QA',m:'claude-haiku-4-5'},
+    {h:'+security-engineer',role:'Security',m:'claude-sonnet-4-6'},
+    {h:'+devops-engineer',role:'DevOps',m:'claude-sonnet-4-6'},
+    {h:'+designer',role:'Design',m:'claude-sonnet-4-6'},
+    {h:'+copywriter',role:'Copy',m:'claude-haiku-4-5'},
+    {h:'+growth-expert',role:'Growth',m:'claude-haiku-4-5'},
+    {h:'+compliance-expert',role:'Compliance',m:'claude-sonnet-4-6'},
+  ];
+  function renderAgentModels(){
+    document.getElementById('am-list').innerHTML=AGENT_MODELS.map(a=>`
+      <div class="am-row">
+        <span class="am-who">${pAvatar(a.h,22)}<span class="am-name mono">${a.h}</span><span class="am-role">${a.role}</span></span>
+        <select class="set-select">${MODELS.map(m=>`<option ${m===a.m?'selected':''}>${m}</option>`).join('')}</select>
+      </div>`).join('');
+    lucide.createIcons();
+  }
+
   function go(r){
     document.querySelectorAll('.route').forEach(x=>x.classList.toggle('active',x.dataset.route===r));
     document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.route===r));
@@ -1505,7 +1562,7 @@ Voice, tone, and primary strings. Owned by +copywriter.
   function cycleTheme(){ themeMode = themeMode==='dark'?'light':themeMode==='light'?'auto':'dark'; applyTheme(); }
 
   renderStats(); renderWork(); renderEpicRings(); renderTl(); renderFooterAgents();
-  renderEpicRail(); renderCols(); renderRefs(); renderMemory(); renderReports();
+  renderEpicRail(); renderCols(); renderRefs(); renderMemory(); renderReports(); renderAgentModels();
   applyTheme();
   lucide.createIcons();
 </script>
