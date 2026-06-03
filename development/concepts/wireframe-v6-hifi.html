@@ -323,6 +323,42 @@
   .fb-md .md-table tr:last-child td{ border-bottom:none; }
   .fb-md .md-table td:not(:first-child), .fb-md .md-table th:not(:first-child){ white-space:nowrap; }
 
+  /* ---------- SETTINGS (Project info / Integrations / …) ---------- */
+  .set-wrap{ flex:1; min-width:0; overflow-y:auto; }
+  .set-inner{ max-width:760px; padding:26px 30px 56px; }
+  .set-title{ font-size:18px; font-weight:600; letter-spacing:-0.01em; margin-bottom:3px; }
+  .set-sub{ font-size:12.5px; color:var(--fg-muted); margin-bottom:24px; }
+  .set-sec{ font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.07em; color:var(--fg-faint); margin:0 0 9px 2px; }
+  .set-sec.danger{ color:var(--red); }
+  .set-card{ border:1px solid var(--border); border-radius:11px; background:var(--card); margin-bottom:24px; overflow:hidden; }
+  .set-card.danger{ border-color:rgba(204,107,107,.35); }
+  .set-row{ display:flex; align-items:center; justify-content:space-between; gap:18px; padding:14px 16px; border-bottom:1px solid var(--border); }
+  .set-row:last-child{ border-bottom:none; }
+  .set-rl{ min-width:0; }
+  .set-lbl{ font-size:13px; font-weight:500; color:var(--fg); }
+  .set-desc{ font-size:11.5px; color:var(--fg-muted); margin-top:2px; }
+  .set-input{ height:32px; min-width:200px; border:1px solid var(--border); background:var(--bg-elev); border-radius:7px; padding:0 11px; color:var(--fg-mid); font-size:12.5px; font-family:inherit; text-align:right; }
+  .set-input:disabled{ opacity:.75; cursor:not-allowed; }
+  .set-pad{ padding:14px 16px; }
+  .set-note{ font-size:11.5px; color:var(--fg-muted); padding:12px 16px 4px; }
+  .set-note b{ color:var(--fg-mid); font-weight:500; }
+  /* platform chips */
+  .chips{ display:flex; gap:8px; flex-wrap:wrap; }
+  .chip{ display:inline-flex; align-items:center; gap:7px; height:32px; padding:0 13px; border-radius:8px; border:1px solid var(--border); color:var(--fg-muted); font-size:12.5px; cursor:pointer; background:transparent; transition:.12s; }
+  .chip:hover{ border-color:var(--border-strong); color:var(--fg-mid); }
+  .chip.on{ border-color:var(--accent-line); background:var(--accent-soft); color:var(--accent-hi); }
+  .chip svg{ width:14px; height:14px; }
+  /* switch */
+  .switch{ width:34px; height:20px; border-radius:11px; background:var(--border-strong); position:relative; cursor:pointer; flex-shrink:0; transition:background .15s; }
+  .switch::after{ content:''; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:#fff; transition:transform .15s; box-shadow:0 1px 2px rgba(0,0,0,.3); }
+  .switch.on{ background:var(--accent); }
+  .switch.on::after{ transform:translateX(14px); }
+  /* danger button */
+  .btn-danger-line{ color:var(--red); border:1px solid rgba(204,107,107,.4); background:transparent; }
+  .btn-danger-line:hover{ background:rgba(204,107,107,.1); }
+  .btn-danger{ color:#fff; background:var(--red); }
+  .btn-danger:hover{ background:#b85c5c; }
+
   /* toast (clarification confirmation) */
   .toast{ position:fixed; bottom:50px; left:50%; transform:translateX(-50%) translateY(10px); display:flex; align-items:center; gap:7px; padding:9px 14px; border-radius:9px; background:var(--bg-elev); border:1px solid var(--border-strong); box-shadow:0 10px 30px rgba(0,0,0,.4); font-size:12.5px; color:var(--green); opacity:0; pointer-events:none; transition:.2s cubic-bezier(.16,1,.3,1); z-index:90; }
   .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
@@ -361,7 +397,7 @@
     <div class="nav" data-route="memory" onclick="go('memory')"><i data-lucide="brain"></i><span class="nav-lbl">Memory</span></div>
     <div class="nav" data-route="reports" onclick="go('reports')"><i data-lucide="book-check"></i><span class="nav-lbl">Reports</span></div>
     <div class="nav-sec">Project settings</div>
-    <div class="nav"><i data-lucide="flag"></i><span class="nav-lbl">Project info</span></div>
+    <div class="nav" data-route="project-info" onclick="go('project-info')"><i data-lucide="flag"></i><span class="nav-lbl">Project info</span></div>
     <div class="nav"><i data-lucide="unplug"></i><span class="nav-lbl">Integrations</span></div>
     <div class="nav"><i data-lucide="construction"></i><span class="nav-lbl">Environments</span></div>
     <div class="nav"><i data-lucide="bot"></i><span class="nav-lbl">Agent models</span></div>
@@ -512,6 +548,66 @@
               <button class="btn btn-line btn-sm" id="pb-add" onclick="annoAdd('rep')" disabled><i data-lucide="plus" style="width:13px;height:13px"></i>Add</button>
               <span class="rb-div"></span>
               <button class="btn btn-pri btn-sm" id="pb-submit" onclick="annoSubmit('rep')" disabled><i data-lucide="send" style="width:13px;height:13px"></i>Ask agents</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== PROJECT INFO (settings) ===== -->
+    <section class="route" data-route="project-info">
+      <div class="set-wrap">
+        <div class="set-inner">
+          <div class="set-title">Project info</div>
+          <div class="set-sub">Settings for <span style="color:var(--fg-mid)">Acme CRM</span></div>
+
+          <div class="set-sec">General</div>
+          <div class="set-card">
+            <div class="set-row">
+              <div class="set-rl"><div class="set-lbl">Project name</div><div class="set-desc">Set at init · immutable</div></div>
+              <input class="set-input" value="Acme CRM" disabled>
+            </div>
+            <div class="set-row">
+              <div class="set-rl"><div class="set-lbl">Project code</div><div class="set-desc">Item id prefix — e.g. <span class="mono">ACME-T01</span></div></div>
+              <input class="set-input mono" value="ACME" disabled>
+            </div>
+          </div>
+
+          <div class="set-sec">Target platform</div>
+          <div class="set-card">
+            <div class="set-pad">
+              <div class="chips">
+                <span class="chip on" onclick="pickPlatform(this)"><i data-lucide="globe"></i>Web</span>
+                <span class="chip" onclick="pickPlatform(this)"><i data-lucide="smartphone"></i>iOS</span>
+                <span class="chip" onclick="pickPlatform(this)"><i data-lucide="tablet-smartphone"></i>Android</span>
+                <span class="chip" onclick="pickPlatform(this)"><i data-lucide="monitor"></i>Desktop</span>
+              </div>
+            </div>
+            <div class="set-note" style="padding-bottom:14px">The stack profile is derived from this choice — <b>Web → Next.js</b>, <b>iOS → Swift</b>.</div>
+          </div>
+
+          <div class="set-sec">Notifications</div>
+          <div class="set-card">
+            <div class="set-note">Connection is global · <b>Kortext &gt; Notifications</b>. Toggle this project's alerts here.</div>
+            <div class="set-row" style="border-top:1px solid var(--border);margin-top:8px">
+              <div class="set-rl"><div class="set-lbl">Slack → <span class="mono" style="font-size:12px;color:var(--fg-muted)">#acme-crm</span></div></div>
+              <div class="switch on" onclick="this.classList.toggle('on')"></div>
+            </div>
+            <div class="set-row">
+              <div class="set-rl"><div class="set-lbl">Telegram → <span class="mono" style="font-size:12px;color:var(--fg-muted)">+prime</span></div></div>
+              <div class="switch on" onclick="this.classList.toggle('on')"></div>
+            </div>
+          </div>
+
+          <div class="set-sec danger">Danger zone</div>
+          <div class="set-card danger">
+            <div class="set-row">
+              <div class="set-rl"><div class="set-lbl">Reset engine state</div><div class="set-desc">Clears SQLite + worktrees; markdown is preserved</div></div>
+              <button class="btn btn-sm btn-danger-line">Reset</button>
+            </div>
+            <div class="set-row">
+              <div class="set-rl"><div class="set-lbl">Remove project</div><div class="set-desc">Unregister (keeps <span class="mono">.kortext/</span>) or delete entirely</div></div>
+              <button class="btn btn-sm btn-danger">Remove…</button>
             </div>
           </div>
         </div>
@@ -1286,6 +1382,7 @@ Voice, tone, and primary strings. Owned by +copywriter.
     lucide.createIcons();
   }
   function requestReport(){ toast('Report requested · an agent is generating it'); }
+  function pickPlatform(el){ el.parentElement.querySelectorAll('.chip').forEach(c=>c.classList.remove('on')); el.classList.add('on'); }
 
   function go(r){
     document.querySelectorAll('.route').forEach(x=>x.classList.toggle('active',x.dataset.route===r));
