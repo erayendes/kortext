@@ -316,6 +316,13 @@
   .fb-md h3{ font-size:11px; font-weight:600; color:var(--fg-faint); text-transform:uppercase; letter-spacing:.06em; margin:18px 0 7px; }
   .fb-md h2 + .l, .fb-md .meta-line{ color:var(--fg-faint); font-size:12px; }
 
+  /* markdown tables (reports) */
+  .fb-md .md-table{ width:100%; border-collapse:collapse; margin:6px 0 2px; font-size:12px; }
+  .fb-md .md-table th{ text-align:left; font-weight:600; color:var(--fg-faint); padding:7px 11px; border-bottom:1px solid var(--border-strong); font-size:10px; text-transform:uppercase; letter-spacing:.05em; }
+  .fb-md .md-table td{ padding:7px 11px; border-bottom:1px solid var(--border); color:var(--fg-muted); }
+  .fb-md .md-table tr:last-child td{ border-bottom:none; }
+  .fb-md .md-table td:not(:first-child), .fb-md .md-table th:not(:first-child){ white-space:nowrap; }
+
   /* toast (clarification confirmation) */
   .toast{ position:fixed; bottom:50px; left:50%; transform:translateX(-50%) translateY(10px); display:flex; align-items:center; gap:7px; padding:9px 14px; border-radius:9px; background:var(--bg-elev); border:1px solid var(--border-strong); box-shadow:0 10px 30px rgba(0,0,0,.4); font-size:12.5px; color:var(--green); opacity:0; pointer-events:none; transition:.2s cubic-bezier(.16,1,.3,1); z-index:90; }
   .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
@@ -352,7 +359,7 @@
     <div class="nav" data-route="board" onclick="go('board')"><i data-lucide="square-kanban"></i><span class="nav-lbl">Board</span></div>
     <div class="nav" data-route="references" onclick="go('references')"><i data-lucide="book-marked"></i><span class="nav-lbl">References</span></div>
     <div class="nav" data-route="memory" onclick="go('memory')"><i data-lucide="brain"></i><span class="nav-lbl">Memory</span></div>
-    <div class="nav" data-route="reports"><i data-lucide="book-check"></i><span class="nav-lbl">Reports</span></div>
+    <div class="nav" data-route="reports" onclick="go('reports')"><i data-lucide="book-check"></i><span class="nav-lbl">Reports</span></div>
     <div class="nav-sec">Project settings</div>
     <div class="nav"><i data-lucide="flag"></i><span class="nav-lbl">Project info</span></div>
     <div class="nav"><i data-lucide="unplug"></i><span class="nav-lbl">Integrations</span></div>
@@ -473,6 +480,39 @@
               <button class="btn btn-line btn-sm" id="cb-add" onclick="annoAdd('mem')" disabled><i data-lucide="plus" style="width:13px;height:13px"></i>Add</button>
               <span class="rb-div"></span>
               <button class="btn btn-pri btn-sm" id="cb-submit" onclick="annoSubmit('mem')" disabled><i data-lucide="send" style="width:13px;height:13px"></i>Ask agents</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== REPORTS (per-file agent reports · view / revise) ===== -->
+    <section class="route" data-route="reports">
+      <div class="fbrowser">
+        <div class="fb-body">
+          <div class="fb-list">
+            <div class="fb-lhead"><span class="page-title">Reports</span><button class="btn btn-pri btn-sm" onclick="requestReport()"><i data-lucide="plus" style="width:13px;height:13px"></i>Request</button></div>
+            <div class="fb-grp" id="rep-grp" style="padding-top:10px"></div>
+            <div class="fb-items" id="rep-list"></div>
+          </div>
+          <div class="fb-view">
+            <div class="fb-vhead">
+              <div style="display:flex;align-items:center;gap:10px">
+                <span class="fb-vname" id="rep-vname"></span>
+                <span id="rep-vstatus"></span>
+              </div>
+              <div style="display:flex;gap:7px">
+                <button class="btn btn-line btn-sm" id="rep-revise-btn" onclick="annoToggle('rep')"><i data-lucide="pen-line" style="width:13px;height:13px"></i>Revise</button>
+                <button class="btn btn-sm btn-approve" onclick="approveRep()"><i data-lucide="check" style="width:13px;height:13px"></i>Approve</button>
+              </div>
+            </div>
+            <div class="fb-md" id="rep-md"></div>
+            <div class="revise-bar" id="rep-bar">
+              <span class="rb-notes" id="pb-notes">0 notes</span>
+              <input class="rb-input" id="pb-input" placeholder="Select lines to annotate…" disabled onkeydown="if(event.key==='Enter')annoAdd('rep')">
+              <button class="btn btn-line btn-sm" id="pb-add" onclick="annoAdd('rep')" disabled><i data-lucide="plus" style="width:13px;height:13px"></i>Add</button>
+              <span class="rb-div"></span>
+              <button class="btn btn-pri btn-sm" id="pb-submit" onclick="annoSubmit('rep')" disabled><i data-lucide="git-pull-request" style="width:13px;height:13px"></i>Request changes</button>
             </div>
           </div>
         </div>
@@ -836,16 +876,35 @@ Voice, tone, and primary strings. Owned by +copywriter.
 > Draft — pricing copy pending +growth-expert review.`},
   ];
   function refInline(s){ return s.replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/`(.+?)`/g,'<code>$1</code>'); }
+  function mdLine(l){
+    if(l.trim()==='')        return '<div style="height:9px"></div>';
+    if(l.startsWith('### ')) return '<h3 class="rline" onclick="lineClick(this)">'+refInline(l.slice(4))+'</h3>';
+    if(l.startsWith('## '))  return '<h2 class="rline" onclick="lineClick(this)">'+refInline(l.slice(3))+'</h2>';
+    if(l.startsWith('# '))   return '<h1 class="rline" onclick="lineClick(this)">'+refInline(l.slice(2))+'</h1>';
+    if(l.startsWith('> '))   return '<blockquote class="rline" onclick="lineClick(this)">'+refInline(l.slice(2))+'</blockquote>';
+    if(l.startsWith('- '))   return '<div class="l bullet rline" onclick="lineClick(this)"><span class="bull">•</span><span>'+refInline(l.slice(2))+'</span></div>';
+    return '<div class="l rline" onclick="lineClick(this)">'+refInline(l)+'</div>';
+  }
+  function mdTable(blk){
+    const cells=row=>row.trim().replace(/^\|/,'').replace(/\|$/,'').split('|').map(c=>c.trim());
+    const isSep=row=>cells(row).every(c=>/^:?-+:?$/.test(c));
+    const head=cells(blk[0]);
+    const body=blk.slice(blk[1] && isSep(blk[1]) ? 2 : 1).map(cells);
+    const thead='<tr>'+head.map(h=>`<th>${refInline(h)}</th>`).join('')+'</tr>';
+    const rows=body.map(r=>'<tr>'+r.map(c=>`<td>${refInline(c)}</td>`).join('')+'</tr>').join('');
+    return `<div class="rline" onclick="lineClick(this)"><table class="md-table"><thead>${thead}</thead><tbody>${rows}</tbody></table></div>`;
+  }
   function mdToHtml(md){
-    return md.split('\n').map(l=>{
-      if(l.trim()==='')        return '<div style="height:9px"></div>';
-      if(l.startsWith('### ')) return '<h3 class="rline" onclick="lineClick(this)">'+refInline(l.slice(4))+'</h3>';
-      if(l.startsWith('## '))  return '<h2 class="rline" onclick="lineClick(this)">'+refInline(l.slice(3))+'</h2>';
-      if(l.startsWith('# '))   return '<h1 class="rline" onclick="lineClick(this)">'+refInline(l.slice(2))+'</h1>';
-      if(l.startsWith('> '))  return '<blockquote class="rline" onclick="lineClick(this)">'+refInline(l.slice(2))+'</blockquote>';
-      if(l.startsWith('- '))  return '<div class="l bullet rline" onclick="lineClick(this)"><span class="bull">•</span><span>'+refInline(l.slice(2))+'</span></div>';
-      return '<div class="l rline" onclick="lineClick(this)">'+refInline(l)+'</div>';
-    }).join('');
+    const lines=md.split('\n'); const out=[]; let i=0;
+    while(i<lines.length){
+      if(lines[i].trim().startsWith('|')){
+        const blk=[]; while(i<lines.length && lines[i].trim().startsWith('|')){ blk.push(lines[i]); i++; }
+        out.push(blk.length>=2 ? mdTable(blk) : blk.map(mdLine).join(''));
+        continue;
+      }
+      out.push(mdLine(lines[i])); i++;
+    }
+    return out.join('');
   }
   let refCur=0;
   function renderRefList(){
@@ -894,9 +953,15 @@ Voice, tone, and primary strings. Owned by +copywriter.
       emptyPh:'Select lines to clarify…', selPh:n=>`Ask the author about ${n} line(s)…`,
       noun:'question', tagWord:'Question',
       submit(){ const g=ANNO.mem.groups.length; annoExit('mem'); toast(`${g} clarification${g===1?'':'s'} sent to Activity · memory unchanged`); } },
+    rep:{ mdId:'rep-md', btnId:'rep-revise-btn', barId:'rep-bar', notesId:'pb-notes', inputId:'pb-input', addId:'pb-add', submitId:'pb-submit',
+      offLabel:'<i data-lucide="pen-line" style="width:13px;height:13px"></i>Revise',
+      onLabel:'<i data-lucide="x" style="width:13px;height:13px"></i>Cancel',
+      emptyPh:'Select lines to annotate…', selPh:n=>`Describe the change for ${n} line(s)…`,
+      noun:'note', tagWord:'Revision',
+      submit(){ REPORTS[repCur].st='review'; renderRepList(); repShow(repCur); } },
   };
-  const ANNO={ ref:{on:false,groups:[]}, mem:{on:false,groups:[]} };
-  function annoKey(el){ return el.closest('#mem-md') ? 'mem' : 'ref'; }
+  const ANNO={ ref:{on:false,groups:[]}, mem:{on:false,groups:[]}, rep:{on:false,groups:[]} };
+  function annoKey(el){ return el.closest('#mem-md') ? 'mem' : el.closest('#rep-md') ? 'rep' : 'ref'; }
   function annoToggle(k){ ANNO[k].on ? annoExit(k) : annoEnter(k); }
   function annoEnter(k){
     const c=ANNO_CFG[k]; ANNO[k].on=true;
@@ -1070,6 +1135,105 @@ Voice, tone, and primary strings. Owned by +copywriter.
     lucide.createIcons();
   }
 
+  /* ---------- reports (per-file agent reports · view / revise) ---------- */
+  const REP_SCOPE={
+    status:{l:'Status',c:'#5E84D2'}, test:{l:'Test',c:'#4CB782'}, security:{l:'Security',c:'#CC6B6B'},
+    release:{l:'Release',c:'#9B82CE'}, delivery:{l:'Delivery',c:'#D2A24C'}, growth:{l:'Growth',c:'#F472B6'},
+  };
+  const REPORTS=[
+    {f:'status_2026-06-02-1435.md', scope:'status', au:'+operation-manager', time:'14:35', st:'review', md:`# Project Status Report
+**Author:** +operation-manager | **Status:** Waiting | 2026-06-02-14:35 | **Reviewer:** +prime
+
+## Executive Summary
+- **Current Phase:** Active development — 04-development-cycle, step 4/7
+- **Overall Health:** Yellow — one blocker (B-203) on the critical path
+
+## Progress
+- **Current Epic:** E-01 Authentication & Users — 40%
+- **Next Epic:** E-02 Billing & Subscription — 8%
+
+## Decisions Requiring +prime
+- Approve T-105 pricing copy → Review
+- Accept the B-203 DNS risk or escalate to infra
+
+## Agent Performance
+| Agent | Done | Blocked | Note |
+| Backend | 4 | 0 | OAuth on track |
+| QA | 2 | 0 | Auth E2E 2/5 |
+| DevOps | 1 | 1 | B-203 DNS blocker |
+| Designer | 3 | 0 | login mocks v3 done |`},
+    {f:'test_2026-06-02-1210.md', scope:'test', au:'+qa-engineer', time:'12:10', st:'approved', md:`# Test Report
+**Author:** +qa-engineer | **Status:** Approved | 2026-06-02-12:10 | **Reviewer:** +engineering-manager
+
+## Summary
+- Regression suite green; auth E2E still in progress.
+
+## Results
+| Suite | Passed | Total | State |
+| Regression | 24 | 24 | Green |
+| Auth E2E | 2 | 5 | In progress |
+| Billing unit | 11 | 11 | Green |
+
+## Notes
+- Fixed the flaky clock-skew test — see learned.md.`},
+    {f:'security_2026-06-01-1730.md', scope:'security', au:'+security-engineer', time:'yesterday', st:'approved', md:`# Security Audit
+**Author:** +security-engineer | **Status:** Approved | 2026-06-01-17:30 | **Reviewer:** +engineering-manager
+
+## Scope
+- Auth endpoints, dependency CVEs, secret scanning.
+
+## Findings
+| Area | Severity | State |
+| Rate-limit on /auth/* | Medium | Open — T-008 |
+| Dependency CVEs | — | Clean |
+| Secret scan | — | Clean |
+
+## Recommendation
+- Ship the rate-limit (T-008) before the billing launch.`},
+    {f:'release_v0.9.md', scope:'release', au:'+delivery-manager', time:'2d', st:'draft', md:`# Release Notes — v0.9
+**Author:** +delivery-manager | **Status:** Draft | 2026-06-01 | **Reviewer:** +prime
+
+## Highlights
+- OAuth login (beta)
+- Dashboard skeleton + first-paint loaders
+- Stripe webhook (work in progress)
+
+## Known Issues
+- Password-reset emails may land in spam (B-203)
+
+> Draft — pending sign-off before tagging v0.9.`},
+  ];
+  let repCur=0;
+  function renderRepList(){
+    document.getElementById('rep-grp').textContent=REPORTS.length+' reports';
+    document.getElementById('rep-list').innerHTML=REPORTS.map((r,i)=>{
+      const sc=REP_SCOPE[r.scope], st=REF_ST[r.st];
+      return `
+      <div class="fb-item ${i===repCur?'active':''}" onclick="repSelect(${i},this)">
+        <div class="fb-nm"><span class="ty-pill" style="color:${sc.c};background:${sc.c}1a"><span class="d" style="background:${sc.c}"></span>${sc.l}</span><span class="stbadge sm ${st.cls}"><span class="d" style="background:${st.c}"></span>${st.l}</span></div>
+        <div class="fb-au" style="margin-top:7px">${pAvatar(r.au,16)}<span>${short(r.au)}</span><span style="flex:1"></span><span class="mono" style="font-size:10.5px;color:var(--fg-faint)">${r.time}</span></div>
+      </div>`;
+    }).join('');
+  }
+  function renderReports(){ repCur=0; renderRepList(); repShow(0); }
+  function repSelect(i,el){
+    repCur=i;
+    document.querySelectorAll('#rep-list .fb-item').forEach(x=>x.classList.remove('active'));
+    if(el) el.classList.add('active');
+    repShow(i);
+  }
+  function repShow(i){
+    repCur=i;
+    const r=REPORTS[i], st=REF_ST[r.st];
+    document.getElementById('rep-vname').textContent=r.f;
+    document.getElementById('rep-vstatus').innerHTML=`<span class="stbadge ${st.cls}"><span class="d" style="background:${st.c}"></span>${st.l}</span>`;
+    document.getElementById('rep-md').innerHTML=mdToHtml(r.md);
+    annoExit('rep');
+    lucide.createIcons();
+  }
+  function approveRep(){ REPORTS[repCur].st='approved'; renderRepList(); repShow(repCur); }
+  function requestReport(){ toast('Report requested · an agent is generating it'); }
+
   function go(r){
     document.querySelectorAll('.route').forEach(x=>x.classList.toggle('active',x.dataset.route===r));
     document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.route===r));
@@ -1090,7 +1254,7 @@ Voice, tone, and primary strings. Owned by +copywriter.
   function cycleTheme(){ themeMode = themeMode==='dark'?'light':themeMode==='light'?'auto':'dark'; applyTheme(); }
 
   renderStats(); renderWork(); renderEpicRings(); renderTl(); renderFooterAgents();
-  renderEpicRail(); renderCols(); renderRefs(); renderMemory();
+  renderEpicRail(); renderCols(); renderRefs(); renderMemory(); renderReports();
   applyTheme();
   lucide.createIcons();
 </script>
