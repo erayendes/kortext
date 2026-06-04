@@ -420,18 +420,12 @@
   .prov .d{ width:6px; height:6px; border-radius:50%; }
 
   /* ---------- footer up-panels (agents / worktrees) ---------- */
-  .uppanel{ position:fixed; bottom:42px; z-index:45; width:316px; background:var(--bg-elev); border:1px solid var(--border-strong); border-radius:11px; box-shadow:0 -10px 34px rgba(0,0,0,.42); transform:translateY(10px); opacity:0; pointer-events:none; transition:.18s cubic-bezier(.16,1,.3,1); overflow:hidden; }
+  .uppanel{ position:fixed; bottom:42px; z-index:45; width:272px; background:var(--bg-elev); border:1px solid var(--border-strong); border-radius:10px; box-shadow:0 -10px 34px rgba(0,0,0,.42); transform:translateY(10px); opacity:0; pointer-events:none; transition:.16s cubic-bezier(.16,1,.3,1); overflow:hidden; }
   .uppanel.open{ transform:translateY(0); opacity:1; pointer-events:auto; }
-  .up-head{ height:40px; display:flex; align-items:center; justify-content:space-between; padding:0 14px; border-bottom:1px solid var(--border); }
-  .up-title{ font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; font-weight:600; color:var(--fg-mid); }
-  .up-x{ color:var(--fg-faint); cursor:pointer; display:flex; }
-  .up-x:hover{ color:var(--fg); }
-  .up-list{ max-height:340px; overflow-y:auto; padding:3px 0 6px; }
-  .up-sec{ display:flex; align-items:center; gap:6px; font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--fg-faint); font-weight:600; padding:10px 14px 5px; }
-  .up-sec .d{ width:5px; height:5px; border-radius:50%; }
-  .up-row{ display:flex; align-items:center; gap:9px; padding:7px 14px; transition:background .1s; cursor:pointer; }
+  .up-list{ max-height:320px; overflow-y:auto; padding:5px; }
+  .up-row{ display:flex; align-items:center; gap:9px; padding:6px 9px; border-radius:7px; transition:background .1s; cursor:pointer; }
   .up-row:hover{ background:var(--hover); }
-  .up-name{ font-size:12px; color:var(--fg-mid); font-family:'Geist Mono',monospace; }
+  .up-name{ font-size:12px; color:var(--fg-mid); font-family:'Geist Mono',monospace; white-space:nowrap; }
   .up-task{ margin-left:auto; font-size:11px; color:var(--fg-faint); white-space:nowrap; }
   .up-dot{ width:6px; height:6px; border-radius:50%; flex-shrink:0; }
 
@@ -934,11 +928,9 @@
 
 <!-- footer up-panels -->
 <div id="up-agents" class="uppanel" style="right:170px">
-  <div class="up-head"><span class="up-title">Agents · 6</span><span class="up-x" onclick="toggleUp('up-agents')"><i data-lucide="x" style="width:14px;height:14px"></i></span></div>
   <div class="up-list" id="up-agents-list"></div>
 </div>
 <div id="up-worktrees" class="uppanel" style="right:74px">
-  <div class="up-head"><span class="up-title">Active worktrees · 3</span><span class="up-x" onclick="toggleUp('up-worktrees')"><i data-lucide="x" style="width:14px;height:14px"></i></span></div>
   <div class="up-list" id="up-worktrees-list"></div>
 </div>
 
@@ -1116,12 +1108,12 @@
   /* ---------- footer up-panels ---------- */
   const ST_C={active:'var(--green)',idle:'var(--amber)',blocked:'var(--red)'};
   const FAGENTS=[
-    {h:'+backend-developer', st:'active', task:'T-101 · JWT middleware'},
-    {h:'+qa-engineer',       st:'active', task:'T-011 · auth E2E'},
-    {h:'+designer',          st:'active', task:'T-002 · login mocks'},
-    {h:'+frontend-developer',st:'active', task:'T-006 · analytics grid'},
-    {h:'+security-engineer', st:'idle',   task:'queued · rate-limit'},
-    {h:'+db-admin',          st:'blocked',task:'T-013 · schema'},
+    {h:'+backend-developer', st:'active', task:'T-101'},
+    {h:'+qa-engineer',       st:'active', task:'T-011'},
+    {h:'+designer',          st:'active', task:'T-002'},
+    {h:'+frontend-developer',st:'active', task:'T-006'},
+    {h:'+security-engineer', st:'idle',   task:'queued'},
+    {h:'+db-admin',          st:'blocked',task:'T-013'},
   ];
   const WORKTREES=[
     {run:'run-101', who:'+backend-developer',  task:'T-101', st:'active'},
@@ -1129,19 +1121,12 @@
     {run:'run-013', who:'+db-admin',           task:'T-013 · quarantine', st:'blocked'},
   ];
   function renderUpAgents(){
-    const groups=[['active','Active'],['idle','Idle'],['blocked','Blocked']];
-    document.getElementById('up-agents-list').innerHTML=groups.map(([st,label])=>{
-      const rows=FAGENTS.filter(a=>a.st===st);
-      if(!rows.length) return '';
-      return `<div class="up-sec"><span class="d" style="background:${ST_C[st]}"></span>${label} · ${rows.length}</div>`+
-        rows.map(a=>`<div class="up-row">${pAvatar(a.h,18)}<span class="up-name">${short(a.h)}</span><span class="up-task" style="${a.st!=='active'?`color:${ST_C[a.st]}`:''}">${a.task}</span></div>`).join('');
-    }).join('');
-    lucide.createIcons();
+    document.getElementById('up-agents-list').innerHTML=FAGENTS.map(a=>`
+      <div class="up-row"><span class="up-dot" style="background:${ST_C[a.st]}"></span><span class="up-name">${short(a.h)}</span><span class="up-task" style="${a.st!=='active'?`color:${ST_C[a.st]}`:''}">${a.task}</span></div>`).join('');
   }
   function renderUpWorktrees(){
     document.getElementById('up-worktrees-list').innerHTML=WORKTREES.map(w=>`
-      <div class="up-row"><span class="up-dot" style="background:${w.st==='blocked'?'var(--red)':'var(--green)'}"></span><span class="up-name">${w.run}</span><span class="up-task" style="${w.st==='blocked'?'color:var(--red)':''}">${short(w.who)} · ${w.task}</span><i data-lucide="external-link" style="width:13px;height:13px;color:var(--fg-faint);margin-left:8px"></i></div>`).join('');
-    lucide.createIcons();
+      <div class="up-row"><span class="up-dot" style="background:${w.st==='blocked'?'var(--red)':'var(--green)'}"></span><span class="up-name">${w.run}</span><span class="up-task" style="${w.st==='blocked'?'color:var(--red)':''}">${short(w.who)} · ${w.task}</span></div>`).join('');
   }
   function toggleUp(id){
     const el=document.getElementById(id);
