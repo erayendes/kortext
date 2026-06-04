@@ -1,10 +1,11 @@
 import { useState, type ReactNode } from 'react';
+import type { LucideIcon } from 'lucide-react';
 import { Plus, ChevronDown, ArrowRight } from 'lucide-react';
 import { PageHeader } from '../components/PageHeader.tsx';
 import { MarkdownViewer } from '../components/MarkdownViewer.tsx';
 import { usePolling, formatElapsed } from '../lib/api.ts';
 import type { DecisionIndex, Handover, DecisionStatus } from '../lib/api-types.ts';
-import { personaColor, personaInitials } from '../lib/persona-colors.ts';
+import { personaColor, personaIcon } from '../lib/persona-colors.ts';
 
 type Tab = 'decisions' | 'learned' | 'handovers';
 
@@ -178,7 +179,7 @@ function HandoversTab({
       {data.map((h) => {
         const fromColor = personaColor(h.from_persona);
         const toColor = personaColor(h.to_persona);
-        const initials = personaInitials(h.from_persona);
+        const FromIcon = personaIcon(h.from_persona);
         return (
           <MemCard
             key={h.id}
@@ -191,7 +192,7 @@ function HandoversTab({
               </span>
             }
             quote={h.reason}
-            avatar={{ initials, color: fromColor }}
+            avatar={{ icon: FromIcon, color: fromColor }}
             footer={
               <>
                 {h.item_id && <span className="mono text-tx-3">{h.item_id}</span>}
@@ -221,7 +222,7 @@ function MemCard({
   id: string;
   title: ReactNode;
   quote: string | null;
-  avatar?: { initials: string; color: string };
+  avatar?: { icon: LucideIcon; color: string };
   footer: ReactNode;
 }) {
   return (
@@ -229,15 +230,15 @@ function MemCard({
       <header className="flex items-center gap-2.5 mb-2">
         <span className="mono text-[10px] text-tx-3 shrink-0">{id}</span>
         <span className="flex-1 text-[13px] text-tx-1 leading-snug">{title}</span>
-        {avatar && (
+        {avatar && (() => { const Ic = avatar.icon; return (
           <span
-            className="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold"
+            className="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full"
             style={{ background: avatar.color, color: '#0A0814' }}
             aria-hidden
           >
-            {avatar.initials}
+            <Ic size={11} strokeWidth={2.5} />
           </span>
-        )}
+        ); })()}
       </header>
       {quote && (
         <p className="text-[12px] text-tx-2 leading-relaxed border-l-2 border-border-default pl-3 my-2">
