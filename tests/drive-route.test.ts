@@ -113,3 +113,91 @@ describe('POST /api/drive — the start-button trigger (locked by default, §5.1
     expect(driveCalls).toBe(2);
   });
 });
+
+describe('GET /api/drive — status', () => {
+  it('reports armed=switch, scheduler off, no pass yet', async () => {
+    enabled = false;
+    let res = await fetch(`${baseUrl}/api/drive`);
+    let body = (await res.json()) as {
+      armed: boolean;
+      inFlight: boolean;
+      scheduler: { running: boolean; intervalSec: number | null };
+      lastPass: unknown;
+    };
+    expect(body.armed).toBe(false);
+    expect(body.inFlight).toBe(false);
+    expect(body.scheduler).toEqual({ running: false, intervalSec: null });
+    expect(body.lastPass).toBeNull();
+
+    enabled = true;
+    res = await fetch(`${baseUrl}/api/drive`);
+    body = (await res.json()) as typeof body;
+    expect(body.armed).toBe(true);
+  });
+
+  it('records lastPass after a pass settles', async () => {
+    enabled = true;
+    await fetch(`${baseUrl}/api/drive`, { method: 'POST' });
+    deferreds.forEach((d) => d.resolve());
+    deferreds = [];
+    await new Promise((r) => setTimeout(r, 10));
+    const body = (await (await fetch(`${baseUrl}/api/drive`)).json()) as {
+      lastPass: { ok: boolean } | null;
+    };
+    expect(body.lastPass?.ok).toBe(true);
+  });
+});
+
+describe('POST /api/drive/scheduler — auto-drive toggle (on top of the master lock)', () => {
+  it('refuses to arm the scheduler with 403 when the master switch is off', async () => {
+    enabled = false;
+    const res = await fetch(`${baseUrl}/api/drive/scheduler`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ enabled: true }),
+    });
+    expect(res.status).toBe(403);
+    expect(((await res.json()) as { error: string }).error).toBe('drive_disabled');
+  });
+
+  it('422 when enabled is not a boolean', async () => {
+    enabled = true;
+    const res = await fetch(`${baseUrl}/api/drive/scheduler`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ enabled: 'yes' }),
+    });
+    expect(res.status).toBe(422);
+  });
+
+  it('turns auto-drive on (kicks an immediate pass) and off', async () => {
+    enabled = true;
+    const on = await fetch(`${baseUrl}/api/drive/scheduler`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ enabled: true, intervalSec: 60 }),
+    });
+    expect(on.status).toBe(200);
+    expect(((await on.json()) as { scheduler: unknown }).scheduler).toEqual({
+      running: true,
+      intervalSec: 60,
+    });
+    expect(driveCalls).toBe(1); // immediate kick
+
+    // GET reflects the running scheduler.
+    const status = (await (await fetch(`${baseUrl}/api/drive`)).json()) as {
+      scheduler: { running: boolean };
+    };
+    expect(status.scheduler.running).toBe(true);
+
+    const off = await fetch(`${baseUrl}/api/drive/scheduler`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ enabled: false }),
+    });
+    expect(((await off.json()) as { scheduler: unknown }).scheduler).toEqual({
+      running: false,
+      intervalSec: null,
+    });
+  });
+});
