@@ -460,6 +460,16 @@
   .cm-in input{ flex:1; height:32px; border:1px solid var(--border); background:var(--card); border-radius:7px; padding:0 11px; color:var(--fg); font-size:12.5px; outline:none; font-family:inherit; }
   .cm-in input:focus{ border-color:var(--accent-line); }
   .dr-foot{ flex-shrink:0; border-top:1px solid var(--border); padding:13px 18px; display:flex; gap:8px; }
+  .dr-block{ display:flex; align-items:flex-start; gap:9px; padding:11px 13px; margin-bottom:18px; border-radius:9px; background:rgba(204,107,107,.1); border:1px solid rgba(204,107,107,.3); font-size:12.5px; color:var(--red); font-weight:500; }
+  .dr-block svg{ width:15px; height:15px; flex-shrink:0; margin-top:1px; }
+  .dr-block .br{ color:var(--fg-mid); font-weight:400; }
+  .btn-stop{ color:var(--amber); border:1px solid rgba(210,162,76,.4); background:transparent; }
+  .btn-stop:hover{ background:rgba(210,162,76,.1); }
+  .ep-kid{ display:flex; align-items:center; gap:9px; padding:9px 11px; border:1px solid var(--border); border-radius:8px; margin-bottom:6px; cursor:pointer; transition:.12s; }
+  .ep-kid:hover{ border-color:var(--border-strong); background:var(--hover); }
+  .ep-kid-id{ font-size:11px; color:var(--fg-faint); flex-shrink:0; font-family:'Geist Mono',monospace; }
+  .ep-kid-t{ flex:1; font-size:12.5px; color:var(--fg-mid); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+  .ep-kid-st{ font-size:11px; color:var(--fg-faint); flex-shrink:0; }
 
   /* ---------- terminal (footer · floating CLI) ---------- */
   .term{ position:fixed; right:16px; bottom:48px; z-index:46; width:486px; max-width:calc(100vw - 32px); height:344px; background:var(--bg-elev); border:1px solid var(--border-strong); border-radius:11px; box-shadow:0 18px 50px rgba(0,0,0,.5); display:none; flex-direction:column; overflow:hidden; }
@@ -1034,10 +1044,10 @@
   const STATUS={todo:'#7B7F87',prog:'#D2A24C',test:'#5E84D2',review:'#9B82CE',done:'#4CB782'};
 
   const EPICS=[
-    {id:'E-01',t:'Authentication & Users',pct:40,n:5,dn:2,who:'+product-manager',sel:true},
-    {id:'E-02',t:'Billing & Subscription',pct:8,n:4,dn:0,who:'+product-manager'},
-    {id:'E-03',t:'Customer Dashboard',pct:25,n:6,dn:1,who:'+designer'},
-    {id:'E-04',t:'Admin Panel',pct:0,n:3,dn:0,who:'+engineering-manager'},
+    {id:'E-01',t:'Authentication & Users',pct:40,n:5,dn:2,who:'+product-manager',sel:true,desc:'Sign-up, login, sessions and authorization.'},
+    {id:'E-02',t:'Billing & Subscription',pct:8,n:4,dn:0,who:'+product-manager',desc:'Stripe billing, subscriptions and the webhook pipeline.'},
+    {id:'E-03',t:'Customer Dashboard',pct:25,n:6,dn:1,who:'+designer',desc:'The customer-facing dashboard and its widgets.'},
+    {id:'E-04',t:'Admin Panel',pct:0,n:3,dn:0,who:'+engineering-manager',desc:'Internal admin tools and role management.'},
   ];
   const COLS=[
     {k:'todo',name:'To do',cards:[
@@ -1048,13 +1058,13 @@
     {k:'prog',name:'In progress',cards:[
       {id:'T-101',ty:'task',t:'Implement OAuth login flow',desc:'Google OAuth + refresh-token rotation',who:'+backend-developer',ep:'E-01',gs:['AC','QC','SE','DS','CR'],g:'ddpnp',dep:'0/1',cm:5},
       {id:'T-105',ty:'task',t:'Pricing page copy',desc:'Tier descriptions + primary CTA',who:'+copywriter',gs:['AC','QC','DS','CR'],g:'dppp',cm:3},
-      {id:'B-203',ty:'bug',t:'Password reset email → spam',desc:'Reset emails flagged as spam (DNS/SPF)',who:'+devops-engineer',ep:'E-01',gs:['AC','QC','CR'],g:'ppp',block:1,cm:4},
+      {id:'B-203',ty:'bug',t:'Password reset email → spam',desc:'Reset emails flagged as spam (DNS/SPF)',who:'+devops-engineer',ep:'E-01',gs:['AC','QC','CR'],g:'ppp',block:1,blockReason:'awaiting DNS / SPF record from infra',cm:4},
     ]},
     {k:'test',name:'Test',cards:[
       {id:'T-103',ty:'task',t:'Dashboard skeleton component',desc:'Skeleton loaders for first paint',who:'+frontend-developer',ep:'E-03',gs:['AC','QC','DS','CR'],g:'ddpp',cm:2},
     ]},
     {k:'review',name:'Review',cards:[
-      {id:'T-106',ty:'task',t:'Email transactional templates',desc:'Welcome / reset / receipt emails',who:'+copywriter',gs:['AC','QC','DS','CR'],g:'ddpp',block:1,cm:1},
+      {id:'T-106',ty:'task',t:'Email transactional templates',desc:'Welcome / reset / receipt emails',who:'+copywriter',gs:['AC','QC','DS','CR'],g:'ddpp',block:1,blockReason:'blocked by B-203 — email delivery',cm:1},
     ]},
     {k:'done',name:'Done',cards:[
       {id:'T-104',ty:'task',t:'DB schema for users',desc:'users + sessions tables',who:'+db-admin',gs:['AC','QC','CR'],g:'ddd',done:1,cm:0},
@@ -1231,7 +1241,7 @@
 
   function renderEpicRail(){
     document.getElementById('epic-rail').innerHTML=EPICS.map((e,i)=>`
-      <div class="epic-card ${e.sel?'sel':''} rise" style="animation-delay:${i*30}ms">
+      <div class="epic-card ${e.sel?'sel':''} rise" onclick="openEpic('${e.id}')" style="animation-delay:${i*30}ms">
         <div class="ec-top"><span class="ty-pill" style="color:${TYPE.epic.c};background:${TYPE.epic.c}1a"><span class="d" style="background:${TYPE.epic.c}"></span>Epic</span><span class="ec-id mono">${e.id}</span></div>
         <div class="ec-title">${e.t}</div>
         <div class="prog" style="margin-bottom:0"><i style="width:${e.pct}%"></i></div>
@@ -1939,12 +1949,14 @@ Voice, tone, and primary strings. Owned by +copywriter.
       <div class="ac-row done" onclick="this.classList.toggle('done')"><span class="ac-box"><i data-lucide="check" style="width:11px;height:11px"></i></span>User can sign in with Google</div>
       <div class="ac-row done" onclick="this.classList.toggle('done')"><span class="ac-box"><i data-lucide="check" style="width:11px;height:11px"></i></span>Refresh token rotates automatically</div>
       <div class="ac-row" onclick="this.classList.toggle('done')"><span class="ac-box"><i data-lucide="check" style="width:11px;height:11px"></i></span>Invalid-login error is shown</div></div>` : '';
+    const blockBanner = c.block ? `<div class="dr-block"><i data-lucide="ban"></i><span>Blocked<span class="br"> · ${c.blockReason||'reason not set'}</span></span></div>` : '';
     document.getElementById('dr-body').innerHTML=`
       <div class="dr-title">${c.t}</div>
       <div class="dr-desc">${c.desc||''}</div>
+      ${blockBanner}
       <div class="dr-meta">
         <div class="dr-mrow"><span class="dr-mk">Assignee</span><span class="dr-mv">${pAvatar(c.who,18)}${short(c.who)}</span></div>
-        <div class="dr-mrow"><span class="dr-mk">Status</span><span class="dr-mv">${c.block?'<span style="color:var(--red)">Blocked</span>':f.status}</span></div>
+        <div class="dr-mrow"><span class="dr-mk">Status</span><span class="dr-mv">${f.status}${c.block?' <span style="color:var(--red);font-size:11px">· blocked</span>':''}</span></div>
         ${c.ep?`<div class="dr-mrow"><span class="dr-mk">Parent epic</span><span class="dr-mv mono">${c.ep}</span></div>`:''}
         ${c.dep?`<div class="dr-mrow"><span class="dr-mk">Dependencies</span><span class="dr-mv mono">${c.dep} ready</span></div>`:''}
       </div>
@@ -1954,9 +1966,31 @@ Voice, tone, and primary strings. Owned by +copywriter.
         <div class="cm-row">${pAvatar('+prime',20)}<div class="cm-bub">Let's wire the rate-limit before this hits staging.</div></div>
         <div class="cm-in"><input placeholder="Add a comment…"><button class="btn btn-pri btn-sm">Send</button></div>
       </div>`;
-    document.getElementById('dr-foot').innerHTML = c.block
-      ? `<button class="btn btn-line btn-sm" style="flex:1"><i data-lucide="arrow-left" style="width:13px;height:13px"></i>Bounce</button><button class="btn btn-sm btn-approve" style="flex:1"><i data-lucide="check" style="width:13px;height:13px"></i>Unblock</button>`
+    const live = f.status==='In progress' && !c.block;
+    document.getElementById('dr-foot').innerHTML =
+      c.block ? `<button class="btn btn-line btn-sm" style="flex:1"><i data-lucide="arrow-left" style="width:13px;height:13px"></i>Bounce</button><button class="btn btn-sm btn-approve" style="flex:1"><i data-lucide="check" style="width:13px;height:13px"></i>Unblock</button>`
+      : live ? `<button class="btn btn-stop btn-sm" style="flex:1"><i data-lucide="circle-stop" style="width:13px;height:13px"></i>Stop agent</button><button class="btn btn-pri btn-sm" style="flex:1">Move to review <i data-lucide="arrow-right" style="width:13px;height:13px"></i></button>`
       : `<button class="btn btn-line btn-sm" style="flex:1"><i data-lucide="arrow-left" style="width:13px;height:13px"></i>Bounce</button><button class="btn btn-pri btn-sm" style="flex:1">Move to review <i data-lucide="arrow-right" style="width:13px;height:13px"></i></button>`;
+    document.getElementById('dr-backdrop').classList.add('open');
+    document.getElementById('drawer').classList.add('open');
+    lucide.createIcons();
+  }
+  function openEpic(id){
+    const e=EPICS.find(x=>x.id===id); if(!e) return;
+    document.getElementById('dr-pill').innerHTML=`<span class="ty-pill" style="color:${TYPE.epic.c};background:${TYPE.epic.c}1a"><span class="d" style="background:${TYPE.epic.c}"></span>Epic</span>`;
+    document.getElementById('dr-id').textContent=e.id;
+    const kids=[]; COLS.forEach(col=>col.cards.forEach(c=>{ if(c.ep===e.id) kids.push({c,status:col.name}); }));
+    const kidRows = kids.length ? kids.map(k=>`<div class="ep-kid" onclick="openItem('${k.c.id}')"><span class="ty-pill" style="color:${TYPE[k.c.ty].c};background:${TYPE[k.c.ty].c}1a"><span class="d" style="background:${TYPE[k.c.ty].c}"></span>${TYPE[k.c.ty].l}</span><span class="ep-kid-id">${k.c.id}</span><span class="ep-kid-t">${k.c.t}</span><span class="ep-kid-st">${k.c.block?'<span style="color:var(--red)">blocked</span>':k.status}</span></div>`).join('') : '<div class="dr-desc">No items in this epic yet.</div>';
+    document.getElementById('dr-body').innerHTML=`
+      <div class="dr-title">${e.t}</div>
+      <div class="dr-desc">${e.desc||''}</div>
+      <div class="dr-meta">
+        <div class="dr-mrow"><span class="dr-mk">Owner</span><span class="dr-mv">${pAvatar(e.who,18)}${short(e.who)}</span></div>
+        <div class="dr-mrow"><span class="dr-mk">Progress</span><span class="dr-mv">${e.pct}% · ${e.n}/${e.dn} done</span></div>
+      </div>
+      <div class="prog" style="margin-bottom:22px"><i style="width:${e.pct}%"></i></div>
+      <div class="dr-grp"><div class="dr-sec">Items · ${kids.length}</div>${kidRows}</div>`;
+    document.getElementById('dr-foot').innerHTML=`<button class="btn btn-line btn-sm" style="flex:1"><i data-lucide="pencil" style="width:13px;height:13px"></i>Edit epic</button><button class="btn btn-pri btn-sm" style="flex:1"><i data-lucide="plus" style="width:13px;height:13px"></i>Add item</button>`;
     document.getElementById('dr-backdrop').classList.add('open');
     document.getElementById('drawer').classList.add('open');
     lucide.createIcons();
