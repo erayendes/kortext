@@ -34,29 +34,64 @@ const VALID_GATES = new Set([
 // 1. Parser
 // ---------------------------------------------------------------------------
 
+/**
+ * Parse the agent-written backlog into items. Two accepted shapes (agents lean
+ * toward the second even when asked for the first):
+ *   1. A pure YAML document with a top-level `items:` list (the instructed form).
+ *   2. Markdown prose containing one or more ```yaml fenced blocks — each block
+ *      a list of items, a single item object, or an `{ items: [...] }` doc.
+ * The fenced fallback makes ingestion robust to the model's natural formatting.
+ */
 export function parseBacklogYaml(text: string): {
   items: ParsedBacklogItem[];
   errors: string[];
 } {
-  let doc: unknown;
+  // Shape 1: whole document is YAML with a top-level items array.
+  let topDoc: unknown;
+  let topErr: string | null = null;
   try {
-    // JSON_SCHEMA restricts parsing to plain JSON-compatible types only,
-    // preventing arbitrary object construction (js-yaml's equivalent of safeLoad).
-    doc = yaml.load(text, { schema: yaml.JSON_SCHEMA });
+    topDoc = yaml.load(text, { schema: yaml.JSON_SCHEMA });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return { items: [], errors: [`yaml parse failed: ${msg}`] };
+    topErr = err instanceof Error ? err.message : String(err);
   }
-
   if (
-    !doc ||
-    typeof doc !== 'object' ||
-    !Array.isArray((doc as Record<string, unknown>)['items'])
+    topDoc &&
+    typeof topDoc === 'object' &&
+    Array.isArray((topDoc as Record<string, unknown>)['items'])
   ) {
-    return { items: [], errors: ['no "items" array found'] };
+    return validateRawItems((topDoc as Record<string, unknown>)['items'] as unknown[]);
   }
 
-  const raw = (doc as Record<string, unknown>)['items'] as unknown[];
+  // Shape 2: collect items from ```yaml fenced blocks embedded in markdown.
+  const raw: unknown[] = [];
+  const fence = /```ya?ml\s*\n([\s\S]*?)```/g;
+  let m: RegExpExecArray | null;
+  while ((m = fence.exec(text)) !== null) {
+    let block: unknown;
+    try {
+      block = yaml.load(m[1] ?? '', { schema: yaml.JSON_SCHEMA });
+    } catch {
+      continue; // skip an unparseable block; others may still be valid
+    }
+    if (Array.isArray(block)) raw.push(...block);
+    else if (block && typeof block === 'object') {
+      const o = block as Record<string, unknown>;
+      if (Array.isArray(o['items'])) raw.push(...(o['items'] as unknown[]));
+      else if (typeof o['id'] === 'string') raw.push(o);
+    }
+  }
+  if (raw.length > 0) return validateRawItems(raw);
+
+  // Nothing usable in either shape.
+  if (topErr) return { items: [], errors: [`yaml parse failed: ${topErr}`] };
+  return { items: [], errors: ['no "items" array found'] };
+}
+
+/** Validate + normalize a raw list of item entries (shared by both shapes). */
+function validateRawItems(raw: unknown[]): {
+  items: ParsedBacklogItem[];
+  errors: string[];
+} {
   const items: ParsedBacklogItem[] = [];
   const errors: string[] = [];
 
