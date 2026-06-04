@@ -64,6 +64,13 @@ export type SafetyGuards = {
   harmfulFilter?: HarmfulOutputFilter;
   /** Per-output post-step indexer (e.g. `reports_index`). Errors are swallowed. */
   outputIndexer?: OutputIndexer;
+  /**
+   * Per-output post-step backlog ingester. When a step writes the canonical
+   * backlog file, this turns it into real backlog rows (see backlog-ingest.ts).
+   * Same best-effort contract as outputIndexer — it logs/audits its own results
+   * (created vs skipped), so a partial/empty backlog is reported, not silent.
+   */
+  backlogIngester?: OutputIndexer;
 };
 
 export type RunWorkflowOptions = {
@@ -151,6 +158,19 @@ async function runSafetyGuards(
         safety.outputIndexer({ absolutePath, step, runId });
       } catch {
         // swallow — bookkeeping must not break the pipeline
+      }
+    }
+  }
+
+  // Best-effort backlog ingester. Turns a step's canonical backlog file into
+  // real rows. Never fail the run (the agent's work is done); the ingester
+  // reports its own created/skipped counts via log + audit.
+  if (safety.backlogIngester && outputFiles.length > 0) {
+    for (const absolutePath of outputFiles) {
+      try {
+        safety.backlogIngester({ absolutePath, step, runId });
+      } catch {
+        // swallow — ingestion failures are surfaced by the ingester's own log
       }
     }
   }

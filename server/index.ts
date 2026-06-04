@@ -1,7 +1,8 @@
 import { existsSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { projectLayout, runtimeLayout } from './paths.ts';
+import { ingestBacklogFile } from './engine/backlog-ingest.ts';
 import express from 'express';
 import { env } from './config/env.ts';
 import { healthRouter } from './routes/health.ts';
@@ -113,6 +114,13 @@ const markdownSync = new MarkdownSyncService(repos, { root: layout.root });
 const safetyGuards: SafetyGuards = {
   outputIndexer: ({ absolutePath }) => {
     markdownSync.indexReportFromPath({ absolutePath });
+  },
+  // When a planning step writes the canonical backlog file, ingest it into real
+  // backlog rows. Keyed on the filename so other outputs are ignored.
+  backlogIngester: ({ absolutePath }) => {
+    if (basename(absolutePath) === 'backlog.yaml') {
+      ingestBacklogFile(repos, absolutePath);
+    }
   },
 };
 
