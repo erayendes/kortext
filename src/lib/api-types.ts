@@ -165,6 +165,36 @@ export type WorkflowSummary = {
   gateCount: number;
 };
 
+// Full workflow definition — mirrors server/engine/workflow-parser.ts. Returned
+// by GET /api/workflows/:id; the Workflows pane "Visual flow" renders it.
+export type WorkflowStepDetail = {
+  key: string;
+  index: number;
+  phase: string;
+  persona: string | null;
+  description: string;
+  inputs: string[];
+  outputs: string[];
+  approver: string | null;
+  reviewer: string | null;
+};
+
+export type WorkflowGate = {
+  phase: string;
+  afterStepIndex: number;
+  body: string;
+  approver: string | null;
+};
+
+export type WorkflowDetail = {
+  id: string;
+  title: string;
+  startCommand: string | null;
+  nextWorkflowId: string | null;
+  steps: WorkflowStepDetail[];
+  gates: WorkflowGate[];
+};
+
 export type BlueprintStatus =
   | 'uninitialized'
   | 'draft'
