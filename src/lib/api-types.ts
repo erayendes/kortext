@@ -86,6 +86,18 @@ export type Handover = {
   created_at: number;
 };
 
+/**
+ * The 5 planning-selectable review gates — mirrors server/db/schemas.ts
+ * `GateSchema`. A backlog item carries the subset that applies to it
+ * (`review_gates`); the board maps these to the AC/QC/SE/DS/CR pills.
+ */
+export type Gate =
+  | 'code_review'
+  | 'quality_control'
+  | 'security_control'
+  | 'design_review'
+  | 'uat';
+
 export type BacklogItem = {
   id: string;
   type: 'epic' | 'task' | 'bug' | 'debt' | 'spike' | 'hotfix';
@@ -101,10 +113,27 @@ export type BacklogItem = {
   owner: string | null;
   parent_id: string | null;
   version: string | null;
+  /**
+   * The review gates selected for this item (the applicable set). Optional on
+   * the frontend mirror because legacy fixtures/tests omit it; the live API
+   * always sends an array (often empty).
+   */
+  review_gates?: Gate[];
   frontmatter: Record<string, unknown>;
   body_md: string;
   created_at: number;
   updated_at: number;
+};
+
+/** One audit-log row, as returned by GET /api/backlog/:id/activity. */
+export type ActivityEntry = {
+  id: number;
+  actor: string;
+  action: string;
+  resource_type: string;
+  resource_id: string | null;
+  payload: Record<string, unknown>;
+  created_at: number;
 };
 
 export type ReportStatus = 'uninitialized' | 'writing' | 'approved';

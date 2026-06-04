@@ -1,10 +1,644 @@
-// Stub — filled by Session 3 (Board + Drawer). See v6 implementation contract.
-export function BoardRoute() {
+/**
+ * Board (Session 3) — the v6 kanban board + item/epic detail drawer.
+ *
+ * Layout maps 1:1 to `wireframe-v6-hifi.html` → `.board-scroll`:
+ *   [ epic-rail (filter) ] [ To do | In progress | Test | Review | Done ]
+ *
+ * Epics are NOT a status — they live in the left rail and act as a filter over
+ * the columns. `blocked` is an orthogonal flag (DECISIONS §12.3), drawn as a red
+ * card inside its underlying column, never a column of its own. All data is real
+ * (GET /api/backlog); mutations (AC toggle, status transitions) hit the live
+ * endpoints and refresh both the board and the open drawer.
+ *
+ * The pure logic (column bucketing, gate derivation, blocked introspection)
+ * lives in src/lib/board-drawer.ts and is unit-tested; this file is the wiring.
+ */
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Ban,
+  Check,
+  CircleStop,
+  Link2,
+  Plus,
+  Rows3,
+  User,
+  X,
+} from 'lucide-react';
+import { Drawer } from '../components/v6/Drawer.tsx';
+import { apiGet, apiPost, formatElapsed, usePolling } from '../lib/api.ts';
+import type { ActivityEntry, BacklogItem } from '../lib/api-types.ts';
+import { personaPalette } from '../lib/persona-colors.ts';
+import {
+  acChecklist,
+  availableTransitions,
+  blockReasonFromActivity,
+  boardColumns,
+  childrenOf,
+  dependenciesFromBody,
+  describeActivity,
+  descriptionFromBody,
+  epicProgress,
+  itemGates,
+  statusBadge,
+  underlyingStatusFromActivity,
+  type BoardTransition,
+} from '../lib/board-drawer.ts';
+
+// ---------------------------------------------------------------------------
+// Small presentational helpers
+// ---------------------------------------------------------------------------
+
+const TYPE_META: Record<BacklogItem['type'], { label: string; color: string }> = {
+  task: { label: 'Task', color: '#5E84D2' },
+  bug: { label: 'Bug', color: '#CC6B6B' },
+  debt: { label: 'Debt', color: '#D2A24C' },
+  epic: { label: 'Epic', color: '#9B82CE' },
+  spike: { label: 'Spike', color: '#67E8F9' },
+  hotfix: { label: 'Hotfix', color: '#FB7185' },
+};
+
+/** hex (#rrggbb) → rgba() string, for the translucent pill/avatar fills. */
+function rgba(hex: string, alpha: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}
+
+const short = (handle: string | null): string => (handle ? handle.replace(/^\+/, '') : '');
+
+/** Persona-routed avatar (colour + Lucide glyph), mirrors the wireframe pAvatar. */
+function Avatar({ handle, size = 24 }: { handle: string | null; size?: number }) {
+  const { color, icon: Icon } = personaPalette(handle);
+  const border = size <= 16 ? 1 : 1.5;
   return (
-    <section style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-      <div className="page-h">
-        <span className="page-title">Board — coming</span>
+    <span
+      className="avatar"
+      title={handle ?? undefined}
+      style={{ width: size, height: size, background: rgba(color, 0.1), border: `${border}px solid ${rgba(color, 0.65)}`, color }}
+    >
+      <Icon size={Math.round(size * 0.52)} strokeWidth={size <= 16 ? 1.8 : 2} />
+    </span>
+  );
+}
+
+function TypePill({ type }: { type: BacklogItem['type'] }) {
+  const t = TYPE_META[type];
+  return (
+    <span className="ty-pill" style={{ color: t.color, background: rgba(t.color, 0.1) }}>
+      <span className="d" style={{ background: t.color }} />
+      {t.label}
+    </span>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Activity hook — fetch an item's audit feed on demand (drawer only)
+// ---------------------------------------------------------------------------
+
+function useActivity(itemId: string | null) {
+  const [activity, setActivity] = useState<ActivityEntry[]>([]);
+  const reload = useCallback(() => {
+    if (!itemId) return;
+    void apiGet<{ activity: ActivityEntry[] }>(`/api/backlog/${itemId}/activity`)
+      .then((r) => setActivity(r.activity))
+      .catch(() => setActivity([]));
+  }, [itemId]);
+  useEffect(() => {
+    setActivity([]);
+    reload();
+  }, [itemId, reload]);
+  return { activity, reload };
+}
+
+// ---------------------------------------------------------------------------
+// Card (one task/bug/debt in a column)
+// ---------------------------------------------------------------------------
+
+function Card({ item, onOpen, index }: { item: BacklogItem; onOpen: () => void; index: number }) {
+  const blocked = item.status === 'blocked';
+  const gates = itemGates(item);
+  const deps = dependenciesFromBody(item.body_md).blockedBy;
+  return (
+    <div
+      className={`card rise${blocked ? ' block' : ''}`}
+      onClick={onOpen}
+      style={{ animationDelay: `${index * 30}ms`, ...(item.status === 'done' ? { opacity: 0.62 } : {}) }}
+    >
+      <div className="c-top">
+        <TypePill type={item.type} />
+        <span className="c-id mono">{item.id}</span>
       </div>
+      <div className="c-title">{item.title}</div>
+      {gates.length > 0 && (
+        <span className="gates">
+          {gates.map((g) => (
+            <span key={g.gate} className={`gate${g.state === 'passed' ? ' done' : ''}`} title={`${g.label} · ${g.state}`}>
+              {g.abbr[0]}
+            </span>
+          ))}
+        </span>
+      )}
+      <div className="c-foot">
+        {deps.length > 0 && (
+          <span className="c-meta">
+            <Link2 />
+            {deps.length}
+          </span>
+        )}
+        <span style={{ flex: 1 }} />
+        <Avatar handle={item.owner} size={24} />
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Epic rail card (filter)
+// ---------------------------------------------------------------------------
+
+function EpicCard({
+  epic,
+  items,
+  selected,
+  onToggleFilter,
+  onOpen,
+  index,
+}: {
+  epic: BacklogItem;
+  items: BacklogItem[];
+  selected: boolean;
+  onToggleFilter: () => void;
+  onOpen: () => void;
+  index: number;
+}) {
+  const { total, done, pct } = epicProgress(items, epic.id);
+  return (
+    <div
+      className={`epic-card rise${selected ? ' sel' : ''}`}
+      onClick={onToggleFilter}
+      style={{ animationDelay: `${index * 30}ms` }}
+    >
+      <div className="ec-top">
+        <TypePill type="epic" />
+        <span className="ec-id mono">{epic.id}</span>
+        <span
+          className="dr-x"
+          title="Open epic detail"
+          style={{ marginLeft: 6, width: 18, height: 18 }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpen();
+          }}
+        >
+          <ArrowRight style={{ width: 14, height: 14 }} />
+        </span>
+      </div>
+      <div className="ec-title">{epic.title}</div>
+      <div className="prog" style={{ marginBottom: 0 }}>
+        <i style={{ width: `${pct}%` }} />
+      </div>
+      <div className="ec-foot">
+        <span className="mono" style={{ fontSize: 11, color: 'var(--fg-muted)' }}>
+          {done}/{total}
+        </span>
+        <span style={{ flex: 1 }} />
+        <Avatar handle={epic.owner} size={24} />
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Item detail drawer body + footer
+// ---------------------------------------------------------------------------
+
+function ItemDrawer({
+  item,
+  onClose,
+  onMutated,
+}: {
+  item: BacklogItem;
+  onClose: () => void;
+  onMutated: () => void;
+}) {
+  const { activity, reload: reloadActivity } = useActivity(item.id);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const t = TYPE_META[item.type];
+  const ac = acChecklist(item.frontmatter);
+  const gates = itemGates(item);
+  const blocked = item.status === 'blocked';
+  const blockReason = blocked ? blockReasonFromActivity(activity) : null;
+  const underlying = blocked ? underlyingStatusFromActivity(activity) : null;
+  const columnLabel = statusBadge((underlying ?? item.status) as BacklogItem['status']).label;
+
+  async function toggleAc(index: number, done: boolean) {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await apiPost(`/api/backlog/${item.id}/ac`, { index, done });
+      onMutated();
+      reloadActivity();
+    } catch {
+      setError('Could not update criterion.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function transition(action: BoardTransition) {
+    if (busy) return;
+    const reason =
+      action === 'block' ? window.prompt('Reason for blocking (optional):') ?? undefined : undefined;
+    setBusy(true);
+    setError(null);
+    try {
+      await apiPost(`/api/backlog/${item.id}/transition`, { action, reason });
+      onMutated();
+      reloadActivity();
+    } catch {
+      setError(`Could not ${action} this item.`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const moves = availableTransitions(item.status);
+  const primary = moves.find((m) => m.primary);
+  const secondary = moves.filter((m) => !m.primary);
+
+  return (
+    <>
+      <div className="dr-head">
+        <span className="ty-pill" style={{ color: t.color, background: rgba(t.color, 0.1) }}>
+          <span className="d" style={{ background: t.color }} />
+          {t.label}
+        </span>
+        <span className="mono" style={{ fontSize: 12, color: 'var(--fg-muted)' }}>
+          {item.id}
+        </span>
+        <span className="dr-x" onClick={onClose}>
+          <X style={{ width: 16, height: 16 }} />
+        </span>
+      </div>
+
+      <div className="dr-body">
+        <div className="dr-title">{item.title}</div>
+        {descriptionFromBody(item.body_md) && (
+          <div className="dr-desc">{descriptionFromBody(item.body_md)}</div>
+        )}
+
+        {blocked && (
+          <div className="dr-block">
+            <Ban />
+            <span>
+              Blocked
+              <span className="br"> · {blockReason ?? 'reason not set'}</span>
+            </span>
+          </div>
+        )}
+
+        <div className="dr-meta">
+          <div className="dr-mrow">
+            <span className="dr-mk">Assignee</span>
+            <span className="dr-mv">
+              <Avatar handle={item.owner} size={18} />
+              {short(item.owner) || '—'}
+            </span>
+          </div>
+          <div className="dr-mrow">
+            <span className="dr-mk">Status</span>
+            <span className="dr-mv">
+              {columnLabel}
+              {blocked && <span style={{ color: 'var(--red)', fontSize: 11 }}> · blocked</span>}
+            </span>
+          </div>
+          {item.parent_id && (
+            <div className="dr-mrow">
+              <span className="dr-mk">Parent epic</span>
+              <span className="dr-mv mono">{item.parent_id}</span>
+            </div>
+          )}
+        </div>
+
+        {ac.length > 0 && (
+          <div className="dr-grp">
+            <div className="dr-sec">Acceptance criteria</div>
+            {ac.map((c, i) => (
+              <div
+                key={i}
+                className={`ac-row${c.done ? ' done' : ''}`}
+                onClick={() => toggleAc(i, !c.done)}
+              >
+                <span className="ac-box">
+                  <Check style={{ width: 11, height: 11 }} />
+                </span>
+                {c.text}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {gates.length > 0 && (
+          <div className="dr-grp">
+            <div className="dr-sec">Gates · {gates.length} for this item</div>
+            {gates.map((g) => (
+              <div key={g.gate} className="gate-row">
+                <span className="gn">{g.label}</span>
+                <span className="gate-st">
+                  {g.state === 'passed' ? (
+                    <span style={{ color: 'var(--green)' }}>✓ passed</span>
+                  ) : (
+                    <span style={{ color: 'var(--amber)' }}>○ pending</span>
+                  )}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="dr-grp">
+          <div className="dr-sec">Activity</div>
+          {activity.length === 0 ? (
+            <div className="dr-desc" style={{ marginBottom: 0 }}>
+              No activity yet.
+            </div>
+          ) : (
+            activity.map((e) => (
+              <div className="cm-row" key={e.id}>
+                <Avatar handle={e.actor} size={20} />
+                <div className="cm-bub">
+                  {describeActivity(e)}
+                  <span style={{ color: 'var(--fg-faint)', marginLeft: 6, fontSize: 11 }}>
+                    {formatElapsed(e.created_at)} ago
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {error && <div className="dr-block">{error}</div>}
+      </div>
+
+      {moves.length > 0 && (
+        <div className="dr-foot">
+          {secondary.map((m) => (
+            <button
+              key={m.action}
+              className={`btn btn-sm ${m.action === 'block' ? 'btn-stop' : 'btn-line'}`}
+              style={{ flex: 1 }}
+              disabled={busy}
+              onClick={() => transition(m.action)}
+            >
+              {m.action === 'bounce' && <ArrowLeft style={{ width: 13, height: 13 }} />}
+              {m.action === 'block' && <CircleStop style={{ width: 13, height: 13 }} />}
+              {m.label}
+            </button>
+          ))}
+          {primary && (
+            <button
+              key={primary.action}
+              className={`btn btn-sm ${primary.action === 'unblock' ? 'btn-approve' : 'btn-pri'}`}
+              style={{ flex: 1 }}
+              disabled={busy}
+              onClick={() => transition(primary.action)}
+            >
+              {primary.action === 'unblock' && <Check style={{ width: 13, height: 13 }} />}
+              {primary.label}
+              {primary.action !== 'unblock' && <ArrowRight style={{ width: 13, height: 13 }} />}
+            </button>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
+function EpicDrawer({
+  epic,
+  items,
+  onOpenItem,
+  onClose,
+}: {
+  epic: BacklogItem;
+  items: BacklogItem[];
+  onOpenItem: (id: string) => void;
+  onClose: () => void;
+}) {
+  const kids = childrenOf(items, epic.id);
+  const { total, done, pct } = epicProgress(items, epic.id);
+  return (
+    <>
+      <div className="dr-head">
+        <TypePill type="epic" />
+        <span className="mono" style={{ fontSize: 12, color: 'var(--fg-muted)' }}>
+          {epic.id}
+        </span>
+        <span className="dr-x" onClick={onClose}>
+          <X style={{ width: 16, height: 16 }} />
+        </span>
+      </div>
+      <div className="dr-body">
+        <div className="dr-title">{epic.title}</div>
+        {descriptionFromBody(epic.body_md) && (
+          <div className="dr-desc">{descriptionFromBody(epic.body_md)}</div>
+        )}
+        <div className="dr-meta">
+          <div className="dr-mrow">
+            <span className="dr-mk">Owner</span>
+            <span className="dr-mv">
+              <Avatar handle={epic.owner} size={18} />
+              {short(epic.owner) || '—'}
+            </span>
+          </div>
+          <div className="dr-mrow">
+            <span className="dr-mk">Progress</span>
+            <span className="dr-mv">
+              {pct}% · {done}/{total} done
+            </span>
+          </div>
+        </div>
+        <div className="prog" style={{ marginBottom: 22 }}>
+          <i style={{ width: `${pct}%` }} />
+        </div>
+        <div className="dr-grp">
+          <div className="dr-sec">Items · {kids.length}</div>
+          {kids.length === 0 ? (
+            <div className="dr-desc">No items in this epic yet.</div>
+          ) : (
+            kids.map((k) => (
+              <div className="ep-kid" key={k.id} onClick={() => onOpenItem(k.id)}>
+                <TypePill type={k.type} />
+                <span className="ep-kid-id">{k.id}</span>
+                <span className="ep-kid-t">{k.title}</span>
+                <span className="ep-kid-st">
+                  {k.status === 'blocked' ? (
+                    <span style={{ color: 'var(--red)' }}>blocked</span>
+                  ) : (
+                    statusBadge(k.status).label
+                  )}
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Board route
+// ---------------------------------------------------------------------------
+
+type DrawerTarget = { kind: 'item' | 'epic'; id: string };
+
+export function BoardRoute() {
+  const { data, refresh } = usePolling<{ items: BacklogItem[] }>('/api/backlog', 5000);
+  const items = useMemo(() => data?.items ?? [], [data]);
+
+  const [filterEpic, setFilterEpic] = useState<string | null>(null);
+  const [target, setTarget] = useState<DrawerTarget | null>(null);
+
+  const epics = useMemo(() => items.filter((it) => it.type === 'epic'), [items]);
+  const columns = useMemo(() => {
+    const cols = boardColumns(items);
+    if (!filterEpic) return cols;
+    return cols.map((c) => ({ ...c, cards: c.cards.filter((card) => card.parent_id === filterEpic) }));
+  }, [items, filterEpic]);
+
+  const visibleCount = columns.reduce((n, c) => n + c.cards.length, 0);
+
+  // The drawer reads its target straight from the live list, so board polling
+  // and post-mutation refreshes keep it in sync without a separate fetch.
+  const openItem = target?.kind === 'item' ? items.find((it) => it.id === target.id) ?? null : null;
+  const openEpic = target?.kind === 'epic' ? items.find((it) => it.id === target.id) ?? null : null;
+
+  async function createItem() {
+    // Quick-create stopgap until the dedicated "New task" modal (Faz 12.9).
+    const title = window.prompt('New task title:')?.trim();
+    if (!title) return;
+    try {
+      await apiPost('/api/backlog', { type: 'task', title });
+      refresh();
+    } catch {
+      /* a failed create simply leaves the board unchanged on next poll */
+    }
+  }
+
+  return (
+    <section className="board-wrap">
+      <div className="page-h">
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+          <span className="page-title">Board</span>
+          <span className="page-sub">
+            {visibleCount} items
+            {filterEpic && (
+              <>
+                {' · filter '}
+                <span style={{ color: 'var(--accent-hi)' }}>{filterEpic}</span>
+                <span
+                  className="dr-x"
+                  style={{ display: 'inline-flex', marginLeft: 4, verticalAlign: 'middle' }}
+                  onClick={() => setFilterEpic(null)}
+                  title="Clear filter"
+                >
+                  <X style={{ width: 12, height: 12 }} />
+                </span>
+              </>
+            )}
+          </span>
+        </div>
+        <div style={{ display: 'flex', gap: 7 }}>
+          <span className="pill">
+            <User style={{ width: 12, height: 12 }} />
+            Assignee
+          </span>
+          <span className="pill">
+            <Rows3 style={{ width: 12, height: 12 }} />
+            Group: Epic
+          </span>
+          <button className="btn btn-pri btn-sm" onClick={createItem}>
+            <Plus style={{ width: 13, height: 13 }} />
+            New
+          </button>
+        </div>
+      </div>
+
+      <div className="board-scroll">
+        <div className="board-row">
+          <div className="epic-rail">
+            <div className="col-h">
+              <span className="dot" style={{ width: 6, height: 6, borderRadius: 2, background: 'var(--accent)' }} />
+              <span className="col-name">Epics</span>
+              <span className="col-count">{epics.length}</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, overflowY: 'auto', flex: 1 }}>
+              {epics.length === 0 ? (
+                <div className="col-empty">No epics</div>
+              ) : (
+                epics.map((epic, i) => (
+                  <EpicCard
+                    key={epic.id}
+                    epic={epic}
+                    items={items}
+                    index={i}
+                    selected={filterEpic === epic.id}
+                    onToggleFilter={() =>
+                      setFilterEpic((cur) => (cur === epic.id ? null : epic.id))
+                    }
+                    onOpen={() => setTarget({ kind: 'epic', id: epic.id })}
+                  />
+                ))
+              )}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 11 }}>
+            {columns.map((col) => (
+              <div className="col" key={col.key}>
+                <div className="col-h">
+                  <span className="dot" style={{ background: col.color }} />
+                  <span className="col-name">{col.name}</span>
+                  <span className="col-count">{col.cards.length}</span>
+                  <span className="col-add" onClick={createItem}>
+                    <Plus style={{ width: 13, height: 13 }} />
+                  </span>
+                </div>
+                <div className="col-list">
+                  {col.cards.length === 0 && <div className="col-empty">No items</div>}
+                  {col.cards.map((card, i) => (
+                    <Card
+                      key={card.id}
+                      item={card}
+                      index={i}
+                      onOpen={() => setTarget({ kind: 'item', id: card.id })}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <Drawer open={!!target} onClose={() => setTarget(null)}>
+        {openItem && (
+          <ItemDrawer item={openItem} onClose={() => setTarget(null)} onMutated={refresh} />
+        )}
+        {openEpic && (
+          <EpicDrawer
+            epic={openEpic}
+            items={items}
+            onClose={() => setTarget(null)}
+            onOpenItem={(id) => setTarget({ kind: 'item', id })}
+          />
+        )}
+      </Drawer>
     </section>
   );
 }
