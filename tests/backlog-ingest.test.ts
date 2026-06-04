@@ -122,17 +122,35 @@ describe('parseBacklogYaml', () => {
 });
 
 describe('ingestBacklogItems', () => {
-  it('creates T-1 and T-3, skips T-2 with invalid type reason', () => {
+  it('coerces an out-of-enum type to task (preserving original) instead of dropping', () => {
     const { items } = parseBacklogYaml(SAMPLE);
     const result = ingestBacklogItems(repos, items);
 
-    expect(result.created).toContain('T-1');
-    expect(result.created).toContain('T-3');
-    expect(result.created).not.toContain('T-2');
+    // All three are created — T-2's bogus type 'nonsense' is coerced, not dropped.
+    expect(result.created).toEqual(expect.arrayContaining(['T-1', 'T-2', 'T-3']));
+    expect(result.skipped).toHaveLength(0);
 
-    const t2skip = result.skipped.find((s) => s.id === 'T-2');
-    expect(t2skip).toBeDefined();
-    expect(t2skip!.reason).toMatch(/invalid type/i);
+    const t2 = repos.backlog.get('T-2');
+    expect(t2!.type).toBe('task');
+    expect(t2!.frontmatter.original_type).toBe('nonsense');
+  });
+
+  it('maps a domain-ish type by keyword (e.g. "tech-debt" → debt)', () => {
+    const { items } = parseBacklogYaml(
+      'items:\n  - id: D-1\n    type: tech-debt\n    title: cleanup\n',
+    );
+    ingestBacklogItems(repos, items);
+    expect(repos.backlog.get('D-1')!.type).toBe('debt');
+  });
+
+  it('preserves agent-added fields (phase, references) into frontmatter', () => {
+    const { items } = parseBacklogYaml(
+      'items:\n  - id: P-1\n    type: task\n    title: t\n    phase: 1\n    references: [TRD §2.1]\n',
+    );
+    ingestBacklogItems(repos, items);
+    const row = repos.backlog.get('P-1');
+    expect(row!.frontmatter.phase).toBe(1);
+    expect(row!.frontmatter.references).toEqual(['TRD §2.1']);
   });
 
   it('T-1 row has correct review_gates, body_md, and frontmatter', () => {
