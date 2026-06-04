@@ -7,10 +7,16 @@
  * Notifications / Terminal) listens for these — S1 only fires them.
  */
 import { PanelLeft, ChevronsUpDown, ChevronDown, Bell, Search, Terminal } from 'lucide-react';
+import { emitShell } from './shell-events.ts';
 
 /** Fire a shell-level UI event. Decouples the topbar from S6 overlays. */
 export function emitShellEvent(name: 'open-cmdk' | 'open-notifs' | 'open-terminal'): void {
   window.dispatchEvent(new CustomEvent(name));
+}
+
+/** Open a topbar dropdown anchored under the element that was clicked. */
+function openMenu(name: 'open-proj-menu' | 'open-ver-menu', el: HTMLElement): void {
+  emitShell(name, { rect: el.getBoundingClientRect() });
 }
 
 export function Topbar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
@@ -21,8 +27,8 @@ export function Topbar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
       </div>
       <div className="logo">K</div>
 
-      {/* Project + version — static placeholders (dropdown wiring is S6). */}
-      <div className="tb-proj">
+      {/* Project + version dropdowns — open `.menu` popovers (ShellMenus). */}
+      <div className="tb-proj" onClick={(e) => openMenu('open-proj-menu', e.currentTarget)}>
         <span style={{ fontWeight: 500, color: 'var(--fg)' }}>Acme CRM</span>
         <ChevronsUpDown style={{ width: 13, height: 13, opacity: 0.6 }} />
       </div>
@@ -32,6 +38,7 @@ export function Topbar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
       <div
         className="tb-proj mono"
         style={{ fontSize: 12, height: 24, padding: '0 7px', border: '1px solid var(--border)' }}
+        onClick={(e) => openMenu('open-ver-menu', e.currentTarget)}
       >
         v1.0 <ChevronDown style={{ width: 12, height: 12, opacity: 0.6 }} />
       </div>
