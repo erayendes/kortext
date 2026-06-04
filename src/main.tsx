@@ -60,7 +60,16 @@ function RootGate() {
 const rootEl = document.getElementById('root');
 if (!rootEl) throw new Error('root element missing');
 
-createRoot(rootEl).render(
+// Reuse a single root across Vite HMR module re-executions. Without this,
+// each hot update re-runs `createRoot(rootEl)` on a container that already
+// has a root, which React rejects with a "container already passed" warning
+// (dev-only, but it pollutes the console and can double-mount). In production
+// this module runs exactly once, so the cache is simply a no-op.
+const rootCache = window as unknown as { __kortextRoot?: ReturnType<typeof createRoot> };
+const root = rootCache.__kortextRoot ?? createRoot(rootEl);
+rootCache.__kortextRoot = root;
+
+root.render(
   <StrictMode>
     <RootGate />
   </StrictMode>,
