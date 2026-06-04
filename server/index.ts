@@ -19,6 +19,7 @@ import { docsRouter } from './routes/docs.ts';
 import { blueprintRouter } from './routes/blueprint.ts';
 import { driveRouter } from './routes/drive.ts';
 import { projectMetaRouter } from './routes/project-meta.ts';
+import { hooksRouter } from './routes/hooks.ts';
 import { startCommand } from './cli/commands.ts';
 import { readProjectMeta, resolveBlueprintPaths } from './blueprint/io.ts';
 import type { ExecutorKind } from './cli/executor-factory.ts';
@@ -141,6 +142,7 @@ app.use('/api', workflowsRouter({ workflows: workflowRegistry, repos }));
 app.use('/api', doctorRouter({ repos, workflows: workflowRegistry, personas: personaRegistry }));
 // Settings panes — project-scoped config (Faz A "vitrin" wiring).
 app.use('/api', projectMetaRouter({ workspaceRoot: process.cwd() }));
+app.use('/api', hooksRouter({ projectRoot: process.cwd() }));
 app.use(
   '/api',
   blueprintRouter({
