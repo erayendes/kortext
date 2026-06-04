@@ -178,6 +178,9 @@ app.use(
         executorBinary,
         agentsDir,
         safety: safetyGuards,
+        // Onboarding runs analysis → planning (which derives the backlog), then
+        // stops. Building backlog items stays the gated driver's job.
+        chainThroughWorkflowId: 'planning-pipeline',
       }).then((result) => {
         if (!result.ok) {
           console.warn(`[kortext] blueprint trigger failed: ${result.errorMessage}`);
