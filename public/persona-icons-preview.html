@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Persona Icons Preview</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0A0814; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 40px; }
+  h1 { color: #fff; font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+  p  { color: #6B6577; font-size: 13px; margin-bottom: 32px; }
+  .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; max-width: 900px; }
+  .card {
+    background: #13101F;
+    border: 1px solid #1E1A2E;
+    border-radius: 12px;
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    transition: border-color 0.15s;
+  }
+  .card:hover { border-color: #2E2A45; }
+  .avatar {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .avatar svg { display: block; }
+  .handle {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 11px;
+    text-align: center;
+    line-height: 1.4;
+  }
+</style>
+</head>
+<body>
+
+<h1>Persona Icons</h1>
+<p>Her ajan için seçilen Lucide ikonu — renk + ikon kombinasyonu</p>
+
+<div class="grid" id="grid"></div>
+
+<script type="module">
+  import { createIcons, Star, Gauge, Target, Code2, Package, Server, Monitor, Database, TestTube2, Shield, Workflow, Palette, Feather, TrendingUp, Scale, HelpCircle } from 'https://cdn.jsdelivr.net/npm/lucide@0.525.0/dist/esm/lucide.js';
+
+  const personas = [
+    { handle: '+prime',               color: '#F59E0B', icon: 'star' },
+    { handle: '+operation-manager',   color: '#67E8F9', icon: 'gauge' },
+    { handle: '+product-manager',     color: '#60A5FA', icon: 'target' },
+    { handle: '+engineering-manager', color: '#C084FC', icon: 'code-2' },
+    { handle: '+delivery-manager',    color: '#FB923C', icon: 'package' },
+    { handle: '+backend-developer',   color: '#818CF8', icon: 'server' },
+    { handle: '+frontend-developer',  color: '#F472B6', icon: 'monitor' },
+    { handle: '+db-admin',            color: '#2DD4BF', icon: 'database' },
+    { handle: '+qa-engineer',         color: '#FACC15', icon: 'test-tube-2' },
+    { handle: '+security-engineer',   color: '#DC2626', icon: 'shield' },
+    { handle: '+devops-engineer',     color: '#F87171', icon: 'workflow' },
+    { handle: '+designer',            color: '#34D399', icon: 'palette' },
+    { handle: '+copywriter',          color: '#A3E635', icon: 'feather' },
+    { handle: '+growth-expert',       color: '#FB7185', icon: 'trending-up' },
+    { handle: '+compliance-expert',   color: '#22D3EE', icon: 'scale' },
+  ];
+
+  const grid = document.getElementById('grid');
+
+  personas.forEach(p => {
+    const card = document.createElement('div');
+    card.className = 'card';
+
+    const avatar = document.createElement('div');
+    avatar.className = 'avatar';
+    avatar.style.background = p.color;
+    avatar.innerHTML = `<i data-lucide="${p.icon}" style="width:24px;height:24px;color:#0A0814;stroke-width:2.5"></i>`;
+
+    const handle = document.createElement('div');
+    handle.className = 'handle';
+    handle.style.color = p.color;
+    handle.textContent = p.handle;
+
+    card.appendChild(avatar);
+    card.appendChild(handle);
+    grid.appendChild(card);
+  });
+
+  createIcons();
+</script>
+
+</body>
+</html>
