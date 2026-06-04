@@ -7,7 +7,7 @@ import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { hooksRouter } from '../server/routes/hooks.ts';
 
-type Hook = { id: string; label: string; enabled: boolean; command: string };
+type Hook = { id: string; label: string; description: string; enabled: boolean; command: string };
 
 let tmpRoot: string;
 let server: Server;
@@ -35,24 +35,29 @@ afterEach(async () => {
 });
 
 describe('GET /api/hooks', () => {
-  it('returns all 6 known hooks, all disabled, with empty commands', async () => {
+  it('returns all 6 known hooks in spec order, with wireframe defaults', async () => {
     const res = await fetch(`${baseUrl}/api/hooks`);
     expect(res.status).toBe(200);
     const body = (await res.json()) as { hooks: Hook[] };
 
     expect(body.hooks.map((h) => h.id)).toEqual([
-      'on_item_created',
-      'on_status_change',
-      'on_review_requested',
-      'on_gate_failed',
-      'on_item_done',
-      'on_handover',
+      'PreToolUse',
+      'PostToolUse',
+      'UserPromptSubmit',
+      'SessionStart',
+      'HandoverStart',
+      'BlockerDetected',
     ]);
+    // Default-on for the first four, off for the last two (mirrors the wireframe).
+    const byId = Object.fromEntries(body.hooks.map((h) => [h.id, h]));
+    expect(byId.PreToolUse?.enabled).toBe(true);
+    expect(byId.SessionStart?.enabled).toBe(true);
+    expect(byId.HandoverStart?.enabled).toBe(false);
+    expect(byId.BlockerDetected?.enabled).toBe(false);
     for (const hook of body.hooks) {
-      expect(hook.enabled).toBe(false);
       expect(hook.command).toBe('');
-      expect(typeof hook.label).toBe('string');
-      expect(hook.label.length).toBeGreaterThan(0);
+      expect(typeof hook.description).toBe('string');
+      expect(hook.description.length).toBeGreaterThan(0);
     }
   });
 });
@@ -63,22 +68,22 @@ describe('PUT /api/hooks', () => {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        hooks: [{ id: 'on_item_done', enabled: true, command: 'echo done' }],
+        hooks: [{ id: 'BlockerDetected', enabled: true, command: 'echo done' }],
       }),
     });
     expect(putRes.status).toBe(200);
     const putBody = (await putRes.json()) as { hooks: Hook[] };
     expect(putBody.hooks).toHaveLength(6);
-    const done = putBody.hooks.find((h) => h.id === 'on_item_done');
+    const done = putBody.hooks.find((h) => h.id === 'BlockerDetected');
     expect(done?.enabled).toBe(true);
     expect(done?.command).toBe('echo done');
-    // Untouched hooks stay at defaults.
-    expect(putBody.hooks.find((h) => h.id === 'on_handover')?.enabled).toBe(false);
+    // Untouched hooks stay at their wireframe defaults (PreToolUse default-on).
+    expect(putBody.hooks.find((h) => h.id === 'PreToolUse')?.enabled).toBe(true);
 
     // Persisted across a fresh GET.
     const getRes = await fetch(`${baseUrl}/api/hooks`);
     const getBody = (await getRes.json()) as { hooks: Hook[] };
-    const persisted = getBody.hooks.find((h) => h.id === 'on_item_done');
+    const persisted = getBody.hooks.find((h) => h.id === 'BlockerDetected');
     expect(persisted?.enabled).toBe(true);
     expect(persisted?.command).toBe('echo done');
   });
@@ -102,7 +107,7 @@ describe('PUT /api/hooks', () => {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        hooks: [{ id: 'on_item_created', enabled: 'yes' }],
+        hooks: [{ id: 'PreToolUse', enabled: 'yes' }],
       }),
     });
     expect(res.status).toBe(422);
