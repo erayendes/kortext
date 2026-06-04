@@ -47,6 +47,14 @@ export function docsRouter(deps: DocsRouterDeps): Router {
       );
       res.json({ scope, files });
     } catch (err) {
+      // A scope dir is created lazily by the agent that first writes into it
+      // (memory/reports don't exist until handover/reports are produced). Until
+      // then the scope is simply empty — not an error. Mirrors the single-file
+      // handler's ENOENT → not-found handling.
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+        res.json({ scope, files: [] });
+        return;
+      }
       const message = err instanceof Error ? err.message : String(err);
       res.status(500).json({ error: 'list_failed', message });
     }
