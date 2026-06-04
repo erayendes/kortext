@@ -150,7 +150,16 @@ export async function runItem(itemId: string, deps: RunItemDeps): Promise<RunIte
   if (run.status === 'succeeded') {
     // Development-cycle exit (§5.8): in_progress → test. Worktree is kept alive —
     // closure (C2) merges it to development and releases it then (ledger kept).
-    lifecycle.transition(itemId, 'test', by, 'development-cycle complete');
+    //
+    // Idempotent: a long real-agent build can race an overlapping drive pass /
+    // scheduler retry that already advanced (or blocked) the item. Re-read and
+    // only apply the exit from `in_progress`, so the exit never throws
+    // IllegalTransitionError('test' from 'test') and never forces a blocked/
+    // advanced item back to `test`.
+    const fresh = repos.backlog.get(itemId);
+    if (fresh?.status === 'in_progress') {
+      lifecycle.transition(itemId, 'test', by, 'development-cycle complete');
+    }
     // Preview seam (§5.7): bring up the local test URL from the worktree so gates
     // + prime UAT can open it. Soft — a failed spawn must not fail a clean build.
     if (previewManager) {
