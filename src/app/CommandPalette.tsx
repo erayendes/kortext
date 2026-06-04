@@ -9,7 +9,7 @@
  *
  * Keyboard: ↑/↓ move the highlight, Enter activates, Esc / backdrop-click close.
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import {
   Search, SquareCheck, Bug, Recycle, Layers, User,
@@ -87,7 +87,8 @@ export function CommandPalette() {
     function onKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
-        open ? close() : show();
+        if (open) close();
+        else show();
       }
     }
     window.addEventListener('keydown', onKey);
@@ -180,7 +181,7 @@ export function CommandPalette() {
     entry.go();
   }
 
-  function onKeyDown(e: React.KeyboardEvent) {
+  function onKeyDown(e: ReactKeyboardEvent) {
     if (e.key === 'Escape') return close();
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -200,7 +201,7 @@ export function CommandPalette() {
   // keyboard highlight (`sel`) lines up with the rendered rows.
   let flatIndex = -1;
   let lastSection = '';
-  const rows: React.ReactNode[] = [];
+  const rows: ReactNode[] = [];
   for (const e of entries) {
     if (e.section !== lastSection) {
       lastSection = e.section;

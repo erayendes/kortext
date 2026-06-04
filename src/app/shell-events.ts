@@ -36,7 +36,7 @@ export function useShellEvent(
   handler: (e: CustomEvent<{ rect?: DOMRect } | undefined>) => void,
 ): void {
   useEffect(() => {
-    const listener = handler as EventListener;
+    const listener = handler as (e: Event) => void;
     window.addEventListener(name, listener);
     return () => window.removeEventListener(name, listener);
   });

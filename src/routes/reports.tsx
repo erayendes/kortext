@@ -8,7 +8,7 @@
  *
  * Data is real (`GET /api/docs/reports` + `/:file`).
  */
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, type ReactNode } from 'react';
 import { apiGet, usePolling } from '../lib/api.ts';
 import { FileBrowser, type FBItem } from '../components/v6/FileBrowser.tsx';
 
@@ -50,7 +50,7 @@ function relDate(mtime: number): string {
   return new Date(mtime).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-function FbMessage({ children }: { children: React.ReactNode }) {
+function FbMessage({ children }: { children: ReactNode }) {
   return (
     <div className="fbrowser">
       <div style={{ padding: '40px 28px', color: 'var(--fg-faint)', fontSize: 13 }}>{children}</div>
