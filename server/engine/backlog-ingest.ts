@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { basename } from 'node:path';
 import yaml from 'js-yaml';
 import type { Repositories } from '../db/repositories/index.ts';
 
@@ -63,15 +64,22 @@ export function parseBacklogYaml(text: string): {
   }
 
   // Shape 2: collect items from ```yaml fenced blocks embedded in markdown.
+  // A block that fails to parse is NOT silently dropped — it becomes an error so
+  // the caller can see (and surface) that some items were lost to bad YAML.
   const raw: unknown[] = [];
+  const blockErrors: string[] = [];
   const fence = /```ya?ml\s*\n([\s\S]*?)```/g;
   let m: RegExpExecArray | null;
+  let blockIndex = 0;
   while ((m = fence.exec(text)) !== null) {
+    blockIndex++;
     let block: unknown;
     try {
       block = yaml.load(m[1] ?? '', { schema: yaml.JSON_SCHEMA });
-    } catch {
-      continue; // skip an unparseable block; others may still be valid
+    } catch (err) {
+      const msg = err instanceof Error ? err.message.split('\n')[0] : String(err);
+      blockErrors.push(`fenced block #${blockIndex}: yaml parse failed: ${msg}`);
+      continue; // others may still be valid
     }
     if (Array.isArray(block)) raw.push(...block);
     else if (block && typeof block === 'object') {
@@ -80,7 +88,10 @@ export function parseBacklogYaml(text: string): {
       else if (typeof o['id'] === 'string') raw.push(o);
     }
   }
-  if (raw.length > 0) return validateRawItems(raw);
+  if (raw.length > 0 || blockErrors.length > 0) {
+    const r = validateRawItems(raw);
+    return { items: r.items, errors: [...blockErrors, ...r.errors] };
+  }
 
   // Nothing usable in either shape.
   if (topErr) return { items: [], errors: [`yaml parse failed: ${topErr}`] };
@@ -250,6 +261,22 @@ export function ingestBacklogFile(
   console.log(
     `[kortext] backlog ingest: ${created.length} created, ${skipped.length} skipped, ${parseErrors.length} parse errors`,
   );
+
+  // Surface the outcome in the audit log too (dashboard activity), so a partial
+  // import (items lost to malformed YAML / skips) is visible, never silent.
+  repos.auditLog.append({
+    actor: 'engine',
+    action: 'backlog.ingest.summary',
+    resource_type: 'run',
+    resource_id: basename(absolutePath),
+    payload: {
+      created: created.length,
+      skipped: skipped.length,
+      parse_errors: parseErrors.length,
+      ...(skipped.length > 0 ? { skipped_detail: skipped.slice(0, 20) } : {}),
+      ...(parseErrors.length > 0 ? { parse_error_detail: parseErrors.slice(0, 20) } : {}),
+    },
+  });
 
   return { created, skipped, parseErrors };
 }
