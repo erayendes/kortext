@@ -10,7 +10,7 @@
  * is pure chrome + interaction. Mirrors the `.fbrowser` / `.fb-*` markup of
  * wireframe-v6-hifi.html.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Lock, PenLine, MessageCircleQuestion, X } from 'lucide-react';
 import { personaColor, personaIcon } from '../../lib/persona-colors.ts';
 import { AnnotatableDoc, type AnnotateMode } from './AnnotatableDoc.tsx';
@@ -33,7 +33,7 @@ export type FileBrowserProps = {
   loadBody: (id: string) => Promise<string>;
   mode: AnnotateMode;
   /** Extra buttons for the right-pane header (e.g. References "Approve"). */
-  headerActions?: React.ReactNode;
+  headerActions?: ReactNode;
   /** Fired when the reviewer submits annotations for the current file. */
   onAnnotate?: (id: string, lines: number[], note: string) => void | Promise<void>;
 };

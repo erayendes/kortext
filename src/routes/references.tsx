@@ -15,7 +15,7 @@
  * `statuses` overlay with real POSTs (request-changes → 'review',
  * approve → 'approved').
  */
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Check } from 'lucide-react';
 import { apiGet, usePolling } from '../lib/api.ts';
 import { FileBrowser, type FBItem, type FBStatus } from '../components/v6/FileBrowser.tsx';
@@ -124,7 +124,7 @@ function useToast() {
   return { fire, node };
 }
 
-function FbMessage({ children }: { children: React.ReactNode }) {
+function FbMessage({ children }: { children: ReactNode }) {
   return (
     <div className="fbrowser">
       <div style={{ padding: '40px 28px', color: 'var(--fg-faint)', fontSize: 13 }}>{children}</div>

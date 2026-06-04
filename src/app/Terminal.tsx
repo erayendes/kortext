@@ -13,14 +13,14 @@
  * endpoints only. Output uses the wireframe's `.t-line / .t-out / .t-dim`
  * classes so it matches the hi-fi spec exactly.
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode, type KeyboardEvent } from 'react';
 import { Terminal as TerminalIcon, Minus } from 'lucide-react';
 import { apiGet } from '../lib/api.ts';
 import type { Run, PersonaSummary, PendingQuestion, ProjectMeta } from '../lib/api-types.ts';
 import { personaColor } from '../lib/persona-colors.ts';
 import { useShellEvent } from './shell-events.ts';
 
-type Line = { id: number; node: React.ReactNode };
+type Line = { id: number; node: ReactNode };
 
 export function Terminal() {
   const [open, setOpen] = useState(false);
@@ -70,14 +70,14 @@ export function Terminal() {
     if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
   }, [lines]);
 
-  function push(node: React.ReactNode) {
+  function push(node: ReactNode) {
     if (node == null) return;
     lineId.current += 1;
     const id = lineId.current;
     setLines((prev) => [...prev, { id, node }]);
   }
 
-  function prompt(cmd: string): React.ReactNode {
+  function prompt(cmd: string): ReactNode {
     return (
       <div className="t-line" style={{ marginTop: 4 }}>
         <span className="t-p">$</span> {cmd}
@@ -85,7 +85,7 @@ export function Terminal() {
     );
   }
 
-  function respond(raw: string): React.ReactNode {
+  function respond(raw: string): ReactNode {
     const c = raw.toLowerCase().trim();
 
     if (c === 'status') {
@@ -161,7 +161,7 @@ export function Terminal() {
     return <div className="t-out t-dim">command not found: {raw} — try 'help'</div>;
   }
 
-  function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+  function onKeyDown(e: KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Escape') return setOpen(false);
     if (e.key !== 'Enter') return;
     const cmd = value.trim();
