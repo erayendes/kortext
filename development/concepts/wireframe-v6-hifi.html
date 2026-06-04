@@ -1729,7 +1729,6 @@ Voice, tone, and primary strings. Owned by +copywriter.
     document.getElementById(prefix+'-list').innerHTML=items.map((it,i)=>`
       <div class="fb-item ${i===0?'active':''}" onclick="kSelect('${prefix}',${i},this)">
         <div class="fb-nm"><span class="nm">${it.name}</span></div>
-        ${it.who?`<div class="fb-au">${pAvatar(it.who,16)}<span>${short(it.who)}</span></div>`:''}
       </div>`).join('');
     kShow(prefix,0);
   }
