@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react';
 import {
   Copy,
   Download,
@@ -10,7 +10,7 @@ import {
   X,
 } from 'lucide-react';
 
-function GithubMark({ size = 14, className }: { size?: number; className?: string }) {
+function GithubMark({ size = 14, style }: { size?: number; style?: CSSProperties }) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -18,7 +18,7 @@ function GithubMark({ size = 14, className }: { size?: number; className?: strin
       height={size}
       viewBox="0 0 24 24"
       fill="currentColor"
-      className={className}
+      style={style}
       aria-hidden
     >
       <path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.04-.02-2.05-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.74.08-.74 1.2.08 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.66-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.31-.54-1.53.12-3.19 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.19.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.62-5.49 5.92.43.37.81 1.1.81 2.22 0 1.6-.01 2.89-.01 3.28 0 .32.21.69.83.57C20.56 21.8 24 17.3 24 12c0-6.63-5.37-12-12-12z" />
@@ -291,26 +291,33 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
 
   if (initializedAt) {
     return (
-      <div className="min-h-screen bg-bg-0 text-tx-1 flex items-center justify-center py-12 px-6">
-        <div className="w-full max-w-[560px] text-center">
-          <div className="flex items-center justify-center mb-4">
+      <div className="ob-root">
+        <div style={{ width: '100%', maxWidth: 560, textAlign: 'center' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
             <FileCheck size={32} style={{ color: 'var(--success)' }} />
           </div>
-          <h2 className="text-[22px] font-semibold mb-2">Project created</h2>
-          <p className="text-tx-2 text-[14px] mb-5">
+          <h2 style={{ fontSize: 22, fontWeight: 600, marginBottom: 8, color: 'var(--fg)' }}>
+            Project created
+          </h2>
+          <p style={{ color: 'var(--fg-muted)', fontSize: 14, marginBottom: 20 }}>
             Kortext set up{' '}
-            <span className="mono" style={{ color: 'var(--accent-soft)' }}>
+            <span className="mono" style={{ color: 'var(--accent-hi)' }}>
               {initializedAt}/.kortext/
             </span>
             . The running daemon serves a different folder — start Kortext in your
             project to run it:
           </p>
           <pre
-            className="mono text-[13px] text-left px-4 py-3 rounded-md m-0"
+            className="mono"
             style={{
-              background: 'var(--bg-2)',
-              border: '1px solid var(--border-default)',
-              color: 'var(--tx-1)',
+              fontSize: 13,
+              textAlign: 'left',
+              padding: '12px 16px',
+              borderRadius: 6,
+              margin: 0,
+              background: 'var(--panel)',
+              border: '1px solid var(--border)',
+              color: 'var(--fg)',
             }}
           >
             {`cd ${initializedAt}\nkortext serve`}
@@ -321,13 +328,23 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
   }
 
   return (
-    <div className="min-h-screen bg-bg-0 text-tx-1 flex items-start justify-center py-12 px-6">
-      <div className="w-full max-w-[640px]">
-        <Header />
-        <div className="border border-border-default rounded-2xl p-8 flex flex-col gap-6" style={{ background: 'var(--bg-1)' }}>
+    <div className="ob-root" style={{ alignItems: 'flex-start' }}>
+      <div style={{ width: '100%', maxWidth: 640 }}>
+        <OnboardingHeader />
+        <div
+          style={{
+            border: '1px solid var(--border)',
+            borderRadius: 16,
+            padding: 32,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 24,
+            background: 'var(--card)',
+          }}
+        >
           <Field label="Project Name" hint="Display name across all views." error={nameError}>
             <input
-              className="input w-full"
+              className="input"
               value={state.projectName}
               placeholder="e.g. Acme CRM"
               onChange={(e) => setState((s) => ({ ...s, projectName: e.target.value }))}
@@ -337,7 +354,7 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
 
           <Field label="Project Code" hint="Used in task IDs (e.g. ACME-T-101)." error={codeError}>
             <input
-              className="input w-full mono"
+              className="input mono"
               style={{ letterSpacing: '0.08em' }}
               value={state.projectCode}
               placeholder="e.g. ACME"
@@ -347,7 +364,7 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
           </Field>
 
           <Field label="Project Type" hint="New project runs analysis pipeline; existing codebase runs onboarding pipeline.">
-            <div className="flex gap-3 flex-wrap">
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
               <RadioCard
                 checked={state.projectType === 'new'}
                 onClick={() => setState((s) => ({ ...s, projectType: 'new' }))}
@@ -367,10 +384,10 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
             label="Project Directory"
             hint="Where .kortext/ is created. Browse or type an absolute path — a different folder is set up there (then you run Kortext in it)."
           >
-            <div className="flex gap-2">
+            <div style={{ display: 'flex', gap: 8 }}>
               <input
-                className="input flex-1 mono"
-                style={{ fontSize: 13 }}
+                className="input mono"
+                style={{ flex: 1, fontSize: 13 }}
                 value={projectDir}
                 placeholder="/Users/you/projects/acme"
                 spellCheck={false}
@@ -378,7 +395,7 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
               />
               <button
                 type="button"
-                className="btn btn-outline"
+                className="btn btn-line"
                 onClick={browseDirectory}
                 disabled={browsing}
               >
@@ -389,14 +406,15 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
           </Field>
 
           <Field label="Target Platform" hint="Pick one or more. Stack defaults and test matrices follow.">
-            <div className="flex gap-2 flex-wrap">
+            <div className="chips">
               {PLATFORM_OPTIONS.map((p) => (
-                <PlatformChip
+                <span
                   key={p}
-                  label={p}
-                  active={state.platforms.includes(p)}
+                  className={`chip${state.platforms.includes(p) ? ' on' : ''}`}
                   onClick={() => togglePlatform(p)}
-                />
+                >
+                  {p}
+                </span>
               ))}
             </div>
           </Field>
@@ -405,7 +423,7 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
             label="Blueprint"
             hint="Upload the product blueprint markdown. operation-manager derives the backlog from it."
             actions={
-              <div className="flex gap-1.5">
+              <div style={{ display: 'flex', gap: 6 }}>
                 <HelperButton
                   active={showSample}
                   icon={<FileText size={11} />}
@@ -465,20 +483,25 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
             ) : null}
             {state.blueprintFile ? (
               <div
-                className="flex items-center gap-2 px-3 py-2 rounded-md mt-2"
                 style={{
-                  background: 'rgba(16,185,129,0.10)',
-                  border: '1px solid rgba(16,185,129,0.25)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '8px 12px',
+                  borderRadius: 6,
+                  marginTop: 8,
+                  background: 'rgba(76,183,130,0.10)',
+                  border: '1px solid rgba(76,183,130,0.25)',
                 }}
               >
                 <FileCheck size={14} style={{ color: 'var(--success)', flexShrink: 0 }} />
-                <span className="mono text-[13px] flex-1" style={{ color: 'var(--success)' }}>
+                <span className="mono" style={{ fontSize: 13, flex: 1, color: 'var(--success)' }}>
                   {state.blueprintFile.name} · {(state.blueprintFile.size / 1024).toFixed(1)} KB · ✓
                 </span>
                 <button
                   type="button"
                   onClick={clearBlueprint}
-                  className="text-tx-3 hover:text-tx-1"
+                  className="ob-x"
                   aria-label="Remove blueprint file"
                 >
                   <X size={12} />
@@ -486,12 +509,16 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
               </div>
             ) : (
               <div
-                className="rounded-[10px] px-6 py-6 text-center cursor-pointer transition-all"
                 style={{
+                  borderRadius: 10,
+                  padding: '24px',
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.12s',
                   border: dragOver
                     ? '1.5px dashed var(--accent)'
-                    : '1.5px dashed var(--border-default)',
-                  background: dragOver ? 'var(--bg-2)' : 'var(--bg-0)',
+                    : '1.5px dashed var(--border)',
+                  background: dragOver ? 'var(--card-hover)' : 'var(--bg)',
                 }}
                 onClick={() => fileInputRef.current?.click()}
                 onDragOver={(e) => {
@@ -506,15 +533,18 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
                   if (file) await onFile(file);
                 }}
               >
-                <FileText size={24} style={{ color: 'var(--tx-3)', margin: '0 auto 8px', display: 'block' }} />
-                <div className="text-[13px] text-tx-2 mb-1">
+                <FileText size={24} style={{ color: 'var(--fg-faint)', margin: '0 auto 8px', display: 'block' }} />
+                <div style={{ fontSize: 13, color: 'var(--fg-muted)', marginBottom: 4 }}>
                   Drop your{' '}
-                  <span className="mono px-1.5 py-0.5 rounded text-[12px]" style={{ background: 'var(--bg-3)' }}>
+                  <span
+                    className="mono"
+                    style={{ padding: '2px 6px', borderRadius: 4, fontSize: 12, background: 'var(--panel)' }}
+                  >
                     blueprint.md
                   </span>{' '}
                   here
                 </div>
-                <div className="text-[12px] text-tx-3">
+                <div style={{ fontSize: 12, color: 'var(--fg-faint)' }}>
                   or <span style={{ color: 'var(--accent)' }}>browse files</span>
                 </div>
                 <input
@@ -545,7 +575,7 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
                 : 'Uses your local `agy` CLI (Antigravity). Make sure you are logged in (agy install).'
             }
           >
-            <div className="grid grid-cols-2 gap-2">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               {EXECUTOR_OPTIONS.map((opt) => (
                 <ExecutorChip
                   key={opt.value}
@@ -558,8 +588,8 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
             </div>
             {state.executor !== null && state.executor !== 'mock' && (
               <input
-                className="input w-full mono mt-2"
-                style={{ fontSize: 12 }}
+                className="input mono"
+                style={{ fontSize: 12, marginTop: 8 }}
                 placeholder={
                   state.executor === 'claude'
                     ? 'Optional: binary path (default: claude on PATH)'
@@ -576,14 +606,20 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
           </Field>
 
           <Field label="GitHub Repository (optional)" hint="Where agents will commit. Skip for sandbox mode." error={githubError}>
-            <div className="relative">
+            <div style={{ position: 'relative' }}>
               <GithubMark
                 size={14}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-tx-3"
+                style={{
+                  position: 'absolute',
+                  left: 11,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: 'var(--fg-faint)',
+                }}
               />
               <input
-                className="input w-full"
-                style={{ paddingLeft: '36px' }}
+                className="input"
+                style={{ paddingLeft: 34 }}
                 value={state.githubRepo}
                 placeholder="github.com/your-org/your-repo"
                 onChange={(e) => setState((s) => ({ ...s, githubRepo: e.target.value }))}
@@ -593,10 +629,12 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
 
           {submitError ? (
             <div
-              className="px-3 py-2 rounded-md text-[13px]"
               style={{
-                background: 'rgba(239,68,68,0.10)',
-                border: '1px solid rgba(239,68,68,0.30)',
+                padding: '8px 12px',
+                borderRadius: 6,
+                fontSize: 13,
+                background: 'rgba(204,107,107,0.10)',
+                border: '1px solid rgba(204,107,107,0.30)',
                 color: 'var(--danger)',
               }}
             >
@@ -606,14 +644,14 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
 
           <button
             type="button"
-            className="btn btn-primary"
+            className="btn btn-pri"
             disabled={!canSubmit}
             onClick={submit}
             style={{
-              padding: '14px',
-              fontSize: '15px',
-              borderRadius: '8px',
-              justifyContent: 'center',
+              height: 'auto',
+              padding: 14,
+              fontSize: 15,
+              borderRadius: 8,
               opacity: canSubmit ? 1 : 0.5,
               cursor: canSubmit ? 'pointer' : 'not-allowed',
             }}
@@ -627,16 +665,22 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
   );
 }
 
-function Header() {
+function OnboardingHeader() {
   return (
-    <div className="mb-7 text-center">
-      <div className="flex items-center justify-center gap-2 mb-3">
+    <div style={{ marginBottom: 28, textAlign: 'center' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 12 }}>
         <Sparkles size={20} style={{ color: 'var(--accent)' }} />
-        <span className="font-semibold tracking-tight text-[16px]">Kortext</span>
-        <span className="mono text-[10px] text-tx-3 ml-1">v3</span>
+        <span style={{ fontWeight: 600, letterSpacing: '-0.01em', fontSize: 16, color: 'var(--fg)' }}>
+          Kortext
+        </span>
+        <span className="mono" style={{ fontSize: 10, color: 'var(--fg-faint)', marginLeft: 4 }}>
+          v3
+        </span>
       </div>
-      <h2 className="text-[28px] font-bold tracking-tight mb-2">Initialize your project</h2>
-      <p className="text-tx-2 text-[14px]">
+      <h2 style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 8, color: 'var(--fg)' }}>
+        Initialize your project
+      </h2>
+      <p style={{ color: 'var(--fg-muted)', fontSize: 14 }}>
         We need just enough to dispatch your operation-manager. The rest is handled automatically.
       </p>
     </div>
@@ -658,19 +702,25 @@ function Field({
 }) {
   return (
     <div>
-      <div className="flex items-center justify-between mb-2">
-        <label className="text-[12px] font-semibold text-tx-2 uppercase tracking-[0.04em]">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <label
+          style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: 'var(--fg-muted)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.04em',
+          }}
+        >
           {label}
         </label>
         {actions}
       </div>
       {children}
       {error ? (
-        <p className="text-[12px] mt-1" style={{ color: 'var(--danger)' }}>
-          {error}
-        </p>
+        <p style={{ fontSize: 12, marginTop: 4, color: 'var(--danger)' }}>{error}</p>
       ) : hint ? (
-        <p className="text-[12px] text-tx-3 mt-1">{hint}</p>
+        <p style={{ fontSize: 12, color: 'var(--fg-faint)', marginTop: 4 }}>{hint}</p>
       ) : null}
     </div>
   );
@@ -691,28 +741,34 @@ function RadioCard({
     <button
       type="button"
       onClick={onClick}
-      className="flex-1 min-w-[200px] text-left px-4 py-3 rounded-md transition-all"
       style={{
-        background: 'var(--bg-2)',
-        border: checked
-          ? '1px solid var(--accent)'
-          : '1px solid var(--border-default)',
+        flex: 1,
+        minWidth: 200,
+        textAlign: 'left',
+        padding: '12px 16px',
+        borderRadius: 8,
+        transition: 'all 0.12s',
+        cursor: 'pointer',
+        background: checked ? 'var(--accent-soft)' : 'var(--panel)',
+        border: checked ? '1px solid var(--accent-line)' : '1px solid var(--border)',
       }}
     >
-      <div className="flex items-center gap-2 mb-1">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
         <span
-          className="inline-block w-3.5 h-3.5 rounded-full flex-shrink-0"
           style={{
-            border: checked ? '4px solid var(--accent)' : '1px solid var(--border-default)',
+            display: 'inline-block',
+            width: 14,
+            height: 14,
+            borderRadius: '50%',
+            flexShrink: 0,
+            border: checked ? '4px solid var(--accent)' : '1px solid var(--border-strong)',
             background: checked ? 'var(--accent)' : 'transparent',
             boxSizing: 'border-box',
           }}
         />
-        <span className="text-[13px] font-medium text-tx-1">{title}</span>
+        <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg)' }}>{title}</span>
       </div>
-      <div className="text-[11px] text-tx-3" style={{ paddingLeft: '22px' }}>
-        {desc}
-      </div>
+      <div style={{ fontSize: 11, color: 'var(--fg-faint)', paddingLeft: 22 }}>{desc}</div>
     </button>
   );
 }
@@ -732,65 +788,31 @@ function ExecutorChip({
     <button
       type="button"
       onClick={onClick}
-      className="text-left px-3 py-2.5 rounded-md transition-all"
       style={{
-        background: 'var(--bg-2)',
-        border: active
-          ? '1px solid var(--accent)'
-          : '1px solid var(--border-default)',
+        textAlign: 'left',
+        padding: '10px 12px',
+        borderRadius: 8,
+        transition: 'all 0.12s',
+        cursor: 'pointer',
+        background: active ? 'var(--accent-soft)' : 'var(--panel)',
+        border: active ? '1px solid var(--accent-line)' : '1px solid var(--border)',
       }}
     >
-      <div className="flex items-center gap-2 mb-0.5">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
         <span
-          className="inline-block w-2.5 h-2.5 rounded-sm flex-shrink-0"
           style={{
+            display: 'inline-block',
+            width: 10,
+            height: 10,
+            borderRadius: 3,
+            flexShrink: 0,
             background: active ? 'var(--accent)' : 'transparent',
-            border: active
-              ? '1px solid var(--accent)'
-              : '1px solid var(--border-default)',
+            border: active ? '1px solid var(--accent)' : '1px solid var(--border-strong)',
           }}
         />
-        <span className="text-[13px] font-medium text-tx-1">{label}</span>
+        <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg)' }}>{label}</span>
       </div>
-      <div className="text-[11px] text-tx-3" style={{ paddingLeft: '18px' }}>
-        {desc}
-      </div>
-    </button>
-  );
-}
-
-function PlatformChip({
-  label,
-  active,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex items-center gap-2 px-4 py-2 rounded-md text-[13px] transition-all"
-      style={{
-        background: 'var(--bg-2)',
-        border: active
-          ? '1px solid var(--accent)'
-          : '1px solid var(--border-default)',
-        color: active ? 'var(--tx-1)' : 'var(--tx-2)',
-      }}
-    >
-      <span
-        className="inline-block w-3 h-3 rounded-sm"
-        style={{
-          background: active ? 'var(--accent)' : 'transparent',
-          border: active
-            ? '1px solid var(--accent)'
-            : '1px solid var(--border-default)',
-        }}
-      />
-      {label}
+      <div style={{ fontSize: 11, color: 'var(--fg-faint)', paddingLeft: 18 }}>{desc}</div>
     </button>
   );
 }
@@ -810,10 +832,18 @@ function HelperButton({
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center gap-1 text-[11px] px-2 py-1 rounded transition-colors"
       style={{
-        color: active ? 'var(--tx-1)' : 'var(--tx-3)',
-        background: active ? 'var(--bg-2)' : 'transparent',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 4,
+        fontSize: 11,
+        padding: '4px 8px',
+        borderRadius: 5,
+        transition: 'color 0.12s',
+        cursor: 'pointer',
+        border: 'none',
+        color: active ? 'var(--fg)' : 'var(--fg-faint)',
+        background: active ? 'var(--panel)' : 'transparent',
       }}
     >
       {icon}
@@ -835,42 +865,48 @@ function HelperPanel({
 }) {
   return (
     <div
-      className="mb-2.5 rounded-lg overflow-hidden"
       style={{
-        background: 'var(--bg-0)',
+        marginBottom: 10,
+        borderRadius: 8,
+        overflow: 'hidden',
+        background: 'var(--bg)',
         border:
           accent === 'accent'
-            ? '1px solid rgba(168,85,247,0.30)'
-            : '1px solid var(--border-default)',
+            ? '1px solid rgba(155,130,206,0.30)'
+            : '1px solid var(--border)',
       }}
     >
       <div
-        className="flex items-center justify-between px-3 py-2"
         style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '8px 12px',
           borderBottom:
             accent === 'accent'
-              ? '1px solid rgba(168,85,247,0.20)'
-              : '1px solid var(--border-subtle)',
-          background:
-            accent === 'accent'
-              ? 'rgba(168,85,247,0.08)'
-              : 'var(--bg-2)',
+              ? '1px solid rgba(155,130,206,0.20)'
+              : '1px solid var(--border)',
+          background: accent === 'accent' ? 'rgba(155,130,206,0.08)' : 'var(--panel)',
         }}
       >
         <span
-          className="mono text-[11px]"
-          style={{ color: accent === 'accent' ? '#D8B4FE' : 'var(--tx-3)' }}
+          className="mono"
+          style={{ fontSize: 11, color: accent === 'accent' ? 'var(--violet)' : 'var(--fg-faint)' }}
         >
           {title}
         </span>
-        <div className="flex gap-1.5 items-center">{actions}</div>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>{actions}</div>
       </div>
       <pre
-        className="mono text-[11px] m-0 overflow-auto whitespace-pre-wrap"
+        className="mono"
         style={{
-          color: 'var(--tx-2)',
-          padding: '14px',
-          maxHeight: '220px',
+          fontSize: 11,
+          margin: 0,
+          overflow: 'auto',
+          whiteSpace: 'pre-wrap',
+          color: 'var(--fg-mid)',
+          padding: 14,
+          maxHeight: 220,
           lineHeight: 1.6,
         }}
       >
@@ -895,11 +931,17 @@ function ToolbarBtn({
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center gap-1 text-[11px] px-2 py-1 rounded"
       style={{
-        background: accent ? 'rgba(168,85,247,0.15)' : 'transparent',
-        color: accent ? '#D8B4FE' : 'var(--tx-3)',
-        border: accent ? '1px solid rgba(168,85,247,0.30)' : 'none',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 4,
+        fontSize: 11,
+        padding: '4px 8px',
+        borderRadius: 5,
+        cursor: 'pointer',
+        background: accent ? 'rgba(155,130,206,0.15)' : 'transparent',
+        color: accent ? 'var(--violet)' : 'var(--fg-faint)',
+        border: accent ? '1px solid rgba(155,130,206,0.30)' : 'none',
       }}
     >
       {icon}
@@ -910,14 +952,8 @@ function ToolbarBtn({
 
 function IconBtn({ onClick }: { onClick: () => void }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="w-5 h-5 flex items-center justify-center rounded text-tx-3 hover:text-tx-1"
-      aria-label="Close"
-    >
+    <button type="button" onClick={onClick} className="ob-x" aria-label="Close">
       <X size={12} />
     </button>
   );
 }
-
