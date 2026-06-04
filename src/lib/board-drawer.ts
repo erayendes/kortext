@@ -6,7 +6,7 @@
  * mapping, the acceptance-criteria checklist derivation, epic child/progress
  * roll-ups, and date formatting — so they can be unit-tested in isolation.
  */
-import type { BacklogItem } from './api-types.ts';
+import type { ActivityEntry, BacklogItem, Gate } from './api-types.ts';
 
 export type BadgeTone =
   | 'purple'
@@ -223,6 +223,197 @@ export function checklistFromSection(
     if (/^#{1,6}\s/.test(line)) break; // next heading ends the section
     const m = line.match(/^[-*]\s*\[([ xX])\]\s+(.*)$/);
     if (m) out.push({ text: (m[2] ?? '').trim(), done: (m[1] ?? '').toLowerCase() === 'x' });
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// Board columns
+//
+// The board is five fixed workflow lanes; Epic is NOT a status — epics live in
+// the left filter rail, tasks/bugs/debt flow through the columns. `blocked` is
+// an orthogonal flag (DECISIONS §12.3), not its own column: a blocked item is
+// drawn in the column it would return to on unblock (in_progress) with a red
+// card flag, never in a separate "Blocked" lane.
+// ---------------------------------------------------------------------------
+
+export type BoardColumnKey = 'to_do' | 'in_progress' | 'test' | 'review' | 'done';
+
+/** The five columns, left→right, each with its dot color (matches index.css). */
+export const BOARD_COLUMNS: { key: BoardColumnKey; name: string; color: string }[] = [
+  { key: 'to_do', name: 'To do', color: '#7B7F87' },
+  { key: 'in_progress', name: 'In progress', color: '#D2A24C' },
+  { key: 'test', name: 'Test', color: '#5E84D2' },
+  { key: 'review', name: 'Review', color: '#9B82CE' },
+  { key: 'done', name: 'Done', color: '#4CB782' },
+];
+
+/**
+ * The board column an item belongs in. `blocked` folds into `in_progress`
+ * (where unblock lands it); `cancelled` returns null (hidden from the board).
+ */
+export function columnKeyForStatus(status: BacklogItem['status']): BoardColumnKey | null {
+  switch (status) {
+    case 'to_do':
+      return 'to_do';
+    case 'in_progress':
+    case 'blocked':
+      return 'in_progress';
+    case 'test':
+      return 'test';
+    case 'review':
+      return 'review';
+    case 'done':
+      return 'done';
+    default:
+      return null; // cancelled
+  }
+}
+
+export type BoardColumn = {
+  key: BoardColumnKey;
+  name: string;
+  color: string;
+  cards: BacklogItem[];
+};
+
+/**
+ * Bucket backlog items into the five board columns, preserving input order.
+ * Epics (rail-only) and cancelled items are dropped.
+ */
+export function boardColumns(items: BacklogItem[]): BoardColumn[] {
+  const cols: BoardColumn[] = BOARD_COLUMNS.map((c) => ({ ...c, cards: [] }));
+  const byKey = new Map(cols.map((c) => [c.key, c]));
+  for (const it of items) {
+    if (it.type === 'epic') continue;
+    const key = columnKeyForStatus(it.status);
+    if (!key) continue;
+    byKey.get(key)!.cards.push(it);
+  }
+  return cols;
+}
+
+// ---------------------------------------------------------------------------
+// Review gates (item-based · §11.4)
+//
+// An item carries `review_gates` — the SUBSET of the 5 gates that applies to it.
+// Per-gate run telemetry (gate_runs) is not exposed by the board API, so a
+// gate's state is derived from the item's own fields: a done item has cleared
+// everything, and the AC (uat) gate tracks the acceptance-criteria checklist.
+// Everything else reads "pending" until the item is done. Gates not selected
+// are simply not shown — the card stays clean for the (common) zero-gate item.
+// ---------------------------------------------------------------------------
+
+export type GateState = 'passed' | 'pending';
+
+/** Gate enum → its board pill abbreviation + full label. */
+export const GATE_META: Record<Gate, { abbr: string; label: string }> = {
+  uat: { abbr: 'AC', label: 'User acceptance' },
+  quality_control: { abbr: 'QC', label: 'Quality control' },
+  security_control: { abbr: 'SE', label: 'Security review' },
+  design_review: { abbr: 'DS', label: 'Design review' },
+  code_review: { abbr: 'CR', label: 'Code review' },
+};
+
+/** Canonical left→right gate order on the card strip and drawer. */
+export const GATE_ORDER: Gate[] = [
+  'uat',
+  'quality_control',
+  'security_control',
+  'design_review',
+  'code_review',
+];
+
+export type ItemGate = { gate: Gate; abbr: string; label: string; state: GateState };
+
+/** True when an item has acceptance criteria and every one is checked. */
+function allAcceptanceMet(item: BacklogItem): boolean {
+  const ac = acChecklist(item.frontmatter);
+  return ac.length > 0 && ac.every((c) => c.done);
+}
+
+/**
+ * The item's applicable gates, in canonical order, each with a derived state.
+ * Returns [] when no gates are selected.
+ */
+export function itemGates(item: BacklogItem): ItemGate[] {
+  const selected = new Set(item.review_gates ?? []);
+  const acMet = allAcceptanceMet(item);
+  return GATE_ORDER.filter((g) => selected.has(g)).map((gate) => {
+    const meta = GATE_META[gate];
+    let state: GateState = 'pending';
+    if (item.status === 'done') state = 'passed';
+    else if (gate === 'uat' && acMet) state = 'passed';
+    return { gate, abbr: meta.abbr, label: meta.label, state };
+  });
+}
+
+/** Passed / total gate counts for the card's X/N strip counter. */
+export function gateProgress(item: BacklogItem): { done: number; total: number } {
+  const gates = itemGates(item);
+  return { done: gates.filter((g) => g.state === 'passed').length, total: gates.length };
+}
+
+// ---------------------------------------------------------------------------
+// Blocked-state introspection (read from the item's activity feed)
+// ---------------------------------------------------------------------------
+
+/** The newest audit entry recording a `block` transition, if any. */
+function latestBlockEntry(activity: ActivityEntry[]): ActivityEntry | null {
+  let best: ActivityEntry | null = null;
+  for (const e of activity) {
+    if (e.action !== 'item_transition') continue;
+    if (e.payload?.transition !== 'block' && e.payload?.to !== 'blocked') continue;
+    if (!best || e.created_at > best.created_at) best = e;
+  }
+  return best;
+}
+
+/** The reason captured when the item was last blocked (null if none / unset). */
+export function blockReasonFromActivity(activity: ActivityEntry[]): string | null {
+  const e = latestBlockEntry(activity);
+  const reason = e?.payload?.reason;
+  return typeof reason === 'string' && reason.length > 0 ? reason : null;
+}
+
+/**
+ * The status a blocked item came from (the `from` of its last block move) — so
+ * the drawer can show "In progress · blocked" rather than just "blocked".
+ */
+export function underlyingStatusFromActivity(
+  activity: ActivityEntry[],
+): BacklogItem['status'] | null {
+  const from = latestBlockEntry(activity)?.payload?.from;
+  return typeof from === 'string' ? (from as BacklogItem['status']) : null;
+}
+
+// ---------------------------------------------------------------------------
+// Dependencies (parsed from the body's `## Dependencies` section)
+// ---------------------------------------------------------------------------
+
+const ITEM_ID_RE = /\b([A-Z]-?\d{1,4})\b/g;
+
+function idsFromDepLine(line: string): string[] {
+  // Drop unfilled "[task-id]" placeholders, then pull item-id tokens (T07, B-203).
+  const cleaned = line.replace(/\[[^\]]*\]/g, '');
+  return [...cleaned.matchAll(ITEM_ID_RE)].map((m) => m[1]!);
+}
+
+/**
+ * Extract `Blocks` / `Blocked By` item ids from the `## Dependencies` section.
+ * Untouched template placeholders (`[task-id]`) yield empty arrays.
+ */
+export function dependenciesFromBody(md: string): { blocks: string[]; blockedBy: string[] } {
+  const lines = md.split('\n');
+  const start = lines.findIndex((l) => /^#{1,6}\s+dependencies\s*$/i.test(l.trim()));
+  const out = { blocks: [] as string[], blockedBy: [] as string[] };
+  if (start === -1) return out;
+
+  for (let i = start + 1; i < lines.length; i++) {
+    const line = (lines[i] ?? '').trim();
+    if (/^#{1,6}\s/.test(line)) break;
+    if (/blocked\s*by/i.test(line)) out.blockedBy.push(...idsFromDepLine(line));
+    else if (/blocks/i.test(line)) out.blocks.push(...idsFromDepLine(line));
   }
   return out;
 }
