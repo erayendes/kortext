@@ -8,6 +8,7 @@
  */
 import { PanelLeft, ChevronsUpDown, ChevronDown, Bell, Search, Terminal } from 'lucide-react';
 import { emitShell } from './shell-events.ts';
+import { useProjectMeta } from '../lib/api.ts';
 
 /** Fire a shell-level UI event. Decouples the topbar from S6 overlays. */
 export function emitShellEvent(name: 'open-cmdk' | 'open-notifs' | 'open-terminal'): void {
@@ -20,6 +21,8 @@ function openMenu(name: 'open-proj-menu' | 'open-ver-menu', el: HTMLElement): vo
 }
 
 export function Topbar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
+  // project name/version come from onboarding meta (no longer hardcoded)
+  const project = useProjectMeta();
   return (
     <header className="topbar">
       <div className="iconbtn" onClick={onToggleSidebar} title="Toggle sidebar">
@@ -29,7 +32,7 @@ export function Topbar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
 
       {/* Project + version dropdowns — open `.menu` popovers (ShellMenus). */}
       <div className="tb-proj" onClick={(e) => openMenu('open-proj-menu', e.currentTarget)}>
-        <span style={{ fontWeight: 500, color: 'var(--fg)' }}>Acme CRM</span>
+        <span style={{ fontWeight: 500, color: 'var(--fg)' }}>{project?.name ?? 'Project'}</span>
         <ChevronsUpDown style={{ width: 13, height: 13, opacity: 0.6 }} />
       </div>
       <span className="tb-sep" style={{ fontSize: 11 }}>
