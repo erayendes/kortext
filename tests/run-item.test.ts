@@ -118,6 +118,35 @@ describe('runItem — per-item run + worktree keystone (capstone B1, §5.9 #10)'
     expect(repos.backlog.get('B5')?.status).toBe('test');
   });
 
+  it('idempotent dev-cycle exit: item concurrently advanced to test during build does not throw', async () => {
+    const lc = makeLifecycle();
+    lc.create({ id: 'IDEM', type: 'task', title: 'IDEM' }); // to_do
+    const acq = mockAcquirer();
+    // Simulate a concurrent advance: the build succeeds, but by the time the
+    // dev-cycle exit fires the item is already in `test` (e.g. an overlapping
+    // drive pass / scheduler retry). The exit must be idempotent — never throw
+    // IllegalTransitionError('test' from 'test').
+    const executor = new MockExecutor(() => {
+      if (repos.backlog.get('IDEM')?.status === 'in_progress') {
+        repos.backlog.transitionStatus('IDEM', 'test');
+      }
+      return { durationMs: 1 };
+    });
+    const result = await runItem('IDEM', {
+      repos,
+      lifecycle: lc,
+      executor,
+      graph: buildGraph(devCycleWf),
+      acquireWorktree: async (id) => {
+        acq.calls.push(id);
+        return acq.fn(id);
+      },
+      registry: new RunRegistry(),
+    });
+    expect(result.outcome).toBe('implemented');
+    expect(repos.backlog.get('IDEM')?.status).toBe('test');
+  });
+
   it('a dev-cycle run failure leaves the item in_progress and quarantines the worktree', async () => {
     const lc = makeLifecycle();
     lc.create({ id: 'B2', type: 'task', title: 'B2' });
