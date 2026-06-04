@@ -419,6 +419,22 @@
   .prov{ display:inline-flex; align-items:center; gap:6px; height:25px; padding:0 10px; border-radius:6px; border:1px solid var(--border); font-size:11.5px; color:var(--fg-mid); font-family:'Geist Mono',monospace; }
   .prov .d{ width:6px; height:6px; border-radius:50%; }
 
+  /* ---------- footer up-panels (agents / worktrees) ---------- */
+  .uppanel{ position:fixed; bottom:42px; z-index:45; width:316px; background:var(--bg-elev); border:1px solid var(--border-strong); border-radius:11px; box-shadow:0 -10px 34px rgba(0,0,0,.42); transform:translateY(10px); opacity:0; pointer-events:none; transition:.18s cubic-bezier(.16,1,.3,1); overflow:hidden; }
+  .uppanel.open{ transform:translateY(0); opacity:1; pointer-events:auto; }
+  .up-head{ height:40px; display:flex; align-items:center; justify-content:space-between; padding:0 14px; border-bottom:1px solid var(--border); }
+  .up-title{ font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; font-weight:600; color:var(--fg-mid); }
+  .up-x{ color:var(--fg-faint); cursor:pointer; display:flex; }
+  .up-x:hover{ color:var(--fg); }
+  .up-list{ max-height:340px; overflow-y:auto; padding:3px 0 6px; }
+  .up-sec{ display:flex; align-items:center; gap:6px; font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--fg-faint); font-weight:600; padding:10px 14px 5px; }
+  .up-sec .d{ width:5px; height:5px; border-radius:50%; }
+  .up-row{ display:flex; align-items:center; gap:9px; padding:7px 14px; transition:background .1s; cursor:pointer; }
+  .up-row:hover{ background:var(--hover); }
+  .up-name{ font-size:12px; color:var(--fg-mid); font-family:'Geist Mono',monospace; }
+  .up-task{ margin-left:auto; font-size:11px; color:var(--fg-faint); white-space:nowrap; }
+  .up-dot{ width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+
   /* toast (clarification confirmation) */
   .toast{ position:fixed; bottom:50px; left:50%; transform:translateX(-50%) translateY(10px); display:flex; align-items:center; gap:7px; padding:9px 14px; border-radius:9px; background:var(--bg-elev); border:1px solid var(--border-strong); box-shadow:0 10px 30px rgba(0,0,0,.4); font-size:12.5px; color:var(--green); opacity:0; pointer-events:none; transition:.2s cubic-bezier(.16,1,.3,1); z-index:90; }
   .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
@@ -909,12 +925,22 @@
   <div class="theme-btn" id="theme-btn" onclick="cycleTheme()" title="Tema: dark"><i data-lucide="moon" style="width:14px;height:14px"></i></div>
   <div class="agct"><span class="dot" style="width:6px;height:6px;background:var(--green)"></span> daemon <span class="mono" style="color:var(--fg-faint)">:3200</span></div>
   <div style="flex:1"></div>
-  <div class="f-item" id="f-agents"></div>
+  <div class="f-item" id="f-agents" onclick="toggleUp('up-agents')" style="cursor:pointer"></div>
   <div class="f-sep"></div>
-  <div class="f-item"><i data-lucide="git-branch" style="width:16px;height:16px"></i>3 worktrees</div>
+  <div class="f-item" id="f-worktrees" onclick="toggleUp('up-worktrees')" style="cursor:pointer"><i data-lucide="git-branch" style="width:16px;height:16px"></i>3 worktrees</div>
   <div class="f-sep"></div>
-  <div class="f-item"><i data-lucide="terminal" style="width:16px;height:16px"></i>Terminal</div>
+  <div class="f-item" style="cursor:pointer"><i data-lucide="terminal" style="width:16px;height:16px"></i>Terminal</div>
 </footer>
+
+<!-- footer up-panels -->
+<div id="up-agents" class="uppanel" style="right:170px">
+  <div class="up-head"><span class="up-title">Agents · 6</span><span class="up-x" onclick="toggleUp('up-agents')"><i data-lucide="x" style="width:14px;height:14px"></i></span></div>
+  <div class="up-list" id="up-agents-list"></div>
+</div>
+<div id="up-worktrees" class="uppanel" style="right:74px">
+  <div class="up-head"><span class="up-title">Active worktrees · 3</span><span class="up-x" onclick="toggleUp('up-worktrees')"><i data-lucide="x" style="width:14px;height:14px"></i></span></div>
+  <div class="up-list" id="up-worktrees-list"></div>
+</div>
 
 <script>
   /* ---------- persona map (PERSONA-ICONS.md) ---------- */
@@ -1085,6 +1111,42 @@
   }
   function renderFooterAgents(){
     document.getElementById('f-agents').innerHTML=`<span class="agct"><span class="dot" style="width:6px;height:6px;background:var(--green)"></span>4</span><span class="agct"><span class="dot" style="width:6px;height:6px;background:var(--amber)"></span>1</span><span class="agct"><span class="dot" style="width:6px;height:6px;background:var(--red)"></span>1</span><span style="color:var(--fg-mid)">Agents</span><i data-lucide="chevron-up" style="width:13px;height:13px"></i>`;
+  }
+
+  /* ---------- footer up-panels ---------- */
+  const ST_C={active:'var(--green)',idle:'var(--amber)',blocked:'var(--red)'};
+  const FAGENTS=[
+    {h:'+backend-developer', st:'active', task:'T-101 · JWT middleware'},
+    {h:'+qa-engineer',       st:'active', task:'T-011 · auth E2E'},
+    {h:'+designer',          st:'active', task:'T-002 · login mocks'},
+    {h:'+frontend-developer',st:'active', task:'T-006 · analytics grid'},
+    {h:'+security-engineer', st:'idle',   task:'queued · rate-limit'},
+    {h:'+db-admin',          st:'blocked',task:'T-013 · schema'},
+  ];
+  const WORKTREES=[
+    {run:'run-101', who:'+backend-developer',  task:'T-101', st:'active'},
+    {run:'run-103', who:'+frontend-developer', task:'T-103', st:'active'},
+    {run:'run-013', who:'+db-admin',           task:'T-013 · quarantine', st:'blocked'},
+  ];
+  function renderUpAgents(){
+    const groups=[['active','Active'],['idle','Idle'],['blocked','Blocked']];
+    document.getElementById('up-agents-list').innerHTML=groups.map(([st,label])=>{
+      const rows=FAGENTS.filter(a=>a.st===st);
+      if(!rows.length) return '';
+      return `<div class="up-sec"><span class="d" style="background:${ST_C[st]}"></span>${label} · ${rows.length}</div>`+
+        rows.map(a=>`<div class="up-row">${pAvatar(a.h,18)}<span class="up-name">${short(a.h)}</span><span class="up-task" style="${a.st!=='active'?`color:${ST_C[a.st]}`:''}">${a.task}</span></div>`).join('');
+    }).join('');
+    lucide.createIcons();
+  }
+  function renderUpWorktrees(){
+    document.getElementById('up-worktrees-list').innerHTML=WORKTREES.map(w=>`
+      <div class="up-row"><span class="up-dot" style="background:${w.st==='blocked'?'var(--red)':'var(--green)'}"></span><span class="up-name">${w.run}</span><span class="up-task" style="${w.st==='blocked'?'color:var(--red)':''}">${short(w.who)} · ${w.task}</span><i data-lucide="external-link" style="width:13px;height:13px;color:var(--fg-faint);margin-left:8px"></i></div>`).join('');
+    lucide.createIcons();
+  }
+  function toggleUp(id){
+    const el=document.getElementById(id);
+    document.querySelectorAll('.uppanel').forEach(p=>{ if(p.id!==id) p.classList.remove('open'); });
+    el.classList.toggle('open');
   }
 
   function renderEpicRail(){
@@ -1793,6 +1855,7 @@ Voice, tone, and primary strings. Owned by +copywriter.
 
   renderStats(); renderWork(); renderEpicRings(); renderTl(); renderFooterAgents();
   renderEpicRail(); renderCols(); renderRefs(); renderMemory(); renderReports(); renderAgentModels();
+  renderUpAgents(); renderUpWorktrees();
   applyTheme();
   lucide.createIcons();
 </script>
