@@ -407,6 +407,18 @@
   .btn-danger{ color:#fff; background:var(--red); }
   .btn-danger:hover{ background:#b85c5c; }
 
+  /* ---------- KORTEXT SETTINGS (engine scope) ---------- */
+  .kpane{ display:none; flex:1; min-width:0; }
+  .kpane.active{ display:flex; }
+  .auth-opt{ display:flex; align-items:flex-start; gap:11px; padding:13px 14px; border:1px solid var(--border); border-radius:9px; cursor:pointer; margin-bottom:8px; transition:.12s; }
+  .auth-opt:hover{ border-color:var(--border-strong); }
+  .auth-opt.sel{ border-color:var(--accent-line); background:var(--accent-soft); }
+  .auth-radio{ width:16px; height:16px; border-radius:50%; border:1.5px solid var(--border-strong); margin-top:1px; flex-shrink:0; position:relative; }
+  .auth-opt.sel .auth-radio{ border-color:var(--accent); }
+  .auth-opt.sel .auth-radio::after{ content:''; position:absolute; inset:3px; border-radius:50%; background:var(--accent); }
+  .prov{ display:inline-flex; align-items:center; gap:6px; height:25px; padding:0 10px; border-radius:6px; border:1px solid var(--border); font-size:11.5px; color:var(--fg-mid); font-family:'Geist Mono',monospace; }
+  .prov .d{ width:6px; height:6px; border-radius:50%; }
+
   /* toast (clarification confirmation) */
   .toast{ position:fixed; bottom:50px; left:50%; transform:translateX(-50%) translateY(10px); display:flex; align-items:center; gap:7px; padding:9px 14px; border-radius:9px; background:var(--bg-elev); border:1px solid var(--border-strong); box-shadow:0 10px 30px rgba(0,0,0,.4); font-size:12.5px; color:var(--green); opacity:0; pointer-events:none; transition:.2s cubic-bezier(.16,1,.3,1); z-index:90; }
   .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
@@ -438,17 +450,30 @@
 <!-- ============ SHELL ============ -->
 <div id="shell">
   <aside class="sidebar">
-    <div class="nav-sec">Workspace</div>
-    <div class="nav active" data-route="dashboard" onclick="go('dashboard')"><i data-lucide="layout-dashboard"></i><span class="nav-lbl">Dashboard</span></div>
-    <div class="nav" data-route="board" onclick="go('board')"><i data-lucide="square-kanban"></i><span class="nav-lbl">Board</span></div>
-    <div class="nav" data-route="references" onclick="go('references')"><i data-lucide="book-marked"></i><span class="nav-lbl">References</span></div>
-    <div class="nav" data-route="memory" onclick="go('memory')"><i data-lucide="brain"></i><span class="nav-lbl">Memory</span></div>
-    <div class="nav" data-route="reports" onclick="go('reports')"><i data-lucide="book-check"></i><span class="nav-lbl">Reports</span></div>
-    <div class="nav-sec">Project settings</div>
-    <div class="nav" data-route="project-info" onclick="go('project-info')"><i data-lucide="flag"></i><span class="nav-lbl">Project info</span></div>
-    <div class="nav" data-route="integrations" onclick="go('integrations')"><i data-lucide="unplug"></i><span class="nav-lbl">Integrations</span></div>
-    <div class="nav" data-route="environments" onclick="go('environments')"><i data-lucide="construction"></i><span class="nav-lbl">Environments</span></div>
-    <div class="nav" data-route="agent-models" onclick="go('agent-models')"><i data-lucide="bot"></i><span class="nav-lbl">Agent models</span></div>
+    <div id="sb-project">
+      <div class="nav-sec">Workspace</div>
+      <div class="nav active" data-route="dashboard" onclick="go('dashboard')"><i data-lucide="layout-dashboard"></i><span class="nav-lbl">Dashboard</span></div>
+      <div class="nav" data-route="board" onclick="go('board')"><i data-lucide="square-kanban"></i><span class="nav-lbl">Board</span></div>
+      <div class="nav" data-route="references" onclick="go('references')"><i data-lucide="book-marked"></i><span class="nav-lbl">References</span></div>
+      <div class="nav" data-route="memory" onclick="go('memory')"><i data-lucide="brain"></i><span class="nav-lbl">Memory</span></div>
+      <div class="nav" data-route="reports" onclick="go('reports')"><i data-lucide="book-check"></i><span class="nav-lbl">Reports</span></div>
+      <div class="nav-sec">Project settings</div>
+      <div class="nav" data-route="project-info" onclick="go('project-info')"><i data-lucide="flag"></i><span class="nav-lbl">Project info</span></div>
+      <div class="nav" data-route="integrations" onclick="go('integrations')"><i data-lucide="unplug"></i><span class="nav-lbl">Integrations</span></div>
+      <div class="nav" data-route="environments" onclick="go('environments')"><i data-lucide="construction"></i><span class="nav-lbl">Environments</span></div>
+      <div class="nav" data-route="agent-models" onclick="go('agent-models')"><i data-lucide="bot"></i><span class="nav-lbl">Agent models</span></div>
+    </div>
+    <div id="sb-kortext" style="display:none">
+      <div class="nav" onclick="exitKortext()" style="color:var(--fg-muted)"><i data-lucide="arrow-left"></i><span class="nav-lbl">Acme CRM</span></div>
+      <div class="nav-sec">Kortext · engine</div>
+      <div class="nav active" data-k="auth" onclick="switchK('auth')"><i data-lucide="key-round"></i><span class="nav-lbl">LLM Auth</span></div>
+      <div class="nav" data-k="agents" onclick="switchK('agents')"><i data-lucide="users"></i><span class="nav-lbl">Agents</span></div>
+      <div class="nav" data-k="rules" onclick="switchK('rules')"><i data-lucide="shield"></i><span class="nav-lbl">Rules</span></div>
+      <div class="nav" data-k="workflows" onclick="switchK('workflows')"><i data-lucide="workflow"></i><span class="nav-lbl">Workflows</span></div>
+      <div class="nav" data-k="notifications" onclick="switchK('notifications')"><i data-lucide="bell-ring"></i><span class="nav-lbl">Notifications</span></div>
+      <div class="nav" data-k="hooks" onclick="switchK('hooks')"><i data-lucide="zap"></i><span class="nav-lbl">Hooks</span></div>
+      <div class="nav" data-k="scripts" onclick="switchK('scripts')"><i data-lucide="terminal"></i><span class="nav-lbl">Scripts</span></div>
+    </div>
   </aside>
 
   <main id="main">
@@ -759,12 +784,128 @@
       </div>
     </section>
 
+    <!-- ===== KORTEXT SETTINGS (engine scope · footer ⚙) ===== -->
+    <section class="route" data-route="kortext" id="route-kortext">
+
+      <!-- LLM Auth -->
+      <div class="kpane active" data-k="auth">
+        <div class="set-wrap"><div class="set-inner">
+          <div class="set-title">LLM Auth</div>
+          <div class="set-sub">How agents authenticate to the model providers</div>
+          <div class="set-sec">Method</div>
+          <div class="auth-opt sel" onclick="pickAuth(this)"><span class="auth-radio"></span><div><div class="set-lbl">Use CLI</div><div class="set-desc">Claude / Codex / Gemini / Antigravity CLI auth — no API key needed</div></div></div>
+          <div class="auth-opt" onclick="pickAuth(this)"><span class="auth-radio"></span><div><div class="set-lbl">API key</div><div class="set-desc"><span class="mono">ANTHROPIC_API_KEY</span> from <span class="mono">.env</span></div></div></div>
+          <div class="set-sec" style="margin-top:22px">Providers</div>
+          <div class="chips">
+            <span class="prov"><span class="d" style="background:var(--green)"></span>claude</span>
+            <span class="prov"><span class="d" style="background:var(--green)"></span>codex</span>
+            <span class="prov"><span class="d" style="background:var(--green)"></span>gemini</span>
+            <span class="prov"><span class="d" style="background:var(--fg-faint)"></span>antigravity</span>
+          </div>
+        </div></div>
+      </div>
+
+      <!-- Agents (read-only file browser) -->
+      <div class="kpane" data-k="agents">
+        <div class="fbrowser"><div class="fb-body">
+          <div class="fb-list">
+            <div class="fb-lhead"><span class="page-title">Agents</span><span class="fb-grp" id="kag-grp" style="padding:0"></span></div>
+            <div class="fb-items" id="kag-list"></div>
+          </div>
+          <div class="fb-view">
+            <div class="fb-vhead"><div style="display:flex;align-items:center;gap:10px"><span class="fb-vname" id="kag-vname"></span><span class="stbadge ro"><i data-lucide="lock" style="width:11px;height:11px"></i>Read-only · package-defined</span></div></div>
+            <div class="fb-md" id="kag-md"></div>
+          </div>
+        </div></div>
+      </div>
+
+      <!-- Rules (read-only file browser) -->
+      <div class="kpane" data-k="rules">
+        <div class="fbrowser"><div class="fb-body">
+          <div class="fb-list">
+            <div class="fb-lhead"><span class="page-title">Rules</span><span class="fb-grp" id="krl-grp" style="padding:0"></span></div>
+            <div class="fb-items" id="krl-list"></div>
+          </div>
+          <div class="fb-view">
+            <div class="fb-vhead"><div style="display:flex;align-items:center;gap:10px"><span class="fb-vname" id="krl-vname"></span><span class="stbadge ro"><i data-lucide="lock" style="width:11px;height:11px"></i>Read-only · package-defined</span></div></div>
+            <div class="fb-md" id="krl-md"></div>
+          </div>
+        </div></div>
+      </div>
+
+      <!-- Workflows (read-only file browser) -->
+      <div class="kpane" data-k="workflows">
+        <div class="fbrowser"><div class="fb-body">
+          <div class="fb-list">
+            <div class="fb-lhead"><span class="page-title">Workflows</span><span class="fb-grp" id="kwf-grp" style="padding:0"></span></div>
+            <div class="fb-items" id="kwf-list"></div>
+          </div>
+          <div class="fb-view">
+            <div class="fb-vhead"><div style="display:flex;align-items:center;gap:10px"><span class="fb-vname" id="kwf-vname"></span><span class="stbadge ro"><i data-lucide="lock" style="width:11px;height:11px"></i>Read-only · package-defined</span></div></div>
+            <div class="fb-md" id="kwf-md"></div>
+          </div>
+        </div></div>
+      </div>
+
+      <!-- Notifications -->
+      <div class="kpane" data-k="notifications">
+        <div class="set-wrap"><div class="set-inner">
+          <div class="set-title">Notifications</div>
+          <div class="set-sub">Channels connect once · all projects use them. Per-project toggle in <b style="color:var(--fg-mid);font-weight:500">Project · Integrations</b>.</div>
+          <div class="intg-grid">
+            <div class="intg-card">
+              <div class="intg-head"><span class="intg-ico"><i data-lucide="hash"></i></span><span class="intg-name">Slack</span><span class="badge-ok"><span class="d"></span>Connected</span></div>
+              <div class="intg-rows">
+                <div class="intg-row"><span class="k">Workspace</span><span class="v mono">acme-team</span></div>
+                <div class="intg-row"><span class="k">Default channel</span><span class="v mono">#kortext</span><button class="btn btn-line btn-sm">Reconnect</button></div>
+              </div>
+            </div>
+            <div class="intg-card">
+              <div class="intg-head"><span class="intg-ico"><i data-lucide="send"></i></span><span class="intg-name">Telegram</span><span class="badge-ok"><span class="d"></span>Connected</span></div>
+              <div class="intg-rows">
+                <div class="intg-row"><span class="k">Bot</span><span class="v mono">@kortext_bot</span></div>
+                <div class="intg-row"><span class="k">Chat</span><span class="v mono">+prime</span><button class="btn btn-line btn-sm">Reconnect</button></div>
+              </div>
+            </div>
+          </div>
+        </div></div>
+      </div>
+
+      <!-- Hooks -->
+      <div class="kpane" data-k="hooks">
+        <div class="set-wrap"><div class="set-inner">
+          <div class="set-title">Hooks</div>
+          <div class="set-sub">Event-triggered automation</div>
+          <div class="set-card">
+            <div class="set-row"><div class="set-rl"><div class="set-lbl mono">PreToolUse · secret-scan</div><div class="set-desc">Scan for secret patterns before any write</div></div><div class="switch on" onclick="this.classList.toggle('on')"></div></div>
+            <div class="set-row"><div class="set-rl"><div class="set-lbl mono">PostStep · auto-commit</div><div class="set-desc">Commit after a successful step</div></div><div class="switch on" onclick="this.classList.toggle('on')"></div></div>
+            <div class="set-row"><div class="set-rl"><div class="set-lbl mono">SessionStart · load-context</div><div class="set-desc">Load handover + decisions</div></div><div class="switch on" onclick="this.classList.toggle('on')"></div></div>
+            <div class="set-row"><div class="set-rl"><div class="set-lbl mono">PostStep · harmful-filter</div><div class="set-desc">Banned-phrase output filter</div></div><div class="switch" onclick="this.classList.toggle('on')"></div></div>
+          </div>
+        </div></div>
+      </div>
+
+      <!-- Scripts -->
+      <div class="kpane" data-k="scripts">
+        <div class="set-wrap"><div class="set-inner">
+          <div class="set-title">Scripts</div>
+          <div class="set-sub">Ready-made helpers — run manually / on request (Hooks ≠ event-triggered)</div>
+          <div class="set-card">
+            <div class="set-row"><div class="set-rl"><div class="set-lbl mono">test:e2e</div><div class="set-desc">Playwright E2E suite</div></div><div style="display:flex;align-items:center;gap:10px"><button class="btn btn-line btn-sm"><i data-lucide="play" style="width:12px;height:12px"></i>Run</button><div class="switch on" onclick="this.classList.toggle('on')"></div></div></div>
+            <div class="set-row"><div class="set-rl"><div class="set-lbl mono">db:seed</div><div class="set-desc">Load demo data</div></div><div style="display:flex;align-items:center;gap:10px"><button class="btn btn-line btn-sm"><i data-lucide="play" style="width:12px;height:12px"></i>Run</button><div class="switch on" onclick="this.classList.toggle('on')"></div></div></div>
+            <div class="set-row"><div class="set-rl"><div class="set-lbl mono">deploy:preview</div><div class="set-desc">Vercel preview deploy</div></div><div style="display:flex;align-items:center;gap:10px"><button class="btn btn-line btn-sm"><i data-lucide="play" style="width:12px;height:12px"></i>Run</button><div class="switch" onclick="this.classList.toggle('on')"></div></div></div>
+          </div>
+        </div></div>
+      </div>
+
+    </section>
+
   </main>
 </div>
 
 <!-- ============ FOOTER ============ -->
 <footer class="footer">
-  <div class="f-item"><i data-lucide="cog" style="width:16px;height:16px"></i>Kortext</div>
+  <div class="f-item" onclick="enterKortext()" style="cursor:pointer"><i data-lucide="cog" style="width:16px;height:16px"></i>Kortext</div>
   <div class="theme-btn" id="theme-btn" onclick="cycleTheme()" title="Tema: dark"><i data-lucide="moon" style="width:14px;height:14px"></i></div>
   <div class="agct"><span class="dot" style="width:6px;height:6px;background:var(--green)"></span> daemon <span class="mono" style="color:var(--fg-faint)">:3200</span></div>
   <div style="flex:1"></div>
@@ -1528,6 +1669,81 @@ Voice, tone, and primary strings. Owned by +copywriter.
     lucide.createIcons();
   }
   function requestReport(){ toast('Report requested · an agent is generating it'); }
+
+  /* ---------- kortext settings (engine scope) ---------- */
+  function enterKortext(){
+    document.getElementById('sb-project').style.display='none';
+    document.getElementById('sb-kortext').style.display='';
+    go('kortext'); switchK('auth');
+  }
+  function exitKortext(){
+    document.getElementById('sb-kortext').style.display='none';
+    document.getElementById('sb-project').style.display='';
+    go('dashboard');
+  }
+  function switchK(k){
+    document.querySelectorAll('#sb-kortext .nav[data-k]').forEach(n=>n.classList.toggle('active',n.dataset.k===k));
+    document.querySelectorAll('#route-kortext .kpane').forEach(p=>p.classList.toggle('active',p.dataset.k===k));
+    const pm={agents:'kag',rules:'krl',workflows:'kwf'};
+    if(pm[k]) kRenderList(pm[k]);
+    lucide.createIcons();
+  }
+  function pickAuth(el){ el.parentElement.querySelectorAll('.auth-opt').forEach(o=>o.classList.remove('sel')); el.classList.add('sel'); }
+
+  let KAGENTS=null;
+  function kAgentsData(){
+    if(!KAGENTS) KAGENTS=AGENT_MODELS.map(a=>({name:a.h+'.md', who:a.h, body:
+`# ${a.h}
+**Role:** ${a.role} · package-defined · read-only
+
+## Mandate
+- Owns the ${a.role.toLowerCase()} surface of every workflow it joins.
+- Reads role-relevant references only; never reopens frozen foundation.
+
+## Gates
+- Leaves a gate-run record on each item it touches (pass / fail + finding).
+
+## Model
+- Assigned per project — see **Project settings · Agent models**.`}));
+    return KAGENTS;
+  }
+  const KRULES=[
+    {name:'behavior.md', body:`# Behavior\n\n- Verify before claiming done.\n- Never push to \`origin/main\` without approval.\n- Provide an insight block when writing code.`},
+    {name:'branching.md', body:`# Branching\n\n- One worktree per active item.\n- Branch name: \`<code>-<item-id>\`.\n- Merge only after the CR gate passes.`},
+    {name:'commands.md', body:`# Commands\n\n- \`npm run dev\` — frontend + backend.\n- \`npm test\` — vitest.\n- \`npm run typecheck\` — tsc --noEmit.`},
+    {name:'emergency.md', body:`# Emergency\n\n- On a blocked critical-path item, escalate to +prime.\n- Hotfixes skip planning but still pass SE + CR gates.`},
+    {name:'mcp.md', body:`# MCP\n\n- Agents read + mark acceptance criteria via the board MCP.\n- Every tool call is logged to the run record.`},
+    {name:'models.md', body:`# Models\n\n- Default tiers — orchestrators Opus, builders Sonnet, light tasks Haiku.\n- Per-project overrides in Project settings · Agent models.`},
+  ];
+  const KWORKFLOWS=[
+    {name:'01-new-project-analysis.md', body:`# 01 · New project analysis\n\n1. **+operation-manager:** intake + scope\n2. **+product-manager:** PRD draft\n3. **+engineering-manager:** TRD draft\n4. gate → **+prime**`},
+    {name:'03-planning-pipeline.md', body:`# 03 · Planning pipeline\n\n1. **+engineering-manager:** epic + task split\n2. **+delivery-manager:** sequencing\n3. gate → **+prime**`},
+    {name:'04-development-cycle.md', body:`# 04 · Development cycle\n\n1. **+engineering-manager:** plan & split\n2. **+backend-developer:** implement\n3. **+qa-engineer:** test\n4. **+security-engineer:** review — approver **+prime**\n5. **+engineering-manager:** merge`},
+    {name:'05-test-cycle.md', body:`# 05 · Test cycle\n\n1. **+qa-engineer:** author + run suites\n2. gate AC / QC per item\n3. epic-close → audit report`},
+    {name:'06-deployment.md', body:`# 06 · Deployment\n\n1. **+devops-engineer:** preview deploy\n2. **+delivery-manager:** release notes\n3. gate → **+prime** → production`},
+  ];
+  function kItems(prefix){ return prefix==='kag'?kAgentsData():prefix==='krl'?KRULES:KWORKFLOWS; }
+  function kRenderList(prefix){
+    const items=kItems(prefix);
+    document.getElementById(prefix+'-grp').textContent=items.length+(prefix==='kag'?' personas':prefix==='krl'?' rules':' workflows');
+    document.getElementById(prefix+'-list').innerHTML=items.map((it,i)=>`
+      <div class="fb-item ${i===0?'active':''}" onclick="kSelect('${prefix}',${i},this)">
+        <div class="fb-nm"><span class="nm">${it.name}</span></div>
+        ${it.who?`<div class="fb-au">${pAvatar(it.who,16)}<span>${short(it.who)}</span></div>`:''}
+      </div>`).join('');
+    kShow(prefix,0);
+  }
+  function kSelect(prefix,i,el){
+    document.querySelectorAll('#'+prefix+'-list .fb-item').forEach(x=>x.classList.remove('active'));
+    if(el) el.classList.add('active');
+    kShow(prefix,i);
+  }
+  function kShow(prefix,i){
+    const it=kItems(prefix)[i];
+    document.getElementById(prefix+'-vname').textContent=it.name;
+    document.getElementById(prefix+'-md').innerHTML=mdToHtml(it.body);
+    lucide.createIcons();
+  }
 
   /* ---------- agent models (persona → model, project-specific) ---------- */
   const MODELS=['claude-opus-4-8','claude-sonnet-4-6','claude-haiku-4-5'];
