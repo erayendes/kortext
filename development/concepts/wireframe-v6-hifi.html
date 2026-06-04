@@ -429,6 +429,38 @@
   .up-task{ margin-left:auto; font-size:11px; color:var(--fg-faint); white-space:nowrap; }
   .up-dot{ width:6px; height:6px; border-radius:50%; flex-shrink:0; }
 
+  /* ---------- item detail (right drawer) ---------- */
+  .drawer-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:60; opacity:0; pointer-events:none; transition:opacity .2s; }
+  .drawer-backdrop.open{ opacity:1; pointer-events:auto; }
+  .drawer{ position:fixed; top:0; right:0; bottom:0; width:464px; max-width:94vw; background:var(--bg-elev); border-left:1px solid var(--border-strong); z-index:61; transform:translateX(100%); transition:transform .26s cubic-bezier(.16,1,.3,1); display:flex; flex-direction:column; box-shadow:-18px 0 50px rgba(0,0,0,.4); }
+  .drawer.open{ transform:translateX(0); }
+  .dr-head{ height:52px; flex-shrink:0; display:flex; align-items:center; gap:10px; padding:0 18px; border-bottom:1px solid var(--border); }
+  .dr-x{ margin-left:auto; color:var(--fg-faint); cursor:pointer; display:flex; }
+  .dr-x:hover{ color:var(--fg); }
+  .dr-body{ flex:1; overflow-y:auto; padding:20px 18px 28px; }
+  .dr-title{ font-size:16px; font-weight:600; letter-spacing:-0.01em; margin-bottom:6px; line-height:1.35; }
+  .dr-desc{ font-size:13px; color:var(--fg-muted); line-height:1.6; margin-bottom:18px; }
+  .dr-meta{ display:flex; flex-direction:column; gap:11px; padding:15px 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border); margin-bottom:22px; }
+  .dr-mrow{ display:flex; align-items:center; gap:12px; }
+  .dr-mk{ font-size:12px; color:var(--fg-faint); width:96px; flex-shrink:0; }
+  .dr-mv{ font-size:12.5px; color:var(--fg-mid); display:flex; align-items:center; gap:7px; }
+  .dr-sec{ font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--fg-faint); margin:0 0 10px; }
+  .dr-grp{ margin-bottom:22px; }
+  .ac-row{ display:flex; align-items:center; gap:10px; padding:9px 11px; border:1px solid var(--border); border-radius:8px; margin-bottom:6px; font-size:12.5px; color:var(--fg-mid); cursor:pointer; transition:.12s; }
+  .ac-row:hover{ border-color:var(--border-strong); }
+  .ac-box{ width:16px; height:16px; border-radius:5px; border:1.5px solid var(--border-strong); flex-shrink:0; display:flex; align-items:center; justify-content:center; color:transparent; }
+  .ac-row.done .ac-box{ background:var(--green); border-color:var(--green); color:#fff; }
+  .ac-row.done{ color:var(--fg-muted); }
+  .gate-row{ display:flex; align-items:center; gap:10px; padding:9px 11px; border:1px solid var(--border); border-radius:8px; margin-bottom:6px; }
+  .gate-row .gn{ flex:1; font-size:12.5px; color:var(--fg-mid); }
+  .gate-st{ font-size:11px; font-family:'Geist Mono',monospace; }
+  .cm-row{ display:flex; gap:9px; align-items:flex-start; margin-bottom:12px; }
+  .cm-bub{ flex:1; border:1px solid var(--border); border-radius:8px; padding:8px 11px; font-size:12.5px; color:var(--fg-mid); line-height:1.5; }
+  .cm-in{ display:flex; gap:8px; }
+  .cm-in input{ flex:1; height:32px; border:1px solid var(--border); background:var(--card); border-radius:7px; padding:0 11px; color:var(--fg); font-size:12.5px; outline:none; font-family:inherit; }
+  .cm-in input:focus{ border-color:var(--accent-line); }
+  .dr-foot{ flex-shrink:0; border-top:1px solid var(--border); padding:13px 18px; display:flex; gap:8px; }
+
   /* ---------- terminal (footer · floating CLI) ---------- */
   .term{ position:fixed; right:16px; bottom:48px; z-index:46; width:486px; max-width:calc(100vw - 32px); height:344px; background:var(--bg-elev); border:1px solid var(--border-strong); border-radius:11px; box-shadow:0 18px 50px rgba(0,0,0,.5); display:none; flex-direction:column; overflow:hidden; }
   .term.open{ display:flex; }
@@ -959,6 +991,14 @@
   <div class="term-in"><span class="p">$</span><input id="term-input" placeholder="type a command — try 'status' or 'help'" onkeydown="termKey(event)" autocomplete="off" spellcheck="false"></div>
 </div>
 
+<!-- item detail (right drawer) -->
+<div id="dr-backdrop" class="drawer-backdrop" onclick="closeItem()"></div>
+<aside id="drawer" class="drawer">
+  <div class="dr-head"><span id="dr-pill"></span><span id="dr-id" class="mono" style="font-size:12px;color:var(--fg-muted)"></span><span class="dr-x" onclick="closeItem()"><i data-lucide="x" style="width:16px;height:16px"></i></span></div>
+  <div class="dr-body" id="dr-body"></div>
+  <div class="dr-foot" id="dr-foot"></div>
+</aside>
+
 <script>
   /* ---------- persona map (PERSONA-ICONS.md) ---------- */
   // persona icons (Lucide paths) — updated set
@@ -1204,7 +1244,7 @@
         <div class="col-h"><span class="dot" style="background:${STATUS[col.k]}"></span><span class="col-name">${col.name}</span><span class="col-count">${col.cards.length}</span><span class="col-add"><i data-lucide="plus" style="width:13px;height:13px"></i></span></div>
         <div class="col-list">
           ${col.cards.map((c,i)=>`
-            <div class="card ${c.block?'block':''} rise" style="${c.done?'opacity:.62;':''}animation-delay:${i*30}ms">
+            <div class="card ${c.block?'block':''} rise" onclick="openItem('${c.id}')" style="${c.done?'opacity:.62;':''}animation-delay:${i*30}ms">
               <div class="c-top">
                 <span class="ty-pill" style="color:${TYPE[c.ty].c};background:${TYPE[c.ty].c}1a"><span class="d" style="background:${TYPE[c.ty].c}"></span>${TYPE[c.ty].l}</span>
                 <span class="c-id mono">${c.id}</span>
@@ -1880,6 +1920,48 @@ Voice, tone, and primary strings. Owned by +copywriter.
     if(r==='board'){ renderEpicRail(); renderCols(); }
     lucide.createIcons();
   }
+
+  /* ---------- item detail (right drawer) ---------- */
+  const GATE_FULL={AC:'Acceptance criteria',QC:'Quality check',SE:'Security review',DS:'Design review',CR:'Code review'};
+  function findItem(id){
+    for(const col of COLS){ const c=col.cards.find(x=>x.id===id); if(c) return {c, status:col.name}; }
+    return null;
+  }
+  function openItem(id){
+    const f=findItem(id); if(!f) return;
+    const c=f.c, T=TYPE[c.ty];
+    document.getElementById('dr-pill').innerHTML=`<span class="ty-pill" style="color:${T.c};background:${T.c}1a"><span class="d" style="background:${T.c}"></span>${T.l}</span>`;
+    document.getElementById('dr-id').textContent=c.id;
+    const gates=c.gs.map((g,i)=>{ const s=c.g[i];
+      const st=s==='d'?'<span style="color:var(--green)">✓ passed</span>':s==='n'?'<span style="color:var(--fg-faint)">— n/a</span>':'<span style="color:var(--amber)">○ pending</span>';
+      return `<div class="gate-row"><span class="gn">${GATE_FULL[g]||g}</span><span class="gate-st">${st}</span></div>`; }).join('');
+    const ac = c.ty!=='debt' ? `<div class="dr-grp"><div class="dr-sec">Acceptance criteria</div>
+      <div class="ac-row done" onclick="this.classList.toggle('done')"><span class="ac-box"><i data-lucide="check" style="width:11px;height:11px"></i></span>User can sign in with Google</div>
+      <div class="ac-row done" onclick="this.classList.toggle('done')"><span class="ac-box"><i data-lucide="check" style="width:11px;height:11px"></i></span>Refresh token rotates automatically</div>
+      <div class="ac-row" onclick="this.classList.toggle('done')"><span class="ac-box"><i data-lucide="check" style="width:11px;height:11px"></i></span>Invalid-login error is shown</div></div>` : '';
+    document.getElementById('dr-body').innerHTML=`
+      <div class="dr-title">${c.t}</div>
+      <div class="dr-desc">${c.desc||''}</div>
+      <div class="dr-meta">
+        <div class="dr-mrow"><span class="dr-mk">Assignee</span><span class="dr-mv">${pAvatar(c.who,18)}${short(c.who)}</span></div>
+        <div class="dr-mrow"><span class="dr-mk">Status</span><span class="dr-mv">${c.block?'<span style="color:var(--red)">Blocked</span>':f.status}</span></div>
+        ${c.ep?`<div class="dr-mrow"><span class="dr-mk">Parent epic</span><span class="dr-mv mono">${c.ep}</span></div>`:''}
+        ${c.dep?`<div class="dr-mrow"><span class="dr-mk">Dependencies</span><span class="dr-mv mono">${c.dep} ready</span></div>`:''}
+      </div>
+      ${ac}
+      <div class="dr-grp"><div class="dr-sec">Gates · ${c.gs.length} for this item</div>${gates}</div>
+      <div class="dr-grp"><div class="dr-sec">Comments</div>
+        <div class="cm-row">${pAvatar('+prime',20)}<div class="cm-bub">Let's wire the rate-limit before this hits staging.</div></div>
+        <div class="cm-in"><input placeholder="Add a comment…"><button class="btn btn-pri btn-sm">Send</button></div>
+      </div>`;
+    document.getElementById('dr-foot').innerHTML = c.block
+      ? `<button class="btn btn-line btn-sm" style="flex:1"><i data-lucide="arrow-left" style="width:13px;height:13px"></i>Bounce</button><button class="btn btn-sm btn-approve" style="flex:1"><i data-lucide="check" style="width:13px;height:13px"></i>Unblock</button>`
+      : `<button class="btn btn-line btn-sm" style="flex:1"><i data-lucide="arrow-left" style="width:13px;height:13px"></i>Bounce</button><button class="btn btn-pri btn-sm" style="flex:1">Move to review <i data-lucide="arrow-right" style="width:13px;height:13px"></i></button>`;
+    document.getElementById('dr-backdrop').classList.add('open');
+    document.getElementById('drawer').classList.add('open');
+    lucide.createIcons();
+  }
+  function closeItem(){ document.getElementById('dr-backdrop').classList.remove('open'); document.getElementById('drawer').classList.remove('open'); }
 
   let themeMode='dark';
   function applyTheme(){
