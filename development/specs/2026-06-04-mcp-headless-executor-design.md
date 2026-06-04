@@ -1,7 +1,23 @@
 # Design — Wire Kortext MCP tools into the headless executors
 
+> ## ⚠️ SUPERSEDED by the file-ingestion bridge (2026-06-04, after live UAT)
+>
+> The MCP approach below was implemented (Tasks 1–4) and **live-tested** with
+> executor=claude. Result: **it does not work as-is.** The headless system
+> prompt forces agents to deliver work via the **Write tool (files)**; the
+> planning agent wrote all 47 backlog items to a file (`backlog-items-defined`)
+> instead of calling `add_backlog_item` — so the DB stayed empty even with the
+> MCP server wired in. Making MCP work would require rewriting the core headless
+> contract + every persona + signal-output handling (large, against-the-grain).
+>
+> **Decision (Eray):** pivot to the **file-ingestion bridge** — the agent
+> already emits a clean, structured backlog file; add a parser + ingester that
+> turns it into real backlog rows. The MCP-wiring commits were reverted (the
+> `busy_timeout` pragma was kept). See **`2026-06-04-backlog-ingest-bridge.md`**
+> for the live design + plan. The text below is retained for the record only.
+
 **Date:** 2026-06-04
-**Status:** Approved (design) — pending implementation plan
+**Status:** SUPERSEDED (see banner) — MCP wiring reverted; file-ingestion bridge adopted
 **Author:** Claude (code side) with Eray
 **Related:** [HANDOVER.md](../HANDOVER.md), [ARCHITECTURE.md](../ARCHITECTURE.md); discovered during the 2026-06-04 live UAT (HydroFlow, executor=claude)
 
