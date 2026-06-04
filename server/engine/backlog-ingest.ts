@@ -17,7 +17,22 @@ export type ParsedBacklogItem = {
   review_gates?: string[];
   blocks?: string[];
   blocked_by?: string[];
+  /** Any non-standard keys the agent added (e.g. phase, references, prd_id),
+   *  preserved verbatim so the agent's structuring is never silently dropped. */
+  extra?: Record<string, unknown>;
 };
+
+const KNOWN_ITEM_KEYS = new Set([
+  'id',
+  'type',
+  'title',
+  'priority',
+  'description',
+  'acceptance_criteria',
+  'review_gates',
+  'blocks',
+  'blocked_by',
+]);
 
 // Valid enum values — kept inline to avoid importing the full zod schema at
 // runtime (the repo already validates on create; we just need them for the
@@ -30,6 +45,24 @@ const VALID_GATES = new Set([
   'design_review',
   'uat',
 ]);
+
+/**
+ * Map a raw `type` onto the work-item enum. Agents frequently put a *domain*
+ * category there ("infrastructure", "security", "feature") instead of the
+ * work-item kind. Rather than dropping the item, map by keyword and default to
+ * 'task'; the caller records the raw value in frontmatter (`original_type`) so
+ * nothing is lost. Only genuinely structureless rows (no id/title) are skipped.
+ */
+export function coerceItemType(raw: string): { type: string; original?: string } {
+  const t = raw.trim().toLowerCase();
+  if (VALID_TYPES.has(t)) return { type: t };
+  if (t.includes('bug')) return { type: 'bug', original: raw };
+  if (t.includes('debt')) return { type: 'debt', original: raw };
+  if (t.includes('epic')) return { type: 'epic', original: raw };
+  if (t.includes('spike')) return { type: 'spike', original: raw };
+  if (t.includes('hotfix')) return { type: 'hotfix', original: raw };
+  return { type: 'task', original: raw };
+}
 
 // ---------------------------------------------------------------------------
 // 1. Parser
@@ -157,6 +190,14 @@ function validateRawItems(raw: unknown[]): {
         .filter((v): v is string => typeof v === 'string');
     }
 
+    // Preserve any agent-added fields (phase, references, prd_id, …) so the
+    // agent's own structuring survives into frontmatter.
+    const extra: Record<string, unknown> = {};
+    for (const key of Object.keys(obj)) {
+      if (!KNOWN_ITEM_KEYS.has(key)) extra[key] = obj[key];
+    }
+    if (Object.keys(extra).length > 0) parsed.extra = extra;
+
     items.push(parsed);
   }
 
@@ -180,11 +221,8 @@ export function ingestBacklogItems(
   for (const item of parsed) {
     const { id, type, title } = item;
 
-    // Validate type
-    if (!VALID_TYPES.has(type)) {
-      skipped.push({ id, reason: `invalid type "${type}"` });
-      continue;
-    }
+    // Coerce an out-of-enum type instead of dropping the item.
+    const { type: coercedType, original: originalType } = coerceItemType(type);
 
     // Idempotency check
     if (repos.backlog.get(id) !== null) {
@@ -197,19 +235,21 @@ export function ingestBacklogItems(
     const validGates = requestedGates.filter((g) => VALID_GATES.has(g));
     const droppedGates = requestedGates.filter((g) => !VALID_GATES.has(g));
 
-    // Build frontmatter
-    const frontmatter: Record<string, unknown> = {};
+    // Build frontmatter — start with any agent-added fields, then the known
+    // ones (so explicit fields win over passthrough on a name clash).
+    const frontmatter: Record<string, unknown> = { ...(item.extra ?? {}) };
     if (item.priority !== undefined) frontmatter['priority'] = item.priority;
     if (item.acceptance_criteria !== undefined)
       frontmatter['acceptance_criteria'] = item.acceptance_criteria;
     if (item.blocks !== undefined) frontmatter['blocks'] = item.blocks;
     if (item.blocked_by !== undefined) frontmatter['blocked_by'] = item.blocked_by;
     if (droppedGates.length > 0) frontmatter['dropped_gates'] = droppedGates;
+    if (originalType) frontmatter['original_type'] = originalType;
 
     try {
       repos.backlog.create({
         id,
-        type: type as import('../db/schemas.ts').BacklogItemType,
+        type: coercedType as import('../db/schemas.ts').BacklogItemType,
         title,
         status: 'to_do',
         body_md: item.description ?? '',
