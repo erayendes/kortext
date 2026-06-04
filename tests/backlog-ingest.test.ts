@@ -26,7 +26,43 @@ const SAMPLE = `items:
     title: A bug
 `;
 
+// The shape the model naturally emits: markdown prose + per-section ```yaml
+// fenced blocks, each holding a list of items. The parser must handle this too.
+const MARKDOWN_WITH_FENCES = [
+  '---',
+  'workflow: planning-pipeline',
+  '---',
+  '',
+  '# HydroFlow — Backlog',
+  '',
+  '## INFRA',
+  '',
+  '```yaml',
+  '- id: INFRA-001',
+  '  type: task',
+  '  title: "Project setup"',
+  '  review_gates: [code_review]',
+  '```',
+  '',
+  '## AUTH',
+  '',
+  '```yaml',
+  '- id: AUTH-001',
+  '  type: task',
+  '  title: "Login"',
+  '  review_gates: [security_control]',
+  '```',
+  '',
+].join('\n');
+
 describe('parseBacklogYaml', () => {
+  it('parses items from markdown ```yaml fenced blocks (model-natural shape)', () => {
+    const result = parseBacklogYaml(MARKDOWN_WITH_FENCES);
+    expect(result.items.map((i) => i.id).sort()).toEqual(['AUTH-001', 'INFRA-001']);
+    const created = ingestBacklogItems(repos, result.items).created.sort();
+    expect(created).toEqual(['AUTH-001', 'INFRA-001']);
+  });
+
   it('parses all 3 entries with no parse errors', () => {
     const result = parseBacklogYaml(SAMPLE);
     expect(result.errors).toHaveLength(0);
