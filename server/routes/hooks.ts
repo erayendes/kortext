@@ -15,18 +15,27 @@ import { projectLayout } from '../paths.ts';
 export type Hook = {
   id: string;
   label: string;
+  description: string;
   enabled: boolean;
   command: string;
 };
 
-/** Canonical lifecycle events, in display order. */
-const HOOK_DEFS: ReadonlyArray<{ id: string; label: string }> = [
-  { id: 'on_item_created', label: 'When a backlog item is created' },
-  { id: 'on_status_change', label: 'When an item changes column' },
-  { id: 'on_review_requested', label: 'When an item enters review' },
-  { id: 'on_gate_failed', label: 'When a test/review gate fails' },
-  { id: 'on_item_done', label: 'When an item is marked done' },
-  { id: 'on_handover', label: 'When a persona hands work off' },
+/**
+ * Canonical lifecycle events, in display order. Ids + labels + default-on
+ * values mirror the Hooks pane in the v4 wireframe (the single visual spec) —
+ * the dashboard sends these ids back on PUT.
+ */
+const HOOK_DEFS: ReadonlyArray<{
+  id: string;
+  description: string;
+  defaultEnabled: boolean;
+}> = [
+  { id: 'PreToolUse', description: 'Runs before any tool call · blocks dangerous patterns', defaultEnabled: true },
+  { id: 'PostToolUse', description: 'Audit logger · persists to audit.log', defaultEnabled: true },
+  { id: 'UserPromptSubmit', description: 'Adds context (project, agent, date) when +prime types', defaultEnabled: true },
+  { id: 'SessionStart', description: 'Loads workflow state & memory on session resume', defaultEnabled: true },
+  { id: 'HandoverStart', description: 'Captures context bundle on persona handover', defaultEnabled: false },
+  { id: 'BlockerDetected', description: 'Notify +prime when an agent reports it cannot proceed', defaultEnabled: false },
 ];
 
 const KNOWN_IDS = new Set(HOOK_DEFS.map((d) => d.id));
@@ -40,8 +49,9 @@ function mergeHooks(overrides: HookOverrides): Hook[] {
     const saved = overrides[def.id];
     return {
       id: def.id,
-      label: def.label,
-      enabled: typeof saved?.enabled === 'boolean' ? saved.enabled : false,
+      label: def.id,
+      description: def.description,
+      enabled: typeof saved?.enabled === 'boolean' ? saved.enabled : def.defaultEnabled,
       command: typeof saved?.command === 'string' ? saved.command : '',
     };
   });
