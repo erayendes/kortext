@@ -63,6 +63,26 @@ describe('parseBacklogYaml', () => {
     expect(created).toEqual(['AUTH-001', 'INFRA-001']);
   });
 
+  it('reports (does not silently drop) a malformed fenced block', () => {
+    const mixed = [
+      '# Backlog',
+      '```yaml',
+      '- id: GOOD-1',
+      '  type: task',
+      '  title: Fine',
+      '```',
+      '```yaml',
+      '- id: BAD-1',
+      '   type: task', // bad indentation → block fails to parse
+      ' title: broken',
+      '```',
+    ].join('\n');
+    const result = parseBacklogYaml(mixed);
+    expect(result.items.map((i) => i.id)).toEqual(['GOOD-1']); // good block survives
+    expect(result.errors.length).toBeGreaterThan(0); // bad block surfaced, not silent
+    expect(result.errors.some((e) => /fenced block/i.test(e))).toBe(true);
+  });
+
   it('parses all 3 entries with no parse errors', () => {
     const result = parseBacklogYaml(SAMPLE);
     expect(result.errors).toHaveLength(0);
