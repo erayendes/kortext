@@ -202,12 +202,11 @@
   .tl-h{ height:44px; flex-shrink:0; display:flex; align-items:center; justify-content:space-between; padding:0 16px; border-bottom:1px solid var(--border); }
   .tl-t{ font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--fg-mid); }
   .tl-list{ flex:1; overflow-y:auto; padding:4px 0; }
-  .tl-ev{ display:grid; grid-template-columns:42px 12px 1fr; gap:8px; padding:8px 16px; cursor:pointer; transition:background .12s; align-items:start; }
+  .tl-ev{ display:flex; gap:9px; align-items:flex-start; padding:9px 16px; cursor:pointer; transition:background .12s; }
   .tl-ev:hover{ background:var(--hover); }
-  .tl-ts{ font-size:11px; color:var(--fg-faint); padding-top:1px; }
-  .tl-dot{ margin-top:4px; }
-  .tl-tx{ font-size:12px; color:var(--fg-muted); line-height:1.4; }
-  .tl-tx .ac{ color:var(--fg-mid); }
+  .tl-tx{ font-size:12px; color:var(--fg-muted); line-height:1.45; padding-top:2px; min-width:0; }
+  .tl-tx .ac{ color:var(--fg-mid); font-weight:500; }
+  .tl-item{ color:var(--fg-faint); }
 
   /* ---------- BOARD ---------- */
   .board-wrap{ flex:1; min-width:0; display:flex; flex-direction:column; }
@@ -326,6 +325,7 @@
   /* ---------- SETTINGS (Project info / Integrations / …) ---------- */
   .set-wrap{ flex:1; min-width:0; overflow-y:auto; }
   .set-inner{ max-width:760px; padding:26px 30px 56px; }
+  .set-inner.wide{ max-width:1040px; }
   .set-title{ font-size:18px; font-weight:600; letter-spacing:-0.01em; margin-bottom:3px; }
   .set-sub{ font-size:12.5px; color:var(--fg-muted); margin-bottom:24px; }
   .set-sec{ font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.07em; color:var(--fg-faint); margin:0 0 9px 2px; }
@@ -378,8 +378,11 @@
   .env-tag .d{ width:6px; height:6px; border-radius:50%; }
   .env-table{ width:100%; border-collapse:collapse; }
   .env-table th{ text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--fg-faint); font-weight:600; padding:11px 15px; border-bottom:1px solid var(--border-strong); }
-  .env-table td{ padding:10px 15px; border-bottom:1px solid var(--border); font-size:12.5px; vertical-align:middle; }
+  .env-table td{ padding:11px 15px; border-bottom:1px solid var(--border); font-size:12.5px; vertical-align:middle; }
+  .env-table tbody tr{ transition:background .1s; }
+  .env-table tbody tr:hover{ background:var(--hover); }
   .env-table tr:last-child td{ border-bottom:none; }
+  .env-table th:not(:first-child), .env-table td:not(:first-child){ width:23%; }
   .env-key{ font-family:'Geist Mono',monospace; color:var(--fg-mid); display:inline-flex; align-items:center; gap:7px; }
   .env-key svg{ width:12px; height:12px; color:var(--fg-faint); flex-shrink:0; }
   .env-val{ font-family:'Geist Mono',monospace; color:var(--fg-muted); }
@@ -389,7 +392,8 @@
   .am-banner{ display:flex; align-items:center; gap:9px; margin-bottom:14px; font-size:12px; color:var(--fg-muted); }
   .am-pill{ display:inline-flex; align-items:center; gap:6px; height:23px; padding:0 9px; border-radius:6px; border:1px solid var(--accent-line); background:var(--accent-soft); color:var(--accent-hi); font-size:11px; font-weight:500; }
   .am-pill svg{ width:12px; height:12px; }
-  .am-row{ display:flex; align-items:center; gap:12px; padding:10px 16px; border-bottom:1px solid var(--border); }
+  .am-row{ display:flex; align-items:center; gap:12px; padding:11px 16px; border-bottom:1px solid var(--border); transition:background .1s; }
+  .am-row:hover{ background:var(--hover); }
   .am-row:last-child{ border-bottom:none; }
   .am-who{ display:flex; align-items:center; gap:9px; flex:1; min-width:0; }
   .am-name{ font-size:12.5px; color:var(--fg-mid); }
@@ -455,8 +459,7 @@
         <div class="dash-main">
           <div class="sec-h" style="margin-bottom:18px;align-items:center;justify-content:space-between">
             <div>
-              <div class="page-title" style="font-size:18px;margin-bottom:3px">Dashboard</div>
-              <div class="page-sub"><span class="mono">04-development-cycle</span> · step 4 of 7</div>
+              <div class="page-title" style="font-size:18px">Dashboard</div>
             </div>
             <button class="btn btn-line btn-sm"><i data-lucide="refresh-cw" style="width:13px;height:13px"></i>Refresh</button>
           </div>
@@ -673,22 +676,33 @@
             </div>
           </div>
 
+          <div class="intg-card" style="margin-bottom:12px">
+            <div class="intg-head"><span class="intg-ico"><i data-lucide="credit-card"></i></span><span class="intg-name">Stripe</span><span class="badge-ok"><span class="d"></span>Connected</span></div>
+            <div class="intg-rows">
+              <div class="intg-row"><span class="k">Mode</span><span class="v mono">test</span><button class="btn btn-line btn-sm">Switch to live…</button></div>
+              <div class="intg-row"><span class="k">Webhook endpoint</span><span class="v mono">/billing/webhook</span></div>
+              <div class="intg-toggle"><span class="k">Auto-file a bug on payment failure</span><div class="switch on" onclick="this.classList.toggle('on')"></div></div>
+            </div>
+          </div>
+
+          <div class="intg-card" style="margin-bottom:12px">
+            <div class="intg-head"><span class="intg-ico"><i data-lucide="triangle"></i></span><span class="intg-name">Vercel</span><span class="badge-ok"><span class="d"></span>Connected</span></div>
+            <div class="intg-rows">
+              <div class="intg-row"><span class="k">Project</span><span class="v mono">acme-crm</span></div>
+              <div class="intg-row"><span class="k">Production branch</span><span class="v mono">main</span></div>
+              <div class="intg-toggle"><span class="k">Deploy on merge to main</span><div class="switch on" onclick="this.classList.toggle('on')"></div></div>
+              <div class="intg-toggle"><span class="k">Comment preview URL on PR</span><div class="switch on" onclick="this.classList.toggle('on')"></div></div>
+            </div>
+          </div>
+
           <div class="intg-grid">
             <div class="intg-card">
-              <div class="intg-head"><span class="intg-ico"><i data-lucide="credit-card"></i></span><span class="intg-name">Stripe</span><span class="badge-ok"><span class="d"></span>Connected</span></div>
-              <div class="intg-desc">Billing events → webhook</div>
-            </div>
-            <div class="intg-card">
-              <div class="intg-head"><span class="intg-ico"><i data-lucide="triangle"></i></span><span class="intg-name">Vercel</span><span class="badge-ok"><span class="d"></span>Connected</span></div>
-              <div class="intg-desc">Deploy + preview URLs</div>
-            </div>
-            <div class="intg-card">
               <div class="intg-head"><span class="intg-ico"><i data-lucide="flame"></i></span><span class="intg-name">Firebase</span><button class="btn btn-line btn-sm">Connect</button></div>
-              <div class="intg-desc">Auth + push (FCM)</div>
+              <div class="intg-desc">Auth + push (FCM) · configured after connect</div>
             </div>
             <div class="intg-card">
               <div class="intg-head"><span class="intg-ico"><i data-lucide="bug"></i></span><span class="intg-name">Sentry</span><button class="btn btn-line btn-sm">Connect</button></div>
-              <div class="intg-desc">Runtime error → auto-bug</div>
+              <div class="intg-desc">Runtime error → auto-bug · configured after connect</div>
             </div>
             <div class="add-card" style="grid-column:1/-1"><i data-lucide="plus"></i>Add integration</div>
           </div>
@@ -699,7 +713,7 @@
     <!-- ===== ENVIRONMENTS (settings) ===== -->
     <section class="route" data-route="environments">
       <div class="set-wrap">
-        <div class="set-inner">
+        <div class="set-inner wide">
           <div class="set-title">Environments</div>
           <div class="set-sub">Variables across <span style="color:var(--fg-mid)">dev / staging / production</span> · secrets masked</div>
 
@@ -731,7 +745,7 @@
     <!-- ===== AGENT MODELS (settings) ===== -->
     <section class="route" data-route="agent-models">
       <div class="set-wrap">
-        <div class="set-inner">
+        <div class="set-inner wide">
           <div class="set-title">Agent models</div>
           <div class="set-sub">Which model each agent runs — specific to <span style="color:var(--fg-mid)">Acme CRM</span></div>
 
@@ -832,14 +846,14 @@
     {who:'+db-admin',desc:'subscription schema migration',id:'T-013',st:'blocked',gs:['AC'],g:'p'},
   ];
   const TL=[
-    ['14:35','#5E84D2','<span class="ac mono">+backend</span> committed <span class="mono">oauth.ts</span> · T-101'],
-    ['14:33','#4CB782','<span class="ac mono">+frontend</span> started T-103'],
-    ['14:31','#5E6AD2','<span class="ac mono">+em</span> handover → <span class="ac mono">+backend</span> · T-101'],
-    ['14:29','#5E6AD2','session ended — <span class="mono">ADR-003</span> recorded'],
-    ['14:25','#CC6B6B','<span class="ac mono">+devops</span> blocked B-203 — awaiting DNS'],
-    ['14:22','#4CB782','<span class="ac mono">+pm</span> approved T-105 → Review'],
-    ['14:18','#4CB782','<span class="ac mono">+designer</span> uploaded <span class="mono">dashboard.fig</span>'],
-    ['14:10','#5E84D2','<span class="ac mono">+ops</span> workflow 3→4 · gate passed'],
+    {who:'+backend-developer',  tx:'committed <span class="mono">oauth.ts</span>', item:'T-101'},
+    {who:'+frontend-developer', tx:'started',                                    item:'T-103'},
+    {who:'+engineering-manager',tx:'handover → <span class="ac mono">+backend</span>', item:'T-101'},
+    {who:'+designer',           tx:'uploaded <span class="mono">dashboard.fig</span>', item:''},
+    {who:'+devops-engineer',    tx:'blocked · awaiting DNS',                      item:'B-203'},
+    {who:'+product-manager',    tx:'approved → Review',                          item:'T-105'},
+    {who:'+db-admin',           tx:'migrated <span class="mono">schema.sql</span>', item:'T-013'},
+    {who:'+prime',              tx:'recorded <span class="mono">ADR-003</span> · session ended', item:''},
   ];
 
   /* ---------- render ---------- */
@@ -925,7 +939,8 @@
   }
   function renderTl(){
     document.getElementById('tl').innerHTML=TL.map(e=>`
-      <div class="tl-ev"><span class="tl-ts mono">${e[0]}</span><span class="tl-dot"><span class="dot" style="width:6px;height:6px;background:${e[1]}"></span></span><span class="tl-tx">${e[2]}</span></div>`).join('');
+      <div class="tl-ev">${pAvatar(e.who,20)}<div class="tl-tx"><span class="ac mono">${short(e.who)}</span> ${e.tx}${e.item?` <span class="mono tl-item">${e.item}</span>`:''}</div></div>`).join('');
+    lucide.createIcons();
   }
   function renderFooterAgents(){
     document.getElementById('f-agents').innerHTML=`<span class="agct"><span class="dot" style="width:6px;height:6px;background:var(--green)"></span>4</span><span class="agct"><span class="dot" style="width:6px;height:6px;background:var(--amber)"></span>1</span><span class="agct"><span class="dot" style="width:6px;height:6px;background:var(--red)"></span>1</span><span style="color:var(--fg-mid)">Agents</span><i data-lucide="chevron-up" style="width:13px;height:13px"></i>`;
