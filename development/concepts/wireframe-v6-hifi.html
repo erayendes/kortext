@@ -429,6 +429,49 @@
   .up-task{ margin-left:auto; font-size:11px; color:var(--fg-faint); white-space:nowrap; }
   .up-dot{ width:6px; height:6px; border-radius:50%; flex-shrink:0; }
 
+  /* ---------- overlays: ⌘K palette + modals ---------- */
+  .overlay{ position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:70; display:none; align-items:flex-start; justify-content:center; padding-top:108px; }
+  .overlay.open{ display:flex; }
+  .overlay.center{ align-items:center; padding-top:0; }
+  .cmdk-box{ width:600px; max-width:92vw; background:var(--bg-elev); border:1px solid var(--border-strong); border-radius:13px; box-shadow:0 24px 60px rgba(0,0,0,.5); overflow:hidden; }
+  .cmdk-head{ height:50px; display:flex; align-items:center; gap:11px; padding:0 16px; border-bottom:1px solid var(--border); }
+  .cmdk-head svg{ width:16px; height:16px; color:var(--fg-faint); }
+  .cmdk-head input{ flex:1; background:transparent; border:none; outline:none; color:var(--fg); font-family:inherit; font-size:14.5px; }
+  .cmdk-head input::placeholder{ color:var(--fg-faint); }
+  .cmdk-list{ max-height:360px; overflow-y:auto; padding:6px; }
+  .cmdk-sec{ font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--fg-faint); font-weight:600; padding:9px 10px 5px; }
+  .cmdk-item{ display:flex; align-items:center; gap:11px; padding:8px 10px; border-radius:7px; cursor:pointer; font-size:13px; color:var(--fg-mid); }
+  .cmdk-item:hover, .cmdk-item.sel{ background:var(--hover-strong); }
+  .cmdk-item .ci-id{ font-size:11px; color:var(--fg-faint); font-family:'Geist Mono',monospace; flex-shrink:0; }
+  .cmdk-item .ci-t{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .cmdk-item svg{ width:15px; height:15px; color:var(--fg-muted); flex-shrink:0; }
+  .cmdk-empty{ padding:24px; text-align:center; font-size:12.5px; color:var(--fg-faint); }
+  /* dropdown menus (topbar) */
+  .menu{ position:fixed; background:var(--bg-elev); border:1px solid var(--border-strong); border-radius:9px; box-shadow:0 12px 32px rgba(0,0,0,.42); padding:5px; min-width:210px; z-index:55; display:none; }
+  .menu.open{ display:block; }
+  .menu-sec{ font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--fg-faint); font-weight:600; padding:7px 9px 4px; }
+  .menu-item{ display:flex; align-items:center; gap:9px; padding:7px 9px; border-radius:6px; font-size:12.5px; color:var(--fg-mid); cursor:pointer; }
+  .menu-item:hover{ background:var(--hover); }
+  .menu-item .mi-check{ margin-left:auto; color:var(--accent-hi); display:flex; }
+  .menu-item svg{ width:14px; height:14px; color:var(--fg-muted); flex-shrink:0; }
+  .menu-sep{ height:1px; background:var(--border); margin:5px 0; }
+  /* notifications rows */
+  .nt-row{ display:flex; gap:11px; align-items:flex-start; padding:13px 0; border-bottom:1px solid var(--border); cursor:pointer; }
+  .nt-row:hover .nt-title{ color:var(--accent-hi); }
+  .nt-ico{ width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .nt-ico svg{ width:15px; height:15px; }
+  .nt-b{ flex:1; min-width:0; }
+  .nt-title{ font-size:13px; color:var(--fg); font-weight:500; transition:color .12s; }
+  .nt-msg{ font-size:12px; color:var(--fg-muted); margin-top:2px; }
+  .nt-meta{ font-size:11px; color:var(--fg-faint); margin-top:4px; font-family:'Geist Mono',monospace; }
+  /* board empty column */
+  .col-empty{ padding:18px 8px; text-align:center; font-size:11.5px; color:var(--fg-faint); border:1px dashed var(--border); border-radius:8px; }
+  /* new-item modal bits */
+  .ni-field{ margin-bottom:14px; }
+  .ni-lbl{ font-size:11.5px; font-weight:500; color:var(--fg-mid); margin-bottom:7px; display:block; }
+  .ni-input{ width:100%; height:34px; border:1px solid var(--border); background:var(--card); border-radius:7px; padding:0 11px; color:var(--fg); font-size:13px; font-family:inherit; outline:none; }
+  .ni-input:focus{ border-color:var(--accent-line); }
+
   /* ---------- item detail (right drawer) ---------- */
   .drawer-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:60; opacity:0; pointer-events:none; transition:opacity .2s; }
   .drawer-backdrop.open{ opacity:1; pointer-events:auto; }
@@ -509,13 +552,29 @@
 <header class="topbar">
   <div class="iconbtn" onclick="toggleSidebar()" title="Toggle sidebar"><i data-lucide="panel-left" style="width:15px;height:15px"></i></div>
   <div class="logo">K</div>
-  <div class="tb-proj"><span style="font-weight:500;color:var(--fg)">Acme CRM</span><i data-lucide="chevrons-up-down" style="width:13px;height:13px;opacity:.6"></i></div>
+  <div class="tb-proj" onclick="toggleMenu('proj-menu',this)"><span style="font-weight:500;color:var(--fg)">Acme CRM</span><i data-lucide="chevrons-up-down" style="width:13px;height:13px;opacity:.6"></i></div>
   <span class="tb-sep" style="font-size:11px">/</span>
-  <div class="tb-proj mono" style="font-size:12px;height:24px;padding:0 7px;border:1px solid var(--border)">v1.0 <i data-lucide="chevron-down" style="width:12px;height:12px;opacity:.6"></i></div>
+  <div class="tb-proj mono" onclick="toggleMenu('ver-menu',this)" style="font-size:12px;height:24px;padding:0 7px;border:1px solid var(--border)">v1.0 <i data-lucide="chevron-down" style="width:12px;height:12px;opacity:.6"></i></div>
   <div style="flex:1"></div>
-  <div class="iconbtn"><i data-lucide="bell" style="width:15px;height:15px"></i><span class="dot" style="position:absolute;top:5px;right:6px;width:6px;height:6px;background:var(--accent)"></span></div>
-  <div class="search"><i data-lucide="search" style="width:13px;height:13px"></i><span>Search…</span><span style="flex:1"></span><span class="kbd">⌘K</span></div>
+  <div class="iconbtn" onclick="openNotif()"><i data-lucide="bell" style="width:15px;height:15px"></i><span class="dot" style="position:absolute;top:5px;right:6px;width:6px;height:6px;background:var(--accent)"></span></div>
+  <div class="search" onclick="openCmdk()"><i data-lucide="search" style="width:13px;height:13px"></i><span>Search…</span><span style="flex:1"></span><span class="kbd">⌘K</span></div>
 </header>
+
+<!-- topbar dropdowns -->
+<div id="proj-menu" class="menu">
+  <div class="menu-sec">Projects</div>
+  <div class="menu-item"><i data-lucide="box"></i>Acme CRM<span class="mi-check"><i data-lucide="check" style="width:13px;height:13px"></i></span></div>
+  <div class="menu-item"><i data-lucide="box"></i>Mobile App</div>
+  <div class="menu-item"><i data-lucide="box"></i>Marketing Site</div>
+  <div class="menu-sep"></div>
+  <div class="menu-item"><i data-lucide="plus"></i>New project…</div>
+</div>
+<div id="ver-menu" class="menu" style="min-width:150px">
+  <div class="menu-sec">Version</div>
+  <div class="menu-item mono">v1.0<span class="mi-check"><i data-lucide="check" style="width:13px;height:13px"></i></span></div>
+  <div class="menu-item mono">v0.9</div>
+  <div class="menu-item mono">v0.8</div>
+</div>
 
 <!-- ============ SHELL ============ -->
 <div id="shell">
@@ -586,7 +645,7 @@
           <div style="display:flex;gap:7px">
             <span class="pill"><i data-lucide="user" style="width:12px;height:12px"></i>Assignee</span>
             <span class="pill"><i data-lucide="rows-3" style="width:12px;height:12px"></i>Group: Epic</span>
-            <button class="btn btn-pri btn-sm"><i data-lucide="plus" style="width:13px;height:13px"></i>New</button>
+            <button class="btn btn-pri btn-sm" onclick="openNew()"><i data-lucide="plus" style="width:13px;height:13px"></i>New</button>
           </div>
         </div>
         <div class="board-scroll">
@@ -1009,6 +1068,40 @@
   <div class="dr-foot" id="dr-foot"></div>
 </aside>
 
+<!-- notifications (right drawer) -->
+<div id="nt-backdrop" class="drawer-backdrop" onclick="closeNotif()"></div>
+<aside id="notif" class="drawer" style="width:408px">
+  <div class="dr-head"><span style="font-size:14px;font-weight:600">Notifications</span><span class="stbadge" style="color:var(--accent-hi);background:var(--accent-soft)">3 new</span><span class="dr-x" onclick="closeNotif()"><i data-lucide="x" style="width:16px;height:16px"></i></span></div>
+  <div class="dr-body" id="notif-body" style="padding:6px 18px 28px"></div>
+</aside>
+
+<!-- ⌘K command palette -->
+<div id="cmdk" class="overlay" onclick="if(event.target===this)closeCmdk()">
+  <div class="cmdk-box">
+    <div class="cmdk-head"><i data-lucide="search"></i><input id="cmdk-input" placeholder="Search items, epics, or go to…" oninput="cmdkRender()" onkeydown="if(event.key==='Escape')closeCmdk()" autocomplete="off" spellcheck="false"></div>
+    <div class="cmdk-list" id="cmdk-list"></div>
+  </div>
+</div>
+
+<!-- new item modal -->
+<div id="newitem" class="overlay center" onclick="if(event.target===this)closeNew()">
+  <div class="cmdk-box" style="width:440px">
+    <div style="padding:18px 18px 16px">
+      <div style="font-size:15px;font-weight:600;margin-bottom:16px">New item</div>
+      <div class="ni-field"><span class="ni-lbl">Type</span><div class="chips" id="ni-type">
+        <span class="chip on" onclick="niType(this)"><span class="d" style="width:6px;height:6px;border-radius:50%;background:#5E84D2"></span>Task</span>
+        <span class="chip" onclick="niType(this)"><span class="d" style="width:6px;height:6px;border-radius:50%;background:#CC6B6B"></span>Bug</span>
+        <span class="chip" onclick="niType(this)"><span class="d" style="width:6px;height:6px;border-radius:50%;background:#D2A24C"></span>Debt</span>
+      </div></div>
+      <div class="ni-field"><span class="ni-lbl">Title</span><input class="ni-input" placeholder="What needs doing?"></div>
+      <div class="ni-field"><span class="ni-lbl">Parent epic</span>
+        <select class="set-select ni-input" style="height:34px"><option>E-01 · Authentication & Users</option><option>E-02 · Billing & Subscription</option><option>E-03 · Customer Dashboard</option><option>E-04 · Admin Panel</option><option>— none</option></select>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px"><button class="btn btn-line btn-sm" onclick="closeNew()">Cancel</button><button class="btn btn-pri btn-sm" onclick="closeNew();toast('Item created · assigned to the engineering manager')"><i data-lucide="plus" style="width:13px;height:13px"></i>Create</button></div>
+    </div>
+  </div>
+</div>
+
 <script>
   /* ---------- persona map (PERSONA-ICONS.md) ---------- */
   // persona icons (Lucide paths) — updated set
@@ -1173,7 +1266,7 @@
   }
   function renderTl(){
     document.getElementById('tl').innerHTML=TL.map(e=>`
-      <div class="tl-ev">${pAvatar(e.who,20)}<div class="tl-tx"><span class="ac mono">${short(e.who)}</span> ${e.tx}${e.item?` <span class="mono tl-item">${e.item}</span>`:''}</div></div>`).join('');
+      <div class="tl-ev"${e.item?` onclick="openItem('${e.item}')"`:''}>${pAvatar(e.who,20)}<div class="tl-tx"><span class="ac mono">${short(e.who)}</span> ${e.tx}${e.item?` <span class="mono tl-item">${e.item}</span>`:''}</div></div>`).join('');
     lucide.createIcons();
   }
   function renderFooterAgents(){
@@ -1251,8 +1344,9 @@
   function renderCols(){
     document.getElementById('cols').innerHTML=COLS.map(col=>`
       <div class="col">
-        <div class="col-h"><span class="dot" style="background:${STATUS[col.k]}"></span><span class="col-name">${col.name}</span><span class="col-count">${col.cards.length}</span><span class="col-add"><i data-lucide="plus" style="width:13px;height:13px"></i></span></div>
+        <div class="col-h"><span class="dot" style="background:${STATUS[col.k]}"></span><span class="col-name">${col.name}</span><span class="col-count">${col.cards.length}</span><span class="col-add" onclick="openNew()"><i data-lucide="plus" style="width:13px;height:13px"></i></span></div>
         <div class="col-list">
+          ${col.cards.length===0?'<div class="col-empty">No items</div>':''}
           ${col.cards.map((c,i)=>`
             <div class="card ${c.block?'block':''} rise" onclick="openItem('${c.id}')" style="${c.done?'opacity:.62;':''}animation-delay:${i*30}ms">
               <div class="c-top">
@@ -1996,6 +2090,69 @@ Voice, tone, and primary strings. Owned by +copywriter.
     lucide.createIcons();
   }
   function closeItem(){ document.getElementById('dr-backdrop').classList.remove('open'); document.getElementById('drawer').classList.remove('open'); }
+
+  /* ---------- notifications ---------- */
+  const NOTIFS=[
+    {kind:'approval', id:'T-105', title:'Pricing page copy', msg:'Ready for your approval', time:'2h'},
+    {kind:'approval', id:'T-103', title:'Dashboard skeleton component', msg:'Ready for your approval', time:'5h'},
+    {kind:'blocked',  id:'B-203', title:'Password reset email → spam', msg:'Blocked — awaiting DNS / SPF', time:'1h'},
+    {kind:'gate',     id:'T-101', title:'OAuth login flow', msg:'SE gate passed · 3/5', time:'3h'},
+    {kind:'done',     id:'T-002', title:'Login screen mocks v3', msg:'Moved to Done', time:'6h'},
+  ];
+  const NT_META={
+    approval:{ic:'badge-check', c:'var(--accent-hi)', bg:'var(--accent-soft)'},
+    blocked:{ic:'ban', c:'var(--red)', bg:'rgba(204,107,107,.12)'},
+    gate:{ic:'shield-check', c:'var(--green)', bg:'rgba(76,183,130,.12)'},
+    done:{ic:'check', c:'var(--fg-muted)', bg:'var(--hover-strong)'},
+  };
+  function renderNotif(){
+    document.getElementById('notif-body').innerHTML=NOTIFS.map(n=>{ const m=NT_META[n.kind];
+      return `<div class="nt-row" onclick="closeNotif();openItem('${n.id}')">
+        <span class="nt-ico" style="background:${m.bg};color:${m.c}"><i data-lucide="${m.ic}"></i></span>
+        <div class="nt-b"><div class="nt-title">${n.title}</div><div class="nt-msg">${n.msg}</div><div class="nt-meta">${n.id} · ${n.time} ago</div></div>
+      </div>`; }).join('');
+    lucide.createIcons();
+  }
+  function openNotif(){ renderNotif(); document.getElementById('nt-backdrop').classList.add('open'); document.getElementById('notif').classList.add('open'); }
+  function closeNotif(){ document.getElementById('nt-backdrop').classList.remove('open'); document.getElementById('notif').classList.remove('open'); }
+
+  /* ---------- ⌘K command palette ---------- */
+  const GO_ROUTES=[['dashboard','Dashboard','layout-dashboard'],['board','Board','square-kanban'],['references','References','book-marked'],['memory','Memory','brain'],['reports','Reports','book-check']];
+  function openCmdk(){ document.getElementById('cmdk').classList.add('open'); const i=document.getElementById('cmdk-input'); i.value=''; cmdkRender(); setTimeout(()=>i.focus(),0); }
+  function closeCmdk(){ document.getElementById('cmdk').classList.remove('open'); }
+  function cmdkRender(){
+    const q=(document.getElementById('cmdk-input').value||'').toLowerCase().trim();
+    const items=[]; COLS.forEach(col=>col.cards.forEach(c=>items.push(c)));
+    const mItems=items.filter(c=>!q || c.id.toLowerCase().includes(q) || c.t.toLowerCase().includes(q));
+    const mEpics=EPICS.filter(e=>!q || e.id.toLowerCase().includes(q) || e.t.toLowerCase().includes(q));
+    const mGo=GO_ROUTES.filter(r=>!q || r[1].toLowerCase().includes(q));
+    let html='';
+    if(mItems.length){ html+='<div class="cmdk-sec">Items</div>'+mItems.slice(0,6).map(c=>`<div class="cmdk-item" onclick="closeCmdk();openItem('${c.id}')"><i data-lucide="${c.ty==='bug'?'bug':c.ty==='debt'?'recycle':'square-check'}"></i><span class="ci-id">${c.id}</span><span class="ci-t">${c.t}</span></div>`).join(''); }
+    if(mEpics.length){ html+='<div class="cmdk-sec">Epics</div>'+mEpics.map(e=>`<div class="cmdk-item" onclick="closeCmdk();go('board');openEpic('${e.id}')"><i data-lucide="layers"></i><span class="ci-id">${e.id}</span><span class="ci-t">${e.t}</span></div>`).join(''); }
+    if(mGo.length){ html+='<div class="cmdk-sec">Go to</div>'+mGo.map(r=>`<div class="cmdk-item" onclick="closeCmdk();go('${r[0]}')"><i data-lucide="${r[2]}"></i><span class="ci-t">${r[1]}</span></div>`).join(''); }
+    document.getElementById('cmdk-list').innerHTML = html || '<div class="cmdk-empty">No matches</div>';
+    lucide.createIcons();
+  }
+
+  /* ---------- topbar dropdowns ---------- */
+  function closeMenus(){ document.querySelectorAll('.menu').forEach(m=>m.classList.remove('open')); }
+  function toggleMenu(id,anchor){
+    const m=document.getElementById(id), wasOpen=m.classList.contains('open');
+    closeMenus();
+    if(!wasOpen){ const r=anchor.getBoundingClientRect(); m.style.left=r.left+'px'; m.style.top=(r.bottom+6)+'px'; m.classList.add('open'); }
+  }
+  document.addEventListener('click',e=>{ if(!e.target.closest('.menu')&&!e.target.closest('.tb-proj')) closeMenus(); });
+
+  /* ---------- new item modal ---------- */
+  function openNew(){ document.getElementById('newitem').classList.add('open'); }
+  function closeNew(){ document.getElementById('newitem').classList.remove('open'); }
+  function niType(el){ el.parentElement.querySelectorAll('.chip').forEach(c=>c.classList.remove('on')); el.classList.add('on'); }
+
+  /* global shortcuts */
+  document.addEventListener('keydown',e=>{
+    if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){ e.preventDefault(); document.getElementById('cmdk').classList.contains('open')?closeCmdk():openCmdk(); }
+    if(e.key==='Escape'){ closeCmdk(); closeNew(); }
+  });
 
   let themeMode='dark';
   function applyTheme(){
