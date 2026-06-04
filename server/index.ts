@@ -21,6 +21,7 @@ import { driveRouter } from './routes/drive.ts';
 import { projectMetaRouter } from './routes/project-meta.ts';
 import { hooksRouter } from './routes/hooks.ts';
 import { integrationsRouter } from './routes/integrations.ts';
+import { envVarsRouter } from './routes/env-vars.ts';
 import { startCommand } from './cli/commands.ts';
 import { readProjectMeta, resolveBlueprintPaths } from './blueprint/io.ts';
 import type { ExecutorKind } from './cli/executor-factory.ts';
@@ -145,6 +146,7 @@ app.use('/api', doctorRouter({ repos, workflows: workflowRegistry, personas: per
 app.use('/api', projectMetaRouter({ workspaceRoot: process.cwd() }));
 app.use('/api', hooksRouter({ projectRoot: process.cwd() }));
 app.use('/api', integrationsRouter({ projectRoot: process.cwd() }));
+app.use('/api', envVarsRouter({ projectRoot: process.cwd() }));
 app.use(
   '/api',
   blueprintRouter({
