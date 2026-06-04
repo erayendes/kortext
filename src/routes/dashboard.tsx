@@ -11,7 +11,7 @@
  * exported so `tests/dashboard.web.test.tsx` can pin them without rendering.
  */
 import { useMemo, useState } from 'react';
-import { RefreshCw, SlidersHorizontal } from 'lucide-react';
+import { RefreshCw, SlidersHorizontal, Play, Lock } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { usePolling, apiPost } from '../lib/api.ts';
 import type {
@@ -187,6 +187,107 @@ function Avatar({ handle, size = 18 }: { handle: string | null; size?: number })
   );
 }
 
+// ────────────────────────── autonomous drive control ─────────────────────────
+
+type DriveStatus = {
+  armed: boolean;
+  inFlight: boolean;
+  scheduler: { running: boolean; intervalSec: number | null };
+  lastPass: { at: number; ok: boolean; error?: string } | null;
+};
+
+/** Format an apiPost rejection (ApiPostError-shaped) for a terse inline note. */
+function driveErr(e: unknown): string {
+  if (e && typeof e === 'object') {
+    const o = e as { message?: unknown; error?: unknown };
+    if (typeof o.message === 'string' && o.message) return o.message;
+    if (typeof o.error === 'string') return o.error;
+  }
+  return e instanceof Error ? e.message : String(e);
+}
+
+/**
+ * The autonomous-driver control surfaced in the dashboard header (§5.16 +
+ * autonomy). Off by default behind the master env lock: when unarmed it shows a
+ * "locked" hint; when armed it offers "Run once" (one pass) + an "Auto" toggle
+ * (60s scheduler). Status polls GET /api/drive.
+ */
+function DriveControl() {
+  const { data, refresh } = usePolling<DriveStatus>('/api/drive', 4000);
+  const armed = data?.armed ?? false;
+  const inFlight = data?.inFlight ?? false;
+  const autoOn = data?.scheduler?.running ?? false;
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function act(fn: () => Promise<unknown>) {
+    if (busy) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      await fn();
+      refresh();
+    } catch (e) {
+      setErr(driveErr(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!armed) {
+    return (
+      <span
+        className="pill"
+        style={{ cursor: 'default' }}
+        title="The autonomous driver is locked. Set KORTEXT_DRIVE_ENABLED=1 to arm it."
+      >
+        <Lock style={{ width: 12, height: 12 }} /> Driver locked
+      </span>
+    );
+  }
+
+  const statusLabel = inFlight ? 'Driving…' : autoOn ? 'Auto on' : 'Idle';
+  const dotCls = inFlight ? 'dot-success live' : autoOn ? 'dot-success' : 'dot-muted';
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <span
+        className="sec-c"
+        style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+        title={
+          err
+            ? err
+            : data?.lastPass
+              ? `Last pass ${formatAge(data.lastPass.at)} ago — ${data.lastPass.ok ? 'ok' : data.lastPass.error ?? 'failed'}`
+              : undefined
+        }
+      >
+        <span className={`dot ${dotCls}`} style={{ color: err ? 'var(--red)' : undefined }} />
+        {err ? 'Error' : statusLabel}
+      </span>
+      <button
+        type="button"
+        className="btn btn-line btn-sm"
+        disabled={busy || inFlight}
+        onClick={() => act(() => apiPost('/api/drive', {}))}
+      >
+        <Play style={{ width: 13, height: 13 }} /> Run once
+      </button>
+      <span
+        className="agct"
+        title={`Auto-drive every ${data?.scheduler.intervalSec ?? 60}s`}
+        style={{ cursor: busy ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 7 }}
+        onClick={() =>
+          act(() => apiPost('/api/drive/scheduler', { enabled: !autoOn, intervalSec: 60 }))
+        }
+      >
+        <span className={`switch ${autoOn ? 'on' : ''}`} />
+        <span className="sec-c">Auto</span>
+      </span>
+    </div>
+  );
+}
+
 // ──────────────────────────────── route ──────────────────────────────────────
 
 export function DashboardRoute() {
@@ -214,9 +315,12 @@ function DashboardView({ onRefresh }: { onRefresh: () => void }) {
           <div className="page-title" style={{ fontSize: 18 }}>
             Dashboard
           </div>
-          <button type="button" className="btn btn-line btn-sm" onClick={onRefresh}>
-            <RefreshCw style={{ width: 13, height: 13 }} /> Refresh
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <DriveControl />
+            <button type="button" className="btn btn-line btn-sm" onClick={onRefresh}>
+              <RefreshCw style={{ width: 13, height: 13 }} /> Refresh
+            </button>
+          </div>
         </div>
 
         <StatsCards items={items} loading={backlogPoll.loading} error={backlogPoll.error} />
