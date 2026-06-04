@@ -13,6 +13,10 @@ import { useState } from 'react';
 import { Topbar } from './Topbar.tsx';
 import { Sidebar } from './Sidebar.tsx';
 import { Footer } from './Footer.tsx';
+import { CommandPalette } from './CommandPalette.tsx';
+import { Notifications } from './Notifications.tsx';
+import { Terminal } from './Terminal.tsx';
+import { ShellMenus } from './ShellMenus.tsx';
 
 export function AppShell() {
   const [collapsed, setCollapsed] = useState(false);
@@ -34,6 +38,12 @@ export function AppShell() {
         </main>
       </div>
       <Footer />
+
+      {/* Global chrome (S6) — event-driven overlays mounted once, app-wide. */}
+      <CommandPalette />
+      <Notifications />
+      <Terminal />
+      <ShellMenus />
     </div>
   );
 }
