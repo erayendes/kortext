@@ -75,6 +75,7 @@
     "@tanstack/router-devtools": "^1.167.0",
     "@types/better-sqlite3": "^7.6.12",
     "@types/express": "^5.0.0",
+    "@types/js-yaml": "^4.0.9",
     "@types/marked": "^5.0.2",
     "@types/node": "^22.10.5",
     "@types/react": "^19.0.2",
