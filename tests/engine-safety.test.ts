@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
+import { ingestBacklogFile } from '../server/engine/backlog-ingest.ts';
 import type Database from 'better-sqlite3';
 import { openDb } from '../server/db/client.ts';
 import type { Repositories } from '../server/db/repositories/index.ts';
@@ -77,6 +78,43 @@ describe('runWorkflow + safety guards', () => {
     const persisted = repos.secrets.list({});
     expect(persisted.length).toBeGreaterThan(0);
     expect(persisted[0]?.run_id).toBe(result.run.id);
+  });
+
+  it('ingests a backlog.yaml output into real backlog rows via the backlogIngester hook', async () => {
+    const wf = parseWorkflowMarkdown(
+      '# Plan (`!start plan`)\n## A\n1. **+x:** define backlog\n   - Outputs: backlog.yaml\n',
+      'plan-wf',
+    );
+    const graph = buildGraph(wf);
+
+    class BacklogExecutor implements Executor {
+      readonly name = 'backlog';
+      async execute(step: WorkflowStep): Promise<ExecutorResult> {
+        if (step.outputs.includes('backlog.yaml')) {
+          writeFileSync(
+            join(workdir, 'backlog.yaml'),
+            'items:\n' +
+              '  - id: T-1\n    type: task\n    title: First\n    review_gates: [code_review]\n' +
+              '  - id: T-2\n    type: bug\n    title: Second\n',
+          );
+        }
+        return { ok: true, outputSummary: 'done' };
+      }
+    }
+
+    const result = await runWorkflow(graph, new BacklogExecutor(), repos, {
+      worktreePath: workdir,
+      safety: {
+        backlogIngester: ({ absolutePath }) => {
+          if (basename(absolutePath) === 'backlog.yaml') ingestBacklogFile(repos, absolutePath);
+        },
+      },
+    });
+
+    expect(result.run.status).toBe('succeeded');
+    const items = repos.backlog.list({});
+    expect(items.map((i) => i.id).sort()).toEqual(['T-1', 'T-2']);
+    expect(repos.backlog.get('T-1')?.review_gates).toEqual(['code_review']);
   });
 
   it('passes when outputs are clean', async () => {
