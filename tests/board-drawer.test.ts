@@ -9,8 +9,16 @@ import {
   availableTransitions,
   describeActivity,
   checklistFromSection,
+  columnKeyForStatus,
+  boardColumns,
+  BOARD_COLUMNS,
+  itemGates,
+  gateProgress,
+  blockReasonFromActivity,
+  underlyingStatusFromActivity,
+  dependenciesFromBody,
 } from '../src/lib/board-drawer.ts';
-import type { BacklogItem } from '../src/lib/api-types.ts';
+import type { ActivityEntry, BacklogItem } from '../src/lib/api-types.ts';
 
 function item(partial: Partial<BacklogItem> & Pick<BacklogItem, 'id'>): BacklogItem {
   return {
@@ -281,5 +289,181 @@ describe('descriptionFromBody', () => {
     const body =
       '# T\n\n## Description\n\n[Bu bir örnek görev dosyasıdır.]\n\n## Acceptance Criteria\n\n- [ ] x\n';
     expect(descriptionFromBody(body)).toBe('');
+  });
+});
+
+describe('columnKeyForStatus (blocked is an orthogonal flag, not a column)', () => {
+  it('maps each workflow status to its own column', () => {
+    expect(columnKeyForStatus('to_do')).toBe('to_do');
+    expect(columnKeyForStatus('in_progress')).toBe('in_progress');
+    expect(columnKeyForStatus('test')).toBe('test');
+    expect(columnKeyForStatus('review')).toBe('review');
+    expect(columnKeyForStatus('done')).toBe('done');
+  });
+
+  it('folds blocked into In progress (DECISIONS §12.3 — blocked = flag, lands on unblock)', () => {
+    expect(columnKeyForStatus('blocked')).toBe('in_progress');
+  });
+
+  it('returns null for cancelled (hidden from the 5-column board)', () => {
+    expect(columnKeyForStatus('cancelled')).toBeNull();
+  });
+});
+
+describe('boardColumns', () => {
+  it('exposes the five columns in left-to-right workflow order', () => {
+    expect(BOARD_COLUMNS.map((c) => c.key)).toEqual([
+      'to_do',
+      'in_progress',
+      'test',
+      'review',
+      'done',
+    ]);
+  });
+
+  it('routes tasks/bugs/debt into columns, drops epics (they live in the rail) and cancelled', () => {
+    const items = [
+      item({ id: 'E01', type: 'epic', status: 'in_progress' }),
+      item({ id: 'T01', status: 'to_do' }),
+      item({ id: 'T02', status: 'in_progress' }),
+      item({ id: 'T03', status: 'blocked' }),
+      item({ id: 'T04', status: 'done' }),
+      item({ id: 'T05', status: 'cancelled' }),
+    ];
+    const cols = boardColumns(items);
+    const byKey = Object.fromEntries(cols.map((c) => [c.key, c.cards.map((x) => x.id)]));
+    expect(byKey.to_do).toEqual(['T01']);
+    // blocked T03 folds in next to the genuinely in-progress T02
+    expect(byKey.in_progress).toEqual(['T02', 'T03']);
+    expect(byKey.test).toEqual([]);
+    expect(byKey.done).toEqual(['T04']);
+    // epic + cancelled never appear as cards
+    expect(cols.flatMap((c) => c.cards.map((x) => x.id))).not.toContain('E01');
+    expect(cols.flatMap((c) => c.cards.map((x) => x.id))).not.toContain('T05');
+  });
+
+  it('preserves input order within a column', () => {
+    const items = [
+      item({ id: 'T09', status: 'to_do' }),
+      item({ id: 'T01', status: 'to_do' }),
+      item({ id: 'T05', status: 'to_do' }),
+    ];
+    const todo = boardColumns(items).find((c) => c.key === 'to_do')!;
+    expect(todo.cards.map((x) => x.id)).toEqual(['T09', 'T01', 'T05']);
+  });
+});
+
+describe('itemGates / gateProgress (item-based gate strip → AC/QC/SE/DS/CR)', () => {
+  it('renders only the selected gates, in canonical AC→QC→SE→DS→CR order', () => {
+    const it1 = item({ id: 'T1', review_gates: ['code_review', 'uat', 'quality_control'] });
+    expect(itemGates(it1).map((g) => g.abbr)).toEqual(['AC', 'QC', 'CR']);
+  });
+
+  it('is empty when no gates are selected (sparse real data → no strip)', () => {
+    expect(itemGates(item({ id: 'T1', review_gates: [] }))).toEqual([]);
+    expect(itemGates(item({ id: 'T1' }))).toEqual([]); // field absent
+    expect(gateProgress(item({ id: 'T1' }))).toEqual({ done: 0, total: 0 });
+  });
+
+  it('marks every gate passed once the item is done', () => {
+    const done = item({ id: 'T1', status: 'done', review_gates: ['code_review', 'uat'] });
+    expect(itemGates(done).every((g) => g.state === 'passed')).toBe(true);
+    expect(gateProgress(done)).toEqual({ done: 2, total: 2 });
+  });
+
+  it('passes the AC (uat) gate only when all acceptance criteria are checked; others stay pending', () => {
+    const fm = { acceptance_criteria: [{ text: 'a', done: true }, { text: 'b', done: true }] };
+    const ip = item({
+      id: 'T1',
+      status: 'in_progress',
+      review_gates: ['uat', 'code_review'],
+      frontmatter: fm,
+    });
+    const gates = itemGates(ip);
+    expect(gates.find((g) => g.abbr === 'AC')!.state).toBe('passed');
+    expect(gates.find((g) => g.abbr === 'CR')!.state).toBe('pending');
+    expect(gateProgress(ip)).toEqual({ done: 1, total: 2 });
+  });
+
+  it('leaves the AC gate pending when criteria are incomplete or absent', () => {
+    const partial = item({
+      id: 'T1',
+      status: 'in_progress',
+      review_gates: ['uat'],
+      frontmatter: { acceptance_criteria: [{ text: 'a', done: false }] },
+    });
+    expect(itemGates(partial)[0]!.state).toBe('pending');
+    const none = item({ id: 'T2', status: 'in_progress', review_gates: ['uat'] });
+    expect(itemGates(none)[0]!.state).toBe('pending');
+  });
+});
+
+describe('blockReasonFromActivity', () => {
+  const entry = (over: Partial<ActivityEntry>): ActivityEntry => ({
+    id: 1,
+    actor: '+prime',
+    action: 'item_transition',
+    resource_type: 'backlog_item',
+    resource_id: 'T03',
+    payload: {},
+    created_at: 0,
+    ...over,
+  });
+
+  it('returns the reason from the most recent block transition', () => {
+    const activity = [
+      entry({ id: 2, created_at: 200, payload: { transition: 'block', reason: 'awaiting DNS / SPF' } }),
+      entry({ id: 1, created_at: 100, payload: { transition: 'start' } }),
+    ];
+    expect(blockReasonFromActivity(activity)).toBe('awaiting DNS / SPF');
+  });
+
+  it('returns null when the block carried no reason or there is no block entry', () => {
+    expect(blockReasonFromActivity([entry({ payload: { transition: 'block', reason: null } })])).toBeNull();
+    expect(blockReasonFromActivity([entry({ payload: { transition: 'start' } })])).toBeNull();
+    expect(blockReasonFromActivity([])).toBeNull();
+  });
+});
+
+describe('underlyingStatusFromActivity (the column a blocked item came from)', () => {
+  const entry = (over: Partial<ActivityEntry>): ActivityEntry => ({
+    id: 1,
+    actor: '+prime',
+    action: 'item_transition',
+    resource_type: 'backlog_item',
+    resource_id: 'T03',
+    payload: {},
+    created_at: 0,
+    ...over,
+  });
+
+  it('reads the `from` status of the latest block transition', () => {
+    const activity = [
+      entry({ id: 2, created_at: 200, payload: { from: 'test', to: 'blocked', transition: 'block' } }),
+      entry({ id: 1, created_at: 100, payload: { from: 'to_do', to: 'in_progress', transition: 'start' } }),
+    ];
+    expect(underlyingStatusFromActivity(activity)).toBe('test');
+  });
+
+  it('returns null when there is no block transition on record', () => {
+    expect(underlyingStatusFromActivity([entry({ payload: { transition: 'start' } })])).toBeNull();
+  });
+});
+
+describe('dependenciesFromBody (## Dependencies → Blocks / Blocked By ids)', () => {
+  it('extracts real item ids and ignores unfilled [task-id] placeholders', () => {
+    const body =
+      '## Dependencies\n\n- **Blocks:** T07 - pricing page\n- **Blocked By:** B-203 - email delivery\n\n## Notes\n';
+    expect(dependenciesFromBody(body)).toEqual({ blocks: ['T07'], blockedBy: ['B-203'] });
+  });
+
+  it('returns empty arrays for the untouched template (all placeholders)', () => {
+    const body =
+      '## Dependencies\n\n- **Blocks:** [task-id] - [task-name]\n- **Blocked By:** [task-id] - [task-name]\n';
+    expect(dependenciesFromBody(body)).toEqual({ blocks: [], blockedBy: [] });
+  });
+
+  it('returns empty arrays when the section is missing', () => {
+    expect(dependenciesFromBody('# T\n\nno deps here')).toEqual({ blocks: [], blockedBy: [] });
   });
 });
