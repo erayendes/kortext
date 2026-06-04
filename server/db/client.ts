@@ -28,6 +28,10 @@ export function openDb(options: OpenDbOptions = {}): DbBundle {
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
   db.pragma('synchronous = NORMAL');
+  // Concurrent writers: agent MCP subprocesses + the backend all open this DB.
+  // WAL allows many readers + one writer; busy_timeout makes a blocked writer
+  // wait-and-retry (up to 5s) instead of throwing SQLITE_BUSY immediately.
+  db.pragma('busy_timeout = 5000');
 
   if (!options.skipMigrations) {
     runMigrations(db);
