@@ -5,7 +5,19 @@
 
 ---
 
-## 1. Şu an (2026-06-02)
+## 1. Şu an (2026-06-04)
+
+**🎨 TASARIM/HI-FI TRACK (2026-06-04, bu oturum) — v6 hi-fi wireframe TAM + uçtan uca gezilebilir ✅.** v5 IA'sının hi-fi hâli [concepts/wireframe-v6-hifi.html](./concepts/wireframe-v6-hifi.html)'de bitti (tek dosya, Tailwind+Lucide CDN + inline JS, Geist/Geist-Mono, Linear-minimal koyu/açık palet `--accent:#5E6AD2`). Canlı: `.claude/launch.json > wf-v5` → `localhost:8094/wireframe-v6-hifi.html`. **KOD DEĞİL — hi-fi görsel/etkileşim spec'i; `src/` implementasyonu buna bakacak.** Bu oturumda Eray ile ekran-ekran gezilip her ekran + global bağ dokusu yapıldı, ~25 commit, **bu oturumda origin/main'e PUSH/MERGE edildi (Eray onayı).** Tüm kararlar [DECISIONS §12](./DECISIONS.md).
+
+**Yapılanlar (hepsi canlı doğrulandı):** Dashboard (yatay status-bar stats + active-work + for-review + activity) · Board (epic-rail + kolonlar + gate şeridi) · **References** (editable file-browser, Revise+Approve statü makinesi) · **Memory** + **Reports** (read-only, "Clarify" satır-anotasyonu → Activity'ye düşer, veri değişmez; Reports 8-tip + markdown tablo) · 4 **Project settings** (Project info/Integrations/Environments/Agent models) · 7-pane **Kortext settings** (sidebar-swap, motor kapsamı) · footer **Agents/Worktrees popover** + **Terminal** (çalışan mini-CLI) · **item/epic drawer** (gate'ler, AC checklist, blocked banner + sebep, Stop agent) · **⌘K paleti** · **bildirim merkezi** · topbar **proje/versiyon dropdown** · **new-item modalı** · empty state.
+
+**Mimari özü (gerçek React'e çıkış):** 4 paylaşılan-primitif katmanı — `fb-*` (→`<FileBrowser mode>`) · `ANNO` anotasyon motoru (→`<AnnotatableDoc mode>`, ref=revise/mem+rep=clarify) · `.set-*` settings · `.drawer`+`.overlay`. Detay [DECISIONS §12.2](./DECISIONS.md). **Dersler:** CDN ikon riski (Lucide `github` kalktı → `git-branch`); const TDZ (lazy-build); screenshot lag → `preview_eval` ile DOM teyidi; hedef genişlik 1600px.
+
+**SIRADAKİ (tasarım track):** v6 hi-fi'yi gerçek app'e (`src/`) implement — `<FileBrowser>`/`<AnnotatableDoc>`/`<SettingsPane>`/`<Drawer>` bileşenlerine indir. **Açık ufak parçalar:** v6'da search/notif/⌘K çalışıyor (wireframe) ama gerçek veriye bağlanacak.
+
+---
+
+## 1.b Önceki tasarım turu (2026-06-02) — v5 IA revizyonu, lo-fi shadcn wireframe ✅
 
 **🎨 TASARIM/IA TRACK (2026-06-02, ayrı oturum) — v5 IA revizyonu, lo-fi shadcn wireframe ✅.** Eray ile ekran-ekran gezerek **tüm uygulamanın bilgi-mimarisi** elden geçirildi ve [concepts/wireframe-v5-shadcn.html](./concepts/wireframe-v5-shadcn.html)'de (default shadcn/ui, tek dosya; canlı `.claude/launch.json > wf-v5` → `localhost:8094`) lo-fi olarak doğrulandı. **Bu KOD DEĞİL — uygulama IA/yerleşim revizyonunun kaynağı; hi-fi pass v4 koyu paletini bu yapıya giydirecek.** Tüm kararlar [DECISIONS §11](./DECISIONS.md). Öne çıkanlar: **sidebar=proje / footer=motor**; **bağlamsal sidebar** (Kortext'e girince sidebar motor-menüsüne döner — ikinci sidebar değil); **"global bağlantı / yerel tercih"** deseni (Agents model · Notifications · LLM Auth); **board** epic=filtre-kolonu + item-bazlı **gate şeridi** + assignee persona ikonu; **file-browser deseni** (References/Memory/Reports/Kortext-Agents/Rules/Workflows = tek bileşen); **persona ikon/renk** sistemi ([PERSONA-ICONS.md](./PERSONA-ICONS.md), ana repo'da); item tipleri sadece Epic/Task/Bug/Debt; tema = footer tek `contrast` butonu ([erayendes/themeSwitcher](https://github.com/erayendes/themeSwitcher) yapısı). **SIRADAKİ (tasarım track) = hi-fi pass** (v5 IA + v4 palet) VEYA v5 ekranlarını gerçek app'e (`src/`) implement. **Build dersi (kayıtlı):** inline `style` stylesheet'i yener — bu turda 3× ısırdı (ghost route display, tema, sidebar genişliği); durum-değiştiren öğelerde (genişlik/görünürlük/display) inline style kullanma, class'a bırak.
 

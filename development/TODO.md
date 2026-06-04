@@ -28,9 +28,10 @@ Açık iş listesi. Yapılan her şey [DECISIONS.md](./DECISIONS.md) tarihçesin
 
 **🎨 Tasarım/IA track — v5 IA revizyonu ✅ (2026-06-02, DECISIONS §11; lo-fi `concepts/wireframe-v5-shadcn.html`, `localhost:8094`):**
 - [x] Tüm uygulama IA'sı elden geçti + lo-fi shadcn wireframe'de doğrulandı (sidebar=proje/footer=motor · bağlamsal sidebar · board epic-filtre + gate şeridi · file-browser deseni · settings ayrımı · persona ikonları · global-bağlantı/yerel-tercih).
-- [ ] **Hi-fi pass** — v5 IA + v4 koyu palet (gerçek shadcn-in-app, ya da v4 token'lı tek dosya).
-- [ ] v5 ekranlarını gerçek app'e (`src/`) implement (mevcut Board/Dashboard üstüne; ekran-ekran).
-- [ ] Dashboard 2/3 içeriği (Eray erteledi — aktif iş + bekleyen onay + KPI adayları).
+- [x] **Hi-fi pass ✅ (2026-06-04)** — [concepts/wireframe-v6-hifi.html](./concepts/wireframe-v6-hifi.html), Linear-minimal palet, uçtan uca gezilebilir (tüm ekranlar + drawer + ⌘K + bildirim + terminal + popover'lar). DECISIONS §12. origin/main'e merge edildi.
+- [ ] **v6 hi-fi'yi gerçek app'e (`src/`) implement** — paylaşılan primitifler: `<FileBrowser mode>` (References/Memory/Reports) · `<AnnotatableDoc mode>` (revise/clarify) · `<SettingsPane>` (4 project + 7 kortext) · `<Drawer>` (item/epic/notif). DECISIONS §12.2.
+- [ ] v6'da wireframe-seviyesinde çalışan global parçaları gerçek veriye bağla (⌘K arama, bildirim merkezi, terminal CLI).
+- [ ] Dashboard sol-içeriği netleşti (yatay status-bar + active-work + for-review) — eski "2/3 TBD" kapandı.
 - [ ] Version selector semantiği netleştir (proje sürümü / snapshot / release?).
 
 **Uygulama-geneli (paused — Board fonksiyoneli öne geçti, fırsatta; Dashboard'u da etkiler → sonra yeniden screenshot):**

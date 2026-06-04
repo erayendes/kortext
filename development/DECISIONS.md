@@ -776,3 +776,32 @@ UI track Ekran 3. Eray ekranı canlı inceledi, 10 maddelik geri bildirim verdi;
 ### Açık (sonraki oturum karar verir)
 - **Version selector** semantiği (proje sürümü mü / snapshot mı / release mi?).
 - Dashboard 2/3 içeriği.
+
+## Bölüm 12 — v6 hi-fi wireframe (Linear-minimal, tek-dosya, 2026-06-04)
+
+[concepts/wireframe-v6-hifi.html](./concepts/wireframe-v6-hifi.html) — v5 IA'sının hi-fi hâli. Tek dosya (Tailwind CDN + Lucide CDN + inline JS), Geist/Geist-Mono, shadcn token sistemi, Linear-minimal koyu/açık palet (`--accent:#5E6AD2`). Canlı: `.claude/launch.json > wf-v5` → `localhost:8094/wireframe-v6-hifi.html`. **KOD DEĞİL** — hi-fi görsel/etkileşim spec'i; `src/` implementasyonu buna bakacak.
+
+### 12.1 Kapsam — uçtan uca gezilebilir
+Tüm ekranlar + global bağ dokusu tamam: **Dashboard · Board · References · Memory · Reports** · Project settings (**Project info · Integrations · Environments · Agent models**) · Kortext settings (**LLM Auth · Agents · Rules · Workflows · Notifications · Hooks · Scripts**, sidebar-swap) · footer (**Agents/Worktrees popover · Terminal CLI**) · **item/epic drawer · ⌘K paleti · bildirim merkezi · topbar dropdown'lar · new-item modalı · empty state**.
+
+### 12.2 Paylaşılan-primitif mimarisi (gerçek React'e çıkış haritası)
+Dört "tek-kaynak" katmanı — her biri tek React bileşenine iner:
+- **`fb-*` file-browser** → References (editable) · Memory (read-only) · Reports (read-only) · Kortext Agents/Rules/Workflows → tek `<FileBrowser mode>`.
+- **`ANNO` anotasyon motoru** → References "Revise" (statü makinesi) · Memory + Reports "Clarify" (Activity'ye düşer, veri değişmez) → tek `<AnnotatableDoc mode>`. Context'ler (`ref`/`mem`/`rep`) `el.closest('#…-md')` ile ayrışır.
+- **`.set-*` settings primitifleri** → 4 project-settings pane (form=dar / matris=`.wide` geniş).
+- **`.drawer` + `.overlay`** → item/epic detail · notifications · ⌘K · new-item.
+
+### 12.3 Anahtar kararlar
+- **Read-only ≠ editable:** References düzenlenebilir (Revise+Approve, statü makinesi: Approved/Waiting/Draft). Memory + Reports read-only → "Clarify" satır-anotasyonu Activity'ye düşer, **içeriği değiştirmez** ("sent to Activity · unchanged" toast). Aynı `ANNO` motoru, farklı `submit()` closure.
+- **Kapsam değişimi = sidebar içerik swap'i** (ikinci sidebar değil): footer ⚙ Kortext `#sb-project` ↔ `#sb-kortext`; "← Acme CRM" geri.
+- **Blocked bir statü değil, ortogonal bayrak:** item-detail'de Status gerçek kolonu gösterir ("In progress · blocked"), üstte kırmızı banner + **block sebebi** (`blockReason`).
+- **Stop:** in-progress item'da "Stop agent" (çalışan ajan durur); blocked → Unblock; diğer → Move to review. Footer durum-duyarlı.
+- **Gate ≠ AC bilerek ayrı:** gate = süreç durumu (passed/pending/n-a rozeti), AC = ikili checklist (checkbox). Birleştirilmedi.
+- **Immutable alan = form-kontrolü değil:** Project name/code/platform düz değer (disabled input değil). Target platform **çoklu** (Web+iOS).
+- **Terminal = çalışan mini-CLI:** `status/agents/gate/help/clear` cevap verir; `agents` çıktısı footer popover ile **aynı `FAGENTS`+persona-renk** verisini metin olarak gösterir.
+- **Reports = read-only, çok-tip:** 8 rapor tipi (`templates/reports/*` yapısı), tarihsiz ad, scope/statü yok → ad+ajan. markdown **tablo** desteği (`mdToHtml` blok-farkında).
+
+### 12.4 Ders (kayıtlı)
+- **CDN ikon riski:** Lucide marka ikonları kaldırıldı (`github` render olmaz → `git-branch`); yeni ikonlar (`book-alert`) tarayıcıda eval ile doğrulandı. `@latest` kullanırken ikon adını teyit et.
+- **Const TDZ:** `KAGENTS = AGENT_MODELS.map(...)` script'te `AGENT_MODELS`'dan önce gelince "before initialization" attı → lazy-build çözdü. Tek-script dosyada blok sırası önemli.
+- **Önizleme screenshot lag:** bu oturumda ısrarla 1-2 kare geride; ölçüt = `preview_eval` ile DOM teyidi (screenshot ikincil). Hedef genişlik 1600px — 800px "dar test" sıkışık gösterir, yanıltıcı.
