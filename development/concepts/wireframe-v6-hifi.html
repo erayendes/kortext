@@ -429,6 +429,24 @@
   .up-task{ margin-left:auto; font-size:11px; color:var(--fg-faint); white-space:nowrap; }
   .up-dot{ width:6px; height:6px; border-radius:50%; flex-shrink:0; }
 
+  /* ---------- terminal (footer · floating CLI) ---------- */
+  .term{ position:fixed; right:16px; bottom:48px; z-index:46; width:486px; max-width:calc(100vw - 32px); height:344px; background:var(--bg-elev); border:1px solid var(--border-strong); border-radius:11px; box-shadow:0 18px 50px rgba(0,0,0,.5); display:none; flex-direction:column; overflow:hidden; }
+  .term.open{ display:flex; }
+  .term-head{ height:38px; flex-shrink:0; display:flex; align-items:center; gap:8px; padding:0 12px; border-bottom:1px solid var(--border); background:var(--panel); }
+  .term-head .ti{ color:var(--accent-hi); display:flex; }
+  .term-title{ font-size:12px; font-family:'Geist Mono',monospace; color:var(--fg-mid); flex:1; }
+  .term-min{ color:var(--fg-faint); cursor:pointer; display:flex; }
+  .term-min:hover{ color:var(--fg); }
+  .term-body{ flex:1; overflow-y:auto; padding:12px 14px; font-family:'Geist Mono',monospace; font-size:12px; line-height:1.72; color:var(--fg-muted); background:var(--bg); }
+  .t-line{ white-space:pre-wrap; word-break:break-word; }
+  .t-p{ color:var(--accent-hi); }
+  .t-out{ padding-left:2px; }
+  .t-dim{ color:var(--fg-faint); }
+  .term-in{ height:38px; flex-shrink:0; display:flex; align-items:center; gap:8px; padding:0 14px; border-top:1px solid var(--border); background:var(--panel); font-family:'Geist Mono',monospace; font-size:12px; }
+  .term-in .p{ color:var(--accent-hi); }
+  .term-in input{ flex:1; background:transparent; border:none; outline:none; color:var(--fg); font-family:inherit; font-size:12px; }
+  .term-in input::placeholder{ color:var(--fg-faint); }
+
   /* toast (clarification confirmation) */
   .toast{ position:fixed; bottom:50px; left:50%; transform:translateX(-50%) translateY(10px); display:flex; align-items:center; gap:7px; padding:9px 14px; border-radius:9px; background:var(--bg-elev); border:1px solid var(--border-strong); box-shadow:0 10px 30px rgba(0,0,0,.4); font-size:12.5px; color:var(--green); opacity:0; pointer-events:none; transition:.2s cubic-bezier(.16,1,.3,1); z-index:90; }
   .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
@@ -923,7 +941,7 @@
   <div class="f-sep"></div>
   <div class="f-item" id="f-worktrees" onclick="toggleUp('up-worktrees')" style="cursor:pointer"><i data-lucide="git-branch" style="width:16px;height:16px"></i>3 worktrees</div>
   <div class="f-sep"></div>
-  <div class="f-item" style="cursor:pointer"><i data-lucide="terminal" style="width:16px;height:16px"></i>Terminal</div>
+  <div class="f-item" onclick="toggleTerm()" style="cursor:pointer"><i data-lucide="terminal" style="width:16px;height:16px"></i>Terminal</div>
 </footer>
 
 <!-- footer up-panels -->
@@ -932,6 +950,13 @@
 </div>
 <div id="up-worktrees" class="uppanel" style="right:74px">
   <div class="up-list" id="up-worktrees-list"></div>
+</div>
+
+<!-- terminal -->
+<div id="term" class="term">
+  <div class="term-head"><span class="ti"><i data-lucide="terminal" style="width:14px;height:14px"></i></span><span class="term-title">kortext · acme-crm</span><span class="term-min" onclick="document.getElementById('term').classList.remove('open')"><i data-lucide="minus" style="width:15px;height:15px"></i></span></div>
+  <div class="term-body" id="term-body"></div>
+  <div class="term-in"><span class="p">$</span><input id="term-input" placeholder="type a command — try 'status' or 'help'" onkeydown="termKey(event)" autocomplete="off" spellcheck="false"></div>
 </div>
 
 <script>
@@ -1132,6 +1157,36 @@
     const el=document.getElementById(id);
     document.querySelectorAll('.uppanel').forEach(p=>{ if(p.id!==id) p.classList.remove('open'); });
     el.classList.toggle('open');
+  }
+
+  /* ---------- terminal (mini kortext CLI) ---------- */
+  function toggleTerm(){
+    const t=document.getElementById('term');
+    if(t.classList.toggle('open')) setTimeout(()=>document.getElementById('term-input').focus(),0);
+  }
+  function termEsc(s){ return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+  function termAppend(html){ const b=document.getElementById('term-body'); b.insertAdjacentHTML('beforeend',html); b.scrollTop=b.scrollHeight; }
+  function termResponse(cmd){
+    const c=cmd.toLowerCase().trim();
+    if(c==='status') return `<div class="t-out"><span style="color:var(--green)">●</span> 4 running   <span style="color:var(--amber)">●</span> 1 queued   <span style="color:var(--red)">●</span> 1 blocked</div><div class="t-out t-dim">gate: T-101 awaiting +prime approval</div>`;
+    if(c==='agents') return FAGENTS.map(a=>{ const col=P[a.h]?P[a.h].c:'var(--fg-mid)'; return `<div class="t-out"><span style="color:${ST_C[a.st]}">●</span> <span style="color:${col}">${a.h}</span><span class="t-dim">  ${a.st} · ${a.task}</span></div>`; }).join('');
+    if(c.startsWith('gate')) return `<div class="t-out">AC <span style="color:var(--green)">✓</span>   QC <span style="color:var(--green)">✓</span>   SE <span style="color:var(--green)">✓</span>   DS <span class="t-dim">·</span>   CR <span class="t-dim">·</span></div><div class="t-out t-dim">→ 3/5 passed · awaiting +prime</div>`;
+    if(c==='help') return `<div class="t-out t-dim">commands:  status · agents · gate &lt;id&gt; · clear · help</div>`;
+    if(c==='clear'){ document.getElementById('term-body').innerHTML=''; return ''; }
+    if(c==='') return '';
+    return `<div class="t-out t-dim">command not found: ${termEsc(cmd)} — try 'help'</div>`;
+  }
+  function termKey(e){
+    if(e.key!=='Enter') return;
+    const inp=e.target, cmd=inp.value.trim(); inp.value='';
+    if(!cmd) return;
+    termAppend(`<div class="t-line" style="margin-top:4px"><span class="t-p">$</span> ${termEsc(cmd)}</div>`);
+    const r=termResponse(cmd); if(r) termAppend(r);
+  }
+  function renderTerm(){
+    document.getElementById('term-body').innerHTML=
+      `<div class="t-line"><span class="t-p">$</span> kortext status</div>`+termResponse('status')+
+      `<div class="t-line" style="margin-top:6px"><span class="t-p">$</span> kortext gate T-101</div>`+termResponse('gate T-101');
   }
 
   function renderEpicRail(){
@@ -1840,7 +1895,7 @@ Voice, tone, and primary strings. Owned by +copywriter.
 
   renderStats(); renderWork(); renderEpicRings(); renderTl(); renderFooterAgents();
   renderEpicRail(); renderCols(); renderRefs(); renderMemory(); renderReports(); renderAgentModels();
-  renderUpAgents(); renderUpWorktrees();
+  renderUpAgents(); renderUpWorktrees(); renderTerm();
   applyTheme();
   lucide.createIcons();
 </script>
