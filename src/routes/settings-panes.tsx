@@ -17,85 +17,172 @@ import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { PageHeader } from '../components/PageHeader.tsx';
 import { PersonaEditor } from '../components/PersonaEditor.tsx';
-import { apiGet, usePolling } from '../lib/api.ts';
-import type { PersonaSummary, WorkflowSummary } from '../lib/api-types.ts';
-import { personaColor, personaInitials } from '../lib/persona-colors.ts';
+import { apiGet, apiPut, apiDelete, usePolling } from '../lib/api.ts';
+import type { PersonaSummary, WorkflowSummary, WorkflowDetail, ProjectMeta } from '../lib/api-types.ts';
+import { personaColor, personaIcon } from '../lib/persona-colors.ts';
+import { groupWorkflowByPhase } from '../lib/workflow-diagram.ts';
 
 marked.setOptions({ gfm: true, breaks: false });
 
 // ─────────────────────────────────── Project settings
 
+const PLATFORM_OPTIONS = ['Web', 'iOS', 'Android', 'Desktop'];
+
+type ProjectForm = { name: string; code: string; githubRepo: string; platforms: string[] };
+
 export function ProjectPane() {
+  const { data, error, refresh } = usePolling<{ meta: ProjectMeta | null }>(
+    '/api/project-meta',
+    30_000,
+  );
+  const meta = data?.meta ?? null;
+
+  const [form, setForm] = useState<ProjectForm | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  // Hydrate the editable form once the meta arrives (and re-sync after a save).
+  useEffect(() => {
+    if (meta && form === null) {
+      setForm({
+        name: meta.name,
+        code: meta.code,
+        githubRepo: meta.githubRepo ?? '',
+        platforms: meta.platforms,
+      });
+    }
+  }, [meta, form]);
+
+  const dirty =
+    !!meta &&
+    !!form &&
+    (form.name !== meta.name ||
+      form.code !== meta.code ||
+      form.githubRepo !== (meta.githubRepo ?? '') ||
+      form.platforms.join(',') !== meta.platforms.join(','));
+
+  function patch(p: Partial<ProjectForm>) {
+    setForm((f) => (f ? { ...f, ...p } : f));
+    setSaved(false);
+  }
+
+  function togglePlatform(name: string) {
+    if (!form) return;
+    const has = form.platforms.includes(name);
+    patch({
+      platforms: has
+        ? form.platforms.filter((p) => p !== name)
+        : [...form.platforms, name],
+    });
+  }
+
+  async function save() {
+    if (!form) return;
+    setBusy(true);
+    setSaveError(null);
+    try {
+      await apiPut('/api/project-meta', {
+        name: form.name,
+        code: form.code,
+        githubRepo: form.githubRepo.trim() === '' ? null : form.githubRepo.trim(),
+        platforms: form.platforms,
+      });
+      setForm(null); // re-hydrate from the refreshed meta
+      setSaved(true);
+      refresh();
+    } catch (e) {
+      setSaveError(mutationError(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <>
-      <PageHeader
-        title="Project settings"
-        subtitle="Core identity, workspace and behavior"
-      />
+      <PageHeader title="Project settings" subtitle="Core identity and workspace" />
       <div className="px-6 py-5 max-w-4xl flex flex-col">
-        <FieldRow
-          label="Project name"
-          desc="Displayed in topbar and reports"
-          control={<input className="input" defaultValue="Acme CRM" style={{ width: 280 }} />}
-        />
-        <FieldRow
-          label="Project code"
-          desc="Slug used in task IDs (e.g. ACME-T-101)"
-          control={<input className="input mono" defaultValue="ACME" style={{ width: 200 }} />}
-        />
-        <FieldRow
-          label="Version"
-          desc="Bumped automatically on release"
-          control={<input className="input mono" defaultValue="0.1.0" style={{ width: 140 }} />}
-        />
-        <FieldRow
-          label="Target platform"
-          desc="Multiple allowed · affects stack defaults"
-          control={
-            <div className="flex gap-1.5">
-              <button className="btn btn-primary btn-xs">Web</button>
-              <button className="btn btn-outline btn-xs">iOS</button>
-              <button className="btn btn-outline btn-xs">Android</button>
-              <button className="btn btn-outline btn-xs">Desktop</button>
-            </div>
-          }
-        />
-        <FieldRow
-          label="GitHub repository"
-          desc="Where agents commit"
-          control={
-            <div className="flex items-center gap-2">
-              <input className="input mono" defaultValue="github.com/acme/acme-crm" style={{ width: 320 }} />
-              <button className="btn btn-ghost btn-xs">Open</button>
-            </div>
-          }
-        />
-        <FieldRow
-          label="Blueprint"
-          desc="Product vision document"
-          control={
-            <div className="flex items-center gap-2">
-              <span className="mono text-[13px] text-tx-2">blueprint.md</span>
-              <span className="text-[12px] text-tx-3">4.2 KB · edited 4d ago</span>
-              <button className="btn btn-ghost btn-xs">View</button>
-              <button className="btn btn-ghost btn-xs">Replace</button>
-            </div>
-          }
-        />
-        <FieldRow
-          label="Auto-commit on transitions"
-          desc="Every status change creates a kortext meta-commit"
-          control={<Toggle defaultOn />}
-        />
-        <FieldRow
-          label="Require approval for PR merges"
-          desc="engineering-manager always asks +prime before merging to main"
-          control={<Toggle defaultOn />}
-        />
+        {error && !meta && <div className="text-[12px] text-danger mb-3">{error}</div>}
+        {!meta && !error && <div className="text-[12px] text-tx-3">loading…</div>}
+        {form && (
+          <>
+            <FieldRow
+              label="Project name"
+              desc="Displayed in topbar and reports"
+              control={
+                <input
+                  className="input"
+                  value={form.name}
+                  onChange={(e) => patch({ name: e.target.value })}
+                  style={{ width: 280 }}
+                />
+              }
+            />
+            <FieldRow
+              label="Project code"
+              desc="Slug used in task IDs (e.g. ACME-T-101)"
+              control={
+                <input
+                  className="input mono"
+                  value={form.code}
+                  onChange={(e) => patch({ code: e.target.value })}
+                  style={{ width: 200 }}
+                />
+              }
+            />
+            <FieldRow
+              label="Target platform"
+              desc="Multiple allowed · affects stack defaults"
+              control={
+                <div className="flex gap-1.5">
+                  {PLATFORM_OPTIONS.map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      className={form.platforms.includes(p) ? 'btn btn-primary btn-xs' : 'btn btn-outline btn-xs'}
+                      onClick={() => togglePlatform(p)}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              }
+            />
+            <FieldRow
+              label="GitHub repository"
+              desc="Where agents commit"
+              control={
+                <div className="flex items-center gap-2">
+                  <input
+                    className="input mono"
+                    placeholder="github.com/owner/repo"
+                    value={form.githubRepo}
+                    onChange={(e) => patch({ githubRepo: e.target.value })}
+                    style={{ width: 320 }}
+                  />
+                  {form.githubRepo.trim() !== '' && (
+                    <a
+                      className="btn btn-ghost btn-xs"
+                      href={`https://${form.githubRepo.replace(/^https?:\/\//, '')}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Open
+                    </a>
+                  )}
+                </div>
+              }
+            />
 
-        <div className="mt-6">
-          <button className="btn btn-primary btn-xs">Save changes</button>
-        </div>
+            <div className="mt-6 flex items-center gap-3">
+              <button className="btn btn-primary btn-xs" disabled={busy || !dirty} onClick={save}>
+                {busy ? 'Saving…' : 'Save changes'}
+              </button>
+              {saved && !dirty && <span className="text-[12px] text-success">Saved ✓</span>}
+              {saveError && <span className="text-[12px] text-danger">{saveError}</span>}
+            </div>
+          </>
+        )}
       </div>
     </>
   );
@@ -171,6 +258,7 @@ export function AgentsPane() {
           {enriched.map((p) => {
             const handle = p.handle.startsWith('+') ? p.handle : `+${p.handle}`;
             const meta = p.meta;
+            const Icon = personaIcon(handle);
             return (
               <button
                 key={handle}
@@ -180,11 +268,11 @@ export function AgentsPane() {
                 style={{ gridTemplateColumns: '32px 1.4fr 90px 1fr 90px 50px', gap: 12 }}
               >
                 <span
-                  className="inline-flex items-center justify-center w-[26px] h-[26px] rounded-full text-[10px] font-bold"
+                  className="inline-flex items-center justify-center w-[26px] h-[26px] rounded-full"
                   style={{ background: personaColor(handle), color: '#0A0814' }}
                   aria-hidden
                 >
-                  {personaInitials(handle)}
+                  <Icon size={13} strokeWidth={2.5} />
                 </span>
                 <div>
                   <div className="mono text-[13px]" style={{ color: personaColor(handle) }}>{handle}</div>
@@ -310,107 +398,138 @@ export function WorkflowsPane() {
 }
 
 function WorkflowDiagram({ workflows }: { workflows: WorkflowSummary[] }) {
-  const first = workflows[0];
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const id = selectedId ?? workflows[0]?.id ?? null;
+
+  const [wf, setWf] = useState<WorkflowDetail | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!id) {
+      setWf(null);
+      return;
+    }
+    let alive = true;
+    setWf(null);
+    setError(null);
+    apiGet<{ workflow: WorkflowDetail }>(`/api/workflows/${encodeURIComponent(id)}`)
+      .then((r) => alive && setWf(r.workflow))
+      .catch((e: unknown) => alive && setError(e instanceof Error ? e.message : String(e)));
+    return () => {
+      alive = false;
+    };
+  }, [id]);
+
+  const phases = wf ? groupWorkflowByPhase(wf) : [];
+
   return (
     <div className="border border-border-default rounded-lg p-5 bg-bg-1 overflow-x-auto">
-      <div className="text-[11px] uppercase tracking-[0.06em] text-tx-3 mb-4 font-semibold">
-        {first ? `${first.id} · visual flow` : 'visual flow'}
+      <div className="flex items-center gap-3 mb-4">
+        <span className="text-[11px] uppercase tracking-[0.06em] text-tx-3 font-semibold">
+          visual flow
+        </span>
+        {workflows.length > 0 && (
+          <select
+            className="input mono"
+            style={{ padding: '4px 8px', fontSize: 12 }}
+            value={id ?? ''}
+            onChange={(e) => setSelectedId(e.target.value)}
+          >
+            {workflows.map((w) => (
+              <option key={w.id} value={w.id}>{w.id}</option>
+            ))}
+          </select>
+        )}
+        {wf?.nextWorkflowId && (
+          <span className="text-[12px] text-tx-3">
+            next → <code className="mono">{wf.nextWorkflowId}</code>
+          </span>
+        )}
       </div>
-      {!first && <p className="text-[12px] text-tx-3">no workflows loaded</p>}
-      {first && (
-        <div className="flex flex-col gap-3">
-          <PhaseRow
-            phases={[
-              { label: 'Step 1 ✓', title: 'Analyze blueprint', tone: 'done' },
-              { label: 'Step 2 ✓', title: 'Plan pipeline', tone: 'done' },
-              { label: 'Step 3 ✓', title: 'Dispatch agents', tone: 'done' },
-            ]}
-          />
-          <PhaseRow
-            phases={[
-              { label: 'Step 4 · active', title: 'Implementation', tone: 'active' },
-            ]}
-            gate="Code review gate"
-            loopback="← FAIL → step 4"
-          />
-          <PhaseRow
-            phases={[
-              { label: 'Step 5', title: 'Integration tests', tone: 'idle' },
-            ]}
-            gate="QA gate"
-            loopback="← FAIL → step 4"
-          />
-          <PhaseRow
-            phases={[
-              { label: 'Step 6', title: 'Handover to QA', tone: 'idle' },
-            ]}
-            trailing={
-              <span className="text-[12px] text-tx-3">
-                → <code className="mono">{workflows[1]?.id ?? '—'}</code>
-              </span>
-            }
-          />
+      {workflows.length === 0 && <p className="text-[12px] text-tx-3">no workflows loaded</p>}
+      {error && <p className="text-[12px] text-danger">{error}</p>}
+      {id && !wf && !error && <p className="text-[12px] text-tx-3">loading…</p>}
+      {wf && phases.length === 0 && (
+        <p className="text-[12px] text-tx-3">this workflow has no parsed steps</p>
+      )}
+      {phases.length > 0 && (
+        <div className="flex flex-col gap-4">
+          {phases.map((p) => (
+            <div key={p.phase} className="flex flex-col gap-2">
+              <div className="text-[11px] uppercase tracking-[0.06em] text-accent font-semibold">
+                {p.phase}
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                {p.steps.map((s, i) => (
+                  <span key={s.key} className="flex items-center gap-2">
+                    <span className="inline-flex flex-col gap-1 px-3 py-2 rounded-md border border-border-default bg-bg-0 min-w-[180px] max-w-[260px]">
+                      <span className="text-[10px] uppercase tracking-[0.06em] text-tx-3 font-semibold">
+                        Step {s.index + 1}
+                        {s.persona && (
+                          <span className="ml-1.5 normal-case" style={{ color: personaColor(s.persona) }}>
+                            {s.persona}
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-[12px] text-tx-1 line-clamp-2">
+                        {s.description || s.key}
+                      </span>
+                    </span>
+                    {i < p.steps.length - 1 && <span className="text-tx-3">→</span>}
+                  </span>
+                ))}
+                {p.gates.map((g, gi) => (
+                  <span key={gi} className="flex items-center gap-2">
+                    <span className="text-tx-3">→</span>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-warning/40 bg-warning/5 text-[11px] text-warning">
+                      <GitMerge className="w-3 h-3" />
+                      gate{g.approver ? ` · ${g.approver}` : ''}
+                    </span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
   );
 }
 
-function PhaseRow({
-  phases,
-  gate,
-  loopback,
-  trailing,
-}: {
-  phases: { label: string; title: string; tone: 'done' | 'active' | 'idle' }[];
-  gate?: string;
-  loopback?: string;
-  trailing?: ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-2 flex-wrap">
-      {phases.map((p, i) => (
-        <span key={p.label} className="flex items-center gap-2">
-          <span
-            className={[
-              'inline-flex flex-col gap-1 px-3 py-2 rounded-md border min-w-[160px]',
-              p.tone === 'done' ? 'border-success/40 bg-success/5' : '',
-              p.tone === 'active' ? 'border-accent bg-accent/10' : '',
-              p.tone === 'idle' ? 'border-border-default bg-bg-0' : '',
-            ].join(' ')}
-          >
-            <span className="text-[10px] uppercase tracking-[0.06em] text-tx-3 font-semibold">{p.label}</span>
-            <span className="text-[12px] text-tx-1">{p.title}</span>
-          </span>
-          {i < phases.length - 1 && <span className="text-tx-3">→</span>}
-        </span>
-      ))}
-      {gate && (
-        <>
-          <span className="text-tx-3">→</span>
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-warning/40 bg-warning/5 text-[11px] text-warning">
-            <GitMerge className="w-3 h-3" /> {gate}
-          </span>
-        </>
-      )}
-      {loopback && <span className="text-[11px] text-danger ml-2">{loopback}</span>}
-      {trailing}
-    </div>
-  );
-}
-
 // ─────────────────────────────────── Hooks
 
-const HOOK_EVENTS: { name: string; desc: string; defaultOn: boolean }[] = [
-  { name: 'PreToolUse', desc: 'Runs before any tool call · blocks dangerous patterns', defaultOn: true },
-  { name: 'PostToolUse', desc: 'Audit logger · persists to audit.log', defaultOn: true },
-  { name: 'UserPromptSubmit', desc: 'Adds context (project, agent, date) when +prime types', defaultOn: true },
-  { name: 'SessionStart', desc: 'Loads workflow state & memory on session resume', defaultOn: true },
-  { name: 'HandoverStart', desc: 'Captures context bundle on persona handover', defaultOn: false },
-  { name: 'BlockerDetected', desc: 'Notify +prime when an agent reports it cannot proceed', defaultOn: false },
-];
+type Hook = {
+  id: string;
+  label: string;
+  description: string;
+  enabled: boolean;
+  command: string;
+};
 
 export function HooksPane() {
+  const { data, error, refresh } = usePolling<{ hooks: Hook[] }>('/api/hooks', 30_000);
+  const hooks = data?.hooks ?? [];
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  async function toggle(target: Hook) {
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const next = hooks.map((h) => ({
+        id: h.id,
+        enabled: h.id === target.id ? !h.enabled : h.enabled,
+        command: h.command,
+      }));
+      await apiPut('/api/hooks', { hooks: next });
+      refresh();
+    } catch (e) {
+      setSaveError(mutationError(e));
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <>
       <PageHeader
@@ -418,20 +537,27 @@ export function HooksPane() {
         subtitle="Lifecycle event listeners · toggle to enable/disable"
       />
       <div className="px-6 py-5 max-w-4xl">
+        {error && hooks.length === 0 && (
+          <div className="text-[12px] text-danger mb-3">{error}</div>
+        )}
+        {saveError && <div className="text-[12px] text-danger mb-3">{saveError}</div>}
         <div className="rounded-lg border border-border-default overflow-hidden">
-          {HOOK_EVENTS.map((h, i) => (
+          {hooks.length === 0 && (
+            <div className="px-4 py-6 text-[12px] text-tx-3">loading hooks…</div>
+          )}
+          {hooks.map((h, i) => (
             <div
-              key={h.name}
+              key={h.id}
               className={[
                 'flex items-center justify-between gap-4 px-4 py-3',
-                i < HOOK_EVENTS.length - 1 ? 'border-b border-border-subtle' : '',
+                i < hooks.length - 1 ? 'border-b border-border-subtle' : '',
               ].join(' ')}
             >
               <div>
-                <div className="text-[13px] text-tx-1">{h.name}</div>
-                <div className="text-[12px] text-tx-3 mt-0.5">{h.desc}</div>
+                <div className="text-[13px] text-tx-1">{h.label}</div>
+                <div className="text-[12px] text-tx-3 mt-0.5">{h.description}</div>
               </div>
-              <Toggle defaultOn={h.defaultOn} />
+              <LiveToggle on={h.enabled} disabled={saving} onToggle={() => toggle(h)} />
             </div>
           ))}
         </div>
@@ -442,72 +568,189 @@ export function HooksPane() {
 
 // ─────────────────────────────────── Integrations
 
-type IntegrationStatus = 'connected' | 'test' | 'disconnected';
 type Integration = {
-  name: string;
-  icon: ReactNode;
-  status: IntegrationStatus;
-  meta: string;
+  id: string;
+  label: string;
+  connected: boolean;
+  tokenMasked: string | null;
 };
 
-const INTEGRATIONS: Integration[] = [
-  { name: 'GitHub', icon: <Code2 className="w-4 h-4" />, status: 'connected', meta: 'acme/acme-crm' },
-  { name: 'Vercel', icon: <Cloud className="w-4 h-4" />, status: 'connected', meta: 'Staging + production' },
-  { name: 'Stripe', icon: <CreditCard className="w-4 h-4" />, status: 'test', meta: 'Webhook T-102 in progress' },
-  { name: 'Auth0', icon: <Lock className="w-4 h-4" />, status: 'connected', meta: 'acme-crm.us.auth0.com' },
-  { name: 'Slack', icon: <MessageSquare className="w-4 h-4" />, status: 'disconnected', meta: 'Approval notifications' },
-  { name: 'Telegram', icon: <Send className="w-4 h-4" />, status: 'disconnected', meta: 'Approval notifications' },
-];
+const INTEGRATION_ICONS: Record<string, ReactNode> = {
+  github: <Code2 className="w-4 h-4" />,
+  vercel: <Cloud className="w-4 h-4" />,
+  stripe: <CreditCard className="w-4 h-4" />,
+  auth0: <Lock className="w-4 h-4" />,
+  slack: <MessageSquare className="w-4 h-4" />,
+  telegram: <Send className="w-4 h-4" />,
+};
 
 export function IntegrationsPane() {
+  const { data, error, refresh } = usePolling<{ integrations: Integration[] }>(
+    '/api/integrations',
+    30_000,
+  );
+  const integrations = data?.integrations ?? [];
+
   return (
     <>
       <PageHeader
         title="Integrations"
-        subtitle="External services connected to this project"
+        subtitle="External services · store a token to connect (no live calls yet)"
       />
-      <div className="px-6 py-5 max-w-4xl grid gap-3" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
-        {INTEGRATIONS.map((i) => (
-          <IntegrationCard key={i.name} integration={i} />
-        ))}
+      <div className="px-6 py-5 max-w-4xl flex flex-col gap-3">
+        {error && integrations.length === 0 && (
+          <div className="text-[12px] text-danger">{error}</div>
+        )}
+        <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+          {integrations.map((i) => (
+            <IntegrationCard key={i.id} integration={i} onChanged={refresh} />
+          ))}
+        </div>
       </div>
     </>
   );
 }
 
-function IntegrationCard({ integration }: { integration: Integration }) {
-  const dim = integration.status === 'disconnected';
+function IntegrationCard({
+  integration,
+  onChanged,
+}: {
+  integration: Integration;
+  onChanged: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [token, setToken] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const dim = !integration.connected && !editing;
+
+  async function connect() {
+    if (token.trim().length === 0) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await apiPut(`/api/integrations/${integration.id}`, { token: token.trim() });
+      setToken('');
+      setEditing(false);
+      onChanged();
+    } catch (e) {
+      setError(mutationError(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function disconnect() {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiDelete(`/api/integrations/${integration.id}`);
+      onChanged();
+    } catch (e) {
+      setError(mutationError(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className={`border border-border-default rounded-md p-3.5 ${dim ? 'opacity-55' : ''}`}>
       <div className="flex items-center gap-2.5 mb-1">
-        {integration.icon}
-        <span className="text-[13px] text-tx-1 font-medium">{integration.name}</span>
+        {INTEGRATION_ICONS[integration.id] ?? <Cloud className="w-4 h-4" />}
+        <span className="text-[13px] text-tx-1 font-medium">{integration.label}</span>
         <span className="flex-1" />
-        {integration.status === 'connected' && <Badge tone="green">Connected</Badge>}
-        {integration.status === 'test' && <Badge tone="amber">Test mode</Badge>}
-        {integration.status === 'disconnected' && (
-          <button className="btn btn-outline btn-xs">Connect</button>
+        {integration.connected ? (
+          <div className="flex items-center gap-2">
+            <Badge tone="green">Connected</Badge>
+            <button className="btn btn-ghost btn-xs" disabled={busy} onClick={disconnect}>
+              Disconnect
+            </button>
+          </div>
+        ) : editing ? (
+          <button className="btn btn-ghost btn-xs" onClick={() => { setEditing(false); setError(null); }}>
+            Cancel
+          </button>
+        ) : (
+          <button className="btn btn-outline btn-xs" onClick={() => setEditing(true)}>
+            Connect
+          </button>
         )}
       </div>
-      <div className="text-[12px] text-tx-3 mono">{integration.meta}</div>
+      {integration.connected && (
+        <div className="text-[12px] text-tx-3 mono">token {integration.tokenMasked}</div>
+      )}
+      {!integration.connected && editing && (
+        <div className="flex items-center gap-2 mt-2">
+          <input
+            className="input mono"
+            type="password"
+            placeholder="paste token / API key"
+            value={token}
+            autoFocus
+            onChange={(e) => setToken(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && void connect()}
+            style={{ flex: 1, fontSize: 12 }}
+          />
+          <button className="btn btn-primary btn-xs" disabled={busy || token.trim().length === 0} onClick={connect}>
+            Save
+          </button>
+        </div>
+      )}
+      {!integration.connected && !editing && (
+        <div className="text-[12px] text-tx-3 mono">not connected</div>
+      )}
+      {error && <div className="text-[11px] text-danger mt-1.5">{error}</div>}
     </div>
   );
 }
 
 // ─────────────────────────────────── Environment
 
-type EnvVar = { key: string; value: string; type: 'secret' | 'string' | 'number' };
-
-const ENV_VARS: EnvVar[] = [
-  { key: 'ANTHROPIC_API_KEY', value: 'sk-ant-•••••••1a2b', type: 'secret' },
-  { key: 'STRIPE_SECRET_KEY', value: 'sk_live_•••••••3f4g', type: 'secret' },
-  { key: 'GITHUB_TOKEN', value: 'ghp_•••••••9h0i', type: 'secret' },
-  { key: 'DATABASE_URL', value: 'postgres://acme:••••@…', type: 'secret' },
-  { key: 'NODE_ENV', value: 'production', type: 'string' },
-  { key: 'MAX_CONCURRENT_AGENTS', value: '3', type: 'number' },
-];
+type EnvVar = { key: string; valueMasked: string };
 
 export function EnvironmentPane() {
+  const { data, error, refresh } = usePolling<{ vars: EnvVar[] }>('/api/env', 30_000);
+  const vars = data?.vars ?? [];
+
+  const [adding, setAdding] = useState(false);
+  const [newKey, setNewKey] = useState('');
+  const [newValue, setNewValue] = useState('');
+  const [editKey, setEditKey] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  async function save(key: string, value: string) {
+    setBusy(true);
+    setActionError(null);
+    try {
+      await apiPut(`/api/env/${encodeURIComponent(key)}`, { value });
+      setAdding(false);
+      setNewKey('');
+      setNewValue('');
+      setEditKey(null);
+      setEditValue('');
+      refresh();
+    } catch (e) {
+      setActionError(mutationError(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove(key: string) {
+    setBusy(true);
+    setActionError(null);
+    try {
+      await apiDelete(`/api/env/${encodeURIComponent(key)}`);
+      refresh();
+    } catch (e) {
+      setActionError(mutationError(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <>
       <PageHeader
@@ -515,35 +758,97 @@ export function EnvironmentPane() {
         subtitle="Project-specific variables and secrets available to agents"
       />
       <div className="px-6 py-5 max-w-5xl flex flex-col gap-3">
+        {error && vars.length === 0 && (
+          <div className="text-[12px] text-danger">{error}</div>
+        )}
+        {actionError && <div className="text-[12px] text-danger">{actionError}</div>}
         <div className="rounded-lg border border-border-default overflow-hidden">
           <div
             className="grid px-4 py-2.5 border-b border-border-default bg-bg-1 text-[11px] uppercase tracking-[0.08em] text-tx-3 font-semibold"
-            style={{ gridTemplateColumns: '1fr 1fr 90px 60px', gap: 12 }}
+            style={{ gridTemplateColumns: '1fr 1fr 120px', gap: 12 }}
           >
             <div>Key</div>
             <div>Value</div>
-            <div>Type</div>
             <div />
           </div>
-          {ENV_VARS.map((v) => (
+          {vars.length === 0 && !adding && (
+            <div className="px-4 py-6 text-[12px] text-tx-3">
+              No variables yet. Add one below.
+            </div>
+          )}
+          {vars.map((v) => (
             <div
               key={v.key}
               className="grid items-center px-4 py-2.5 border-b border-border-subtle last:border-b-0"
-              style={{ gridTemplateColumns: '1fr 1fr 90px 60px', gap: 12 }}
+              style={{ gridTemplateColumns: '1fr 1fr 120px', gap: 12 }}
             >
               <span className="mono text-[12px] text-tx-2">{v.key}</span>
-              <span className="mono text-[12px] text-tx-3 flex items-center gap-1.5">
-                {v.value}
-                {v.type === 'secret' && <EyeOff className="w-3 h-3 text-tx-disabled" />}
-              </span>
-              <Badge tone={v.type === 'secret' ? 'red' : 'neutral'}>{v.type}</Badge>
-              <button className="btn btn-ghost btn-xs">Edit</button>
+              {editKey === v.key ? (
+                <input
+                  className="input mono"
+                  type="password"
+                  placeholder="new value"
+                  value={editValue}
+                  autoFocus
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && void save(v.key, editValue)}
+                  style={{ fontSize: 12 }}
+                />
+              ) : (
+                <span className="mono text-[12px] text-tx-3 flex items-center gap-1.5">
+                  {v.valueMasked}
+                  <EyeOff className="w-3 h-3 text-tx-disabled" />
+                </span>
+              )}
+              <div className="flex items-center gap-1.5 justify-end">
+                {editKey === v.key ? (
+                  <>
+                    <button className="btn btn-primary btn-xs" disabled={busy} onClick={() => save(v.key, editValue)}>Save</button>
+                    <button className="btn btn-ghost btn-xs" onClick={() => { setEditKey(null); setEditValue(''); }}>Cancel</button>
+                  </>
+                ) : (
+                  <>
+                    <button className="btn btn-ghost btn-xs" onClick={() => { setEditKey(v.key); setEditValue(''); }}>Edit</button>
+                    <button className="btn btn-ghost btn-xs" disabled={busy} onClick={() => remove(v.key)} style={{ color: 'var(--danger)' }}>Delete</button>
+                  </>
+                )}
+              </div>
             </div>
           ))}
+          {adding && (
+            <div
+              className="grid items-center px-4 py-2.5 border-t border-border-subtle bg-bg-1"
+              style={{ gridTemplateColumns: '1fr 1fr 120px', gap: 12 }}
+            >
+              <input
+                className="input mono"
+                placeholder="KEY_NAME"
+                value={newKey}
+                autoFocus
+                onChange={(e) => setNewKey(e.target.value)}
+                style={{ fontSize: 12 }}
+              />
+              <input
+                className="input mono"
+                type="password"
+                placeholder="value"
+                value={newValue}
+                onChange={(e) => setNewValue(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && newKey.trim() && void save(newKey.trim(), newValue)}
+                style={{ fontSize: 12 }}
+              />
+              <div className="flex items-center gap-1.5 justify-end">
+                <button className="btn btn-primary btn-xs" disabled={busy || newKey.trim().length === 0} onClick={() => save(newKey.trim(), newValue)}>Add</button>
+                <button className="btn btn-ghost btn-xs" onClick={() => { setAdding(false); setNewKey(''); setNewValue(''); }}>Cancel</button>
+              </div>
+            </div>
+          )}
         </div>
-        <button className="btn btn-outline btn-xs self-start">
-          <Plus className="w-3 h-3" /> Add variable
-        </button>
+        {!adding && (
+          <button className="btn btn-outline btn-xs self-start" onClick={() => setAdding(true)}>
+            <Plus className="w-3 h-3" /> Add variable
+          </button>
+        )}
       </div>
     </>
   );
@@ -644,15 +949,36 @@ function FieldRow({
   );
 }
 
-function Toggle({ defaultOn = false }: { defaultOn?: boolean }) {
-  const [on, setOn] = useState(defaultOn);
+/** Controlled toggle — caller owns `on` and persists on change. */
+function LiveToggle({
+  on,
+  disabled,
+  onToggle,
+}: {
+  on: boolean;
+  disabled?: boolean;
+  onToggle: () => void;
+}) {
+  return <ToggleVisual on={on} disabled={disabled} onClick={onToggle} />;
+}
+
+function ToggleVisual({
+  on,
+  disabled,
+  onClick,
+}: {
+  on: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={on}
-      onClick={() => setOn((v) => !v)}
-      className="relative inline-flex items-center w-[40px] h-[22px] rounded-full transition-colors duration-200"
+      disabled={disabled}
+      onClick={onClick}
+      className="relative inline-flex items-center w-[40px] h-[22px] rounded-full transition-colors duration-200 disabled:opacity-50"
       style={{ background: on ? 'var(--accent)' : 'var(--bg-3)' }}
     >
       <span
@@ -661,6 +987,19 @@ function Toggle({ defaultOn = false }: { defaultOn?: boolean }) {
       />
     </button>
   );
+}
+
+/** Format an apiPut/apiDelete rejection (ApiPostError-shaped) for display. */
+function mutationError(e: unknown): string {
+  if (e && typeof e === 'object') {
+    const obj = e as { error?: unknown; message?: unknown; details?: unknown };
+    if (typeof obj.message === 'string' && obj.message.length > 0) return obj.message;
+    if (Array.isArray(obj.details) && obj.details.length > 0) {
+      return obj.details.map(String).join('; ');
+    }
+    if (typeof obj.error === 'string') return obj.error;
+  }
+  return e instanceof Error ? e.message : String(e);
 }
 
 // ─────────────────────────────────── shared markdown file shell (rules + workflows)
