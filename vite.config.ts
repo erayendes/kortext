@@ -8,7 +8,9 @@ const API_TARGET = process.env.KORTEXT_API_URL ?? `http://localhost:${KORTEXT_PO
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
-    port: 5173,
+    // Honor an injected PORT (the preview harness assigns a free one when 5173
+    // is taken); fall back to the conventional 5173 for plain `npm run dev`.
+    port: Number(process.env.PORT) || 5173,
     proxy: {
       '/api': { target: API_TARGET, changeOrigin: true },
     },
