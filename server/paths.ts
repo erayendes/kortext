@@ -73,6 +73,10 @@ export type ProjectLayout = {
   memory: string;
   worktrees: string;
   worktreesQuarantine: string;
+  /** Per-project non-secret config (hooks/integrations JSON files). */
+  settings: string;
+  /** `.env`-style file for user-managed secrets (tokens, env vars). */
+  secretsFile: string;
 };
 
 export function projectLayout(projectRoot: string): ProjectLayout {
@@ -88,6 +92,8 @@ export function projectLayout(projectRoot: string): ProjectLayout {
     memory: join(dotKortext, 'memory'),
     worktrees: join(dotKortext, 'data', 'worktrees'),
     worktreesQuarantine: join(dotKortext, 'data', 'worktrees-quarantine'),
+    settings: join(dotKortext, 'settings'),
+    secretsFile: join(dotKortext, 'secrets.env'),
   };
 }
 
