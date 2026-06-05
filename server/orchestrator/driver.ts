@@ -3,7 +3,9 @@ import type { WorkflowGraph } from '../engine/dag.ts';
 import type { Composition } from './composition.ts';
 import { runReadyItems, type RunItemResult } from './run-item.ts';
 import { runTestCycle, type TestCycleResult } from './test-cycle.ts';
-import { runReviewCycle, type ReviewCycleResult } from './review-cycle.ts';
+import { judgeReview, type ReviewCycleResult } from './review-cycle.ts';
+import { runClosure } from './closure.ts';
+import { mapWithPool } from './pool.ts';
 
 export type DriveDeps = {
   /** The wired-up runtime (real adapters + ledgers), from createComposition. */
@@ -51,6 +53,7 @@ export type DriveResult = {
 export async function driveReadyItems(deps: DriveDeps): Promise<DriveResult> {
   const { composition: c, lifecycle, graph } = deps;
   const by = deps.by ?? 'orchestrator';
+  const max = Math.max(1, deps.maxConcurrent ?? 3);
   const { repos, gateExecutor, approver, merger, deployer, registry, resolution, previewManager } = c;
 
   // Phase 1 — start fresh to_do items: each builds in its own real worktree and
@@ -69,35 +72,54 @@ export async function driveReadyItems(deps: DriveDeps): Promise<DriveResult> {
   });
 
   // Phase 2 — run the test-gate cycle for everything now in `test` (newly built
-  // above OR left there from a previous pass). Gate judgment uses the real agent.
+  // above OR left there from a previous pass). Each item's gate judgment is
+  // independent (its own gate_run rows + agent calls), so they fan out in
+  // parallel — the slow part is the agent, not any shared state.
   const inTest = repos.backlog.list({ status: 'test', limit: 1000 });
-  const tested: TestCycleResult[] = [];
-  for (const item of inTest) {
-    tested.push(await runTestCycle(item.id, { repos, lifecycle, gateExecutor, by }));
-  }
+  const tested: TestCycleResult[] = await mapWithPool(inTest, max, (item) =>
+    runTestCycle(item.id, { repos, lifecycle, gateExecutor, by }),
+  );
 
-  // Phase 3 — run the review/closure cycle for everything now in `review`
-  // (gates passed above OR left there from a previous pass). A clean close →
-  // `done`, merges to development, may trigger the epic→staging deploy; then we
+  // Phase 3 — review/closure for everything now in `review`. Two passes: the uat
+  // JUDGMENTS run in parallel (independent +prime approvals, so they surface
+  // together) while the MERGES run SERIALLY — every close grafts the item's
+  // worktree onto the shared `development` branch, and parallel git merges would
+  // race. A clean merge → `done` (may trigger the epic→staging deploy); then we
   // forget the item's ledger entry (its worktree is gone).
   const inReview = repos.backlog.list({ status: 'review', limit: 1000 });
+  const decisions = await mapWithPool(inReview, max, (item) =>
+    judgeReview(item.id, { repos, lifecycle, approver, by }),
+  );
   const reviewed: ReviewCycleResult[] = [];
-  for (const item of inReview) {
-    const result = await runReviewCycle(item.id, {
+  for (const decision of decisions) {
+    if (decision.kind === 'bounced') {
+      reviewed.push({
+        itemId: decision.itemId,
+        outcome: 'bounced',
+        uatRequired: decision.uatRequired,
+        verdict: decision.verdict,
+      });
+      continue;
+    }
+    const closure = await runClosure(decision.itemId, {
       repos,
       lifecycle,
-      approver,
       merger,
       deployer,
       previewManager,
       by,
     });
-    reviewed.push(result);
-    if (result.outcome === 'done') {
+    reviewed.push({
+      itemId: decision.itemId,
+      outcome: closure.outcome,
+      uatRequired: decision.uatRequired,
+      verdict: decision.verdict,
+    });
+    if (closure.outcome === 'done') {
       // The worktree is merged + torn down — drop the stale ledger entry so no
       // later resolve hands an adapter a dangling handle (orchestrator-layer
       // cleanup, kept out of closure to avoid a new dependency there).
-      resolution.forget(item.id);
+      resolution.forget(decision.itemId);
     }
   }
 
