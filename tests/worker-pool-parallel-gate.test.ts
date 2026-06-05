@@ -102,4 +102,56 @@ describe('runWorkflow — parallel gates (LEGAL ∥ GROWTH)', () => {
       executor.startedOrder.indexOf(growthKey),
     );
   });
+
+  it('regenerates ONLY the rejected sibling; the approved sibling holds and the run survives (§14.2)', async () => {
+    const graph = buildGraph(wfParallel);
+    const executor = new MockExecutor(() => ({ durationMs: 3 }));
+
+    // LEGAL approves immediately. GROWTH is rejected once (revise), then the
+    // regenerated artifact is approved. LEGAL's approval must NOT be re-asked,
+    // and the run must survive the GROWTH rejection.
+    const callsByPersona = new Map<string, number>();
+    const controller: GateController = {
+      pauseAtGate: async ({ gate }) => {
+        const persona = gate.persona ?? gate.phase;
+        const n = (callsByPersona.get(persona) ?? 0) + 1;
+        callsByPersona.set(persona, n);
+        if (persona === '+growth' && n === 1) {
+          return { decision: 'reject', reason: 'sharpen the metrics' };
+        }
+        return { decision: 'approve' };
+      },
+    };
+
+    const result = await runWorkflow(graph, executor, repos, {
+      concurrency: 3,
+      gates: wfParallel.gates,
+      gateController: controller,
+    });
+
+    // Run survives the GROWTH rejection.
+    expect(result.run.status).toBe('succeeded');
+    // GROWTH's gate fired twice (reject → regenerate → approve); LEGAL once.
+    expect(callsByPersona.get('+growth')).toBe(2);
+    expect(callsByPersona.get('+legal')).toBe(1);
+
+    const legalKey = [...graph.nodes.keys()].find(
+      (k) => k.endsWith('.1') && k.startsWith('analysis'),
+    )!;
+    const growthKey = [...graph.nodes.keys()].find(
+      (k) => k.endsWith('.2') && k.startsWith('analysis'),
+    )!;
+    const prdKey = [...graph.nodes.keys()].find((k) => k.startsWith('consolidate'))!;
+
+    // GROWTH step ran twice (regenerated); LEGAL ran once (held, not re-run).
+    const growthRuns = executor.startedOrder.filter((k) => k === growthKey).length;
+    const legalRuns = executor.startedOrder.filter((k) => k === legalKey).length;
+    expect(growthRuns).toBe(2);
+    expect(legalRuns).toBe(1);
+    // The dependent (PRD) still ran exactly once, after both were approved.
+    expect(executor.startedOrder.filter((k) => k === prdKey)).toHaveLength(1);
+    expect(executor.startedOrder.indexOf(prdKey)).toBeGreaterThan(
+      executor.startedOrder.lastIndexOf(growthKey),
+    );
+  });
 });

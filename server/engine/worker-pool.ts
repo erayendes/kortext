@@ -251,7 +251,11 @@ export async function runWorkflow(
   const gateResolving = new Map<string, Promise<void>>(); // in-flight approvals
   const firedGates = new Set<string>(); // gates already enqueued (fire once)
   const gatesToFire: string[] = []; // step keys whose gate is ready to enqueue
-  let rejectionReason: string | null = null;
+  // §14.2 — "revize tek başına döner". When a gate is rejected we do NOT abort
+  // the run; we regenerate only that step. The reject reason is parked here and
+  // handed to the step's re-execution (ExecutorContext.reviseFeedback), then
+  // consumed (one-shot) when the step re-launches.
+  const reviseReasonByKey = new Map<string, string>();
 
   // Resumed runs (Orchestrator.retryRun): a pre-completed step that carries a
   // gate is re-surfaced for approval, so a retry-from-rejected still asks the
@@ -272,18 +276,23 @@ export async function runWorkflow(
   let failedStepKey: string | null = null;
   let firstError: string | null = null;
 
-  const ctxFor = (runStepId: number): ExecutorContext => ({
+  const ctxFor = (runStepId: number, stepKey: string): ExecutorContext => ({
     workflowId: graph.workflowId,
     runId: run.id,
     runStepId,
     worktreePath: options.worktreePath ?? process.cwd(),
     signal: aborter.signal,
+    reviseFeedback: reviseReasonByKey.get(stepKey),
   });
 
   const launch = (stepKey: string): void => {
     const node = graph.nodes.get(stepKey);
     if (!node) return;
     const runStepId = stepRowByKey.get(stepKey)!;
+    // Build the context (folding in any pending revise feedback) BEFORE we clear
+    // the one-shot reason, so a regeneration carries the feedback exactly once.
+    const ctx = ctxFor(runStepId, stepKey);
+    reviseReasonByKey.delete(stepKey);
     repos.runs.transitionStep(runStepId, 'running');
     repos.auditLog.append({
       actor: executor.name,
@@ -294,7 +303,7 @@ export async function runWorkflow(
     });
 
     const promise = executor
-      .execute(node.step, ctxFor(runStepId))
+      .execute(node.step, ctx)
       .then(async (result) => {
         if (result.ok) {
           // Apply safety guards before we mark the step as succeeded.
@@ -422,22 +431,33 @@ export async function runWorkflow(
               payload: { phase: gate.phase, decision: 'approve' },
             });
           } else {
-            if (!rejectionReason) {
-              rejectionReason = decision.reason;
-              aborter.abort();
-            }
+            // §14.2 "revize tek başına döner": a rejected gate regenerates ONLY
+            // this step — it does NOT abort the run. Drop the step from `done`
+            // and clear its fire-marker so the scheduler re-launches it; when it
+            // completes again its gate re-fires for another approval round. The
+            // revise reason rides into the re-execution via reviseFeedback.
+            // Approved sibling gates stay in `gateApproved` and hold.
+            done.delete(gateKey);
+            firedGates.delete(gateKey);
+            gateApproved.delete(gateKey);
+            reviseReasonByKey.set(gateKey, decision.reason);
             repos.auditLog.append({
               actor: 'orchestrator',
               action: 'gate.rejected',
               resource_type: 'run',
               resource_id: String(run.id),
-              payload: { phase: gate.phase, reason: decision.reason },
+              payload: {
+                phase: gate.phase,
+                reason: decision.reason,
+                regenerate_step: gateKey,
+              },
             });
           }
         })
         .catch(() => {
-          // Aborted while awaiting (a sibling gate rejected, or the run was
-          // cancelled). The run already carries its terminal reason — settle quietly.
+          // Aborted while awaiting (the run was cancelled — a step failed, or an
+          // external block fired). The run already carries its terminal reason —
+          // settle quietly. (Gate rejections no longer abort: see else-branch.)
         })
         .finally(() => {
           gateResolving.delete(gateKey);
@@ -447,7 +467,7 @@ export async function runWorkflow(
 
     // Schedule ready steps: every dependency must be done AND, when that
     // dependency carries a gate, approved.
-    if (!failedStepKey && !rejectionReason) {
+    if (!failedStepKey) {
       const ready = graph.readyKeys(done).filter((k) => {
         if (running.has(k)) return false;
         const node = graph.nodes.get(k);
@@ -472,8 +492,9 @@ export async function runWorkflow(
     }
   }
 
-  // Mark any un-started steps as skipped (only happens after failure or rejection).
-  if (failedStepKey || rejectionReason) {
+  // Mark any un-started steps as skipped (only happens after a step failure —
+  // gate rejections no longer terminate the run, they regenerate one step).
+  if (failedStepKey) {
     for (const [key, rowId] of stepRowByKey) {
       if (done.has(key)) continue;
       if (key === failedStepKey) continue;
@@ -484,12 +505,9 @@ export async function runWorkflow(
     }
   }
 
-  let finalStatus: 'succeeded' | 'failed' | 'cancelled';
+  let finalStatus: 'succeeded' | 'failed';
   let finalError: string | null;
-  if (rejectionReason) {
-    finalStatus = 'cancelled';
-    finalError = `rejected: ${rejectionReason}`;
-  } else if (failedStepKey) {
+  if (failedStepKey) {
     finalStatus = 'failed';
     finalError = firstError;
   } else {
@@ -508,7 +526,6 @@ export async function runWorkflow(
       workflow_id: graph.workflowId,
       failed_step: failedStepKey,
       step_count: graph.size,
-      rejection_reason: rejectionReason,
     },
   });
 

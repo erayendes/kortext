@@ -17,6 +17,13 @@ export type ExecutorContext = {
   worktreePath: string;
   /** Signal aborted when the run is cancelled. */
   signal: AbortSignal;
+  /**
+   * Set only when this step is being *regenerated* after its approval gate was
+   * rejected (§14.2 "revize tek başına döner"). Carries the human's revise
+   * reason so the persona can address the feedback on the second pass. Unset on
+   * the first attempt. Executors that build a prompt should fold it in.
+   */
+  reviseFeedback?: string;
 };
 
 export type ExecutorResult = {

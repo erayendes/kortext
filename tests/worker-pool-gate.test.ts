@@ -108,15 +108,19 @@ describe('runWorkflow — gate integration', () => {
     expect(executor.startedOrder).toEqual(['phase-1.1', 'phase-2.1']);
   });
 
-  it('cancels the run with rejected: <reason> when controller rejects', async () => {
+  it('regenerates ONLY the rejected step and keeps the run alive (§14.2)', async () => {
     const graph = buildGraph(wfWithGate);
     const executor = new MockExecutor(() => ({ durationMs: 5 }));
 
+    // Reject the first approval, approve the regenerated artifact.
+    let calls = 0;
     const controller: GateController = {
-      pauseAtGate: async () => ({
-        decision: 'reject',
-        reason: 'blueprint missing acceptance criteria',
-      }),
+      pauseAtGate: async () => {
+        calls += 1;
+        return calls === 1
+          ? { decision: 'reject', reason: 'blueprint missing acceptance criteria' }
+          : { decision: 'approve' };
+      },
     };
 
     const result = await runWorkflow(graph, executor, repos, {
@@ -125,16 +129,19 @@ describe('runWorkflow — gate integration', () => {
       gateController: controller,
     });
 
-    expect(result.run.status).toBe('cancelled');
-    expect(result.run.error_message).toBe(
-      'rejected: blueprint missing acceptance criteria',
-    );
-    // Second step never started.
-    expect(executor.startedOrder).toEqual(['phase-1.1']);
-    // Remaining step is recorded as skipped.
+    // The run survives the rejection and completes.
+    expect(result.run.status).toBe('succeeded');
+    expect(result.run.error_message).toBeNull();
+    // The gated step ran TWICE (regenerated); the dependent ran once, only
+    // after the regenerated artifact was approved.
+    expect(executor.startedOrder).toEqual(['phase-1.1', 'phase-1.1', 'phase-2.1']);
+    // The dependent's row is succeeded, not skipped.
     const steps = repos.runs.listSteps(result.run.id);
     const second = steps.find((s) => s.step_index === 1);
-    expect(second?.status).toBe('skipped');
+    expect(second?.status).toBe('succeeded');
+    // The rejection was audited (so the timeline shows the revise round).
+    const entries = repos.auditLog.list({ resource_id: String(result.run.id) });
+    expect(entries.some((e) => e.action === 'gate.rejected')).toBe(true);
   });
 
   it('dispatches gate.awaiting-approval when a dispatcher is given on options', async () => {
@@ -222,45 +229,57 @@ describe('runWorkflow — gate integration', () => {
 });
 
 describe('Orchestrator.retryRun', () => {
-  it('retries a rejected run, reusing the worktree and skipping succeeded steps', async () => {
+  it('retries an interrupted (orphaned) run, reusing the worktree and skipping succeeded steps', async () => {
+    // Gate rejections no longer cancel a run (§14.2 — they regenerate one step
+    // in place). retryRun now serves crash recovery: an `orphaned:` cancelled
+    // run is resumed, re-using the worktree and skipping the steps that already
+    // succeeded before the process died.
     const { Orchestrator } = await import('../server/orchestrator/orchestrator.ts');
-
-    let attempts = 0;
     const orchestrator = new Orchestrator({
       repos,
       executor: new MockExecutor(() => ({ durationMs: 1 })),
       loadWorkflowById: (id) => (id === 'gated' ? wfWithGate : null),
       approvalQueue: new ApprovalQueue({ repos }),
-      gateController: {
-        pauseAtGate: async () => {
-          attempts += 1;
-          if (attempts === 1) {
-            return { decision: 'reject', reason: 'fix me' };
-          }
-          return { decision: 'approve' };
-        },
-      },
-      acquireWorktree: async (runId) => ({
-        path: join(tmpRoot, `wt-${runId}`),
-        release: async () => {},
-      }),
+      gateController: { pauseAtGate: async () => ({ decision: 'approve' }) },
     });
 
-    const first = await orchestrator.triggerWorkflow('gated');
-    expect(first.ok).toBe(true);
-    if (first.ok) {
-      expect(first.run.status).toBe('cancelled');
-      expect(first.run.error_message).toContain('rejected: fix me');
-    }
-    if (!first.ok) throw new Error('expected ok');
+    // Seed a crashed run: step 0 (the gated step) succeeded, then the process
+    // died and the run was marked orphaned before step 1 could run.
+    const wtPath = join(tmpRoot, 'wt-orphan');
+    const prev = repos.runs.createRun({
+      workflow_id: 'gated',
+      item_id: null,
+      status: 'queued',
+      worktree_path: wtPath,
+      triggered_by: 'test',
+    });
+    repos.runs.transitionRun(prev.id, 'running');
+    const s0 = repos.runs.addStep({
+      run_id: prev.id,
+      step_index: 0,
+      step_name: 's0',
+      persona: '+a',
+      status: 'pending',
+    });
+    repos.runs.transitionStep(s0.id, 'succeeded');
+    repos.runs.addStep({
+      run_id: prev.id,
+      step_index: 1,
+      step_name: 's1',
+      persona: '+b',
+      status: 'pending',
+    });
+    repos.runs.transitionRun(prev.id, 'cancelled', {
+      error_message: 'orphaned: process exited',
+    });
 
-    const retried = await orchestrator.retryRun(first.run.id);
+    const retried = await orchestrator.retryRun(prev.id);
     expect(retried.ok).toBe(true);
     if (retried.ok) {
       expect(retried.run.status).toBe('succeeded');
       // The retried run shares the worktree of the original (same key path).
-      expect(retried.run.worktree_path).toBe(first.run.worktree_path);
-      // First-phase step was already done; on the retry it should be marked skipped(resumed).
+      expect(retried.run.worktree_path).toBe(wtPath);
+      // First-phase step was already done; on the retry it is marked skipped(resumed).
       const steps = repos.runs.listSteps(retried.run.id);
       const firstStep = steps.find((s) => s.step_index === 0);
       expect(firstStep?.status).toBe('skipped');

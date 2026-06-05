@@ -228,7 +228,15 @@ ${formatPathList(step.inputs)}
 
 Outputs — call the Write tool ONCE per path, using these EXACT paths:
 ${formatPathList(step.outputs)}
-
+${
+  ctx.reviseFeedback
+    ? `
+⚠ REVISION REQUESTED — a previous attempt at this step was rejected by +prime.
+Address this feedback and rewrite the Output(s) accordingly:
+${ctx.reviseFeedback}
+`
+    : ''
+}
 ═══════════════════════════════════════════════════════════════════════
 Now perform the Task. For each Output path above, invoke the Write tool with
 the path verbatim and the deliverable body. Do NOT paste the deliverable
