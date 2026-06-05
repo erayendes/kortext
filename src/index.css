@@ -163,6 +163,9 @@ html.light body::before { background: radial-gradient(120% 100% at 50% -40%, rgb
 @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .rise { animation: rise 0.42s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin 0.9s linear infinite; }
+
 /* ---------- DASHBOARD ---------- */
 .dash { flex: 1; min-width: 0; display: flex; }
 .dash-main { flex: 1; min-width: 0; overflow-y: auto; padding: 22px 24px 32px; }

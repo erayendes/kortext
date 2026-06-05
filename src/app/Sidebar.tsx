@@ -9,6 +9,7 @@
 import { Link, useRouterState } from '@tanstack/react-router';
 import {
   LayoutDashboard,
+  Rocket,
   SquareKanban,
   BookMarked,
   Brain,
@@ -36,6 +37,9 @@ const PROJECT_NAV: NavSection[] = [
     heading: 'Workspace',
     items: [
       { to: '/', label: 'Dashboard', icon: LayoutDashboard },
+      // Init-phase view: visible while the project is still being set up.
+      // TODO(v6): hide once the development cycle starts (needs an init-status signal).
+      { to: '/initializing', label: 'Setup', icon: Rocket },
       { to: '/board', label: 'Board', icon: SquareKanban },
       { to: '/references', label: 'References', icon: BookMarked },
       { to: '/memory', label: 'Memory', icon: Brain },
