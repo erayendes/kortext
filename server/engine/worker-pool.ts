@@ -13,6 +13,12 @@ export type GatePauseContext = {
   gate: ApprovalGate;
   runId: number;
   workflowId: string;
+  /**
+   * Aborts when the run is cancelled (e.g. a sibling gate was rejected). A
+   * controller that waits on a human (DB poll) should forward this so a
+   * pending approval stops waiting instead of hanging the run.
+   */
+  signal?: AbortSignal;
 };
 
 export type GateDecision =
@@ -226,35 +232,35 @@ export async function runWorkflow(
     }
   }
 
-  const gateByStepIndex = new Map<number, ApprovalGate>();
-  for (const gate of options.gates ?? []) {
-    if (gate.afterStepIndex >= 0) gateByStepIndex.set(gate.afterStepIndex, gate);
+  // Per-step gates. A gate is attached to the step whose completion should
+  // pause for +prime approval. Unlike the old index-barrier model — which
+  // froze EVERY later step into a single linear phase boundary — a gate now
+  // blocks only that step's dependents. Independent siblings (e.g. LEGAL ∥
+  // GROWTH) run and await approval in parallel; a consumer (PRD) becomes
+  // ready only once every gated dependency it lists is done AND approved.
+  const gateByStepKey = new Map<string, ApprovalGate>();
+  {
+    const keyByIndex = new Map<number, string>();
+    for (const node of orderedNodes) keyByIndex.set(node.step.index, node.step.key);
+    for (const gate of options.gates ?? []) {
+      const key = keyByIndex.get(gate.afterStepIndex);
+      if (key) gateByStepKey.set(key, gate);
+    }
   }
-  const firedGateIndices = new Set<number>();
-  let pendingGate: ApprovalGate | null = null;
+  const gateApproved = new Set<string>(); // step keys whose gate is approved
+  const gateResolving = new Map<string, Promise<void>>(); // in-flight approvals
+  const firedGates = new Set<string>(); // gates already enqueued (fire once)
+  const gatesToFire: string[] = []; // step keys whose gate is ready to enqueue
   let rejectionReason: string | null = null;
 
-  // Resumed runs (Orchestrator.retryRun) replay the lowest gate that sat
-  // *after* one of the resumed steps. Without this, the scheduler's barrier
-  // would block forever — the gate would never fire because the step that
-  // would have fired it was pre-marked as skipped.
+  // Resumed runs (Orchestrator.retryRun): a pre-completed step that carries a
+  // gate is re-surfaced for approval, so a retry-from-rejected still asks the
+  // human before its dependents proceed. Dependents stay blocked until the
+  // re-fired gate is approved — same contract as a fresh run.
   for (const node of orderedNodes) {
-    if (!preCompleted.has(node.step.key)) continue;
-    const gate = gateByStepIndex.get(node.step.index);
-    if (gate && !pendingGate) {
-      pendingGate = gate;
-      firedGateIndices.add(gate.afterStepIndex);
-      repos.auditLog.append({
-        actor: 'orchestrator',
-        action: 'gate.paused',
-        resource_type: 'run',
-        resource_id: String(run.id),
-        payload: {
-          phase: gate.phase,
-          after_step_index: gate.afterStepIndex,
-          reason: 'resumed',
-        },
-      });
+    if (preCompleted.has(node.step.key) && gateByStepKey.has(node.step.key)) {
+      firedGates.add(node.step.key);
+      gatesToFire.push(node.step.key);
     }
   }
 
@@ -331,18 +337,12 @@ export async function runWorkflow(
             payload: { run_id: run.id, step_key: stepKey },
           });
           done.add(stepKey);
-          // Gate trigger: a gate fires once after the step at its afterStepIndex completes.
-          const gate = gateByStepIndex.get(node.step.index);
-          if (gate && !firedGateIndices.has(gate.afterStepIndex)) {
-            firedGateIndices.add(gate.afterStepIndex);
-            pendingGate = gate;
-            repos.auditLog.append({
-              actor: 'orchestrator',
-              action: 'gate.paused',
-              resource_type: 'run',
-              resource_id: String(run.id),
-              payload: { phase: gate.phase, after_step_index: gate.afterStepIndex },
-            });
+          // A gated step, on completion, queues its approval. The scheduler
+          // loop enqueues a non-blocking gate resolution — so sibling steps
+          // and sibling gates keep making progress in parallel.
+          if (gateByStepKey.has(stepKey) && !firedGates.has(stepKey)) {
+            firedGates.add(stepKey);
+            gatesToFire.push(stepKey);
           }
         } else {
           repos.runs.transitionStep(runStepId, 'failed', {
@@ -380,74 +380,95 @@ export async function runWorkflow(
     running.set(stepKey, promise);
   };
 
-  // Scheduler loop.
-  while (
-    done.size + (failedStepKey ? 1 : 0) < graph.size ||
-    running.size > 0 ||
-    pendingGate !== null
-  ) {
-    // Gate barrier: when a gate is pending we drain in-flight work first,
-    // then ask the controller for approve/reject before scheduling more steps.
-    const gateToProcess: ApprovalGate | null = pendingGate;
-    if (gateToProcess && running.size === 0 && !failedStepKey && !rejectionReason) {
+  // Scheduler loop. Steps and gate approvals settle concurrently; the loop
+  // wakes whenever either a step finishes or a gate is decided.
+  while (true) {
+    // Enqueue any gates whose step has completed. Each resolution runs in the
+    // background — it blocks neither sibling steps nor sibling gates, so two
+    // independent artifacts can sit awaiting +prime at the same time.
+    while (gatesToFire.length > 0) {
+      const gateKey = gatesToFire.shift()!;
+      const gate = gateByStepKey.get(gateKey)!;
       if (!options.gateController) {
         // Exceptional exit — drop the run from the registry before throwing so
         // a misconfigured run never leaks a stale cancellable entry.
         options.registry?.unregister(run.id);
         throw new Error(
-          `gate encountered but no gateController provided (phase: ${(gateToProcess as ApprovalGate).phase})`,
+          `gate encountered but no gateController provided (phase: ${gate.phase})`,
         );
       }
-      pendingGate = null;
-      const decision = await options.gateController.pauseAtGate({
-        gate: gateToProcess,
-        runId: run.id,
-        workflowId: graph.workflowId,
+      repos.auditLog.append({
+        actor: 'orchestrator',
+        action: 'gate.paused',
+        resource_type: 'run',
+        resource_id: String(run.id),
+        payload: { phase: gate.phase, after_step_index: gate.afterStepIndex },
       });
-      if (decision.decision === 'approve') {
-        repos.auditLog.append({
-          actor: 'orchestrator',
-          action: 'gate.resumed',
-          resource_type: 'run',
-          resource_id: String(run.id),
-          payload: { phase: (gateToProcess as ApprovalGate).phase, decision: 'approve' },
+      const resolution = options.gateController
+        .pauseAtGate({
+          gate,
+          runId: run.id,
+          workflowId: graph.workflowId,
+          signal: aborter.signal,
+        })
+        .then((decision) => {
+          if (decision.decision === 'approve') {
+            gateApproved.add(gateKey);
+            repos.auditLog.append({
+              actor: 'orchestrator',
+              action: 'gate.resumed',
+              resource_type: 'run',
+              resource_id: String(run.id),
+              payload: { phase: gate.phase, decision: 'approve' },
+            });
+          } else {
+            if (!rejectionReason) {
+              rejectionReason = decision.reason;
+              aborter.abort();
+            }
+            repos.auditLog.append({
+              actor: 'orchestrator',
+              action: 'gate.rejected',
+              resource_type: 'run',
+              resource_id: String(run.id),
+              payload: { phase: gate.phase, reason: decision.reason },
+            });
+          }
+        })
+        .catch(() => {
+          // Aborted while awaiting (a sibling gate rejected, or the run was
+          // cancelled). The run already carries its terminal reason — settle quietly.
+        })
+        .finally(() => {
+          gateResolving.delete(gateKey);
         });
-      } else {
-        rejectionReason = decision.reason;
-        repos.auditLog.append({
-          actor: 'orchestrator',
-          action: 'gate.rejected',
-          resource_type: 'run',
-          resource_id: String(run.id),
-          payload: { phase: (gateToProcess as ApprovalGate).phase, reason: decision.reason },
-        });
-        aborter.abort();
-      }
+      gateResolving.set(gateKey, resolution);
     }
 
-    if (!failedStepKey && !rejectionReason && !pendingGate) {
-      // Gate barrier: do not start any step whose index lies past an un-fired gate.
-      // This makes gates semantically equivalent to a phase boundary even when the
-      // pure data-flow DAG sees later steps as already runnable in parallel.
-      let barrier = Number.POSITIVE_INFINITY;
-      for (const idx of gateByStepIndex.keys()) {
-        if (!firedGateIndices.has(idx) && idx < barrier) barrier = idx;
-      }
+    // Schedule ready steps: every dependency must be done AND, when that
+    // dependency carries a gate, approved.
+    if (!failedStepKey && !rejectionReason) {
       const ready = graph.readyKeys(done).filter((k) => {
         if (running.has(k)) return false;
         const node = graph.nodes.get(k);
-        if (node && node.step.index > barrier) return false;
-        return true;
+        if (!node) return false;
+        return node.depKeys.every(
+          (d) => !gateByStepKey.has(d) || gateApproved.has(d),
+        );
       });
       while (ready.length > 0 && running.size < concurrency) {
-        const next = ready.shift()!;
-        launch(next);
+        launch(ready.shift()!);
       }
     }
 
-    if (running.size === 0 && !pendingGate) break;
-    if (running.size > 0) {
-      await Promise.race(running.values());
+    // Done when nothing is running, no gate is resolving, and none are queued.
+    if (running.size === 0 && gateResolving.size === 0 && gatesToFire.length === 0) {
+      break;
+    }
+
+    const waiters = [...running.values(), ...gateResolving.values()];
+    if (waiters.length > 0) {
+      await Promise.race(waiters);
     }
   }
 

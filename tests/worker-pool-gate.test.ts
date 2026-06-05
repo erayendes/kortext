@@ -31,6 +31,7 @@ const wfWithGate = parseWorkflowMarkdown(
 
 ## Phase 2
 2. **+b:** second
+   - Inputs: a.md
    - Outputs: b.md
 `,
   'gated',
