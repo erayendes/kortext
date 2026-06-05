@@ -184,7 +184,7 @@ Pull Request açıldığında veya görev denetim gerektirdiğinde:
 
 - +backend-developer, +frontend-developer, +db-admin personalarına görev ata.
 - İnceleme sırasında tespit edilen teknik borçları `// todo: [tech-debt]` ile işaretle.
-- Borçları önceliklendir ve `kortext-backlog-add.py` aracıyla (`--type debt` parametresi kullanarak) backlog sistemine ekleyerek takip et.
+- Borçları önceliklendir ve `.kortext/foundation/backlog.yaml`'e `type: debt` item ekleyerek (dosya köprüsü) backlog'a kaydet ve takip et.
 
 ### 10. Project Documentation
 **Kategori:** `routine`

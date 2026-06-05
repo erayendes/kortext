@@ -88,7 +88,8 @@ Yön [DECISIONS Bölüm 0](./DECISIONS.md)'da onaylı. Sıralı adımlar:
 
 - [ ] `templates/AGENTS.md` (AI bootstrap) · `agents/*.md` (14 persona) · `rules/*.md` (6 rule) · `workflows/*.md` (10 workflow) · `templates/{foundation,references,reports,memory,backlogs}/*.md` (iskelet).
 - [ ] Bilinen risk: `existing-project-analysis.md` (hızlı yazıldı, kalibre), `spike-pipeline.md` (dinamik persona oversimplification).
-- [ ] **Persona/workflow tutarlılık** — personalar eski araçlara atıf yapıyor (örn. `kortext-backlog-add.py`, `add_backlog_item` MCP) ama gerçek yol artık dosya köprüsü. ✅ `planning-pipeline.md` köprüye göre kalibre edildi (2026-06-05, §14.7 — `update_backlog_item` atıfları temizlendi, "bütün dosyayı yeniden yaz" deseni). **Kalan:** diğer workflow/persona dosyalarında ölü araç atıflarını tara (`add_backlog_item`, `kortext-backlog-add.py`, `update_backlog_item`).
+- [x] ~~**Persona/workflow tutarlılık — backlog araç atıfları**~~ ✅ (2026-06-05, §14.7). Tüm `add_backlog_item` / `update_backlog_item` / `kortext-backlog-add.py` / `kortext-bulk-plan.py` atıfları dosya köprüsüne (`backlog.yaml` → `type:` + `parent_epic:`) çevrildi: `planning-pipeline.md`, `deployment-cycle.md`, `hotfix-pipeline.md`, `rollback-pipeline.md`, `operation-manager.md`, `qa-engineer.md`, `engineering-manager.md`, `rules/commands.md`, `rules/behavior.md`. (planning-pipeline'da kalan tek atıf kasıtlı "MCP YOKTUR" notu.)
+- [ ] **Stale `.py` komut katmanı (geniş Faz 13)** — backlog-dışı v2 script atıfları hâlâ var: `kortext-session-start.py`, `kortext-item-start.py`, `kortext-item-transition.py`, `kortext-handover.py`, `kortext-lock.py`, `kortext-consistency-check.py`, `kortext-context-check.py`, `kortext-item-check.py`, `kortext-backlog-{done,health,sync}.py` (rules/commands.md "Çağrılan Script" sütunu + agents/workflows/templates). v3 TS runtime'da bu script'ler yok → komut katmanını gerçek mekanizmaya (engine/UI tetikleme) göre baştan kalibre et.
 
 ---
 

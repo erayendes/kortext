@@ -201,7 +201,7 @@ Projeye özel `workspace/references/` ve `workspace/reports/` dosyalarında onay
 
 ## Hata Yönetimi
 
-- **Hata Tespiti:** Bir ajan başka bir ajanın hatasını tespit ederse, doğrudan düzeltmez; ilgili ajana bildirir ve `kortext-backlog-add.py` ile `workspace/memory/backlog/BXX-[bug-name].md` formatında bug olarak kaydeder. İlgili Epic ilişkisi `epic-dashboard.md` içinde tutulur.
+- **Hata Tespiti:** Bir ajan başka bir ajanın hatasını tespit ederse, doğrudan düzeltmez; ilgili ajana bildirir ve `.kortext/foundation/backlog.yaml`'e `type: bug` item ekleyerek (dosya köprüsü) bug olarak kaydeder. İlgili Epic ilişkisini `parent_epic:` alanıyla kurar.
 - **Teknik Çatışma:** +engineering-manager hakem olarak karar verir.
 - **Son Söz:** Tüm çatışmalarda +prime'ın kararı kesindir.
 

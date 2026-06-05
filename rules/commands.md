@@ -10,31 +10,31 @@ Bu tablo Faz 2 (glue layer) kapsamında eklendi. Her komutun hangi persona taraf
 |---|---|---|---|
 | `!start analysis` | +operation-manager | workflows/new-project-analysis.md | `kortext-session-start.py` |
 | `!start onboard` | +operation-manager | workflows/existing-project-analysis.md | `kortext-session-start.py` |
-| `!start planning` | +operation-manager | workflows/planning-pipeline.md | `kortext-bulk-plan.py` |
-| `!start spike` | +engineering-manager | workflows/spike-pipeline.md | `kortext-backlog-add.py --type spike` |
+| `!start planning` | +operation-manager | workflows/planning-pipeline.md | `backlog.yaml` (dosya köprüsü) |
+| `!start spike` | +engineering-manager | workflows/spike-pipeline.md | `backlog.yaml` → `type: spike` |
 | `!setup environment` | +devops-engineer | workflows/environment-setup.md | — |
 | `!start development` | +engineering-manager | workflows/development-cycle.md | `kortext-item-start.py` |
 | `!start test` | +qa-engineer | workflows/test-cycle.md | `kortext-item-transition.py` |
 | `!deploy prod` | +delivery-manager | workflows/deployment-cycle.md | — (manuel git tag + CI) |
 | `!trigger-rollback` | +delivery-manager | workflows/rollback-pipeline.md | (manuel git revert) |
-| `!start-hotfix` | +delivery-manager | workflows/hotfix-pipeline.md | `kortext-backlog-add.py --type hotfix` |
+| `!start-hotfix` | +delivery-manager | workflows/hotfix-pipeline.md | `backlog.yaml` → `type: hotfix` |
 | `!status` | +operation-manager | — | `kortext-session-start.py` + `kortext-context-check.py` |
 | `!continue` | +prime | — (checkpoint onayı) | — |
 | `!approve` | +prime | — (gate onayı) | `kortext-item-transition.py` |
 | `!handover` | (herhangi ajan) | — | `kortext-handover.py` |
-| `!add task` | +engineering-manager | — | `kortext-backlog-add.py --type task` |
-| `!add bug` | +qa-engineer | — | `kortext-backlog-add.py --type bug` |
-| `!add debt` | +engineering-manager | — | `kortext-backlog-add.py --type debt` |
+| `!add task` | +engineering-manager | — | `backlog.yaml` → `type: task` |
+| `!add bug` | +qa-engineer | — | `backlog.yaml` → `type: bug` |
+| `!add debt` | +engineering-manager | — | `backlog.yaml` → `type: debt` |
 | `!check` | +operation-manager | — | `kortext-consistency-check.py` |
 
 ### Yeni Komutlar (Faz 2'de Tanıtılan)
 
 - `!trigger-rollback` — +delivery-manager tarafından son güvenli sürüme geri dönüş akışını başlatır. `workflows/rollback-pipeline.md` üzerinden ilerler; manuel git revert sonrası rollback kayıtları işlenir.
-- `!start-hotfix` — +delivery-manager tarafından kritik production hatası için hotfix akışı başlatır. `workflows/hotfix-pipeline.md` üzerinden ilerler; `kortext-backlog-add.py --type hotfix` ile backlog'a `HXX-` prefix'li item eklenir.
+- `!start-hotfix` — +delivery-manager tarafından kritik production hatası için hotfix akışı başlatır. `workflows/hotfix-pipeline.md` üzerinden ilerler; `.kortext/foundation/backlog.yaml`'e `type: hotfix`, `HXX-` prefix'li item eklenir (dosya köprüsü).
 - `!continue` — +prime tarafından checkpoint onayı olarak verilir. Workflow açmaz, ajanın bir sonraki adıma geçmesini onaylar. `development-cycle.md`'deki checkpoint mekanizmasında kullanılır.
 - `!approve` — +prime tarafından gate onayı olarak verilir. `Review` statüsündeki bir item'ı `Done`'a taşımak için `kortext-item-transition.py` tetikler.
 - `!handover` — Herhangi bir ajan tarafından ara devir için kullanılabilir. `kortext-handover.py` ile `workspace/memory/handover.md`'ye yeni devir kaydı eklenir.
-- `!add task` / `!add bug` / `!add debt` — Sırasıyla +engineering-manager, +qa-engineer ve +engineering-manager tarafından direkt backlog girişi için. `kortext-backlog-add.py --type <task|bug|debt>` çağırır.
+- `!add task` / `!add bug` / `!add debt` — Sırasıyla +engineering-manager, +qa-engineer ve +engineering-manager tarafından direkt backlog girişi için. `.kortext/foundation/backlog.yaml`'e `type: <task|bug|debt>` item ekler (dosya köprüsü).
 - `!check` — +operation-manager tarafından tutarlılık kontrolü olarak çağrılır. `kortext-consistency-check.py` çalıştırır; eski pattern kalıntılarını tespit eder.
 
 ## Ana Komutlar

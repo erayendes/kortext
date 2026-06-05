@@ -4,7 +4,7 @@
 
 ## Triaj
 
-1. **+operation-manager:** Severity sınıflandır (P0 sistem/veri kaybı — derhal, prime eş zamanlı; P1 temel akış — derhal, prime bilgilendir; P2 kısmi/workaround — prime kararıyla). Hotfix'in doğru yol olduğunu doğrula: hata eski sürümde de var / migration geri alınamaz / izole modülde hızlı düzeltilir. Son deploy kaynaklı + revert güvenliyse prime'ı `rollback-pipeline`'a yönlendir ve durdur. Motor incident bug'ı açar (`add_backlog_item --type bug`, ilgili Epic).
+1. **+operation-manager:** Severity sınıflandır (P0 sistem/veri kaybı — derhal, prime eş zamanlı; P1 temel akış — derhal, prime bilgilendir; P2 kısmi/workaround — prime kararıyla). Hotfix'in doğru yol olduğunu doğrula: hata eski sürümde de var / migration geri alınamaz / izole modülde hızlı düzeltilir. Son deploy kaynaklı + revert güvenliyse prime'ı `rollback-pipeline`'a yönlendir ve durdur. Motor, ilgili Epic'e bağlı yeni bir `type: bug` item açar (dosya köprüsü: backlog.yaml → ingester).
    - inputs: `.kortext/references/STACK.md`, `.kortext/references/STRUCTURE.md`
    - outputs: `.kortext/reports/delivery-reports.md`, incident-triaged
 
