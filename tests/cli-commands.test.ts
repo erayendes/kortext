@@ -79,6 +79,55 @@ describe('startCommand', () => {
       expect(result.errorMessage).toMatch(/empty|no steps/i);
     }
   });
+
+  describe('bounded auto-chain (chainThroughWorkflowId)', () => {
+    // A → B → C, each declaring the next via "**Sonraki akış:**".
+    function writeChain() {
+      writeFileSync(
+        join(workflowsDir, 'alpha.md'),
+        `# Alpha\n\n## P\n1. **+only:** a\n   - Outputs: a.md\n\n**Sonraki akış:** \`beta\`\n`,
+        'utf8',
+      );
+      writeFileSync(
+        join(workflowsDir, 'beta.md'),
+        `# Beta\n\n## P\n1. **+only:** b\n   - Outputs: b.md\n\n**Sonraki akış:** \`gamma\`\n`,
+        'utf8',
+      );
+      writeFileSync(
+        join(workflowsDir, 'gamma.md'),
+        `# Gamma\n\n## P\n1. **+only:** c\n   - Outputs: c.md\n`,
+        'utf8',
+      );
+    }
+
+    it('without chainThroughWorkflowId, runs exactly one workflow (no chain)', async () => {
+      writeChain();
+      const result = await startCommand({ repos, workflowsDir, workflowId: 'alpha', executor: 'mock' });
+      expect(result.ok).toBe(true);
+      const ran = repos.runs.listRuns({ limit: 50 }).map((r) => r.workflow_id);
+      expect(ran).toContain('alpha');
+      expect(ran).not.toContain('beta');
+      expect(ran).not.toContain('gamma');
+    });
+
+    it('chains through the named workflow then STOPS (does not roll past it)', async () => {
+      writeChain();
+      const result = await startCommand({
+        repos,
+        workflowsDir,
+        workflowId: 'alpha',
+        executor: 'mock',
+        chainThroughWorkflowId: 'beta',
+      });
+      expect(result.ok).toBe(true);
+      const ran = repos.runs.listRuns({ limit: 50 }).map((r) => r.workflow_id);
+      // alpha ran, chained into beta...
+      expect(ran).toContain('alpha');
+      expect(ran).toContain('beta');
+      // ...but NOT gamma — the chain stops after the workflow we chain *through*.
+      expect(ran).not.toContain('gamma');
+    });
+  });
 });
 
 describe('approveCommand', () => {

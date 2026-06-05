@@ -7,6 +7,7 @@ import { buildGraph } from '../engine/dag.ts';
 import { runWorkflow, type SafetyGuards } from '../engine/worker-pool.ts';
 import { createExecutor, type ExecutorKind } from './executor-factory.ts';
 import type { ApprovalQueue } from '../orchestrator/approval-queue.ts';
+import { chainNextWorkflow } from '../orchestrator/pipeline-chainer.ts';
 import { runtimeLayout } from '../paths.ts';
 
 /**
@@ -30,6 +31,19 @@ export type StartCommandInput = {
    * (`kortext start`) leave it undefined unless extended later.
    */
   safety?: SafetyGuards;
+  /**
+   * When set, after this workflow succeeds the runner follows each workflow's
+   * `**Sonraki akış:**` pointer (nextWorkflowId), running the chain until it has
+   * just completed the workflow whose id equals this value — then stops.
+   *
+   * This bounds the auto-chain to the *setup* phase. Onboarding passes
+   * `'planning-pipeline'` so a new project runs analysis → planning (which
+   * derives the backlog via `add_backlog_item`) and then STOPS — it must not
+   * roll on into environment-setup → development-cycle (building the product is
+   * the gated driver's job, not a side effect of onboarding). Left undefined,
+   * `start` runs exactly one workflow (the original CLI behavior).
+   */
+  chainThroughWorkflowId?: string;
 };
 
 export type StartCommandResult =
@@ -83,11 +97,39 @@ export async function startCommand(input: StartCommandInput): Promise<StartComma
     safety: input.safety,
   });
 
+  let lastRun = result.run;
+  let lastDef = def;
+
+  // Optional bounded auto-chain (see chainThroughWorkflowId). Follow the
+  // nextWorkflowId pointer hop-by-hop while runs keep succeeding, stopping once
+  // the workflow we were told to chain *through* has run. chainNextWorkflow
+  // records pipeline.chained / chain-skipped audit entries for each hop.
+  const stopAfter = input.chainThroughWorkflowId;
+  if (stopAfter) {
+    while (
+      lastRun.status === 'succeeded' &&
+      lastDef.id !== stopAfter &&
+      lastDef.nextWorkflowId
+    ) {
+      const chain = await chainNextWorkflow(lastRun, lastDef, {
+        repos: input.repos,
+        executor,
+        loadWorkflowById: (id) => registry.get(id) ?? null,
+        runOptions: { concurrency: input.concurrency ?? 3, safety: input.safety },
+      });
+      if (!chain.chained) break;
+      lastRun = chain.run;
+      lastDef = chain.definition;
+    }
+  }
+
   return {
     ok: true,
-    runId: result.run.id,
-    status: result.run.status,
-    failedStepKey: result.failedStepKey,
+    runId: lastRun.id,
+    status: lastRun.status,
+    // failedStepKey only meaningful for the first run; chained runs surface
+    // their own failures via status + the audit log.
+    failedStepKey: lastRun.id === result.run.id ? result.failedStepKey : null,
   };
 }
 

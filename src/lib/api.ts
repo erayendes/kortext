@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import type { ProjectMeta } from './api-types.ts';
 
 /**
  * Tiny JSON fetcher — throws on non-2xx so usePolling can surface errors.
@@ -141,6 +142,22 @@ export function usePolling<T>(path: string, intervalMs = 3000): PollingState<T> 
   };
 
   return { data, error, loading, tick, refresh };
+}
+
+/**
+ * One-time fetch of the project metadata written at onboarding (name/code/…).
+ * Project meta is effectively static after init, so a single GET (no polling)
+ * is enough — every chrome surface that shows the project name shares this.
+ * Returns `null` until loaded (callers fall back to a placeholder).
+ */
+export function useProjectMeta(): ProjectMeta | null {
+  const [meta, setMeta] = useState<ProjectMeta | null>(null);
+  useEffect(() => {
+    void apiGet<{ meta: ProjectMeta }>('/api/project-meta')
+      .then((r) => setMeta(r.meta))
+      .catch(() => undefined);
+  }, []);
+  return meta;
 }
 
 /**
