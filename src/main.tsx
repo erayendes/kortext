@@ -11,6 +11,20 @@ import './index.css';
 // Apply the persisted theme before first paint to avoid a light/dark flash.
 initTheme();
 
+// Hash-router deep-link normalizer. The app uses hash history, so the canonical
+// URL form is `/#/route`. If the page loads on a *bare* path with no hash — a
+// bookmarked/typed `/initializing`, or index.html served for a deep path — the
+// hash is empty and the router boots at `/` (Dashboard). Rewrite the bare deep
+// link into its hash form ONCE, before the router mounts, so direct navigation
+// lands on the right screen. This also resets pathname to `/`, so later `<Link>`
+// clicks produce clean `/#/route` URLs instead of `/initializing#/board`.
+{
+  const { pathname, search, hash } = window.location;
+  if (pathname !== '/' && !hash) {
+    window.history.replaceState(null, '', `/#${pathname}${search}`);
+  }
+}
+
 type GateState = 'loading' | 'onboarding' | 'app';
 
 /**

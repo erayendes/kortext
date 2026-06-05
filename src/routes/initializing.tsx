@@ -143,12 +143,51 @@ function InitializingView({ onRefresh }: { onRefresh: () => void }) {
   );
   const rows = useMemo(() => deriveRows(data?.questions ?? []), [data]);
   const [openRow, setOpenRow] = useState<InitRow | null>(null);
+  // When the drawer is opened via the row's "Revize" button, land directly in
+  // revise mode; a plain row/"görüntüle" open lands in read mode.
+  const [openRevise, setOpenRevise] = useState(false);
+  // Key of the row whose inline "Onayla" POST is in flight (guards double-fire).
+  const [approvingKey, setApprovingKey] = useState<string | null>(null);
 
   // Keep the open drawer's row fresh as polling reconciles status/answer.
   const liveOpenRow = useMemo(() => {
     if (!openRow) return null;
     return rows.find((r) => r.key === openRow.key) ?? openRow;
   }, [openRow, rows]);
+
+  // Inline approve — mirrors the drawer's approve path so +prime can clear a row
+  // straight from the timeline without opening it (the screen-level fix for the
+  // dead row buttons). Run-bound questions approve via the run endpoint; loose
+  // questions answer directly.
+  const approveRow = useCallback(
+    async (row: InitRow) => {
+      const q = row.question;
+      if (!q || approvingKey) return;
+      setApprovingKey(row.key);
+      try {
+        if (q.run_id != null) {
+          await apiPost(`/api/runs/${q.run_id}/approve`, {
+            answer: 'approve',
+            answered_by: 'prime',
+          });
+        } else {
+          await apiPost(`/api/questions/${q.id}/answer`, {
+            answer: 'approve',
+            answered_by: 'prime',
+          });
+        }
+        refresh();
+      } finally {
+        setApprovingKey(null);
+      }
+    },
+    [approvingKey, refresh],
+  );
+
+  const openRowAt = useCallback((row: InitRow, revise: boolean) => {
+    setOpenRevise(revise);
+    setOpenRow(row);
+  }, []);
 
   const remaining = rows.filter((r) => r.status !== 'approved').length;
 
@@ -195,7 +234,15 @@ function InitializingView({ onRefresh }: { onRefresh: () => void }) {
             <EmptyRow text="Henüz üretilen döküman yok — ajanlar başladığında burada görünecek." />
           ) : (
             rows.map((row, i) => (
-              <TimelineRow key={row.key} row={row} index={i} onOpen={() => setOpenRow(row)} />
+              <TimelineRow
+                key={row.key}
+                row={row}
+                index={i}
+                approving={approvingKey === row.key}
+                onOpen={() => openRowAt(row, false)}
+                onApprove={() => void approveRow(row)}
+                onRevise={() => openRowAt(row, true)}
+              />
             ))
           )}
         </div>
@@ -203,6 +250,7 @@ function InitializingView({ onRefresh }: { onRefresh: () => void }) {
 
       <ArtifactDrawer
         row={liveOpenRow}
+        initialRevise={openRevise}
         onClose={() => setOpenRow(null)}
         onAnswered={() => {
           refresh();
@@ -218,11 +266,17 @@ function InitializingView({ onRefresh }: { onRefresh: () => void }) {
 function TimelineRow({
   row,
   index,
+  approving,
   onOpen,
+  onApprove,
+  onRevise,
 }: {
   row: InitRow;
   index: number;
+  approving: boolean;
   onOpen: () => void;
+  onApprove: () => void;
+  onRevise: () => void;
 }) {
   const meta = STATUS_META[row.status];
   const Initializing = row.status === 'initializing';
@@ -252,13 +306,34 @@ function TimelineRow({
       </div>
       <div className="w-right" style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
         {row.status === 'need_action' ? (
-          <span className="prime-acts" onClick={onOpen}>
-            <span className="btn btn-sm btn-approve" style={{ pointerEvents: 'none' }}>
+          <span className="prime-acts">
+            <button
+              type="button"
+              className="btn btn-sm btn-approve"
+              disabled={approving}
+              onClick={(e) => {
+                e.stopPropagation();
+                onApprove();
+              }}
+            >
+              {approving ? (
+                <Loader2 style={{ width: 12, height: 12 }} className="spin" />
+              ) : (
+                <Check style={{ width: 12, height: 12 }} />
+              )}{' '}
               Onayla
-            </span>
-            <span className="btn btn-line btn-sm" style={{ pointerEvents: 'none' }}>
-              Revize
-            </span>
+            </button>
+            <button
+              type="button"
+              className="btn btn-line btn-sm"
+              disabled={approving}
+              onClick={(e) => {
+                e.stopPropagation();
+                onRevise();
+              }}
+            >
+              <PenLine style={{ width: 12, height: 12 }} /> Revize
+            </button>
           </span>
         ) : (
           <span className="w-name" style={{ color: 'var(--fg-faint)' }}>
@@ -274,10 +349,12 @@ function TimelineRow({
 
 function ArtifactDrawer({
   row,
+  initialRevise,
   onClose,
   onAnswered,
 }: {
   row: InitRow | null;
+  initialRevise: boolean;
   onClose: () => void;
   onAnswered: () => void;
 }) {
@@ -321,13 +398,14 @@ function ArtifactDrawer({
   const [reason, setReason] = useState('');
   const [err, setErr] = useState<string | null>(null);
 
-  // Reset the per-row action state when the drawer target changes.
+  // Reset the per-row action state when the drawer target changes. Honour the
+  // entry mode: opening via the row's "Revize" button lands in revise mode.
   useEffect(() => {
-    setReviseMode(false);
+    setReviseMode(initialRevise && row?.status === 'need_action');
     setReason('');
     setErr(null);
     setBusy(false);
-  }, [row?.key]);
+  }, [row?.key, initialRevise, row?.status]);
 
   const approve = useCallback(async () => {
     if (!row?.question || busy) return;
