@@ -23,6 +23,12 @@ export type EnqueueInput = {
   stepId?: number | null;
   question: string;
   choices?: string[];
+  /** Gate UI contract: artifact awaiting approval (step's first output). */
+  artifactPath?: string | null;
+  /** Gate UI contract: persona that produced the artifact. */
+  persona?: string | null;
+  /** Gate UI contract: the gate's phase. */
+  phase?: string | null;
 };
 
 export type WaitOptions = {
@@ -44,6 +50,9 @@ export class ApprovalQueue {
       step_id: input.stepId ?? null,
       question: input.question,
       choices: input.choices ?? [],
+      artifact_path: input.artifactPath ?? null,
+      persona: input.persona ?? null,
+      phase: input.phase ?? null,
     });
     this.repos.auditLog.append({
       actor: 'orchestrator',

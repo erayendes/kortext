@@ -4,7 +4,11 @@ import type { PendingQuestion, Run } from '../db/schemas.ts';
 import { loadWorkflowsFromDir } from '../engine/workflow-loader.ts';
 import { loadPersonasFromDir } from '../engine/persona-registry.ts';
 import { buildGraph } from '../engine/dag.ts';
-import { runWorkflow, type SafetyGuards } from '../engine/worker-pool.ts';
+import {
+  runWorkflow,
+  type SafetyGuards,
+  type GateController,
+} from '../engine/worker-pool.ts';
 import { createExecutor, type ExecutorKind } from './executor-factory.ts';
 import type { ApprovalQueue } from '../orchestrator/approval-queue.ts';
 import { chainNextWorkflow } from '../orchestrator/pipeline-chainer.ts';
@@ -31,6 +35,15 @@ export type StartCommandInput = {
    * (`kortext start`) leave it undefined unless extended later.
    */
   safety?: SafetyGuards;
+  /**
+   * Decides approve/reject at each mid-run +prime gate. When provided, the
+   * run pauses at every gate the workflow declares and waits for this
+   * controller (server boot wires a `QueueGateController` backed by the same
+   * ApprovalQueue the REST routes use). Left undefined, gates are not armed
+   * and behavior is unchanged — the original CLI `start` path runs straight
+   * through. The bounded auto-chain reuses the same controller for each hop.
+   */
+  gateController?: GateController;
   /**
    * When set, after this workflow succeeds the runner follows each workflow's
    * `**Sonraki akış:**` pointer (nextWorkflowId), running the chain until it has
@@ -91,10 +104,15 @@ export async function startCommand(input: StartCommandInput): Promise<StartComma
     logsDir: input.logsDir ?? resolve(process.cwd(), '.kortext', 'data', 'logs'),
     personaRegistry,
   });
+  // Only arm the gates when a controller is present to answer them. Passing
+  // `gates` without a `gateController` would make the worker-pool throw at the
+  // first gate — so an un-wired caller (plain CLI `start`) runs ungated.
+  const gateController = input.gateController;
   const result = await runWorkflow(graph, executor, input.repos, {
     concurrency: input.concurrency ?? 3,
     triggeredBy: 'cli',
     safety: input.safety,
+    ...(gateController ? { gates: def.gates, gateController } : {}),
   });
 
   let lastRun = result.run;
@@ -116,6 +134,7 @@ export async function startCommand(input: StartCommandInput): Promise<StartComma
         executor,
         loadWorkflowById: (id) => registry.get(id) ?? null,
         runOptions: { concurrency: input.concurrency ?? 3, safety: input.safety },
+        gateController,
       });
       if (!chain.chained) break;
       lastRun = chain.run;
