@@ -4,9 +4,21 @@ Açık iş listesi. Yapılan her şey [DECISIONS.md](./DECISIONS.md) tarihçesin
 
 ---
 
+## ⭐ Backlog köprüsü — sonraki (2026-06-05, DECISIONS Bölüm 13)
+
+Dosya köprüsü indi ve canlı kanıtlandı (BRD → `backlog.yaml` → Board'da 83 item). Açık işler:
+
+- [ ] **Zenginleştirme — sonraki planning adımlarını ingest et.** Şu an yalnız step 1'in `backlog.yaml`'i ingest ediliyor; qa-engineer/security-engineer/designer adımları gate/acceptance "update" üretiyor ama ingest edilmiyor → bu koşuda `acceptance_criteria`/`review_gates` seyrek kaldı. Ya step 1 talimatını bu alanları zorunlu kılacak şekilde güçlendir, ya da "id'ye göre güncelle" köprüsü ekle (`backlog-acceptance-set` vb. dosyalarını oku → `repos.backlog.update`).
+- [ ] **Standalone CLI'a ingester bağla.** `kortext start` (commands.ts) `safetyGuards` almıyor → ingester sadece backend (onboarding/drive) yolunda ateşleniyor. CLI yolunu da besle (repos + backlogIngester) ki `kortext start planning-pipeline` de backlog'u doldursun.
+- [ ] **Tek-seferlik kesintisiz canlı koşu** — sıfırdan onboarding → analiz → planning → Board (~25dk, executor=claude, UAT kum havuzu). Her halka ayrı kanıtlandı; kesintisiz tam zincir henüz koşulmadı.
+- [ ] **Ajan YAML tutarlılığı** — ajan `type`'a kategori yazıyor (coerce ediyoruz) ve şema alanlarını atlayabiliyor. İzlemeye değer; gerekirse step 1 prompt'unu daha katı örnek + "SADECE şu alanlar" ile sıkılaştır.
+
+---
+
 ## Sırada (Faz 13 kapanışı)
 
-- [ ] **Manuel UAT** — Eray makinesinde clean `kortext-uat/` klasörü, `npm pack` + `npm install -g ./kortext-3.X.X.tgz` + `kortext init` + `kortext serve` + Onboarding wizard'da blueprint kabul + new-project-analysis gerçek Claude executor ile koşma. Beklenen: foundation/references/reports doluyor, `pending_questions`'a +prime gate'leri düşüyor, log mesajında "0 step skipped — no persona handle".
+- [~] **Manuel UAT** — **kısmen yapıldı (2026-06-05):** `_codebase/UAT`'ta `cwd=UAT` backend + vite ile canlı UAT; onboarding + 14 ekran + gerçek analiz (PRD/TRD/PFD + 9 ref) + planning→backlog doğrulandı; 4 bug bulundu+düzeltildi. **Kalan:** `npm pack` + global install + `kortext init/serve` ile **paketlenmiş** akışın (kaynak değil) ayrı doğrulaması.
+
 - [ ] **v3.1.0 release flow** — `package.json` 3.0.0 → 3.1.0, CHANGELOG `[Unreleased]` → `[3.1.0] — <tarih>` + yeni `[Unreleased]` aç, `git tag v3.1.0`, npm publish (otomatik tetik). Sıralama: Manuel UAT (her iki tur) pass + CLI redesign 11 adım kuyruk pass + v3.0.1 EADDRINUSE fix sonrası.
 
 ---

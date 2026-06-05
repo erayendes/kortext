@@ -4,12 +4,36 @@
 
 ## Backlog Tanımı
 
-1. **+engineering-manager:** Backlog item adaylarını çıkar (`add_backlog_item` MCP tool). Kapsam: ürün özellikleri → task, açık hatalar → bug, teknik borçlar → debt. Disiplin: atomik (tek başına anlaşılabilir, bağımsız geliştirilebilir, ayrı doğrulanabilir). Bağımlılık: `blocks` / `blocked_by` alanları. Gate seçimi: karmaşık veya mimariye dokunan item'lara `review_gates: code_review`; insan (prime) kabulü gereken item'lara (kullanıcıya dönük kritik akış, iş/bütçe kararı, geri alınamaz işlem) `review_gates: uat` ekle.
+1. **+engineering-manager:** Backlog'u tek bir YAML dosyası olarak üret: `.kortext/foundation/backlog.yaml`. Dosya **sadece geçerli YAML** olmalı (markdown/prose/code-fence YOK), en üstte `items:` listesi. PRD + TRD'den tüm item'ları çıkar; her item ayrı satırda. Disiplin: atomik (tek başına anlaşılabilir, bağımsız geliştirilebilir, ayrı doğrulanabilir).
+
+   Her item şu alanlara sahip olmalı:
+   - `id`: kararlı benzersiz kimlik (örn. `INFRA-001`, `AUTH-002`)
+   - `type`: `task` | `bug` | `debt` | `epic` | `spike` (ürün özellikleri → task, açık hatalar → bug, teknik borçlar → debt)
+   - `title`: kısa başlık
+   - `priority`: `P0` (MVP blocker) | `P1` | `P2` | `P3`
+   - `description`: ne yapılacağı
+   - `acceptance_criteria`: davranış odaklı, test edilebilir kriter listesi (her item için zorunlu)
+   - `review_gates`: şu alt kümeden seç — `code_review` (mimariye dokunan/karmaşık mantık), `security_control` (auth/secret/veri işleme/erişim/compliance riski), `design_review` (UI/UX/erişilebilirlik), `quality_control` (yoğun QA gerektiren), `uat` (kullanıcıya dönük kritik akış, iş/bütçe kararı, geri alınamaz işlem — prime kabulü)
+   - `blocks` / `blocked_by`: bağımlılık id listeleri
+
+   Şema örneği:
+   ```yaml
+   items:
+     - id: INFRA-001
+       type: task
+       title: "Proje kurulumu"
+       priority: P0
+       description: "..."
+       acceptance_criteria: ["tsc --noEmit hatasız", "lint geçer"]
+       review_gates: [code_review]
+       blocks: [INFRA-002]
+       blocked_by: []
+   ```
    - inputs: `.kortext/foundation/PRD.md`, `.kortext/foundation/TRD.md`
-   - outputs: `backlog-items-defined`
+   - outputs: `.kortext/foundation/backlog.yaml`
 
 2. **+qa-engineer:** Her item için davranış odaklı acceptance criteria yaz (`update_backlog_item` MCP). Test edilemeyecek kadar muğlak item'ları +engineering-manager'a revize için işaretle. QA gerektiren item'lara `review_gates: quality_control` ekle.
-   - inputs: `.kortext/foundation/PRD.md`, `.kortext/references/TEST.md`, `backlog-items-defined`
+   - inputs: `.kortext/foundation/PRD.md`, `.kortext/references/TEST.md`, `.kortext/foundation/backlog.yaml`
    - outputs: `backlog-acceptance-set`
 
 3. **+security-engineer:** Auth, secret, veri işleme, erişim kontrolü, compliance riski taşıyan item'lara `review_gates: security_control` ekle (`update_backlog_item` MCP).

@@ -26,12 +26,10 @@ import {
   FileCode,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { useProjectMeta } from '../lib/api.ts';
 
 type NavItem = { to: string; label: string; icon: LucideIcon };
 type NavSection = { heading?: string; items: NavItem[] };
-
-/** Project name shown as the engine-menu back-link (static for S1). */
-const PROJECT_NAME = 'Acme CRM';
 
 const PROJECT_NAV: NavSection[] = [
   {
@@ -89,6 +87,7 @@ function NavLink({
 export function Sidebar({ collapsed }: { collapsed: boolean }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const engineScope = pathname.startsWith('/kortext');
+  const project = useProjectMeta();
 
   const sections = engineScope ? ENGINE_NAV : PROJECT_NAV;
 
@@ -97,7 +96,7 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
       {engineScope && (
         <Link to="/" className="nav" style={{ color: 'var(--fg-muted)' }}>
           <ArrowLeft />
-          <span className="nav-lbl">{PROJECT_NAME}</span>
+          <span className="nav-lbl">{project?.name ?? 'Project'}</span>
         </Link>
       )}
       {sections.map((section, i) => (
