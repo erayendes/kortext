@@ -7,17 +7,15 @@
 
 ---
 
-## ⭐ Şu an (2026-06-05) — Workflow kuralları runtime'a bağlandı + sistem-geneli paralellik ✅
+## ⭐ Şu an (2026-06-05) — Kapı Faz 2 (revize tek başına döner) + ekran bug'ları kapandı ✅
 
-**Bağlam:** Eray tespit etti — canlı UAT'ta sistem **workflow'ların içindeki kuralları atlıyordu**: artifact onay kapıları +prime'a hiç düşmedi, epic/versiyon üretilmedi, persona modelleri seçilmedi. Kurallar workflow dosyalarında doğru yazılıydı ama runtime uygulamıyordu (onboarding, kapı-denetleyicisiz `startCommand` kısayolundan gidiyordu). Detay [DECISIONS Bölüm 14](./DECISIONS.md).
+**Bağlam:** Önceki devirde açık kalan üç yıldızlı işten ikisi (kod tarafı) bitti + tarayıcıda kanıtlandı. Üçüncüsü (gerçek-Claude canlı koşu) hâlâ açık. Detay [DECISIONS Bölüm 14.2/14.5](./DECISIONS.md).
 
-**Üç dilim (paralel ajanlarla):** (1) **Onay kapıları bağlandı** — `QueueGateController` (`server/orchestrator/queue-gate-controller.ts`) mevcut `ApprovalQueue`+REST uçlarına bağlanır, onboarding koşusuna geçer; `pending_questions`'a `artifact_path`/`persona`/`phase` (migration 007). (2) **Epic/versiyon/model** — `backlog-ingest` artık `version`/`parent_epic`→sütun eşler + yeni `model` sütunu (migration 008) + `planning-pipeline.md` bunları üretir (DB sütunları zaten vardı). (3) **"Proje hazırlanıyor" timeline ekranı** (`src/routes/initializing.tsx`).
+**Dilim 1 — Kapı Faz 2 "revize tek başına döner" (commit `7e56755`):** `reject` artık run'ı **abort etmiyor**. Kök değişiklik `worker-pool`'da: tekil `rejectionReason` + paylaşılan `aborter.abort()` kaldırıldı; bir kapı reddedilince **sadece o adım** yerinde yeniden üretiliyor — `done`'dan düşür + `firedGates`'ten temizle → scheduler aynı adımı yeniden başlatır, bitince kapısı yeniden ateşlenir. Onaylanan kardeş kapılar `gateApproved`'da durur. Revize nedeni `ExecutorContext.reviseFeedback` ile re-execution'a taşınır (claude prompt'una "⚠ REVISION REQUESTED" olarak girer, tek-seferlik). `retryRun` artık yalnız crash-recovery (`orphaned:`) için — kapı reddi artık `cancelled` run üretmiyor. **Yeni paralel test:** LEGAL∥GROWTH'ta GROWTH bir kez reddedilip yeniden üretiliyor + onaylanıyor, LEGAL'in onayı dokunulmadan duruyor, PRD ikisi de onaylanınca koşuyor.
 
-**Kritik düzeltme — DAG-paralel kapılar:** Eray "LEGAL ∥ GROWTH paralel olmalıydı" dedi (ilke: koşabilen her şey paralel). Kök sebep: `worker-pool` kapıyı **adım index'ine** + tekil `pendingGate`'e bağlamıştı → seri. Çözüm: kapı per-step + **DAG bağımlılığına** bağlandı (`gateByStepKey`/`gateApproved`); birden çok kapı aynı anda pending olabilir. **Canlı kanıt:** `/api/questions` aynı anda **2 açık kapı** (LEGAL+GROWTH); GROWTH onaylanınca PRD belirmedi, LEGAL de onaylanınca belirdi. Seçilen semantik (Eray): **"onaylanan kalır, revize tek başına döner"** — ama **FAZ 2 açık** (reject hâlâ tüm run'ı abort ediyor).
+**Dilim 2 — "Proje hazırlanıyor" ekran bug'ları (commit `575ca49`):** Dördü de çözüldü + tarayıcıda kanıtlandı (375px screenshot + DB teyidi). (1) `main.tsx` hash deep-link normalizer — çıplak `/initializing` router mount'tan önce `/#/initializing`'e `replaceState`'leniyor, Dashboard'a düşmüyor; (2) satır Onayla = gerçek `<button>` + `stopPropagation` → drawer açmadan inline onay (`/api/questions/:id/answer`; DB'de `answered`/`approve`/`prime` doğrulandı); (3) satır Revize drawer'ı doğrudan revize modunda açıyor (`initialRevise` prop); (4) `@media (max-width:560px)` — sidebar 52px ikon-moduna iniyor, satır butonları kırpılmıyor (edge 338<375), drawer tam-genişlik. Desktop'ta sızma yok (835px'te sidebar 212px).
 
-**Sistem-geneli paralellik (driver):** `pool.ts` `mapWithPool` ile dev-cycle Phase 2 (test gate'leri) tam paralel; Phase 3 yargılar paralel ama **git merge'ler seri** (paylaşılan `development` dalı). `review-cycle` `judgeReview`/`runClosure` olarak bölündü.
-
-**Durum:** **744 test yeşil, typecheck temiz.** İki lokal commit (`237acc6` kapılar, `e9efac2` driver) + üç dilim main'de. **origin'e PUSH EDİLMEDİ.** **SIRADAKİ:** [Açık işler](#açık-işler-özet--tam-liste-todomd) — ekran bug'ları / kapı Faz 2 / canlı koşu.
+**Durum:** **745 test yeşil, typecheck temiz, console hatasız.** İki yeni lokal commit (`7e56755` kapı Faz 2, `575ca49` ekran) main'de. **origin'e PUSH EDİLMEDİ.** **SIRADAKİ:** Tek açık yıldızlı iş → **canlı koşu** (gerçek-Claude, ~25dk, UAT kum havuzu) — epic/versiyon/model ingestion + driver paralelliği + yeni kapı-revize semantiği canlı kanıt bekliyor.
 
 ---
 
@@ -32,9 +30,7 @@
 
 ## Açık işler (özet — tam liste [TODO.md](./TODO.md))
 
-- **⭐ "Proje hazırlanıyor" ekranı — etkileşim bug'ları (Bölüm 14):** (1) Sidebar "Setup" linki hash-farkında değil (`/initializing#/initializing` → Dashboard'a düşüyor); (2) satırdaki **Onayla `stopPropagation` eksik** → tıklama drawer açıyor, onaylamıyor; (3) drawer içi onay/revize aksiyonları; (4) <500px responsive overlap. Şu an onay **Dashboard "For review" kartından** çalışıyor.
-- **⭐ Kapı Faz 2 — "revize tek başına döner":** Analiz kapıları artık DAG-paralel ([DECISIONS §14.2](./DECISIONS.md)) ama `reject` hâlâ **tüm run'ı abort** ediyor. Eray'ın seçtiği semantik (onaylanan kalır, sadece revize edilen yeniden üretilir) için `worker-pool` reject + `Orchestrator.retryRun` ayıklanmalı.
-- **⭐ Canlı koşu — epic/versiyon/model + dev-cycle paralelliği:** ingestion + driver paralelliği **test yeşil** ama gerçek-Claude ile canlı kanıtlanmadı (~25dk). Mock ile analiz kapıları kanıtlandı.
+- **⭐ Canlı koşu — epic/versiyon/model + dev-cycle paralelliği + kapı revize:** ingestion + driver paralelliği + yeni kapı-revize semantiği **745 test yeşil** ama gerçek-Claude ile canlı kanıtlanmadı (~25dk, executor=claude, UAT kum havuzu). Mock ile analiz kapıları + revize kanıtlandı. **Tek kalan yıldızlı iş.**
 - **Concurrency knob'ları:** workflow-içi `concurrency=3`, `maxConcurrentWorktrees=10` — ayarlanabilir tavanlar (Eray isterse yükseltilir).
 - **Backlog köprüsü follow-up:** zenginleştirme (sonraki planning adımlarını da ingest), standalone CLI'a ingester bağla, kesintisiz canlı koşu. [TODO](./TODO.md).
 - **Motor — ertelenen backend dilimleri:** handover-on-close, blocker-temizle, `gate_runs` uat verdict, epic-status-flip, gate-persona staging raporları + prime staging onayı, preview wiring/persistence. [TODO §"Motor epic"](./TODO.md).
