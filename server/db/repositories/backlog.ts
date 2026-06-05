@@ -21,6 +21,7 @@ type Row = {
   owner: string | null;
   parent_id: string | null;
   version: string | null;
+  model: string | null;
   review_gates: string;
   frontmatter: string;
   body_md: string;
@@ -50,9 +51,9 @@ export class BacklogRepository {
   constructor(private readonly db: Database.Database) {
     this.insertStmt = db.prepare(`
       INSERT INTO backlog_items
-        (id, type, title, status, owner, parent_id, version, review_gates, frontmatter, body_md, created_at, updated_at)
+        (id, type, title, status, owner, parent_id, version, model, review_gates, frontmatter, body_md, created_at, updated_at)
       VALUES
-        (@id, @type, @title, @status, @owner, @parent_id, @version, @review_gates, @frontmatter, @body_md, @ts, @ts)
+        (@id, @type, @title, @status, @owner, @parent_id, @version, @model, @review_gates, @frontmatter, @body_md, @ts, @ts)
     `);
     this.selectByIdStmt = db.prepare('SELECT * FROM backlog_items WHERE id = ?');
     this.listStmt = db.prepare(`
@@ -93,6 +94,7 @@ export class BacklogRepository {
       owner: parsed.owner,
       parent_id: parsed.parent_id,
       version: parsed.version,
+      model: parsed.model,
       review_gates: packJson(parsed.review_gates),
       frontmatter: packJson(parsed.frontmatter),
       body_md: parsed.body_md,

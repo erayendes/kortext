@@ -17,6 +17,13 @@ export type ParsedBacklogItem = {
   review_gates?: string[];
   blocks?: string[];
   blocked_by?: string[];
+  /** Target version (e.g. 'v0.1', 'v1.0') → maps to the `version` column. */
+  version?: string;
+  /** Parent epic id (from `parent_epic` or `parent`) → maps to the `parent_id`
+   *  column, building the Epic → Task hierarchy. */
+  parent_id?: string;
+  /** Per-item LLM model preference (per rules/models.md) → `model` column. */
+  model?: string;
   /** Any non-standard keys the agent added (e.g. phase, references, prd_id),
    *  preserved verbatim so the agent's structuring is never silently dropped. */
   extra?: Record<string, unknown>;
@@ -32,6 +39,11 @@ const KNOWN_ITEM_KEYS = new Set([
   'review_gates',
   'blocks',
   'blocked_by',
+  // Hierarchy + model fields mapped to real columns (not frontmatter passthrough).
+  'version',
+  'parent_epic',
+  'parent',
+  'model',
 ]);
 
 // Valid enum values — kept inline to avoid importing the full zod schema at
@@ -190,6 +202,20 @@ function validateRawItems(raw: unknown[]): {
         .filter((v): v is string => typeof v === 'string');
     }
 
+    // Hierarchy + model: map to real columns instead of frontmatter.
+    if (typeof obj['version'] === 'string' && obj['version'].trim() !== '') {
+      parsed.version = obj['version'].trim();
+    }
+    // `parent_epic` is the instructed key; accept `parent` as an alias. Either
+    // links this item to its epic via the parent_id column.
+    const rawParent = obj['parent_epic'] ?? obj['parent'];
+    if (typeof rawParent === 'string' && rawParent.trim() !== '') {
+      parsed.parent_id = rawParent.trim();
+    }
+    if (typeof obj['model'] === 'string' && obj['model'].trim() !== '') {
+      parsed.model = obj['model'].trim();
+    }
+
     // Preserve any agent-added fields (phase, references, prd_id, …) so the
     // agent's own structuring survives into frontmatter.
     const extra: Record<string, unknown> = {};
@@ -218,7 +244,17 @@ export function ingestBacklogItems(
   const created: string[] = [];
   const skipped: { id: string; reason: string }[] = [];
 
-  for (const item of parsed) {
+  // Epics first (stable): parent_id is a real FK (foreign_keys = ON), so a child
+  // task linking to an epic in the same batch must see the epic row already
+  // inserted. Sorting epics ahead of tasks satisfies the common flat-batch case
+  // without a full topological sort; cross-batch parents resolve via idempotency.
+  const ordered = [...parsed].sort((a, b) => {
+    const aEpic = coerceItemType(a.type).type === 'epic' ? 0 : 1;
+    const bEpic = coerceItemType(b.type).type === 'epic' ? 0 : 1;
+    return aEpic - bEpic;
+  });
+
+  for (const item of ordered) {
     const { id, type, title } = item;
 
     // Coerce an out-of-enum type instead of dropping the item.
@@ -252,6 +288,9 @@ export function ingestBacklogItems(
         type: coercedType as import('../db/schemas.ts').BacklogItemType,
         title,
         status: 'to_do',
+        parent_id: item.parent_id ?? null,
+        version: item.version ?? null,
+        model: item.model ?? null,
         body_md: item.description ?? '',
         review_gates: validGates as import('../db/schemas.ts').Gate[],
         frontmatter,
