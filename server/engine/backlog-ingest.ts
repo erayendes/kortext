@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { basename } from 'node:path';
 import yaml from 'js-yaml';
 import type { Repositories } from '../db/repositories/index.ts';
@@ -9,8 +9,10 @@ import type { Repositories } from '../db/repositories/index.ts';
 
 export type ParsedBacklogItem = {
   id: string;
-  type: string;
-  title: string;
+  /** Required in full mode; omitted in patch mode (a delta only carries the
+   *  fields it changes — the existing row keeps its type/title). */
+  type?: string;
+  title?: string;
   priority?: string;
   description?: string;
   acceptance_criteria?: string[];
@@ -96,10 +98,14 @@ export function coerceItemType(raw: string): { type: string; original?: string }
  *      a list of items, a single item object, or an `{ items: [...] }` doc.
  * The fenced fallback makes ingestion robust to the model's natural formatting.
  */
-export function parseBacklogYaml(text: string): {
+export function parseBacklogYaml(
+  text: string,
+  opts: { mode?: 'full' | 'patch' } = {},
+): {
   items: ParsedBacklogItem[];
   errors: string[];
 } {
+  const mode = opts.mode ?? 'full';
   // Shape 1: whole document is YAML with a top-level items array.
   let topDoc: unknown;
   let topErr: string | null = null;
@@ -113,7 +119,7 @@ export function parseBacklogYaml(text: string): {
     typeof topDoc === 'object' &&
     Array.isArray((topDoc as Record<string, unknown>)['items'])
   ) {
-    return validateRawItems((topDoc as Record<string, unknown>)['items'] as unknown[]);
+    return validateRawItems((topDoc as Record<string, unknown>)['items'] as unknown[], mode);
   }
 
   // Shape 2: collect items from ```yaml fenced blocks embedded in markdown.
@@ -142,7 +148,7 @@ export function parseBacklogYaml(text: string): {
     }
   }
   if (raw.length > 0 || blockErrors.length > 0) {
-    const r = validateRawItems(raw);
+    const r = validateRawItems(raw, mode);
     return { items: r.items, errors: [...blockErrors, ...r.errors] };
   }
 
@@ -151,8 +157,16 @@ export function parseBacklogYaml(text: string): {
   return { items: [], errors: ['no "items" array found'] };
 }
 
-/** Validate + normalize a raw list of item entries (shared by both shapes). */
-function validateRawItems(raw: unknown[]): {
+/**
+ * Validate + normalize a raw list of item entries (shared by both shapes).
+ * In `full` mode an item must carry id+title+type (a freshly defined item).
+ * In `patch` mode only `id` is required — the entry is a delta that updates the
+ * fields it does carry and leaves the rest of the existing row untouched.
+ */
+function validateRawItems(
+  raw: unknown[],
+  mode: 'full' | 'patch' = 'full',
+): {
   items: ParsedBacklogItem[];
   errors: string[];
 } {
@@ -173,19 +187,19 @@ function validateRawItems(raw: unknown[]): {
 
     const missing: string[] = [];
     if (typeof id !== 'string' || id.trim() === '') missing.push('id');
-    if (typeof title !== 'string' || title.trim() === '') missing.push('title');
-    if (typeof type !== 'string' || type.trim() === '') missing.push('type');
+    if (mode === 'full') {
+      if (typeof title !== 'string' || title.trim() === '') missing.push('title');
+      if (typeof type !== 'string' || type.trim() === '') missing.push('type');
+    }
 
     if (missing.length > 0) {
       errors.push(`item #${i}: missing ${missing.join('/')}`);
       continue;
     }
 
-    const parsed: ParsedBacklogItem = {
-      id: (id as string).trim(),
-      type: (type as string).trim(),
-      title: (title as string).trim(),
-    };
+    const parsed: ParsedBacklogItem = { id: (id as string).trim() };
+    if (typeof type === 'string' && type.trim() !== '') parsed.type = type.trim();
+    if (typeof title === 'string' && title.trim() !== '') parsed.title = title.trim();
 
     if (typeof obj['priority'] === 'string') parsed.priority = obj['priority'];
     if (typeof obj['description'] === 'string') parsed.description = obj['description'];
@@ -318,13 +332,19 @@ export function ingestBacklogItems(
   // inserted. Sorting epics ahead of tasks satisfies the common flat-batch case
   // without a full topological sort; cross-batch parents resolve via idempotency.
   const ordered = [...parsed].sort((a, b) => {
-    const aEpic = coerceItemType(a.type).type === 'epic' ? 0 : 1;
-    const bEpic = coerceItemType(b.type).type === 'epic' ? 0 : 1;
+    const aEpic = coerceItemType(a.type ?? '').type === 'epic' ? 0 : 1;
+    const bEpic = coerceItemType(b.type ?? '').type === 'epic' ? 0 : 1;
     return aEpic - bEpic;
   });
 
   for (const item of ordered) {
-    const { id, type, title } = item;
+    const { id } = item;
+    // A full ingest needs type+title (patch deltas go through patchBacklogItems).
+    if (!item.type || !item.title) {
+      skipped.push({ id, reason: 'missing type/title for full ingest' });
+      continue;
+    }
+    const { type, title } = item;
 
     // Coerce an out-of-enum type instead of dropping the item.
     const { type: coercedType, original: originalType } = coerceItemType(type);
@@ -385,6 +405,126 @@ export function ingestBacklogItems(
   return { created, updated, skipped };
 }
 
+/**
+ * Apply delta patches to existing backlog rows. A patch entry carries only the
+ * fields it changes (id + e.g. `review_gates` or `version`); every other column
+ * is left untouched. This replaces the "rewrite the whole 100-item file every
+ * enrichment step" pattern, which forced the agent to re-emit ~80 KB per step
+ * (~20 min each at 100 items). A patch is a few KB → seconds.
+ *
+ * Merge rules:
+ *   - `review_gates`: ADDITIVE (qa/security/designer each add their own gate),
+ *     unioned + deduped + validity-filtered onto the existing gates.
+ *   - `version` / `model` / `parent_id` / `priority` / `acceptance_criteria` /
+ *     `blocks` / `blocked_by` / `description` + unknown frontmatter keys:
+ *     last-writer-wins — set only when the patch provides them.
+ *   - `type` is never changed by a patch (the row keeps its kind).
+ *   - An id that doesn't exist is skipped, never created (full ingest owns
+ *     creation).
+ */
+export function patchBacklogItems(
+  repos: Repositories,
+  parsed: ParsedBacklogItem[],
+): {
+  updated: string[];
+  skipped: { id: string; reason: string }[];
+} {
+  const updated: string[] = [];
+  const skipped: { id: string; reason: string }[] = [];
+
+  for (const item of parsed) {
+    const existing = repos.backlog.get(item.id);
+    if (existing === null) {
+      skipped.push({ id: item.id, reason: 'not found (patch only updates)' });
+      continue;
+    }
+
+    // review_gates: additive union (drop unknown gates, dedupe).
+    let reviewGates = existing.review_gates;
+    if (item.review_gates !== undefined) {
+      const valid = item.review_gates.filter((g) => VALID_GATES.has(g));
+      reviewGates = [...new Set([...existing.review_gates, ...valid])] as typeof existing.review_gates;
+    }
+
+    // frontmatter: overlay only patch-provided keys onto the existing block.
+    const frontmatter: Record<string, unknown> = { ...existing.frontmatter };
+    if (item.extra) Object.assign(frontmatter, item.extra);
+    if (item.priority !== undefined) frontmatter['priority'] = item.priority;
+    if (item.acceptance_criteria !== undefined)
+      frontmatter['acceptance_criteria'] = item.acceptance_criteria;
+    if (item.blocks !== undefined) frontmatter['blocks'] = item.blocks;
+    if (item.blocked_by !== undefined) frontmatter['blocked_by'] = item.blocked_by;
+
+    try {
+      repos.backlog.updatePlanningFields(item.id, {
+        type: existing.type, // patches never change the work-item kind
+        title: item.title ?? existing.title,
+        parent_id: item.parent_id ?? existing.parent_id,
+        version: item.version ?? existing.version,
+        model: item.model ?? existing.model,
+        review_gates: reviewGates,
+        frontmatter,
+        body_md: item.description ?? existing.body_md,
+      });
+      repos.auditLog.append({
+        actor: 'engine',
+        action: 'backlog.patch',
+        resource_type: 'backlog_item',
+        resource_id: item.id,
+        payload: {},
+      });
+      updated.push(item.id);
+    } catch (err) {
+      skipped.push({ id: item.id, reason: err instanceof Error ? err.message : String(err) });
+    }
+  }
+
+  return { updated, skipped };
+}
+
+// ---------------------------------------------------------------------------
+// 2b. DB → backlog.yaml serializer
+// ---------------------------------------------------------------------------
+
+/**
+ * Serialize the whole backlog (DB) back into canonical `backlog.yaml` text.
+ *
+ * Why: enrichment steps write tiny patches that only touch the DB. If the file
+ * stayed at the step-1 skeleton, a later persona (model assignment, which needs
+ * the assignee; consolidation, which scans the enriched state) would read stale
+ * data. After every patch the engine re-serializes the file from the DB — the
+ * agent never re-emits the big file, but every persona still reads the current,
+ * fully-enriched backlog. Output is pure YAML (a top-level `items:` array) so it
+ * round-trips through parseBacklogYaml.
+ */
+export function serializeBacklogToYaml(repos: Repositories): string {
+  const rows = repos.backlog.list({ limit: 100_000 });
+  // Epics first: readable + FK-friendly if the file is ever re-ingested fresh.
+  rows.sort((a, b) => (a.type === 'epic' ? 0 : 1) - (b.type === 'epic' ? 0 : 1));
+
+  const items = rows.map((r) => {
+    const o: Record<string, unknown> = { id: r.id, type: r.type, title: r.title };
+    if (r.parent_id) o['parent_epic'] = r.parent_id;
+    if (r.version) o['version'] = r.version;
+    if (r.model) o['model'] = r.model;
+    if (r.review_gates.length > 0) o['review_gates'] = r.review_gates;
+    if (r.body_md) o['description'] = r.body_md;
+    // Frontmatter holds the rest (priority, acceptance_criteria, blocks,
+    // blocked_by, assignee, …) — emit it so nothing is dropped on re-read.
+    for (const [k, v] of Object.entries(r.frontmatter)) {
+      if (v !== undefined && v !== null && !(k in o)) o[k] = v;
+    }
+    return o;
+  });
+
+  return yaml.dump({ items }, { lineWidth: -1, noRefs: true });
+}
+
+/** Serialize the DB backlog and write it to `absolutePath` (the canonical file). */
+export function writeBacklogYamlFromDb(repos: Repositories, absolutePath: string): void {
+  writeFileSync(absolutePath, serializeBacklogToYaml(repos), 'utf8');
+}
+
 // ---------------------------------------------------------------------------
 // 3. File-level entry point
 // ---------------------------------------------------------------------------
@@ -431,4 +571,50 @@ export function ingestBacklogFile(
   });
 
   return { created, updated, skipped, parseErrors };
+}
+
+/**
+ * Apply a delta patch file (e.g. `backlog.patch.yaml`) to existing rows. Parsed
+ * in `patch` mode (only `id` required per entry) and merged field-by-field via
+ * patchBacklogItems. Enrichment steps write these instead of rewriting the whole
+ * backlog so a 100-item plan stays fast.
+ */
+export function ingestBacklogPatchFile(
+  repos: Repositories,
+  absolutePath: string,
+): {
+  updated: string[];
+  skipped: { id: string; reason: string }[];
+  parseErrors: string[];
+} {
+  let text: string;
+  try {
+    text = readFileSync(absolutePath, 'utf8');
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { updated: [], skipped: [], parseErrors: [`read failed: ${msg}`] };
+  }
+
+  const { items, errors: parseErrors } = parseBacklogYaml(text, { mode: 'patch' });
+  const { updated, skipped } = patchBacklogItems(repos, items);
+
+  console.log(
+    `[kortext] backlog patch: ${updated.length} updated, ${skipped.length} skipped, ${parseErrors.length} parse errors`,
+  );
+
+  repos.auditLog.append({
+    actor: 'engine',
+    action: 'backlog.patch.summary',
+    resource_type: 'run',
+    resource_id: basename(absolutePath),
+    payload: {
+      updated: updated.length,
+      skipped: skipped.length,
+      parse_errors: parseErrors.length,
+      ...(skipped.length > 0 ? { skipped_detail: skipped.slice(0, 20) } : {}),
+      ...(parseErrors.length > 0 ? { parse_error_detail: parseErrors.slice(0, 20) } : {}),
+    },
+  });
+
+  return { updated, skipped, parseErrors };
 }

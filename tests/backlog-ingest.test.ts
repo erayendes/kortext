@@ -1,7 +1,12 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 import { openDb } from '../server/db/client.ts';
 import type { Repositories } from '../server/db/repositories/index.ts';
-import { parseBacklogYaml, ingestBacklogItems } from '../server/engine/backlog-ingest.ts';
+import {
+  parseBacklogYaml,
+  ingestBacklogItems,
+  patchBacklogItems,
+  serializeBacklogToYaml,
+} from '../server/engine/backlog-ingest.ts';
 
 let repos: Repositories;
 beforeEach(() => {
@@ -432,5 +437,139 @@ describe('ingestBacklogItems — epic/version/parent/model columns', () => {
     const ingested = ingestBacklogItems(repos, result.items);
     expect(ingested.created).toEqual(['OK-1']);
     expect(repos.backlog.get('OK-1')!.version).toBe('v1.0');
+  });
+});
+
+// A full backlog can run to ~100 items; making each enrichment persona rewrite
+// the whole file is pathologically slow (the agent re-emits ~80 KB per step).
+// Patches let a step write ONLY the items+fields it changed; the ingester merges
+// them field-by-field onto the existing rows.
+describe('patch mode (delta enrichment)', () => {
+  it('parses patch items needing only an id (no type/title required)', () => {
+    const { items, errors } = parseBacklogYaml(
+      'items:\n  - id: T-1\n    review_gates: [security_control]\n',
+      { mode: 'patch' },
+    );
+    expect(errors).toHaveLength(0);
+    expect(items).toHaveLength(1);
+    expect(items[0]!.id).toBe('T-1');
+    expect(items[0]!.review_gates).toEqual(['security_control']);
+  });
+
+  it('full mode still rejects an item with only an id (no regression)', () => {
+    const { items, errors } = parseBacklogYaml('items:\n  - id: T-1\n');
+    expect(items).toHaveLength(0);
+    expect(errors.length).toBeGreaterThan(0);
+  });
+
+  it('unions a gate onto an existing item without clobbering other fields', () => {
+    ingestBacklogItems(
+      repos,
+      parseBacklogYaml(
+        'items:\n  - id: T-1\n    type: task\n    title: X\n    review_gates: [code_review]\n    version: v0.1\n',
+      ).items,
+    );
+    const { items } = parseBacklogYaml(
+      'items:\n  - id: T-1\n    review_gates: [security_control]\n',
+      { mode: 'patch' },
+    );
+    const res = patchBacklogItems(repos, items);
+    expect(res.updated).toContain('T-1');
+    const row = repos.backlog.get('T-1')!;
+    expect([...row.review_gates].sort()).toEqual(['code_review', 'security_control']); // union
+    expect(row.version).toBe('v0.1'); // untouched
+    expect(row.type).toBe('task'); // untouched
+  });
+
+  it('sets version via patch without wiping gates/model', () => {
+    ingestBacklogItems(
+      repos,
+      parseBacklogYaml(
+        'items:\n  - id: T-2\n    type: task\n    title: Y\n    review_gates: [code_review]\n    model: high-reasoning\n',
+      ).items,
+    );
+    patchBacklogItems(
+      repos,
+      parseBacklogYaml('items:\n  - id: T-2\n    version: v1.0\n', { mode: 'patch' }).items,
+    );
+    const row = repos.backlog.get('T-2')!;
+    expect(row.version).toBe('v1.0');
+    expect(row.review_gates).toEqual(['code_review']); // preserved
+    expect(row.model).toBe('high-reasoning'); // preserved
+  });
+
+  it('skips a patch for an unknown id (patches only update, never create)', () => {
+    const res = patchBacklogItems(
+      repos,
+      parseBacklogYaml('items:\n  - id: NOPE\n    version: v1.0\n', { mode: 'patch' }).items,
+    );
+    expect(res.updated).toHaveLength(0);
+    expect(res.skipped.find((s) => s.id === 'NOPE')).toBeTruthy();
+    expect(repos.backlog.get('NOPE')).toBeNull();
+  });
+
+  it('merges patch frontmatter keys (acceptance_criteria) onto existing', () => {
+    ingestBacklogItems(
+      repos,
+      parseBacklogYaml('items:\n  - id: T-3\n    type: task\n    title: Z\n    priority: P0\n').items,
+    );
+    patchBacklogItems(
+      repos,
+      parseBacklogYaml('items:\n  - id: T-3\n    acceptance_criteria: [works]\n', { mode: 'patch' })
+        .items,
+    );
+    const row = repos.backlog.get('T-3')!;
+    expect(row.frontmatter.acceptance_criteria).toEqual(['works']);
+    expect(row.frontmatter.priority).toBe('P0'); // preserved
+  });
+});
+
+// After a patch updates the DB, the engine re-serializes backlog.yaml from the
+// DB so the NEXT persona reads the current, fully-enriched state — not the stale
+// step-1 skeleton. The serializer must round-trip every column the pipeline sets.
+describe('serializeBacklogToYaml', () => {
+  it('round-trips epic + enriched task back into parseable YAML', () => {
+    ingestBacklogItems(
+      repos,
+      parseBacklogYaml(
+        'items:\n  - id: AUTH-EPIC\n    type: epic\n    title: Auth\n  - id: AUTH-001\n    type: task\n    title: Login\n    parent_epic: AUTH-EPIC\n',
+      ).items,
+    );
+    // enrich via patches like the real pipeline
+    patchBacklogItems(
+      repos,
+      parseBacklogYaml(
+        'items:\n  - id: AUTH-001\n    review_gates: [security_control]\n    version: v0.1\n    model: high-reasoning\n    acceptance_criteria: [user logs in]\n',
+        { mode: 'patch' },
+      ).items,
+    );
+
+    const yamlText = serializeBacklogToYaml(repos);
+    // It must be valid, parseable backlog YAML (no prose/fences).
+    const reparsed = parseBacklogYaml(yamlText);
+    expect(reparsed.errors).toHaveLength(0);
+
+    // Re-ingest into a clean DB → every field survived the round-trip.
+    const repos2 = openDb({ path: ':memory:' }).repositories;
+    ingestBacklogItems(repos2, reparsed.items);
+    const t = repos2.backlog.get('AUTH-001')!;
+    expect(t.type).toBe('task');
+    expect(t.title).toBe('Login');
+    expect(t.parent_id).toBe('AUTH-EPIC');
+    expect(t.version).toBe('v0.1');
+    expect(t.model).toBe('high-reasoning');
+    expect(t.review_gates).toEqual(['security_control']);
+    expect(t.frontmatter.acceptance_criteria).toEqual(['user logs in']);
+    expect(repos2.backlog.get('AUTH-EPIC')!.type).toBe('epic');
+  });
+
+  it('produces pure YAML (a top-level items array, no markdown)', () => {
+    ingestBacklogItems(
+      repos,
+      parseBacklogYaml('items:\n  - id: X-1\n    type: task\n    title: T\n').items,
+    );
+    const yamlText = serializeBacklogToYaml(repos);
+    expect(yamlText.trimStart().startsWith('items:')).toBe(true);
+    expect(yamlText).not.toContain('```');
   });
 });

@@ -2,7 +2,11 @@ import { existsSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { projectLayout, runtimeLayout } from './paths.ts';
-import { ingestBacklogFile } from './engine/backlog-ingest.ts';
+import {
+  ingestBacklogFile,
+  ingestBacklogPatchFile,
+  writeBacklogYamlFromDb,
+} from './engine/backlog-ingest.ts';
 import express from 'express';
 import { env } from './config/env.ts';
 import { healthRouter } from './routes/health.ts';
@@ -122,9 +126,20 @@ const safetyGuards: SafetyGuards = {
   },
   // When a planning step writes the canonical backlog file, ingest it into real
   // backlog rows. Keyed on the filename so other outputs are ignored.
+  //   - backlog.yaml        → full ingest (create/upsert whole items)
+  //   - backlog.patch.yaml  → delta merge (enrichment steps patch only the
+  //                           fields they change, so a 100-item plan stays fast)
   backlogIngester: ({ absolutePath }) => {
-    if (basename(absolutePath) === 'backlog.yaml') {
+    const base = basename(absolutePath);
+    if (base === 'backlog.yaml') {
       ingestBacklogFile(repos, absolutePath);
+      // Normalize the file from the DB (e.g. surface synthesized epics).
+      writeBacklogYamlFromDb(repos, absolutePath);
+    } else if (base === 'backlog.patch.yaml') {
+      ingestBacklogPatchFile(repos, absolutePath);
+      // Re-serialize the canonical file so the NEXT persona reads the merged,
+      // fully-enriched state instead of the stale step-1 skeleton.
+      writeBacklogYamlFromDb(repos, join(dirname(absolutePath), 'backlog.yaml'));
     }
   },
 };
