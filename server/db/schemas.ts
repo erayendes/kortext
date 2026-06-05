@@ -54,6 +54,7 @@ export const BacklogItemSchema = z.object({
   owner: PersonaHandle.nullable(),
   parent_id: z.string().nullable(),
   version: z.string().nullable(),
+  model: z.string().nullable(),
   review_gates: z.array(GateSchema),
   frontmatter: z.record(z.unknown()),
   body_md: z.string(),
@@ -72,6 +73,7 @@ export const BacklogItemInsertSchema = BacklogItemSchema.omit({
   owner: PersonaHandle.nullable().default(null),
   parent_id: z.string().nullable().default(null),
   version: z.string().nullable().default(null),
+  model: z.string().nullable().default(null),
   review_gates: z.array(GateSchema).default([]),
 });
 export type BacklogItemInsert = z.input<typeof BacklogItemInsertSchema>;

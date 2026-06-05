@@ -184,3 +184,111 @@ describe('ingestBacklogItems', () => {
     expect(t3skip!.reason).toMatch(/already exists/i);
   });
 });
+
+// The planning pipeline emits a real Epic → Version → Task hierarchy plus a
+// per-item model. These must land in the dedicated columns (parent_id, version,
+// model), NOT be dumped into frontmatter.
+const HIERARCHY = `items:
+  - id: AUTH-EPIC
+    type: epic
+    title: Authentication
+    version: v0.1
+    model: high-reasoning
+  - id: AUTH-001
+    type: task
+    title: Login form
+    parent_epic: AUTH-EPIC
+    version: v0.1
+    model: high-reasoning
+    acceptance_criteria: [user can log in]
+    review_gates: [security_control]
+  - id: AUTH-002
+    type: task
+    title: Logout
+    parent: AUTH-EPIC
+    version: v0.2
+    model: fast-reasoning
+    cost_center: infra
+`;
+
+describe('ingestBacklogItems — epic/version/parent/model columns', () => {
+  it('ingests an epic + child tasks into the right columns', () => {
+    const { items, errors } = parseBacklogYaml(HIERARCHY);
+    expect(errors).toHaveLength(0);
+    const result = ingestBacklogItems(repos, items);
+    expect(result.created).toEqual(
+      expect.arrayContaining(['AUTH-EPIC', 'AUTH-001', 'AUTH-002']),
+    );
+    expect(result.skipped).toHaveLength(0);
+
+    const epic = repos.backlog.get('AUTH-EPIC');
+    expect(epic!.type).toBe('epic');
+    expect(epic!.version).toBe('v0.1');
+    expect(epic!.model).toBe('high-reasoning');
+    expect(epic!.parent_id).toBeNull();
+
+    const t1 = repos.backlog.get('AUTH-001');
+    expect(t1!.parent_id).toBe('AUTH-EPIC'); // parent_epic → parent_id column
+    expect(t1!.version).toBe('v0.1');
+    expect(t1!.model).toBe('high-reasoning');
+
+    const t2 = repos.backlog.get('AUTH-002');
+    expect(t2!.parent_id).toBe('AUTH-EPIC'); // `parent` alias also works
+    expect(t2!.version).toBe('v0.2');
+    expect(t2!.model).toBe('fast-reasoning');
+  });
+
+  it('does NOT leak hierarchy/model fields into frontmatter, but keeps unknown ones', () => {
+    const { items } = parseBacklogYaml(HIERARCHY);
+    ingestBacklogItems(repos, items);
+
+    const t2 = repos.backlog.get('AUTH-002');
+    // mapped fields are columns, not frontmatter
+    expect(t2!.frontmatter.version).toBeUndefined();
+    expect(t2!.frontmatter.parent).toBeUndefined();
+    expect(t2!.frontmatter.parent_epic).toBeUndefined();
+    expect(t2!.frontmatter.model).toBeUndefined();
+    // genuinely unknown field still preserved (no silent loss)
+    expect(t2!.frontmatter.cost_center).toBe('infra');
+  });
+
+  it('links children even when the epic appears after them in the file', () => {
+    // Child listed before its epic — epic-first ordering must still satisfy the FK.
+    const reordered = `items:
+  - id: X-001
+    type: task
+    title: Child first
+    parent_epic: X-EPIC
+  - id: X-EPIC
+    type: epic
+    title: Epic second
+`;
+    const { items } = parseBacklogYaml(reordered);
+    const result = ingestBacklogItems(repos, items);
+    expect(result.skipped).toHaveLength(0);
+    expect(repos.backlog.get('X-001')!.parent_id).toBe('X-EPIC');
+  });
+
+  it('still surfaces a broken fenced block as an error (no silent loss)', () => {
+    const mixed = [
+      '# Backlog',
+      '```yaml',
+      '- id: OK-1',
+      '  type: epic',
+      '  title: Good epic',
+      '  version: v1.0',
+      '```',
+      '```yaml',
+      '- id: BAD-1',
+      '   type: task', // bad indentation → block fails to parse
+      ' title: broken',
+      '```',
+    ].join('\n');
+    const result = parseBacklogYaml(mixed);
+    expect(result.items.map((i) => i.id)).toEqual(['OK-1']);
+    expect(result.errors.some((e) => /fenced block/i.test(e))).toBe(true);
+    const ingested = ingestBacklogItems(repos, result.items);
+    expect(ingested.created).toEqual(['OK-1']);
+    expect(repos.backlog.get('OK-1')!.version).toBe('v1.0');
+  });
+});

@@ -12,6 +12,7 @@ function item(overrides: Partial<BacklogItem>): BacklogItem {
     owner: null,
     parent_id: null,
     version: null,
+    model: null,
     review_gates: [],
     frontmatter: {},
     body_md: '',
