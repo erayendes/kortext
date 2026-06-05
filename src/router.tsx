@@ -13,6 +13,7 @@ import { AppShell } from './app/AppShell.tsx';
 
 // Project scope
 import { DashboardRoute } from './routes/dashboard.tsx';
+import { InitializingRoute } from './routes/initializing.tsx';
 import { BoardRoute } from './routes/board.tsx';
 import { ReferencesRoute } from './routes/references.tsx';
 import { MemoryRoute } from './routes/memory.tsx';
@@ -35,6 +36,7 @@ const rootRoute = new RootRoute({ component: AppShell });
 
 // --- project scope ---
 const dashboardRoute = new Route({ getParentRoute: () => rootRoute, path: '/', component: DashboardRoute });
+const initializingRoute = new Route({ getParentRoute: () => rootRoute, path: '/initializing', component: InitializingRoute });
 const boardRoute = new Route({ getParentRoute: () => rootRoute, path: '/board', component: BoardRoute });
 const referencesRoute = new Route({ getParentRoute: () => rootRoute, path: '/references', component: ReferencesRoute });
 const memoryRoute = new Route({ getParentRoute: () => rootRoute, path: '/memory', component: MemoryRoute });
@@ -55,6 +57,7 @@ const scriptsRoute = new Route({ getParentRoute: () => rootRoute, path: '/kortex
 
 const routeTree = rootRoute.addChildren([
   dashboardRoute,
+  initializingRoute,
   boardRoute,
   referencesRoute,
   memoryRoute,
