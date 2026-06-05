@@ -15,7 +15,9 @@
 
 **Dilim 2 — "Proje hazırlanıyor" ekran bug'ları (commit `575ca49`):** Dördü de çözüldü + tarayıcıda kanıtlandı (375px screenshot + DB teyidi). (1) `main.tsx` hash deep-link normalizer — çıplak `/initializing` router mount'tan önce `/#/initializing`'e `replaceState`'leniyor, Dashboard'a düşmüyor; (2) satır Onayla = gerçek `<button>` + `stopPropagation` → drawer açmadan inline onay (`/api/questions/:id/answer`; DB'de `answered`/`approve`/`prime` doğrulandı); (3) satır Revize drawer'ı doğrudan revize modunda açıyor (`initialRevise` prop); (4) `@media (max-width:560px)` — sidebar 52px ikon-moduna iniyor, satır butonları kırpılmıyor (edge 338<375), drawer tam-genişlik. Desktop'ta sızma yok (835px'te sidebar 212px).
 
-**Durum:** **745 test yeşil, typecheck temiz, console hatasız.** İki yeni lokal commit (`7e56755` kapı Faz 2, `575ca49` ekran) main'de. **origin'e PUSH EDİLMEDİ.** **SIRADAKİ:** Tek açık yıldızlı iş → **canlı koşu** (gerçek-Claude, ~25dk, UAT kum havuzu) — epic/versiyon/model ingestion + driver paralelliği + yeni kapı-revize semantiği canlı kanıt bekliyor.
+**Dilim 3 — Canlı koşu (gerçek Claude) ✅ + 2 bulgu:** Sandbox `kortext-live-uat`'ta tam zincir koştu (onboarding TaskFlow BRD → analysis 12 adım → planning-pipeline → Board 100 item). **§14.2 canlı kanıtlandı:** LEGAL∥GROWTH iki kapı aynı anda; LEGAL onay (durdu), GROWTH revize → tek başına yeniden üretildi (251→184 satır), **Claude revize feedback'ini prompt'tan aldı** (frontmatter'a birebir `revision_note: …ASO and paid channels removed; KPIs limited to 3` yazdı), `regenerate_step: product-analysis.2`, run abort YOK. **Bulgular (TODO'da detaylı):** (A) epic/version/model Board'a inmiyor — `backlog.yaml` yalnız step-0'da yazılıyor (enrichment adımları yeniden yazmıyor) + alan-adı uyuşmazlığı (`epic:` vs ingester `parent_epic:`) + hiç `type: epic` item yok → sütunlar 0; (B) step-8 konsolidasyon FAILED (declared report output pattern eşleşmedi, dosya yazılmış olsa da). Bunlar §14.2 işini etkilemez — planning-pipeline persona/köprü kalibrasyonu işi.
+
+**Durum:** **745 test yeşil, typecheck temiz, console hatasız.** Üç yeni lokal commit (`7e56755` kapı Faz 2, `575ca49` ekran, `0620832` docs) main'de. **origin'e PUSH EDİLMEDİ.** **SIRADAKİ:** Canlı koşunun çıkardığı **backlog enrichment + step-8 bulgusu** (TODO ⚠️) — planning-pipeline persona talimatları + köprü kalibrasyonu. Sandbox `kortext-live-uat/.kortext/` inceleme için duruyor.
 
 ---
 
@@ -30,7 +32,7 @@
 
 ## Açık işler (özet — tam liste [TODO.md](./TODO.md))
 
-- **⭐ Canlı koşu — epic/versiyon/model + dev-cycle paralelliği + kapı revize:** ingestion + driver paralelliği + yeni kapı-revize semantiği **745 test yeşil** ama gerçek-Claude ile canlı kanıtlanmadı (~25dk, executor=claude, UAT kum havuzu). Mock ile analiz kapıları + revize kanıtlandı. **Tek kalan yıldızlı iş.**
+- **⭐ Backlog enrichment + step-8 (canlı koşu bulgusu):** Canlı koşu §14.2'yi kanıtladı ama (A) epic/version/model Board'a inmiyor (`backlog.yaml` yalnız step-0'da yazılıyor + `epic:` vs `parent_epic:` alan uyuşmazlığı + hiç `type: epic` item yok) ve (B) step-8 konsolidasyon FAILED (rapor output pattern). Çözüm: planning-pipeline persona talimatları + köprü kalibrasyonu (alttaki "Backlog köprüsü zenginleştirme" ile birleşir). Detay [TODO ⚠️](./TODO.md).
 - **Concurrency knob'ları:** workflow-içi `concurrency=3`, `maxConcurrentWorktrees=10` — ayarlanabilir tavanlar (Eray isterse yükseltilir).
 - **Backlog köprüsü follow-up:** zenginleştirme (sonraki planning adımlarını da ingest), standalone CLI'a ingester bağla, kesintisiz canlı koşu. [TODO](./TODO.md).
 - **Motor — ertelenen backend dilimleri:** handover-on-close, blocker-temizle, `gate_runs` uat verdict, epic-status-flip, gate-persona staging raporları + prime staging onayı, preview wiring/persistence. [TODO §"Motor epic"](./TODO.md).
