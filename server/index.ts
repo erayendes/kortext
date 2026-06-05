@@ -28,6 +28,7 @@ import { readProjectMeta, resolveBlueprintPaths } from './blueprint/io.ts';
 import type { ExecutorKind } from './cli/executor-factory.ts';
 import { getDb } from './db/client.ts';
 import { ApprovalQueue } from './orchestrator/approval-queue.ts';
+import { QueueGateController } from './orchestrator/queue-gate-controller.ts';
 import { MarkdownSyncService } from './services/markdown-sync.ts';
 import type { SafetyGuards } from './engine/worker-pool.ts';
 import { mcpSseRouter } from '../mcp/sse.ts';
@@ -104,6 +105,10 @@ if (resumed.recovered.length > 0) {
 }
 
 const approvalQueue = new ApprovalQueue({ repos });
+// Same queue instance the REST routes (GET /api/questions, POST .../answer)
+// are mounted on — so a human's answer lands in the exact DB view the gate
+// controller polls. Onboarding analysis pauses at each +prime gate through it.
+const queueGateController = new QueueGateController(approvalQueue);
 
 // Faz 12.9 follow-up: wire the reports-index back-fill into the worker
 // pool's safety guard so per-file outputs (`<scope>_<slug>_<ts>.md`)
@@ -186,6 +191,10 @@ app.use(
         executorBinary,
         agentsDir,
         safety: safetyGuards,
+        // Pause at each +prime artifact-approval gate and wait for the human
+        // (via the approval queue) before continuing. Same queue the REST
+        // routes use, so a dashboard answer resumes the run.
+        gateController: queueGateController,
         // Onboarding runs analysis → planning (which derives the backlog), then
         // stops. Building backlog items stays the gated driver's job.
         chainThroughWorkflowId: 'planning-pipeline',

@@ -322,6 +322,11 @@ export const PendingQuestionSchema = z.object({
   answered_by: z.string().nullable(),
   answered_at: Timestamp.nullable(),
   created_at: Timestamp,
+  // Gate UI contract (migration 007): which artifact awaits approval, from
+  // whom, in which phase. Nullable — non-gate questions leave these NULL.
+  artifact_path: z.string().nullable().default(null),
+  persona: z.string().nullable().default(null),
+  phase: z.string().nullable().default(null),
 });
 export type PendingQuestion = z.infer<typeof PendingQuestionSchema>;
 
@@ -330,6 +335,9 @@ export const PendingQuestionInsertSchema = z.object({
   step_id: z.number().int().positive().nullable().default(null),
   question: z.string().min(1),
   choices: z.array(z.string()).default([]),
+  artifact_path: z.string().nullable().default(null),
+  persona: z.string().nullable().default(null),
+  phase: z.string().nullable().default(null),
 });
 export type PendingQuestionInsert = z.input<typeof PendingQuestionInsertSchema>;
 
