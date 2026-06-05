@@ -31,32 +31,47 @@ export type ReviewCycleDeps = {
 };
 
 /**
- * Run the `review`-column uat cycle for an item already in `review`.
- *
- * The review counterpart of {@link runTestCycle} (§5.9, Madde 4 eşi): the engine
- * owns the mechanics (uat-selected check, lifecycle transition, audit), the
- * injected {@link ReviewApprover} owns the approve/reject judgment.
+ * The outcome of an item's uat *judgment* — the parallelisable half of the
+ * review cycle. `kind: 'merge'` means the item cleared review (approved, or no
+ * uat gate selected) and is ready for the SERIAL mechanical closure; `kind:
+ * 'bounced'` means it was rejected and has already been transitioned back to
+ * in_progress. The merge itself (git → development) is intentionally NOT done
+ * here so callers can run judgments concurrently and serialise only the merge.
  */
-export async function runReviewCycle(itemId: string, deps: ReviewCycleDeps): Promise<ReviewCycleResult> {
-  const { repos, lifecycle, approver, merger, deployer, previewManager } = deps;
+export type ReviewDecision = {
+  itemId: string;
+  kind: 'merge' | 'bounced';
+  uatRequired: boolean;
+  verdict: ReviewVerdict | null;
+};
+
+export type JudgeReviewDeps = Pick<ReviewCycleDeps, 'repos' | 'lifecycle' | 'approver' | 'by'>;
+
+/**
+ * Run the human uat judgment for an item in `review` WITHOUT merging.
+ *
+ * Independent across items (each is its own +prime approval + DB rows), so the
+ * driver can fan these out in parallel; the returned {@link ReviewDecision}
+ * tells it which items still need the serial closure.
+ */
+export async function judgeReview(itemId: string, deps: JudgeReviewDeps): Promise<ReviewDecision> {
+  const { repos, lifecycle, approver } = deps;
   const by = deps.by ?? 'orchestrator';
 
   const item = repos.backlog.get(itemId);
   if (!item) throw new Error(`backlog item not found: ${itemId}`);
   if (item.status !== 'review') {
     throw new Error(
-      `runReviewCycle requires item in 'review', got '${item.status}' for ${itemId}`,
+      `judgeReview requires item in 'review', got '${item.status}' for ${itemId}`,
     );
   }
 
   const uatRequired = item.review_gates.includes('uat');
 
-  // uat unselected → no human approval needed; vacuous pass straight to done
+  // uat unselected → no human approval needed; vacuous pass straight to closure
   // (mirrors test-cycle's 0-gate → review, §5.8).
   if (!uatRequired) {
-    // No human approval needed → straight into mechanical closure (§5.9 #6).
-    const closure = await runClosure(itemId, { repos, lifecycle, merger, deployer, previewManager, by });
-    return { itemId, outcome: closure.outcome, uatRequired: false, verdict: null };
+    return { itemId, kind: 'merge', uatRequired: false, verdict: null };
   }
 
   let verdict: ReviewVerdict;
@@ -71,9 +86,7 @@ export async function runReviewCycle(itemId: string, deps: ReviewCycleDeps): Pro
   }
 
   if (verdict.approved) {
-    // Prime approved → mechanical closure decides done vs bounce (merge conflict).
-    const closure = await runClosure(itemId, { repos, lifecycle, merger, deployer, previewManager, by });
-    return { itemId, outcome: closure.outcome, uatRequired, verdict };
+    return { itemId, kind: 'merge', uatRequired, verdict };
   }
 
   lifecycle.transition(
@@ -82,5 +95,28 @@ export async function runReviewCycle(itemId: string, deps: ReviewCycleDeps): Pro
     by,
     verdict.reason ? `uat rejected: ${verdict.reason}` : 'uat rejected',
   );
-  return { itemId, outcome: 'bounced', uatRequired, verdict };
+  return { itemId, kind: 'bounced', uatRequired, verdict };
+}
+
+/**
+ * Run the full `review`-column uat cycle for an item already in `review`:
+ * judgment then (when cleared) the mechanical closure.
+ *
+ * The review counterpart of {@link runTestCycle} (§5.9, Madde 4 eşi): the engine
+ * owns the mechanics (uat-selected check, lifecycle transition, audit), the
+ * injected {@link ReviewApprover} owns the approve/reject judgment. Kept as the
+ * single-item entry point; the driver splits judge (parallel) from close
+ * (serial) via {@link judgeReview} + {@link runClosure}.
+ */
+export async function runReviewCycle(itemId: string, deps: ReviewCycleDeps): Promise<ReviewCycleResult> {
+  const { repos, lifecycle, approver, merger, deployer, previewManager } = deps;
+  const by = deps.by ?? 'orchestrator';
+
+  const decision = await judgeReview(itemId, { repos, lifecycle, approver, by });
+  if (decision.kind === 'bounced') {
+    return { itemId, outcome: 'bounced', uatRequired: decision.uatRequired, verdict: decision.verdict };
+  }
+
+  const closure = await runClosure(itemId, { repos, lifecycle, merger, deployer, previewManager, by });
+  return { itemId, outcome: closure.outcome, uatRequired: decision.uatRequired, verdict: decision.verdict };
 }
