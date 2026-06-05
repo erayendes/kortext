@@ -890,3 +890,13 @@ Canlı koşunun (§14.2) çıkardığı iki bulgu giderildi. **Kök neden ortak:
 **(B) Step-8 konsolidasyon raporu FAILED — output-resolver toleransı:** `<ts>` pattern'i (`\d{4}-\d{2}-\d{2}-\d{4}`) yalnız canonical `2026-06-05-1959` eşliyordu; ajan `planning-reports_planning_20260605.md` (compact, tarih-only) yazınca dosya diskte olduğu halde "üretilmedi" dendi. Pattern gevşetildi: tarih + opsiyonel ayraç + opsiyonel saat (`20260605`, `2026-06-05`, `20260605-1959` hepsi eşler), ama `draft` gibi tarih-olmayan çöp hâlâ reddedilir. Canonical form regresyonsuz çalışır.
 
 **Uçtan uca kanıt (in-memory):** iki-geçişli ingest (skeleton → enriched) → 0 yaratım/3 güncelleme, Board sütunları 1 epic / 2 child / 3 version / 3 model (canlı koşuda 0/0/0'dı). Fallback: düz `epic: Payments` → `epic-payments` epic'i türetildi.
+
+### 14.8 Dayanıklılık — adım-seviyesi transient CLI retry (2026-06-05)
+
+§14.7'yi gerçek-Claude ile canlı doğrulamak için `kortext-live-uat-v2`'de kesintisiz koşu denendi: **analysis adım 0-8 gerçek ajanla başarılı**, ama **adım 9 (+engineering-manager) geçici bir CLI hatasıyla düştü** — `API Error: The socket connection was closed unexpectedly` (exit 1, `aborted=false`). Zincir planning'e ulaşmadı. Bu kod değil, headless `claude` CLI'ın uzun deep-research adımında aldığı ağ/API blip'i. Sorun: tek bir geçici hata **tüm run'ı** `failed` yapıyordu (`retryRun` yalnız startup `orphaned:` crash-recovery için).
+
+**Çözüm (TDD, +8 test):** `cli-spawn.ts`'e iki parça eklendi:
+- **`isTransientCliFailure(res)`** — saf sınıflandırıcı. `aborted` → false (iptale saygı), `exitCode === 0` → false; aksi halde stdout/stderr'de **dar** bir marker setine bakar (socket closed, API Error, ECONNRESET/ETIMEDOUT/EAI_AGAIN, fetch failed, connection error, overloaded, rate-limit, 429, 5xx). Liste dışı her şey (bad-model, ENOENT, auth-red, declared-output-missing) **deterministik** → retry yok (boşa token yakmaz).
+- **`spawnCliWithRetry(opts, {maxAttempts, retryBaseDelayMs})`** — aynı komutu transient sonuçta exponential backoff'la (base·2^(k-1)) yeniden spawn eder; başarı / non-transient / `maxAttempts` tükenince durur. Log `flags:'a'` ile eklemeli → denemeler aynı log'da birikir.
+
+`claude-cli-executor` artık `spawnCliWithRetry`'ı varsayılan `maxAttempts: 3` ile sarıyor. Codex/gemini executor'ları henüz `spawnCli`'ı doğrudan kullanıyor (kullanılan executor claude; diğerleri opsiyonel follow-up). Üretimde canlı ajanlar bu blip'leri düzenli alacak → kesintisiz zincir için şart.
