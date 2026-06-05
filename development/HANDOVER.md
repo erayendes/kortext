@@ -7,24 +7,23 @@
 
 ---
 
-## ⭐ Şu an (2026-06-05) — Canlı UAT + backlog file-ingestion köprüsü ✅
+## ⭐ Şu an (2026-06-05) — Workflow kuralları runtime'a bağlandı + sistem-geneli paralellik ✅
 
-**Bağlam:** Gerçek bir BRD (`~/Downloads/BRD.md`, "Dinamik Hidrasyon Asistanı") ile `/Users/erayendes/Documents/_codebase/UAT` dizininde **canlı uçtan-uca UAT** (proje **HydroFlow**, executor=claude). Backend `cwd=UAT` ile çalıştırıldı (tüm `.kortext/` verisi UAT'a; kortext reposu temiz). Frontend: `.claude/launch.json > kortext-uat-web` (sadece vite, `/api`→3200 proxy).
+**Bağlam:** Eray tespit etti — canlı UAT'ta sistem **workflow'ların içindeki kuralları atlıyordu**: artifact onay kapıları +prime'a hiç düşmedi, epic/versiyon üretilmedi, persona modelleri seçilmedi. Kurallar workflow dosyalarında doğru yazılıydı ama runtime uygulamıyordu (onboarding, kapı-denetleyicisiz `startCommand` kısayolundan gidiyordu). Detay [DECISIONS Bölüm 14](./DECISIONS.md).
 
-**Vitrin doğrulandı:** onboarding + 14 ekran gerçek veriyle gezildi; onboarding gerçek analiz pipeline'ını tetikledi → gerçek Claude ajanları BRD'den **PRD/TRD/PFD + 9 referans** üretti.
+**Üç dilim (paralel ajanlarla):** (1) **Onay kapıları bağlandı** — `QueueGateController` (`server/orchestrator/queue-gate-controller.ts`) mevcut `ApprovalQueue`+REST uçlarına bağlanır, onboarding koşusuna geçer; `pending_questions`'a `artifact_path`/`persona`/`phase` (migration 007). (2) **Epic/versiyon/model** — `backlog-ingest` artık `version`/`parent_epic`→sütun eşler + yeni `model` sütunu (migration 008) + `planning-pipeline.md` bunları üretir (DB sütunları zaten vardı). (3) **"Proje hazırlanıyor" timeline ekranı** (`src/routes/initializing.tsx`).
 
-**Bulunan + düzeltilen 4 UAT bug'ı:** `e6adc8b` Memory/Reports 500→boş liste (yeni projede `memory/` yokken ENOENT) · `bca744c` onboarding **analiz→planning zinciri** (backlog hiç türetilmiyordu) · `9614386` sabit "Acme CRM"→gerçek proje adı (`useProjectMeta`) · `30af9d8` Vite HMR createRoot uyarısı.
+**Kritik düzeltme — DAG-paralel kapılar:** Eray "LEGAL ∥ GROWTH paralel olmalıydı" dedi (ilke: koşabilen her şey paralel). Kök sebep: `worker-pool` kapıyı **adım index'ine** + tekil `pendingGate`'e bağlamıştı → seri. Çözüm: kapı per-step + **DAG bağımlılığına** bağlandı (`gateByStepKey`/`gateApproved`); birden çok kapı aynı anda pending olabilir. **Canlı kanıt:** `/api/questions` aynı anda **2 açık kapı** (LEGAL+GROWTH); GROWTH onaylanınca PRD belirmedi, LEGAL de onaylanınca belirdi. Seçilen semantik (Eray): **"onaylanan kalır, revize tek başına döner"** — ama **FAZ 2 açık** (reject hâlâ tüm run'ı abort ediyor).
 
-**Asıl iş — backlog file-ingestion köprüsü (DECISIONS Bölüm 13):** Otonom pipeline backlog'u **dolduramıyordu**. Önce MCP yaklaşımı denendi → **canlı testte çöktü** (headless ajanlar Write-tool/dosya ile çalışıyor, MCP çağırmıyor). Eray **"dosya köprüsü"** seçti → MCP commit'leri geri alındı (`busy_timeout` kaldı). Köprü: planning agent `.kortext/foundation/backlog.yaml` yazar → motor hook'u (`SafetyGuards.backlogIngester`, `server/engine/backlog-ingest.ts`) parse edip gerçek backlog satırlarına çevirir. Sağlamlık: fenced ```yaml fallback · out-of-enum tip coerce · bilinmeyen alan passthrough · **sessiz kayıp yok** (bozuk blok→hata + audit özeti) · idempotent.
+**Sistem-geneli paralellik (driver):** `pool.ts` `mapWithPool` ile dev-cycle Phase 2 (test gate'leri) tam paralel; Phase 3 yargılar paralel ama **git merge'ler seri** (paylaşılan `development` dalı). `review-cycle` `judgeReview`/`runClosure` olarak bölündü.
 
-**Canlı kanıt:** gerçek Claude ajanı BRD'den **83 item'lık temiz `backlog.yaml`** yazdı → ingester **83/0** satır → **Board'da 83 gerçek görev**. **721 test yeşil, typecheck temiz. main'e merge + origin'e push edildi.**
-
-**Caveat'lar:** (1) bu koşuda `acceptance_criteria`/`review_gates` seyrekti (ajan kendi alanlarını kullandı, frontmatter'da korundu, kayıp yok) → zenginleştirme TODO'da. (2) Auto-fire B2 testinde kanıtlı ama tek-seferlik kesintisiz onboarding→Board (~25dk) koşusu yapılmadı. (3) Standalone `kortext start` `safetyGuards` almıyor → ingester sadece backend yolunda (onboarding/drive). **SIRADAKİ:** [TODO §"Backlog köprüsü — sonraki"](./TODO.md).
+**Durum:** **744 test yeşil, typecheck temiz.** İki lokal commit (`237acc6` kapılar, `e9efac2` driver) + üç dilim main'de. **origin'e PUSH EDİLMEDİ.** **SIRADAKİ:** [Açık işler](#açık-işler-özet--tam-liste-todomd) — ekran bug'ları / kapı Faz 2 / canlı koşu.
 
 ---
 
-## Önceki devir (özet) — v6 hi-fi app + otonomi + motor
+## Önceki devir (özet) — backlog köprüsü + v6 hi-fi app + otonomi + motor
 
+- **Canlı UAT + backlog file-ingestion köprüsü (2026-06-05, [DECISIONS §13](./DECISIONS.md)):** MCP yaklaşımı canlı testte çöktü (headless ajan Write-tool kullanıyor) → Eray "dosya köprüsü" seçti. Planning agent `.kortext/foundation/backlog.yaml` yazar → `backlog-ingest.ts` parse eder. Gerçek ajan BRD'den 83 item yazdı → Board'da 83 görev. main'e push edildi.
 - **v6 hi-fi gerçek app'e indi (2026-06-04→05):** 14 ekranın tamamı React'te (`src/`) — Dashboard/Board/References/Memory/Reports + 4 project + 7 kortext settings + onboarding wizard + ⌘K + bildirim + terminal + light/dark tema. Paylaşılan primitifler: `FileBrowser`/`AnnotatableDoc`/`SettingsPane`/`Drawer`. Tasarım kaynağı `concepts/wireframe-v6-hifi.html`. Kararlar [DECISIONS §11–§12](./DECISIONS.md).
 - **Üretim otonomisi (2026-06-04, `e209ac0`):** dashboard "Run once" + "Auto" toggle + `DriveScheduler` (60sn). Ana env kilidi (`KORTEXT_DRIVE_ENABLED`, varsayılan kapalı) üstünde ikinci toggle. Canlı kanıtlandı.
 - **Motor/şema epic §5.9 TAMAM:** tek-item lifecycle + epic→staging + capstone + son montaj + `driveReadyItems` ("başlat düğmesi") + `POST /api/drive` (kilitli). Gerçek git ile to_do→done kanıtlı (`driver-e2e.test.ts`). Detay [DECISIONS §5](./DECISIONS.md).
@@ -33,6 +32,10 @@
 
 ## Açık işler (özet — tam liste [TODO.md](./TODO.md))
 
+- **⭐ "Proje hazırlanıyor" ekranı — etkileşim bug'ları (Bölüm 14):** (1) Sidebar "Setup" linki hash-farkında değil (`/initializing#/initializing` → Dashboard'a düşüyor); (2) satırdaki **Onayla `stopPropagation` eksik** → tıklama drawer açıyor, onaylamıyor; (3) drawer içi onay/revize aksiyonları; (4) <500px responsive overlap. Şu an onay **Dashboard "For review" kartından** çalışıyor.
+- **⭐ Kapı Faz 2 — "revize tek başına döner":** Analiz kapıları artık DAG-paralel ([DECISIONS §14.2](./DECISIONS.md)) ama `reject` hâlâ **tüm run'ı abort** ediyor. Eray'ın seçtiği semantik (onaylanan kalır, sadece revize edilen yeniden üretilir) için `worker-pool` reject + `Orchestrator.retryRun` ayıklanmalı.
+- **⭐ Canlı koşu — epic/versiyon/model + dev-cycle paralelliği:** ingestion + driver paralelliği **test yeşil** ama gerçek-Claude ile canlı kanıtlanmadı (~25dk). Mock ile analiz kapıları kanıtlandı.
+- **Concurrency knob'ları:** workflow-içi `concurrency=3`, `maxConcurrentWorktrees=10` — ayarlanabilir tavanlar (Eray isterse yükseltilir).
 - **Backlog köprüsü follow-up:** zenginleştirme (sonraki planning adımlarını da ingest), standalone CLI'a ingester bağla, kesintisiz canlı koşu. [TODO](./TODO.md).
 - **Motor — ertelenen backend dilimleri:** handover-on-close, blocker-temizle, `gate_runs` uat verdict, epic-status-flip, gate-persona staging raporları + prime staging onayı, preview wiring/persistence. [TODO §"Motor epic"](./TODO.md).
 - **v3.1 CLI/onboarding redesign:** multi-project daemon, postinstall onboard, native folder picker, 9 komutluk CLI. Yön [DECISIONS Bölüm 0](./DECISIONS.md), sıralı kuyruk [TODO](./TODO.md).

@@ -835,3 +835,36 @@ Onboarding analizi çalıştırıyordu ama **backlog hiç dolmuyordu**. İki seb
 
 ### 13.5 Canlı kanıt + caveat
 Gerçek Claude ajanı BRD'den **83 item'lık temiz `backlog.yaml`** (0 parse hatası) yazdı → ingester **83/0** satır → **Board'da 83 gerçek görev**. Caveat: bu koşuda `acceptance_criteria`/`review_gates` seyrekti (ajan kendi alanlarını kullandı, kayıp yok). **Açık iş:** sonraki planning adımlarını (qa/security/designer "update") da ingest et; standalone CLI'a da `safetyGuards` bağla; tek-seferlik kesintisiz onboarding→Board (~25dk) koşusu. Bkz. [TODO](./TODO.md), [spec](./specs/2026-06-04-backlog-ingest-bridge.md).
+
+---
+
+## Bölüm 14 — Workflow kuralları runtime'a bağlandı + sistem-geneli paralellik (2026-06-05)
+
+**Status:** İmplemente + **744 test yeşil** + typecheck temiz. Analiz kapıları **canlı kanıtlı** (mock executor, deterministik). Üç dilim main'e merge edildi (commit'ler `7102c53` kapılar, `de5b129` backlog, `2ccffe3` ekran + 3 merge commit). Paralellik iki ek lokal commit: `237acc6` (DAG-paralel kapılar), `e9efac2` (driver paralelliği). **origin'e PUSH EDİLMEDİ** (Eray onayı bekliyor).
+
+**Bağlam:** Eray tespit etti — canlı UAT'ta sistem **workflow'ların içindeki kuralları atlıyordu**: artifact onay kapıları sana hiç düşmedi, epic/versiyon üretilmedi, persona modelleri seçilmedi. Teşhis: kurallar workflow dosyalarında doğru yazılı (DAG + `approver: +prime`) ama runtime onları uygulamıyordu — onboarding, kapı-denetleyici verilmeyen `startCommand` kısayolundan gidiyordu.
+
+### 14.1 Üç dilim (paralel ajanlarla implemente)
+- **Onay kapıları bağlandı.** Mekanizmanın %90'ı zaten vardı (`ApprovalQueue`, `worker-pool` kapı mantığı, REST `/api/questions` + `/api/runs/:id/approve`) ama onboarding `runWorkflow`'a `gateController` vermiyordu. Yeni `server/orchestrator/queue-gate-controller.ts` (`QueueGateController`) kuyruğa bağlanır; `server/index.ts` onboarding koşusuna geçer. `pending_questions`'a artifact metadata sütunları: `artifact_path`/`persona`/`phase` (**migration 007**). Onay→approve, başka herhangi bir cevap→reject(reason).
+- **Epic/versiyon/model köprüye eklendi.** DB'de `epic` tipi + `parent_id` + `version` sütunları zaten vardı; `backlog-ingest` bunları tanımayıp frontmatter'a atıyordu. Artık `version`/`parent_epic`(`parent`)→sütun eşlemesi + yeni `model` sütunu (**migration 008**) + `planning-pipeline.md` bu alanları (`type: epic`, `parent_epic`, `version`, `model`) üretir.
+- **"Proje hazırlanıyor" timeline ekranı** (`src/routes/initializing.tsx`): `/api/questions`'ı yoklar, status-pill + Onayla/Revize satırları, tıkla→artifact drawer.
+
+### 14.2 DAG-paralel onay kapıları (kritik düzeltme)
+Eray tespit etti: **LEGAL ∥ GROWTH paralel olmalıydı** — tek vaka değil, ilke (koşabilen tüm doküman/rapor/görev paralel). Kök sebep: `worker-pool` kapıyı **adım index'ine** bağlamıştı (yorum bile "phase boundary by index" diyordu) + tekil `pendingGate` slotu → her kapılı adım index sırasına serileşiyordu, ve iki kapı aynı anda onayda duramıyordu.
+
+**Düzeltme:** kapı per-step, **DAG bağımlılığına** bağlandı (`gateByStepKey`/`gateApproved`/`gatesToFire`). Bir kapı yalnız **kendi bağımlılarını** bekletir; bağımsız kardeş paralel koşar; bir tüketici (PRD) ancak listelediği her kapılı bağımlılık **done + onaylı** olunca hazır olur. Birden çok kapı eşzamanlı pending olabilir. `GatePauseContext`'e abort sinyali eklendi (bir kapı reddedilince paralel bekleyenler asılı kalmasın).
+
+**Seçilen semantik (Eray, AskUserQuestion option 1): "onaylanan kalır, revize tek başına döner."** Canlı kanıt: tetikleme sonrası `/api/questions` **aynı anda 2 açık kapı** (LEGAL+GROWTH); sadece GROWTH onaylanınca PRD belirmedi, LEGAL de onaylanınca belirdi. **FAZ 2 AÇIK:** `reject` şu an hâlâ **tüm run'ı abort** ediyor; "revize tek başına" tam karşılanması için reject'in sadece o adımı yeniden üretip kardeşlerin onayını koruması gerekir (retryRun/Orchestrator abort-on-reject mantığı ayıklanmalı).
+
+### 14.3 Sistem-geneli paralellik (dev-cycle driver)
+İlke gereği tüm boru hattı denetlendi. Bulgu: `driveReadyItems` Phase 2 (test gate'leri) ve Phase 3 (review) item'ları `for...await` ile **tek tek** işliyordu. Düzeltme:
+- Yeni `server/orchestrator/pool.ts` `mapWithPool` (sıra-korumalı, sınırlı eşzamanlılık; `runReadyItems` desenini genelleştirir).
+- **Phase 2 tam paralel** (saf gate yargısı, paylaşılan durum yok).
+- **Phase 3: yargılar paralel, MERGE'LER SERİ.** `review-cycle` `judgeReview` (paralel insan onayı) + `runClosure` (seri git merge) olarak bölündü. Sebep: tüm merge'ler paylaşılan `development` dalına yapılır → paralel git merge çakışır. Ayrım: **"yargı" (ajan/insan, dakikalar → paralelleştir)** vs **"merge" (git, saniyeler → seri kalmalı).**
+- Zaten paralel olanlar korundu: yeni `to_do` item'lar (ayrı worktree), bir item'ın kendi test gate'leri (`Promise.all`), workflow-içi adımlar (concurrency=3).
+
+### 14.4 Ayarlanabilir tavanlar (bug değil)
+Workflow-içi `concurrency=3` ve `maxConcurrentWorktrees=10` — kasıtlı güvenlik tavanı (aynı anda kaç gerçek ajan/disk). Yükseltilebilir; gerçek ajanlarda kaynak/maliyet artar.
+
+### 14.5 Açık işler
+(1) **Ekran etkileşim bug'ları** — Setup linki hash-farkında değil (`/initializing#/initializing`), satır-Onayla `stopPropagation` eksik (tıklama drawer açıyor, onaylamıyor), drawer onay aksiyonları, <500px responsive overlap. Şu an onay **Dashboard "For review" kartından** çalışıyor. (2) **Kapı Faz 2** (revize-tek-başına, yukarıda). (3) Epic/versiyon/model + dev-cycle paralelliği için **gerçek-Claude canlı koşu** (test yeşil, canlı değil). Bkz. [TODO](./TODO.md).
