@@ -166,22 +166,81 @@ describe('ingestBacklogItems', () => {
     expect(row!.frontmatter.blocks).toEqual(['T-2']);
   });
 
-  it('is idempotent: second ingest creates 0 and marks existing as skipped', () => {
+  it('re-ingest of identical items creates 0, updates existing (no skip), data unchanged', () => {
     const { items } = parseBacklogYaml(SAMPLE);
 
     // first call
     ingestBacklogItems(repos, items);
+    const before = repos.backlog.get('T-1');
 
-    // second call — same items
+    // second call — same items: an upsert re-applies them as updates, never
+    // silently dropping a later enrichment pass.
     const second = ingestBacklogItems(repos, items);
     expect(second.created).toHaveLength(0);
+    expect(second.skipped).toHaveLength(0);
+    expect(second.updated).toEqual(expect.arrayContaining(['T-1', 'T-3']));
 
-    const t1skip = second.skipped.find((s) => s.id === 'T-1');
-    const t3skip = second.skipped.find((s) => s.id === 'T-3');
-    expect(t1skip).toBeDefined();
-    expect(t1skip!.reason).toMatch(/already exists/i);
-    expect(t3skip).toBeDefined();
-    expect(t3skip!.reason).toMatch(/already exists/i);
+    // Identical input → row content unchanged.
+    const after = repos.backlog.get('T-1');
+    expect(after!.review_gates).toEqual(before!.review_gates);
+    expect(after!.frontmatter.priority).toBe('P0');
+  });
+
+  it('upserts: a later enrichment pass updates gates/version/model/parent on existing rows', () => {
+    // The multi-step planning pipeline rewrites the WHOLE backlog.yaml each
+    // enrichment step. The ingester must merge a later pass onto an existing
+    // item instead of skipping it — otherwise security/version/model markings
+    // (added after the EM's first skeleton write) never reach the DB.
+    ingestBacklogItems(
+      repos,
+      parseBacklogYaml('items:\n  - id: AUTH-001\n    type: task\n    title: Login\n').items,
+    );
+    const skeleton = repos.backlog.get('AUTH-001')!;
+    expect(skeleton.review_gates).toEqual([]);
+    expect(skeleton.version).toBeNull();
+    expect(skeleton.parent_id).toBeNull();
+
+    const enriched = `items:
+  - id: AUTH-EPIC
+    type: epic
+    title: Authentication
+  - id: AUTH-001
+    type: task
+    title: Login
+    parent_epic: AUTH-EPIC
+    version: v0.1
+    model: high-reasoning
+    review_gates: [security_control]
+    acceptance_criteria: [user can log in]
+`;
+    const result = ingestBacklogItems(repos, parseBacklogYaml(enriched).items);
+    expect(result.created).toContain('AUTH-EPIC'); // brand-new epic
+    expect(result.updated).toContain('AUTH-001'); // existing task enriched
+
+    const row = repos.backlog.get('AUTH-001')!;
+    expect(row.parent_id).toBe('AUTH-EPIC');
+    expect(row.version).toBe('v0.1');
+    expect(row.model).toBe('high-reasoning');
+    expect(row.review_gates).toEqual(['security_control']);
+    expect(row.frontmatter.acceptance_criteria).toEqual(['user can log in']);
+  });
+
+  it('upsert never downgrades engine-owned status (planning fields only)', () => {
+    ingestBacklogItems(
+      repos,
+      parseBacklogYaml('items:\n  - id: W-1\n    type: task\n    title: Work\n').items,
+    );
+    // Engine moves the item forward, as the driver would.
+    repos.backlog.transitionStatus('W-1', 'in_progress');
+
+    // A re-ingest of the planning file must NOT reset it back to to_do.
+    ingestBacklogItems(
+      repos,
+      parseBacklogYaml('items:\n  - id: W-1\n    type: task\n    title: Work\n    version: v0.1\n').items,
+    );
+    const row = repos.backlog.get('W-1')!;
+    expect(row.status).toBe('in_progress'); // status untouched
+    expect(row.version).toBe('v0.1'); // planning field still applied
   });
 });
 
@@ -267,6 +326,89 @@ describe('ingestBacklogItems — epic/version/parent/model columns', () => {
     const result = ingestBacklogItems(repos, items);
     expect(result.skipped).toHaveLength(0);
     expect(repos.backlog.get('X-001')!.parent_id).toBe('X-EPIC');
+  });
+
+  it('derives real epics from a flat `epic:` label when the agent omits epic items', () => {
+    // What the live run actually produced: a flat list of tasks, each tagged
+    // with a human-readable `epic:` LABEL (not a parent_epic id), and NO
+    // `type: epic` container items at all. Result on the Board: the epic column
+    // was empty. The ingester should synthesize one epic per distinct label and
+    // link the labelled tasks to it so the hierarchy column is populated.
+    const FLAT = `items:
+  - id: INFRA-001
+    type: task
+    title: Setup CI
+    epic: Infrastructure
+  - id: INFRA-002
+    type: task
+    title: Dockerize
+    epic: Infrastructure
+  - id: AUTH-001
+    type: task
+    title: Login
+    epic: Authentication
+`;
+    const { items, errors } = parseBacklogYaml(FLAT);
+    expect(errors).toHaveLength(0);
+    const result = ingestBacklogItems(repos, items);
+
+    // The three tasks plus two synthesized epics are created.
+    expect(result.created).toEqual(
+      expect.arrayContaining(['INFRA-001', 'INFRA-002', 'AUTH-001']),
+    );
+    expect(result.skipped).toHaveLength(0);
+
+    // Both INFRA tasks point at the SAME synthesized epic, titled by the label.
+    const i1 = repos.backlog.get('INFRA-001')!;
+    const i2 = repos.backlog.get('INFRA-002')!;
+    expect(i1.parent_id).not.toBeNull();
+    expect(i1.parent_id).toBe(i2.parent_id);
+    const infraEpic = repos.backlog.get(i1.parent_id!)!;
+    expect(infraEpic.type).toBe('epic');
+    expect(infraEpic.title).toBe('Infrastructure');
+
+    // The AUTH task points at a different epic.
+    const a1 = repos.backlog.get('AUTH-001')!;
+    expect(a1.parent_id).not.toBe(i1.parent_id);
+    expect(repos.backlog.get(a1.parent_id!)!.title).toBe('Authentication');
+
+    // The label is consumed structurally — it does not also leak to frontmatter.
+    expect(i1.frontmatter.epic).toBeUndefined();
+  });
+
+  it('does NOT synthesize an epic when an explicit parent_epic id is given', () => {
+    // Regression guard: the proper shape (parent_epic id + a real epic item)
+    // must not trigger label-derivation. Here the label and the id coexist;
+    // the explicit id wins and no extra epic is invented.
+    const PROPER = `items:
+  - id: AUTH-EPIC
+    type: epic
+    title: Authentication
+  - id: AUTH-001
+    type: task
+    title: Login
+    parent_epic: AUTH-EPIC
+    epic: Authentication
+`;
+    const { items } = parseBacklogYaml(PROPER);
+    const result = ingestBacklogItems(repos, items);
+    // Exactly two rows — no synthesized third epic.
+    expect(result.created.sort()).toEqual(['AUTH-001', 'AUTH-EPIC']);
+    expect(repos.backlog.get('AUTH-001')!.parent_id).toBe('AUTH-EPIC');
+  });
+
+  it('is idempotent across runs when epics are synthesized from labels', () => {
+    const FLAT = `items:
+  - id: INFRA-001
+    type: task
+    title: Setup CI
+    epic: Infrastructure
+`;
+    const { items } = parseBacklogYaml(FLAT);
+    ingestBacklogItems(repos, items);
+    const second = ingestBacklogItems(repos, items);
+    // Stable synthetic epic id → second run re-creates nothing.
+    expect(second.created).toHaveLength(0);
   });
 
   it('still surfaces a broken fenced block as an error (no silent loss)', () => {

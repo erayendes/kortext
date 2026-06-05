@@ -49,6 +49,30 @@ describe('resolveDeclaredOutput', () => {
     }
   });
 
+  it('tolerates timestamp forms real headless agents emit', () => {
+    // Headless Claude writes files via the raw Write tool, inventing its own
+    // filename — it does NOT always honour the canonical YYYY-MM-DD-HHMM form.
+    // The live run produced `planning-reports_planning_20260605.md` (compact,
+    // date-only) and the strict pattern dropped a file that existed on disk.
+    const r = resolveDeclaredOutput(
+      '.kortext/reports/planning-reports_<slug>_<ts>.md',
+      worktree,
+    );
+    if (r.kind !== 'pattern') throw new Error('expected pattern');
+    // Canonical form still matches (no regression).
+    expect(r.filenameRegex.test('planning-reports_planning_2026-06-05-1959.md')).toBe(true);
+    // Compact date (YYYYMMDD) — the exact form the live run emitted.
+    expect(r.filenameRegex.test('planning-reports_planning_20260605.md')).toBe(true);
+    // Date-only with dashes.
+    expect(r.filenameRegex.test('planning-reports_planning_2026-06-05.md')).toBe(true);
+    // Compact date + time.
+    expect(r.filenameRegex.test('planning-reports_planning_20260605-1959.md')).toBe(true);
+    // Still rejects clearly non-date junk in the <ts> slot.
+    expect(r.filenameRegex.test('planning-reports_planning_draft.md')).toBe(false);
+    // Still anchored on the .md extension.
+    expect(r.filenameRegex.test('planning-reports_planning_20260605xmd')).toBe(false);
+  });
+
   it('supports absolute declared paths', () => {
     const r = resolveDeclaredOutput('/var/foo_<slug>_<ts>.md', worktree);
     expect(r.kind).toBe('pattern');
