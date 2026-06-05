@@ -59,6 +59,14 @@ export type PendingQuestion = {
   answered_by: string | null;
   answered_at: number | null;
   created_at: number;
+  /**
+   * Init-phase artifact metadata (Project Initializing timeline). Optional on
+   * the mirror because legacy fixtures/tests omit them; the live API sends them
+   * for init questions (e.g. `.kortext/references/LEGAL.md`, `+legal-expert`).
+   */
+  artifact_path?: string | null;
+  persona?: string | null;
+  phase?: string | null;
 };
 
 export type DecisionStatus = 'proposed' | 'accepted' | 'superseded' | 'rejected';
