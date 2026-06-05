@@ -8,7 +8,7 @@
 
    Her item şu alanlara sahip olmalı:
    - `id`: kararlı benzersiz kimlik (örn. `INFRA-001`, `AUTH-002`)
-   - `type`: `task` | `bug` | `debt` | `epic` | `spike` | `hotfix` (ürün özellikleri → task, açık hatalar → bug, teknik borçlar → debt)
+   - `type`: `task` | `bug` | `debt` | `epic` | `spike` (ürün özellikleri → task, açık hatalar → bug, teknik borçlar → debt)
    - `title`: kısa başlık
    - `priority`: `P0` (MVP blocker) | `P1` | `P2` | `P3`
    - `description`: ne yapılacağı
