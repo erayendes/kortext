@@ -7,7 +7,20 @@
 
 ---
 
-## ⭐ Şu an (2026-06-05) — Backlog enrichment + step-8 bulgusu kapandı ✅
+## ⭐ Şu an (2026-06-06) — Tam zincir KESİNTİSİZ canlı koştu ✅ (§14.7–14.9)
+
+**Bağlam:** Backlog enrichment (§14.7) + transient retry (§14.8) + delta köprüsü (§14.9) bitti ve **tam zincir gerçek-Claude ile kesintisiz tamamlandı (ilk kez)** — sandbox `kortext-live-uat-v2`. Detay [DECISIONS §14.7–14.9](./DECISIONS.md).
+
+**Canlı sonuç:** onboarding → analiz (12 adım, 30 dk) → planning (9 adım, 56 dk) → Board. İki run da `succeeded`.
+- **§14.7 (5/5 sütun, DB 127 item):** epics=18, parent=109, version=127, model=127, gates=97 (önceki koşuda 0/0/0). Synthetic epic fallback + step-8 konsolidasyon + rapor hepsi canlı çalıştı.
+- **§14.9 hız:** qa 24→7dk, security 22→5dk, designer 22→3dk (3-7×). Planning ~56 dk (eskiden ~3 saat). gate union canlı birikti.
+- **§14.8 retry:** önceki v2 koşusunda adım 9 transient socket hatasını retry'la kurtardı (canlı kanıt); bu koşuda gerek olmadı.
+
+**Durum:** **767 test yeşil, typecheck temiz.** 7 lokal commit (`28f3b65`..`9c04fae`) main'de. **origin'e PUSH EDİLMEDİ.** **SIRADAKİ seçenekler:** (1) bu 7 commit'i push (Eray onayıyla); (2) `/api/backlog` limit=100 sayfalama follow-up'ı (127 item'da epic'leri kesiyor — Board görünümü); (3) codex/gemini executor'larına transient retry; (4) diğer açık işler ([TODO](./TODO.md)).
+
+---
+
+## Önceki devir (2026-06-05) — Backlog enrichment + step-8 bulgusu kapandı ✅
 
 **Bağlam:** Canlı koşunun (§14.2) çıkardığı iki gerçek bulgu giderildi. Önceki devrin üç yıldızlı işinin tamamı (kapı Faz 2, ekran bug'ları, canlı koşu) + bu bulgular artık kapalı. Detay [DECISIONS §14.7](./DECISIONS.md).
 
