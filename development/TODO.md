@@ -1,212 +1,106 @@
 # Kortext — TODO
 
-Açık iş listesi. Yapılan her şey [DECISIONS.md](./DECISIONS.md) tarihçesine taşınır.
+Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECISIONS.md](./DECISIONS.md)'de, son durum [HANDOVER.md](./HANDOVER.md)'de.
 
 ---
 
-## ⭐ Backlog köprüsü — sonraki (2026-06-05, DECISIONS Bölüm 13)
+## ⭐ Sırada
 
-Dosya köprüsü indi ve canlı kanıtlandı (BRD → `backlog.yaml` → Board'da 83 item). Açık işler:
-
-- [ ] **Zenginleştirme — sonraki planning adımlarını ingest et.** Şu an yalnız step 1'in `backlog.yaml`'i ingest ediliyor; qa-engineer/security-engineer/designer adımları gate/acceptance "update" üretiyor ama ingest edilmiyor → bu koşuda `acceptance_criteria`/`review_gates` seyrek kaldı. Ya step 1 talimatını bu alanları zorunlu kılacak şekilde güçlendir, ya da "id'ye göre güncelle" köprüsü ekle (`backlog-acceptance-set` vb. dosyalarını oku → `repos.backlog.update`).
-- [ ] **Standalone CLI'a ingester bağla.** `kortext start` (commands.ts) `safetyGuards` almıyor → ingester sadece backend (onboarding/drive) yolunda ateşleniyor. CLI yolunu da besle (repos + backlogIngester) ki `kortext start planning-pipeline` de backlog'u doldursun.
-- [ ] **Tek-seferlik kesintisiz canlı koşu** — sıfırdan onboarding → analiz → planning → Board (~25dk, executor=claude, UAT kum havuzu). Her halka ayrı kanıtlandı; kesintisiz tam zincir henüz koşulmadı.
-- [ ] **Ajan YAML tutarlılığı** — ajan `type`'a kategori yazıyor (coerce ediyoruz) ve şema alanlarını atlayabiliyor. İzlemeye değer; gerekirse step 1 prompt'unu daha katı örnek + "SADECE şu alanlar" ile sıkılaştır.
-
----
-
-## Sırada (Faz 13 kapanışı)
-
-- [~] **Manuel UAT** — **kısmen yapıldı (2026-06-05):** `_codebase/UAT`'ta `cwd=UAT` backend + vite ile canlı UAT; onboarding + 14 ekran + gerçek analiz (PRD/TRD/PFD + 9 ref) + planning→backlog doğrulandı; 4 bug bulundu+düzeltildi. **Kalan:** `npm pack` + global install + `kortext init/serve` ile **paketlenmiş** akışın (kaynak değil) ayrı doğrulaması.
-
-- [ ] **v3.1.0 release flow** — `package.json` 3.0.0 → 3.1.0, CHANGELOG `[Unreleased]` → `[3.1.0] — <tarih>` + yeni `[Unreleased]` aç, `git tag v3.1.0`, npm publish (otomatik tetik). Sıralama: Manuel UAT (her iki tur) pass + CLI redesign 11 adım kuyruk pass + v3.0.1 EADDRINUSE fix sonrası.
+- [ ] **Backlog köprüsü — zenginleştirme** (2026-06-05, DECISIONS Bölüm 13). Şu an yalnız planning step 1'in `.kortext/foundation/backlog.yaml`'i ingest ediliyor; sonraki adımlar (qa/security/designer gate/acceptance "update") ingest edilmiyor → bu koşuda `acceptance_criteria`/`review_gates` seyrek kaldı. Çözüm: step 1 talimatını bu alanları zorunlu kılacak şekilde güçlendir **veya** "id'ye göre güncelle" köprüsü ekle (`backlog-acceptance-set` vb. → `repos.backlog.update`).
+- [ ] **Standalone CLI'a ingester bağla** — `kortext start` (commands.ts) `safetyGuards` almıyor → ingester sadece backend (onboarding/drive) yolunda ateşleniyor. CLI yolunu da besle.
+- [ ] **Tek-seferlik kesintisiz canlı koşu** — sıfırdan onboarding → analiz → planning → Board (~25dk, executor=claude, UAT kum havuzu). Her halka ayrı kanıtlandı; kesintisiz tam zincir koşulmadı.
+- [ ] **Manuel UAT (paketlenmiş)** — clean klasör + `npm pack` + `npm install -g ./kortext-3.X.X.tgz` + `kortext init` + `kortext serve` ile **paketlenmiş** akışın doğrulaması (bu oturum kaynak-modda UAT yaptı; tgz akışı ayrı).
+- [ ] **v3.1.0 release flow** — `package.json` 3.0.0→3.1.0, CHANGELOG `[Unreleased]`→`[3.1.0]` + yeni `[Unreleased]`, `git tag v3.1.0`, npm publish. Sıralama: paketlenmiş UAT pass + CLI redesign kuyruğu + v3.0.1 EADDRINUSE fix sonrası.
 
 ---
 
-## UI track (ekran-ekran) — aktif (2026-06-02)
+## Motor — ertelenen backend dilimleri
 
-✅ Ekran 1 Onboarding · ✅ Ekran 2 Dashboard · ✅ Ekran 3 Board (#4 AC dahil TAM; ertelenenler aşağıda Eray'ın sözüyle). **Sıra: Memory(4) → Reports(5) → References(6) → settings pane'leri(7-14).**
+> Motor/şema epic §5.9 ana iş **bitti + main'de** (lifecycle + capstone + son montaj + driver + `POST /api/drive` + scheduler). Tarihçe [DECISIONS §5](./DECISIONS.md). Aşağısı = dilim-içi ertelenen, numaralı maddeye girmeyen alt-işler.
 
-**Board — #4 AC madde-madde işaretleme ✅ BİTTİ (2026-06-02, 4 katman, 612 test yeşil — DECISIONS §10.6; hepsi LOKAL, push YOK):**
-- [x] Veri modeli — `[{text, done}]`, geriye-uyumlu (`acChecklist(fm)` iki şekli okur) — `996cf6f`.
-- [x] Endpoint — `POST /api/backlog/:id/ac` işaretle/kaldır + `item_ac_toggle` audit — `5086373`.
-- [x] UI — tıklanabilir AC checkbox + `describeActivity` humanize — `8ffd061`.
-- [x] Ajan yolu — MCP `get_acceptance_criteria` + `mark_acceptance_criterion` (ortak `applyCriterionToggle`) — `953b6e9`.
-
-**Board — ertelenen (Eray'ın sözüyle):**
-- [ ] #9 global arama (header "SOON")
-- [ ] #10 terminal = komut girişi (şu an salt-okunur run-history timeline)
-- [ ] Canlı gate pass/fail — `gate_runs` panelde (şu an gate'ler body `## Review Gates`'ten statik/boş)
-
-**🎨 Tasarım/IA track — v5 IA revizyonu ✅ (2026-06-02, DECISIONS §11; lo-fi `concepts/wireframe-v5-shadcn.html`, `localhost:8094`):**
-- [x] Tüm uygulama IA'sı elden geçti + lo-fi shadcn wireframe'de doğrulandı (sidebar=proje/footer=motor · bağlamsal sidebar · board epic-filtre + gate şeridi · file-browser deseni · settings ayrımı · persona ikonları · global-bağlantı/yerel-tercih).
-- [x] **Hi-fi pass ✅ (2026-06-04)** — [concepts/wireframe-v6-hifi.html](./concepts/wireframe-v6-hifi.html), Linear-minimal palet, uçtan uca gezilebilir (tüm ekranlar + drawer + ⌘K + bildirim + terminal + popover'lar). DECISIONS §12. origin/main'e merge edildi.
-- [ ] **v6 hi-fi'yi gerçek app'e (`src/`) implement** — paylaşılan primitifler: `<FileBrowser mode>` (References/Memory/Reports) · `<AnnotatableDoc mode>` (revise/clarify) · `<SettingsPane>` (4 project + 7 kortext) · `<Drawer>` (item/epic/notif). DECISIONS §12.2.
-- [ ] v6'da wireframe-seviyesinde çalışan global parçaları gerçek veriye bağla (⌘K arama, bildirim merkezi, terminal CLI).
-- [ ] Dashboard sol-içeriği netleşti (yatay status-bar + active-work + for-review) — eski "2/3 TBD" kapandı.
-- [ ] Version selector semantiği netleştir (proje sürümü / snapshot / release?).
-
-**Uygulama-geneli (paused — Board fonksiyoneli öne geçti, fırsatta; Dashboard'u da etkiler → sonra yeniden screenshot):**
-- [ ] Gerçek font yükleme — Inter + JetBrains Mono bundle (UI stack'inde sistem fontu Inter'in ÖNÜNDE, devreye girmiyor)
-- [ ] Ortak `PageHeader` 22px / items-end + subtitle 13px (wireframe `.route-title`/`.route-sub`)
-- [ ] index.html bayat `bg-neutral-950` → violet token tabanı; base `.dot` 6→7px
-
-## Motor epic (§5.9) — aktif
-
-**Kaynak doğruluk:** numaralı maddeler [DECISIONS §5.9](./DECISIONS.md) + bağımlılık sırası §5.13 sonunda (Madde 1–4 ✅ main'de). Burada yalnızca **dilim-içi ertelenen alt-işler** (numaralı maddeye girmeyen) izlenir ki kaybolmasın.
-
-### Madde 10 + 11 capstone — ✅ 9 TDD dilimi indi (2026-05-31 #3)
-
-**Plan TAMAM (Eray onayı "sırayla hepsini yap"):** `W1→W2→B1→C2→C5→C3→C1→C4→D1`, 9 commit (`39953ad`→`c692223`), **465→499 test**, typecheck+lint temiz. Per-dilim detay [DECISIONS §5.14](./DECISIONS.md). İnen:
-
-- [x] **W1** worker-pool ↔ RunRegistry register/unregister (`39953ad`) — block canlı ajanı durdurur; FK bulgusu doğrulandı.
-- [x] **W2** closure done → epic-completion dikişi (`f338f15`) — `deployer` zorunlu dep.
-- [x] **B1 (keystone)** per-item run + worktree (`0491171`) — item gerçek run+worktree'yle doğar, FK kapanır. Mimari: Eray "standalone fonksiyon" seçti.
-- [x] **C2** gerçek `GitMerger` (git) (`3fec38a`) — worktree→development merge + gerçek conflict.
-- [x] **C5** gerçek `AgentGateExecutor` (AI ajan) (`02bc2e4`).
-- [x] **C3** gerçek `QueueReviewApprover` (ApprovalQueue) (`5ae1478`) — uat sorusu item'ın son run'ına bağlı.
-- [x] **C1** gerçek `DevServerPreviewServer` (process spawn) (`dff79a6`).
-- [x] **C4** gerçek `WorkflowDeployer` (deployment-cycle run) (`f70125b`).
-- [x] **D1** Madde 11 kesişen karar/öğrenim kuralı (`c692223`) — ⚠️ `write_decision`/`write_learned` tool'ları YOK, dosya-tabanlı kullanıldı.
-
-> **NOT:** 5 gerçek adapter + W1/W2 dikişleri + keystone tek tek **gerçek + test edildi**, ama orchestrator kompozisyonuna **takılmadı**. Aşağıdaki eski "Gerçek X impl'i" maddeleri = ADAPTER ✅ indi; geriye yalnız **wiring** kaldı (↓ "son montaj").
-
-### SON MONTAJ — ✅ 4 kompozisyon dilimi indi (2026-05-31 #4, §5.15)
-
-`8cbd5e1`→`86ddaeb` (4 commit), **499→521 test**, typecheck+lint temiz. Sistem ilk kez bir işi `to_do→done`'a GERÇEK git'le yürütüyor.
-
-- [x] **1 — ResolutionRegistry + runItem→gerçek worktree** (`8cbd5e1`) — item→{handle,runId,worktree} defteri; `runItem` önce gerçek run yaratır, worktree'yi run id'siyle alır, defteri doldurur, workflow'u `existingRun`'la sürer (tek run, orphan yok). +7 test.
-- [x] **2 — Composition root** (`cda0818`) — `createComposition`: 5 gerçek adapter + resolver'ları ResolutionRegistry'ye bağlar (saf wiring, §5.13). +6 test.
-- [x] **3 — Preview dikişi** (`8193ac9`) — `runItem` test-girişinde `startFor`, `runClosure` (done/bounce) `stopFor`; ikisi de soft. +5 test.
-- [x] **4 — Driver + e2e** (`86ddaeb`) — `driveReadyItems` = "başlat düğmesi" (tek-tur, 3 faz); **Eray "ayrı temiz yeni parça" seçti**. Uçtan-uca test gerçek git repo (gerçek merge commit). +4 test. ⚠️ Süreç dersi: test executor guard'ı host repo'ya düşüp 2 stray commit yarattı → `--mixed reset` + dar guard (§5.15).
-
-### KALAN — driver'ı bir girişe bağla (sonraki faz, blast-radius'u açar)
-
-- [ ] **Driver'ı sür:** `server/index.ts` `createComposition` kurup `driveReadyItems`'i HTTP tetiği/manuel komuttan çağırsın. **Periyodik otomatik zamanlayıcı AYRI iş** (Eray henüz seçmedi). Bu, üretim blast-radius'u sıfırdan çıkaran ilk dilim → Eray onayı + dikkat.
-
-### uat review-cycle diliminden ertelenenler (tasarım onaylı 2026-05-31, mock-first)
-
-- [x] **Gerçek approval-queue bağlantısı (uat)** ✅ adapter `QueueReviewApprover` indi (C3, `5ae1478`) — uat sorusu item'ın son run'ına bağlanır; **wiring → son montaj**. (Eski not:) mock-first `ReviewApprover`'ın gerçek impl'i: `review`'deki item için prime'a dashboard onay sorusu düşür + cevabı bekle. **Engel (impedance):** `pending_questions` `item_id` taşımıyor (yalnız nullable `run_id`); item-cycle'lar workflow `run`'ı yaratmıyor; `enqueue`/`waitForAnswer`'ın motor tarafında **hiç üreticisi yok** (sadece insan-`answer` ucu CLI+route'ta). → ya `pending_questions`'a item adresleme ekle, ya enqueue/resolve ayrımı tasarla. (Madde 4'ün "gerçek GateExecutor" follow-up'ının eşi.)
-- [ ] **uat verdict'i `gate_runs` satırı olarak kaydet** — şimdilik red sebebi `audit_log`'da (§5.13 "comment alanı ERTELENDİ" ile tutarlı). gate_runs'a yazmak için **`attempt` tuzağı** çözülmeli: 0-test-gate + tekrarlı-bounce'ta `UNIQUE(item_id, attempt, gate='uat')` çakışır. → `attempt`'i item alanı yap **veya** test-cycle her cycle'da marker üretsin.
-- [x] **Madde 6 dikiş notu** — ✅ YAPILDI (2026-05-31): `runReviewCycle`'ın onay+vacuous dalları `runClosure`'a delege ediyor; `done` öncesi merge adımı araya eklendi. Detay DECISIONS §5.13 "Madde 6 ✅". Kapanışın *gerçek* git'i + handover + blocker aşağıda.
-
-### Madde 5 (whose-turn) tüketiminden ertelenen
-
-- [ ] **Board "sıra kimde" rozetini bağla (src/)** — `whoseTurn(item)` türetimi hazır (`server/orchestrator/whose-turn.ts`) ama tüketen UI yok. Board kartlarının üstüne dönen persona rozetlerini render et (test→paralel rozetler, review→+prime, in_progress→owner). Backend derivation saf + DB'siz; UI tarafı ayrı iş.
-
-### Madde 6 (mekanik kapanış) diliminden ertelenenler
-
-İskelet hazır (`runClosure` + `Merger` arayüzü, mock-first); gerçek mekanik bekliyor:
-
-- [x] **Gerçek git `Merger` impl'i** ✅ `GitMerger` indi (C2, `3fec38a`) — worktree→development merge + gerçek conflict; **wiring (resolveHandle) → son montaj**. (Eski not:) `MockMerger` yerine `WorktreeManager`'ı süren gerçek merger: CI+conflict kontrolü → feature worktree'yi `development`'a merge (`--no-ff`) → worktree/preview teardown. **Engel:** `WorktreeManager` `runId` ile çalışıyor + per-item worktree'yi **Madde 10** kuruyor → Madde 10 ile birlikte bağlanır.
-- [ ] **Handover-on-close** — kapanış başarılıysa (merge ok) `HandoverEngine.record()` ile kapanış handover'ı üret (developer→prime, completed/next). Mock-merge üzerine handover boş kaçtığı için gerçek Merger'la birlikte eklenir.
-- [ ] **blocker-temizle (§5.9 #6)** — ŞU AN KARŞILIKSIZ: item bağımlılık modeli (`blocked_on`/`blocks`) şemada yok, motor "X'i bekleyen item" bilmiyor. Bir bağımlılık modeli tasarlanırsa kapanışta downstream item'ları unblock et. (Eray: şimdilik ertele.)
-
-### Madde 8 (epic→staging) diliminden ertelenenler
-
-Tespit + tetik hazır (`runEpicCompletion` + `Deployer` arayüzü, mock-first); gerçek deploy + §5.11 zinciri bekliyor:
-
-- [x] **Gerçek `Deployer` impl'i** ✅ `WorkflowDeployer` indi (C4, `f70125b`) — staging deploy = deployment-cycle workflow run'ı (§5.11); **wiring → son montaj**. (Eski not:) `MockDeployer` yerine `development`'ı staging ortamına (test verisi, §5.11) deploy eden gerçek deployer.
+- [ ] **`gate_runs` uat verdict** — uat red sebebi şu an `audit_log`'da; `gate_runs` satırına yazmak için `attempt` tuzağı çözülmeli (0-test-gate + tekrarlı-bounce'ta `UNIQUE(item_id, attempt, gate='uat')` çakışır → `attempt`'i item alanı yap veya test-cycle marker üretsin).
+- [ ] **Handover-on-close** — kapanış başarılıysa (merge ok) `HandoverEngine.record()` ile kapanış handover'ı (developer→prime, completed/next).
+- [ ] **blocker-temizle (§5.9 #6)** — KARŞILIKSIZ: item bağımlılık modeli (`blocked_on`/`blocks`) şemada yok. Bağımlılık modeli tasarlanırsa kapanışta downstream item'ları unblock et. (Eray: şimdilik ertele.)
 - [ ] **Gate-persona staging raporları (§5.11)** — epic'te gate koşmuş personalar (qa/security/designer/EM/devops) tek-dosya rapor yazar (paralel), motor toplar.
 - [ ] **Prime staging onayı (§5.11)** — staging deploy sonrası motor prime'a "staging onayı" sorar; onay→version ilerler, red→bug açılır.
-- [ ] **Epic-status-flip** — epic bittiğinde epic item'ını board'da `done` göster. Epic'ler review→done yolundan geçmiyor → container-completion için ayrı lifecycle geçişi (veya türetilmiş done) tasarlanmalı. (Eray: Madde 8'de sadece tespit+tetik seçildi, flip ertelendi.)
-- [x] **closure→epic-check dikişi** ✅ YAPILDI (W2, `f338f15`) — `runClosure` `done` verince `runEpicCompletion` çağrılıyor; `deployer` zorunlu dep olarak review-cycle'dan geçirildi.
-
-### Madde 9 (block→cancel) diliminden ertelenen
-
-Mekanizma hazır (`RunRegistry` + `blockItem`, gerçek); worker-pool köprüsü bekliyor:
-
-- [x] **worker-pool → RunRegistry wiring** ✅ YAPILDI (W1, `39953ad`) — `runWorkflow` `aborter` oluşunca `register(run.id, itemId, aborter)`, iki çıkışta da `unregister`. `RunRegistry.unregister` eklendi. `blockItem` artık canlı ajanı durdurur.
-
-### Madde 7 (local test URL) diliminden ertelenenler
-
-Mekanizma hazır (`PreviewServer` arayüzü + `PreviewManager`, mock-first); gerçek spawn + wiring bekliyor:
-
-- [x] **Gerçek `PreviewServer` impl'i** ✅ `DevServerPreviewServer` indi (C1, `dff79a6`) — worktree'den dev komutu spawn + URL parse + stop'ta kill; **wiring → son montaj**. (Eski not:) `MockPreviewServer` yerine worktree'den projenin dev komutunu (vite vb.) spawn eden gerçek server.
-- [ ] **Preview wiring (Madde 10 capstone)** — item `test`'e girince `previewManager.startFor(itemId, worktreePath)`; worktree teardown'da (closure) `stopFor(itemId)`.
-- [ ] **"Çalıştırılabilir/UI görev mi?" koşulu** — §5.7: yalnız çalıştırılabilir/UI görevler preview alır. Şu an koşul yok (her item denenebilir). Bir flag (frontmatter/type) ile gate'le.
-- [ ] **Preview URL persistence + sunma** — URL'i gate'ler + prime UAT'a sun. `runtime_artifacts` `run_id`'e bağlı + `preview` kind'ı yok → ya `preview` artifact kind'ı ekle (migration) ya item-merkezli sakla. Madde 10'da per-item run ile çözülür.
+- [ ] **Epic-status-flip** — epic bittiğinde epic item'ını board'da `done` göster (epic'ler review→done yolundan geçmiyor → container-completion için ayrı geçiş/türetilmiş done).
+- [ ] **Board "sıra kimde" rozetini bağla (src/)** — `whoseTurn(item)` türetimi hazır (`server/orchestrator/whose-turn.ts`) ama tüketen UI yok. Kart üstüne dönen persona rozetleri (test→paralel, review→+prime, in_progress→owner).
+- [ ] **Preview wiring + persistence** — item `test`'e girince `previewManager.startFor`; closure'da `stopFor`. "Çalıştırılabilir/UI görev mi?" koşulu (§5.7, flag ile gate'le). Preview URL'i gate'ler + prime UAT'a sun (`runtime_artifacts`'a `preview` kind'ı veya item-merkezli sakla).
 
 ---
 
-## v3.1.x follow-up (blocker değil — release sonrası)
+## UI — açık parçalar
+
+- [ ] **#9 global arama** — header ⌘K paleti var ama gerçek arama backend'ine bağlı değil ("SOON").
+- [ ] **#10 terminal = komut girişi** — şu an salt-okunur run-history timeline; gerçek komut girişi.
+- [ ] **Canlı gate pass/fail** — `gate_runs` panelde (şu an gate'ler body `## Review Gates`'ten statik).
+- [ ] **Global parçaları gerçek veriye bağla** — v6'da ⌘K/bildirim/terminal kabuk-seviyesinde çalışıyor, gerçek veri akışına tam bağlanması.
+- [ ] **Version selector semantiği** — proje sürümü / snapshot / release? netleştir.
+
+---
+
+## v3.1.x follow-up (release sonrası, blocker değil)
 
 | Madde | Yer | Durum |
 |---|---|---|
-| Reports SQL UI revamp | `src/routes/reports.tsx` | `/api/docs/reports` (filesystem) yerine `/api/reports` (SQL `reports_index`); filter chip'leri, tags multi-select, status badge |
-| Memory archive dropdown | `src/routes/memory.tsx` | Decisions/Learned tab'larında sol panel TOC navigation; Handovers tab'ında eski `handover-<ts>.md` segmentleri için dropdown |
-| `POST /api/backlog` integration test | `tests/` | Route landed, route-level test eksik |
-| Footer canlı stats wiring | `src/components/Footer.tsx` | `tkn/s`, `$today`, branch chip'leri hâlâ partial hardcoded |
-| Inline markdown save endpoint | `server/routes/docs.ts` | PUT `/api/docs/:scope/:file` — Rules/Workflows/References "Save" butonları için |
-| Decisions cards author+quote | Schema + UI | Decision schema'da `author`/`quote` alanı yok; mem-card avatar+quote opsiyonel |
-| TimelinePanel.tsx cleanup | `src/components/TimelinePanel.tsx` | Header'dan toggle kaldırıldı, dosya orphan — sil veya yeniden bağla |
-| Eski v3.0 `/api/docs/reports` endpoint kaldırma | `server/routes/docs.ts` | UI `/api/reports`'a çevirildikten sonra |
+| Reports SQL UI revamp | `src/routes/reports.tsx` | `/api/docs/reports` (fs) → `/api/reports` (SQL `reports_index`); filter/tags/status |
+| Memory archive dropdown | `src/routes/memory.tsx` | Decisions/Learned TOC; Handovers eski `handover-<ts>.md` dropdown |
+| `POST /api/backlog` integration test | `tests/` | route-level test eksik |
+| Footer canlı stats wiring | `src/components/Footer.tsx` | `tkn/s`, `$today`, branch chip'leri partial hardcoded |
+| Inline markdown save endpoint | `server/routes/docs.ts` | PUT `/api/docs/:scope/:file` — Rules/Workflows/References "Save" |
+| Decisions cards author+quote | Schema + UI | Decision schema'da `author`/`quote` yok |
+| TimelinePanel.tsx cleanup | `src/components/TimelinePanel.tsx` | orphan — sil veya yeniden bağla |
+| Eski `/api/docs/reports` kaldır | `server/routes/docs.ts` | UI `/api/reports`'a çevrildikten sonra |
 
 ---
 
-## v3.0.1 borç (HANDOVER #51)
+## v3.0.1 borç
 
-- [ ] **`app.listen()` error handler** — EADDRINUSE durumunda Express sessizce listening callback'i atlayıp exit ediyor. Kullanıcı "Cannot GET /" görüyor, gerçek hatayı görmüyor. UAT'ta 6 saat dev server zombie process bu sebeple yanılttı.
+- [ ] **`app.listen()` error handler** — EADDRINUSE'da Express sessizce listening callback'i atlayıp exit ediyor; kullanıcı "Cannot GET /" görüyor. UAT'ta zombie process yanılttı.
 
 ---
 
 ## CLI/Onboarding redesign — implementation kuyruğu
 
-Yön kararı [DECISIONS Bölüm 0](./DECISIONS.md)'da onaylandı. Sıralı implementation adımları (versiyon numarası Açık sorular'da belirlenecek):
+Yön [DECISIONS Bölüm 0](./DECISIONS.md)'da onaylı. Sıralı adımlar:
 
-- [ ] **`bin/kortext.ts` argv parser yeniden yaz** — 9 komut: `start [proje]` / `stop` / `pause [proje]` / `list` / `remove [proje]` / `purge [proje]` / `update` / `doctor` / `help`. `init` ve `serve` `start` içine konsolide edilir.
-- [ ] **Global registry servisi** — `~/.kortext/projects.json` okuma/yazma + lock; `server/registry/` modülü
-- [ ] **Postinstall script** — `scripts/postinstall.mjs`; `detached: true` + `stdio: 'ignore'` + `unref()` ile daemon spawn + tarayıcı aç. Fallback mesajı: "Kortext kuruldu — `kortext start` yaz."
-- [ ] **Native folder picker endpoint** — `POST /api/system/pick-folder`; macOS `osascript -e 'choose folder'`, Windows PowerShell `FolderBrowserDialog`, Linux `zenity --file-selection --directory` (yedek `kdialog`)
-- [ ] **Onboard route** — `src/routes/onboard.tsx`; proje adı + dizin seç + executor seçimi; submit → backend `initCommand({ targetDir })` çağrı + registry insert + dashboard'a yönlen
-- [ ] **Proje listesi ekranı** — registry doluysa açılan ilk ekran: kayıtlı projeler + "Yeni proje başlat" butonu (onboard'a gider)
-- [ ] **Multi-project routing** — engine'i `projectId`-aware yap (her proje kendi `.kortext/data/kortext.db` ve worktrees'i kullanır); React Router `/[proje]/dashboard`, `/[proje]/board`, vb.
-- [ ] **Daemon lifecycle** — `kortext stop` daemon shutdown (clean), `kortext pause [proje]` worker pool'a "bu proje için yeni step alma" sinyali
-- [ ] **`purge` confirmation** — interactive `Are you sure? [y/N]` + dizindeki `.kortext/` rm; readline tabanlı
-- [ ] **`kortext update`** — `npm update -g kortext` wrapper + sonra daemon restart
-- [ ] **Migration kararı** — v3.1 `init/serve` kullanıcıları yok (clean break, DECISIONS Bölüm 2.9), migration tooling yazılmaz
+- [ ] **`bin/kortext.ts` argv parser** — 9 komut: `start [proje]`/`stop`/`pause [proje]`/`list`/`remove [proje]`/`purge [proje]`/`update`/`doctor`/`help`. `init`+`serve` → `start` içine konsolide.
+- [ ] **Global registry servisi** — `~/.kortext/projects.json` oku/yaz + lock; `server/registry/`.
+- [ ] **Postinstall script** — `scripts/postinstall.mjs`; `detached:true`+`stdio:'ignore'`+`unref()` daemon spawn + tarayıcı. Fallback: "Kortext kuruldu — `kortext start` yaz."
+- [ ] **Native folder picker endpoint** — `POST /api/system/pick-folder`; macOS `osascript`, Windows PowerShell, Linux `zenity`/`kdialog`. (Not: onboarding'de `pick-directory` zaten var — bununla birleştir/genişlet.)
+- [ ] **Onboard + proje listesi route** — registry doluysa proje listesi + "Yeni proje başlat".
+- [ ] **Multi-project routing** — engine `projectId`-aware (her proje kendi `.kortext/data/kortext.db`); `/[proje]/dashboard` vb.
+- [ ] **Daemon lifecycle** — `stop` clean shutdown, `pause [proje]` worker pool sinyali.
+- [ ] **`purge` confirmation** — interactive `[y/N]` + `.kortext/` rm.
+- [ ] **`kortext update`** — `npm update -g kortext` + daemon restart.
+- [ ] **Migration kararı** — v3.1 clean break (DECISIONS Bölüm 2.9), migration tooling yok.
+
+---
+
+## İçerik review turu (Faz 13 kalibrasyon)
+
+`development/` cleanup bitince çekirdek akış dosyalarının içeriği gözden geçirilecek:
+
+- [ ] `templates/AGENTS.md` (AI bootstrap) · `agents/*.md` (14 persona) · `rules/*.md` (6 rule) · `workflows/*.md` (10 workflow) · `templates/{foundation,references,reports,memory,backlogs}/*.md` (iskelet).
+- [ ] Bilinen risk: `existing-project-analysis.md` (hızlı yazıldı, kalibre), `spike-pipeline.md` (dinamik persona oversimplification).
+- [ ] **Persona/workflow tutarlılık** — personalar eski araçlara atıf yapıyor (örn. `kortext-backlog-add.py`, `add_backlog_item` MCP) ama gerçek yol artık dosya köprüsü; planning persona talimatlarını köprüye göre kalibre et (DECISIONS Bölüm 13 ile bağlantılı).
 
 ---
 
 ## v3.2.0 — bilinçli ertelenmiş
 
-### Tasarım borçları
+**Tasarım/UI:** mobile responsive (şu an 1280px+) · a11y (focus var, aria yok) · i18n (Settings seçimi statik; gerçek tr/en) · LocalStorage persistence.
 
-- [ ] **Light theme variant** — `--bg-0` token'larını override eden body class
-- [ ] **Mobile responsive** — şu an 1280px+ optimize
-- [ ] **A11y** — focus states var, aria yok
-- [ ] **i18n implementation** — Settings'te seçim statik; gerçek tr/en switch
-- [ ] **LocalStorage persistence** — sayfa yenilenince state sıfırlanmasın
-- [ ] **⌘K command palette** — şu an disabled ("soon")
+**Engine + workflow:** reviewer-as-step runtime (Faz 13'te kaldırıldı; "agent code review pattern") · Settings/Agents YAZMA editor (şu an readonly; paket immutability) · `+prime` synthetic persona (`agents/prime.md` mi registry'de mi).
 
-### Engine + workflow
+**Refactor:** `scripts/` rename (tek dosya `copy-migrations.mjs` → `tools/`/`build/`?) · workflow gate hint syntax (`parallel_with_json` parser doldurmuyor) · `learned.md` topical split (50KB+ olunca).
 
-- [ ] **Reviewer-as-step runtime** — Faz 13'te reviewer satırları kaldırıldı (Karar C). v3.2'de "agent code review pattern" ele alınmalı: workflow body'sinde `reviewer:` declared edilirse engine post-step otomatik review step ekler (review-notes.md veya pending_question).
-- [ ] **Settings/Agents YAZMA editor** — şu an readonly (spec §10); v3.2'de paket immutability problemine bakılır (override pattern yok karar).
-- [ ] **`+prime` synthetic persona** için `agents/prime.md` mı yoksa registry'de synthetic mı kalır karar.
-
-### Refactor
-
-- [ ] **`scripts/` klasör adı yanıltıcı** — sadece `copy-migrations.mjs` var (build infrastructure). `tools/` veya `build/` daha açıklayıcı.
-- [ ] **Workflow gate hint syntax** — Faz 12.8 `workflow_steps.parallel_with_json` kolonu var ama parser doldurmuyor. Data-flow yeterli olduğu için ertelendi; v3.2'de UI hint (dashboard "phase X paralel") gerekirse ele alınır.
-- [ ] **`learned.md` topical split** — şu an tek dosya hep büyür. 50KB+ olduğunda `learned/auth.md`, `learned/payment.md` gibi alt-dosya pattern'ine geçiş.
-
-### Klasör + dosya
-
-- [ ] **`v3.1-uat-guide.md` → `UAT-GUIDE.md`** rename oldu, içerik güncellenmeli (foundation/ + ALL-CAPS + new test count 382).
+**Dosya:** `UAT-GUIDE.md` içerik güncelleme (foundation/ + ALL-CAPS + güncel test sayısı).
 
 ---
 
-## Açık sorular (Eray ile konuşulacak)
+## Açık sorular (Eray ile)
 
-- **`scripts/` rename mi tutalım mı** — yanıltıcı ad ama tek dosya, marjinal fayda
-- **v3.0.1 borç (app.listen)** — bu sıraya ne zaman alınır (v3.1 release öncesi şart, EADDRINUSE bug fix)
-- **Manuel UAT 1. tur zamanı** — şimdi mi (mevcut `init/serve` ile) yoksa CLI redesign sonrası tek tur mu
-
-> **Karar verildi (2026-05-27):** v3.1 = devasa sürüm = Faz 11-13 birikmiş iş + CLI redesign hepsi tek atışta. Bkz. [DECISIONS Bölüm 0](./DECISIONS.md).
-
----
-
-## Yapılanlar (referans)
-
-[DECISIONS.md Bölüm 8 — Tarihçe](./DECISIONS.md#bölüm-8--tarihçe-özet) tüm fazların özetini içerir. Detay için `git log development/HANDOVER.md`.
+- `scripts/` rename tutalım mı (yanıltıcı ad ama tek dosya, marjinal fayda).
+- v3.0.1 borç (app.listen) — v3.1 release öncesi şart, sıraya ne zaman.
+- Backlog köprüsü zenginleştirme — step-1 talimatını güçlendirmek mi yeterli, yoksa "id'ye göre güncelle" köprüsü de gerekli mi (canlı koşuda görülecek).
