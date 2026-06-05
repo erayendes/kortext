@@ -805,3 +805,33 @@ Dört "tek-kaynak" katmanı — her biri tek React bileşenine iner:
 - **CDN ikon riski:** Lucide marka ikonları kaldırıldı (`github` render olmaz → `git-branch`); yeni ikonlar (`book-alert`) tarayıcıda eval ile doğrulandı. `@latest` kullanırken ikon adını teyit et.
 - **Const TDZ:** `KAGENTS = AGENT_MODELS.map(...)` script'te `AGENT_MODELS`'dan önce gelince "before initialization" attı → lazy-build çözdü. Tek-script dosyada blok sırası önemli.
 - **Önizleme screenshot lag:** bu oturumda ısrarla 1-2 kare geride; ölçüt = `preview_eval` ile DOM teyidi (screenshot ikincil). Hedef genişlik 1600px — 800px "dar test" sıkışık gösterir, yanıltıcı.
+
+---
+
+## Bölüm 13 — Canlı UAT + backlog file-ingestion köprüsü (2026-06-05)
+
+**Status:** İmplemente + canlı kanıtlandı. `feat/mcp-headless-executor` dalı → main'e merge + origin'e push (Eray onayı). 721 test yeşil.
+
+**Bağlam:** Gerçek BRD (Dinamik Hidrasyon Asistanı) ile `/Users/erayendes/Documents/_codebase/UAT`'ta canlı UAT. Backend `cwd=UAT` ile çalışır; vitrin (14 ekran + onboarding) doğrulandı; gerçek analiz pipeline'ı BRD'den PRD/TRD/PFD + 9 referans üretti.
+
+### 13.1 Çekirdek bulgu — backlog otonom üretilemiyordu
+Onboarding analizi çalıştırıyordu ama **backlog hiç dolmuyordu**. İki sebep: (a) `startCommand` `nextWorkflowId`'yi takip etmiyordu → backlog'u türeten `planning-pipeline` hiç çalışmıyordu; (b) çalışsa bile headless ajanların backlog **oluşturma yolu yoktu**.
+
+### 13.2 MCP yaklaşımı denendi → canlı testte reddedildi
+İlk tasarım: headless executor'lara Kortext MCP araçlarını (`add_backlog_item` …) `--mcp-config` ile bağlamak (4 motor için, genel erişim — Eray seçti). İmplemente edildi (parser/descriptor/Claude enjeksiyonu/factory threading, hepsi testli). **Canlı test (executor=claude) çökertti:** headless sistem-prompt'u ajanları **Write-tool/dosya** ile çalışmaya zorluyor; ajan 47 backlog item'ını bir **dosyaya** yazdı, `add_backlog_item`'ı çağırmadı → DB boş kaldı. MCP'yi çalıştırmak çekirdek headless sözleşmesini + tüm personaları + sinyal-çıktı işlemeyi yeniden yazmayı gerektirirdi (büyük, akıntıya karşı).
+
+**Karar (Eray, sade-dille "dosya köprüsü"):** MCP'den vazgeç. Ajan zaten yapılandırılmış bir backlog **dosyası** üretiyor → onu parse edip gerçek satırlara çeviren bir köprü ekle. MCP-kablolama commit'leri **geri alındı** (`git reset`), yalnız genel-fayda olan `busy_timeout` korundu. *Risk açıklaması Eray'a yapıldı (sade dille): dosya köprüsü = düşük risk/hızlı ama formatlama tutarlılığına bağlı + işlem başına okuyucu; tam MCP = büyük/riskli, çalışan analiz-inşa adımlarını bozabilir.*
+
+### 13.3 Dosya köprüsü mimarisi
+- `planning-pipeline` step 1 (+engineering-manager) artık **`.kortext/foundation/backlog.yaml`** yazar (katı şema in-step; eski `add_backlog_item` talimatı kaldırıldı).
+- `server/engine/backlog-ingest.ts` (saf): `parseBacklogYaml` (top-level `items:` **VEYA** markdown'daki ```yaml fenced blok fallback) → `ingestBacklogItems` (idempotent: var olan id atlanır) → `ingestBacklogFile` (oku+parse+ingest, audit özeti).
+- Motor hook'u: `SafetyGuards.backlogIngester` (`worker-pool.ts`), adım sonrası `outputIndexer` ile aynı best-effort desende çalışır; `server/index.ts` `basename === 'backlog.yaml'` ise `ingestBacklogFile`'ı çağırır (ana proje DB'sine).
+
+### 13.4 Sağlamlık kararları (canlı veriyle şekillendi)
+- **Sessizce kaybetme YOK:** bozuk bir fenced blok artık `errors`'a eklenir + `ingestBacklogFile` `created/skipped/parse_errors` özetini **audit-log**'a yazar. (Gerçek dosyada 46 item'ın 21'i sessizce kayboluyordu — yakalandı.)
+- **Tip coerce, atma değil:** ajan `type`'a domain kategorisi yazıyor (`infrastructure`/`security`); enum dışı tip **keyword ile eşlenir, yoksa `task`** olur, orijinali `frontmatter.original_type`'a yazılır. Item asla tip yüzünden atılmaz.
+- **Bilinmeyen alan passthrough:** ajanın eklediği alanlar (`phase`/`references`/`prd_id`) frontmatter'a korunur.
+- **busy_timeout:** çoklu yazar için (ileride driver/MCP alt-süreçleri).
+
+### 13.5 Canlı kanıt + caveat
+Gerçek Claude ajanı BRD'den **83 item'lık temiz `backlog.yaml`** (0 parse hatası) yazdı → ingester **83/0** satır → **Board'da 83 gerçek görev**. Caveat: bu koşuda `acceptance_criteria`/`review_gates` seyrekti (ajan kendi alanlarını kullandı, kayıp yok). **Açık iş:** sonraki planning adımlarını (qa/security/designer "update") da ingest et; standalone CLI'a da `safetyGuards` bağla; tek-seferlik kesintisiz onboarding→Board (~25dk) koşusu. Bkz. [TODO](./TODO.md), [spec](./specs/2026-06-04-backlog-ingest-bridge.md).

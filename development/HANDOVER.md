@@ -5,6 +5,30 @@
 
 ---
 
+## ⭐ Şu an (2026-06-05) — Canlı UAT + backlog file-ingestion köprüsü ✅
+
+**Bağlam:** Gerçek bir BRD (`~/Downloads/BRD.md`, "Dinamik Hidrasyon Asistanı") ile `/Users/erayendes/Documents/_codebase/UAT` dizininde **canlı uçtan-uca UAT** yapıldı (proje adı **HydroFlow**, executor=claude). Backend `cwd=UAT` ile çalıştırıldı (tüm `.kortext/` verisi UAT'a gider; kortext reposu temiz kalır). Frontend: `.claude/launch.json > kortext-uat-web` (sadece vite, `/api`'yi 3200'e proxy).
+
+**Vitrin doğrulandı:** Onboarding (form + gerçek submit) + 14 ekran gerçek veriyle gezildi. Onboarding gerçek analiz pipeline'ını tetikledi → gerçek Claude ajanları BRD'den **PRD/TRD/PFD + 9 referans** üretti.
+
+**Bu oturumda bulunan + düzeltilen 4 UAT bug'ı** (hepsi `feat/mcp-headless-executor` dalında, merge ile main'e geldi):
+- `e6adc8b` Memory/Reports **500 → boş liste** (yeni projede `memory/` dizini yokken ENOENT) + 6-test regresyon.
+- `bca744c` Onboarding **analiz → planning zinciri** (startCommand `nextWorkflowId`'yi yok sayıyordu → backlog hiç türetilmiyordu); `chainThroughWorkflowId: 'planning-pipeline'` ile sınırlı auto-chain.
+- `9614386` Sabit **"Acme CRM" başlığı → gerçek proje adı** (`useProjectMeta` hook'u; Topbar+Sidebar).
+- `30af9d8` Vite HMR **createRoot uyarısı** (root yeniden kullanımı).
+
+**Asıl iş — backlog file-ingestion köprüsü (DECISIONS Bölüm 13):**
+Çekirdek boşluk: otonom pipeline backlog'u **dolduramıyordu**. Önce MCP yaklaşımı denendi (ajanlara `add_backlog_item` MCP araçlarını vermek) → **canlı testte çöktü**: headless ajanlar Write-tool/dosya ile çalışıyor, MCP çağırmıyor (47 item'ı bir dosyaya yazdı, DB boş kaldı). Eray sade-dille **"dosya köprüsü"** seçti → MCP commit'leri geri alındı (`busy_timeout` kaldı). Köprü: planning agent `.kortext/foundation/backlog.yaml` yazar → motor hook'u (`SafetyGuards.backlogIngester`) parse edip gerçek backlog satırlarına çevirir.
+- `f6a37c3` SQLite `busy_timeout` · `1f1bceb` parser+ingester (`server/engine/backlog-ingest.ts`, idempotent) · `5479784` motor hook (`worker-pool.ts` + `server/index.ts`, `backlog.yaml`'da ateşlenir) · `74bc8ca` fenced ```yaml blok fallback · `dba6e28` **sessiz kayıp düzeltmesi** (bozuk bloklar artık hata + audit özeti) · `6eb32c4` out-of-enum tip **coerce** (kategori→task, orijinal saklanır) + bilinmeyen alan **passthrough** · `118a74f` planning-pipeline.md step 1 → `backlog.yaml`.
+
+**Canlı kanıt:** gerçek Claude ajanı BRD'den **83 item'lık temiz `backlog.yaml`** yazdı → ingester **83/0** satır oluşturdu → **Board'da 83 gerçek görev göründü** (API-02, WIDGET-01 iOS WidgetKit, A11Y-01, COMP-03 Google Health Connect...). **721 test yeşil, typecheck temiz.**
+
+**Dürüst caveat'lar:** (1) Bu koşudaki 83 item'da `acceptance_criteria`/`review_gates` seyrek — ajan kendi alanlarını (`phase`/`references`/`prd_id`) kullandı, hepsi frontmatter'da korundu (kayıp yok); zenginleştirme = sonraki planning adımlarını da ingest etmek (TODO). (2) Auto-zincirin her halkası ayrı kanıtlandı (hook auto-fire B2 testinde), ama tek-seferlik kesintisiz **onboarding→Board** (~25dk) koşusu yapılmadı. (3) Standalone `kortext start` `safetyGuards` almıyor → ingester sadece **backend** yolunda (onboarding/drive) ateşlenir; CLI'a da bağlamak açık iş.
+
+**Branch:** `feat/mcp-headless-executor` → **bu oturumda main'e merge + origin'e push edildi (Eray onayı).** Temiz oturum açılacak. **SIRADAKİ:** TODO.md "Backlog köprüsü — sonraki" bölümü.
+
+---
+
 ## 1. Şu an (2026-06-04)
 
 **🎨 TASARIM/HI-FI TRACK (2026-06-04, bu oturum) — v6 hi-fi wireframe TAM + uçtan uca gezilebilir ✅.** v5 IA'sının hi-fi hâli [concepts/wireframe-v6-hifi.html](./concepts/wireframe-v6-hifi.html)'de bitti (tek dosya, Tailwind+Lucide CDN + inline JS, Geist/Geist-Mono, Linear-minimal koyu/açık palet `--accent:#5E6AD2`). Canlı: `.claude/launch.json > wf-v5` → `localhost:8094/wireframe-v6-hifi.html`. **KOD DEĞİL — hi-fi görsel/etkileşim spec'i; `src/` implementasyonu buna bakacak.** Bu oturumda Eray ile ekran-ekran gezilip her ekran + global bağ dokusu yapıldı, ~25 commit, **bu oturumda origin/main'e PUSH/MERGE edildi (Eray onayı).** Tüm kararlar [DECISIONS §12](./DECISIONS.md).
