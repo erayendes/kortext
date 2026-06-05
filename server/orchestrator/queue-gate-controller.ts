@@ -37,7 +37,7 @@ export class QueueGateController implements GateController {
       phase: gate.phase,
     });
 
-    const answered = await this.queue.waitForAnswer(created.id);
+    const answered = await this.queue.waitForAnswer(created.id, { signal: ctx.signal });
     const answer = answered.answer ?? '';
     return answer === 'approve'
       ? { decision: 'approve' }
