@@ -32,6 +32,13 @@ export type ChainNextOptions = {
   }>;
   /** Optional run-level options forwarded to runWorkflow (concurrency, safety). */
   runOptions?: Pick<RunWorkflowOptions, 'concurrency' | 'safety'>;
+  /**
+   * Optional gate controller. When set, each chained hop arms the next
+   * workflow's own gates against this controller, so a chained workflow
+   * (e.g. planning-pipeline) pauses at its +prime gates exactly like the
+   * lead workflow did. Left undefined, chained hops run ungated.
+   */
+  gateController?: RunWorkflowOptions['gateController'];
 };
 
 export type ChainResult =
@@ -117,6 +124,10 @@ export async function chainNextWorkflow(
       triggeredBy: `chain:${previousDefinition.id}`,
       itemId: previousRun.item_id,
       worktreePath,
+      // Arm the chained workflow's own gates only when a controller is wired.
+      ...(opts.gateController
+        ? { gates: nextDef.gates, gateController: opts.gateController }
+        : {}),
     });
 
     repos.auditLog.append({

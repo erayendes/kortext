@@ -54,6 +54,18 @@ export type ApprovalGate = {
   body: string;
   /** Approver mentioned in the body (usually +prime). */
   approver: string | null;
+  /**
+   * Persona that produced the artifact this gate guards (the step's persona,
+   * e.g. '+compliance-expert'). Surfaced to the dashboard so a reviewer sees
+   * who is asking for approval. Null when the step has no persona.
+   */
+  persona: string | null;
+  /**
+   * First declared output of the step that fired the gate (e.g.
+   * '.kortext/references/LEGAL.md'). This is the artifact awaiting approval.
+   * Null when the step declares no outputs.
+   */
+  artifactPath: string | null;
 };
 
 export type WorkflowDefinition = {
@@ -139,6 +151,8 @@ export function parseWorkflowMarkdown(source: string, fileId: string): WorkflowD
           afterStepIndex: activeStep.index,
           body: `${activeStep.persona ?? '(no persona)'} step in ${activeStep.phase}: ${activeStep.description}`,
           approver: '+prime',
+          persona: activeStep.persona,
+          artifactPath: activeStep.outputs[0] ?? null,
         });
       }
       activeStep = null;

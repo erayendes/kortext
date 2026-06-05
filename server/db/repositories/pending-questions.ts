@@ -20,6 +20,9 @@ type Row = {
   answered_by: string | null;
   answered_at: number | null;
   created_at: number;
+  artifact_path: string | null;
+  persona: string | null;
+  phase: string | null;
 };
 
 function rowToQuestion(row: Row): PendingQuestion {
@@ -38,8 +41,10 @@ export class PendingQuestionsRepository {
 
   constructor(private readonly db: Database.Database) {
     this.insertStmt = db.prepare(`
-      INSERT INTO pending_questions (run_id, step_id, question, choices, created_at)
-      VALUES (@run_id, @step_id, @question, @choices, @created_at)
+      INSERT INTO pending_questions
+        (run_id, step_id, question, choices, created_at, artifact_path, persona, phase)
+      VALUES
+        (@run_id, @step_id, @question, @choices, @created_at, @artifact_path, @persona, @phase)
     `);
     this.selectByIdStmt = db.prepare('SELECT * FROM pending_questions WHERE id = ?');
     this.listOpenStmt = db.prepare(
@@ -63,6 +68,9 @@ export class PendingQuestionsRepository {
       question: parsed.question,
       choices: packJson(parsed.choices),
       created_at: Date.now(),
+      artifact_path: parsed.artifact_path,
+      persona: parsed.persona,
+      phase: parsed.phase,
     });
     return this.get(Number(result.lastInsertRowid))!;
   }
