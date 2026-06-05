@@ -45,6 +45,7 @@ export class BacklogRepository {
   private readonly updateBodyStmt;
   private readonly updateFrontmatterStmt;
   private readonly updateReviewGatesStmt;
+  private readonly updatePlanningStmt;
   private readonly deleteStmt;
   private readonly countStmt;
 
@@ -77,6 +78,23 @@ export class BacklogRepository {
     this.updateReviewGatesStmt = db.prepare(
       'UPDATE backlog_items SET review_gates = @review_gates, updated_at = @ts WHERE id = @id',
     );
+    // Planning-owned columns only — NEVER status/owner (engine-owned). The
+    // backlog-ingest upsert calls this when a later enrichment pass rewrites the
+    // whole backlog.yaml, so version/model/gate markings reach an already-created
+    // row instead of being skipped.
+    this.updatePlanningStmt = db.prepare(`
+      UPDATE backlog_items SET
+        type = @type,
+        title = @title,
+        parent_id = @parent_id,
+        version = @version,
+        model = @model,
+        review_gates = @review_gates,
+        frontmatter = @frontmatter,
+        body_md = @body_md,
+        updated_at = @ts
+      WHERE id = @id
+    `);
     this.deleteStmt = db.prepare('DELETE FROM backlog_items WHERE id = ?');
     this.countStmt = db.prepare(
       'SELECT COUNT(*) as n FROM backlog_items WHERE (@status IS NULL OR status = @status)',
@@ -175,6 +193,44 @@ export class BacklogRepository {
       id,
       review_gates: packJson(parsed),
       ts,
+    });
+    if (result.changes === 0) {
+      throw new Error(`backlog item not found: ${id}`);
+    }
+    return this.get(id)!;
+  }
+
+  /**
+   * Re-apply the planning-owned fields of an existing item (used by the backlog
+   * upsert when a later pipeline step rewrites the whole backlog.yaml). Updates
+   * type/title/parent_id/version/model/review_gates/frontmatter/body_md — but
+   * deliberately leaves `status` and `owner` untouched so a re-ingest can never
+   * drag an item the engine has already moved forward back to `to_do`.
+   */
+  updatePlanningFields(
+    id: string,
+    fields: {
+      type: BacklogItemType;
+      title: string;
+      parent_id: string | null;
+      version: string | null;
+      model: string | null;
+      review_gates: Gate[];
+      frontmatter: Record<string, unknown>;
+      body_md: string;
+    },
+  ): BacklogItem {
+    const result = this.updatePlanningStmt.run({
+      id,
+      type: fields.type,
+      title: fields.title,
+      parent_id: fields.parent_id,
+      version: fields.version,
+      model: fields.model,
+      review_gates: packJson(z.array(GateSchema).parse(fields.review_gates)),
+      frontmatter: packJson(fields.frontmatter),
+      body_md: fields.body_md,
+      ts: Date.now(),
     });
     if (result.changes === 0) {
       throw new Error(`backlog item not found: ${id}`);

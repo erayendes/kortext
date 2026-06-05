@@ -24,6 +24,11 @@ export type ParsedBacklogItem = {
   parent_id?: string;
   /** Per-item LLM model preference (per rules/models.md) → `model` column. */
   model?: string;
+  /** A human-readable epic LABEL the agent wrote as `epic:` instead of a proper
+   *  `parent_epic` id (e.g. `epic: Infrastructure`). When no explicit parent_id
+   *  is given, the ingester synthesizes a real `type: epic` item from this label
+   *  and links the task to it, so the Board's epic column is never left empty. */
+  epic_label?: string;
   /** Any non-standard keys the agent added (e.g. phase, references, prd_id),
    *  preserved verbatim so the agent's structuring is never silently dropped. */
   extra?: Record<string, unknown>;
@@ -44,6 +49,9 @@ const KNOWN_ITEM_KEYS = new Set([
   'parent_epic',
   'parent',
   'model',
+  // A bare `epic:` LABEL is consumed into a synthesized epic (see epic_label),
+  // not dumped into frontmatter.
+  'epic',
 ]);
 
 // Valid enum values — kept inline to avoid importing the full zod schema at
@@ -215,6 +223,15 @@ function validateRawItems(raw: unknown[]): {
     if (typeof obj['model'] === 'string' && obj['model'].trim() !== '') {
       parsed.model = obj['model'].trim();
     }
+    // A bare `epic:` label (not an id). Held aside for synthesis in the ingester
+    // only when no explicit parent_epic/parent id was supplied.
+    if (
+      parsed.parent_id === undefined &&
+      typeof obj['epic'] === 'string' &&
+      obj['epic'].trim() !== ''
+    ) {
+      parsed.epic_label = obj['epic'].trim();
+    }
 
     // Preserve any agent-added fields (phase, references, prd_id, …) so the
     // agent's own structuring survives into frontmatter.
@@ -234,15 +251,67 @@ function validateRawItems(raw: unknown[]): {
 // 2. Ingester
 // ---------------------------------------------------------------------------
 
+/** Kebab-case slug for a synthesized epic id, e.g. "Infra & CI" → "infra-ci". */
+function epicSlug(label: string): string {
+  return label
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+/**
+ * Agents frequently flatten the backlog: every task carries a human-readable
+ * `epic:` LABEL and there is no `type: epic` container item, so the Board's epic
+ * column comes back empty. Synthesize one real epic per distinct label (stable
+ * id `epic-<slug>`, derived deterministically so re-ingest is idempotent) and
+ * point each labelled task at it via parent_id. Items that already have an
+ * explicit parent_id are left untouched — the proper shape always wins.
+ */
+export function deriveSyntheticEpics(
+  parsed: ParsedBacklogItem[],
+): ParsedBacklogItem[] {
+  const synthesized = new Map<string, ParsedBacklogItem>();
+  const out: ParsedBacklogItem[] = [];
+
+  for (const item of parsed) {
+    if (item.parent_id !== undefined || !item.epic_label) {
+      out.push(item);
+      continue;
+    }
+    const slug = epicSlug(item.epic_label);
+    if (slug === '') {
+      out.push(item); // label is pure punctuation — nothing to derive
+      continue;
+    }
+    const epicId = `epic-${slug}`;
+    if (!synthesized.has(epicId)) {
+      synthesized.set(epicId, {
+        id: epicId,
+        type: 'epic',
+        title: item.epic_label,
+      });
+    }
+    out.push({ ...item, parent_id: epicId });
+  }
+
+  // Synthesized epics go first so the parent FK is satisfied for flat batches.
+  return [...synthesized.values(), ...out];
+}
+
 export function ingestBacklogItems(
   repos: Repositories,
   parsed: ParsedBacklogItem[],
 ): {
   created: string[];
+  updated: string[];
   skipped: { id: string; reason: string }[];
 } {
   const created: string[] = [];
+  const updated: string[] = [];
   const skipped: { id: string; reason: string }[] = [];
+
+  // Turn bare `epic:` labels into real epic items + parent links before ingest.
+  parsed = deriveSyntheticEpics(parsed);
 
   // Epics first (stable): parent_id is a real FK (foreign_keys = ON), so a child
   // task linking to an epic in the same batch must see the epic row already
@@ -260,12 +329,6 @@ export function ingestBacklogItems(
     // Coerce an out-of-enum type instead of dropping the item.
     const { type: coercedType, original: originalType } = coerceItemType(type);
 
-    // Idempotency check
-    if (repos.backlog.get(id) !== null) {
-      skipped.push({ id, reason: 'already exists' });
-      continue;
-    }
-
     // Filter review_gates; collect dropped ones
     const requestedGates = item.review_gates ?? [];
     const validGates = requestedGates.filter((g) => VALID_GATES.has(g));
@@ -282,36 +345,44 @@ export function ingestBacklogItems(
     if (droppedGates.length > 0) frontmatter['dropped_gates'] = droppedGates;
     if (originalType) frontmatter['original_type'] = originalType;
 
+    const planningFields = {
+      type: coercedType as import('../db/schemas.ts').BacklogItemType,
+      title,
+      parent_id: item.parent_id ?? null,
+      version: item.version ?? null,
+      model: item.model ?? null,
+      review_gates: validGates as import('../db/schemas.ts').Gate[],
+      frontmatter,
+      body_md: item.description ?? '',
+    };
+
+    // Upsert: a later enrichment pass rewrites the whole backlog.yaml, so an
+    // existing item is UPDATED (planning fields only — status/owner stay), never
+    // skipped. Skips are reserved for genuine failures.
+    const exists = repos.backlog.get(id) !== null;
     try {
-      repos.backlog.create({
-        id,
-        type: coercedType as import('../db/schemas.ts').BacklogItemType,
-        title,
-        status: 'to_do',
-        parent_id: item.parent_id ?? null,
-        version: item.version ?? null,
-        model: item.model ?? null,
-        body_md: item.description ?? '',
-        review_gates: validGates as import('../db/schemas.ts').Gate[],
-        frontmatter,
-      });
+      if (exists) {
+        repos.backlog.updatePlanningFields(id, planningFields);
+        updated.push(id);
+      } else {
+        repos.backlog.create({ id, ...planningFields, status: 'to_do' });
+        created.push(id);
+      }
 
       repos.auditLog.append({
         actor: 'engine',
-        action: 'backlog.ingest',
+        action: exists ? 'backlog.ingest.update' : 'backlog.ingest',
         resource_type: 'backlog_item',
         resource_id: id,
         payload: { type, title },
       });
-
-      created.push(id);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       skipped.push({ id, reason: msg });
     }
   }
 
-  return { created, skipped };
+  return { created, updated, skipped };
 }
 
 // ---------------------------------------------------------------------------
@@ -323,6 +394,7 @@ export function ingestBacklogFile(
   absolutePath: string,
 ): {
   created: string[];
+  updated: string[];
   skipped: { id: string; reason: string }[];
   parseErrors: string[];
 } {
@@ -331,14 +403,14 @@ export function ingestBacklogFile(
     text = readFileSync(absolutePath, 'utf8');
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    return { created: [], skipped: [], parseErrors: [`read failed: ${msg}`] };
+    return { created: [], updated: [], skipped: [], parseErrors: [`read failed: ${msg}`] };
   }
 
   const { items, errors: parseErrors } = parseBacklogYaml(text);
-  const { created, skipped } = ingestBacklogItems(repos, items);
+  const { created, updated, skipped } = ingestBacklogItems(repos, items);
 
   console.log(
-    `[kortext] backlog ingest: ${created.length} created, ${skipped.length} skipped, ${parseErrors.length} parse errors`,
+    `[kortext] backlog ingest: ${created.length} created, ${updated.length} updated, ${skipped.length} skipped, ${parseErrors.length} parse errors`,
   );
 
   // Surface the outcome in the audit log too (dashboard activity), so a partial
@@ -350,6 +422,7 @@ export function ingestBacklogFile(
     resource_id: basename(absolutePath),
     payload: {
       created: created.length,
+      updated: updated.length,
       skipped: skipped.length,
       parse_errors: parseErrors.length,
       ...(skipped.length > 0 ? { skipped_detail: skipped.slice(0, 20) } : {}),
@@ -357,5 +430,5 @@ export function ingestBacklogFile(
     },
   });
 
-  return { created, skipped, parseErrors };
+  return { created, updated, skipped, parseErrors };
 }

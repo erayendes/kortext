@@ -13,7 +13,14 @@ import { basename, dirname, isAbsolute, join } from 'node:path';
  */
 
 const SLUG_PATTERN = '[a-z0-9][a-z0-9-]*';
-const TIMESTAMP_PATTERN = '\\d{4}-\\d{2}-\\d{2}-\\d{4}';
+// Canonical timestamp is YYYY-MM-DD-HHMM (markdown-sync.formatReportTimestamp),
+// but headless agents write report files via the raw Write tool and invent the
+// filename — they routinely emit looser, still date-shaped forms (compact
+// `20260605`, date-only `2026-06-05`, `20260605-1959`). Match a date with
+// optional separators and an optional time so a file that genuinely exists on
+// disk is never dropped as "not produced" over a timestamp-format nicety, while
+// still rejecting non-date junk (e.g. `draft`) in the <ts> slot.
+const TIMESTAMP_PATTERN = '\\d{4}-?\\d{2}-?\\d{2}(?:[-T ]?\\d{2}:?\\d{2}(?::?\\d{2})?)?';
 
 export type ResolvedOutput =
   | { kind: 'static'; absolutePath: string }
