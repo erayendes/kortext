@@ -25,7 +25,7 @@
    - inputs: `.kortext/references/ACCESS.md`
    - outputs: `.kortext/reports/delivery-reports.md`, staging-reviewed
 
-6. **+prime:** Motor, tüm staging raporları hazır olunca prime'a staging onayı sorar (staging URL + raporlar). Onay → epic version'a hazır. Ret → motor, prime'ın gerekçesiyle bug açar (`add_backlog_item --type bug`) ve epic owner'a triaj için atar; bug çözülmeden epic kapanmaz.
+6. **+prime:** Motor, tüm staging raporları hazır olunca prime'a staging onayı sorar (staging URL + raporlar). Onay → epic version'a hazır. Ret → motor, prime'ın gerekçesiyle yeni bir `type: bug` item açar (dosya köprüsü: backlog.yaml → ingester) ve epic owner'a triaj için atar; bug çözülmeden epic kapanmaz.
    - inputs: staging-reviewed
    - approver: +prime
    - outputs: staging-approved
