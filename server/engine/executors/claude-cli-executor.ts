@@ -2,7 +2,7 @@ import { join } from 'node:path';
 import type { Executor, ExecutorContext, ExecutorResult } from '../executor.ts';
 import type { WorkflowStep } from '../workflow-parser.ts';
 import { findActualOutputFiles } from '../output-resolver.ts';
-import { spawnCli, tailLines } from './cli-spawn.ts';
+import { spawnCliWithRetry, tailLines } from './cli-spawn.ts';
 import { readPersonaPrompt, type PersonaRegistry } from '../persona-registry.ts';
 
 /**
@@ -82,6 +82,15 @@ export type ClaudeCliExecutorOptions = {
   timeoutMs?: number;
   /** Override SIGKILL grace period. Default 5s. */
   sigkillDelayMs?: number;
+  /**
+   * Total spawn attempts per step including the first. A transient CLI failure
+   * (socket closed / API error / overload — see isTransientCliFailure) re-runs
+   * the same step with exponential backoff up to this many times. Default 3;
+   * set 1 to disable. Deterministic failures never retry.
+   */
+  maxAttempts?: number;
+  /** Base backoff between transient retries (exponential). Default 1000ms. */
+  retryBaseDelayMs?: number;
 };
 
 export class ClaudeCliExecutor implements Executor {
@@ -126,16 +135,22 @@ export class ClaudeCliExecutor implements Executor {
       ...(this.opts.extraArgs ?? []),
     ];
 
-    const res = await spawnCli({
-      binary: this.opts.binary,
-      args,
-      cwd: ctx.worktreePath,
-      stdin: prompt,
-      logPath,
-      signal: ctx.signal,
-      sigkillDelayMs: this.opts.sigkillDelayMs,
-      timeoutMs: this.opts.timeoutMs,
-    });
+    const res = await spawnCliWithRetry(
+      {
+        binary: this.opts.binary,
+        args,
+        cwd: ctx.worktreePath,
+        stdin: prompt,
+        logPath,
+        signal: ctx.signal,
+        sigkillDelayMs: this.opts.sigkillDelayMs,
+        timeoutMs: this.opts.timeoutMs,
+      },
+      {
+        maxAttempts: this.opts.maxAttempts ?? 3,
+        retryBaseDelayMs: this.opts.retryBaseDelayMs,
+      },
+    );
 
     if (res.aborted) {
       return {

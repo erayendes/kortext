@@ -184,3 +184,86 @@ export function tailLines(text: string, n: number): string {
   const lines = text.split(/\r?\n/).filter((l) => l.length > 0);
   return lines.slice(-n).join('\n');
 }
+
+// ---------------------------------------------------------------------------
+// Transient-failure classification + retry
+// ---------------------------------------------------------------------------
+
+/**
+ * Markers in the CLI's stdout/stderr that signal a *transient* failure — a
+ * network blip, a server-side overload, or a rate-limit — where re-running the
+ * exact same step is likely to succeed. Headless agent CLIs on long
+ * deep-research steps hit these routinely (the live UAT died on the first one
+ * below), so a single blip must not fail the whole workflow run.
+ *
+ * Deliberately narrow: anything not listed (bad model id, missing binary,
+ * auth rejection, declared-output-missing) is treated as deterministic and is
+ * NOT retried — re-running it would just burn tokens to fail again.
+ */
+const TRANSIENT_MARKERS: RegExp[] = [
+  /socket connection (?:was )?closed/i,
+  /\bapi error\b/i,
+  /\beconnreset\b/i,
+  /\betimedout\b/i,
+  /\beai_again\b/i,
+  /fetch failed/i,
+  /network error/i,
+  /connection (?:error|reset|closed)/i,
+  /timed?\s*out/i,
+  /overloaded/i,
+  /rate.?limit/i,
+  /\b429\b/,
+  /\b5(?:00|02|03|04|29)\b/,
+];
+
+/**
+ * Decide whether a finished spawn is a transient failure worth retrying.
+ *
+ * Never transient when:
+ *   - the run was aborted (user/worker cancelled — honour the cancel), or
+ *   - the process exited 0 (success — the caller validates outputs separately).
+ * Otherwise, transient iff a known marker appears in stdout/stderr.
+ */
+export function isTransientCliFailure(
+  res: Pick<SpawnCliResult, 'exitCode' | 'stdoutTail' | 'stderrTail' | 'aborted'>,
+): boolean {
+  if (res.aborted) return false;
+  if (res.exitCode === 0) return false;
+  const haystack = `${res.stdoutTail}\n${res.stderrTail}`;
+  return TRANSIENT_MARKERS.some((re) => re.test(haystack));
+}
+
+export type SpawnCliRetryOptions = {
+  /** Total attempts including the first. 1 = no retry. Default 1. */
+  maxAttempts?: number;
+  /** Base backoff; attempt k waits base * 2^(k-1) before the next try. Default 1000ms. */
+  retryBaseDelayMs?: number;
+  /** Injectable sleep so tests don't wait real time. */
+  sleep?: (ms: number) => Promise<void>;
+};
+
+/**
+ * `spawnCli` with bounded, exponential-backoff retry on transient failures.
+ * Re-spawns the SAME command (the log appends across attempts) until it
+ * succeeds, hits a non-transient result, or exhausts `maxAttempts`. Returns the
+ * last attempt's result plus the attempt count.
+ */
+export async function spawnCliWithRetry(
+  opts: SpawnCliOptions,
+  retry: SpawnCliRetryOptions = {},
+): Promise<SpawnCliResult & { attempts: number }> {
+  const maxAttempts = Math.max(1, retry.maxAttempts ?? 1);
+  const base = retry.retryBaseDelayMs ?? 1000;
+  const sleep = retry.sleep ?? ((ms: number) => new Promise((r) => setTimeout(r, ms)));
+
+  let last!: SpawnCliResult;
+  let attempts = 0;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    last = await spawnCli(opts);
+    attempts = attempt;
+    if (attempt >= maxAttempts) break;
+    if (!isTransientCliFailure(last)) break;
+    await sleep(base * 2 ** (attempt - 1));
+  }
+  return { ...last, attempts };
+}
