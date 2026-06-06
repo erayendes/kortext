@@ -15,6 +15,17 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 
 ---
 
+## 🔧 Faz-3 + Motor dilimleri follow-up (2026-06-06)
+
+> Faz-3 boşlukları + motor dilimleri + içerik kalibrasyonu **tamam** ([plan](../docs/superpowers/plans/2026-06-06-phase3-engine-content.md), 874 test). Kalan kuyruk:
+
+- [ ] **Staging-onay tüketicisi** (Slice 5 takibi, kapsam dışı bırakıldı): `staging-approval` sorusu üretiliyor ama yanıtı işleyen yok. Prime onay → version ilerlet; red → motor gerekçeyle bug açsın. `server/orchestrator/` (yeni handler) + onay kuyruğu yanıt yolu.
+- [ ] **Staging `reports_index` gerçek dosya** (Slice 5 inceleme nitü): gate-persona staging rapor satırları sentetik `file_path` + `status='uninitialized'` ile yazılıyor (diskte dosya yok). Şu an dashboard `/api/docs/reports` (fs taraması) kullandığı için görünmez/zararsız; ama `reports_index` tüketen gelecek bir okuyucu kırık-link görür. Kısa bir özet markdown'ı üretip indexle.
+- [ ] **Blocker-clear (Slice 2) — hâlâ ertelendi:** item bağımlılık modeli (`blocked_on`/join tablosu) şemada yok → migration + tasarım kararı gerek (tek-upstream kolon mu, many-to-many mi). Eray kararı bekliyor.
+- [ ] **Bağımlılık üretimi — canlı koşu doğrulaması:** motor enforcement (simetri/dangling/epic-id) hazır; gerçek planning ajanının artık `blocks`/`blocked_by` ürettiğini taze canlı koşuyla teyit et (talimat pekiştirildi ama uyum LLM'e bağlı).
+
+---
+
 ## 🔍 UAT bulguları — canlı koşu UI incelemesi (2026-06-06, TaskFlow sandbox)
 
 > Eray `kortext-live-uat-v2` verisini gerçek UI'da gezdi. Her madde **gördüğü + doğrulanmış gerçek durum + dosya**. Çoğu "veri doğru, UI bağlı değil". (Project + Kortext settings ekranları bu turda incelenmedi — ertelendi.)

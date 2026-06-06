@@ -7,7 +7,31 @@
 
 ---
 
-## ⭐ Şu an (2026-06-06) — v3.1 CLI per-project-daemon TAMAM ✅ (11 görev) + paketlenmiş smoke test geçti
+## ⭐ Şu an (2026-06-06) — Faz-3 boşlukları + Motor dilimleri + İçerik kalibrasyonu TAMAM ✅
+
+Eray'ın seçtiği 3 alan ([plan](../docs/superpowers/plans/2026-06-06-phase3-engine-content.md), 3 paralel keşif ajanıyla haritalandı, TDD subagent'larıyla koşturuldu):
+
+**A — Bağımlılık üretimi + epic-id** (motor enforcement; ajan-yazar + motor-doğrular kararı):
+- ✅ Kodlu epic id'leri `<CODE>-E0N` — `deriveSyntheticEpics`'e `code` `server/index.ts` hook'undan geçirildi. **Entegrasyon bug'ı yakalandı+düzeltildi:** hook proje kökünü `dirname×2` ile çözüyordu (`.kortext` veriyordu) → `dirname×3` (gerçek kök) — yoksa `code` çözülmez, epic-id slug'a düşerdi.
+- ✅ Motor simetri zorlaması (`enforceSymmetricDeps`, additive) + dangling-ref audit uyarısı. Workflow talimatı (planning-pipeline) zaten güçlüydü, pekiştirildi.
+
+**B — Motor ertelenen dilimleri** (Slice 2/blocker-clear hariç — şema migrasyonu gerek, yine ertelendi):
+- ✅ **Slice 3:** UAT verdict artık `gate_runs` satırı (attempt = önceki uat + 1, UNIQUE çakışması çözüldü).
+- ✅ **Slice 4:** epic'in tüm çocukları bitince epic board'da `done` (direct write + audit, idempotent).
+- ✅ **Slice 1:** handover-on-close — `HandoverEngine` closure'a bağlandı. **Final inceleme 2 boşluk buldu+düzeltildi:** driver `handoverEngine`'i `runClosure`'a geçirmiyordu (sessiz no-op) + `record()` sentetik `+prime` handle'ını reddediyordu (prod'da hiç yazılmazdı). Driver thread + `SYNTHETIC_PERSONA_HANDLES` izni + driver-e2e guard test eklendi.
+- ✅ **Slice 6:** preview URL kalıcılığı — migration `009`, `backlog_items.preview_url`, `frontmatter.preview` flag ile gate'li, API'de açık.
+- ✅ **Slice 5:** staging raporları (`reports_index` gate-persona başına) + prime staging-onay sorusu (`run_id=null`; `ApprovalQueue.enqueue` gevşetildi). Yeni `staging-approval.ts`.
+
+**C — İçerik kalibrasyonu** (tam):
+- ✅ Ölü MCP tool refs (`write_learned`/`write_decision`/`get_backlog_item`) → gerçek dosya-yazım/tool. ✅ Tüm `kortext-*.py` script refs (`commands.md`, `behavior.md`, dev-agent'lar) → gerçek v3 MCP tool'ları (`transition_item`/`handover`/`get_acceptance_criteria`/`get_runtime_status`) ya da "motor-otomatik". Doctor yeşil, içerikte hiç ölü ref kalmadı.
+
+**Durum:** **874 test yeşil** (807→874, +67 TDD), typecheck temiz, build başarılı. **24 yeni lokal commit** (v3.1'in 12'si + bu fazın 12'si: `0dce640`..`c7acc53`), **origin'e PUSH EDİLMEDİ.**
+
+**SIRADAKİ:** push (sen "push" deyince) → publish. Ertelenen follow-up'lar [TODO](./TODO.md): staging-onay tüketicisi (prime onay→version ilerle / red→bug), staging `reports_index` sentetik `file_path` (gerçek özet dosyası yazımı), + v3.1 nitleri (paralel-start kilidi, allocatePort mesajı). Blocker-clear (Slice 2) hâlâ ertelendi.
+
+---
+
+## Önceki devir (2026-06-06) — v3.1 CLI per-project-daemon TAMAM ✅ (11 görev) + paketlenmiş smoke test geçti
 
 **v3.1 CLI yeniden tasarımı bitti.** [Plan](../docs/superpowers/plans/2026-06-06-cli-per-project-daemon.md)'ın 11 görevi `subagent-driven-development` ile koşturuldu (TDD). Sonuç: **proje-başına port** mimarisi — global registry (`~/.kortext/projects.json`, atomik yazım) + daemon launcher (detached spawn / pid-liveness / kill) + 9-komutluk CLI yüzeyi. Sunucu/API/React dokunulmadı.
 
