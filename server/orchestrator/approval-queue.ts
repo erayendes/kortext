@@ -32,6 +32,11 @@ export type EnqueueInput = {
   persona?: string | null;
   /** Gate UI contract: the gate's phase. */
   phase?: string | null;
+  /**
+   * Epic metadata (migration 010): carries epicId + version so consumers can
+   * act without parsing question text. Nullable — non-epic questions omit this.
+   */
+  metadata?: Record<string, unknown> | null;
 };
 
 export type WaitOptions = {
@@ -56,6 +61,7 @@ export class ApprovalQueue {
       artifact_path: input.artifactPath ?? null,
       persona: input.persona ?? null,
       phase: input.phase ?? null,
+      metadata: input.metadata ?? null,
     });
     this.repos.auditLog.append({
       actor: 'orchestrator',

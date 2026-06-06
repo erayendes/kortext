@@ -2,6 +2,7 @@ import type { Repositories } from '../db/repositories/index.ts';
 import type { BacklogStatus } from '../db/schemas.ts';
 import type { Deployer, DeployOutcome } from '../engine/deployer.ts';
 import type { ApprovalQueue } from './approval-queue.ts';
+import type { MarkdownSyncService } from '../services/markdown-sync.ts';
 import { runStagingApproval } from './staging-approval.ts';
 
 const TERMINAL: ReadonlySet<BacklogStatus> = new Set(['done', 'cancelled']);
@@ -28,6 +29,11 @@ export type EpicCompletionDeps = {
    * wire the queue).
    */
   queue?: ApprovalQueue;
+  /**
+   * MarkdownSyncService for writing real gate-staging report files (M2a).
+   * When omitted, falls back to the legacy synthetic row path.
+   */
+  markdownSync?: MarkdownSyncService;
 };
 
 /**
@@ -93,11 +99,15 @@ export async function runEpicCompletion(
     };
   }
 
-  // Task B5: gate-persona staging reports + prime staging-approval question.
+  // Task B5 / M2a: gate-persona staging reports + prime staging-approval question.
   // Best-effort — a failure here must not throw the epic-completion result.
   if (deploy.ok && deps.queue) {
     try {
-      await runStagingApproval(epicId, { repos, queue: deps.queue });
+      await runStagingApproval(epicId, {
+        repos,
+        queue: deps.queue,
+        markdownSync: deps.markdownSync,
+      });
     } catch {
       // Swallow: staging-approval is a post-deploy side-effect; epic completion
       // already succeeded at this point.

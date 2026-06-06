@@ -23,12 +23,14 @@ type Row = {
   artifact_path: string | null;
   persona: string | null;
   phase: string | null;
+  metadata: string | null;
 };
 
 function rowToQuestion(row: Row): PendingQuestion {
   return PendingQuestionSchema.parse({
     ...row,
     choices: unpackJson<string[]>(row.choices, []),
+    metadata: row.metadata ? unpackJson<Record<string, unknown> | null>(row.metadata, null) : null,
   });
 }
 
@@ -42,9 +44,9 @@ export class PendingQuestionsRepository {
   constructor(private readonly db: Database.Database) {
     this.insertStmt = db.prepare(`
       INSERT INTO pending_questions
-        (run_id, step_id, question, choices, created_at, artifact_path, persona, phase)
+        (run_id, step_id, question, choices, created_at, artifact_path, persona, phase, metadata)
       VALUES
-        (@run_id, @step_id, @question, @choices, @created_at, @artifact_path, @persona, @phase)
+        (@run_id, @step_id, @question, @choices, @created_at, @artifact_path, @persona, @phase, @metadata)
     `);
     this.selectByIdStmt = db.prepare('SELECT * FROM pending_questions WHERE id = ?');
     this.listOpenStmt = db.prepare(
@@ -71,6 +73,7 @@ export class PendingQuestionsRepository {
       artifact_path: parsed.artifact_path,
       persona: parsed.persona,
       phase: parsed.phase,
+      metadata: parsed.metadata != null ? packJson(parsed.metadata) : null,
     });
     return this.get(Number(result.lastInsertRowid))!;
   }
