@@ -22,6 +22,7 @@ type Row = {
   parent_id: string | null;
   version: string | null;
   model: string | null;
+  preview_url: string | null;
   review_gates: string;
   frontmatter: string;
   body_md: string;
@@ -46,6 +47,7 @@ export class BacklogRepository {
   private readonly updateFrontmatterStmt;
   private readonly updateReviewGatesStmt;
   private readonly updatePlanningStmt;
+  private readonly setPreviewUrlStmt;
   private readonly deleteStmt;
   private readonly countStmt;
 
@@ -95,6 +97,9 @@ export class BacklogRepository {
         updated_at = @ts
       WHERE id = @id
     `);
+    this.setPreviewUrlStmt = db.prepare(
+      'UPDATE backlog_items SET preview_url = @preview_url, updated_at = @ts WHERE id = @id',
+    );
     this.deleteStmt = db.prepare('DELETE FROM backlog_items WHERE id = ?');
     this.countStmt = db.prepare(
       'SELECT COUNT(*) as n FROM backlog_items WHERE (@status IS NULL OR status = @status)',
@@ -194,6 +199,21 @@ export class BacklogRepository {
       review_gates: packJson(parsed),
       ts,
     });
+    if (result.changes === 0) {
+      throw new Error(`backlog item not found: ${id}`);
+    }
+    return this.get(id)!;
+  }
+
+  /**
+   * Persist the live local-preview URL for a runnable item (task B4, §5.7). Set
+   * by the orchestrator after a successful dev-cycle exit when the item's
+   * frontmatter declares `preview: true`. Pass null to clear the URL (e.g. on a
+   * restart where the preview server is no longer running).
+   */
+  setPreviewUrl(id: string, url: string | null): BacklogItem {
+    const ts = Date.now();
+    const result = this.setPreviewUrlStmt.run({ id, preview_url: url, ts });
     if (result.changes === 0) {
       throw new Error(`backlog item not found: ${id}`);
     }

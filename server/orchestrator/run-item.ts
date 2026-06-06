@@ -165,6 +165,16 @@ export async function runItem(itemId: string, deps: RunItemDeps): Promise<RunIte
     if (previewManager) {
       try {
         await previewManager.startFor(itemId, lease.path);
+        // Persist the URL only for items explicitly flagged runnable in their
+        // frontmatter (preview: true). Unflagged items start a preview in-memory
+        // for backwards compatibility but do not write to the DB.
+        const itemForPreview = repos.backlog.get(itemId);
+        if (itemForPreview?.frontmatter?.preview === true) {
+          const url = previewManager.urlFor(itemId);
+          if (url) {
+            repos.backlog.setPreviewUrl(itemId, url);
+          }
+        }
       } catch {
         // preview is best-effort; the item is on `test` regardless
       }
