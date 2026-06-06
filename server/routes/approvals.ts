@@ -24,7 +24,7 @@ export function approvalRouter(deps: ApprovalRouterDeps): Router {
     res.json({ questions });
   });
 
-  r.post('/questions/:id/answer', (req, res) => {
+  r.post('/questions/:id/answer', async (req, res) => {
     const id = Number(req.params.id);
     if (!Number.isFinite(id)) {
       res.status(400).json({ error: 'invalid_id' });
@@ -43,14 +43,16 @@ export function approvalRouter(deps: ApprovalRouterDeps): Router {
     try {
       const answered = deps.queue.answer(id, body.answer, body.answered_by);
 
-      // Fire-and-forget consumer for staging-approval questions. The route
-      // MUST return the answered question even if the consumer errors.
+      // Run the staging-approval consumer to completion BEFORE responding, so
+      // its side-effects (bug on reject, reports approved + preprod question on
+      // approve) are durable by the time the caller sees 200. A consumer error
+      // is logged but does NOT fail the answer (the question is already answered).
       if (answered.phase === 'staging-approval') {
-        consumeStagingApproval(answered, { repos: deps.repos, queue: deps.queue }).catch(
-          (err: unknown) => {
-            console.error('[approvals] consumeStagingApproval error:', err);
-          },
-        );
+        try {
+          await consumeStagingApproval(answered, { repos: deps.repos, queue: deps.queue });
+        } catch (err: unknown) {
+          console.error('[approvals] consumeStagingApproval error:', err);
+        }
       }
 
       res.json({ question: answered });
