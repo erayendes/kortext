@@ -132,8 +132,13 @@ const safetyGuards: SafetyGuards = {
   //                           fields they change, so a 100-item plan stays fast)
   backlogIngester: ({ absolutePath }) => {
     const base = basename(absolutePath);
+    // Read the project code from .kortext/project.json (the directory containing
+    // the output file is the project workspace root for per-project daemons).
+    const projectRoot = dirname(dirname(absolutePath)); // outputs/ → project root
+    const meta = readProjectMeta(resolveBlueprintPaths(projectRoot).projectJsonPath);
+    const ingestOpts = meta?.code ? { code: meta.code } : undefined;
     if (base === 'backlog.yaml') {
-      ingestBacklogFile(repos, absolutePath);
+      ingestBacklogFile(repos, absolutePath, ingestOpts);
       // Normalize the file from the DB (e.g. surface synthesized epics).
       writeBacklogYamlFromDb(repos, absolutePath);
     } else if (base === 'backlog.patch.yaml') {
