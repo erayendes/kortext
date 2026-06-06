@@ -1,16 +1,21 @@
 #!/usr/bin/env tsx
 /**
- * Kortext CLI entry — user-facing surface.
+ * Kortext CLI entry — user-facing surface (v3.1, per-project-port).
  *
- *   kortext init                         scaffold .kortext/ + root templates + DB
- *   kortext serve                        start backend + dashboard together
- *   kortext start <workflow-id>          run a workflow with the mock executor
- *   kortext approve <run-id> [answer]    answer the oldest open question
- *   kortext status                       recent runs + open questions
- *   kortext logs                         tail of the audit log
- *   kortext cleanup                      remove old quarantine + branches
+ *   kortext start [project|path]         launch a project's daemon on its port
+ *   kortext stop                         stop all running project daemons
+ *   kortext pause <project>              pause one project (others keep running)
+ *   kortext list                         registered projects + ports + status
+ *   kortext remove <project>             drop from registry (keeps .kortext/)
+ *   kortext purge <project>              drop + delete the project .kortext/
+ *   kortext update                       npm update -g kortext
  *   kortext doctor                       consistency scan
- *   kortext mcp                          run the MCP server over stdio
+ *
+ * Dev / Kortext-development commands (off the main surface):
+ *   kortext serve [--mode] [--port]      single-project dev server
+ *   kortext init [--force]               scaffold .kortext/ + templates + DB
+ *   kortext dev:run <workflow-id>        run one workflow (was `start <id>`)
+ *   kortext approve / status / logs / cleanup / archive / mcp
  *
  * Compiled to JS by `npm run build:server`; the `bin/kortext.js` shim
  * prefers the compiled entry and falls back to tsx in dev.
@@ -39,6 +44,12 @@ import { loadWorkflowsFromDir } from '../server/engine/workflow-loader.ts';
 import { loadPersonasFromDir } from '../server/engine/persona-registry.ts';
 import { runtimeLayout } from '../server/paths.ts';
 import { runStdioServer } from '../mcp/stdio.ts';
+import { createInterface } from 'node:readline';
+import { startProject } from '../server/cli/cmd-start.ts';
+import { stopAll, pauseProject } from '../server/cli/cmd-lifecycle.ts';
+import { formatList, removeFromRegistry, purgeProject } from '../server/cli/cmd-projects.ts';
+import { updateCommandPlan } from '../server/cli/cmd-update.ts';
+import { readRegistry } from '../server/registry/projects.ts';
 
 const args = process.argv.slice(2);
 const cmd = args[0];
@@ -148,28 +159,37 @@ function readVersion(): string {
   }
 }
 
+async function confirm(question: string): Promise<boolean> {
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    const answer = await new Promise<string>((res) => rl.question(`${question} [y/N] `, res));
+    return /^y(es)?$/i.test(answer.trim());
+  } finally {
+    rl.close();
+  }
+}
+
 const HELP_TEXT = [
-  'kortext v3 — autonomous AI agent runtime',
+  'kortext v3.1 — autonomous AI agent runtime',
   '',
-  '  init [--force]                 scaffold .kortext/, AGENTS.md,',
-  '                                 .gitignore, .env.example, and DB',
-  '  serve [--mode=dev|prod|auto]   start backend + dashboard together',
-  '         [--port=N]              (auto picks prod when dist/ is built)',
-  '  start <workflow-id> [--executor=<kind>] [--binary=<path>]',
-  '                                 run a workflow (mock|claude|codex|gemini)',
-  '  approve <run-id> [answer]      answer the oldest open question for a run',
-  '  status                         show recent runs + open questions',
-  '  logs [--limit=N] [--actor=A] [--action=A]',
-  '                                 tail of the audit log',
-  '  cleanup [--quarantine-older-than=Nd] [--branches] [--dry-run]',
-  '                                 remove old quarantine + abandoned branches',
-  '  archive handover               rotate .kortext/memory/handover.md to',
-  '                                 a timestamped archive file',
-  '  doctor                         workflow / persona / lock consistency scan',
-  '  mcp                            run the MCP server over stdio',
+  '  start [project|path]   start the daemon for a project + open it;',
+  '                         no arg = this folder, or pick from the list',
+  '  stop                   stop all running project daemons',
+  '  pause <project>        pause one project (others keep running)',
+  '  list                   show registered projects + ports + status',
+  '  remove <project>       drop from the registry (keeps .kortext/ on disk)',
+  '  purge <project>        drop + delete the project .kortext/ (asks first)',
+  '  update                 update kortext (npm update -g kortext)',
+  '  doctor                 workflow / persona / lock consistency scan',
+  '  help                   show this help (--help, -h)',
   '',
-  '  --help, -h                     show this help',
-  '  --version, -v                  print version',
+  '  (dev) serve [--mode] [--port]   single-project dev server (source checkout)',
+  '  (dev) init [--force]            scaffold .kortext/ in this folder',
+  '  (dev) dev:run <workflow-id>     run one workflow (was `start <id>`)',
+  '  (dev) mcp                       MCP server over stdio',
+  '',
+  '  --help, -h             show this help',
+  '  --version, -v          print version',
 ].join('\n');
 
 async function main(): Promise<number> {
@@ -226,6 +246,79 @@ async function main(): Promise<number> {
     console.log(`db schema v${result.schemaVersion} at ${result.dbPath}`);
     console.log("next: 'kortext serve' to launch backend + dashboard");
     return 0;
+  }
+
+  if (cmd === 'start') {
+    const result = startProject(args[1], {
+      packageRoot: packageRoot(),
+      cwd: process.cwd(),
+      init: (path) => initCommand({ targetDir: path, force: false }),
+    });
+    if (result.ok) {
+      console.log(`${result.reused ? 'already running' : 'started'} ${result.slug} → ${result.url}`);
+      const shouldOpen = !hasFlag('no-open') && process.env.KORTEXT_NO_OPEN !== '1';
+      if (shouldOpen) setTimeout(() => openBrowser(result.url), 1200);
+      return 0;
+    }
+    if (result.action === 'list') {
+      console.log('Registered projects:');
+      console.log(formatList(readRegistry()));
+      console.log('\nStart one with: kortext start <project>');
+      return 0;
+    }
+    if (result.action === 'onboard') {
+      console.log('No Kortext project in this folder.');
+      console.log('Run `kortext start <path-to-project>` (it will scaffold + launch).');
+      return 0;
+    }
+    console.error(result.message);
+    return 1;
+  }
+
+  if (cmd === 'stop') {
+    const { stopped } = stopAll();
+    console.log(stopped.length ? `stopped: ${stopped.join(', ')}` : 'nothing was running');
+    return 0;
+  }
+
+  if (cmd === 'pause') {
+    const slug = args[1];
+    if (!slug) { console.error('usage: kortext pause <project>'); return 2; }
+    const res = pauseProject(slug);
+    if (!res.ok) { console.error(res.message); return 1; }
+    console.log(`paused ${slug}`);
+    return 0;
+  }
+
+  if (cmd === 'list') {
+    console.log(formatList(readRegistry()));
+    return 0;
+  }
+
+  if (cmd === 'remove') {
+    const slug = args[1];
+    if (!slug) { console.error('usage: kortext remove <project>'); return 2; }
+    const res = removeFromRegistry(slug);
+    if (!res.ok) { console.error(res.message); return 1; }
+    console.log(`removed ${slug} from the registry (kept ${res.keptPath})`);
+    return 0;
+  }
+
+  if (cmd === 'purge') {
+    const slug = args[1];
+    if (!slug) { console.error('usage: kortext purge <project>'); return 2; }
+    const ok = hasFlag('yes') || (await confirm(`Permanently delete ${slug}'s .kortext/ folder?`));
+    if (!ok) { console.log('aborted'); return 0; }
+    const res = purgeProject(slug);
+    if (!res.ok) { console.error(res.message); return 1; }
+    console.log(`purged ${slug} (registry + .kortext/ deleted)`);
+    return 0;
+  }
+
+  if (cmd === 'update') {
+    const plan = updateCommandPlan();
+    const child = spawn(plan.command, plan.args, { stdio: 'inherit', shell: false });
+    return await new Promise<number>((res) => child.on('close', (code) => res(code ?? 1)));
   }
 
   if (cmd === 'serve') {
@@ -344,10 +437,10 @@ async function main(): Promise<number> {
   const queue = new ApprovalQueue({ repos });
 
   switch (cmd) {
-    case 'start': {
+    case 'dev:run': {
       const workflowId = args[1];
       if (!workflowId || workflowId.startsWith('--')) {
-        console.error('usage: kortext start <workflow-id> [--executor=mock|claude|codex|gemini] [--binary=<path>]');
+        console.error('usage: kortext dev:run <workflow-id> [--executor=mock|claude|codex|gemini] [--binary=<path>]');
         return 2;
       }
       const kind = parseExecutorKind();

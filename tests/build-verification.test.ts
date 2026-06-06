@@ -87,14 +87,17 @@ describe('build verification', () => {
     });
 
     for (const sub of [
-      'init',
-      'serve',
       'start',
-      'approve',
-      'status',
-      'logs',
-      'cleanup',
+      'stop',
+      'pause',
+      'list',
+      'remove',
+      'purge',
+      'update',
       'doctor',
+      'serve',
+      'init',
+      'dev:run',
       'mcp',
     ]) {
       expect(out).toContain(sub);
