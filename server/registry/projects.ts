@@ -56,7 +56,9 @@ export function allocatePort(claimed: number[]): number {
   for (let p = BASE_PORT; p <= MAX_PORT; p++) {
     if (!used.has(p)) return p;
   }
-  throw new Error(`no free port in ${BASE_PORT}..${MAX_PORT}`);
+  throw new Error(
+    `no free port in ${BASE_PORT}..${MAX_PORT} — free one with 'kortext remove <project>' or check 'kortext list' for stale entries`,
+  );
 }
 
 export function readRegistry(dir: string = defaultRegistryDir()): Registry {

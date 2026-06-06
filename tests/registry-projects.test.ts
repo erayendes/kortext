@@ -32,6 +32,12 @@ describe('allocatePort', () => {
   it('returns the first free port above claimed ones', () => {
     expect(allocatePort([3200, 3201, 3203])).toBe(3202);
   });
+  it('throws with actionable message when the entire port pool is exhausted', () => {
+    // Claim all 100 ports (3200–3299).
+    const allPorts = Array.from({ length: 100 }, (_, i) => 3200 + i);
+    expect(() => allocatePort(allPorts)).toThrow(/kortext remove/);
+    expect(() => allocatePort(allPorts)).toThrow(/kortext list/);
+  });
 });
 
 describe('registry read/write round-trip', () => {
