@@ -323,6 +323,17 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 const server = app.listen(env.KORTEXT_PORT, () => {
   console.log(`[kortext] server listening on http://localhost:${env.KORTEXT_PORT}`);
 });
+server.on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(
+      `[kortext] port ${env.KORTEXT_PORT} is already in use. Another project (or a stale daemon) is on it.\n` +
+        `          Pick another port (KORTEXT_PORT=...) or run \`kortext list\` / \`kortext stop\`.`,
+    );
+    process.exit(1);
+  }
+  console.error('[kortext] server error:', err);
+  process.exit(1);
+});
 
 const shutdown = (signal: string) => {
   console.log(`[kortext] received ${signal}, closing`);
