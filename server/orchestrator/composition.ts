@@ -23,6 +23,7 @@ import type { WorktreeLease } from './run-item.ts';
 import { HandoverEngine } from '../engine/handover.ts';
 import { loadPersonasFromDir } from '../engine/persona-registry.ts';
 import { runtimeLayout } from '../paths.ts';
+import { MarkdownSyncService } from '../services/markdown-sync.ts';
 
 export type CompositionDeps = {
   repos: Repositories;
@@ -78,6 +79,7 @@ export type Composition = {
   deployer: Deployer;
   previewManager: PreviewManager;
   handoverEngine: HandoverEngine;
+  markdownSync: MarkdownSyncService;
   /** The per-item worktree acquirer runItem injects (keyed by run id, real handle). */
   acquireWorktree: (itemId: string, runId: number) => Promise<WorktreeLease>;
 };
@@ -168,6 +170,10 @@ export function createComposition(deps: CompositionDeps): Composition {
     workspaceRoot,
   });
 
+  // M2a — markdown sync service for writing real gate-staging report files
+  // and other generated artifacts under .kortext/.
+  const markdownSync = new MarkdownSyncService(repos, { root: workspaceRoot });
+
   // The per-item worktree acquirer runItem injects: provision a real worktree
   // keyed by the (pre-created) run id and surface its handle so the ledger can
   // record it for the merger (C2).
@@ -193,6 +199,7 @@ export function createComposition(deps: CompositionDeps): Composition {
     deployer,
     previewManager,
     handoverEngine,
+    markdownSync,
     acquireWorktree,
   };
 }

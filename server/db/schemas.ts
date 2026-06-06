@@ -331,6 +331,9 @@ export const PendingQuestionSchema = z.object({
   artifact_path: z.string().nullable().default(null),
   persona: z.string().nullable().default(null),
   phase: z.string().nullable().default(null),
+  // Epic metadata (migration 010): carries epicId + version so consumers
+  // can act without parsing question text. Nullable — non-epic questions leave NULL.
+  metadata: z.record(z.unknown()).nullable().default(null),
 });
 export type PendingQuestion = z.infer<typeof PendingQuestionSchema>;
 
@@ -342,6 +345,7 @@ export const PendingQuestionInsertSchema = z.object({
   artifact_path: z.string().nullable().default(null),
   persona: z.string().nullable().default(null),
   phase: z.string().nullable().default(null),
+  metadata: z.record(z.unknown()).nullable().default(null),
 });
 export type PendingQuestionInsert = z.input<typeof PendingQuestionInsertSchema>;
 
