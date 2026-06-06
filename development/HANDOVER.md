@@ -7,7 +7,20 @@
 
 ---
 
-## ⭐ Şu an (2026-06-06) — UI fazı 1+2+4 BİTTİ ✅ (UAT bulguları), kalan tek faz 3
+## ⭐ Şu an (2026-06-06) — UI fazlarının TAMAMI (1+2+4+3) BİTTİ ✅; faz-3 canlı koşuyla doğrulandı
+
+**Faz 3 (persona kalibrasyonu) — taze canlı koşu `kortext-live-uat-v3` ile doğrulandı.** Yeni sandbox sıfırdan koştu (onboarding TaskFlow BRD → analiz → planning, iki run da `succeeded`, 102 item / 86 task + 16 epic). Auto-approve poller +prime gate'lerini sürdü. Sonuç **kısmi ama ana hedefler tuttu:**
+- ✅ **item-id:** 86 task hepsi `TF-001`…`TF-086` (slug→`<CODE>-NNN` çözüldü).
+- ✅ **memory:** `.kortext/memory/decisions.md` 15KB gerçek ADR günlüğü (analiz+planning yazdı).
+- ✅ **dependency UI:** `dependenciesOf` frontmatter okuyor + drawer Dependencies bölümü (synthetic dep ile kanıtlandı).
+- ⚠️ **KALAN:** dependency ÜRETİMİ (ajan 0 üretti — yalnız görsel boşluk, motor kullanmıyor) + epic-id (ajan `TF-E01` uygulamadı, slug kaldı). Eray: şimdilik ertele ([TODO §D](./TODO.md)).
+- **Bonus:** inşaat-fazı paralelliği 6 görev / 12 worktree'ye çıkarıldı (Eray "orta", `server-drive.ts`).
+
+**⚠️ Backend artık v3'ü gösteriyor:** port `:3200` cwd=`kortext-live-uat-v3` (v2 değil). v2 verisi diskte duruyor. Eski UI bulguları v2'de keşfedildi; v3 = kalibre koşu.
+
+---
+
+## Önceki bu-devir özeti — UI fazı 1+2+4 (UAT bulguları)
 
 **Bağlam:** Tam zincir kesintisiz canlı koştu (§14.7–14.9, sandbox `kortext-live-uat-v2`, 127 item/18 epic — detay [DECISIONS §14.7–14.9](./DECISIONS.md)). Eray canlı veriyi gerçek UI'da gezip ~18 UAT bulgusu verdi; sıra **1→2→4→3**. **1, 2, 4 tamamlandı ve canlı tarayıcıda doğrulandı.** Hepsi "veri doğru, UI bağlı değil" türündendi — motorda değişiklik gerekmedi.
 
@@ -16,13 +29,11 @@
 - **Faz 2 — eksik özellikler:** doküman scroll (`.fb-view min-height:0`), "New" görev gerçek in-app form (prompt→form, POST `version` kabul eder), item yorumu (`POST .../comment`→audit_log, drawer+timeline aynı feed), çalışan Assignee filtresi (+ per-item feed küratörü; "Group:Epic" pill kaldırıldı).
 - **Faz 4 — agents/ikonlar:** Agents paneli `deriveActiveAgents` (yalnız açık-görevli ajan + statü, açıklamasız); persona ikon seti Eray'ın seçimiyle güncellendi (`persona-colors.ts`).
 
-**Durum:** **804 test yeşil** (767→804, +37 TDD), typecheck temiz, konsol hatasız. Yeni saf-mantık modülleri: `agents-panel.ts` + board-drawer'a `assigneeOf`/`assigneesOf`/`compareVersions`/`sortedVersions`/`defaultActiveVersion`. **12 lokal commit main'de (`28f3b65`..`96be236`), origin'e PUSH EDİLMEDİ.**
+**Durum (tüm fazlar):** **807 test yeşil** (767→807, +40 TDD), typecheck temiz, konsol hatasız. Yeni saf-mantık modülleri: `agents-panel.ts` + board-drawer'a `assigneeOf`/`assigneesOf`/`compareVersions`/`sortedVersions`/`defaultActiveVersion`/`dependenciesOf`. **Bu oturumda main'e ~19 lokal commit (`28f3b65`..`6e71a39` + bu docs commit'i), origin'e PUSH EDİLMEDİ.**
 
-**SIRADAKİ — Faz 3: Persona kalibrasyonu (EN SON, canlı koşu gerektirir ~86 dk).** [TODO §D](./TODO.md): item-id konvansiyonu (slug→`TF-001`), dependency üretimi (planning `blocks`/`blocked_by` üretmeli — DB'de 0), memory yazımı (analiz/planning `decisions`/`learned` yazmalı). Persona/workflow markdown'ları (`agents/`, `workflows/`) düzenle → biriktir → **tek canlı koşuyla** doğrula. (UI tarafında kalan küçük iş: drawer'da dependency bölümü — veri üretilince gösterilecek.)
+**SIRADAKİ:** UI UAT fazlarının tamamı kapandı. Açık işler: (1) faz-3 kalan boşlukları (dependency üretimi + epic-id — [TODO §D](./TODO.md), ertelendi); (2) lokal commit'leri push (Eray onayıyla); (3) [TODO](./TODO.md)'daki diğer kuyruk (motor backend dilimleri, CLI redesign, paketlenmiş UAT, v3.1.0 release).
 
-**Canlı sandbox + sunucular AYAKTA (nohup):** veri `kortext-live-uat-v2/.kortext/` (127 item, 18 epic). Backend `:3200` (cwd=sandbox), vite önizleme `:5173` (preview MCP `kortext-uat-web`) /api'yi 3200'e proxy'ler. (Düşerse: `cd kortext-live-uat-v2 && KORTEXT_PORT=3200 npx --prefix <repo> tsx <repo>/server/index.ts &`; server dosyası düzenlenince elle restart — `tsx watch` değil.)
-
-**Diğer bekleyenler:** 12 commit'i push (Eray onayıyla); codex/gemini transient retry; `/api/backlog` gerçek sayfalama (>500 item için); drawer dependency bölümü.
+**Canlı sandbox + sunucular AYAKTA:** Backend `:3200` cwd=`kortext-live-uat-v3` (kalibre koşu, 102 item / 86 task `TF-NNN` + 16 epic + `memory/decisions.md`). Eski v2 (127 item) diskte duruyor. vite önizleme `:5173` (preview MCP `kortext-uat-web`) /api'yi 3200'e proxy'ler. (Düşerse: `cd kortext-live-uat-v3 && KORTEXT_PORT=3200 npx --prefix <repo> tsx <repo>/server/index.ts &`; server dosyası düzenlenince elle restart — `tsx watch` değil.)
 
 ---
 

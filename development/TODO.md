@@ -26,10 +26,12 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 **C. Doküman görünümü (`FileBrowser`/`AnnotatableDoc`)**
 - [x] ~~**Scroll olmuyor**~~ ✅ (2026-06-06, faz-2). `.fb-view` grid-hücresinde `min-height: 0` eksikti → içindeki `.fb-md`'nin `overflow-y:auto`'su devreye giremiyordu. Tek satır CSS. Canlı: API.md (34k px) scroll'lanıyor.
 
-**D. İçerik / persona kalibrasyonu** (yeni canlı koşu ile doğrulanır)
-- [ ] **item-id konvansiyonu** — planning persona'ları slug yerine `<PROJE_KODU>-NNN` üretmeli.
-- [ ] **Dependency üretimi** — planning `blocks`/`blocked_by` neredeyse hiç üretmedi (DB'de 0). Persona talimatını güçlendir.
-- [ ] **Memory boş** — `kortext-live-uat-v2/.kortext/memory/` yok; onboarding decisions/learned yazmıyor. Karar: analiz/planning memory üretmeli mi (EM persona "decisions.md yaz" diyor ama workflow output declare etmiyor) yoksa normal mi.
+**D. İçerik / persona kalibrasyonu** (faz-3, canlı koşu `kortext-live-uat-v3` ile doğrulandı — 102 item, 86 task + 16 epic)
+- [x] ~~**item-id konvansiyonu**~~ ✅ (2026-06-06, faz-3). planning-pipeline step-0 artık `.kortext/project.json`'dan `code` okuyup `<CODE>-NNN` üretiyor; "slug YASAK" sertleştirmesi tuttu — canlı koşuda **86 task hepsi `TF-001`…`TF-086`** (eskiden `init-nextjs-project` gibi slug'lardı).
+- [x] ~~**Memory boş**~~ ✅ (2026-06-06, faz-3). analiz + planning konsolidasyonu `.kortext/memory/decisions.md` yazıyor (workflow declared output). Canlı: 15KB gerçek karar günlüğü — ADR'ler (ADR-001 Supabase Auth: karar+gerekçe+reddedilenler), `/api/docs/memory` serve ediyor, Memory ekranında görünür.
+- [x] ~~**Dependency — UI tarafı**~~ ✅ (2026-06-06, faz-3). `dependenciesOf(item)` frontmatter'daki `blocks`/`blocked_by`'ı okuyor (ingester oraya yazıyor; eskiden UI yalnız body parse ediyordu → üretilse bile görünmezdi); drawer'a Dependencies bölümü + kart rozeti. Synthetic dep ile canlı kanıtlandı.
+- [ ] **⚠️ Dependency üretimi (içerik) — KALAN BOŞLUK** — sertleştirilmiş talimata rağmen ajan faz-3 koşusunda **0 dependency** üretti (büyük step-1'de alt-madde gözden kaçtı). Şu an **yalnız görsel** boşluk: motor `blocked_on`'a göre iş sıralamıyor (şema'da yok — bkz "blocker-temizle KARŞILIKSIZ"), yani işlevsel etki yok. Daha güvenilir çözüm: planning'e **yalnız dependency atayan ayrı bir adım** (odaklı adım uyumu artırır). Eray kararı: şimdilik ertele.
+- [ ] **⚠️ Epic-id konvansiyonu — KALAN BOŞLUK** — ajan task'lara `TF-NNN` uyguladı ama epic'lere `<CODE>-E01` uygulamadı; epic'ler hâlâ slug (`epic-seo-legal`). Okunur olduğu için düşük öncelik. Seçenek: ayrı adım/sertleştirme **veya** ingester'da deterministik normalize (`epic-x`→`TF-E0N`, parent_epic ref'leri de güncelle). Eray kararı: şimdilik ertele.
 
 **E. Global / agents (`Footer` agents paneli, persona ikonları)**
 - [x] ~~**Agents paneli**~~ ✅ (2026-06-06, faz-4). `/api/personas` (tüm persona'lar yeşil) → `deriveActiveAgents(items)` (saf helper, TDD): yalnız tamamlanmamış (done/cancelled/epic hariç) görevi olan ajanlar; her satır lead item + statü + kalan-sayı; tone renkli nokta (working=yeşil, blocked=kırmızı, queued=amber); açıklama metni kaldırıldı. Canlı: 5 ajan, hepsi queued (tüm item to_do), openCount'a göre sıralı.
