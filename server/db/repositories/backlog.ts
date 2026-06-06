@@ -50,6 +50,7 @@ export class BacklogRepository {
   private readonly setPreviewUrlStmt;
   private readonly deleteStmt;
   private readonly countStmt;
+  private readonly countFilteredStmt;
 
   constructor(private readonly db: Database.Database) {
     this.insertStmt = db.prepare(`
@@ -104,6 +105,13 @@ export class BacklogRepository {
     this.countStmt = db.prepare(
       'SELECT COUNT(*) as n FROM backlog_items WHERE (@status IS NULL OR status = @status)',
     );
+    this.countFilteredStmt = db.prepare(`
+      SELECT COUNT(*) as n FROM backlog_items
+      WHERE (@type IS NULL OR type = @type)
+        AND (@status IS NULL OR status = @status)
+        AND (@owner IS NULL OR owner = @owner)
+        AND (@parent_id IS NULL OR parent_id = @parent_id)
+    `);
   }
 
   create(input: BacklogItemInsert): BacklogItem {
@@ -265,6 +273,27 @@ export class BacklogRepository {
 
   countByStatus(status: BacklogStatus | null = null): number {
     const row = this.countStmt.get({ status }) as { n: number };
+    return row.n;
+  }
+
+  /**
+   * Count items matching the same filter set as `list()` — used by the route
+   * to return `total` (full count ignoring limit/offset).
+   */
+  count(
+    filter: {
+      type?: BacklogItemType | null;
+      status?: BacklogStatus | null;
+      owner?: string | null;
+      parent_id?: string | null;
+    } = {},
+  ): number {
+    const row = this.countFilteredStmt.get({
+      type: filter.type ?? null,
+      status: filter.status ?? null,
+      owner: filter.owner ?? null,
+      parent_id: filter.parent_id ?? null,
+    }) as { n: number };
     return row.n;
   }
 }

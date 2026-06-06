@@ -852,7 +852,7 @@ export function BoardRoute() {
   // The board needs the WHOLE set to bucket columns + roll up epics, so it asks
   // for a high limit (the default 100 would drop the oldest items — the epics,
   // created first in planning). True pagination is a separate follow-up.
-  const { data, refresh } = usePolling<{ items: BacklogItem[] }>('/api/backlog?limit=500', 5000);
+  const { data, refresh } = usePolling<{ items: BacklogItem[]; total: number }>('/api/backlog?limit=2000', 5000);
   const items = useMemo(() => data?.items ?? [], [data]);
 
   const [filterEpic, setFilterEpic] = useState<string | null>(null);
@@ -901,7 +901,9 @@ export function BoardRoute() {
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
           <span className="page-title">Board</span>
           <span className="page-sub">
-            {visibleCount} items
+            {data?.total != null && data.total !== items.length
+              ? `${items.length} / ${data.total} gösteriliyor`
+              : `${visibleCount} items`}
             {activeVersion && (
               <>
                 {' · '}
