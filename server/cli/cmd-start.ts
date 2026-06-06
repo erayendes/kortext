@@ -4,6 +4,7 @@ import {
   readRegistry, writeRegistry, registerProject, getProject, upsertProject,
   listProjects, defaultRegistryDir, type Registry, type ProjectEntry,
 } from '../registry/projects.ts';
+import { withRegistryLock } from '../registry/lock.ts';
 import { resolveDaemonCommand, spawnDaemon, isPidAlive } from '../registry/daemon.ts';
 import { readProjectMeta } from '../blueprint/io.ts';
 
@@ -58,44 +59,55 @@ export function startProject(arg: string | undefined, deps: StartDeps): StartRes
   const registryDir = deps.registryDir ?? defaultRegistryDir();
   const now = deps.now ?? (() => Date.now());
   const spawnFn = deps.spawn ?? spawnDaemon;
-  let reg = readRegistry(registryDir);
-  const target = resolveStartTarget(reg, arg, deps.cwd);
+
+  // Read + resolve outside the lock for cheap early-exit (list/onboard/not-found).
+  const regPre = readRegistry(registryDir);
+  const target = resolveStartTarget(regPre, arg, deps.cwd);
 
   if (target.kind === 'list') return { ok: false, action: 'list', message: 'Pick a project to start.' };
   if (target.kind === 'onboard') return { ok: false, action: 'onboard', message: 'No project here yet — run onboarding.' };
   if (target.kind === 'not-found') return { ok: false, action: 'not-found', message: `No project '${target.arg}'.` };
 
-  let entry: ProjectEntry;
-  if (target.kind === 'existing') {
-    entry = getProject(reg, target.slug)!;
-  } else {
-    // new-path: scaffold if needed, then register from project.json (or basename).
-    if (!existsSync(join(target.path, '.kortext'))) {
-      const initFn = deps.init;
-      if (initFn) {
-        const r = initFn(target.path);
-        if (!r.ok) return { ok: false, action: 'not-found', message: r.errorMessage ?? 'init failed' };
-      }
+  // new-path scaffold step (pure FS, no registry mutation) can run before the lock.
+  if (target.kind === 'new-path' && !existsSync(join(target.path, '.kortext'))) {
+    const initFn = deps.init;
+    if (initFn) {
+      const r = initFn(target.path);
+      if (!r.ok) return { ok: false, action: 'not-found', message: r.errorMessage ?? 'init failed' };
     }
-    const meta = readProjectMeta(join(target.path, '.kortext', 'project.json'));
-    const reg2 = registerProject(reg, {
-      code: meta?.code ?? '', name: meta?.name ?? '', path: target.path, now: now(),
-    });
-    reg = reg2.reg;
-    entry = reg2.entry;
   }
 
-  // Already running? reuse.
-  if (isPidAlive(entry.pid) && entry.status === 'running') {
-    return { ok: true, slug: entry.slug, port: entry.port, url: `http://localhost:${entry.port}/`, reused: true };
-  }
+  return withRegistryLock(registryDir, () => {
+    // Re-read inside the lock to get the authoritative state.
+    let reg = readRegistry(registryDir);
+    let entry: ProjectEntry;
 
-  const cmd = resolveDaemonCommand({ packageRoot: deps.packageRoot, projectPath: entry.path, port: entry.port });
-  if (cmd.mode === 'dev') {
-    return { ok: false, action: 'dev-mode', message: 'Source checkout (no dist/) — use `kortext serve` for development.' };
-  }
-  const pid = spawnFn(cmd);
-  reg = upsertProject(reg, { ...entry, pid, status: 'running' });
-  writeRegistry(registryDir, reg);
-  return { ok: true, slug: entry.slug, port: entry.port, url: `http://localhost:${entry.port}/`, reused: false };
+    if (target.kind === 'existing') {
+      entry = getProject(reg, target.slug)!;
+    } else {
+      // new-path: register (allocate port) and immediately persist.
+      const meta = readProjectMeta(join(target.path, '.kortext', 'project.json'));
+      const reg2 = registerProject(reg, {
+        code: meta?.code ?? '', name: meta?.name ?? '', path: target.path, now: now(),
+      });
+      reg = reg2.reg;
+      entry = reg2.entry;
+      // Persist registration before spawn so a spawn failure doesn't lose it.
+      writeRegistry(registryDir, reg);
+    }
+
+    // Already running? reuse.
+    if (isPidAlive(entry.pid) && entry.status === 'running') {
+      return { ok: true, slug: entry.slug, port: entry.port, url: `http://localhost:${entry.port}/`, reused: true };
+    }
+
+    const cmd = resolveDaemonCommand({ packageRoot: deps.packageRoot, projectPath: entry.path, port: entry.port });
+    if (cmd.mode === 'dev') {
+      return { ok: false, action: 'dev-mode', message: 'Source checkout (no dist/) — use `kortext serve` for development.' };
+    }
+    const pid = spawnFn(cmd);
+    reg = upsertProject(reg, { ...entry, pid, status: 'running' });
+    writeRegistry(registryDir, reg);
+    return { ok: true, slug: entry.slug, port: entry.port, url: `http://localhost:${entry.port}/`, reused: false };
+  });
 }
