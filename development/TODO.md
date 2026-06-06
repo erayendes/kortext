@@ -13,9 +13,9 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 - [x] ~~**Versiyon filtresi yok**~~ ✅ (2026-06-06, faz-1). Board page-h'a `VersionSelect` (pill+native select) eklendi; `defaultActiveVersion` = en küçük bitmemiş versiyon varsayılan-aktif (canlı: v0.1, 9 item), "All versions" → 109 item. Saf helper'lar `compareVersions`/`sortedVersions`/`defaultActiveVersion` (semver-doğru sıralama, v0.10 > v0.2) — 13 unit-test.
 - [x] ~~**Assignee görünmüyor**~~ ✅ (2026-06-06, faz-1). `assigneeOf(item)` = `owner` → `frontmatter.assignee` fallback. Kart avatar + drawer Assignee/Owner satırı + Dashboard PrimeRow buna bağlandı. Canlı: kartlar `+engineering-manager`/`+frontend-developer` gösteriyor, drawer "frontend-developer".
 - [ ] **Dependency gösterilmiyor** — drawer'da blocks/blocked_by yok. (Ayrıca bu koşuda ajan **hiç dependency üretmedi** — content gap, aşağıda D.)
-- [ ] **Comment alanı yok** — item drawer'ında yorum bölümü yok.
-- [ ] **Filtreler çalışmıyor** — "Assignee" / "Group: Epic" pill'leri işlevsiz (statik).
-- [ ] **"New" (yeni görev) çalışmıyor** — buton tıklanınca bir şey olmuyor.
+- [x] ~~**Comment alanı yok**~~ ✅ (2026-06-06, faz-2). Item drawer'a yorum kutusu (input+Send) eklendi; `POST /api/backlog/:id/comment` yorumu `audit_log`'a (`item_comment`) yazıyor → drawer + Dashboard timeline aynı feed'de gösteriyor (ayrı store yok). Per-item activity feed de küratörlendi (gürültülü `backlog.patch` elenir) + `backlog.ingest` "added this item from planning" olarak okunur. Canlı doğrulandı.
+- [x] ~~**Filtreler çalışmıyor**~~ ✅ (2026-06-06, faz-2). "Assignee" statik pill → `AssigneeSelect` dropdown (`assigneesOf` helper, owner/frontmatter çözer); versiyon+epik+assignee filtreleri birleşiyor, page-sub temizlenebilir chip gösteriyor. Canlı: backend-developer → 37 item hepsi doğru. **"Group: Epic" pill kaldırıldı** — epic-rail zaten epik gruplama/filtre işlevini görüyor, pill gereksizdi (Eray gerçek "group by" kontrolü isterse ayrı iş — soruldu).
+- [x] ~~**"New" (yeni görev) çalışmıyor**~~ ✅ (2026-06-06, faz-2). `window.prompt` (önizleme/bazı tarayıcılarda bloklu) → gerçek in-app form (Drawer içinde): type pill'leri + title + epic select + version select (board filtresinden seed). `POST /api/backlog` artık `version` kabul ediyor. Canlı: form → kart board'da. +route testleri.
 - [ ] **item-id'ler slug** — `init-nextjs-project`, `write-component-tests-task-form`. Proje-kodlu kısa id konvansiyonu (`TF-001`) yok → persona/workflow kalibrasyonu (D).
 
 **B. Dashboard (`src/routes/dashboard.tsx`)**
@@ -24,7 +24,7 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 - [ ] **Active work / For review boş** — koşu bittiği için boş (beklenen). Netleştir: bitmiş koşu geçmişi gösterilmeli mi, yoksa "boş = doğru" mu.
 
 **C. Doküman görünümü (`FileBrowser`/`AnnotatableDoc`)**
-- [ ] **Scroll olmuyor** — References/Reports'ta uzun döküman okunamıyor (overflow/scroll CSS).
+- [x] ~~**Scroll olmuyor**~~ ✅ (2026-06-06, faz-2). `.fb-view` grid-hücresinde `min-height: 0` eksikti → içindeki `.fb-md`'nin `overflow-y:auto`'su devreye giremiyordu. Tek satır CSS. Canlı: API.md (34k px) scroll'lanıyor.
 
 **D. İçerik / persona kalibrasyonu** (yeni canlı koşu ile doğrulanır)
 - [ ] **item-id konvansiyonu** — planning persona'ları slug yerine `<PROJE_KODU>-NNN` üretmeli.

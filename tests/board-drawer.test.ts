@@ -18,6 +18,7 @@ import {
   underlyingStatusFromActivity,
   dependenciesFromBody,
   assigneeOf,
+  assigneesOf,
   compareVersions,
   sortedVersions,
   defaultActiveVersion,
@@ -495,6 +496,23 @@ describe('assigneeOf', () => {
     expect(assigneeOf(item({ id: 'T1', owner: null }))).toBeNull();
     expect(assigneeOf(item({ id: 'T1', owner: null, frontmatter: { assignee: 42 } }))).toBeNull();
     expect(assigneeOf(item({ id: 'T1', owner: null, frontmatter: { assignee: '' } }))).toBeNull();
+  });
+});
+
+describe('assigneesOf', () => {
+  it('lists distinct non-epic assignees alphabetically, resolving owner/frontmatter', () => {
+    const items = [
+      item({ id: 'A', owner: '+qa-engineer' }),
+      item({ id: 'B', owner: null, frontmatter: { assignee: '+frontend-developer' } }),
+      item({ id: 'C', owner: '+qa-engineer' }), // dup
+      item({ id: 'E', type: 'epic', owner: '+engineering-manager' }), // epic excluded
+      item({ id: 'D', owner: null }), // no assignee skipped
+    ];
+    expect(assigneesOf(items)).toEqual(['+frontend-developer', '+qa-engineer']);
+  });
+
+  it('returns [] when nobody is assigned', () => {
+    expect(assigneesOf([item({ id: 'A', owner: null })])).toEqual([]);
   });
 });
 
