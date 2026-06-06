@@ -20,6 +20,9 @@ import type { GateExecutor } from '../engine/gate-executor.ts';
 import type { ReviewApprover } from '../engine/review-approver.ts';
 import type { Deployer } from '../engine/deployer.ts';
 import type { WorktreeLease } from './run-item.ts';
+import { HandoverEngine } from '../engine/handover.ts';
+import { loadPersonasFromDir } from '../engine/persona-registry.ts';
+import { runtimeLayout } from '../paths.ts';
 
 export type CompositionDeps = {
   repos: Repositories;
@@ -29,6 +32,17 @@ export type CompositionDeps = {
   queue: ApprovalQueue;
   /** Repo root (the directory containing .git). */
   repoRoot: string;
+  /**
+   * Project root for per-project artefacts (.kortext/memory/handover.md etc.).
+   * Defaults to {@link repoRoot} when not set.
+   */
+  projectRoot?: string;
+  /**
+   * Directory that contains persona `.md` files (e.g. `<pkg>/agents`).
+   * Used by the HandoverEngine to validate `fromPersona`/`toPersona`.
+   * Defaults to `<packageRoot>/agents` via {@link runtimeLayout} when not set.
+   */
+  agentsDir?: string;
   /** Branch item worktrees fork from (§5.11). Default 'development'. */
   baseBranch?: string;
   /** Resolve the deployment-cycle workflow the staging deploy drives (C4). */
@@ -63,6 +77,7 @@ export type Composition = {
   approver: ReviewApprover;
   deployer: Deployer;
   previewManager: PreviewManager;
+  handoverEngine: HandoverEngine;
   /** The per-item worktree acquirer runItem injects (keyed by run id, real handle). */
   acquireWorktree: (itemId: string, runId: number) => Promise<WorktreeLease>;
 };
@@ -142,6 +157,17 @@ export function createComposition(deps: CompositionDeps): Composition {
     new DevServerPreviewServer(deps.preview ?? { command: 'npm', args: ['run', 'dev'] });
   const previewManager = new PreviewManager(previewServer);
 
+  // B3 — handover-on-close engine. Personas resolved from the package's agents
+  // dir (or an override); workspace root anchored at projectRoot (defaults to
+  // repoRoot so the .kortext/memory/ tree lands next to .git).
+  const workspaceRoot = deps.projectRoot ?? deps.repoRoot;
+  const agentsDirResolved = deps.agentsDir ?? runtimeLayout().agentsDir;
+  const handoverEngine = new HandoverEngine({
+    repos,
+    personas: loadPersonasFromDir(agentsDirResolved),
+    workspaceRoot,
+  });
+
   // The per-item worktree acquirer runItem injects: provision a real worktree
   // keyed by the (pre-created) run id and surface its handle so the ledger can
   // record it for the merger (C2).
@@ -166,6 +192,7 @@ export function createComposition(deps: CompositionDeps): Composition {
     approver,
     deployer,
     previewManager,
+    handoverEngine,
     acquireWorktree,
   };
 }
