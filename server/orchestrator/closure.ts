@@ -2,6 +2,7 @@ import type { Repositories } from '../db/repositories/index.ts';
 import type { ItemLifecycle } from '../engine/item-lifecycle.ts';
 import type { Merger, MergeOutcome } from '../engine/merger.ts';
 import type { Deployer } from '../engine/deployer.ts';
+import type { HandoverEngine } from '../engine/handover.ts';
 import type { PreviewManager } from './test-preview.ts';
 import { runEpicCompletion, type EpicCompletionResult } from './epic-completion.ts';
 
@@ -31,6 +32,11 @@ export type ClosureDeps = {
    * next test entry). Optional + soft: a stop failure never fails the closure.
    */
   previewManager?: PreviewManager;
+  /**
+   * Handover engine (B3). When set, a handover record is written after a
+   * successful merge. Best-effort — a write failure never fails the closure.
+   */
+  handoverEngine?: HandoverEngine;
   /** Actor recorded on lifecycle transitions/audit. Default 'orchestrator'. */
   by?: string;
 };
@@ -46,7 +52,7 @@ export type ClosureDeps = {
  * (Madde 10). Handover-on-close and blocker clearing are deferred (TODO §5.9).
  */
 export async function runClosure(itemId: string, deps: ClosureDeps): Promise<ClosureResult> {
-  const { repos, lifecycle, merger, deployer, previewManager } = deps;
+  const { repos, lifecycle, merger, deployer, previewManager, handoverEngine } = deps;
   const by = deps.by ?? 'orchestrator';
 
   const item = repos.backlog.get(itemId);
@@ -81,6 +87,29 @@ export async function runClosure(itemId: string, deps: ClosureDeps): Promise<Clo
 
   if (merge.ok) {
     lifecycle.transition(itemId, 'done', by, 'closure: merged to development');
+
+    // B3 — handover-on-close: best-effort, must never fail the closure.
+    if (handoverEngine) {
+      try {
+        const closedItem = repos.backlog.get(itemId);
+        const fromPersona = closedItem?.owner ?? '+engineering-manager';
+        handoverEngine.record({
+          itemId,
+          title: closedItem?.title ?? itemId,
+          fromPersona,
+          toPersona: '+prime',
+          status: 'completed',
+          completed: `${closedItem?.title ?? itemId}: acceptance criteria met / merged`,
+          context: merge.sha
+            ? `run closed by ${by}; merge commit ${merge.sha}`
+            : `run closed by ${by}`,
+          nextStep: 'review merged work / pick next item',
+        });
+      } catch {
+        // Best-effort — handover write failure must not throw the closure.
+      }
+    }
+
     // Seam (W2, §5.9 #8): a fresh `done` may have completed the parent epic —
     // check + (if so) trigger the staging deploy. The item is already `done`
     // regardless of the epic outcome; this is the downstream trigger only.

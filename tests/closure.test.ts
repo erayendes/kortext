@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'node:fs';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { mkdtempSync, rmSync, mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type Database from 'better-sqlite3';
@@ -7,6 +7,7 @@ import { openDb } from '../server/db/client.ts';
 import type { Repositories } from '../server/db/repositories/index.ts';
 import { ItemLifecycle } from '../server/engine/item-lifecycle.ts';
 import { loadPersonasFromDir } from '../server/engine/persona-registry.ts';
+import { HandoverEngine } from '../server/engine/handover.ts';
 import { MockMerger } from '../server/engine/executors/mock-merger.ts';
 import { MockDeployer } from '../server/engine/executors/mock-deployer.ts';
 import { runClosure } from '../server/orchestrator/closure.ts';
@@ -24,6 +25,10 @@ beforeEach(() => {
     join(agentsDir, 'backend-developer.md'),
     '# backend-developer\n\n- description: builds.\n\n## identity\nbody\n',
   );
+  writeFileSync(
+    join(agentsDir, 'prime.md'),
+    '# prime\n\n- description: prime persona.\n\n## identity\nbody\n',
+  );
   const bundle = openDb({ path: join(tmpRoot, 'cl.db') });
   db = bundle.db;
   repos = bundle.repositories;
@@ -36,6 +41,15 @@ afterEach(() => {
 
 function makeLifecycle() {
   return new ItemLifecycle({ repos, personas: loadPersonasFromDir(agentsDir) });
+}
+
+function makeHandoverEngine() {
+  return new HandoverEngine({
+    repos,
+    personas: loadPersonasFromDir(agentsDir),
+    workspaceRoot: tmpRoot,
+    rotation: { disabled: true },
+  });
 }
 
 /** Create an item (optionally under an epic) and walk it to `review`. */
@@ -142,5 +156,98 @@ describe('runClosure → epic-completion seam (capstone W2, §5.9 #8)', () => {
     expect(result.outcome).toBe('bounced');
     expect(result.epic).toBeNull(); // seam not entered on a bounce
     expect(deployer.deployedFor).toEqual([]);
+  });
+});
+
+describe('runClosure → handover-on-close (B3)', () => {
+  it('successful merge writes a handover row + markdown', async () => {
+    // Seed with owner set so from_persona is deterministic.
+    // seedItemInReview creates the item with no owner; we create it here directly.
+    const lc = makeLifecycle();
+    lc.create({ id: 'H01', type: 'task', title: 'H01', owner: '+backend-developer' });
+    lc.transition('H01', 'start', '+backend-developer');
+    lc.transition('H01', 'test', '+backend-developer');
+    lc.transition('H01', 'review', 'orchestrator');
+
+    const handoverEngine = makeHandoverEngine();
+    const merger = new MockMerger(() => ({ sha: 'abc1234' }));
+
+    const result = await runClosure('H01', {
+      repos,
+      lifecycle: lc,
+      merger,
+      deployer: new MockDeployer(),
+      handoverEngine,
+    });
+
+    expect(result.outcome).toBe('done');
+
+    // DB row created
+    const rows = repos.handovers.listByItem('H01');
+    expect(rows).toHaveLength(1);
+    const row = rows[0]!;
+    expect(row.item_id).toBe('H01');
+    expect(row.from_persona).toBe('+backend-developer');
+    expect(row.to_persona).toBe('+prime');
+
+    // Markdown file written
+    const mdPath = join(tmpRoot, '.kortext', 'memory', 'handover.md');
+    expect(existsSync(mdPath)).toBe(true);
+    const md = readFileSync(mdPath, 'utf8');
+    expect(md).toContain('## Handover: H01');
+  });
+
+  it('failed merge (bounce) does NOT write a handover', async () => {
+    const lc = seedItemInReview('H02');
+    const handoverEngine = makeHandoverEngine();
+
+    const result = await runClosure('H02', {
+      repos,
+      lifecycle: lc,
+      merger: new MockMerger(() => ({ conflict: true, reason: 'file conflict' })),
+      deployer: new MockDeployer(),
+      handoverEngine,
+    });
+
+    expect(result.outcome).toBe('bounced');
+    expect(repos.handovers.listByItem('H02')).toHaveLength(0);
+    const mdPath = join(tmpRoot, '.kortext', 'memory', 'handover.md');
+    expect(existsSync(mdPath)).toBe(false);
+  });
+
+  it('handoverEngine.record throwing does NOT fail the closure (best-effort)', async () => {
+    const lc = seedItemInReview('H03');
+
+    // Build an engine with an unknown persona for toPersona so record() throws
+    // (personas validation), but we want to prove the closure still succeeds.
+    // The simplest approach: spy on record and throw.
+    const handoverEngine = makeHandoverEngine();
+    vi.spyOn(handoverEngine, 'record').mockImplementation(() => {
+      throw new Error('simulated handover failure');
+    });
+
+    const result = await runClosure('H03', {
+      repos,
+      lifecycle: lc,
+      merger: new MockMerger(),
+      deployer: new MockDeployer(),
+      handoverEngine,
+    });
+
+    // Closure still reports done despite the handover engine blowing up
+    expect(result.outcome).toBe('done');
+    expect(repos.backlog.get('H03')?.status).toBe('done');
+  });
+
+  it('no handoverEngine dep → closure still succeeds (optional dep path)', async () => {
+    const lc = seedItemInReview('H04');
+    const result = await runClosure('H04', {
+      repos,
+      lifecycle: lc,
+      merger: new MockMerger(),
+      deployer: new MockDeployer(),
+      // no handoverEngine
+    });
+    expect(result.outcome).toBe('done');
   });
 });
