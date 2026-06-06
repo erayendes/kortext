@@ -157,4 +157,54 @@ describe('runReviewCycle — uat gate (§5.9, Madde 4 eşi)', () => {
     expect(result.outcome).toBe('bounced'); // but closure bounced it
     expect(repos.backlog.get('R07')?.status).toBe('in_progress');
   });
+
+  // ── B1: gate_runs row for UAT verdict ──────────────────────────────────────
+
+  it('B1-1: uat REJECT → exactly one gate_runs row gate=uat status=fail with reason in findings', async () => {
+    const lc = seedItemInReview('B1a', ['uat']);
+    const approver = new MockReviewApprover(() => ({
+      reject: true,
+      reason: 'checkout flow broken on mobile',
+    }));
+    await runReviewCycle('B1a', { repos, lifecycle: lc, approver, merger: new MockMerger(), deployer: new MockDeployer() });
+
+    const uatRows = repos.gateRuns.listForItem('B1a').filter((r) => r.gate === 'uat');
+    expect(uatRows).toHaveLength(1);
+    const row = uatRows[0]!;
+    expect(row.status).toBe('fail');
+    expect(row.findings).toContain('checkout flow broken on mobile');
+    expect(row.attempt).toBe(1);
+  });
+
+  it('B1-2: second UAT bounce → second uat row with incremented attempt, no unique-constraint throw', async () => {
+    // First bounce
+    const lc = seedItemInReview('B1b', ['uat']);
+    const rejectApprover = new MockReviewApprover(() => ({ reject: true, reason: 'still broken' }));
+    await runReviewCycle('B1b', { repos, lifecycle: lc, approver: rejectApprover, merger: new MockMerger(), deployer: new MockDeployer() });
+
+    // Walk item back to review for second UAT cycle (bounce lands in in_progress)
+    lc.transition('B1b', 'test', '+backend-developer');
+    lc.transition('B1b', 'review', 'orchestrator');
+
+    const rejectApprover2 = new MockReviewApprover(() => ({ reject: true, reason: 'still broken again' }));
+    await runReviewCycle('B1b', { repos, lifecycle: lc, approver: rejectApprover2, merger: new MockMerger(), deployer: new MockDeployer() });
+
+    const uatRows = repos.gateRuns.listForItem('B1b').filter((r) => r.gate === 'uat');
+    expect(uatRows).toHaveLength(2);
+    const attempts = uatRows.map((r) => r.attempt).sort();
+    expect(attempts[0]).toBe(1);
+    expect(attempts[1]).toBe(2);
+  });
+
+  it('B1-3: uat APPROVE → gate_runs row gate=uat status=pass', async () => {
+    const lc = seedItemInReview('B1c', ['uat']);
+    const approver = new MockReviewApprover(); // default: approve
+    await runReviewCycle('B1c', { repos, lifecycle: lc, approver, merger: new MockMerger(), deployer: new MockDeployer() });
+
+    const uatRows = repos.gateRuns.listForItem('B1c').filter((r) => r.gate === 'uat');
+    expect(uatRows).toHaveLength(1);
+    const row = uatRows[0]!;
+    expect(row.status).toBe('pass');
+    expect(row.attempt).toBe(1);
+  });
 });

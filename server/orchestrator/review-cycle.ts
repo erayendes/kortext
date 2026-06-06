@@ -85,10 +85,33 @@ export async function judgeReview(itemId: string, deps: JudgeReviewDeps): Promis
     };
   }
 
+  // Derive a collision-safe attempt: count of prior uat gate_run rows + 1.
+  // UNIQUE(item_id, attempt, gate) means we must NOT reuse an existing (item_id, N, 'uat').
+  // Using `currentAttempt()` (which tracks test-cycle attempt numbers) would collide
+  // when test-cycle never ran (0-test-gate items stay at attempt 0). Counting only
+  // prior uat rows gives an independent sequence per UAT cycle.
+  const priorUatCount = repos.gateRuns.listForItem(itemId).filter((r) => r.gate === 'uat').length;
+  const uatAttempt = priorUatCount + 1;
+
   if (verdict.approved) {
+    repos.gateRuns.create({
+      item_id: itemId,
+      gate: 'uat',
+      persona: '+prime',
+      attempt: uatAttempt,
+      status: 'pass',
+    });
     return { itemId, kind: 'merge', uatRequired, verdict };
   }
 
+  repos.gateRuns.create({
+    item_id: itemId,
+    gate: 'uat',
+    persona: '+prime',
+    attempt: uatAttempt,
+    status: 'fail',
+    findings: verdict.reason ?? null,
+  });
   lifecycle.transition(
     itemId,
     'bounce',
