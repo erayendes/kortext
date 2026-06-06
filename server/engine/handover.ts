@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import type { Repositories } from '../db/repositories/index.ts';
 import type { PersonaRegistry } from './persona-registry.ts';
+import { SYNTHETIC_PERSONA_HANDLES } from './consistency.ts';
 import { gitCommit } from './git-commit.ts';
 import { rotateHandover } from '../services/handover-rotation.ts';
 
@@ -150,6 +151,11 @@ export class HandoverEngine {
   }
 
   private assertKnownPersona(handle: string, role: 'from' | 'to'): void {
+    // Synthetic handles (+prime human approver, +assignee/+approver dynamic
+    // tokens) have no agents/*.md file but are valid handover endpoints — a
+    // closure handover legitimately goes to +prime. Mirror the consistency
+    // check's allowance so handover-on-close isn't silently rejected.
+    if (SYNTHETIC_PERSONA_HANDLES.includes(handle)) return;
     if (this.opts.personas.get(handle) === null) {
       throw new Error(`unknown persona for ${role}: ${handle}`);
     }

@@ -147,6 +147,11 @@ describe('driveReadyItems — end-to-end pull-through (capstone composition 4, �
     expect(c.resolution.resolveHandle('E1')).toBeNull();
     // No preview left running.
     expect(c.previewManager.urlFor('E1')).toBeNull();
+
+    // Handover-on-close: a successful merge writes a handover record. Regression
+    // guard — the production driver must thread composition.handoverEngine into
+    // runClosure (it's an optional dep, so a missing thread fails silently).
+    expect(repos.handovers.listByItem('E1').length).toBeGreaterThanOrEqual(1);
   });
 
   it('drives a gated item through its test gate to done (mock agent passes the gate)', async () => {
