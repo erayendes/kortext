@@ -59,8 +59,10 @@
 ## Konsolidasyon
 
 1. **+operation-manager:** `PFD.md` konsolide et. PRD + TRD + TEST'ten: proje kapsamı, ana kararlar, açık konular, riskler, bağımlılıklar, planlama akışına geçecek görev başlıkları.
+
+   **Memory (kalıcı karar günlüğü):** Analiz aşamasında alınan kalıcı ürün/mimari kararları `.kortext/memory/decisions.md`'e yaz (dosya yoksa oluştur, en üste `# Decisions` başlığı). Her karar tek madde: ne karar verildi + kısa gerekçe (örn. "Stack: Next.js + Postgres — ekip aşinalığı + SSR ihtiyacı", "KVKK kapsamı: kullanıcı verisi AB dışına çıkmayacak"). Bu dosya planning akışında üstüne eklenerek büyür.
    - inputs: `.kortext/foundation/PRD.md`, `.kortext/foundation/TRD.md`, `.kortext/references/TEST.md`
-   - outputs: `.kortext/foundation/PFD.md`
+   - outputs: `.kortext/foundation/PFD.md`, `.kortext/memory/decisions.md`
    - approver: +prime
 
 **Sonraki akış:** `planning-pipeline`

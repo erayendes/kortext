@@ -39,7 +39,7 @@ import {
   boardColumns,
   childrenOf,
   defaultActiveVersion,
-  dependenciesFromBody,
+  dependenciesOf,
   describeActivity,
   descriptionFromBody,
   epicProgress,
@@ -122,7 +122,7 @@ function useActivity(itemId: string | null) {
 function Card({ item, onOpen, index }: { item: BacklogItem; onOpen: () => void; index: number }) {
   const blocked = item.status === 'blocked';
   const gates = itemGates(item);
-  const deps = dependenciesFromBody(item.body_md).blockedBy;
+  const deps = dependenciesOf(item).blockedBy;
   return (
     <div
       className={`card rise${blocked ? ' block' : ''}`}
@@ -234,6 +234,7 @@ function ItemDrawer({
   const t = TYPE_META[item.type];
   const ac = acChecklist(item.frontmatter);
   const gates = itemGates(item);
+  const deps = dependenciesOf(item);
   const blocked = item.status === 'blocked';
   const blockReason = blocked ? blockReasonFromActivity(activity) : null;
   const underlying = blocked ? underlyingStatusFromActivity(activity) : null;
@@ -344,6 +345,38 @@ function ItemDrawer({
             </div>
           )}
         </div>
+
+        {(deps.blockedBy.length > 0 || deps.blocks.length > 0) && (
+          <div className="dr-grp">
+            <div className="dr-sec">Dependencies</div>
+            {deps.blockedBy.length > 0 && (
+              <div className="dr-mrow">
+                <span className="dr-mk">Blocked by</span>
+                <span className="dr-mv" style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {deps.blockedBy.map((id) => (
+                    <span key={id} className="ty-pill mono" style={{ color: 'var(--red)', background: rgba('#CC6B6B', 0.1) }}>
+                      <Link2 style={{ width: 11, height: 11 }} />
+                      {id}
+                    </span>
+                  ))}
+                </span>
+              </div>
+            )}
+            {deps.blocks.length > 0 && (
+              <div className="dr-mrow">
+                <span className="dr-mk">Blocks</span>
+                <span className="dr-mv" style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {deps.blocks.map((id) => (
+                    <span key={id} className="ty-pill mono" style={{ color: 'var(--fg-muted)', background: 'var(--hover)' }}>
+                      <Link2 style={{ width: 11, height: 11 }} />
+                      {id}
+                    </span>
+                  ))}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
 
         {ac.length > 0 && (
           <div className="dr-grp">

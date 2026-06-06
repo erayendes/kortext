@@ -19,10 +19,14 @@
 
 1. **+engineering-manager:** Backlog'u tek bir YAML dosyası olarak üret: `.kortext/foundation/backlog.yaml`. Dosya **sadece geçerli YAML** olmalı (markdown/prose/code-fence YOK), en üstte `items:` listesi. PRD + TRD'den tüm item'ları çıkar; her item ayrı satırda. Disiplin: atomik (tek başına anlaşılabilir, bağımsız geliştirilebilir, ayrı doğrulanabilir).
 
-   **Epic'ler zorunludur, bu ilk adımda kurulur.** Önce mantıksal grupları belirle ve her grup için bir `type: epic` **container item'ı** yaz (kararlı id, örn. `AUTH-EPIC`). Sonra her task/bug/debt item'ında `parent_epic: <EPIC-ID>` alanıyla onu epic'ine bağla. **Düz bir liste yazma** — `type: epic` item'ı olmayan, `parent_epic` taşımayan bir backlog Board'da boş Epic sütunu olarak görünür. Etiket (`epic: "Altyapı"`) DEĞİL, gerçek epic id'si (`parent_epic: AUTH-EPIC`) kullan.
+   **🔑 ID konvansiyonu — ZORUNLU.** Önce `.kortext/project.json`'u oku ve `code` alanını al (örn. `"code": "TF"`). Her item id'si **`<CODE>-NNN`** desenine uymalı: task/bug/debt için sıralı üç haneli numara (`TF-001`, `TF-002`, `TF-003`…), epic container için `<CODE>-E01`, `<CODE>-E02`. **Slug/kebab-case id YASAK** — `init-nextjs-project`, `setup-github-actions-ci` gibi id'ler hatadır; bunlar başlık (`title`) olur, id olmaz. Numaraları tüm backlog boyunca tekilleştir (atlamadan artır). project.json okunamazsa proje adının baş harflerinden 2-4 harfli bir kod türet.
+
+   **Epic'ler zorunludur, bu ilk adımda kurulur.** Önce mantıksal grupları belirle ve her grup için bir `type: epic` **container item'ı** yaz (`<CODE>-E01` gibi). Sonra her task/bug/debt item'ında `parent_epic: <CODE>-E0X` alanıyla onu epic'ine bağla. **Düz bir liste yazma** — `type: epic` item'ı olmayan, `parent_epic` taşımayan bir backlog Board'da boş Epic sütunu olarak görünür. Etiket (`epic: "Altyapı"`) DEĞİL, gerçek epic id'si (`parent_epic: <CODE>-E01`) kullan.
+
+   **🔗 Bağımlılıklar — ZORUNLU.** Mantıksal kurulum sırasını düşün: hangi item başka bir item bitmeden başlayamaz? Her item için, önce tamamlanması gereken item'ları `blocked_by: [<ID>, …]` listesine yaz (örn. bir özellik, altyapı kurulumuna bağlıysa `blocked_by: [TF-001]`). Tersini de `blocks:` ile ver (kurulum item'ı `blocks: [TF-005, TF-006]`). Gerçek bağımlılığı olmayan item'da boş liste bırak — **uydurma**. Referans verdiğin her id backlog'da var olmalı (dangling YASAK). Bunlar Board'da kartın bağımlılık rozetinde + drawer'da görünür.
 
    Her item şu alanlara sahip olmalı:
-   - `id`: kararlı benzersiz kimlik (örn. `INFRA-001`, `AUTH-002`, epic için `AUTH-EPIC`)
+   - `id`: `<CODE>-NNN` (task/bug/debt) veya `<CODE>-E0X` (epic) — yukarıdaki konvansiyon. Slug DEĞİL.
    - `type`: `task` | `bug` | `debt` | `epic` | `spike` (ürün özellikleri → task, açık hatalar → bug, teknik borçlar → debt, üst seviye gruplama → **epic, en az bir tane zorunlu**)
    - `title`: kısa başlık
    - `priority`: `P0` (MVP blocker) | `P1` | `P2` | `P3`
@@ -36,28 +40,40 @@
 
    > Bu alanların adlarını **bire bir** böyle yaz: `type`, `parent_epic`, `version`, `model`, `acceptance_criteria`, `review_gates`. Bunlar gerçek DB kolonlarına eşlenir (frontmatter'a düşmez). Bilinmeyen ek alanlar frontmatter'a korunur, sessizce kaybolmaz.
 
-   Şema örneği (Epic → Task hiyerarşisi + per-item model):
+   Şema örneği (Epic → Task hiyerarşisi + per-item model, proje kodu `TF`):
    ```yaml
    items:
-     - id: AUTH-EPIC
+     - id: TF-E01
        type: epic
        title: "Kimlik doğrulama"
        version: v0.1
        model: high-reasoning
-     - id: INFRA-001
+     - id: TF-001
        type: task
        title: "Proje kurulumu"
        priority: P0
        description: "..."
-       parent_epic: AUTH-EPIC
+       parent_epic: TF-E01
        version: v0.1
        model: high-reasoning
        acceptance_criteria: ["tsc --noEmit hatasız", "lint geçer"]
        review_gates: [code_review]
-       blocks: [INFRA-002]
+       blocks: [TF-002]
        blocked_by: []
+     - id: TF-002
+       type: task
+       title: "Oturum açma ekranı"
+       priority: P0
+       description: "..."
+       parent_epic: TF-E01
+       version: v0.1
+       model: high-reasoning
+       acceptance_criteria: ["..."]
+       review_gates: [code_review, design_review]
+       blocks: []
+       blocked_by: [TF-001]
    ```
-   - inputs: `.kortext/foundation/PRD.md`, `.kortext/foundation/TRD.md`
+   - inputs: `.kortext/project.json`, `.kortext/foundation/PRD.md`, `.kortext/foundation/TRD.md`
    - outputs: `.kortext/foundation/backlog.yaml`, `backlog-drafted`
 
 2. **+qa-engineer:** Mevcut `backlog.yaml`'i oku. Her item için davranış odaklı, test edilebilir `acceptance_criteria` belirle; QA gerektiren item'lara `quality_control` gate'i ekle. Çıktıyı **patch olarak** yaz: `backlog.patch.yaml`'e yalnız dokunduğun item'ları, her satırda `id` + `acceptance_criteria` (ve gerekirse `review_gates: [quality_control]`) ile. Tüm dosyayı yeniden yazma.
@@ -94,9 +110,11 @@
 
 ## Konsolidasyon
 
-1. **+operation-manager:** Nihai `backlog.yaml`'i baştan sona tara: drift, eksik alan (epic/versiyon/model boş kalan item), dangling `blocks`/`blocked_by` referansı, eksik Epic veya versiyon ilişkisi. Bulduğun eksikleri **patch olarak** `backlog.patch.yaml`'e yaz (yalnız düzelttiğin item'lar, yalnız eksik alanlar) — tüm dosyayı yeniden yazma. Sonra planning özet raporu yaz: versiyon planı, Epic dağılımı, açık riskler, +prime kararına bırakılan kalemler. Rapor dosya adı `<scope>_<slug>_<ts>.md` desenine uymalı (örn. `planning-reports_taskflow_2026-06-05-1959.md`).
+1. **+operation-manager:** Nihai `backlog.yaml`'i baştan sona tara: drift, eksik alan (epic/versiyon/model boş kalan item), dangling `blocks`/`blocked_by` referansı, eksik Epic veya versiyon ilişkisi. **ID denetimi:** her id `<CODE>-NNN`/`<CODE>-E0X` desenine uymalı; slug/kebab-case id (`init-nextjs-project`) bulursan **hata olarak düzelt** (patch'te eski→yeni id veremezsin; bunun yerine raporun "açık riskler" bölümüne not düş, çünkü id yeniden yazımı step-1'de yapılmalıydı). **Bağımlılık denetimi:** `blocked_by`/`blocks` referansları gerçek id'lere işaret etmeli; dangling olanı temizle. Bulduğun eksikleri **patch olarak** `backlog.patch.yaml`'e yaz (yalnız düzelttiğin item'lar, yalnız eksik alanlar) — tüm dosyayı yeniden yazma. Sonra planning özet raporu yaz: versiyon planı, Epic dağılımı, açık riskler, +prime kararına bırakılan kalemler. Rapor dosya adı `<scope>_<slug>_<ts>.md` desenine uymalı (örn. `planning-reports_taskflow_2026-06-05-1959.md`).
+
+   **Memory (kalıcı karar günlüğü):** Planlama sırasında alınan kalıcı kararları `.kortext/memory/decisions.md`'e yaz. Varsa önce oku ve **üstüne ekle** (silme). Her karar tek satır/madde: ne karar verildi + kısa gerekçe (örn. "Versiyonlama v0.1→v1.0 aşamalı — MVP'yi erken çıkarmak için", "Auth epic'i ilk sürüme alındı — tüm akışların ön koşulu"). Yoksa yeni dosya oluştur, en üste `# Decisions` başlığı koy.
    - inputs: `.kortext/foundation/PRD.md`, `.kortext/foundation/TRD.md`, `backlog-models-set`
-   - outputs: `.kortext/foundation/backlog.patch.yaml`, `.kortext/reports/planning-reports_<slug>_<ts>.md`
+   - outputs: `.kortext/foundation/backlog.patch.yaml`, `.kortext/reports/planning-reports_<slug>_<ts>.md`, `.kortext/memory/decisions.md`
    - approver: +prime
 
 **Sonraki akış:** `environment-setup`

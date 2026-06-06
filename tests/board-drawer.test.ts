@@ -17,6 +17,7 @@ import {
   blockReasonFromActivity,
   underlyingStatusFromActivity,
   dependenciesFromBody,
+  dependenciesOf,
   assigneeOf,
   assigneesOf,
   compareVersions,
@@ -470,6 +471,30 @@ describe('dependenciesFromBody (## Dependencies → Blocks / Blocked By ids)', (
 
   it('returns empty arrays when the section is missing', () => {
     expect(dependenciesFromBody('# T\n\nno deps here')).toEqual({ blocks: [], blockedBy: [] });
+  });
+});
+
+describe('dependenciesOf', () => {
+  it('prefers structured frontmatter blocks/blocked_by (what planning writes)', () => {
+    expect(
+      dependenciesOf(
+        item({ id: 'TF-002', frontmatter: { blocks: ['TF-003'], blocked_by: ['TF-001'] }, body_md: '' }),
+      ),
+    ).toEqual({ blocks: ['TF-003'], blockedBy: ['TF-001'] });
+  });
+
+  it('falls back to the body Dependencies section when frontmatter has none', () => {
+    const body = '## Dependencies\n- Blocked by: T01\n- Blocks: T03';
+    expect(dependenciesOf(item({ id: 'T02', body_md: body }))).toEqual({
+      blocks: ['T03'],
+      blockedBy: ['T01'],
+    });
+  });
+
+  it('ignores non-string / empty frontmatter values', () => {
+    expect(
+      dependenciesOf(item({ id: 'X', frontmatter: { blocks: [1, '', 'TF-009'], blocked_by: 'nope' }, body_md: '' })),
+    ).toEqual({ blocks: ['TF-009'], blockedBy: [] });
   });
 });
 
