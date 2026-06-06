@@ -8,34 +8,34 @@ Bu tablo Faz 2 (glue layer) kapsamında eklendi. Her komutun hangi persona taraf
 
 | Komut | Tetikleyen Persona | Açılan Workflow | Çağrılan Script |
 |---|---|---|---|
-| `!start analysis` | +operation-manager | workflows/new-project-analysis.md | `kortext-session-start.py` |
-| `!start onboard` | +operation-manager | workflows/existing-project-analysis.md | `kortext-session-start.py` |
+| `!start analysis` | +operation-manager | workflows/new-project-analysis.md | `get_context` (bağlam yükle) |
+| `!start onboard` | +operation-manager | workflows/existing-project-analysis.md | `get_context` (bağlam yükle) |
 | `!start planning` | +operation-manager | workflows/planning-pipeline.md | `backlog.yaml` (dosya köprüsü) |
 | `!start spike` | +engineering-manager | workflows/spike-pipeline.md | `backlog.yaml` → `type: spike` |
 | `!setup environment` | +devops-engineer | workflows/environment-setup.md | — |
-| `!start development` | +engineering-manager | workflows/development-cycle.md | `kortext-item-start.py` |
-| `!start test` | +qa-engineer | workflows/test-cycle.md | `kortext-item-transition.py` |
+| `!start development` | +engineering-manager | workflows/development-cycle.md | `transition_item` |
+| `!start test` | +qa-engineer | workflows/test-cycle.md | `transition_item` |
 | `!deploy prod` | +delivery-manager | workflows/deployment-cycle.md | — (manuel git tag + CI) |
 | `!trigger-rollback` | +delivery-manager | workflows/rollback-pipeline.md | (manuel git revert) |
 | `!start-hotfix` | +delivery-manager | workflows/hotfix-pipeline.md | `backlog.yaml` → `type: hotfix` |
-| `!status` | +operation-manager | — | `kortext-session-start.py` + `kortext-context-check.py` |
+| `!status` | +operation-manager | — | `get_runtime_status` |
 | `!continue` | +prime | — (checkpoint onayı) | — |
-| `!approve` | +prime | — (gate onayı) | `kortext-item-transition.py` |
-| `!handover` | (herhangi ajan) | — | `kortext-handover.py` |
+| `!approve` | +prime | — (gate onayı) | `transition_item` |
+| `!handover` | (herhangi ajan) | — | `handover` |
 | `!add task` | +engineering-manager | — | `backlog.yaml` → `type: task` |
 | `!add bug` | +qa-engineer | — | `backlog.yaml` → `type: bug` |
 | `!add debt` | +engineering-manager | — | `backlog.yaml` → `type: debt` |
-| `!check` | +operation-manager | — | `kortext-consistency-check.py` |
+| `!check` | +operation-manager | — | `doctor` (motor tutarlılık taraması) |
 
 ### Yeni Komutlar (Faz 2'de Tanıtılan)
 
 - `!trigger-rollback` — +delivery-manager tarafından son güvenli sürüme geri dönüş akışını başlatır. `workflows/rollback-pipeline.md` üzerinden ilerler; manuel git revert sonrası rollback kayıtları işlenir.
 - `!start-hotfix` — +delivery-manager tarafından kritik production hatası için hotfix akışı başlatır. `workflows/hotfix-pipeline.md` üzerinden ilerler; `.kortext/foundation/backlog.yaml`'e `type: hotfix`, `HXX-` prefix'li item eklenir (dosya köprüsü).
 - `!continue` — +prime tarafından checkpoint onayı olarak verilir. Workflow açmaz, ajanın bir sonraki adıma geçmesini onaylar. `development-cycle.md`'deki checkpoint mekanizmasında kullanılır.
-- `!approve` — +prime tarafından gate onayı olarak verilir. `Review` statüsündeki bir item'ı `Done`'a taşımak için `kortext-item-transition.py` tetikler.
-- `!handover` — Herhangi bir ajan tarafından ara devir için kullanılabilir. `kortext-handover.py` ile `workspace/memory/handover.md`'ye yeni devir kaydı eklenir.
+- `!approve` — +prime tarafından gate onayı olarak verilir. `Review` statüsündeki bir item'ı `Done`'a taşımak için `transition_item` MCP tool'unu tetikler.
+- `!handover` — Herhangi bir ajan tarafından ara devir için kullanılabilir. `handover` MCP tool'u ile yeni devir kaydı eklenir.
 - `!add task` / `!add bug` / `!add debt` — Sırasıyla +engineering-manager, +qa-engineer ve +engineering-manager tarafından direkt backlog girişi için. `.kortext/foundation/backlog.yaml`'e `type: <task|bug|debt>` item ekler (dosya köprüsü).
-- `!check` — +operation-manager tarafından tutarlılık kontrolü olarak çağrılır. `kortext-consistency-check.py` çalıştırır; eski pattern kalıntılarını tespit eder.
+- `!check` — +operation-manager tarafından tutarlılık kontrolü olarak çağrılır. Motor tutarlılık taramasını (`doctor`) çalıştırır; ölü ref / stale lock / blocked item'ları tespit eder.
 
 ## Ana Komutlar
 
@@ -50,7 +50,7 @@ Bu tablo Faz 2 (glue layer) kapsamında eklendi. Her komutun hangi persona taraf
 | `!deploy` | `prod` | `workflows/deployment-cycle.md` | `workspace/reports/delivery-reports.md` | Production deployment akışını başlatır. |
 | `!rollback` | `[version]` | `workflows/rollback-pipeline.md` | Rollback kayıtları | Son güvenli sürüme geri dönüş akışını başlatır. |
 | `!hotfix` | `[issue-id]` | `workflows/hotfix-pipeline.md` | Hotfix kayıtları | Kritik production hatası için hotfix akışını başlatır. |
-| `!status` | — | `scripts/kortext-backlog-health.py` + `context-check.py` | Hızlı durum özeti | Backlog sağlığı, aktif ajanlar ve blokerları özetler. |
+| `!status` | — | `get_runtime_status` | Hızlı durum özeti | Backlog sağlığı, aktif ajanlar ve blokerları özetler. |
 | `!status` | `full` | Tüm rapor dosyaları | Tam sistem raporu | Deployment durumu, test coverage ve maliyet dahil tam rapor. |
 | `!request` | `[açıklama]` | Talep alım süreci | `workspace/memory/backlog/` adayı | Yeni feature, improvement, bug veya debt talebini sisteme alır. |
 | `!approve` | `[artifact]` | Onay noktası | İlgili artifact status kaydı | Bekleyen kararı onaylar ve akışı ilerletir. |
@@ -67,16 +67,13 @@ Bu tablo Faz 2 (glue layer) kapsamında eklendi. Her komutun hangi persona taraf
 - Dosya yolu yazılırken canonical workspace yolları kullanılır: `workspace/references/`, `workspace/reports/`, `workspace/memory/backlog/`, `workspace/memory/context/[agent-name]-active.md`.
 - Backlog item'ları düz yapıdadır: `TXX-[task-name].md`, `BXX-[bug-name].md`, `DXX-[debt-name].md`.
 - `skills/` ayrı bir çalışma alanıdır; komut referansı bu klasörün içeriğini yönetmez.
-- Görev yaşam döngüsü scriptlerle desteklenir:
-  - `kortext-session-start.py` — oturum başlangıcı (context yükleme ve SESSION_BRIEF)
-  - `kortext-context-check.py` — context bütünlük kontrolü
-  - `kortext-backlog-health.py` — backlog sağlık skoru
-  - `kortext-lock.py` — paylaşımlı dosya kilidi yönetimi
-  - `kortext-item-start.py`
-  - `kortext-item-transition.py`
-  - `kortext-handover.py`
-  - `kortext-item-check.py`
-  - `kortext-backlog-sync.py`
+- Görev yaşam döngüsü MCP tool'larıyla desteklenir (eski `kortext-*.py` scriptleri v3'te YOKTUR):
+  - `get_context` — oturum başlangıcı: bağlam yükleme (handover + aktif ajanlar)
+  - `get_runtime_status` — backlog sağlığı + aktif ajanlar + blokerlar tek bakışta
+  - `transition_item` — item statüsünü ilerlet (In Progress / Done / bounce …)
+  - `get_acceptance_criteria` + `mark_acceptance_criterion` — kapanış koşullarını doğrula
+  - `handover` — ara/kapanış devir kaydı yaz
+  - Dosya kilidi + backlog↔dashboard senkronu motor tarafından otomatik yönetilir (ajan çağırmaz).
 
 ## `!request` Akışı
 
