@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from 'express';
 import type { Repositories } from '../db/repositories/index.ts';
 import type { ApprovalQueue } from '../orchestrator/approval-queue.ts';
+import { consumeStagingApproval } from '../orchestrator/staging-approval-consumer.ts';
 
 /**
  * REST surface for the human-in-the-loop approval flow.
@@ -41,6 +42,17 @@ export function approvalRouter(deps: ApprovalRouterDeps): Router {
     }
     try {
       const answered = deps.queue.answer(id, body.answer, body.answered_by);
+
+      // Fire-and-forget consumer for staging-approval questions. The route
+      // MUST return the answered question even if the consumer errors.
+      if (answered.phase === 'staging-approval') {
+        consumeStagingApproval(answered, { repos: deps.repos, queue: deps.queue }).catch(
+          (err: unknown) => {
+            console.error('[approvals] consumeStagingApproval error:', err);
+          },
+        );
+      }
+
       res.json({ question: answered });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

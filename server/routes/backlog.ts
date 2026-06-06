@@ -369,6 +369,14 @@ function clampLimit(raw: unknown, fallback: number, max: number): number {
   return Math.min(Math.floor(n), max);
 }
 
+/**
+ * Exported for use by consumers (e.g. staging-approval-consumer) that need to
+ * mint a new backlog id without going through the HTTP layer.
+ */
+export function nextBacklogId(repos: Repositories, type: BacklogItemType): string {
+  return nextId(repos, type);
+}
+
 function nextId(repos: Repositories, type: BacklogItemType): string {
   const prefix = TYPE_PREFIX[type];
   const existing = repos.backlog.list({ type, limit: 500 });
