@@ -9,6 +9,16 @@ import { createComposition } from './composition.ts';
 import { driveReadyItems, type DriveResult } from './driver.ts';
 import type { ApprovalQueue } from './approval-queue.ts';
 
+/**
+ * Build-phase parallelism (Eray's "orta" tier, 2026-06-06). The autonomous
+ * driver codes up to this many backlog items at once, each in its own git
+ * worktree; the worktree ceiling sits just above so item leases never starve.
+ * Raising these trades wall-clock for concurrent Claude processes (API cost +
+ * machine load) — see DECISIONS. Conservative defaults were 3 / 10.
+ */
+const DRIVE_MAX_ITEMS = 6;
+const DRIVE_MAX_WORKTREES = 12;
+
 /** Just the lookup the assembler needs from the workflow registry. */
 export type WorkflowLookup = { get(id: string): WorkflowDefinition | null };
 
@@ -80,6 +90,10 @@ export function makeServerDrive(deps: ServerDriveDeps): ServerDrive {
       repoRoot: deps.repoRoot,
       baseBranch: deps.baseBranch,
       loadDeploymentWorkflow: () => deps.workflows.get('deployment-cycle'),
+      // Build phase parallelism (Eray: "orta" — 6 items / 12 worktrees). The
+      // driver runs DRIVE_MAX_ITEMS items at once, each in its own worktree;
+      // the worktree ceiling sits a little above so leases never starve.
+      maxConcurrentWorktrees: DRIVE_MAX_WORKTREES,
     });
     return {
       composition,
@@ -96,6 +110,7 @@ export function makeServerDrive(deps: ServerDriveDeps): ServerDrive {
         composition: runtime.composition,
         lifecycle: runtime.lifecycle,
         graph: runtime.graph,
+        maxConcurrent: DRIVE_MAX_ITEMS,
       });
     },
   };
