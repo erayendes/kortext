@@ -1,6 +1,8 @@
 import type { Repositories } from '../db/repositories/index.ts';
 import type { BacklogStatus } from '../db/schemas.ts';
 import type { Deployer, DeployOutcome } from '../engine/deployer.ts';
+import type { ApprovalQueue } from './approval-queue.ts';
+import { runStagingApproval } from './staging-approval.ts';
 
 const TERMINAL: ReadonlySet<BacklogStatus> = new Set(['done', 'cancelled']);
 
@@ -19,6 +21,13 @@ export type EpicCompletionDeps = {
   deployer: Deployer;
   /** Actor reserved for future audit. Default 'orchestrator'. */
   by?: string;
+  /**
+   * Approval queue for the post-deploy staging-approval fan-out (Task B5).
+   * When omitted, gate-persona staging reports and the prime approval question
+   * are skipped (backwards-compatible with existing call sites that do not yet
+   * wire the queue).
+   */
+  queue?: ApprovalQueue;
 };
 
 /**
@@ -83,5 +92,17 @@ export async function runEpicCompletion(
       reason: `deployer error: ${err instanceof Error ? err.message : String(err)}`,
     };
   }
+
+  // Task B5: gate-persona staging reports + prime staging-approval question.
+  // Best-effort — a failure here must not throw the epic-completion result.
+  if (deploy.ok && deps.queue) {
+    try {
+      await runStagingApproval(epicId, { repos, queue: deps.queue });
+    } catch {
+      // Swallow: staging-approval is a post-deploy side-effect; epic completion
+      // already succeeded at this point.
+    }
+  }
+
   return { itemId, epicId, epicComplete: true, deploy };
 }

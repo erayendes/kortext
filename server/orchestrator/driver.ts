@@ -108,6 +108,7 @@ export async function driveReadyItems(deps: DriveDeps): Promise<DriveResult> {
       deployer,
       previewManager,
       by,
+      queue: c.queue,
     });
     reviewed.push({
       itemId: decision.itemId,
