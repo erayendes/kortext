@@ -4,10 +4,29 @@ import {
   epicProgressRows,
   runPill,
   mergeActivity,
+  describeAuditEvent,
+  buildActivityFeed,
   formatAge,
   STATUS_SEGMENTS,
 } from '../src/routes/dashboard.tsx';
-import type { BacklogItem, DecisionIndex, Handover } from '../src/lib/api-types.ts';
+import type {
+  ActivityEntry,
+  BacklogItem,
+  DecisionIndex,
+  Handover,
+} from '../src/lib/api-types.ts';
+
+function audit(partial: Partial<ActivityEntry> & Pick<ActivityEntry, 'id'>): ActivityEntry {
+  return {
+    actor: '+prime',
+    action: 'pipeline.succeeded',
+    resource_type: 'run',
+    resource_id: '1',
+    payload: {},
+    created_at: 0,
+    ...partial,
+  };
+}
 
 function item(partial: Partial<BacklogItem> & Pick<BacklogItem, 'id'>): BacklogItem {
   return {
@@ -134,5 +153,69 @@ describe('formatAge', () => {
     expect(formatAge(now - 90_000, now)).toBe('1m');
     expect(formatAge(now - 2 * 3_600_000, now)).toBe('2h');
     expect(formatAge(now - 3 * 86_400_000, now)).toBe('3d');
+  });
+});
+
+describe('describeAuditEvent', () => {
+  it('phrases pipeline lifecycle events', () => {
+    expect(
+      describeAuditEvent({ actor: 'orchestrator', action: 'pipeline.succeeded', payload: { workflow_id: 'planning-pipeline' } }),
+    ).toBe('completed planning-pipeline');
+    expect(
+      describeAuditEvent({ actor: 'orchestrator', action: 'pipeline.chained', payload: { to_workflow: 'planning-pipeline' } }),
+    ).toBe('advanced to planning-pipeline');
+  });
+
+  it('phrases gate events', () => {
+    expect(describeAuditEvent({ actor: 'engine', action: 'gate.awaiting-approval', payload: {} })).toMatch(
+      /approval/i,
+    );
+  });
+
+  it('summarises a backlog patch by count', () => {
+    expect(describeAuditEvent({ actor: 'engine', action: 'backlog.patch.summary', payload: { count: 50 } })).toBe(
+      'patched 50 items',
+    );
+    expect(describeAuditEvent({ actor: 'engine', action: 'backlog.patch.summary', payload: { count: 1 } })).toBe(
+      'patched 1 item',
+    );
+  });
+
+  it('reuses status labels for item transitions', () => {
+    expect(
+      describeAuditEvent({ actor: '+prime', action: 'item_transition', payload: { from: 'to_do', to: 'in_progress' } }),
+    ).toBe('moved To do → In progress');
+  });
+
+  it('falls back to a humanised action for unknown events', () => {
+    expect(describeAuditEvent({ actor: 'x', action: 'some.weird_action', payload: {} })).toBe('some weird action');
+  });
+});
+
+describe('buildActivityFeed', () => {
+  it('maps audit rows, attaching the backlog item id when the resource is one', () => {
+    const feed = buildActivityFeed(
+      [
+        audit({ id: 1, action: 'item_transition', resource_type: 'backlog_item', resource_id: 'T-7', payload: { from: 'to_do', to: 'in_progress' }, created_at: 10 }),
+        audit({ id: 2, action: 'pipeline.succeeded', resource_type: 'run', resource_id: '2', created_at: 20 }),
+      ],
+      [],
+      [],
+    );
+    expect(feed.map((e) => e.id)).toEqual(['a-2', 'a-1']); // newest first
+    const t = feed.find((e) => e.id === 'a-1')!;
+    expect(t.kind).toBe('audit');
+    expect(t.item).toBe('T-7');
+    const run = feed.find((e) => e.id === 'a-2')!;
+    expect(run.item).toBeNull(); // run resource → no board item link
+  });
+
+  it('merges audit, handovers and decisions into one reverse-chronological feed', () => {
+    const feed = buildActivityFeed(
+      [audit({ id: 1, created_at: 30 })],
+      [{ id: 9, item_id: 'T-1', from_persona: '+dev', to_persona: '+qa', reason: null, context_payload: {}, markdown_path: null, created_at: 50 }],
+      [{ id: 4, decision_id: 'D-2', title: 'pick db', status: 'accepted', markdown_path: 'x', item_id: null, tags: [], created_at: 0, decided_at: 40 }],
+    );
+    expect(feed.map((e) => e.kind)).toEqual(['handover', 'decision', 'audit']);
   });
 });

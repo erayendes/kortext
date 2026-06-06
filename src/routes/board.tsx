@@ -23,6 +23,7 @@ import {
   Link2,
   Plus,
   Rows3,
+  Tag,
   User,
   X,
 } from 'lucide-react';
@@ -32,15 +33,18 @@ import type { ActivityEntry, BacklogItem } from '../lib/api-types.ts';
 import { personaPalette } from '../lib/persona-colors.ts';
 import {
   acChecklist,
+  assigneeOf,
   availableTransitions,
   blockReasonFromActivity,
   boardColumns,
   childrenOf,
+  defaultActiveVersion,
   dependenciesFromBody,
   describeActivity,
   descriptionFromBody,
   epicProgress,
   itemGates,
+  sortedVersions,
   statusBadge,
   underlyingStatusFromActivity,
   type BoardTransition,
@@ -147,7 +151,7 @@ function Card({ item, onOpen, index }: { item: BacklogItem; onOpen: () => void; 
           </span>
         )}
         <span style={{ flex: 1 }} />
-        <Avatar handle={item.owner} size={24} />
+        <Avatar handle={assigneeOf(item)} size={24} />
       </div>
     </div>
   );
@@ -203,7 +207,7 @@ function EpicCard({
           {done}/{total}
         </span>
         <span style={{ flex: 1 }} />
-        <Avatar handle={epic.owner} size={24} />
+        <Avatar handle={assigneeOf(epic)} size={24} />
       </div>
     </div>
   );
@@ -305,8 +309,8 @@ function ItemDrawer({
           <div className="dr-mrow">
             <span className="dr-mk">Assignee</span>
             <span className="dr-mv">
-              <Avatar handle={item.owner} size={18} />
-              {short(item.owner) || '—'}
+              <Avatar handle={assigneeOf(item)} size={18} />
+              {short(assigneeOf(item)) || '—'}
             </span>
           </div>
           <div className="dr-mrow">
@@ -451,8 +455,8 @@ function EpicDrawer({
           <div className="dr-mrow">
             <span className="dr-mk">Owner</span>
             <span className="dr-mv">
-              <Avatar handle={epic.owner} size={18} />
-              {short(epic.owner) || '—'}
+              <Avatar handle={assigneeOf(epic)} size={18} />
+              {short(assigneeOf(epic)) || '—'}
             </span>
           </div>
           <div className="dr-mrow">
@@ -492,24 +496,88 @@ function EpicDrawer({
 }
 
 // ---------------------------------------------------------------------------
+// Version selector (Board filter · UAT §A)
+// ---------------------------------------------------------------------------
+
+/**
+ * Pill-styled version filter. A native <select> keeps it keyboard-accessible;
+ * `value=null` is the "All versions" sentinel. The board defaults this to the
+ * smallest unfinished version, so it opens on the work in flight.
+ */
+function VersionSelect({
+  versions,
+  value,
+  onChange,
+}: {
+  versions: string[];
+  value: string | null;
+  onChange: (v: string | null) => void;
+}) {
+  return (
+    <span className="pill" style={{ paddingRight: 0, gap: 4 }} title="Filter by release version">
+      <Tag style={{ width: 12, height: 12 }} />
+      <select
+        value={value ?? '__all__'}
+        onChange={(e) => onChange(e.target.value === '__all__' ? null : e.target.value)}
+        style={{
+          background: 'transparent',
+          border: 'none',
+          color: 'inherit',
+          font: 'inherit',
+          padding: '0 8px 0 0',
+          cursor: 'pointer',
+          outline: 'none',
+          appearance: 'none',
+          WebkitAppearance: 'none',
+        }}
+      >
+        <option value="__all__">All versions</option>
+        {versions.map((v) => (
+          <option key={v} value={v}>
+            {v}
+          </option>
+        ))}
+      </select>
+    </span>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Board route
 // ---------------------------------------------------------------------------
 
 type DrawerTarget = { kind: 'item' | 'epic'; id: string };
 
 export function BoardRoute() {
-  const { data, refresh } = usePolling<{ items: BacklogItem[] }>('/api/backlog', 5000);
+  // The board needs the WHOLE set to bucket columns + roll up epics, so it asks
+  // for a high limit (the default 100 would drop the oldest items — the epics,
+  // created first in planning). True pagination is a separate follow-up.
+  const { data, refresh } = usePolling<{ items: BacklogItem[] }>('/api/backlog?limit=500', 5000);
   const items = useMemo(() => data?.items ?? [], [data]);
 
   const [filterEpic, setFilterEpic] = useState<string | null>(null);
+  // `undefined` = not yet chosen → fall back to the smallest unfinished version;
+  // once the user picks (a version, or `null` for "all") their choice sticks
+  // across polls.
+  const [versionChoice, setVersionChoice] = useState<string | null | undefined>(undefined);
   const [target, setTarget] = useState<DrawerTarget | null>(null);
+
+  const versions = useMemo(() => sortedVersions(items), [items]);
+  const activeVersion =
+    versionChoice === undefined ? defaultActiveVersion(items) : versionChoice;
 
   const epics = useMemo(() => items.filter((it) => it.type === 'epic'), [items]);
   const columns = useMemo(() => {
     const cols = boardColumns(items);
-    if (!filterEpic) return cols;
-    return cols.map((c) => ({ ...c, cards: c.cards.filter((card) => card.parent_id === filterEpic) }));
-  }, [items, filterEpic]);
+    return cols.map((c) => ({
+      ...c,
+      cards: c.cards.filter(
+        (card) =>
+          (!filterEpic || card.parent_id === filterEpic) &&
+          (!activeVersion || card.version === activeVersion),
+      ),
+    }));
+  }, [items, filterEpic, activeVersion]);
 
   const visibleCount = columns.reduce((n, c) => n + c.cards.length, 0);
 
@@ -537,6 +605,12 @@ export function BoardRoute() {
           <span className="page-title">Board</span>
           <span className="page-sub">
             {visibleCount} items
+            {activeVersion && (
+              <>
+                {' · '}
+                <span style={{ color: 'var(--accent-hi)' }}>{activeVersion}</span>
+              </>
+            )}
             {filterEpic && (
               <>
                 {' · filter '}
@@ -553,7 +627,14 @@ export function BoardRoute() {
             )}
           </span>
         </div>
-        <div style={{ display: 'flex', gap: 7 }}>
+        <div style={{ display: 'flex', gap: 7, alignItems: 'center' }}>
+          {versions.length > 0 && (
+            <VersionSelect
+              versions={versions}
+              value={activeVersion}
+              onChange={(v) => setVersionChoice(v)}
+            />
+          )}
           <span className="pill">
             <User style={{ width: 12, height: 12 }} />
             Assignee

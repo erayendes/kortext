@@ -15,6 +15,7 @@ import { RefreshCw, SlidersHorizontal, Play, Lock } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { usePolling, apiPost } from '../lib/api.ts';
 import type {
+  ActivityEntry,
   BacklogItem,
   DecisionIndex,
   Handover,
@@ -23,6 +24,7 @@ import type {
   RunStep,
 } from '../lib/api-types.ts';
 import { personaPalette } from '../lib/persona-colors.ts';
+import { assigneeOf, statusBadge } from '../lib/board-drawer.ts';
 import { resolveActiveRun } from '../lib/active-run.ts';
 import { primaryPersonaFor } from '../lib/workflow-primary-persona.ts';
 
@@ -112,7 +114,63 @@ export function runPill(status: Run['status']): RunPill {
 
 export type ActivityEvent =
   | { kind: 'handover'; id: string; at: number; who: string; toPersona: string; item: string | null }
-  | { kind: 'decision'; id: string; at: number; who: string; decisionId: string; title: string; item: string | null };
+  | { kind: 'decision'; id: string; at: number; who: string; decisionId: string; title: string; item: string | null }
+  | { kind: 'audit'; id: string; at: number; who: string; text: string; item: string | null };
+
+/**
+ * Render one audit-log row as a human activity phrase (the actor is shown
+ * separately as the avatar, so this omits it). Covers the pipeline/gate/patch
+ * lifecycle the engine emits plus item transitions; unknown actions degrade to
+ * a humanised form of the action key.
+ */
+export function describeAuditEvent(entry: {
+  action: string;
+  payload: Record<string, unknown>;
+  actor?: string;
+}): string {
+  const p = entry.payload ?? {};
+  const str = (k: string): string | null => (typeof p[k] === 'string' ? (p[k] as string) : null);
+  switch (entry.action) {
+    case 'pipeline.chained':
+      return str('to_workflow') ? `advanced to ${str('to_workflow')}` : 'advanced to the next workflow';
+    case 'pipeline.succeeded':
+      return str('workflow_id') ? `completed ${str('workflow_id')}` : 'completed a workflow';
+    case 'pipeline.failed':
+      return str('workflow_id') ? `${str('workflow_id')} failed` : 'a workflow failed';
+    case 'pipeline.step.started':
+      return str('step_key') ? `started ${str('step_key')}` : 'started a step';
+    case 'pipeline.step.succeeded':
+      return str('step_key') ? `finished ${str('step_key')}` : 'finished a step';
+    case 'pipeline.step.failed':
+      return str('step_key') ? `step ${str('step_key')} failed` : 'a step failed';
+    case 'gate.awaiting-approval':
+      return 'paused for your approval';
+    case 'gate.answered':
+      return 'gate answered';
+    case 'gate.paused':
+      return 'paused at a gate';
+    case 'gate.resumed':
+      return 'resumed after a gate';
+    case 'backlog.patch.summary': {
+      const n = typeof p.count === 'number' ? p.count : null;
+      return n === null ? 'patched the backlog' : `patched ${n} item${n === 1 ? '' : 's'}`;
+    }
+    case 'item_transition': {
+      const from = str('from');
+      const to = str('to');
+      if (from && to)
+        return `moved ${statusBadge(from as BacklogItem['status']).label} → ${statusBadge(to as BacklogItem['status']).label}`;
+      return 'updated an item';
+    }
+    case 'item_ac_toggle': {
+      const text = str('text');
+      if (text) return `${p.done ? 'checked' : 'unchecked'} "${text}"`;
+      return 'updated acceptance criteria';
+    }
+    default:
+      return entry.action.replace(/[._]/g, ' ');
+  }
+}
 
 /** Merge handovers + decisions into one reverse-chronological activity feed. */
 export function mergeActivity(
@@ -120,7 +178,31 @@ export function mergeActivity(
   decisions: DecisionIndex[],
   limit = 40,
 ): ActivityEvent[] {
+  return buildActivityFeed([], handovers, decisions, limit);
+}
+
+/**
+ * The Dashboard timeline feed: the curated audit log (the project-wide "what
+ * just happened") merged with handovers and decisions, newest-first. Audit rows
+ * carry a board-item link only when their resource is a backlog item.
+ */
+export function buildActivityFeed(
+  audit: ActivityEntry[],
+  handovers: Handover[],
+  decisions: DecisionIndex[],
+  limit = 40,
+): ActivityEvent[] {
   const events: ActivityEvent[] = [];
+  for (const e of audit) {
+    events.push({
+      kind: 'audit',
+      id: `a-${e.id}`,
+      at: e.created_at,
+      who: e.actor,
+      text: describeAuditEvent(e),
+      item: e.resource_type === 'backlog_item' ? e.resource_id : null,
+    });
+  }
   for (const h of handovers) {
     events.push({
       kind: 'handover',
@@ -299,7 +381,9 @@ export function DashboardRoute() {
 
 function DashboardView({ onRefresh }: { onRefresh: () => void }) {
   const runsPoll = usePolling<{ runs: Run[] }>('/api/runs', 3000);
-  const backlogPoll = usePolling<{ items: BacklogItem[] }>('/api/backlog', 10000);
+  // High limit so epic progress sees every item (the default 100 drops the
+  // oldest — the epics themselves). Matches the Board fetch.
+  const backlogPoll = usePolling<{ items: BacklogItem[] }>('/api/backlog?limit=500', 10000);
 
   const runs = runsPoll.data?.runs ?? [];
   const items = backlogPoll.data?.items ?? [];
@@ -554,7 +638,7 @@ function PrimeRow({
   const item = run?.item_id ? items.find((i) => i.id === run.item_id) ?? null : null;
   const type = item ? TYPE_PILL[item.type] : { label: 'Review', color: '#9B82CE' };
   const idLabel = item?.id ?? (q.run_id != null ? `run #${q.run_id}` : `Q-${q.id}`);
-  const persona = item?.owner ?? null;
+  const persona = item ? assigneeOf(item) : null;
 
   async function answer(kind: 'approve' | 'reject') {
     if (busy) return;
@@ -633,16 +717,18 @@ function EmptyPrimeRow({ text }: { text: string }) {
 
 function ActivityTimeline() {
   const navigate = useNavigate();
-  const { data: hData, loading: hLoading } = usePolling<{ handovers: Handover[] }>(
-    '/api/handovers?limit=30',
+  const { data: aData, loading: aLoading } = usePolling<{ activity: ActivityEntry[] }>(
+    '/api/activity?limit=40',
     5000,
   );
+  const { data: hData } = usePolling<{ handovers: Handover[] }>('/api/handovers?limit=30', 8000);
   const { data: dData } = usePolling<{ decisions: DecisionIndex[] }>('/api/decisions?limit=30', 8000);
 
   const events = useMemo(
-    () => mergeActivity(hData?.handovers ?? [], dData?.decisions ?? []),
-    [hData, dData],
+    () => buildActivityFeed(aData?.activity ?? [], hData?.handovers ?? [], dData?.decisions ?? []),
+    [aData, hData, dData],
   );
+  const hLoading = aLoading;
 
   return (
     <aside className="tl">
@@ -690,9 +776,12 @@ function EventText({ event }: { event: ActivityEvent }) {
       </>
     );
   }
-  return (
-    <>
-      recorded <span className="mono">{event.decisionId}</span> · {event.title}
-    </>
-  );
+  if (event.kind === 'decision') {
+    return (
+      <>
+        recorded <span className="mono">{event.decisionId}</span> · {event.title}
+      </>
+    );
+  }
+  return <>{event.text}</>;
 }

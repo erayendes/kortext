@@ -9,9 +9,9 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 > Eray `kortext-live-uat-v2` verisini gerçek UI'da gezdi. Her madde **gördüğü + doğrulanmış gerçek durum + dosya**. Çoğu "veri doğru, UI bağlı değil". (Project + Kortext settings ekranları bu turda incelenmedi — ertelendi.)
 
 **A. Board (`src/routes/board.tsx`)**
-- [ ] **Epic kolonu boş** — DB'de 18 epic var ama `/api/backlog` `limit:100` en eski 18'i kesiyor. Fix: limit yükselt / sayfalama / epic-öncelik. [veri var, API kesiyor]
-- [ ] **Versiyon filtresi yok** — 11 versiyon (v0.1…v1.0) atanmış ama Board hepsini (100) gösteriyor. Yalnız **seçili versiyona** ait item'lar listelenmeli; versiyon seçici Board'a taşınmalı; **en küçük bitmemiş versiyon** varsayılan-aktif olmalı.
-- [ ] **Assignee görünmüyor** — DB frontmatter'da 127/127 assignee dolu (`+engineering-manager` vb.) ama kart + drawer "—" gösteriyor. UI `frontmatter.assignee`'yi okumuyor. [veri var, UI bağlı değil]
+- [x] ~~**Epic kolonu boş**~~ ✅ (2026-06-06, faz-1). Board+Dashboard artık `/api/backlog?limit=500` çekiyor (board kolonları + epic roll-up tüm seti gerektirir; varsayılan 100 en eski olan epic'leri kesiyordu). Canlı: Board epic-rail 18 epic gösteriyor, Dashboard epic-progress 18 satır. **Gerçek sayfalama** ayrı follow-up (aşağıda).
+- [x] ~~**Versiyon filtresi yok**~~ ✅ (2026-06-06, faz-1). Board page-h'a `VersionSelect` (pill+native select) eklendi; `defaultActiveVersion` = en küçük bitmemiş versiyon varsayılan-aktif (canlı: v0.1, 9 item), "All versions" → 109 item. Saf helper'lar `compareVersions`/`sortedVersions`/`defaultActiveVersion` (semver-doğru sıralama, v0.10 > v0.2) — 13 unit-test.
+- [x] ~~**Assignee görünmüyor**~~ ✅ (2026-06-06, faz-1). `assigneeOf(item)` = `owner` → `frontmatter.assignee` fallback. Kart avatar + drawer Assignee/Owner satırı + Dashboard PrimeRow buna bağlandı. Canlı: kartlar `+engineering-manager`/`+frontend-developer` gösteriyor, drawer "frontend-developer".
 - [ ] **Dependency gösterilmiyor** — drawer'da blocks/blocked_by yok. (Ayrıca bu koşuda ajan **hiç dependency üretmedi** — content gap, aşağıda D.)
 - [ ] **Comment alanı yok** — item drawer'ında yorum bölümü yok.
 - [ ] **Filtreler çalışmıyor** — "Assignee" / "Group: Epic" pill'leri işlevsiz (statik).
@@ -19,8 +19,8 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 - [ ] **item-id'ler slug** — `init-nextjs-project`, `write-component-tests-task-form`. Proje-kodlu kısa id konvansiyonu (`TF-001`) yok → persona/workflow kalibrasyonu (D).
 
 **B. Dashboard (`src/routes/dashboard.tsx`)**
-- [ ] **Epic progress 0** — aynı epic-kesme (A).
-- [ ] **Activity timeline boş** — "No activity yet" ama audit_log'da 1586 patch + 127 ingest + adım/gate kaydı var. Timeline `audit_log`'a bağlı değil. [veri var, UI bağlı değil]
+- [x] ~~**Epic progress 0**~~ ✅ (2026-06-06, faz-1). Aynı limit fix (A) — Dashboard `?limit=500`; epic-progress 18 satır, hepsi gerçek child-tamamlanma yüzdesiyle.
+- [x] ~~**Activity timeline boş**~~ ✅ (2026-06-06, faz-1). Yeni `GET /api/activity` (küratörlü audit feed — gürültülü per-item `backlog.patch` SQL'de elenir, `AuditLogRepository.listFeed`/`FEED_EXCLUDED_ACTIONS`). Timeline `buildActivityFeed(audit, handovers, decisions)` ile besleniyor; `describeAuditEvent` pipeline/gate/transition olaylarını okunur metne çeviriyor. Canlı: 40 olay ("advanced to planning-pipeline", "gate answered", "paused for your approval"…), `backlog.patch` gürültüsü 0.
 - [ ] **Active work / For review boş** — koşu bittiği için boş (beklenen). Netleştir: bitmiş koşu geçmişi gösterilmeli mi, yoksa "boş = doğru" mu.
 
 **C. Doküman görünümü (`FileBrowser`/`AnnotatableDoc`)**
@@ -51,7 +51,7 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 - [ ] **Standalone CLI'a ingester bağla** — `kortext start` (commands.ts) `safetyGuards` almıyor → ingester sadece backend (onboarding/drive) yolunda ateşleniyor. CLI yolunu da besle.
 - [x] ~~**Performans — delta (patch) köprüsü**~~ ✅ (2026-06-05, DECISIONS §14.9). Canlı koşu planning'in **patolojik yavaş** olduğunu gösterdi (her enrichment adımı 100 item'lı 80KB backlog.yaml'i yeniden yazıyor → ~22 dk/adım, ~3 saat). Çözüm (Eray: delta köprüsü): patch parse modu + `patchBacklogItems` (alan-birleştirme, gate union) + `backlog.patch.yaml` köprüsü + DB→yaml serializer (motor her patch'ten sonra dosyayı tazeler → personalar güncel okur). Workflow: step 1 tam yazar, adım 2-9 patch yazar. **+8 test, 767 yeşil.**
 - [x] ~~**Tek-seferlik kesintisiz canlı koşu**~~ ✅ (2026-06-06, DECISIONS §14.9 canlı kanıt). `kortext-live-uat-v2`'de onboarding → analiz (30dk) → planning (56dk) → Board **kesintisiz tamamlandı**. İki run `succeeded`; 5/5 sütun dolu (epics=18, parent=109, version=127, model=127, gates=97 / 127 item); §14.9 hız 3-7×; serializer + synthetic epic + step-8 hepsi canlı doğrulandı.
-- [ ] **`/api/backlog` sayfalama follow-up** (2026-06-06 canlı koşu bulgusu) — `list({limit:100})` 127 item'da en eski 18 epic'i kesiyor (created_at DESC); Board epic sütununu boş gösterir. Çözüm: limit'i yükselt / sayfalama / epic-öncelik sıralama. Veri doğru (DB), yalnız liste API'si.
+- [ ] **`/api/backlog` gerçek sayfalama** (faz-1 sonrası kalan) — faz-1'de Board+Dashboard `?limit=500` ile **band-aid** yapıldı (127 item rahat sığar, epic kesilmesi giderildi). Gerçek sayfalama/sonsuz-kaydırma >500 item'lı projeler için açık kalır (kanban'da kolon-bazlı lazy-load anlamlı). Şimdilik blocker değil.
 - [ ] **Transient retry — codex/gemini executor** — `spawnCliWithRetry` paylaşımlı helper hazır; codex/gemini executor'ları hâlâ `spawnCli`'ı doğrudan çağırıyor. Kullanılan executor claude (sarılı); diğerlerini de geçir.
 - [x] ~~**⚠️ Dayanıklılık — adım-seviyesi transient retry**~~ ✅ (2026-06-05, DECISIONS §14.8). `cli-spawn.ts`'e `isTransientCliFailure` (dar marker seti: socket closed / API Error / ECONNRESET / overload / rate-limit / 5xx-429) + `spawnCliWithRetry` (exponential backoff) eklendi; `claude-cli-executor` varsayılan `maxAttempts: 3` ile sarmalandı. Deterministik hatalar (bad-model / ENOENT / declared-output-missing) + `aborted` retry edilmez. **+8 test, 759 yeşil.** **Kalan (opsiyonel):** codex/gemini executor'ları da `spawnCliWithRetry`'a geçir (şu an yalnız claude sarılı; kullanılan executor o).
 - [ ] **Manuel UAT (paketlenmiş)** — clean klasör + `npm pack` + `npm install -g ./kortext-3.X.X.tgz` + `kortext init` + `kortext serve` ile **paketlenmiş** akışın doğrulaması (bu oturum kaynak-modda UAT yaptı; tgz akışı ayrı).
