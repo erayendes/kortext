@@ -6,14 +6,33 @@ All notable changes to Kortext are documented here. The format is based on
 
 ## [Unreleased]
 
-Targeting **v3.1.0 — onboarding overhaul + CLI redesign**. Single large release
-that bundles Phases 11-13 (already merged on `main`, never published because
-`kortext@3.0.0` is broken with an EADDRINUSE silent-fail bug) plus the v3.1 CLI
-redesign decided in [development/DECISIONS.md Bölüm 0](development/DECISIONS.md).
-Implementation queue: [development/TODO.md](development/TODO.md).
+## [3.1.0] - 2026-06-06
+
+**Onboarding overhaul + CLI redesign.** Single large release that bundles Phases
+11-13 (merged on `main`, never published because `kortext@3.0.0` shipped with an
+EADDRINUSE silent-fail bug) plus the UI UAT polish round and the per-project-port
+CLI redesign decided in
+[development/DECISIONS.md Bölüm 0](development/DECISIONS.md).
 
 ### Added
 
+- **Per-project-port CLI** (v3.1). New 9-command surface — `start` / `stop` /
+  `pause` / `list` / `remove` / `purge` / `update` / `doctor` / `help` — backed by
+  a global registry (`~/.kortext/projects.json`, atomic temp-file + rename writes)
+  that maps each project to a stable port (3200+) and tracks one detached
+  prod-mode daemon per project (spawn / pid-liveness / kill). Multiple projects
+  run in parallel and survive restarts (bookmarked ports stay stable). `remove`
+  drops the registry entry but keeps `.kortext/` on disk; `purge` deletes it after
+  a confirmation prompt. The legacy mock-executor workflow runner moved off the
+  main surface to `kortext dev:run <workflow-id>`; `serve` / `init` remain as dev
+  commands. Friendly postinstall pointer that never blocks `npm i -g`.
+- **UI UAT polish** (board data wiring). Epic column (`?limit=500`), assignee
+  derivation (`assigneeOf`), semver-sorted version filter with smallest-unfinished
+  default, Dashboard activity timeline (`GET /api/activity`), in-app "New task"
+  form (POST accepts `version`), item comments (drawer + timeline share one feed),
+  working Assignee filter, Agents panel (active-agent derivation with status),
+  refreshed persona icon set, and dependency display (`dependenciesOf` + drawer
+  Dependencies section).
 - **`.kortext/` encapsulation** (Faz 12.1). All framework files live under
   `.kortext/` (`.git/`-style), keeping the project root clean — only
   `AGENTS.md`, `.env*`, `.gitignore` remain at the top level.
@@ -160,13 +179,14 @@ Implementation queue: [development/TODO.md](development/TODO.md).
 - **Repo-root `/.env.example`** (Faz 13). Duplicate + stale path. Removed —
   `templates/.env.example` is canonical.
 
-### Known issues (carried from 3.0.0)
+### Fixed
 
-- **`app.listen()` EADDRINUSE silent fail** (HANDOVER #51). When port 3200
-  is in use, Express silently skips the listening callback and exits.
-  `kortext serve` shows no error and "Cannot GET /" appears in the browser.
-  v3.0.1 debt — must be fixed before v3.1.0 publish. Workaround:
-  `lsof -ti:3200 | xargs kill` before running `serve`.
+- **`app.listen()` EADDRINUSE silent fail** (HANDOVER #51, v3.0.1 debt). The
+  server now attaches an explicit `error` handler: a clashing port prints a clear
+  message (which project/port + how to resolve via `kortext list` / `kortext
+  stop`) and exits 1, instead of silently skipping the listening callback and
+  serving "Cannot GET /". Matters more under per-project-port where two `start`s
+  can race for a port.
 
 ### Deferred to v3.2+ (intentional)
 
