@@ -6,6 +6,7 @@ import {
   type BacklogItemType,
 } from '../db/schemas.ts';
 import type { Repositories } from '../db/repositories/index.ts';
+import { FEED_EXCLUDED_ACTIONS } from '../db/repositories/audit-log.ts';
 import {
   ItemLifecycle,
   IllegalTransitionError,
@@ -101,6 +102,7 @@ export function backlogRouter(deps: BacklogRouterDeps): Router {
       title?: unknown;
       parent_id?: unknown;
       owner?: unknown;
+      version?: unknown;
       frontmatter?: unknown;
       body_md?: unknown;
     };
@@ -158,6 +160,17 @@ export function backlogRouter(deps: BacklogRouterDeps): Router {
       owner = body.owner;
     }
 
+    // version (optional release label, e.g. "v0.1" — lets the New-task form
+    // create into the version the board is currently filtered to)
+    let version: string | null = null;
+    if (body.version !== undefined && body.version !== null && body.version !== '') {
+      if (typeof body.version !== 'string') {
+        res.status(400).json({ error: 'invalid_version' });
+        return;
+      }
+      version = body.version;
+    }
+
     // frontmatter (optional object)
     let frontmatter: Record<string, unknown> = {};
     if (body.frontmatter !== undefined && body.frontmatter !== null) {
@@ -194,6 +207,7 @@ export function backlogRouter(deps: BacklogRouterDeps): Router {
       status: 'to_do',
       owner,
       parent_id: parentId,
+      version,
       frontmatter,
       body_md: bodyMd,
     });
@@ -248,8 +262,10 @@ export function backlogRouter(deps: BacklogRouterDeps): Router {
     }
   });
 
-  // Item activity feed — the audit trail (transitions etc.) for the drawer,
-  // newest-first. "Who did what, when" comes straight from audit_log.
+  // Item activity feed — the audit trail (transitions, comments, gate moves) for
+  // the drawer, newest-first. The high-volume per-item `backlog.patch` rows are
+  // dropped (FEED_EXCLUDED_ACTIONS) so the drawer reads as a clean history; we
+  // over-fetch then filter so a noisy item still yields a useful 50.
   r.get('/backlog/:id/activity', (req, res) => {
     const id = req.params.id;
     if (typeof id !== 'string' || id.length === 0) {
@@ -260,12 +276,42 @@ export function backlogRouter(deps: BacklogRouterDeps): Router {
       res.status(404).json({ error: 'not_found' });
       return;
     }
-    const activity = deps.repos.auditLog.list({
+    const excluded = new Set<string>(FEED_EXCLUDED_ACTIONS);
+    const activity = deps.repos.auditLog
+      .list({ resource_type: 'backlog_item', resource_id: id, limit: 300 })
+      .filter((e) => !excluded.has(e.action))
+      .slice(0, 50);
+    res.json({ activity });
+  });
+
+  // Post a human comment on an item. Comments live in the audit log (action
+  // `item_comment`), so they thread into the same Activity feed the drawer and
+  // dashboard already render — no separate store, and they stay in chronological
+  // order with transitions and gate events.
+  r.post('/backlog/:id/comment', (req, res) => {
+    const id = req.params.id;
+    if (typeof id !== 'string' || id.length === 0) {
+      res.status(400).json({ error: 'invalid_id' });
+      return;
+    }
+    if (!deps.repos.backlog.get(id)) {
+      res.status(404).json({ error: 'not_found' });
+      return;
+    }
+    const body = (req.body ?? {}) as { text?: unknown; by?: unknown };
+    if (typeof body.text !== 'string' || body.text.trim().length === 0) {
+      res.status(400).json({ error: 'invalid_text', message: 'text must be a non-empty string' });
+      return;
+    }
+    const by = typeof body.by === 'string' && body.by.length > 0 ? body.by : '+you';
+    const entry = deps.repos.auditLog.append({
+      actor: by,
+      action: 'item_comment',
       resource_type: 'backlog_item',
       resource_id: id,
-      limit: 50,
+      payload: { text: body.text.trim() },
     });
-    res.json({ activity });
+    res.status(201).json({ entry });
   });
 
   // Mark / unmark a single acceptance criterion (human override). AC lives in

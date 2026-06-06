@@ -167,6 +167,11 @@ export function describeAuditEvent(entry: {
       if (text) return `${p.done ? 'checked' : 'unchecked'} "${text}"`;
       return 'updated acceptance criteria';
     }
+    case 'item_comment': {
+      const text = str('text');
+      if (text) return `commented: "${text}"`;
+      return 'commented';
+    }
     default:
       return entry.action.replace(/[._]/g, ' ');
   }

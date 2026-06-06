@@ -151,6 +151,21 @@ export function defaultActiveVersion(items: BacklogItem[]): string | null {
   return null;
 }
 
+/**
+ * The distinct assignees across the board's non-epic items, alphabetical. Powers
+ * the board's Assignee filter dropdown. Epics are excluded (rail-only); items
+ * with no resolvable assignee are skipped.
+ */
+export function assigneesOf(items: BacklogItem[]): string[] {
+  const set = new Set<string>();
+  for (const it of items) {
+    if (it.type === 'epic') continue;
+    const who = assigneeOf(it);
+    if (who) set.add(who);
+  }
+  return [...set].sort((a, b) => a.localeCompare(b));
+}
+
 /** All items parented to the given epic, in their original order. */
 export function childrenOf(items: BacklogItem[], epicId: string): BacklogItem[] {
   return items.filter((it) => it.parent_id === epicId);
@@ -275,7 +290,14 @@ export function describeActivity(entry: {
       return `${entry.actor} ${done ? 'checked' : 'unchecked'} "${text}"`;
     }
   }
-  return `${entry.actor} ${entry.action}`;
+  if (entry.action === 'item_comment') {
+    const { text } = entry.payload;
+    if (typeof text === 'string') return `${entry.actor}: ${text}`;
+  }
+  if (entry.action === 'backlog.ingest') return `${entry.actor} added this item from planning`;
+  // Humanise unknown action keys ("backlog.ingest" → "backlog ingest") so the
+  // feed never shows a raw dotted identifier.
+  return `${entry.actor} ${entry.action.replace(/[._]/g, ' ')}`;
 }
 
 /**

@@ -13,7 +13,7 @@
  * The pure logic (column bucketing, gate derivation, blocked introspection)
  * lives in src/lib/board-drawer.ts and is unit-tested; this file is the wiring.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
@@ -22,7 +22,6 @@ import {
   CircleStop,
   Link2,
   Plus,
-  Rows3,
   Tag,
   User,
   X,
@@ -34,6 +33,7 @@ import { personaPalette } from '../lib/persona-colors.ts';
 import {
   acChecklist,
   assigneeOf,
+  assigneesOf,
   availableTransitions,
   blockReasonFromActivity,
   boardColumns,
@@ -229,6 +229,7 @@ function ItemDrawer({
   const { activity, reload: reloadActivity } = useActivity(item.id);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [comment, setComment] = useState('');
 
   const t = TYPE_META[item.type];
   const ac = acChecklist(item.frontmatter);
@@ -248,6 +249,22 @@ function ItemDrawer({
       reloadActivity();
     } catch {
       setError('Could not update criterion.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function postComment() {
+    const text = comment.trim();
+    if (busy || !text) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await apiPost(`/api/backlog/${item.id}/comment`, { text });
+      setComment('');
+      reloadActivity();
+    } catch {
+      setError('Could not post comment.');
     } finally {
       setBusy(false);
     }
@@ -366,6 +383,37 @@ function ItemDrawer({
 
         <div className="dr-grp">
           <div className="dr-sec">Activity</div>
+
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+            <input
+              value={comment}
+              placeholder="Add a comment…"
+              disabled={busy}
+              onChange={(e) => setComment(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') void postComment();
+              }}
+              style={{
+                flex: 1,
+                background: 'var(--panel)',
+                border: '1px solid var(--border-strong)',
+                borderRadius: 7,
+                color: 'var(--fg)',
+                font: 'inherit',
+                fontSize: 12.5,
+                padding: '7px 10px',
+                outline: 'none',
+              }}
+            />
+            <button
+              className="btn btn-line btn-sm"
+              disabled={busy || !comment.trim()}
+              onClick={() => void postComment()}
+            >
+              Send
+            </button>
+          </div>
+
           {activity.length === 0 ? (
             <div className="dr-desc" style={{ marginBottom: 0 }}>
               No activity yet.
@@ -542,6 +590,225 @@ function VersionSelect({
   );
 }
 
+/**
+ * Pill-styled assignee filter — same native-<select> pattern as VersionSelect.
+ * `value=null` = "All assignees". Options are the resolved handles present.
+ */
+function AssigneeSelect({
+  assignees,
+  value,
+  onChange,
+}: {
+  assignees: string[];
+  value: string | null;
+  onChange: (v: string | null) => void;
+}) {
+  return (
+    <span className="pill" style={{ paddingRight: 0, gap: 4 }} title="Filter by assignee">
+      <User style={{ width: 12, height: 12 }} />
+      <select
+        value={value ?? '__all__'}
+        onChange={(e) => onChange(e.target.value === '__all__' ? null : e.target.value)}
+        style={{
+          background: 'transparent',
+          border: 'none',
+          color: 'inherit',
+          font: 'inherit',
+          padding: '0 8px 0 0',
+          cursor: 'pointer',
+          outline: 'none',
+          appearance: 'none',
+          WebkitAppearance: 'none',
+        }}
+      >
+        <option value="__all__">All assignees</option>
+        {assignees.map((a) => (
+          <option key={a} value={a}>
+            {short(a)}
+          </option>
+        ))}
+      </select>
+    </span>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// New-item form (the "New" button → in-app create, replacing window.prompt)
+// ---------------------------------------------------------------------------
+
+/** The types a human can create from the board (epics are planning-owned). */
+const CREATABLE_TYPES: BacklogItem['type'][] = ['task', 'bug', 'debt', 'spike', 'hotfix'];
+
+const fieldStyle: CSSProperties = {
+  width: '100%',
+  background: 'var(--panel)',
+  border: '1px solid var(--border-strong)',
+  borderRadius: 7,
+  color: 'var(--fg)',
+  font: 'inherit',
+  fontSize: 13,
+  padding: '8px 10px',
+  outline: 'none',
+};
+
+/**
+ * Create-item form rendered inside the board Drawer. Posts to /api/backlog and
+ * seeds `version` from the board's active filter so the new card lands in the
+ * column the user is looking at (not hidden behind a version filter).
+ */
+function NewItemForm({
+  epics,
+  versions,
+  defaultVersion,
+  defaultEpic,
+  onCreated,
+  onClose,
+}: {
+  epics: BacklogItem[];
+  versions: string[];
+  defaultVersion: string | null;
+  defaultEpic: string | null;
+  onCreated: () => void;
+  onClose: () => void;
+}) {
+  const [type, setType] = useState<BacklogItem['type']>('task');
+  const [title, setTitle] = useState('');
+  const [parentId, setParentId] = useState<string>(defaultEpic ?? '');
+  const [version, setVersion] = useState<string>(defaultVersion ?? '');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit() {
+    if (busy) return;
+    const trimmed = title.trim();
+    if (!trimmed) {
+      setError('Give the item a title.');
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await apiPost('/api/backlog', {
+        type,
+        title: trimmed,
+        parent_id: parentId || undefined,
+        version: version || undefined,
+      });
+      onCreated();
+      onClose();
+    } catch {
+      setError('Could not create the item.');
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <div className="dr-head">
+        <span className="dr-title" style={{ fontSize: 15, margin: 0 }}>
+          New item
+        </span>
+        <span className="dr-x" onClick={onClose} style={{ marginLeft: 'auto' }}>
+          <X style={{ width: 16, height: 16 }} />
+        </span>
+      </div>
+
+      <div className="dr-body">
+        <label className="dr-sec" htmlFor="ni-type">
+          Type
+        </label>
+        <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
+          {CREATABLE_TYPES.map((t) => (
+            <button
+              key={t}
+              type="button"
+              className={`pill${type === t ? ' is-active' : ''}`}
+              style={
+                type === t
+                  ? { color: TYPE_META[t].color, background: rgba(TYPE_META[t].color, 0.14), borderColor: rgba(TYPE_META[t].color, 0.5) }
+                  : undefined
+              }
+              onClick={() => setType(t)}
+            >
+              <span className="d" style={{ background: TYPE_META[t].color, width: 6, height: 6, borderRadius: 3 }} />
+              {TYPE_META[t].label}
+            </button>
+          ))}
+        </div>
+
+        <label className="dr-sec" htmlFor="ni-title">
+          Title
+        </label>
+        <input
+          id="ni-title"
+          autoFocus
+          value={title}
+          placeholder="What needs doing?"
+          onChange={(e) => setTitle(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') void submit();
+          }}
+          style={{ ...fieldStyle, marginBottom: 16 }}
+        />
+
+        <label className="dr-sec" htmlFor="ni-epic">
+          Epic <span style={{ color: 'var(--fg-faint)', textTransform: 'none' }}>· optional</span>
+        </label>
+        <select
+          id="ni-epic"
+          value={parentId}
+          onChange={(e) => setParentId(e.target.value)}
+          style={{ ...fieldStyle, marginBottom: 16, cursor: 'pointer' }}
+        >
+          <option value="">No epic</option>
+          {epics.map((ep) => (
+            <option key={ep.id} value={ep.id}>
+              {ep.id} · {ep.title}
+            </option>
+          ))}
+        </select>
+
+        {versions.length > 0 && (
+          <>
+            <label className="dr-sec" htmlFor="ni-version">
+              Version <span style={{ color: 'var(--fg-faint)', textTransform: 'none' }}>· optional</span>
+            </label>
+            <select
+              id="ni-version"
+              value={version}
+              onChange={(e) => setVersion(e.target.value)}
+              style={{ ...fieldStyle, cursor: 'pointer' }}
+            >
+              <option value="">No version</option>
+              {versions.map((v) => (
+                <option key={v} value={v}>
+                  {v}
+                </option>
+              ))}
+            </select>
+          </>
+        )}
+
+        {error && (
+          <div className="dr-block" style={{ marginTop: 16 }}>
+            {error}
+          </div>
+        )}
+      </div>
+
+      <div className="dr-foot">
+        <button className="btn btn-line btn-sm" style={{ flex: 1 }} disabled={busy} onClick={onClose}>
+          Cancel
+        </button>
+        <button className="btn btn-pri btn-sm" style={{ flex: 1 }} disabled={busy} onClick={() => void submit()}>
+          <Plus style={{ width: 13, height: 13 }} />
+          Create
+        </button>
+      </div>
+    </>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Board route
 // ---------------------------------------------------------------------------
@@ -560,9 +827,12 @@ export function BoardRoute() {
   // once the user picks (a version, or `null` for "all") their choice sticks
   // across polls.
   const [versionChoice, setVersionChoice] = useState<string | null | undefined>(undefined);
+  const [assigneeFilter, setAssigneeFilter] = useState<string | null>(null);
   const [target, setTarget] = useState<DrawerTarget | null>(null);
+  const [creating, setCreating] = useState(false);
 
   const versions = useMemo(() => sortedVersions(items), [items]);
+  const assignees = useMemo(() => assigneesOf(items), [items]);
   const activeVersion =
     versionChoice === undefined ? defaultActiveVersion(items) : versionChoice;
 
@@ -574,10 +844,11 @@ export function BoardRoute() {
       cards: c.cards.filter(
         (card) =>
           (!filterEpic || card.parent_id === filterEpic) &&
-          (!activeVersion || card.version === activeVersion),
+          (!activeVersion || card.version === activeVersion) &&
+          (!assigneeFilter || assigneeOf(card) === assigneeFilter),
       ),
     }));
-  }, [items, filterEpic, activeVersion]);
+  }, [items, filterEpic, activeVersion, assigneeFilter]);
 
   const visibleCount = columns.reduce((n, c) => n + c.cards.length, 0);
 
@@ -586,16 +857,9 @@ export function BoardRoute() {
   const openItem = target?.kind === 'item' ? items.find((it) => it.id === target.id) ?? null : null;
   const openEpic = target?.kind === 'epic' ? items.find((it) => it.id === target.id) ?? null : null;
 
-  async function createItem() {
-    // Quick-create stopgap until the dedicated "New task" modal (Faz 12.9).
-    const title = window.prompt('New task title:')?.trim();
-    if (!title) return;
-    try {
-      await apiPost('/api/backlog', { type: 'task', title });
-      refresh();
-    } catch {
-      /* a failed create simply leaves the board unchanged on next poll */
-    }
+  function openCreate() {
+    setTarget(null);
+    setCreating(true);
   }
 
   return (
@@ -609,6 +873,20 @@ export function BoardRoute() {
               <>
                 {' · '}
                 <span style={{ color: 'var(--accent-hi)' }}>{activeVersion}</span>
+              </>
+            )}
+            {assigneeFilter && (
+              <>
+                {' · '}
+                <span style={{ color: 'var(--accent-hi)' }}>{short(assigneeFilter)}</span>
+                <span
+                  className="dr-x"
+                  style={{ display: 'inline-flex', marginLeft: 4, verticalAlign: 'middle' }}
+                  onClick={() => setAssigneeFilter(null)}
+                  title="Clear assignee filter"
+                >
+                  <X style={{ width: 12, height: 12 }} />
+                </span>
               </>
             )}
             {filterEpic && (
@@ -635,15 +913,14 @@ export function BoardRoute() {
               onChange={(v) => setVersionChoice(v)}
             />
           )}
-          <span className="pill">
-            <User style={{ width: 12, height: 12 }} />
-            Assignee
-          </span>
-          <span className="pill">
-            <Rows3 style={{ width: 12, height: 12 }} />
-            Group: Epic
-          </span>
-          <button className="btn btn-pri btn-sm" onClick={createItem}>
+          {assignees.length > 0 && (
+            <AssigneeSelect
+              assignees={assignees}
+              value={assigneeFilter}
+              onChange={(v) => setAssigneeFilter(v)}
+            />
+          )}
+          <button className="btn btn-pri btn-sm" onClick={openCreate}>
             <Plus style={{ width: 13, height: 13 }} />
             New
           </button>
@@ -686,7 +963,7 @@ export function BoardRoute() {
                   <span className="dot" style={{ background: col.color }} />
                   <span className="col-name">{col.name}</span>
                   <span className="col-count">{col.cards.length}</span>
-                  <span className="col-add" onClick={createItem}>
+                  <span className="col-add" onClick={openCreate}>
                     <Plus style={{ width: 13, height: 13 }} />
                   </span>
                 </div>
@@ -707,11 +984,27 @@ export function BoardRoute() {
         </div>
       </div>
 
-      <Drawer open={!!target} onClose={() => setTarget(null)}>
-        {openItem && (
+      <Drawer
+        open={!!target || creating}
+        onClose={() => {
+          setTarget(null);
+          setCreating(false);
+        }}
+      >
+        {creating && (
+          <NewItemForm
+            epics={epics}
+            versions={versions}
+            defaultVersion={activeVersion}
+            defaultEpic={filterEpic}
+            onCreated={refresh}
+            onClose={() => setCreating(false)}
+          />
+        )}
+        {!creating && openItem && (
           <ItemDrawer item={openItem} onClose={() => setTarget(null)} onMutated={refresh} />
         )}
-        {openEpic && (
+        {!creating && openEpic && (
           <EpicDrawer
             epic={openEpic}
             items={items}
