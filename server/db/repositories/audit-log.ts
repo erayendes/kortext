@@ -24,9 +24,19 @@ function rowToAudit(row: Row): AuditLogRow {
   });
 }
 
+/**
+ * Actions hidden from the global activity feed (Dashboard timeline). These are
+ * high-volume per-item bookkeeping rows — a single planning enrichment pass
+ * emits one `backlog.patch` per item (hundreds in a real run), which would bury
+ * the meaningful lifecycle/gate events. The per-step `backlog.patch.summary`
+ * (one row per step) survives, so the feed still shows "patched N items".
+ */
+export const FEED_EXCLUDED_ACTIONS = ['backlog.patch'] as const;
+
 export class AuditLogRepository {
   private readonly insertStmt;
   private readonly listStmt;
+  private readonly listFeedStmt;
 
   constructor(private readonly db: Database.Database) {
     this.insertStmt = db.prepare(`
@@ -40,6 +50,15 @@ export class AuditLogRepository {
         AND (@resource_type IS NULL OR resource_type = @resource_type)
         AND (@resource_id IS NULL OR resource_id = @resource_id)
         AND (@since IS NULL OR created_at >= @since)
+      ORDER BY created_at DESC
+      LIMIT @limit OFFSET @offset
+    `);
+    // Curated feed — same ordering, but the noisy per-item actions are filtered
+    // out at the SQL level so a `limit` of N yields N *meaningful* events.
+    const excluded = FEED_EXCLUDED_ACTIONS.map((a) => `'${a}'`).join(', ');
+    this.listFeedStmt = db.prepare(`
+      SELECT * FROM audit_log
+      WHERE action NOT IN (${excluded})
       ORDER BY created_at DESC
       LIMIT @limit OFFSET @offset
     `);
@@ -80,6 +99,20 @@ export class AuditLogRepository {
       since: filter.since ?? null,
       limit: filter.limit ?? 200,
       offset: filter.offset ?? 0,
+    }) as Row[];
+    return rows.map(rowToAudit);
+  }
+
+  /**
+   * The curated, cross-resource activity feed for the Dashboard timeline —
+   * newest-first, with the high-volume per-item actions
+   * ({@link FEED_EXCLUDED_ACTIONS}) filtered out so the limit buys meaningful
+   * lifecycle, gate and transition events rather than a wall of patches.
+   */
+  listFeed(opts: { limit?: number; offset?: number } = {}): AuditLogRow[] {
+    const rows = this.listFeedStmt.all({
+      limit: opts.limit ?? 40,
+      offset: opts.offset ?? 0,
     }) as Row[];
     return rows.map(rowToAudit);
   }

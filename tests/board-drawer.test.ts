@@ -17,6 +17,10 @@ import {
   blockReasonFromActivity,
   underlyingStatusFromActivity,
   dependenciesFromBody,
+  assigneeOf,
+  compareVersions,
+  sortedVersions,
+  defaultActiveVersion,
 } from '../src/lib/board-drawer.ts';
 import type { ActivityEntry, BacklogItem } from '../src/lib/api-types.ts';
 
@@ -465,5 +469,95 @@ describe('dependenciesFromBody (## Dependencies → Blocks / Blocked By ids)', (
 
   it('returns empty arrays when the section is missing', () => {
     expect(dependenciesFromBody('# T\n\nno deps here')).toEqual({ blocks: [], blockedBy: [] });
+  });
+});
+
+describe('assigneeOf', () => {
+  it('prefers the engine-set owner column when present', () => {
+    expect(assigneeOf(item({ id: 'T1', owner: '+engineering-manager' }))).toBe(
+      '+engineering-manager',
+    );
+  });
+
+  it('falls back to frontmatter.assignee when owner is null (planning agents write here)', () => {
+    expect(
+      assigneeOf(item({ id: 'T1', owner: null, frontmatter: { assignee: '+frontend-developer' } })),
+    ).toBe('+frontend-developer');
+  });
+
+  it('owner wins over a differing frontmatter.assignee', () => {
+    expect(
+      assigneeOf(item({ id: 'T1', owner: '+prime', frontmatter: { assignee: '+qa-engineer' } })),
+    ).toBe('+prime');
+  });
+
+  it('returns null when neither owner nor a string assignee is set', () => {
+    expect(assigneeOf(item({ id: 'T1', owner: null }))).toBeNull();
+    expect(assigneeOf(item({ id: 'T1', owner: null, frontmatter: { assignee: 42 } }))).toBeNull();
+    expect(assigneeOf(item({ id: 'T1', owner: null, frontmatter: { assignee: '' } }))).toBeNull();
+  });
+});
+
+describe('compareVersions', () => {
+  it('orders dotted versions numerically, not lexically (v0.2 < v0.10 < v1.0)', () => {
+    expect(['v0.10', 'v1.0', 'v0.2'].sort(compareVersions)).toEqual(['v0.2', 'v0.10', 'v1.0']);
+  });
+
+  it('treats a missing trailing segment as zero (v1 === v1.0 < v1.1)', () => {
+    expect(compareVersions('v1', 'v1.0')).toBe(0);
+    expect(compareVersions('v1', 'v1.1')).toBeLessThan(0);
+  });
+
+  it('ignores the leading non-digit prefix (v / version)', () => {
+    expect(compareVersions('v2.0', '1.5')).toBeGreaterThan(0);
+  });
+});
+
+describe('sortedVersions', () => {
+  it('returns the unique versions present, ascending, skipping null', () => {
+    const items = [
+      item({ id: 'A', version: 'v1.0' }),
+      item({ id: 'B', version: 'v0.2' }),
+      item({ id: 'C', version: 'v0.2' }),
+      item({ id: 'D', version: null }),
+      item({ id: 'E', version: 'v0.10' }),
+    ];
+    expect(sortedVersions(items)).toEqual(['v0.2', 'v0.10', 'v1.0']);
+  });
+
+  it('returns [] when no item carries a version', () => {
+    expect(sortedVersions([item({ id: 'A' }), item({ id: 'B' })])).toEqual([]);
+  });
+});
+
+describe('defaultActiveVersion', () => {
+  it('picks the smallest version that still has unfinished non-epic work', () => {
+    const items = [
+      item({ id: 'A', version: 'v0.1', status: 'done' }),
+      item({ id: 'B', version: 'v0.2', status: 'in_progress' }),
+      item({ id: 'C', version: 'v1.0', status: 'to_do' }),
+    ];
+    expect(defaultActiveVersion(items)).toBe('v0.2');
+  });
+
+  it('skips a version whose only open item is an epic (epics are rail-only)', () => {
+    const items = [
+      item({ id: 'E1', type: 'epic', version: 'v0.1', status: 'to_do' }),
+      item({ id: 'A', version: 'v0.1', status: 'done' }),
+      item({ id: 'B', version: 'v0.5', status: 'review' }),
+    ];
+    expect(defaultActiveVersion(items)).toBe('v0.5');
+  });
+
+  it('returns null when every version is fully complete (board shows all)', () => {
+    const items = [
+      item({ id: 'A', version: 'v0.1', status: 'done' }),
+      item({ id: 'B', version: 'v1.0', status: 'cancelled' }),
+    ];
+    expect(defaultActiveVersion(items)).toBeNull();
+  });
+
+  it('returns null when there are no versions at all', () => {
+    expect(defaultActiveVersion([item({ id: 'A', status: 'to_do' })])).toBeNull();
   });
 });

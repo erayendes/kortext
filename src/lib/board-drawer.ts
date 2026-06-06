@@ -74,6 +74,83 @@ export function acChecklist(fm: Record<string, unknown>): ChecklistItem[] {
   return raw.map((text, i) => ({ text: String(text), done: i < checked }));
 }
 
+/**
+ * Resolve the persona handle responsible for an item. The engine sets the
+ * `owner` column when it picks an item up, but the (headless) planning agents
+ * never touch it — they write `assignee` into frontmatter. So owner wins when
+ * present, otherwise we fall back to `frontmatter.assignee`. Returns null when
+ * neither is a non-empty string (the card/drawer then render the "—" dash).
+ */
+export function assigneeOf(item: {
+  owner: string | null;
+  frontmatter: Record<string, unknown>;
+}): string | null {
+  if (item.owner) return item.owner;
+  const fm = item.frontmatter?.assignee;
+  return typeof fm === 'string' && fm.length > 0 ? fm : null;
+}
+
+// ---------------------------------------------------------------------------
+// Version filter (Board · UAT §A)
+//
+// Planning assigns every item a `version` ("v0.1" … "v1.0"). The board filters
+// to one version at a time, defaulting to the smallest version that still has
+// open work. These versions sort numerically, NOT lexically — a plain string
+// sort puts "v0.10" before "v0.2", which is wrong, so we parse dotted segments.
+// ---------------------------------------------------------------------------
+
+/** Parse "v0.10" → [0, 10], stripping the leading non-digit prefix. */
+function versionSegments(v: string): number[] {
+  const digits = v.replace(/^[^\d]*/, '');
+  if (!digits) return [];
+  return digits.split('.').map((s) => {
+    const n = Number(s);
+    return Number.isFinite(n) ? n : 0;
+  });
+}
+
+/**
+ * Compare two version labels by their dotted numeric segments, so
+ * "v0.2" < "v0.10" < "v1.0". A missing trailing segment counts as zero
+ * (v1 === v1.0). Suitable as an Array.sort comparator.
+ */
+export function compareVersions(a: string, b: string): number {
+  const sa = versionSegments(a);
+  const sb = versionSegments(b);
+  const len = Math.max(sa.length, sb.length);
+  for (let i = 0; i < len; i++) {
+    const diff = (sa[i] ?? 0) - (sb[i] ?? 0);
+    if (diff !== 0) return diff;
+  }
+  return 0;
+}
+
+/** The unique versions present across items, ascending; items without one drop. */
+export function sortedVersions(items: BacklogItem[]): string[] {
+  const set = new Set<string>();
+  for (const it of items) if (it.version) set.add(it.version);
+  return [...set].sort(compareVersions);
+}
+
+/**
+ * The version the board should open on: the smallest version that still has
+ * unfinished (not done/cancelled) non-epic work. Returns null when every
+ * version is complete, or there are no versions — the caller then shows all.
+ */
+export function defaultActiveVersion(items: BacklogItem[]): string | null {
+  for (const v of sortedVersions(items)) {
+    const hasOpen = items.some(
+      (it) =>
+        it.version === v &&
+        it.type !== 'epic' &&
+        it.status !== 'done' &&
+        it.status !== 'cancelled',
+    );
+    if (hasOpen) return v;
+  }
+  return null;
+}
+
 /** All items parented to the given epic, in their original order. */
 export function childrenOf(items: BacklogItem[], epicId: string): BacklogItem[] {
   return items.filter((it) => it.parent_id === epicId);
