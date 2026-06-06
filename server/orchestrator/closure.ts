@@ -6,6 +6,7 @@ import type { HandoverEngine } from '../engine/handover.ts';
 import type { PreviewManager } from './test-preview.ts';
 import type { ApprovalQueue } from './approval-queue.ts';
 import { runEpicCompletion, type EpicCompletionResult } from './epic-completion.ts';
+import { clearBlockedDependents } from './blocker-clear.ts';
 
 export type ClosureResult = {
   itemId: string;
@@ -115,6 +116,13 @@ export async function runClosure(itemId: string, deps: ClosureDeps): Promise<Clo
       } catch {
         // Best-effort — handover write failure must not throw the closure.
       }
+    }
+
+    // M1 — Auto-unblock dependents: best-effort, must never fail the closure.
+    try {
+      await clearBlockedDependents(itemId, { repos, by });
+    } catch {
+      // Best-effort — blocker-clear failure must not throw the closure.
     }
 
     // Seam (W2, §5.9 #8): a fresh `done` may have completed the parent epic —
