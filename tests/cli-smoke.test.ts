@@ -61,14 +61,17 @@ describe('CLI smoke (shim entry)', () => {
     const { stdout, status } = runCli(['--help']);
     expect(status).toBe(0);
     for (const sub of [
-      'init',
-      'serve',
       'start',
-      'approve',
-      'status',
-      'logs',
-      'cleanup',
+      'stop',
+      'pause',
+      'list',
+      'remove',
+      'purge',
+      'update',
       'doctor',
+      'serve',
+      'init',
+      'dev:run',
       'mcp',
     ]) {
       expect(stdout).toContain(sub);
