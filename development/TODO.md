@@ -32,8 +32,8 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 - [ ] **Memory boş** — `kortext-live-uat-v2/.kortext/memory/` yok; onboarding decisions/learned yazmıyor. Karar: analiz/planning memory üretmeli mi (EM persona "decisions.md yaz" diyor ama workflow output declare etmiyor) yoksa normal mi.
 
 **E. Global / agents (`Footer` agents paneli, persona ikonları)**
-- [ ] **Agents paneli** — açıklama metnini gösterme; şu an TÜM ajanlar yeşil/aktif görünüyor. Yalnız **üzerinde tamamlanmamış görevi olan** ajanları + statülerini göster.
-- [ ] **Persona ikonları** — Eray'ın belirlediği ikon setiyle değiştirilmeli (mevcutlar yanlış).
+- [x] ~~**Agents paneli**~~ ✅ (2026-06-06, faz-4). `/api/personas` (tüm persona'lar yeşil) → `deriveActiveAgents(items)` (saf helper, TDD): yalnız tamamlanmamış (done/cancelled/epic hariç) görevi olan ajanlar; her satır lead item + statü + kalan-sayı; tone renkli nokta (working=yeşil, blocked=kırmızı, queued=amber); açıklama metni kaldırıldı. Canlı: 5 ajan, hepsi queued (tüm item to_do), openCount'a göre sıralı.
+- [ ] **Persona ikonları** — Eray'ın belirlediği ikon setiyle değiştirilmeli (mevcutlar yanlış). `src/lib/persona-colors.ts`'te 15 persona→lucide ikon eşlemesi var; Eray'a soruldu (ikon seçimi bekleniyor).
 
 **F. Açıklama (bug değil)**
 - `planning-reports_<slug>_<ts>.md` **meşru** — planning-pipeline step-8 konsolidasyon raporu (workflow declared output). Başıboş dosya değil; istenirse scope-adı (`planning-reports`) gözden geçirilir.

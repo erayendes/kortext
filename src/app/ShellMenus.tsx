@@ -15,8 +15,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Box, Check, Plus } from 'lucide-react';
 import { apiGet, apiPost } from '../lib/api.ts';
 import type {
-  BacklogItem, PersonaSummary, Run, ProjectMeta,
+  BacklogItem, Run, ProjectMeta,
 } from '../lib/api-types.ts';
+import { deriveActiveAgents, type AgentTone } from '../lib/agents-panel.ts';
 import { useShellEvent } from './shell-events.ts';
 
 const short = (h: string) => h.replace(/^\+/, '');
@@ -123,16 +124,22 @@ function runDot(status: Run['status']): string {
   return 'var(--amber)';
 }
 
+const AGENT_TONE_COLOR: Record<AgentTone, string> = {
+  working: 'var(--green)',
+  blocked: 'var(--red)',
+  queued: 'var(--amber)',
+};
+
 function UpPanels() {
   const [which, setWhich] = useState<'agents' | 'worktrees' | null>(null);
-  const [personas, setPersonas] = useState<PersonaSummary[]>([]);
+  const [items, setItems] = useState<BacklogItem[]>([]);
   const [runs, setRuns] = useState<Run[]>([]);
 
   function toggle(target: 'agents' | 'worktrees') {
     setWhich((cur) => (cur === target ? null : target));
     if (target === 'agents') {
-      apiGet<{ personas: PersonaSummary[] }>('/api/personas')
-        .then((r) => setPersonas(r.personas))
+      apiGet<{ items: BacklogItem[] }>('/api/backlog?limit=500')
+        .then((r) => setItems(r.items))
         .catch(() => undefined);
     } else {
       apiGet<{ runs: Run[] }>('/api/runs').then((r) => setRuns(r.runs)).catch(() => undefined);
@@ -142,6 +149,7 @@ function UpPanels() {
   useShellEvent('open-agents', () => toggle('agents'));
   useShellEvent('open-worktrees', () => toggle('worktrees'));
 
+  const agents = deriveActiveAgents(items);
   const worktrees = runs.filter((r) => r.worktree_path);
 
   return (
@@ -157,14 +165,20 @@ function UpPanels() {
         style={{ right: 170 }}
       >
         <div className="up-list">
-          {personas.length === 0 ? (
-            <div className="up-row up-task">no agents</div>
+          {agents.length === 0 ? (
+            <div className="up-row up-task">no agents on a task</div>
           ) : (
-            personas.map((a) => (
+            agents.map((a) => (
               <div className="up-row" key={a.handle}>
-                <span className="up-dot" style={{ background: 'var(--green)' }} />
+                <span className="up-dot" style={{ background: AGENT_TONE_COLOR[a.tone] }} />
                 <span className="up-name">{short(a.handle)}</span>
-                <span className="up-task">{a.description || a.id}</span>
+                <span
+                  className="up-task"
+                  style={a.tone === 'blocked' ? { color: 'var(--red)' } : undefined}
+                >
+                  <span className="mono">{a.leadItemId}</span> · {a.statusLabel}
+                  {a.openCount > 1 ? ` · +${a.openCount - 1}` : ''}
+                </span>
               </div>
             ))
           )}
