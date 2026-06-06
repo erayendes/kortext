@@ -516,3 +516,26 @@ export function dependenciesFromBody(md: string): { blocks: string[]; blockedBy:
   }
   return out;
 }
+
+/** Coerce an unknown frontmatter value into a clean string-id array. */
+function toIdArray(v: unknown): string[] {
+  if (!Array.isArray(v)) return [];
+  return v.filter((x): x is string => typeof x === 'string' && x.trim().length > 0).map((x) => x.trim());
+}
+
+/**
+ * An item's dependencies, preferring the structured frontmatter the planning
+ * pipeline writes (`blocks` / `blocked_by`, set by the agent and ingested into
+ * frontmatter) and falling back to the `## Dependencies` body section for items
+ * that only carry prose. This is the single source the card + drawer read, so
+ * generated dependencies actually surface in the UI.
+ */
+export function dependenciesOf(item: {
+  frontmatter: Record<string, unknown>;
+  body_md: string;
+}): { blocks: string[]; blockedBy: string[] } {
+  const blocks = toIdArray(item.frontmatter.blocks);
+  const blockedBy = toIdArray(item.frontmatter.blocked_by);
+  if (blocks.length > 0 || blockedBy.length > 0) return { blocks, blockedBy };
+  return dependenciesFromBody(item.body_md);
+}
