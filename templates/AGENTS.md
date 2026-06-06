@@ -27,7 +27,7 @@ Her reference / report / memory dosyası YAML frontmatter taşır (tek doğru ka
 
 Her zaman bu kaynaklardan referans ve proje durumu al:
 
-- **Task listesi (backlog)** — sıradaki görev burada. SQL'de `backlog_items` tablosunda; MCP tool'larıyla eriş (`list_backlog`, `get_backlog_item`).
+- **Task listesi (backlog)** — sıradaki görev burada. SQL'de `backlog_items` tablosunda; MCP tool'uyla eriş (`list_backlog`).
 - `.kortext/memory/`
   - `handover.md` — önceki ajanların ne yaptığını anlamak için (bağlam kaynağı).
   - `decisions.md` — ADR TOC; seçici okuma. **Önemli bir karar verdiğinde iş sırasında buraya da işlersin** (kesişen kural, `rules/behavior.md`).

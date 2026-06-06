@@ -31,7 +31,7 @@
    - approver: +prime
    - outputs: incident-approved
 
-3. **+engineering-manager:** Post-mortem yaz (`write_learned`): severity, etkilenen modül, etki süresi, kök neden, tespit, rollback gerekçesi, tekrar önleme. Motor incident bug'ını `done` yapar; kapsam büyüdüyse yeni Task/Debt açılır; kullanıcı bildirimi gerekiyorsa +delivery-manager release notes'a delege.
+3. **+engineering-manager:** Post-mortem yaz (`.kortext/memory/learned.md`'e işle): severity, etkilenen modül, etki süresi, kök neden, tespit, rollback gerekçesi, tekrar önleme. Motor incident bug'ını `done` yapar; kapsam büyüdüyse yeni Task/Debt açılır; kullanıcı bildirimi gerekiyorsa +delivery-manager release notes'a delege.
    - inputs: incident-approved
    - outputs: `.kortext/reports/release-notes.md`
 

@@ -10,7 +10,7 @@
 
 ## Karar
 
-1. **+engineering-manager:** Spike sonucunu ADR olarak yaz (`write_decision`): seçilen yol + gerekçe + elenen alternatifler + tahmini maliyet/etki. Prime'ın teknik bilgisi olmadığı varsayımıyla sade dille: hangi belirsizlik vardı, ne araştırıldı, ne seçildi, neden, neyi eledik, maliyeti ne. Hipotez çürüdüyse veya kapsam belirsizleştiyse bunu da aynı sadelikte raporla (öneri: alternatif yol ya da yeni spike). Motor ADR'yi prime onayına sunar.
+1. **+engineering-manager:** Spike sonucunu ADR olarak yaz (`.kortext/memory/decisions.md`'e işle): seçilen yol + gerekçe + elenen alternatifler + tahmini maliyet/etki. Prime'ın teknik bilgisi olmadığı varsayımıyla sade dille: hangi belirsizlik vardı, ne araştırıldı, ne seçildi, neden, neyi eledik, maliyeti ne. Hipotez çürüdüyse veya kapsam belirsizleştiyse bunu da aynı sadelikte raporla (öneri: alternatif yol ya da yeni spike). Motor ADR'yi prime onayına sunar.
    - inputs: spike-explored
    - approver: +prime
    - outputs: spike-decided
