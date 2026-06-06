@@ -7,7 +7,24 @@
 
 ---
 
-## ⭐ Şu an (2026-06-06) — UI fazlarının TAMAMI (1+2+4+3) BİTTİ ✅; faz-3 canlı koşuyla doğrulandı
+## ⭐ Şu an (2026-06-06) — v3.1 CLI per-project-daemon TAMAM ✅ (11 görev) + paketlenmiş smoke test geçti
+
+**v3.1 CLI yeniden tasarımı bitti.** [Plan](../docs/superpowers/plans/2026-06-06-cli-per-project-daemon.md)'ın 11 görevi `subagent-driven-development` ile koşturuldu (TDD). Sonuç: **proje-başına port** mimarisi — global registry (`~/.kortext/projects.json`, atomik yazım) + daemon launcher (detached spawn / pid-liveness / kill) + 9-komutluk CLI yüzeyi. Sunucu/API/React dokunulmadı.
+
+- ✅ **9 komut:** `start / stop / pause / list / remove / purge / update / doctor / help`. Eski mock-executor workflow runner → `kortext dev:run <id>` (testler için korundu); `serve`/`init` dev komutu olarak kaldı.
+- ✅ **Registry core** (slug `<CODE>`→lowercase, çakışmada `-N`; stabil port 3200+; atomik temp+rename). **Daemon** (prod-mode `node dist/server/index.js`, log → `<proj>/.kortext/data/logs/daemon.log`).
+- ✅ **EADDRINUSE handler** (v3.0.1 borcu kapandı): çakışan port artık net mesaj + exit 1, sessiz "Cannot GET /" değil. Canlı doğrulandı.
+- ✅ **Paketlenmiş smoke test** (Task 11) uçtan uca geçti — `npm pack` → izole temp-prefix kurulum → iki paralel daemon gerçek portlarda (3201/3202, HTTP 200) → stop / aynı-port restart / remove (.kortext korundu) / purge (.kortext silindi). Senin global kortext'ine ve canlı `:3200` UAT sunucuna **dokunulmadı** (izole HOME + temp prefix).
+- 🐛 **Smoke test + final review 2 defect yakaladı, ikisi de düzeltildi:** (1) `js-yaml` runtime'da import ediliyordu ama `dependencies`'te yoktu → paketlenmiş daemon `ERR_MODULE_NOT_FOUND` ile çöküyordu (artık deklare edildi); (2) `spawnDaemon` parent log fd'sini kapatmıyordu (fd sızıntısı → `closeSync` eklendi).
+- **Durum:** **835 test yeşil** (807→835, +28 TDD), typecheck temiz, build başarılı, version **3.1.0**, CHANGELOG `[3.1.0]`. **12 yeni lokal commit (`672f06c`..`681302e`), origin'e PUSH EDİLMEDİ** (senin onayını bekliyor).
+
+**SIRADAKİ:** (1) **push** (sen "push" deyince) → ardından **`npm publish`** (kasıtlı manuel adım, otomatik değil). (2) Final-inceleme ertelenen nitler [TODO](./TODO.md)'da: paralel-`start` yarış kilidi (EADDRINUSE hafifletiyor), `allocatePort` tükenme mesajına `kortext list/remove` ipucu. (3) Ertelenen faz-3 boşlukları: dependency üretimi + epic-id (`TF-E01`).
+
+**⚠️ Not:** Mevcut global `kortext` (`/opt/homebrew/bin/kortext`) eski sürüm — yayın sonrası `kortext update` veya yeniden global install ile tazelenir. Canlı UAT sunucusu hâlâ `:3200`'de ayakta (dokunulmadı).
+
+---
+
+## Önceki devir (2026-06-06) — UI fazlarının TAMAMI (1+2+4+3) BİTTİ ✅; faz-3 canlı koşuyla doğrulandı
 
 **Faz 3 (persona kalibrasyonu) — taze canlı koşu `kortext-live-uat-v3` ile doğrulandı.** Yeni sandbox sıfırdan koştu (onboarding TaskFlow BRD → analiz → planning, iki run da `succeeded`, 102 item / 86 task + 16 epic). Auto-approve poller +prime gate'lerini sürdü. Sonuç **kısmi ama ana hedefler tuttu:**
 - ✅ **item-id:** 86 task hepsi `TF-001`…`TF-086` (slug→`<CODE>-NNN` çözüldü).

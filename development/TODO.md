@@ -4,6 +4,17 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 
 ---
 
+## 🚀 v3.1 release + CLI follow-up (2026-06-06)
+
+> v3.1 CLI per-project-daemon **tamam** (11 görev, 835 test, paketlenmiş smoke test geçti). Kalanlar:
+
+- [ ] **PUBLISH:** Eray "push" → `git push origin main`, ardından `npm publish` (kasıtlı manuel adım). Yayın sonrası mevcut global `/opt/homebrew/bin/kortext` eski → `kortext update` veya yeniden global install.
+- [ ] **Paralel-`start` yarış kilidi** (final review #3, düşük öncelik): iki eşzamanlı `start` registry'yi stale okuyup aynı portu tahsis edebilir. EADDRINUSE handler çakışmayı zarafetle yönetiyor (kaybeden daemon exit 1) → veri bozulmaz, yalnız bir daemon başlamaz. `~/.kortext/projects.json.lock` (O_EXCL) ile sağlamlaştırılabilir. `server/cli/cmd-start.ts`.
+- [ ] **`allocatePort` tükenme mesajı** (final review #5, kozmetik): 3200..3299 dolunca atılan hata `kortext list` / `kortext remove` kurtarma ipucu içermeli (stale girdiler port tutuyor olabilir). `server/registry/projects.ts`.
+- [ ] **(opsiyonel) new-path spawn-fail persist** (final review #4): yeni proje kaydı yalnız spawn başarılıysa yazılıyor; spawn fırlatırsa kayıt kaybolur (retry aynı portla temiz çalışır → mevcut davranış savunulabilir, düşük öncelik).
+
+---
+
 ## 🔍 UAT bulguları — canlı koşu UI incelemesi (2026-06-06, TaskFlow sandbox)
 
 > Eray `kortext-live-uat-v2` verisini gerçek UI'da gezdi. Her madde **gördüğü + doğrulanmış gerçek durum + dosya**. Çoğu "veri doğru, UI bağlı değil". (Project + Kortext settings ekranları bu turda incelenmedi — ertelendi.)
