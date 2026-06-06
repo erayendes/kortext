@@ -72,14 +72,20 @@ export function backlogRouter(deps: BacklogRouterDeps): Router {
   const r = Router();
 
   r.get('/backlog', (req, res) => {
+    const type = pickStr(req.query.type) as never;
+    const status = pickStr(req.query.status) as never;
+    const owner = pickStr(req.query.owner);
+    const parent_id = pickStr(req.query.parent_id);
     const items = deps.repos.backlog.list({
-      type: pickStr(req.query.type) as never,
-      status: pickStr(req.query.status) as never,
-      owner: pickStr(req.query.owner),
-      parent_id: pickStr(req.query.parent_id),
-      limit: clampLimit(req.query.limit, 100, 500),
+      type,
+      status,
+      owner,
+      parent_id,
+      limit: clampLimit(req.query.limit, 100, 2000),
+      offset: clampOffset(req.query.offset),
     });
-    res.json({ items });
+    const total = deps.repos.backlog.count({ type, status, owner, parent_id });
+    res.json({ items, total });
   });
 
   r.get('/backlog/:id', (req, res) => {
@@ -367,6 +373,12 @@ function clampLimit(raw: unknown, fallback: number, max: number): number {
   const n = Number(raw);
   if (!Number.isFinite(n) || n <= 0) return fallback;
   return Math.min(Math.floor(n), max);
+}
+
+function clampOffset(raw: unknown): number {
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return Math.floor(n);
 }
 
 /**

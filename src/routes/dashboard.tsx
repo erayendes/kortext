@@ -388,7 +388,7 @@ function DashboardView({ onRefresh }: { onRefresh: () => void }) {
   const runsPoll = usePolling<{ runs: Run[] }>('/api/runs', 3000);
   // High limit so epic progress sees every item (the default 100 drops the
   // oldest — the epics themselves). Matches the Board fetch.
-  const backlogPoll = usePolling<{ items: BacklogItem[] }>('/api/backlog?limit=500', 10000);
+  const backlogPoll = usePolling<{ items: BacklogItem[]; total: number }>('/api/backlog?limit=2000', 10000);
 
   const runs = runsPoll.data?.runs ?? [];
   const items = backlogPoll.data?.items ?? [];
