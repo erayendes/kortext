@@ -59,12 +59,12 @@ Mobil uygulama geliştirme sırasında platformlara özgü arayüz standartları
 | Responsive implementasyon                           | **R**              | +designer: C                          |
 | Meta tag ve SEO entegrasyonu                        | **R**              | +growth-expert: C                     |
 | Erişilebilirlik (a11y) implementasyonu              | **R**              | +designer: C                          |
-| Görev statüsü güncelleme (`kortext-backlog-done.py`)                | **R**              | +operation-manager: I                 |
+| Görev statüsü güncelleme (`transition_item`)                | **R**              | +operation-manager: I                 |
 | Platform-spesifik entegrasyon (kamera, push, konum) | **R**              | +engineering-manager: A               |
 | API entegrasyonu (mobil taraf)                      | **R**              | +backend-developer: C                 |
 | App Store / Play Store yayınlama hazırlığı          | **R**              | +devops-engineer: C, +prime: A        |
 | Mobil performans optimizasyonu                      | **R**              | +engineering-manager: I               |
-| Görev statüsü güncelleme (`kortext-backlog-done.py`)                | **R**              | +operation-manager: I                 |
+| Görev statüsü güncelleme (`transition_item`)                | **R**              | +operation-manager: I                 |
 
 
 ## skills

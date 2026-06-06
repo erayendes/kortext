@@ -35,15 +35,15 @@
 ### Her Göreve Başlamadan Önce
 1. **Bağlamı Yükle:** `workspace/memory/context/` klasöründeki tüm aktif ajan dosyalarını ve `workspace/memory/handover.md` dosyasını oku. Diğer ajanların ne yaptığını anla.
 2. **Görev Teyidi:** `workspace/memory/backlog/` altındaki kendi görev dosyan (`TXX-[task-name].md` / `BXX-[bug-name].md` / `DXX-[debt-name].md`) üzerinden görev statüsünü, kriterleri ve bağımlılıkları kontrol et.
-3. **Statü Güncelle:** `kortext-item-start.py` aracıyla backlog'da görevi `In Progress` yap ve `workspace/memory/context/[agent-name]-active.md` dosyasını oluştur veya güncelle:
+3. **Statü Güncelle:** `transition_item` MCP tool'uyla backlog'da görevi `In Progress` yap ve `workspace/memory/context/[agent-name]-active.md` dosyasını oluştur veya güncelle:
    > `### +[persona] | [task-id] | In Progress | [HH:MM] | [özet]`
 4. **Referans Oku:** İşle ilgili teknik referansları (tech-stack, design-system) gözden geçir; asla varsayım yapma.
 
 ### Görev Tamamlandığında
-1. **Raporla:** `kortext-handover.py` aracıyla `workspace/memory/handover.md` dosyasının **en üstüne** devir raporu ekle (öncekiler silinmez). Bu adım atlanamaz.
-2. **Kontrol Et:** `kortext-item-check.py` aracıyla kapanış koşullarını doğrula.
+1. **Raporla:** `handover` MCP tool'uyla `workspace/memory/handover.md` dosyasının **en üstüne** devir raporu ekle (öncekiler silinmez). Bu adım atlanamaz.
+2. **Kontrol Et:** `get_acceptance_criteria` + `mark_acceptance_criterion` ile kapanış koşullarını doğrula.
 3. **Öğrenim:** Kalan ders veya kritik çözümleri `workspace/memory/learned.md` dosyasına işle. (Kesişen kural gereği büyük kararlar/dersler iş sırasında zaten kaydedildi; burada son dersleri tamamla.)
-4. **Kapat:** `kortext-item-transition.py` aracıyla item'ı `Done` yap, `kortext-backlog-sync.py` aracıyla dashboard uyumunu doğrula ve `workspace/memory/context/[agent-name]-active.md` dosyanı güvenle sil.
+4. **Kapat:** `transition_item` MCP tool'uyla item'ı `Done` yap (motor backlog↔dashboard senkronunu otomatik yapar) ve `workspace/memory/context/[agent-name]-active.md` dosyanı güvenle sil.
 
 ## Secrets Safety Rules
 
