@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { mkdirSync, openSync } from 'node:fs';
+import { mkdirSync, openSync, closeSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildServeCommands } from '../cli/serve.ts';
 
@@ -52,6 +52,7 @@ export function spawnDaemon(cmd: DaemonCommand): number {
     stdio: ['ignore', logFd, logFd],
   });
   child.unref();
+  closeSync(logFd); // child inherited its own dup; release the parent's fd
   if (child.pid === undefined) throw new Error('daemon failed to spawn (no pid)');
   return child.pid;
 }
