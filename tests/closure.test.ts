@@ -251,3 +251,69 @@ describe('runClosure → handover-on-close (B3)', () => {
     expect(result.outcome).toBe('done');
   });
 });
+
+// ---------------------------------------------------------------------------
+// M1 — Auto-unblock dependents on closure (blocker-clear wiring)
+// ---------------------------------------------------------------------------
+
+describe('runClosure → auto-unblock dependents (M1)', () => {
+  it('successful merge of the blocker → the dependent (blocked) item ends to_do', async () => {
+    // Seed blocker + dependent.
+    const lc = makeLifecycle();
+    // The blocker item (to be closed via runClosure).
+    lc.create({ id: 'BLK-001', type: 'task', title: 'BLK-001' });
+    lc.transition('BLK-001', 'start', '+backend-developer');
+    lc.transition('BLK-001', 'test', '+backend-developer');
+    lc.transition('BLK-001', 'review', 'orchestrator');
+
+    // The dependent item: ingest it as blocked with blocked_by pointing at BLK-001.
+    repos.backlog.create({
+      id: 'DEP-001',
+      type: 'task',
+      title: 'DEP-001',
+      status: 'blocked',
+      frontmatter: { blocked_by: ['BLK-001'] },
+    });
+
+    const result = await runClosure('BLK-001', {
+      repos,
+      lifecycle: lc,
+      merger: new MockMerger(),
+      deployer: new MockDeployer(),
+    });
+
+    expect(result.outcome).toBe('done');
+    // Blocker is done
+    expect(repos.backlog.get('BLK-001')!.status).toBe('done');
+    // Dependent was unblocked → back to to_do so the driver can pick it
+    expect(repos.backlog.get('DEP-001')!.status).toBe('to_do');
+  });
+
+  it('bounce (failed merge) → dependent stays blocked', async () => {
+    const lc = makeLifecycle();
+    lc.create({ id: 'BLK-002', type: 'task', title: 'BLK-002' });
+    lc.transition('BLK-002', 'start', '+backend-developer');
+    lc.transition('BLK-002', 'test', '+backend-developer');
+    lc.transition('BLK-002', 'review', 'orchestrator');
+
+    repos.backlog.create({
+      id: 'DEP-002',
+      type: 'task',
+      title: 'DEP-002',
+      status: 'blocked',
+      frontmatter: { blocked_by: ['BLK-002'] },
+    });
+
+    const result = await runClosure('BLK-002', {
+      repos,
+      lifecycle: lc,
+      merger: new MockMerger(() => ({ conflict: true, reason: 'conflict' })),
+      deployer: new MockDeployer(),
+    });
+
+    expect(result.outcome).toBe('bounced');
+    // Blocker bounced back to in_progress — not done, so dependent stays blocked
+    expect(repos.backlog.get('BLK-002')!.status).toBe('in_progress');
+    expect(repos.backlog.get('DEP-002')!.status).toBe('blocked');
+  });
+});

@@ -802,3 +802,100 @@ describe('A4: dangling-reference audit log warnings', () => {
     expect(entry).toBeDefined();
   });
 });
+
+// ---------------------------------------------------------------------------
+// A5 — Auto-block on ingest
+// ---------------------------------------------------------------------------
+
+describe('A5: auto-block on ingest', () => {
+  it('TF-002 blocked_by:[TF-001] (TF-001 is to_do) → TF-002 becomes blocked', () => {
+    const { items } = parseBacklogYaml(`items:
+  - id: TF-001
+    type: task
+    title: Task One
+  - id: TF-002
+    type: task
+    title: Task Two
+    blocked_by: [TF-001]
+`);
+    ingestBacklogItems(repos, items);
+
+    expect(repos.backlog.get('TF-001')!.status).toBe('to_do');
+    expect(repos.backlog.get('TF-002')!.status).toBe('blocked');
+
+    // Audit log entry written
+    const logs = repos.auditLog.list({ action: 'backlog.auto_blocked' });
+    expect(logs.length).toBeGreaterThan(0);
+    const entry = logs.find((l) => l.resource_id === 'TF-002');
+    expect(entry).toBeDefined();
+    expect((entry!.payload['blockedBy'] as string[])).toContain('TF-001');
+  });
+
+  it('item with all-terminal deps (done blocker) → stays to_do', () => {
+    // Ingest TF-001 first and mark it done via direct write
+    ingestBacklogItems(
+      repos,
+      parseBacklogYaml(`items:
+  - id: TF-001
+    type: task
+    title: Task One
+`).items,
+    );
+    repos.backlog.transitionStatus('TF-001', 'done');
+
+    // Now ingest TF-002 blocked_by TF-001 (which is done → terminal)
+    ingestBacklogItems(
+      repos,
+      parseBacklogYaml(`items:
+  - id: TF-002
+    type: task
+    title: Task Two
+    blocked_by: [TF-001]
+`).items,
+    );
+
+    expect(repos.backlog.get('TF-002')!.status).toBe('to_do');
+  });
+
+  it('dangling blocker (dep not in DB) treated as terminal → item stays to_do', () => {
+    const { items } = parseBacklogYaml(`items:
+  - id: TF-002
+    type: task
+    title: Task Two
+    blocked_by: [TF-GHOST]
+`);
+    ingestBacklogItems(repos, items);
+    // TF-GHOST doesn't exist → treated as terminal → TF-002 not blocked
+    expect(repos.backlog.get('TF-002')!.status).toBe('to_do');
+  });
+
+  it('epic is never auto-blocked even with an unresolved blocked_by', () => {
+    const { items } = parseBacklogYaml(`items:
+  - id: TF-001
+    type: task
+    title: Task One
+  - id: TF-E01
+    type: epic
+    title: My Epic
+    blocked_by: [TF-001]
+`);
+    ingestBacklogItems(repos, items);
+    // TF-001 is to_do (non-terminal), but TF-E01 is epic → must NOT be blocked
+    expect(repos.backlog.get('TF-E01')!.status).toBe('to_do');
+  });
+
+  it('same-batch blocker: TF-001 blocks TF-002, both ingested together', () => {
+    const { items } = parseBacklogYaml(`items:
+  - id: TF-001
+    type: task
+    title: Task One
+    blocks: [TF-002]
+  - id: TF-002
+    type: task
+    title: Task Two
+`);
+    // enforceSymmetricDeps will add blocked_by:[TF-001] to TF-002
+    ingestBacklogItems(repos, items);
+    expect(repos.backlog.get('TF-002')!.status).toBe('blocked');
+  });
+});
