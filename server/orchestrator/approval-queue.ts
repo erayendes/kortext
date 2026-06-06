@@ -19,7 +19,10 @@ export type ApprovalQueueOptions = {
 };
 
 export type EnqueueInput = {
-  runId: number;
+  /** The run this question belongs to. `null` for epic-level questions (e.g. staging-approval)
+   * that are not tied to a specific workflow run. The `pending_questions.run_id` column is
+   * already nullable in the DB schema. */
+  runId: number | null;
   stepId?: number | null;
   question: string;
   choices?: string[];

@@ -4,6 +4,7 @@ import type { Merger, MergeOutcome } from '../engine/merger.ts';
 import type { Deployer } from '../engine/deployer.ts';
 import type { HandoverEngine } from '../engine/handover.ts';
 import type { PreviewManager } from './test-preview.ts';
+import type { ApprovalQueue } from './approval-queue.ts';
 import { runEpicCompletion, type EpicCompletionResult } from './epic-completion.ts';
 
 export type ClosureResult = {
@@ -39,6 +40,12 @@ export type ClosureDeps = {
   handoverEngine?: HandoverEngine;
   /** Actor recorded on lifecycle transitions/audit. Default 'orchestrator'. */
   by?: string;
+  /**
+   * Approval queue threaded to the epic-completion seam for the post-deploy
+   * staging-approval fan-out (Task B5). Optional — when absent the staging
+   * reports + prime question are silently skipped (backwards-compatible).
+   */
+  queue?: ApprovalQueue;
 };
 
 /**
@@ -113,7 +120,7 @@ export async function runClosure(itemId: string, deps: ClosureDeps): Promise<Clo
     // Seam (W2, §5.9 #8): a fresh `done` may have completed the parent epic —
     // check + (if so) trigger the staging deploy. The item is already `done`
     // regardless of the epic outcome; this is the downstream trigger only.
-    const epic = await runEpicCompletion(itemId, { repos, deployer, by });
+    const epic = await runEpicCompletion(itemId, { repos, deployer, by, queue: deps.queue });
     return { itemId, outcome: 'done', merge, epic };
   }
 
