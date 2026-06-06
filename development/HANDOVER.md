@@ -16,7 +16,17 @@
 - **§14.9 hız:** qa 24→7dk, security 22→5dk, designer 22→3dk (3-7×). Planning ~56 dk (eskiden ~3 saat). gate union canlı birikti.
 - **§14.8 retry:** önceki v2 koşusunda adım 9 transient socket hatasını retry'la kurtardı (canlı kanıt); bu koşuda gerek olmadı.
 
-**Durum:** **767 test yeşil, typecheck temiz.** 7 lokal commit (`28f3b65`..`9c04fae`) main'de. **origin'e PUSH EDİLMEDİ.** **SIRADAKİ seçenekler:** (1) bu 7 commit'i push (Eray onayıyla); (2) `/api/backlog` limit=100 sayfalama follow-up'ı (127 item'da epic'leri kesiyor — Board görünümü); (3) codex/gemini executor'larına transient retry; (4) diğer açık işler ([TODO](./TODO.md)).
+**Durum:** **767 test yeşil, typecheck temiz.** 8 lokal commit (`28f3b65`..`8a92785`) main'de. **origin'e PUSH EDİLMEDİ.**
+
+**SIRADAKİ — UI fazı (UAT bulguları, Eray'ın seçtiği sıra 1→2→4→3).** Eray canlı koşu verisini gerçek UI'da gezip ~18 bulgu verdi → [TODO § 🔍 UAT bulguları](./TODO.md). Çoğu "veri doğru, UI bağlı değil". Sıra:
+1. **Veriyi UI'a bağla** (src/) — epic kolonu (`/api/backlog` limit), assignee görünümü (DB frontmatter'da dolu), versiyon filtresi (+ en-küçük-bitmemiş-aktif), Dashboard activity timeline (audit_log'a bağla). **Anında doğrulanır, canlı koşu gerekmez.**
+2. **Eksik UI özellikleri** — item comment alanı, çalışan filtreler, "New" görev, doküman scroll.
+4. **Agents paneli + persona ikonları** — açıklamasız, yalnız aktif-görevli ajanlar; ikon setini düzelt.
+3. **Persona kalibrasyonu** (EN SON) — item-id konvansiyonu (`TF-001`), dependency üretimi, memory yazımı → biriktir, **tek canlı koşuyla** (~86 dk) doğrula.
+
+**Canlı sandbox + sunucular AYAKTA (nohup):** veri `kortext-live-uat-v2/.kortext/` (127 item, 18 epic). Backend `:3200` (cwd=sandbox), vite `:5174` → tarayıcıda `http://localhost:5174` Board/Dashboard/References gezilebilir. (Yeni oturumda düşmüşlerse: `cd kortext-live-uat-v2 && KORTEXT_PORT=3200 npx tsx <repo>/server/index.ts &` + repo'da `KORTEXT_PORT=3200 npm run dev:web`.)
+
+**Diğer bekleyenler:** 8 commit'i push (Eray onayıyla); codex/gemini transient retry; `/api/backlog` sayfalama (UI fazı #1 ile birleşir).
 
 ---
 
