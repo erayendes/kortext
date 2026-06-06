@@ -9,9 +9,9 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 > v3.1 CLI per-project-daemon **tamam** (11 görev, 835 test, paketlenmiş smoke test geçti). Kalanlar:
 
 - [ ] **PUBLISH:** Eray "push" → `git push origin main`, ardından `npm publish` (kasıtlı manuel adım). Yayın sonrası mevcut global `/opt/homebrew/bin/kortext` eski → `kortext update` veya yeniden global install.
-- [ ] **Paralel-`start` yarış kilidi** (final review #3, düşük öncelik): iki eşzamanlı `start` registry'yi stale okuyup aynı portu tahsis edebilir. EADDRINUSE handler çakışmayı zarafetle yönetiyor (kaybeden daemon exit 1) → veri bozulmaz, yalnız bir daemon başlamaz. `~/.kortext/projects.json.lock` (O_EXCL) ile sağlamlaştırılabilir. `server/cli/cmd-start.ts`.
-- [ ] **`allocatePort` tükenme mesajı** (final review #5, kozmetik): 3200..3299 dolunca atılan hata `kortext list` / `kortext remove` kurtarma ipucu içermeli (stale girdiler port tutuyor olabilir). `server/registry/projects.ts`.
-- [ ] **(opsiyonel) new-path spawn-fail persist** (final review #4): yeni proje kaydı yalnız spawn başarılıysa yazılıyor; spawn fırlatırsa kayıt kaybolur (retry aynı portla temiz çalışır → mevcut davranış savunulabilir, düşük öncelik).
+- [x] ~~**Paralel-`start` yarış kilidi**~~ ✅ (2026-06-07). `server/registry/lock.ts` — sync O_EXCL + Atomics.wait + stale-reclaim; allocate+write kilit içinde, taze re-read.
+- [x] ~~**`allocatePort` tükenme mesajı**~~ ✅ (2026-06-07). Hata artık `kortext remove`/`list` ipucu içeriyor.
+- [x] ~~**new-path spawn-fail persist**~~ ✅ (2026-06-07). Kayıt spawn'dan önce persist ediliyor.
 
 ---
 
@@ -19,10 +19,12 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 
 > Faz-3 boşlukları + motor dilimleri + içerik kalibrasyonu **tamam** ([plan](../docs/superpowers/plans/2026-06-06-phase3-engine-content.md), 874 test). Kalan kuyruk:
 
-- [ ] **Staging-onay tüketicisi** (Slice 5 takibi, kapsam dışı bırakıldı): `staging-approval` sorusu üretiliyor ama yanıtı işleyen yok. Prime onay → version ilerlet; red → motor gerekçeyle bug açsın. `server/orchestrator/` (yeni handler) + onay kuyruğu yanıt yolu.
-- [ ] **Staging `reports_index` gerçek dosya** (Slice 5 inceleme nitü): gate-persona staging rapor satırları sentetik `file_path` + `status='uninitialized'` ile yazılıyor (diskte dosya yok). Şu an dashboard `/api/docs/reports` (fs taraması) kullandığı için görünmez/zararsız; ama `reports_index` tüketen gelecek bir okuyucu kırık-link görür. Kısa bir özet markdown'ı üretip indexle.
-- [ ] **Blocker-clear (Slice 2) — hâlâ ertelendi:** item bağımlılık modeli (`blocked_on`/join tablosu) şemada yok → migration + tasarım kararı gerek (tek-upstream kolon mu, many-to-many mi). Eray kararı bekliyor.
-- [ ] **Bağımlılık üretimi — canlı koşu doğrulaması:** motor enforcement (simetri/dangling/epic-id) hazır; gerçek planning ajanının artık `blocks`/`blocked_by` ürettiğini taze canlı koşuyla teyit et (talimat pekiştirildi ama uyum LLM'e bağlı).
+- [x] ~~**Staging-onay tüketicisi**~~ ✅ (2026-06-07). `staging-approval-consumer.ts` + route: onay→raporlar approved + epic `staging_approved` + version-tamamlama→`preprod-approval` sorusu; red→bug. (await edilir, idempotent.)
+- [x] ~~**Staging `reports_index` gerçek dosya**~~ ✅ (2026-06-07). `writeReport` ile gerçek `.kortext/reports/gate-staging_*_*.md` dosyaları.
+- [x] ~~**Blocker-clear (Slice 2)**~~ ✅ (2026-06-07). Migration GEREKMEDİ — frontmatter tabanlı: ingest oto-block + closure oto-unblock (`to_do`). Eray kararı: otomatik 'blocked' (dürüst board).
+- [ ] **Bağımlılık üretimi — canlı koşu doğrulaması:** motor enforcement (simetri/dangling/epic-id + oto-block/unblock) hazır; gerçek planning ajanının artık `blocks`/`blocked_by` ürettiğini + bağımlılık-sıralı yürütmeyi taze canlı koşuyla teyit et.
+- [ ] **Preprod DEPLOY substratı** (yeni): version onaylanınca `preprod-approval` sorusu açılıyor ama gerçek preprod deploy hedefi yok. Staging'deki `Deployer` soyutlaması gibi bir `deployPreprod` + preprod ortamı gerek. Ayrıca preprod-onay tüketicisi (onay→prod? red→bug).
+- [ ] **Tam sayfalama** (gerekince, ~500+ item): şu an küçük adım yapıldı (`total`+`offset`+"N of M", cap 2000, filtre-öncelikli full fetch). Ölçek büyürse ayrı aggregate endpoint (epic roll-up tüm item üzerinden) + sayfalı kart fetch — [scope raporu mevcut].
 
 ---
 

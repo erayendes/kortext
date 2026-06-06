@@ -7,7 +7,30 @@
 
 ---
 
-## ⭐ Şu an (2026-06-06) — Faz-3 boşlukları + Motor dilimleri + İçerik kalibrasyonu TAMAM ✅
+## ⭐ Şu an (2026-06-07) — Motor takibi + CLI sertleştirme + sayfalama TAMAM ✅
+
+Eray'ın seçtiği 3 blok ([plan](../docs/superpowers/plans/2026-06-07-motor-cli-pagination.md), 3 paralel keşif → karar → TDD subagent'ları). **Hiç yeni migration gerekmedi** — biri hariç: staging metadata için `010` (nullable ADD COLUMN, güvenli).
+
+**🔧 Motor takibi:**
+- ✅ **Blocker-clear** (kararın: otomatik 'blocked' — dürüst board): ingest'te bağımlılığı bitmemiş item'lar oto-`blocked`; kapanışta bağlı item'lar oto-`to_do` (driver tekrar alır — `in_progress` DEĞİL, yoksa takılırdı). Frontmatter tabanlı, DB kolonu yok. Bu, **bağımlılık-sıralı yürütmeyi uçtan uca işler hale getirdi.** (Eski Slice 2 ertelemesi — migration gerekmeden çözüldü.)
+- ✅ **Staging-onay tüketicisi** (kararın: tam zincir): prime onay→epic raporları 'approved' + epic `staging_approved` + **version-tamamlama** (bir version'ın tüm epic'leri onaylanınca `preprod-approval` sorusu); red→motor gerekçeyle **bug açar**. Cevap route'ta işleniyor. Staging raporları artık **gerçek dosya** (`writeReport`), epicId/version soru `metadata`'sında.
+- ⚠️ **Preprod DEPLOY substratı yok** — sadece preprod-onay sorusu açılıyor (preprod ortam hedefi ayrı follow-up, [TODO](./TODO.md)).
+
+**🖥️ CLI sertleştirme:**
+- ✅ Paralel-`start` yarış kilidi (`server/registry/lock.ts`, sync O_EXCL + stale-reclaim; allocate+write kilit içinde, taze re-read). ✅ `allocatePort` tükenme mesajına kurtarma ipucu. ✅ Yeni-proje kaydı spawn'dan önce persist edilir.
+
+**📐 Teknik borç:**
+- ✅ Sayfalama küçük adım: `/api/backlog` `total` + `offset` döner, cap 2000'e çıktı, board "N / M gösteriliyor" der. Epic roll-up korundu (filtre-öncelikli model, full fetch kalıyor). Tam sayfalama (~500+ item olunca) hâlâ TODO.
+
+**Final inceleme 2 bulgu buldu+düzeltildi:** (1) route consumer'ı fire-and-forget'ti → `await` edildi (yan etkiler 200'den önce durable); (2) `checkVersionCompletion` idempotent değildi → çift `preprod-approval` engellendi (+ regresyon testi).
+
+**Durum:** **929 test yeşil** (807→929, +122 TDD bu oturum), typecheck temiz, build başarılı. Bu blokta 7 yeni commit (`710a0df`..`2537c12`). v3.1 + tüm fazlar dahil **toplam 25 commit push edildi `origin/main`'e (1971b1b'e kadar)**; bu blok (`1971b1b`..`2537c12`, 7 commit) **henüz push EDİLMEDİ.**
+
+**SIRADAKİ:** push (sen "push" deyince). Açık follow-up'lar [TODO](./TODO.md): preprod deploy substratı, bağımlılık üretimi canlı-koşu teyidi, tam sayfalama (gerekince). Sonra `npm publish` + senin GUI-UAT turun.
+
+---
+
+## Önceki devir (2026-06-06) — Faz-3 boşlukları + Motor dilimleri + İçerik kalibrasyonu TAMAM ✅
 
 Eray'ın seçtiği 3 alan ([plan](../docs/superpowers/plans/2026-06-06-phase3-engine-content.md), 3 paralel keşif ajanıyla haritalandı, TDD subagent'larıyla koşturuldu):
 
