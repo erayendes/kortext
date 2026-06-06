@@ -249,6 +249,32 @@ describe('consumeStagingApproval — approve branch', () => {
     expect(preprod).toBeDefined();
     expect(preprod?.metadata?.version).toBe('v3.0');
   });
+
+  it('approve — re-triggering version completion does NOT enqueue a duplicate preprod-approval', async () => {
+    seedEpic('E8a', { version: 'v4.0' });
+    seedEpic('E8b', { version: 'v4.0' });
+    const queue = new ApprovalQueue({ repos });
+
+    // Approve both → one preprod-approval fires.
+    await consumeStagingApproval(
+      makeAnswered({ id: 1, answer: 'approve', metadata: { epicId: 'E8a', version: 'v4.0' } }),
+      { repos, queue },
+    );
+    await consumeStagingApproval(
+      makeAnswered({ id: 2, answer: 'approve', metadata: { epicId: 'E8b', version: 'v4.0' } }),
+      { repos, queue },
+    );
+    // Re-run completion (e.g. a late/duplicate answer for the same version).
+    await consumeStagingApproval(
+      makeAnswered({ id: 3, answer: 'approve', metadata: { epicId: 'E8a', version: 'v4.0' } }),
+      { repos, queue },
+    );
+
+    const preprods = repos.pendingQuestions
+      .listOpen()
+      .filter((pq) => pq.phase === 'preprod-approval' && pq.metadata?.version === 'v4.0');
+    expect(preprods).toHaveLength(1);
+  });
 });
 
 // ---------------------------------------------------------------------------

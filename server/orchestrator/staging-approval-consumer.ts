@@ -123,6 +123,17 @@ async function checkVersionCompletion(
   );
 
   if (allApproved) {
+    // Idempotency guard: two epics of the same version approved close together
+    // (the route consumer is invoked per answer) must not each enqueue a
+    // separate preprod-approval. Skip if one is already open for this version.
+    const alreadyQueued = repos.pendingQuestions
+      .listOpen()
+      .some(
+        (q) =>
+          q.phase === 'preprod-approval' &&
+          (q.metadata as { version?: string } | null)?.version === version,
+      );
+    if (alreadyQueued) return;
     queue.enqueue({
       runId: null,
       question: `All epics in version ${version} have been staging-approved. Ready to promote to pre-production?`,
