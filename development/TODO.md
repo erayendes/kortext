@@ -4,6 +4,42 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 
 ---
 
+## 🔍 UAT bulguları — canlı koşu UI incelemesi (2026-06-06, TaskFlow sandbox)
+
+> Eray `kortext-live-uat-v2` verisini gerçek UI'da gezdi. Her madde **gördüğü + doğrulanmış gerçek durum + dosya**. Çoğu "veri doğru, UI bağlı değil". (Project + Kortext settings ekranları bu turda incelenmedi — ertelendi.)
+
+**A. Board (`src/routes/board.tsx`)**
+- [ ] **Epic kolonu boş** — DB'de 18 epic var ama `/api/backlog` `limit:100` en eski 18'i kesiyor. Fix: limit yükselt / sayfalama / epic-öncelik. [veri var, API kesiyor]
+- [ ] **Versiyon filtresi yok** — 11 versiyon (v0.1…v1.0) atanmış ama Board hepsini (100) gösteriyor. Yalnız **seçili versiyona** ait item'lar listelenmeli; versiyon seçici Board'a taşınmalı; **en küçük bitmemiş versiyon** varsayılan-aktif olmalı.
+- [ ] **Assignee görünmüyor** — DB frontmatter'da 127/127 assignee dolu (`+engineering-manager` vb.) ama kart + drawer "—" gösteriyor. UI `frontmatter.assignee`'yi okumuyor. [veri var, UI bağlı değil]
+- [ ] **Dependency gösterilmiyor** — drawer'da blocks/blocked_by yok. (Ayrıca bu koşuda ajan **hiç dependency üretmedi** — content gap, aşağıda D.)
+- [ ] **Comment alanı yok** — item drawer'ında yorum bölümü yok.
+- [ ] **Filtreler çalışmıyor** — "Assignee" / "Group: Epic" pill'leri işlevsiz (statik).
+- [ ] **"New" (yeni görev) çalışmıyor** — buton tıklanınca bir şey olmuyor.
+- [ ] **item-id'ler slug** — `init-nextjs-project`, `write-component-tests-task-form`. Proje-kodlu kısa id konvansiyonu (`TF-001`) yok → persona/workflow kalibrasyonu (D).
+
+**B. Dashboard (`src/routes/dashboard.tsx`)**
+- [ ] **Epic progress 0** — aynı epic-kesme (A).
+- [ ] **Activity timeline boş** — "No activity yet" ama audit_log'da 1586 patch + 127 ingest + adım/gate kaydı var. Timeline `audit_log`'a bağlı değil. [veri var, UI bağlı değil]
+- [ ] **Active work / For review boş** — koşu bittiği için boş (beklenen). Netleştir: bitmiş koşu geçmişi gösterilmeli mi, yoksa "boş = doğru" mu.
+
+**C. Doküman görünümü (`FileBrowser`/`AnnotatableDoc`)**
+- [ ] **Scroll olmuyor** — References/Reports'ta uzun döküman okunamıyor (overflow/scroll CSS).
+
+**D. İçerik / persona kalibrasyonu** (yeni canlı koşu ile doğrulanır)
+- [ ] **item-id konvansiyonu** — planning persona'ları slug yerine `<PROJE_KODU>-NNN` üretmeli.
+- [ ] **Dependency üretimi** — planning `blocks`/`blocked_by` neredeyse hiç üretmedi (DB'de 0). Persona talimatını güçlendir.
+- [ ] **Memory boş** — `kortext-live-uat-v2/.kortext/memory/` yok; onboarding decisions/learned yazmıyor. Karar: analiz/planning memory üretmeli mi (EM persona "decisions.md yaz" diyor ama workflow output declare etmiyor) yoksa normal mi.
+
+**E. Global / agents (`Footer` agents paneli, persona ikonları)**
+- [ ] **Agents paneli** — açıklama metnini gösterme; şu an TÜM ajanlar yeşil/aktif görünüyor. Yalnız **üzerinde tamamlanmamış görevi olan** ajanları + statülerini göster.
+- [ ] **Persona ikonları** — Eray'ın belirlediği ikon setiyle değiştirilmeli (mevcutlar yanlış).
+
+**F. Açıklama (bug değil)**
+- `planning-reports_<slug>_<ts>.md` **meşru** — planning-pipeline step-8 konsolidasyon raporu (workflow declared output). Başıboş dosya değil; istenirse scope-adı (`planning-reports`) gözden geçirilir.
+
+---
+
 ## ⭐ Sırada
 
 - [x] ~~**"Proje hazırlanıyor" ekranı — etkileşim bug'ları**~~ ✅ (2026-06-05, commit `575ca49`). Dört bug da çözüldü + tarayıcıda kanıtlandı: (1) hash deep-link normalizer (`main.tsx`) — çıplak `/initializing` artık `/#/initializing`'e yazılıp doğru ekrana iniyor; (2) satırdaki Onayla gerçek `<button>` + `stopPropagation` → drawer açmadan inline onaylıyor (DB'de `answered`/`approve` doğrulandı); (3) satırdaki Revize drawer'ı doğrudan revize modunda açıyor; (4) <560px sidebar ikon-moduna iniyor, satır butonları kırpılmıyor, drawer tam-genişlik.
