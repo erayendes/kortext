@@ -276,14 +276,23 @@ function epicSlug(label: string): string {
 /**
  * Agents frequently flatten the backlog: every task carries a human-readable
  * `epic:` LABEL and there is no `type: epic` container item, so the Board's epic
- * column comes back empty. Synthesize one real epic per distinct label (stable
- * id `epic-<slug>`, derived deterministically so re-ingest is idempotent) and
- * point each labelled task at it via parent_id. Items that already have an
- * explicit parent_id are left untouched — the proper shape always wins.
+ * column comes back empty. Synthesize one real epic per distinct label and point
+ * each labelled task at it via parent_id. Items that already have an explicit
+ * parent_id are left untouched — the proper shape always wins.
+ *
+ * Epic id strategy (stable / idempotent across re-ingest of the same labels):
+ *   - When `code` is provided: `${code}-E01`, `${code}-E02`, … (padded 2 digits,
+ *     counting distinct labels in first-seen order within the batch).
+ *   - When `code` is absent or empty: `epic-${slug}` (legacy behavior preserved).
  */
 export function deriveSyntheticEpics(
   parsed: ParsedBacklogItem[],
+  code?: string,
 ): ParsedBacklogItem[] {
+  const useCode = typeof code === 'string' && code.trim() !== '';
+  // Map from the canonical key (coded: label; slug: slug) → epic item.
+  // We need to track insertion order to assign stable E01/E02/… counters.
+  const labelToEpicId = new Map<string, string>();
   const synthesized = new Map<string, ParsedBacklogItem>();
   const out: ParsedBacklogItem[] = [];
 
@@ -297,14 +306,25 @@ export function deriveSyntheticEpics(
       out.push(item); // label is pure punctuation — nothing to derive
       continue;
     }
-    const epicId = `epic-${slug}`;
-    if (!synthesized.has(epicId)) {
+
+    // Use the label itself as the dedup key so E01/E02 is label-stable.
+    const labelKey = item.epic_label;
+    if (!labelToEpicId.has(labelKey)) {
+      let epicId: string;
+      if (useCode) {
+        const counter = labelToEpicId.size + 1;
+        epicId = `${code!.trim()}-E${String(counter).padStart(2, '0')}`;
+      } else {
+        epicId = `epic-${slug}`;
+      }
+      labelToEpicId.set(labelKey, epicId);
       synthesized.set(epicId, {
         id: epicId,
         type: 'epic',
         title: item.epic_label,
       });
     }
+    const epicId = labelToEpicId.get(labelKey)!;
     out.push({ ...item, parent_id: epicId });
   }
 
@@ -312,9 +332,51 @@ export function deriveSyntheticEpics(
   return [...synthesized.values(), ...out];
 }
 
+/**
+ * Enforce symmetric dependency invariants on a list of parsed items — additive
+ * only, never removing agent-authored entries.
+ *
+ * Rules:
+ *   - If A.blocks includes B, ensure B.blocked_by includes A.
+ *   - If A.blocked_by includes B, ensure B.blocks includes A.
+ *
+ * Only items within the same batch are cross-referenced; dangling refs (B not
+ * present in the batch) are left as-is and reported via the audit log in the
+ * ingester.
+ */
+export function enforceSymmetricDeps(items: ParsedBacklogItem[]): ParsedBacklogItem[] {
+  // Build a mutable copy of each item so we can add missing entries.
+  const byId = new Map<string, ParsedBacklogItem>(
+    items.map((item) => [item.id, { ...item }]),
+  );
+
+  for (const item of byId.values()) {
+    // A.blocks → B.blocked_by
+    for (const bId of item.blocks ?? []) {
+      const b = byId.get(bId);
+      if (!b) continue;
+      if (!(b.blocked_by ?? []).includes(item.id)) {
+        b.blocked_by = [...(b.blocked_by ?? []), item.id];
+      }
+    }
+    // A.blocked_by → B.blocks
+    for (const bId of item.blocked_by ?? []) {
+      const b = byId.get(bId);
+      if (!b) continue;
+      if (!(b.blocks ?? []).includes(item.id)) {
+        b.blocks = [...(b.blocks ?? []), item.id];
+      }
+    }
+  }
+
+  // Preserve original ordering.
+  return items.map((orig) => byId.get(orig.id) ?? orig);
+}
+
 export function ingestBacklogItems(
   repos: Repositories,
   parsed: ParsedBacklogItem[],
+  opts?: { code?: string },
 ): {
   created: string[];
   updated: string[];
@@ -325,7 +387,11 @@ export function ingestBacklogItems(
   const skipped: { id: string; reason: string }[] = [];
 
   // Turn bare `epic:` labels into real epic items + parent links before ingest.
-  parsed = deriveSyntheticEpics(parsed);
+  // Pass optional project code so synthesized ids use <CODE>-E0N format.
+  parsed = deriveSyntheticEpics(parsed, opts?.code);
+
+  // Enforce symmetric dep invariants (additive only — never removes entries).
+  parsed = enforceSymmetricDeps(parsed);
 
   // Epics first (stable): parent_id is a real FK (foreign_keys = ON), so a child
   // task linking to an epic in the same batch must see the epic row already
@@ -399,6 +465,30 @@ export function ingestBacklogItems(
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       skipped.push({ id, reason: msg });
+    }
+  }
+
+  // A4 — Dangling-reference warnings (warn-only, no mutation).
+  // After all rows are written, build the set of known ids in this batch so we
+  // can detect references that point at non-existent items. References to items
+  // that were skipped (failed to write) are also considered dangling.
+  const ingested = new Set([...created, ...updated]);
+  for (const item of ordered) {
+    const refs: string[] = [...(item.blocks ?? []), ...(item.blocked_by ?? [])];
+    for (const refId of refs) {
+      if (!ingested.has(refId)) {
+        repos.auditLog.append({
+          actor: 'engine',
+          action: 'backlog.ingest.dangling_ref',
+          resource_type: 'backlog_item',
+          resource_id: refId,
+          payload: {
+            source_id: item.id,
+            ref_id: refId,
+            message: `dangling reference: ${item.id} references ${refId} which is not in the ingested set`,
+          },
+        });
+      }
     }
   }
 
@@ -532,6 +622,7 @@ export function writeBacklogYamlFromDb(repos: Repositories, absolutePath: string
 export function ingestBacklogFile(
   repos: Repositories,
   absolutePath: string,
+  opts?: { code?: string },
 ): {
   created: string[];
   updated: string[];
@@ -547,7 +638,7 @@ export function ingestBacklogFile(
   }
 
   const { items, errors: parseErrors } = parseBacklogYaml(text);
-  const { created, updated, skipped } = ingestBacklogItems(repos, items);
+  const { created, updated, skipped } = ingestBacklogItems(repos, items, opts);
 
   console.log(
     `[kortext] backlog ingest: ${created.length} created, ${updated.length} updated, ${skipped.length} skipped, ${parseErrors.length} parse errors`,

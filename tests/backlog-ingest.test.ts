@@ -4,6 +4,8 @@ import type { Repositories } from '../server/db/repositories/index.ts';
 import {
   parseBacklogYaml,
   ingestBacklogItems,
+  deriveSyntheticEpics,
+  enforceSymmetricDeps,
   patchBacklogItems,
   serializeBacklogToYaml,
 } from '../server/engine/backlog-ingest.ts';
@@ -571,5 +573,232 @@ describe('serializeBacklogToYaml', () => {
     const yamlText = serializeBacklogToYaml(repos);
     expect(yamlText.trimStart().startsWith('items:')).toBe(true);
     expect(yamlText).not.toContain('```');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A1 — Coded epic ids (<CODE>-E0N)
+// ---------------------------------------------------------------------------
+
+describe('A1: deriveSyntheticEpics — coded epic ids', () => {
+  it('uses TF-E01 when code="TF" and a single epic label is present', () => {
+    const { items } = parseBacklogYaml(`items:
+  - id: TF-001
+    type: task
+    title: Task One
+    epic: Auth
+`);
+    const result = deriveSyntheticEpics(items, 'TF');
+    const epic = result.find((i) => i.type === 'epic');
+    expect(epic).toBeDefined();
+    expect(epic!.id).toBe('TF-E01');
+    const child = result.find((i) => i.id === 'TF-001');
+    expect(child!.parent_id).toBe('TF-E01');
+  });
+
+  it('assigns TF-E01 and TF-E02 for two distinct labels in stable (insertion) order', () => {
+    const { items } = parseBacklogYaml(`items:
+  - id: TF-001
+    type: task
+    title: Task One
+    epic: Auth
+  - id: TF-002
+    type: task
+    title: Task Two
+    epic: Infrastructure
+`);
+    const result = deriveSyntheticEpics(items, 'TF');
+    const epics = result.filter((i) => i.type === 'epic');
+    expect(epics).toHaveLength(2);
+    expect(epics[0]!.id).toBe('TF-E01');
+    expect(epics[1]!.id).toBe('TF-E02');
+    // Children correctly linked
+    const child1 = result.find((i) => i.id === 'TF-001');
+    const child2 = result.find((i) => i.id === 'TF-002');
+    expect(child1!.parent_id).toBe('TF-E01');
+    expect(child2!.parent_id).toBe('TF-E02');
+  });
+
+  it('is idempotent: re-running deriveSyntheticEpics on same input yields same ids', () => {
+    const { items } = parseBacklogYaml(`items:
+  - id: TF-001
+    type: task
+    title: Task One
+    epic: Auth
+`);
+    const first = deriveSyntheticEpics(items, 'TF');
+    const epicId = first.find((i) => i.type === 'epic')!.id;
+    // Run again on original input
+    const second = deriveSyntheticEpics(items, 'TF');
+    expect(second.find((i) => i.type === 'epic')!.id).toBe(epicId);
+  });
+
+  it('falls back to epic-${slug} when code is absent', () => {
+    const { items } = parseBacklogYaml(`items:
+  - id: TF-001
+    type: task
+    title: Task One
+    epic: Auth
+`);
+    const result = deriveSyntheticEpics(items);
+    const epic = result.find((i) => i.type === 'epic');
+    expect(epic!.id).toBe('epic-auth');
+    expect(result.find((i) => i.id === 'TF-001')!.parent_id).toBe('epic-auth');
+  });
+
+  it('ingestBacklogItems passes code through and creates coded epic rows', () => {
+    const { items } = parseBacklogYaml(`items:
+  - id: TF-001
+    type: task
+    title: Task One
+    epic: Auth
+  - id: TF-002
+    type: task
+    title: Task Two
+    epic: Auth
+`);
+    const result = ingestBacklogItems(repos, items, { code: 'TF' });
+    expect(result.created).toContain('TF-E01');
+    const epic = repos.backlog.get('TF-E01')!;
+    expect(epic.type).toBe('epic');
+    expect(repos.backlog.get('TF-001')!.parent_id).toBe('TF-E01');
+    expect(repos.backlog.get('TF-002')!.parent_id).toBe('TF-E01');
+  });
+
+  it('re-ingest with same code is idempotent (no new epics created)', () => {
+    const { items } = parseBacklogYaml(`items:
+  - id: TF-001
+    type: task
+    title: Task One
+    epic: Auth
+`);
+    ingestBacklogItems(repos, items, { code: 'TF' });
+    const second = ingestBacklogItems(repos, items, { code: 'TF' });
+    expect(second.created).toHaveLength(0);
+    expect(second.updated).toContain('TF-E01');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A3 — Symmetric dependency enforcement
+// ---------------------------------------------------------------------------
+
+describe('A3: enforceSymmetricDeps — symmetric dependency enforcement', () => {
+  it('adds blocked_by to TF-002 when TF-001 blocks:[TF-002] and TF-002 has no blocked_by', () => {
+    const { items } = parseBacklogYaml(`items:
+  - id: TF-001
+    type: task
+    title: Task One
+    blocks: [TF-002]
+  - id: TF-002
+    type: task
+    title: Task Two
+`);
+    const result = enforceSymmetricDeps(items);
+    const tf002 = result.find((i) => i.id === 'TF-002')!;
+    expect(tf002.blocked_by).toContain('TF-001');
+  });
+
+  it('does not duplicate entries when input is already symmetric', () => {
+    const { items } = parseBacklogYaml(`items:
+  - id: TF-001
+    type: task
+    title: Task One
+    blocks: [TF-002]
+  - id: TF-002
+    type: task
+    title: Task Two
+    blocked_by: [TF-001]
+`);
+    const result = enforceSymmetricDeps(items);
+    const tf002 = result.find((i) => i.id === 'TF-002')!;
+    expect(tf002.blocked_by!.filter((id) => id === 'TF-001')).toHaveLength(1);
+  });
+
+  it('adds blocks to TF-001 when TF-002 blocked_by:[TF-001] and TF-001 has no blocks', () => {
+    const { items } = parseBacklogYaml(`items:
+  - id: TF-001
+    type: task
+    title: Task One
+  - id: TF-002
+    type: task
+    title: Task Two
+    blocked_by: [TF-001]
+`);
+    const result = enforceSymmetricDeps(items);
+    const tf001 = result.find((i) => i.id === 'TF-001')!;
+    expect(tf001.blocks).toContain('TF-002');
+  });
+
+  it('ingestBacklogItems stores symmetric deps in frontmatter', () => {
+    const { items } = parseBacklogYaml(`items:
+  - id: TF-001
+    type: task
+    title: Task One
+    blocks: [TF-002]
+  - id: TF-002
+    type: task
+    title: Task Two
+`);
+    ingestBacklogItems(repos, items);
+    const tf002 = repos.backlog.get('TF-002')!;
+    expect(tf002.frontmatter.blocked_by).toContain('TF-001');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A4 — Dangling-reference warning (warn-only, no mutation)
+// ---------------------------------------------------------------------------
+
+describe('A4: dangling-reference audit log warnings', () => {
+  it('writes an audit_log warning when blocked_by references a non-existent id', () => {
+    const { items } = parseBacklogYaml(`items:
+  - id: TF-001
+    type: task
+    title: Task One
+    blocked_by: [TF-999]
+`);
+    ingestBacklogItems(repos, items);
+    const logs = repos.auditLog.list({ action: 'backlog.ingest.dangling_ref' });
+    expect(logs.length).toBeGreaterThan(0);
+    const entry = logs.find(
+      (l) =>
+        (typeof l.payload['ref_id'] === 'string' && l.payload['ref_id'].includes('TF-999')) ||
+        (typeof l.payload['message'] === 'string' && l.payload['message'].includes('TF-999')) ||
+        l.resource_id === 'TF-999' ||
+        (typeof l.payload['dangling'] === 'string' && l.payload['dangling'].includes('TF-999'))
+    );
+    expect(entry).toBeDefined();
+  });
+
+  it('does NOT mutate the item — the dangling ref stays in frontmatter', () => {
+    const { items } = parseBacklogYaml(`items:
+  - id: TF-001
+    type: task
+    title: Task One
+    blocked_by: [TF-999]
+`);
+    ingestBacklogItems(repos, items);
+    const row = repos.backlog.get('TF-001')!;
+    expect(row.frontmatter.blocked_by).toContain('TF-999');
+  });
+
+  it('also warns for dangling blocks references', () => {
+    const { items } = parseBacklogYaml(`items:
+  - id: TF-001
+    type: task
+    title: Task One
+    blocks: [TF-888]
+`);
+    ingestBacklogItems(repos, items);
+    const logs = repos.auditLog.list({ action: 'backlog.ingest.dangling_ref' });
+    const entry = logs.find(
+      (l) =>
+        (typeof l.payload['ref_id'] === 'string' && l.payload['ref_id'].includes('TF-888')) ||
+        (typeof l.payload['message'] === 'string' && l.payload['message'].includes('TF-888')) ||
+        l.resource_id === 'TF-888' ||
+        (typeof l.payload['dangling'] === 'string' && l.payload['dangling'].includes('TF-888'))
+    );
+    expect(entry).toBeDefined();
   });
 });
