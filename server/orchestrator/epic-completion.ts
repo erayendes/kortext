@@ -57,6 +57,22 @@ export async function runEpicCompletion(
     return { itemId, epicId, epicComplete: false, deploy: null };
   }
 
+  // Flip the epic's own status to `done` (direct write — epics bypass the
+  // worker/test/review lifecycle, so we skip lifecycle.transition and write
+  // directly). Guard on current status so repeated calls are idempotent.
+  const epic = repos.backlog.get(epicId);
+  if (epic && epic.status !== 'done') {
+    const by = deps.by ?? 'orchestrator';
+    repos.backlog.transitionStatus(epicId, 'done');
+    repos.auditLog.append({
+      actor: by,
+      action: 'epic.completed',
+      resource_type: 'backlog_item',
+      resource_id: epicId,
+      payload: { epicId, triggeredBy: itemId },
+    });
+  }
+
   let deploy: DeployOutcome;
   try {
     deploy = await deployer.deployStaging({ epicId });

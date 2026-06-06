@@ -90,4 +90,37 @@ describe('runEpicCompletion — epic→staging trigger (§5.9 #8, mock-first)', 
     expect(result.epicComplete).toBe(true);
     expect(result.deploy?.ok).toBe(false);
   });
+
+  // --- Task B2: epic status flip on completion ---
+
+  it('all children terminal ≥1 done → epic own status flipped to done + audit entry written', async () => {
+    const child = makeEpic('E6', ['done', 'cancelled']);
+    const deployer = new MockDeployer();
+    await runEpicCompletion(child, { repos, deployer });
+    expect(repos.backlog.get('E6')?.status).toBe('done');
+    const entries = repos.auditLog.list({ resource_id: 'E6' });
+    expect(entries.length).toBeGreaterThan(0);
+    expect(entries.some((e) => e.action === 'epic.completed')).toBe(true);
+  });
+
+  it('incomplete epic (child still in_progress) → epic status not flipped', async () => {
+    const child = makeEpic('E7', ['done', 'in_progress']);
+    const deployer = new MockDeployer();
+    await runEpicCompletion(child, { repos, deployer });
+    expect(repos.backlog.get('E7')?.status).toBe('to_do');
+  });
+
+  it('epic already done → no throw, no duplicate audit entry', async () => {
+    const child = makeEpic('E8', ['done']);
+    const deployer = new MockDeployer();
+    // First call — flips the epic to done
+    await runEpicCompletion(child, { repos, deployer });
+    expect(repos.backlog.get('E8')?.status).toBe('done');
+    const entriesBefore = repos.auditLog.list({ resource_id: 'E8', action: 'epic.completed' });
+    expect(entriesBefore.length).toBe(1);
+    // Second call — idempotent: no duplicate audit entry, no throw
+    await expect(runEpicCompletion(child, { repos, deployer })).resolves.not.toThrow();
+    const entriesAfter = repos.auditLog.list({ resource_id: 'E8', action: 'epic.completed' });
+    expect(entriesAfter.length).toBe(1);
+  });
 });
