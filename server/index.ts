@@ -132,9 +132,11 @@ const safetyGuards: SafetyGuards = {
   //                           fields they change, so a 100-item plan stays fast)
   backlogIngester: ({ absolutePath }) => {
     const base = basename(absolutePath);
-    // Read the project code from .kortext/project.json (the directory containing
-    // the output file is the project workspace root for per-project daemons).
-    const projectRoot = dirname(dirname(absolutePath)); // outputs/ → project root
+    // Read the project code from .kortext/project.json. The backlog file lives at
+    // <root>/.kortext/foundation/backlog.yaml, so three dirname() hops reach the
+    // project workspace root (foundation → .kortext → root) — which is exactly
+    // what resolveBlueprintPaths expects (it re-appends `.kortext/project.json`).
+    const projectRoot = dirname(dirname(dirname(absolutePath)));
     const meta = readProjectMeta(resolveBlueprintPaths(projectRoot).projectJsonPath);
     const ingestOpts = meta?.code ? { code: meta.code } : undefined;
     if (base === 'backlog.yaml') {
