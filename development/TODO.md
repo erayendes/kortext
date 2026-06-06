@@ -33,7 +33,7 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 
 **E. Global / agents (`Footer` agents paneli, persona ikonları)**
 - [x] ~~**Agents paneli**~~ ✅ (2026-06-06, faz-4). `/api/personas` (tüm persona'lar yeşil) → `deriveActiveAgents(items)` (saf helper, TDD): yalnız tamamlanmamış (done/cancelled/epic hariç) görevi olan ajanlar; her satır lead item + statü + kalan-sayı; tone renkli nokta (working=yeşil, blocked=kırmızı, queued=amber); açıklama metni kaldırıldı. Canlı: 5 ajan, hepsi queued (tüm item to_do), openCount'a göre sıralı.
-- [ ] **Persona ikonları** — Eray'ın belirlediği ikon setiyle değiştirilmeli (mevcutlar yanlış). `src/lib/persona-colors.ts`'te 15 persona→lucide ikon eşlemesi var; Eray'a soruldu (ikon seçimi bekleniyor).
+- [x] ~~**Persona ikonları**~~ ✅ (2026-06-06, faz-4). Eray'ın belirlediği lucide seti `persona-colors.ts`'e uygulandı: operation-manager→Bot, product-manager→Rocket, engineering-manager→DraftingCompass, backend-developer→SquareChevronRight, frontend-developer→SquareCode, qa-engineer→FlaskConical, devops-engineer→GitMerge, copywriter→Pencil, growth-expert→Sprout (prime/Compass, delivery/Package, db/Database, security/Shield, designer/Palette, compliance/Scale değişmedi). Tüm yüzeyler (kart/drawer/dashboard/agents) ortak palette okuyor → tek yerde değişti. Canlı render doğrulandı.
 
 **F. Açıklama (bug değil)**
 - `planning-reports_<slug>_<ts>.md` **meşru** — planning-pipeline step-8 konsolidasyon raporu (workflow declared output). Başıboş dosya değil; istenirse scope-adı (`planning-reports`) gözden geçirilir.
