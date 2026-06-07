@@ -7,25 +7,30 @@ const META: ProjectMeta = {
   githubRepo: null, executor: 'claude', executorBinary: null, createdAt: 1,
 };
 function repos(runs: Array<{ workflow_id: string }>) {
-  return { runs: { listRuns: vi.fn(() => runs) } } as any;
+  const listRuns = vi.fn(() => runs);
+  return { repos: { runs: { listRuns } } as any, listRuns };
 }
 
 describe('autoStartPendingAnalysis', () => {
   it('triggers analysis when approved and no prior run exists', () => {
     const trigger = vi.fn();
+    const r = repos([]);
     const res = autoStartPendingAnalysis({
-      repos: repos([]), blueprintPath: '/bp', projectJsonPath: '/pj', trigger,
+      repos: r.repos, blueprintPath: '/bp', projectJsonPath: '/pj', trigger,
       readStatus: () => 'approved', readMeta: () => META,
     });
     expect(res.started).toBe(true);
     expect(res.workflowId).toBe('new-project-analysis');
     expect(trigger).toHaveBeenCalledWith('new-project-analysis');
+    // Idempotency query must be a SQL-filtered lookup, not a capped full scan.
+    expect(r.listRuns).toHaveBeenCalledWith({ workflow_id: 'new-project-analysis', limit: 1 });
   });
 
   it('does NOT trigger when blueprint not approved', () => {
     const trigger = vi.fn();
+    const r = repos([]);
     const res = autoStartPendingAnalysis({
-      repos: repos([]), blueprintPath: '/bp', projectJsonPath: '/pj', trigger,
+      repos: r.repos, blueprintPath: '/bp', projectJsonPath: '/pj', trigger,
       readStatus: () => 'draft', readMeta: () => META,
     });
     expect(res.started).toBe(false);
@@ -34,8 +39,9 @@ describe('autoStartPendingAnalysis', () => {
 
   it('does NOT trigger when an analysis run already exists (idempotent)', () => {
     const trigger = vi.fn();
+    const r = repos([{ workflow_id: 'new-project-analysis' }]);
     const res = autoStartPendingAnalysis({
-      repos: repos([{ workflow_id: 'new-project-analysis' }]),
+      repos: r.repos,
       blueprintPath: '/bp', projectJsonPath: '/pj', trigger,
       readStatus: () => 'approved', readMeta: () => META,
     });
@@ -46,8 +52,9 @@ describe('autoStartPendingAnalysis', () => {
 
   it('does NOT trigger when meta is missing', () => {
     const trigger = vi.fn();
+    const r = repos([]);
     const res = autoStartPendingAnalysis({
-      repos: repos([]), blueprintPath: '/bp', projectJsonPath: '/pj', trigger,
+      repos: r.repos, blueprintPath: '/bp', projectJsonPath: '/pj', trigger,
       readStatus: () => 'approved', readMeta: () => null,
     });
     expect(res.started).toBe(false);
