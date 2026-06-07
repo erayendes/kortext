@@ -145,16 +145,24 @@ Eray'ın seçtiği 3 alan ([plan](../docs/superpowers/plans/2026-06-06-phase3-en
 
 ---
 
-## Açık işler (özet — tam liste [TODO.md](./TODO.md))
+## Açık işler (KALAN — tam liste + detay [TODO.md](./TODO.md))
 
-- **⭐ Backlog enrichment + step-8 (canlı koşu bulgusu):** Canlı koşu §14.2'yi kanıtladı ama (A) epic/version/model Board'a inmiyor (`backlog.yaml` yalnız step-0'da yazılıyor + `epic:` vs `parent_epic:` alan uyuşmazlığı + hiç `type: epic` item yok) ve (B) step-8 konsolidasyon FAILED (rapor output pattern). Çözüm: planning-pipeline persona talimatları + köprü kalibrasyonu (alttaki "Backlog köprüsü zenginleştirme" ile birleşir). Detay [TODO ⚠️](./TODO.md).
-- **Concurrency knob'ları:** workflow-içi `concurrency=3`, `maxConcurrentWorktrees=10` — ayarlanabilir tavanlar (Eray isterse yükseltilir).
-- **Backlog köprüsü follow-up:** zenginleştirme (sonraki planning adımlarını da ingest), standalone CLI'a ingester bağla, kesintisiz canlı koşu. [TODO](./TODO.md).
-- **Motor — ertelenen backend dilimleri:** handover-on-close, blocker-temizle, `gate_runs` uat verdict, epic-status-flip, gate-persona staging raporları + prime staging onayı, preview wiring/persistence. [TODO §"Motor epic"](./TODO.md).
-- **v3.1 CLI/onboarding redesign:** multi-project daemon, postinstall onboard, native folder picker, 9 komutluk CLI. Yön [DECISIONS Bölüm 0](./DECISIONS.md), sıralı kuyruk [TODO](./TODO.md).
-- **v3.0.1 borç:** `app.listen()` EADDRINUSE silent-fail handler.
-- **Manuel UAT (paketlenmiş):** `npm pack` + global install + `kortext init/serve` ile **paketlenmiş** akış doğrulaması (kaynak değil — bu oturum kaynak-modda UAT yaptı).
-- **v3.1.0 release flow** + **içerik review turu** (personas/rules/workflows/templates kalibrasyon). [TODO](./TODO.md).
+> Bu oturumda biten her şey [DECISIONS Bölüm 7](./DECISIONS.md)'de. Aşağısı = **gerçekten kalan**.
+
+**🚀 Yayın (tek aksiyon kalemi)**
+- [ ] **`npm publish`** — kod hazır + push edildi; son kasıtlı manuel adım. Yayın sonrası mevcut global `/opt/homebrew/bin/kortext` eski → `kortext update`.
+- [ ] **Senin GUI-UAT turun** — paketlenmiş akışı tarayıcıda gez (ben terminalden doğruladım: 2 daemon HTTP 200).
+
+**🔧 Motor follow-up'ları**
+- [ ] **Gerçek git main-merge/tag** — `deployProd` şu an mock; §5.11'in `development→main` merge + semver tag + prod push'unu gerçek git ile yapan implementasyon (`WorkflowDeployer.deployProd` / prod-deployment-cycle workflow).
+- [ ] **Full planning pipeline canlı dayanıklılık** — 9-adım gerçek-LLM koşusunda adım-zaman-aşımı + hung-claude tespiti (canlı teyitte bir zenginleştirme adımı ~70dk askıda kaldı, kill). + auto-approve poller ile uçtan-uca canlı koşu.
+- [ ] **Tam sayfalama** — şu an küçük adım (total+offset+"N of M", filtre-öncelik). ~500+ item olunca ayrı aggregate endpoint (epic roll-up tüm item üzerinden) + sayfalı kart fetch. [scope raporu mevcut].
+
+**🧹 Küçük / opsiyonel**
+- [ ] Dashboard "Active work / For review" boşken davranışı netleştir (boş = doğru mu, geçmiş koşu mu).
+- [ ] Concurrency tavanları (`DRIVE_MAX_ITEMS=6`, `DRIVE_MAX_WORKTREES=12`) — Eray isterse ayarlanır.
+- [ ] İçerik kalibrasyonu (persona/workflow ince ayar) — ölü ref'ler temizlendi; gerçek koşularda davranış gözlemiyle süren bir tur.
+- [ ] (final review düşük-öncelik) new-path spawn-fail persist nüansı; allocatePort havuz-tükenme UX'i.
 
 ---
 

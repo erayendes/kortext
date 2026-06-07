@@ -920,3 +920,38 @@ Canlı koşunun (§14.2) çıkardığı iki bulgu giderildi. **Kök neden ortak:
 - **§14.8 retry:** bu koşuda transient hata çıkmadı (gerek olmadı); önceki v2 koşusunda adım 9 retry'la kurtulmuştu (canlı kanıtlı).
 
 **Follow-up (küçük):** `/api/backlog` limit=100 sayfalaması 127 item'da en eski 18 epic'i kesiyor (Board görünümü) — sayfalama/epic-öncelik gerekir. Veri doğru (DB 127); yalnız liste API'si.
+
+---
+
+## Bölüm 7 — v3.1 CLI implementation + Faz-3 motor + içerik + approval merdiveni (2026-06-06 → 07)
+
+**Status:** Hepsi koda döküldü + main'de. **951 test yeşil**, typecheck temiz, build başarılı, version 3.1.0. Bölüm 0'ın (CLI design) + §5.9/§5.11'in (motor/deployment) implementasyonu. subagent-driven-development (TDD subagent + iki-aşamalı denetim) ile koşturuldu.
+
+### 7.1 v3.1 CLI = proje-başına port (Eray'ın "A" seçimi, Bölüm 0.1'in çözümü)
+Tek-daemon-URL yerine **her proje kendi portunda kendi daemon'u**. Sunucu/API/React **dokunulmadı** — iş tamamen CLI + registry katmanında. Global registry `~/.kortext/projects.json` (atomik temp+rename) slug→`{name,path,port,pid,status}` tutar; port 3200+ stabil (yer imleri çalışır). 9 komut: `start/stop/pause/list/remove/purge/update/doctor/help` (Bölüm 0.4). Eski mock-executor workflow runner → `kortext dev:run`; `serve`/`init` dev komutu. EADDRINUSE handler (v3.0.1 borcu): net mesaj + exit 1. **Paketlenmiş smoke test bir release-blocker yakaladı:** `js-yaml` runtime'da import ediliyordu ama `dependencies`'te yoktu → her kurulumda daemon çökerdi; deklare edildi. Detay [plan](../docs/superpowers/plans/2026-06-06-cli-per-project-daemon.md).
+
+### 7.2 Bağımlılık üretimi: ajan yazar + motor doğrular (Eray kararı)
+Motor uydurma bağımlılık ÜRETMEZ. Workflow talimatı sertleştirildi (her item `blocks`/`blocked_by` zorunlu), motor ingest'te **simetri zorlar** (A blocks B → B blocked_by A) + **dangling-ref uyarısı** verir. Kodlu epic id'leri: `deriveSyntheticEpics` `code`'u (project.json'dan, server hook'u 3-dirname ile workspace kökünü çözer) alıp `<CODE>-E0N` üretir. **Canlı koşu kalibrasyonu (7.8):** ajan `depends_on` yazınca ingester onu `blocked_by` alias'ı kabul eder.
+
+### 7.3 Motor §5.9 ertelenen dilimler indi
+UAT verdict artık `gate_runs` satırı (attempt = önceki uat + 1, UNIQUE çakışması çözüldü); epic-status-flip (çocuklar bitince epic board'da `done`, direct write + audit, idempotent); handover-on-close (`HandoverEngine` closure'a bağlandı — driver thread'i + `+prime` sentetik handle izni gerekti, yoksa prod'da no-op'tu); preview URL kalıcılığı (migration 009 `backlog_items.preview_url`, `frontmatter.preview` flag ile gate'li, API'de açık). Blocker-clear (Slice 2) **migration GEREKMEDEN** çözüldü (7.5). Eski "şema gerek" varsayımı yanlıştı — bağımlılıklar frontmatter'da.
+
+### 7.4 Approval merdiveni: staging + preprod (§5.11 implementasyonu)
+- **Epic done → staging:** `deployStaging` (mock-first) → gate-persona staging raporları (gerçek `writeReport` dosyaları) → `staging-approval` sorusu (`metadata={epicId,version}`, migration 010).
+- **staging-onay tüketicisi:** onay→raporlar approved + epic `frontmatter.staging_approved` + **version-tamamlama** (bir version'ın tüm epic'leri staging-onaylı) → `deployPreprod` → `preprod-approval` sorusu (idempotent — çift soru engellenir); red→motor `type:bug` açar.
+- **preprod-onay tüketicisi:** onay→epic'ler `preprod_approved` + `deployProd` (mekanik release); red→bug. **Zincir preprod-onayında BİTER** — §5.11: preprod onayı → development→main merge + prod deploy + tag, prod gate'i YOK. Tüm deploy'lar **mock-first** (staging gibi); gerçek git main-merge/tag `deployProd`'a foldlandı (follow-up). Cevap route'ta **await edilir** (yan etkiler 200'den önce durable).
+
+### 7.5 Blocker-clear = otomatik 'blocked' (Eray kararı: dürüst board)
+Frontmatter tabanlı, **migration yok**. Ingest'te bağımlılığı bitmemiş (non-terminal `blocked_by`) item'lar oto-`blocked`; closure'da bağlı item'lar oto-`to_do` (**`in_progress` DEĞİL** — driver `to_do` seçer, `in_progress`'e alsak takılırdı). Çoklu-blocker: yalnız TÜM blocker'lar terminal olunca açılır. Bu, bağımlılık-sıralı yürütmeyi uçtan uca işler hale getirdi.
+
+### 7.6 CLI sertleştirme + sayfalama
+Paralel-`start` yarış kilidi (`server/registry/lock.ts`, sync O_EXCL + Atomics.wait + stale-reclaim; allocate+write kilit içinde taze re-read). `allocatePort` tükenme mesajına kurtarma ipucu. Sayfalama küçük adım (Eray kararı: tam sayfalama gereksiz, projeler 30-150 item): `/api/backlog` `total`+`offset` döner, cap 2000, board "N / M gösteriliyor"; epic roll-up korundu (filtre-öncelikli full fetch). Tam aggregate-endpoint sayfalaması ~500+ item olunca (follow-up).
+
+### 7.7 İçerik kalibrasyonu (tam)
+Ölü MCP tool refs (`write_learned`/`write_decision`/`get_backlog_item`) → gerçek dosya-yazım. Tüm `kortext-*.py` script refs (`commands.md`, `behavior.md`, dev-agent'lar) → gerçek v3 MCP tool'ları (`transition_item`/`handover`/`get_acceptance_criteria`/`get_runtime_status`) ya da "motor-otomatik". İçerikte sıfır ölü ref.
+
+### 7.8 Canlı koşu teyidi (gerçek claude ajanı, 2026-06-07)
+İzole sandbox (DevVault, code DV), gerçek planning ajanı: **39 item + 6 sentetik epic (DV-E01…E06) + mantıksal bağımlılıklar üretti** → A2 pekiştirmesi + esas belirsizlik (LLM bağımlılık üretir mi) çözüldü. **Bulgu:** ajan `depends_on` kullandı (motorun `blocked_by`'ı değil) → unit-test'in yakalayamayacağı kalibrasyon boşluğu → ingester'a `depends_on`→`blocked_by` alias'ı eklendi ("LLM'i olduğu yerde karşıla"). Fix sonrası gerçek veride: **38/39 auto-block**, simetri türetildi, DV-001 kapanınca bağımlıları açıldı, çoklu-blocker'lı DV-005 doğru şekilde bloklu kaldı. **Kazı:** `dev:run --executor=claude` `--binary`/`KORTEXT_CLAUDE_BIN` şart; full 9-adım pipeline bir zenginleştirme adımında ~70dk askıda kaldı (kill) — adım-zaman-aşımı follow-up.
+
+### 7.9 Süreç notu
+Bu oturumun büyük işi paralel keşif ajanları (haritalama) → AskUserQuestion (mimari karar) → TDD subagent'ları (uygulama) → final holistic review (her blok) döngüsüyle yürütüldü. Final review'lar **gerçek prod bug'ları yakaladı:** epic-id proje-kök çözümü (1 seviye yanlış), handover driver-thread eksikliği + `+prime` sentetik handle reddi, fire-and-forget consumer, çift preprod sorusu — hepsi düzeltildi + regresyon testi eklendi. Subagent çıktısını körü körüne kabul etmemenin değeri tekrar tekrar kanıtlandı.
