@@ -62,6 +62,7 @@ describe('GET /api/backlog/aggregate', () => {
       epicProgress: {},
       statusCounts: {},
       versions: [],
+      openByVersion: {},
       assignees: [],
       total: 0,
     });
@@ -137,6 +138,28 @@ describe('GET /api/backlog/aggregate', () => {
 
     const { body } = await call(a, 'GET', '/api/backlog/aggregate');
     expect(body.versions).toEqual(['v1.0', 'v2.0']);
+  });
+
+  it('openByVersion: per-version count of open (non-done/cancelled, non-epic) items', async () => {
+    const a = app();
+    // v1.0: 2 tasks, one moved to done → 1 open
+    const { body: t1 } = await call(a, 'POST', '/api/backlog', { type: 'task', title: 'T1', version: 'v1.0' });
+    await call(a, 'POST', '/api/backlog', { type: 'task', title: 'T2', version: 'v1.0' });
+    repos.backlog.transitionStatus(t1.item.id, 'done');
+
+    // v2.0: 1 task open + 1 cancelled (excluded) → 1 open
+    await call(a, 'POST', '/api/backlog', { type: 'task', title: 'T3', version: 'v2.0' });
+    const { body: t4 } = await call(a, 'POST', '/api/backlog', { type: 'task', title: 'T4', version: 'v2.0' });
+    repos.backlog.transitionStatus(t4.item.id, 'cancelled');
+
+    // v3.0: only an epic (excluded — epics are rail-only) → absent
+    await call(a, 'POST', '/api/backlog', { type: 'epic', title: 'E1', version: 'v3.0' });
+
+    // no version → never counted
+    await call(a, 'POST', '/api/backlog', { type: 'task', title: 'T5' });
+
+    const { body } = await call(a, 'GET', '/api/backlog/aggregate');
+    expect(body.openByVersion).toEqual({ 'v1.0': 1, 'v2.0': 1 });
   });
 
   it('assignees: distinct non-epic owners', async () => {

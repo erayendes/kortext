@@ -65,6 +65,28 @@ async function gitProdRelease(repoRoot: string, version: string): Promise<Deploy
     return { ok: false, reason: 'development branch not found' };
   }
 
+  // Capture the branch we start on so we can restore it before returning — the
+  // server is long-running and other components expect to find the working tree
+  // on `development`, not the `main` we're about to check out. Detached HEAD →
+  // null (nothing to restore to a named branch).
+  let originalBranch: string | null = null;
+  try {
+    originalBranch = git(repoRoot, 'symbolic-ref', '--short', 'HEAD') || null;
+  } catch {
+    originalBranch = null; // detached HEAD
+  }
+
+  // Restore the original branch (best-effort) — only when it was a real branch
+  // other than the `main` we may already be on.
+  const restoreBranch = () => {
+    if (!originalBranch || originalBranch === 'main') return;
+    try {
+      git(repoRoot, 'checkout', originalBranch);
+    } catch {
+      // best-effort — leave the tree where it is rather than throw on cleanup
+    }
+  };
+
   // 3. Ensure main: create from development if it doesn't exist yet (first release).
   let mainExists = false;
   try {
@@ -91,15 +113,21 @@ async function gitProdRelease(repoRoot: string, version: string): Promise<Deploy
         git(repoRoot, 'checkout', 'main');
         git(repoRoot, 'tag', '-a', version, '-m', `Release ${version}`);
       } catch (e) {
-        return { ok: false, reason: e instanceof Error ? e.message : String(e) };
+        restoreBranch();
+        return { ok: false, conflict: false, reason: e instanceof Error ? e.message : String(e) };
       }
+      restoreBranch();
       return { ok: true, url: null };
     }
   }
 
-  // 5–6. Checkout main → merge --no-ff → tag.
+  // 5–6. Checkout main → merge --no-ff → tag. Track which step is running so a
+  // checkout/tag failure is NOT mislabelled as a merge conflict — only a failure
+  // of the `git merge` itself sets conflict:true (and triggers `merge --abort`).
+  let step: 'checkout' | 'merge' | 'tag' = 'checkout';
   try {
     git(repoRoot, 'checkout', 'main');
+    step = 'merge';
     git(
       repoRoot,
       'merge',
@@ -108,20 +136,26 @@ async function gitProdRelease(repoRoot: string, version: string): Promise<Deploy
       `Release ${version}: merge development into main`,
       'development',
     );
+    step = 'tag';
     git(repoRoot, 'tag', '-a', version, '-m', `Release ${version}`);
     git(repoRoot, 'rev-parse', 'HEAD'); // capture HEAD (could surface in logs)
     // NOTE: prod push is intentionally omitted — CI/prod-push is a follow-up.
+    restoreBranch();
     return { ok: true, url: null };
   } catch (e) {
-    // 7. Merge failed (conflict or other) → abort to leave main clean.
-    try {
-      git(repoRoot, 'merge', '--abort');
-    } catch {
-      // best-effort — already in a clean state or no merge in progress
+    // Only a merge failure is a conflict; a checkout/tag failure is not. Abort
+    // the merge (best-effort) only when one was actually in progress.
+    if (step === 'merge') {
+      try {
+        git(repoRoot, 'merge', '--abort');
+      } catch {
+        // best-effort — already in a clean state or no merge in progress
+      }
     }
+    restoreBranch();
     return {
       ok: false,
-      conflict: true,
+      conflict: step === 'merge',
       reason: e instanceof Error ? e.message : String(e),
     };
   }
