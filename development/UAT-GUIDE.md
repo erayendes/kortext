@@ -13,22 +13,28 @@
 - **Sen +prime'sın:** hiçbir şey onayın olmadan kapıdan geçmez — UAT'ın özü bu.
 
 ### Adım 1 — Paketle + global kur (terminal, tek sefer)
+> ⚠️ Komut bloklarında **inline `# yorum` KULLANMA** — zsh'de `setopt interactivecomments` kapalıysa yorum komuta argüman olur (`npm pack #` → "Invalid tag name"). Aşağısı yorumsuz; satır satır çalıştır.
 ```bash
 cd /Users/erayendes/Documents/_codebase/kortext
-npm run build && npm pack                 # → kortext-3.1.0.tgz
-npm install -g ./kortext-3.1.0.tgz        # gerçek `kortext`'i global kurar (eskiyi ezer)
-kortext --version                         # 3.1.0 görmeli
-lsof -ti tcp:3200 | xargs kill 2>/dev/null; true   # eski :3200 daemon'u kapat
+npm run build
+npm pack
+npm install -g ./kortext-3.1.0.tgz
+kortext --version
+lsof -ti tcp:3200 | xargs kill 2>/dev/null
 ```
+Beklenen: `kortext --version` → `3.1.0`.
 
 ### Adım 2 — Proje klasörü + git bootstrap + başlat (terminal)
 ```bash
-cd <proje-klasörün>                       # boş ya da mevcut bir proje
-kortext init --skip-preflight             # .kortext/ + .gitignore + şablonlar (daemon başlatmaz)
-# BUILD fazı git ŞART (worktree + development→main merge). Bootstrap:
-git init -b main && git add -A && git commit -m "kortext scaffold" && git branch development
+cd <proje-klasörün>
+kortext init --skip-preflight
+git init -b main
+git add -A
+git commit -m "kortext scaffold"
+git branch development
 KORTEXT_DRIVE_ENABLED=1 KORTEXT_CLAUDE_BIN=$(which claude) kortext start .
 ```
+(`init` `.kortext/`'i önce kurar ki `.gitignore` commit'e girsin; git bootstrap **`main` + `development`** branch'lerini yaratır — build fazının ön şartı. ⚠️ Ajanlar gerçek kodu bu repoya yazar.)
 `init` `.kortext/`'i kurar (önce, ki `.gitignore` commit'e girsin); git bootstrap **`main` + `development` branch'lerini** yaratır (build fazının ön şartı); `start` daemon'u 3200'de başlatır + **tarayıcıyı açar**. `KORTEXT_DRIVE_ENABLED=1` build'i açar, `KORTEXT_CLAUDE_BIN` gerçek executor. Sonrası **tamamen GUI**. ⚠️ Ajanlar gerçek kodu bu repoya (worktree'lerde, `development`'a merge) yazar — kendi repon.
 
 ### Adım 3 — Onboarding (GUI)
