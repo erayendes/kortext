@@ -23,6 +23,11 @@ describe('resolveStartTarget', () => {
   it('no arg, empty registry, cwd has no .kortext → onboard hint', () => {
     expect(resolveStartTarget({ version: 1, projects: {} }, undefined, '/cwd', () => false)).toEqual({ kind: 'onboard' });
   });
+  it('no arg, empty registry, cwd has no .kortext → onboard (wizard trigger)', () => {
+    const reg = { version: 1, projects: {} } as any;
+    const target = resolveStartTarget(reg, undefined, '/tmp/empty', () => false);
+    expect(target.kind).toBe('onboard');
+  });
   it('no arg, populated registry, cwd not a project → list', () => {
     expect(resolveStartTarget(reg, undefined, '/cwd', () => false)).toEqual({ kind: 'list' });
   });

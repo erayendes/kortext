@@ -7,9 +7,9 @@ try {
     '',
     '  Kortext installed.',
     '',
-    '  Start a project:   cd <your-project> && kortext start',
-    '  See your projects: kortext list',
-    '  Help:              kortext help',
+    '  Start (opens the setup wizard): kortext start',
+    '  Your projects:                  kortext list',
+    '  Help:                           kortext help',
     '',
   ].join('\n');
   process.stdout.write(msg);

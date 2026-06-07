@@ -29,7 +29,17 @@ import { hooksRouter } from './routes/hooks.ts';
 import { integrationsRouter } from './routes/integrations.ts';
 import { envVarsRouter } from './routes/env-vars.ts';
 import { startCommand } from './cli/commands.ts';
-import { readProjectMeta, resolveBlueprintPaths } from './blueprint/io.ts';
+import {
+  readProjectMeta,
+  resolveBlueprintPaths,
+  writeBlueprint,
+  writeProjectMeta,
+} from './blueprint/io.ts';
+import { autoStartPendingAnalysis } from './orchestrator/auto-start-analysis.ts';
+import { createProjectAndLaunch } from './blueprint/create-project.ts';
+import { bootstrapGit } from './cli/bootstrap-git.ts';
+import { startProject } from './cli/cmd-start.ts';
+import { initCommand } from './cli/init.ts';
 import { createExecutor, type ExecutorKind } from './cli/executor-factory.ts';
 import { WorkflowDeployer } from './engine/executors/workflow-deployer.ts';
 import { getDb } from './db/client.ts';
@@ -102,6 +112,11 @@ if (indexSync.stepsWithoutPersona.length > 0) {
   );
 }
 
+// The ephemeral onboarding wizard daemon runs with KORTEXT_BOOTSTRAP=1: it hosts
+// onboarding in a scratch home, delegates project creation to its own dir
+// (blueprint `bootstrap` branch), and must NOT auto-start analysis for itself.
+const isBootstrapDaemon = process.env.KORTEXT_BOOTSTRAP === '1';
+
 // Reconcile zombie runs left behind by a previous crash/restart.
 const resumed = resumeOrphanedRuns(repos);
 if (resumed.recovered.length > 0) {
@@ -165,6 +180,74 @@ function defaultBinaryFor(executor: ExecutorKind): string | undefined {
   return undefined;
 }
 
+// Shared analysis trigger. Extracted from the blueprint route's `onApproved`
+// closure so BOTH the route (a human approving in the dashboard) AND the
+// boot-time auto-start path (a project spawned by the bootstrap wizard) can
+// kick the analysis → planning pipeline through the exact same logic.
+const triggerAnalysis = (workflowId: string) => {
+  // Read the executor choice from project.json (written by the wizard).
+  // Falls back to 'mock' when project.json is missing or malformed —
+  // safer default than crashing the trigger.
+  const projectMeta = readProjectMeta(
+    resolveBlueprintPaths(process.cwd()).projectJsonPath,
+  );
+  const executor = projectMeta?.executor ?? 'mock';
+  const executorBinary =
+    projectMeta?.executorBinary ?? defaultBinaryFor(executor);
+
+  console.log(
+    `[kortext] blueprint trigger: workflow=${workflowId} executor=${executor}` +
+      (executorBinary ? ` binary=${executorBinary}` : ''),
+  );
+
+  // Fire-and-forget: the wizard returns 201 immediately while the
+  // analysis pipeline runs in the background. Failures land in the
+  // run row + audit log; the dashboard surfaces them.
+  void startCommand({
+    repos,
+    workflowsDir,
+    workflowId,
+    executor,
+    executorBinary,
+    agentsDir,
+    safety: safetyGuards,
+    // Pause at each +prime artifact-approval gate and wait for the human
+    // (via the approval queue) before continuing. Same queue the REST
+    // routes use, so a dashboard answer resumes the run.
+    gateController: queueGateController,
+    // Onboarding runs analysis → planning (which derives the backlog), then
+    // stops. Building backlog items stays the gated driver's job.
+    chainThroughWorkflowId: 'planning-pipeline',
+  }).then((result) => {
+    if (!result.ok) {
+      console.warn(`[kortext] blueprint trigger failed: ${result.errorMessage}`);
+    } else {
+      console.log(
+        `[kortext] blueprint trigger ok: workflow=${workflowId} run=${result.runId} status=${result.status}`,
+      );
+    }
+  });
+};
+
+// Boot-time auto-start: a project materialized by the bootstrap wizard had its
+// blueprint approved in the wizard's scratch daemon, not here. The real daemon
+// (started in the chosen dir) must pick that up and begin analysis on boot.
+// Idempotent — guarded by an existing-run check, so a restart never re-triggers.
+// Skipped in bootstrap (wizard) mode: that scratch home has no approved
+// blueprint, and the blueprint route handles creation there instead.
+if (!isBootstrapDaemon) {
+  const bpPaths = resolveBlueprintPaths(process.cwd());
+  const auto = autoStartPendingAnalysis({
+    repos,
+    blueprintPath: bpPaths.blueprintPath,
+    projectJsonPath: bpPaths.projectJsonPath,
+    trigger: triggerAnalysis,
+  });
+  if (auto.started) {
+    console.log(`[kortext] auto-start: analysis ${auto.workflowId} triggered on boot`);
+  }
+}
+
 const app = express();
 
 app.use(express.json());
@@ -210,50 +293,25 @@ app.use(
   '/api',
   blueprintRouter({
     workspaceRoot: process.cwd(),
-    onApproved: (workflowId) => {
-      // Read the executor choice from project.json (written by the wizard).
-      // Falls back to 'mock' when project.json is missing or malformed —
-      // safer default than crashing the trigger.
-      const projectMeta = readProjectMeta(
-        resolveBlueprintPaths(process.cwd()).projectJsonPath,
-      );
-      const executor = projectMeta?.executor ?? 'mock';
-      const executorBinary =
-        projectMeta?.executorBinary ?? defaultBinaryFor(executor);
-
-      console.log(
-        `[kortext] blueprint trigger: workflow=${workflowId} executor=${executor}` +
-          (executorBinary ? ` binary=${executorBinary}` : ''),
-      );
-
-      // Fire-and-forget: the wizard returns 201 immediately while the
-      // analysis pipeline runs in the background. Failures land in the
-      // run row + audit log; the dashboard surfaces them.
-      void startCommand({
-        repos,
-        workflowsDir,
-        workflowId,
-        executor,
-        executorBinary,
-        agentsDir,
-        safety: safetyGuards,
-        // Pause at each +prime artifact-approval gate and wait for the human
-        // (via the approval queue) before continuing. Same queue the REST
-        // routes use, so a dashboard answer resumes the run.
-        gateController: queueGateController,
-        // Onboarding runs analysis → planning (which derives the backlog), then
-        // stops. Building backlog items stays the gated driver's job.
-        chainThroughWorkflowId: 'planning-pipeline',
-      }).then((result) => {
-        if (!result.ok) {
-          console.warn(`[kortext] blueprint trigger failed: ${result.errorMessage}`);
-        } else {
-          console.log(
-            `[kortext] blueprint trigger ok: workflow=${workflowId} run=${result.runId} status=${result.status}`,
-          );
-        }
-      });
-    },
+    // KORTEXT_BOOTSTRAP=1 marks the ephemeral wizard daemon: the chosen dir is
+    // materialized into its own project (createProject) rather than written in
+    // place, and the real daemon there auto-starts analysis on boot.
+    bootstrap: isBootstrapDaemon,
+    createProject: (input) =>
+      createProjectAndLaunch(input, {
+        packageRoot: process.env.KORTEXT_PACKAGE_ROOT ?? process.cwd(),
+        init: (dir) => initCommand({ targetDir: dir, force: false }),
+        bootstrapGit: (dir) => bootstrapGit(dir),
+        startProject: (dir, d) => {
+          const r = startProject(dir, { packageRoot: d.packageRoot, cwd: d.cwd });
+          return r.ok
+            ? { ok: true, url: r.url, slug: r.slug, port: r.port }
+            : { ok: false, message: r.message };
+        },
+        writeBlueprint,
+        writeProjectMeta,
+      }),
+    onApproved: triggerAnalysis,
   }),
 );
 // §5.16 — the manual "start button": POST /api/drive runs one autonomous driver

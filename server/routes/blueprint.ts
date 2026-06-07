@@ -18,6 +18,14 @@ import { existsSync, statSync } from 'node:fs';
 export type BlueprintRouterDeps = {
   workspaceRoot: string;
   onApproved?: (workflowId: string) => Promise<void> | void;
+  bootstrap?: boolean; // this daemon is the ephemeral wizard
+  createProject?: (input: {
+    projectDir: string;
+    meta: ProjectMeta;
+    blueprintBody: string;
+  }) =>
+    | { ok: true; handoffUrl: string; projectDir: string; gitWarning?: string }
+    | { ok: false; message: string };
 };
 
 /**
@@ -106,7 +114,10 @@ export function blueprintRouter(deps: BlueprintRouterDeps): Router {
         : null;
 
     const target = resolveBlueprintTarget(body.projectDir, deps.workspaceRoot);
+    // In bootstrap (wizard) mode the chosen directory is materialized by
+    // createProject, so it need not exist yet — skip the existence check.
     if (
+      !deps.bootstrap &&
       target.isElsewhere &&
       (!existsSync(target.root) || !statSync(target.root).isDirectory())
     ) {
@@ -115,6 +126,49 @@ export function blueprintRouter(deps: BlueprintRouterDeps): Router {
 
     if (errors.length > 0 || projectType === null) {
       res.status(422).json({ error: 'validation_failed', details: errors });
+      return;
+    }
+
+    // Single source of truth for the project metadata — shared by the bootstrap
+    // (wizard) path and the in-place path below (one createdAt timestamp, no
+    // field drift between the two object literals).
+    const meta: ProjectMeta = {
+      name: projectName,
+      code: projectCode,
+      type: projectType,
+      platforms,
+      githubRepo,
+      executor,
+      executorBinary,
+      createdAt: Date.now(),
+    };
+
+    // Bootstrap (wizard) mode: the directory chosen in the GUI becomes a brand
+    // new project with its own daemon. Delegate the whole create-and-launch and
+    // return a handoffUrl the frontend redirects to.
+    if (deps.bootstrap && deps.createProject) {
+      const chosen = typeof body.projectDir === 'string' ? body.projectDir.trim() : '';
+      if (chosen.length === 0) {
+        res.status(422).json({
+          error: 'validation_failed',
+          details: ['projectDir (project directory) is required'],
+        });
+        return;
+      }
+      const created = deps.createProject({ projectDir: chosen, meta, blueprintBody });
+      if (!created.ok) {
+        res.status(500).json({ error: 'create_failed', message: created.message });
+        return;
+      }
+      res.status(201).json({
+        ok: true,
+        triggerWorkflowId: triggerWorkflowIdFor(projectType),
+        project: meta,
+        projectDir: created.projectDir,
+        initializedElsewhere: false,
+        handoffUrl: created.handoffUrl,
+        ...(created.gitWarning ? { gitWarning: created.gitWarning } : {}),
+      });
       return;
     }
 
@@ -128,16 +182,6 @@ export function blueprintRouter(deps: BlueprintRouterDeps): Router {
       return;
     }
 
-    const meta: ProjectMeta = {
-      name: projectName,
-      code: projectCode,
-      type: projectType,
-      platforms,
-      githubRepo,
-      executor,
-      executorBinary,
-      createdAt: Date.now(),
-    };
     try {
       writeProjectMeta(target.paths.projectJsonPath, meta);
     } catch (err) {

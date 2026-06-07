@@ -24,18 +24,13 @@ lsof -ti tcp:3200 | xargs kill 2>/dev/null
 ```
 Beklenen: `kortext --version` → `3.1.0`.
 
-### Adım 2 — Proje klasörü + git bootstrap + başlat (terminal)
+### Adım 2 — Başlat (terminal) → kurulum sihirbazı (GUI)
 ```bash
-cd <proje-klasörün>
-kortext init --skip-preflight
-git init -b main
-git add -A
-git commit -m "kortext scaffold"
-git branch development
-KORTEXT_DRIVE_ENABLED=1 KORTEXT_CLAUDE_BIN=$(which claude) kortext start .
+KORTEXT_DRIVE_ENABLED=1 KORTEXT_CLAUDE_BIN=$(which claude) kortext start
 ```
-(`init` `.kortext/`'i önce kurar ki `.gitignore` commit'e girsin; git bootstrap **`main` + `development`** branch'lerini yaratır — build fazının ön şartı. ⚠️ Ajanlar gerçek kodu bu repoya yazar.)
-`init` `.kortext/`'i kurar (önce, ki `.gitignore` commit'e girsin); git bootstrap **`main` + `development` branch'lerini** yaratır (build fazının ön şartı); `start` daemon'u 3200'de başlatır + **tarayıcıyı açar**. `KORTEXT_DRIVE_ENABLED=1` build'i açar, `KORTEXT_CLAUDE_BIN` gerçek executor. Sonrası **tamamen GUI**. ⚠️ Ajanlar gerçek kodu bu repoya (worktree'lerde, `development`'a merge) yazar — kendi repon.
+`kortext start` (path **yok**) herhangi bir yerden çalışır → kurulum **sihirbazını tarayıcıda açar**. Proje klasörünü **sihirbazda seçersin** — terminalde `cd` / `init` / git komutu yok. `KORTEXT_DRIVE_ENABLED=1` build'i açar, `KORTEXT_CLAUDE_BIN` gerçek executor. Sonrası **tamamen GUI**. ⚠️ Ajanlar gerçek kodu seçtiğin repoya (worktree'lerde, `development`'a merge) yazar — kendi repon.
+
+> Build fazı git ister; artık sihirbaz projeyi oluştururken git'i otomatik kurar (git init + ilk commit + `development` dalı). Mevcut git repo'su olan klasörlerde sadece `development` dalı garanti edilir — elle git komutu gerekmez.
 
 ### Adım 3 — Onboarding (GUI)
 Sihirbazda: proje **adı** + **kod** (örn. `DV`) + **agent = Claude** (binary `/opt/homebrew/bin/claude`) + **BRD** (fikrini sade dille; sıralı özellikler → doğal bağımlılık). Onayla → motor **analiz**'i başlatır.

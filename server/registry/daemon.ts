@@ -47,7 +47,13 @@ export function spawnDaemon(cmd: DaemonCommand): number {
   const logFd = openSync(join(logDir, 'daemon.log'), 'a');
   const child = spawn(cmd.command, cmd.args, {
     cwd: cmd.cwd,
-    env: { ...process.env, ...cmd.env },
+    // Clear KORTEXT_BOOTSTRAP from the inherited env BEFORE applying cmd.env.
+    // A real project daemon spawned from INSIDE the wizard daemon (which runs
+    // with KORTEXT_BOOTSTRAP=1) would otherwise inherit the flag via
+    // ...process.env and wrongly suppress its own boot auto-start. The wizard's
+    // own launch still wins because cmd-bootstrap sets KORTEXT_BOOTSTRAP in
+    // cmd.env, which is spread last.
+    env: { ...process.env, KORTEXT_BOOTSTRAP: '', ...cmd.env },
     detached: true,
     stdio: ['ignore', logFd, logFd],
   });
