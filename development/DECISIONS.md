@@ -955,3 +955,10 @@ Paralel-`start` yarış kilidi (`server/registry/lock.ts`, sync O_EXCL + Atomics
 
 ### 7.9 Süreç notu
 Bu oturumun büyük işi paralel keşif ajanları (haritalama) → AskUserQuestion (mimari karar) → TDD subagent'ları (uygulama) → final holistic review (her blok) döngüsüyle yürütüldü. Final review'lar **gerçek prod bug'ları yakaladı:** epic-id proje-kök çözümü (1 seviye yanlış), handover driver-thread eksikliği + `+prime` sentetik handle reddi, fire-and-forget consumer, çift preprod sorusu — hepsi düzeltildi + regresyon testi eklendi. Subagent çıktısını körü körüne kabul etmemenin değeri tekrar tekrar kanıtlandı.
+
+### 7.10 Follow-up implementasyonu (2026-06-07 #2) — gerçek prod merge + tam sayfalama + vocab
+- **Gerçek git prod release (§7.4'ün mock'unu gerçekledi):** `deployProd` artık gerçek `development→main` merge + annotated version tag yapıyor (`gitProdRelease`, `repoRoot` enjekte). Idempotent (tag-var / ancestor), ilk-release `main`'i türetir, çakışma→`merge --abort`+`conflict:true`→preprod tüketicisi bug açar. **Prod push (CI) hâlâ mock seam** (gerçek hedef yok). Final review: prod merge sonrası sunucu orijinal branch'e geri döner (`main`'de bırakmaz); `conflict` bayrağı yalnız gerçek merge çakışmasında.
+- **Tam sayfalama (§7.6'nın "küçük adım"ını tamamladı):** yeni `GET /api/backlog/aggregate` — epic roll-up + status/version/assignee sayıları + per-version açık-iş sayısı, hepsi sunucu-tarafı TÜM item üzerinden (birkaç GROUP BY). Board/Dashboard roll-up + facet'leri aggregate'ten okur (kart sayfalamasından bağımsız doğru); kartlar "Daha fazla yükle" ile sayfalanır (artık 2000 cap yok). Final review: aktif-version flicker'ı aggregate `openByVersion`'dan giderildi; EpicDrawer ilerlemesi aggregate'ten (rail kartıyla tutarlı).
+- **Vocab toleransı belgelendi:** planning-pipeline'a motor-kabul-eder notu (`depends_on`/`feature`/`chore`/`todo`/`epic:` etiketi normalize edilir).
+- **Doğrulanan zaten-bitmişler:** dashboard boş-durum dostça mesajları (#6) + CLI allocatePort mesajı/persist-before-spawn (#9) bu blokta zaten mevcuttu — Eray onayıyla ek yapılmadı.
+- **Durum:** 977 test yeşil, typecheck + build temiz.

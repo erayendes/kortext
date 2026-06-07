@@ -7,7 +7,15 @@
 
 ---
 
-## ⭐ Şu an (2026-06-07) — Preprod substratı + CANLI KOŞU TEYİDİ TAMAM ✅
+## ⭐ Şu an (2026-06-07 #2) — Gerçek prod merge + tam sayfalama + vocab TAMAM ✅
+
+Eray "3,5,6,8,9'u yap" dedi → sonuç: **#3 gerçek git prod release** (`deployProd` artık gerçek `development→main` merge + version tag; çakışma→bug; idempotent; sunucu orijinal branch'e döner; prod-push CI hâlâ mock). **#5 tam sayfalama** (`GET /api/backlog/aggregate` — roll-up/facet/per-version açık-iş sunucu-tarafı + "Daha fazla yükle" kart sayfalaması). **#8 vocab toleransı belgelendi**. **#6 (dashboard boş-durum) + #9 (CLI nüansları) zaten bitmişti** — Eray onayıyla ek yapılmadı. Final review 4 bulgu buldu+düzeltildi (branch-restore, conflict-flag scope, drawer-progress aggregate, version-flicker). Detay [DECISIONS §7.10](./DECISIONS.md).
+
+**Durum:** **977 test yeşil**, typecheck + build temiz. Bu blok +4 commit (`f2fb20c`..`bab0c77`), **push EDİLMEDİ** (toplam bekleyen: bu blok). **SIRADAKİ:** push (sen "push" deyince) + `npm publish`.
+
+---
+
+## Önceki bu-devir (2026-06-07) — Preprod substratı + CANLI KOŞU TEYİDİ TAMAM ✅
 
 **Preprod substratı:** §5.11 zinciri tamamlandı — `deployPreprod` + `deployProd` (mock-first) Deployer'a eklendi; version staging-onaylanınca `deployPreprod`→`preprod-approval` sorusu; `consumePreprodApproval` (onay→epic'ler `preprod_approved` + `deployProd` mekanik release; red→bug; idempotent) + route. Zincir preprod-onayında biter (prod gate'i yok, §5.11). Gerçek git main-merge/tag mock `deployProd`'a foldlandı (follow-up).
 
@@ -154,15 +162,15 @@ Eray'ın seçtiği 3 alan ([plan](../docs/superpowers/plans/2026-06-06-phase3-en
 - [ ] **Senin GUI-UAT turun** — paketlenmiş akışı tarayıcıda gez (ben terminalden doğruladım: 2 daemon HTTP 200).
 
 **🔧 Motor follow-up'ları**
-- [ ] **Gerçek git main-merge/tag** — `deployProd` şu an mock; §5.11'in `development→main` merge + semver tag + prod push'unu gerçek git ile yapan implementasyon (`WorkflowDeployer.deployProd` / prod-deployment-cycle workflow).
+- [ ] **Prod push (CI) substratı** — `deployProd` artık gerçek `development→main` merge + tag yapıyor ✅; ama `git push origin main`/CI tetikleme hâlâ yok (gerçek prod hedefi yok). Gerçek prod altyapısı gelince ekle.
 - [ ] **Full planning pipeline canlı dayanıklılık** — 9-adım gerçek-LLM koşusunda adım-zaman-aşımı + hung-claude tespiti (canlı teyitte bir zenginleştirme adımı ~70dk askıda kaldı, kill). + auto-approve poller ile uçtan-uca canlı koşu.
-- [ ] **Tam sayfalama** — şu an küçük adım (total+offset+"N of M", filtre-öncelik). ~500+ item olunca ayrı aggregate endpoint (epic roll-up tüm item üzerinden) + sayfalı kart fetch. [scope raporu mevcut].
 
 **🧹 Küçük / opsiyonel**
-- [ ] Dashboard "Active work / For review" boşken davranışı netleştir (boş = doğru mu, geçmiş koşu mu).
 - [ ] Concurrency tavanları (`DRIVE_MAX_ITEMS=6`, `DRIVE_MAX_WORKTREES=12`) — Eray isterse ayarlanır.
-- [ ] İçerik kalibrasyonu (persona/workflow ince ayar) — ölü ref'ler temizlendi; gerçek koşularda davranış gözlemiyle süren bir tur.
-- [ ] (final review düşük-öncelik) new-path spawn-fail persist nüansı; allocatePort havuz-tükenme UX'i.
+- [ ] İçerik kalibrasyonu (persona/workflow ince ayar) — ölü ref'ler temizlendi + vocab toleransı belgelendi; gerçek koşularda davranış gözlemiyle süren bir tur.
+- [ ] Sayfalama: EpicDrawer çocuk LİSTESİ hâlâ yüklü sayfadan (ilerleme sayısı aggregate'ten doğru; liste "Daha fazla yükle" ile tamamlanır) — büyük epic'lerde tam liste için ufak follow-up.
+
+> **Biten (bu blok):** gerçek git prod merge+tag (#3), tam sayfalama/aggregate (#5), vocab (#8); dashboard boş-durum (#6) + CLI nüansları (#9) zaten yeterliydi.
 
 ---
 
