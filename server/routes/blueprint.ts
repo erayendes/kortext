@@ -129,6 +129,20 @@ export function blueprintRouter(deps: BlueprintRouterDeps): Router {
       return;
     }
 
+    // Single source of truth for the project metadata — shared by the bootstrap
+    // (wizard) path and the in-place path below (one createdAt timestamp, no
+    // field drift between the two object literals).
+    const meta: ProjectMeta = {
+      name: projectName,
+      code: projectCode,
+      type: projectType,
+      platforms,
+      githubRepo,
+      executor,
+      executorBinary,
+      createdAt: Date.now(),
+    };
+
     // Bootstrap (wizard) mode: the directory chosen in the GUI becomes a brand
     // new project with its own daemon. Delegate the whole create-and-launch and
     // return a handoffUrl the frontend redirects to.
@@ -141,16 +155,6 @@ export function blueprintRouter(deps: BlueprintRouterDeps): Router {
         });
         return;
       }
-      const meta: ProjectMeta = {
-        name: projectName,
-        code: projectCode,
-        type: projectType,
-        platforms,
-        githubRepo,
-        executor,
-        executorBinary,
-        createdAt: Date.now(),
-      };
       const created = deps.createProject({ projectDir: chosen, meta, blueprintBody });
       if (!created.ok) {
         res.status(500).json({ error: 'create_failed', message: created.message });
@@ -178,16 +182,6 @@ export function blueprintRouter(deps: BlueprintRouterDeps): Router {
       return;
     }
 
-    const meta: ProjectMeta = {
-      name: projectName,
-      code: projectCode,
-      type: projectType,
-      platforms,
-      githubRepo,
-      executor,
-      executorBinary,
-      createdAt: Date.now(),
-    };
     try {
       writeProjectMeta(target.paths.projectJsonPath, meta);
     } catch (err) {
