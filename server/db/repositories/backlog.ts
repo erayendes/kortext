@@ -38,6 +38,15 @@ function rowToItem(row: Row): BacklogItem {
   });
 }
 
+export type BacklogAggregate = {
+  epics: BacklogItem[];
+  epicProgress: Record<string, { total: number; done: number }>;
+  statusCounts: Record<string, number>;
+  versions: string[];
+  assignees: string[];
+  total: number;
+};
+
 export class BacklogRepository {
   private readonly insertStmt;
   private readonly selectByIdStmt;
@@ -51,6 +60,12 @@ export class BacklogRepository {
   private readonly deleteStmt;
   private readonly countStmt;
   private readonly countFilteredStmt;
+  private readonly aggregateEpicsStmt;
+  private readonly aggregateStatusCountsStmt;
+  private readonly aggregateEpicProgressStmt;
+  private readonly aggregateVersionsStmt;
+  private readonly aggregateAssigneesStmt;
+  private readonly aggregateTotalStmt;
 
   constructor(private readonly db: Database.Database) {
     this.insertStmt = db.prepare(`
@@ -112,6 +127,30 @@ export class BacklogRepository {
         AND (@owner IS NULL OR owner = @owner)
         AND (@parent_id IS NULL OR parent_id = @parent_id)
     `);
+    // Aggregate queries (used by GET /api/backlog/aggregate)
+    this.aggregateEpicsStmt = db.prepare(
+      `SELECT * FROM backlog_items WHERE type = 'epic' ORDER BY created_at ASC`,
+    );
+    this.aggregateStatusCountsStmt = db.prepare(
+      `SELECT status, COUNT(*) as n FROM backlog_items GROUP BY status`,
+    );
+    this.aggregateEpicProgressStmt = db.prepare(`
+      SELECT parent_id,
+             COUNT(*) as total,
+             SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) as done
+      FROM backlog_items
+      WHERE parent_id IS NOT NULL
+      GROUP BY parent_id
+    `);
+    this.aggregateVersionsStmt = db.prepare(
+      `SELECT DISTINCT version FROM backlog_items WHERE version IS NOT NULL AND version != '' ORDER BY version ASC`,
+    );
+    this.aggregateAssigneesStmt = db.prepare(
+      `SELECT DISTINCT owner FROM backlog_items WHERE owner IS NOT NULL AND owner != '' AND type != 'epic' ORDER BY owner ASC`,
+    );
+    this.aggregateTotalStmt = db.prepare(
+      `SELECT COUNT(*) as n FROM backlog_items`,
+    );
   }
 
   create(input: BacklogItemInsert): BacklogItem {
@@ -269,6 +308,40 @@ export class BacklogRepository {
   delete(id: string): boolean {
     const result = this.deleteStmt.run(id);
     return result.changes > 0;
+  }
+
+  /**
+   * Compute the full-table aggregate in a small number of SQL queries.
+   * Used by GET /api/backlog/aggregate so the board and dashboard can derive
+   * epic roll-up %, facet filter option lists, and status counts without
+   * loading all row payloads into JS.
+   */
+  aggregate(): BacklogAggregate {
+    const epicRows = this.aggregateEpicsStmt.all() as Row[];
+    const epics = epicRows.map(rowToItem);
+
+    const statusRows = this.aggregateStatusCountsStmt.all() as { status: string; n: number }[];
+    const statusCounts: Record<string, number> = {};
+    for (const r of statusRows) statusCounts[r.status] = r.n;
+
+    const progressRows = this.aggregateEpicProgressStmt.all() as {
+      parent_id: string;
+      total: number;
+      done: number;
+    }[];
+    const epicProgress: Record<string, { total: number; done: number }> = {};
+    for (const r of progressRows) epicProgress[r.parent_id] = { total: r.total, done: r.done };
+
+    const versionRows = this.aggregateVersionsStmt.all() as { version: string }[];
+    const versions = versionRows.map((r) => r.version);
+
+    const assigneeRows = this.aggregateAssigneesStmt.all() as { owner: string }[];
+    const assignees = assigneeRows.map((r) => r.owner);
+
+    const totalRow = this.aggregateTotalStmt.get() as { n: number };
+    const total = totalRow.n;
+
+    return { epics, epicProgress, statusCounts, versions, assignees, total };
   }
 
   countByStatus(status: BacklogStatus | null = null): number {

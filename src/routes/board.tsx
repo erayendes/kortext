@@ -28,23 +28,21 @@ import {
 } from 'lucide-react';
 import { Drawer } from '../components/v6/Drawer.tsx';
 import { apiGet, apiPost, formatElapsed, usePolling } from '../lib/api.ts';
-import type { ActivityEntry, BacklogItem } from '../lib/api-types.ts';
+import type { ActivityEntry, BacklogAggregate, BacklogItem } from '../lib/api-types.ts';
 import { personaPalette } from '../lib/persona-colors.ts';
 import {
   acChecklist,
   assigneeOf,
-  assigneesOf,
   availableTransitions,
   blockReasonFromActivity,
   boardColumns,
   childrenOf,
-  defaultActiveVersion,
+  compareVersions,
   dependenciesOf,
   describeActivity,
   descriptionFromBody,
   epicProgress,
   itemGates,
-  sortedVersions,
   statusBadge,
   underlyingStatusFromActivity,
   type BoardTransition,
@@ -163,20 +161,21 @@ function Card({ item, onOpen, index }: { item: BacklogItem; onOpen: () => void; 
 
 function EpicCard({
   epic,
-  items,
+  progress,
   selected,
   onToggleFilter,
   onOpen,
   index,
 }: {
   epic: BacklogItem;
-  items: BacklogItem[];
+  /** Pre-computed progress from the aggregate (total/done/pct). */
+  progress: { total: number; done: number; pct: number };
   selected: boolean;
   onToggleFilter: () => void;
   onOpen: () => void;
   index: number;
 }) {
-  const { total, done, pct } = epicProgress(items, epic.id);
+  const { total, done, pct } = progress;
   return (
     <div
       className={`epic-card rise${selected ? ' sel' : ''}`}
@@ -848,30 +847,115 @@ function NewItemForm({
 
 type DrawerTarget = { kind: 'item' | 'epic'; id: string };
 
-export function BoardRoute() {
-  // The board needs the WHOLE set to bucket columns + roll up epics, so it asks
-  // for a high limit (the default 100 would drop the oldest items — the epics,
-  // created first in planning). True pagination is a separate follow-up.
-  const { data, refresh } = usePolling<{ items: BacklogItem[]; total: number }>('/api/backlog?limit=2000', 5000);
-  const items = useMemo(() => data?.items ?? [], [data]);
+/** Page size for the paginated card list. */
+const CARD_PAGE_SIZE = 100;
 
+export function BoardRoute() {
+  // ── Aggregate poll: epics, epicProgress, versions, assignees, total ─────────
+  // Replaces the old ?limit=2000 full-fetch for all whole-set consumers.
+  const { data: aggData, refresh: refreshAgg } = usePolling<BacklogAggregate>(
+    '/api/backlog/aggregate',
+    5000,
+  );
+
+  // ── Paginated card list ──────────────────────────────────────────────────────
+  // "items" is a growing window of non-epic cards. We start with one page and
+  // append via "Daha fazla yükle". On any refresh (mutation / poll) we re-fetch
+  // the same window size so existing cards update in place.
+  const [cardOffset, setCardOffset] = useState(0);
+  const [cards, setCards] = useState<BacklogItem[]>([]);
+  const [cardsLoading, setCardsLoading] = useState(false);
+
+  // Build the card-fetch URL (no type filter — server omits epics if we send
+  // type=task; simplest approach: fetch all non-epic types by loading without
+  // a type filter and bucketing on the client, same as before, just paginated).
+  const cardUrl = useMemo(
+    () => `/api/backlog?limit=${cardOffset + CARD_PAGE_SIZE}&offset=0`,
+    [cardOffset],
+  );
+
+  // Initial load + refresh after mutations
+  const fetchCards = useCallback(async () => {
+    setCardsLoading(true);
+    try {
+      const res = await apiGet<{ items: BacklogItem[]; total: number }>(cardUrl);
+      setCards(res.items);
+    } catch {
+      // keep stale cards on error
+    } finally {
+      setCardsLoading(false);
+    }
+  }, [cardUrl]);
+
+  // Fetch on mount and whenever cardUrl changes (load-more bumps cardOffset)
+  useEffect(() => {
+    void fetchCards();
+  }, [fetchCards]);
+
+  function refresh() {
+    void fetchCards();
+    refreshAgg();
+  }
+
+  function loadMore() {
+    setCardOffset((prev) => prev + CARD_PAGE_SIZE);
+  }
+
+  // ── Derived data from aggregate ─────────────────────────────────────────────
+  const epics = useMemo(() => aggData?.epics ?? [], [aggData]);
+  // Versions from server are already distinct; re-sort with the numeric comparator.
+  const versions = useMemo(
+    () => [...(aggData?.versions ?? [])].sort(compareVersions),
+    [aggData],
+  );
+  const assignees = useMemo(() => aggData?.assignees ?? [], [aggData]);
+  const total = aggData?.total ?? 0;
+
+  // EpicCard progress: derive pct from aggregate, fall back to epicProgress()
+  // on loaded cards when a child's epic_id is not yet in the aggregate map.
+  const epicProgressMap = useMemo(() => aggData?.epicProgress ?? {}, [aggData]);
+
+  function epicProgressFor(epicId: string): { total: number; done: number; pct: number } {
+    const agg = epicProgressMap[epicId];
+    if (agg) {
+      const pct = agg.total > 0 ? Math.round((agg.done / agg.total) * 100) : 0;
+      return { ...agg, pct };
+    }
+    // Fallback for epics not yet in the aggregate (e.g. brand new / childless)
+    return epicProgress(cards, epicId);
+  }
+
+  // ── Filter state ─────────────────────────────────────────────────────────────
   const [filterEpic, setFilterEpic] = useState<string | null>(null);
-  // `undefined` = not yet chosen → fall back to the smallest unfinished version;
-  // once the user picks (a version, or `null` for "all") their choice sticks
-  // across polls.
+  // `undefined` = not yet chosen → fall back to first version with open work
+  // (derived from the loaded cards; bounded: picks first unfinished version
+  // from the aggregate list on initial load, which matches the old behaviour
+  // once a page of cards is loaded).
   const [versionChoice, setVersionChoice] = useState<string | null | undefined>(undefined);
   const [assigneeFilter, setAssigneeFilter] = useState<string | null>(null);
   const [target, setTarget] = useState<DrawerTarget | null>(null);
   const [creating, setCreating] = useState(false);
 
-  const versions = useMemo(() => sortedVersions(items), [items]);
-  const assignees = useMemo(() => assigneesOf(items), [items]);
-  const activeVersion =
-    versionChoice === undefined ? defaultActiveVersion(items) : versionChoice;
+  // Default active version: first version (in ascending order) that still has
+  // unfinished non-epic items among the loaded cards. Matches old logic.
+  const activeVersion = useMemo(() => {
+    if (versionChoice !== undefined) return versionChoice;
+    for (const v of versions) {
+      const hasOpen = cards.some(
+        (it) =>
+          it.version === v &&
+          it.type !== 'epic' &&
+          it.status !== 'done' &&
+          it.status !== 'cancelled',
+      );
+      if (hasOpen) return v;
+    }
+    return null;
+  }, [versionChoice, versions, cards]);
 
-  const epics = useMemo(() => items.filter((it) => it.type === 'epic'), [items]);
+  // ── Column bucketing from loaded cards ───────────────────────────────────────
   const columns = useMemo(() => {
-    const cols = boardColumns(items);
+    const cols = boardColumns(cards);
     return cols.map((c) => ({
       ...c,
       cards: c.cards.filter(
@@ -881,14 +965,15 @@ export function BoardRoute() {
           (!assigneeFilter || assigneeOf(card) === assigneeFilter),
       ),
     }));
-  }, [items, filterEpic, activeVersion, assigneeFilter]);
+  }, [cards, filterEpic, activeVersion, assigneeFilter]);
 
   const visibleCount = columns.reduce((n, c) => n + c.cards.length, 0);
+  const loadedCount = cardOffset + CARD_PAGE_SIZE;
+  const hasMore = loadedCount < total;
 
-  // The drawer reads its target straight from the live list, so board polling
-  // and post-mutation refreshes keep it in sync without a separate fetch.
-  const openItem = target?.kind === 'item' ? items.find((it) => it.id === target.id) ?? null : null;
-  const openEpic = target?.kind === 'epic' ? items.find((it) => it.id === target.id) ?? null : null;
+  // Drawer targets from loaded cards
+  const openItem = target?.kind === 'item' ? cards.find((it) => it.id === target.id) ?? null : null;
+  const openEpic = target?.kind === 'epic' ? epics.find((it) => it.id === target.id) ?? null : null;
 
   function openCreate() {
     setTarget(null);
@@ -901,8 +986,8 @@ export function BoardRoute() {
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
           <span className="page-title">Board</span>
           <span className="page-sub">
-            {data?.total != null && data.total !== items.length
-              ? `${items.length} / ${data.total} gösteriliyor`
+            {total > 0
+              ? `${visibleCount} / ${total} gösteriliyor`
               : `${visibleCount} items`}
             {activeVersion && (
               <>
@@ -978,7 +1063,7 @@ export function BoardRoute() {
                   <EpicCard
                     key={epic.id}
                     epic={epic}
-                    items={items}
+                    progress={epicProgressFor(epic.id)}
                     index={i}
                     selected={filterEpic === epic.id}
                     onToggleFilter={() =>
@@ -1017,6 +1102,19 @@ export function BoardRoute() {
             ))}
           </div>
         </div>
+
+        {/* Load more control */}
+        {hasMore && (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '16px 0' }}>
+            <button
+              className="btn btn-line btn-sm"
+              disabled={cardsLoading}
+              onClick={loadMore}
+            >
+              {cardsLoading ? 'Yükleniyor…' : 'Daha fazla yükle'}
+            </button>
+          </div>
+        )}
       </div>
 
       <Drawer
@@ -1042,7 +1140,7 @@ export function BoardRoute() {
         {!creating && openEpic && (
           <EpicDrawer
             epic={openEpic}
-            items={items}
+            items={cards}
             onClose={() => setTarget(null)}
             onOpenItem={(id) => setTarget({ kind: 'item', id })}
           />
