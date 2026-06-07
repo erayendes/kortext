@@ -224,6 +224,15 @@ function validateRawItems(
         .filter((v): v is string => typeof v === 'string');
     }
 
+    // Alias: agents naturally reach for `depends_on` (proven in live runs) — it is
+    // semantically `blocked_by` ("this item depends on / is blocked by those").
+    // Accept it when an explicit `blocked_by` wasn't given, so dependency
+    // generation + auto-block work regardless of which field name the LLM picks.
+    if (parsed.blocked_by === undefined && Array.isArray(obj['depends_on'])) {
+      parsed.blocked_by = (obj['depends_on'] as unknown[])
+        .filter((v): v is string => typeof v === 'string');
+    }
+
     // Hierarchy + model: map to real columns instead of frontmatter.
     if (typeof obj['version'] === 'string' && obj['version'].trim() !== '') {
       parsed.version = obj['version'].trim();
