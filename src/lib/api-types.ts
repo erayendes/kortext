@@ -133,6 +133,20 @@ export type BacklogItem = {
   updated_at: number;
 };
 
+/**
+ * Server-side aggregate for whole-set consumers: epic roll-up, facet filters,
+ * status counts, and version/assignee option lists.
+ * Returned by GET /api/backlog/aggregate.
+ */
+export type BacklogAggregate = {
+  epics: BacklogItem[];
+  epicProgress: Record<string, { total: number; done: number }>;
+  statusCounts: Record<string, number>;
+  versions: string[];
+  assignees: string[];
+  total: number;
+};
+
 /** One audit-log row, as returned by GET /api/backlog/:id/activity. */
 export type ActivityEntry = {
   id: number;

@@ -10,12 +10,13 @@
  * Pure derivations (epic progress, status counts, run→pill, activity merge) are
  * exported so `tests/dashboard.web.test.tsx` can pin them without rendering.
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { RefreshCw, SlidersHorizontal, Play, Lock } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
-import { usePolling, apiPost } from '../lib/api.ts';
+import { usePolling, apiGet, apiPost } from '../lib/api.ts';
 import type {
   ActivityEntry,
+  BacklogAggregate,
   BacklogItem,
   DecisionIndex,
   Handover,
@@ -386,12 +387,22 @@ export function DashboardRoute() {
 
 function DashboardView({ onRefresh }: { onRefresh: () => void }) {
   const runsPoll = usePolling<{ runs: Run[] }>('/api/runs', 3000);
-  // High limit so epic progress sees every item (the default 100 drops the
-  // oldest — the epics themselves). Matches the Board fetch.
-  const backlogPoll = usePolling<{ items: BacklogItem[]; total: number }>('/api/backlog?limit=2000', 10000);
+  // Aggregate: replaces the old ?limit=2000 full-fetch for whole-set consumers
+  // (epic progress, status bars). No row payload — server-side GROUP BY.
+  const aggPoll = usePolling<BacklogAggregate>('/api/backlog/aggregate', 10000);
+
+  // Paginated card list for ActiveWork / ReviewQueue item lookups.
+  // A single page is enough: active runs reference recent items which are
+  // in the first 100 by created_at DESC.
+  const [cards, setCards] = useState<BacklogItem[]>([]);
+  useEffect(() => {
+    void apiGet<{ items: BacklogItem[] }>('/api/backlog?limit=100')
+      .then((r) => setCards(r.items))
+      .catch(() => {});
+  }, []);
 
   const runs = runsPoll.data?.runs ?? [];
-  const items = backlogPoll.data?.items ?? [];
+  const agg = aggPoll.data;
   const active = runs.filter((r) => ACTIVE_RUN_STATUSES.includes(r.status));
 
   return (
@@ -412,7 +423,7 @@ function DashboardView({ onRefresh }: { onRefresh: () => void }) {
           </div>
         </div>
 
-        <StatsCards items={items} loading={backlogPoll.loading} error={backlogPoll.error} />
+        <StatsCards agg={agg} loading={aggPoll.loading} error={aggPoll.error} />
 
         <div className="sec-h">
           <span className="sec-t">Active work</span>
@@ -422,12 +433,12 @@ function DashboardView({ onRefresh }: { onRefresh: () => void }) {
         </div>
         <ActiveWork
           active={active}
-          items={items}
+          items={cards}
           loading={runsPoll.loading && !runsPoll.data}
           error={runsPoll.error}
         />
 
-        <ReviewQueue runs={runs} items={items} />
+        <ReviewQueue runs={runs} items={cards} />
       </div>
 
       <ActivityTimeline />
@@ -438,18 +449,49 @@ function DashboardView({ onRefresh }: { onRefresh: () => void }) {
 // ──────────────────────────────── stats ──────────────────────────────────────
 
 function StatsCards({
-  items,
+  agg,
   loading,
   error,
 }: {
-  items: BacklogItem[];
+  agg: BacklogAggregate | null | undefined;
   loading: boolean;
   error: string | null;
 }) {
-  const epics = useMemo(() => epicProgressRows(items), [items]);
-  const { bars, total } = useMemo(() => itemStatusBars(items), [items]);
+  // Derive epic progress rows from aggregate data
+  const epics = useMemo<EpicRow[]>(() => {
+    if (!agg) return [];
+    return agg.epics.map((epic) => {
+      const prog = agg.epicProgress[epic.id];
+      let pct: number;
+      if (prog && prog.total > 0) {
+        pct = Math.round((prog.done / prog.total) * 100);
+      } else {
+        pct = epic.status === 'done' ? 100 : 0;
+      }
+      return { id: epic.id, title: epic.title, pct };
+    });
+  }, [agg]);
 
-  if (loading && items.length === 0) {
+  // Derive status bars from aggregate statusCounts
+  const { bars, total } = useMemo(() => {
+    if (!agg) return { bars: [], total: 0 };
+    const raw = STATUS_SEGMENTS.map((s) => ({
+      ...s,
+      n: agg.statusCounts[s.status] ?? 0,
+    }));
+    const totalN = raw.reduce((a, s) => a + s.n, 0);
+    const maxN = Math.max(1, ...raw.map((s) => s.n));
+    const bars = raw.map((s) => ({
+      label: s.label,
+      color: s.color,
+      n: s.n,
+      pct: totalN === 0 ? 0 : Math.round((s.n / totalN) * 100),
+      barPct: Math.round((s.n / maxN) * 100),
+    }));
+    return { bars, total: agg.total };
+  }, [agg]);
+
+  if (loading && !agg) {
     return <div className="stats">{statCardSkeleton('Epic progress')}{statCardSkeleton('Item status')}</div>;
   }
 

@@ -88,6 +88,12 @@ export function backlogRouter(deps: BacklogRouterDeps): Router {
     res.json({ items, total });
   });
 
+  // Must be registered before /backlog/:id so "aggregate" is not treated as an id.
+  r.get('/backlog/aggregate', (_req, res) => {
+    const agg = deps.repos.backlog.aggregate();
+    res.json(agg);
+  });
+
   r.get('/backlog/:id', (req, res) => {
     const id = req.params.id;
     if (typeof id !== 'string' || id.length === 0) {
