@@ -58,6 +58,17 @@ describe('bootstrapGit', () => {
     expect(flat.some((c) => c.includes('commit'))).toBe(false);
   });
 
+  it('treats untrimmed --is-inside-work-tree output as a real repo', () => {
+    const runner: GitRunner = (args) => {
+      if (args[0] === 'rev-parse' && args[1] === '--is-inside-work-tree') return 'true\n';
+      if (args[0] === 'rev-parse' && args[1] === '--verify') return 'refs/heads/development\n';
+      return '';
+    };
+    const res = bootstrapGit('/tmp/proj', runner);
+    expect(res.created).toBe(false);
+    expect(res.developmentEnsured).toBe(true);
+  });
+
   it('git missing / throws everywhere: soft-fails with a warning', () => {
     const runner: GitRunner = () => { throw new Error('command not found: git'); };
     const res = bootstrapGit('/tmp/proj', runner);

@@ -10,7 +10,7 @@ export type BootstrapGitResult = {
 };
 
 const defaultRunner: GitRunner = (args, cwd) =>
-  execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 
 function isInsideRepo(run: GitRunner, dir: string): boolean {
   try {
@@ -22,7 +22,7 @@ function isInsideRepo(run: GitRunner, dir: string): boolean {
 
 function hasBranch(run: GitRunner, dir: string, name: string): boolean {
   try {
-    run(['rev-parse', '--verify', name], dir);
+    run(['rev-parse', '--verify', '--quiet', `refs/heads/${name}`], dir);
     return true;
   } catch {
     return false;
