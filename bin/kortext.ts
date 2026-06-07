@@ -257,7 +257,13 @@ async function main(): Promise<number> {
     if (result.ok) {
       console.log(`${result.reused ? 'already running' : 'started'} ${result.slug} → ${result.url}`);
       const shouldOpen = !hasFlag('no-open') && process.env.KORTEXT_NO_OPEN !== '1';
-      if (shouldOpen) setTimeout(() => openBrowser(result.url), 1200);
+      if (shouldOpen) {
+        // AWAIT the delay before opening: `start` returns → process.exit(), so a
+        // bare setTimeout would be killed before it fires (browser never opens).
+        // The daemon is detached + unref'd, so it survives this process exiting.
+        await new Promise((r) => setTimeout(r, 1200));
+        openBrowser(result.url);
+      }
       return 0;
     }
     if (result.action === 'list') {
