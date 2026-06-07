@@ -363,3 +363,89 @@ describe('approvalRouter — preprod-approval answer integration', () => {
     expect(epic?.frontmatter.preprod_approved).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Unit — deployProd failure → bug creation
+// ---------------------------------------------------------------------------
+
+describe('consumePreprodApproval — deployProd failure opens a bug', () => {
+  it('deployProd returning ok:false → a type:bug item is created', async () => {
+    seedVersionEpics('v20.0', ['EF1']);
+    const deployer = makeMockDeployer({ prodOk: false });
+    const queue = new ApprovalQueue({ repos });
+    const q = makeAnswered({ answer: 'approve', metadata: { version: 'v20.0' } });
+
+    await consumePreprodApproval(q, { repos, queue, deployer });
+
+    const bugs = repos.backlog.list({ type: 'bug' });
+    expect(bugs).toHaveLength(1);
+    expect(bugs[0]!.type).toBe('bug');
+  });
+
+  it('deployProd ok:false → bug title contains "Prod release failed" and the version', async () => {
+    seedVersionEpics('v20.1', ['EF2']);
+    const deployer = makeMockDeployer({ prodOk: false });
+    const queue = new ApprovalQueue({ repos });
+    const q = makeAnswered({ answer: 'approve', metadata: { version: 'v20.1' } });
+
+    await consumePreprodApproval(q, { repos, queue, deployer });
+
+    const bug = repos.backlog.list({ type: 'bug' })[0]!;
+    expect(bug.title).toMatch(/Prod release failed/i);
+    expect(bug.title).toContain('v20.1');
+  });
+
+  it('deployProd ok:false → bug body contains the failure reason', async () => {
+    seedVersionEpics('v20.2', ['EF3']);
+    const deployer: ReturnType<typeof makeMockDeployer> = {
+      ...makeMockDeployer(),
+      name: 'failing-mock',
+      async deployProd(_ctx) {
+        return { ok: false, reason: 'merge conflict on README.md' };
+      },
+    };
+    const queue = new ApprovalQueue({ repos });
+    const q = makeAnswered({ answer: 'approve', metadata: { version: 'v20.2' } });
+
+    await consumePreprodApproval(q, { repos, queue, deployer });
+
+    const bug = repos.backlog.list({ type: 'bug' })[0]!;
+    expect(bug.body_md).toContain('merge conflict on README.md');
+  });
+
+  it('deployProd ok:false → bug parent_id = first version epic', async () => {
+    seedVersionEpics('v20.3', ['EF4', 'EF5']);
+    const deployer = makeMockDeployer({ prodOk: false });
+    const queue = new ApprovalQueue({ repos });
+    const q = makeAnswered({ answer: 'approve', metadata: { version: 'v20.3' } });
+
+    await consumePreprodApproval(q, { repos, queue, deployer });
+
+    const bug = repos.backlog.list({ type: 'bug' })[0]!;
+    expect(['EF4', 'EF5']).toContain(bug.parent_id);
+  });
+
+  it('deployProd ok:false → preprod_approved markers were STILL set (approval side-effects kept)', async () => {
+    seedVersionEpics('v20.4', ['EF6']);
+    const deployer = makeMockDeployer({ prodOk: false });
+    const queue = new ApprovalQueue({ repos });
+    const q = makeAnswered({ answer: 'approve', metadata: { version: 'v20.4' } });
+
+    await consumePreprodApproval(q, { repos, queue, deployer });
+
+    // Approval side-effect (frontmatter update) still happened even though deploy failed.
+    expect(repos.backlog.get('EF6')?.frontmatter.preprod_approved).toBe(true);
+  });
+
+  it('deployProd ok:true → no bug created', async () => {
+    seedVersionEpics('v20.5', ['EF7']);
+    const deployer = makeMockDeployer({ prodOk: true });
+    const queue = new ApprovalQueue({ repos });
+    const q = makeAnswered({ answer: 'approve', metadata: { version: 'v20.5' } });
+
+    await consumePreprodApproval(q, { repos, queue, deployer });
+
+    const bugs = repos.backlog.list({ type: 'bug' });
+    expect(bugs).toHaveLength(0);
+  });
+});

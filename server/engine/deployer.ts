@@ -39,6 +39,8 @@ export type DeployOutcome = {
   url?: string | null;
   /** Why the deploy failed. */
   reason?: string | null;
+  /** True when a merge conflict (not a general failure) blocked the deploy. */
+  conflict?: boolean;
 };
 
 export interface Deployer {
