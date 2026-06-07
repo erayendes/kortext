@@ -22,8 +22,10 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 - [x] ~~**Staging-onay tüketicisi**~~ ✅ (2026-06-07). `staging-approval-consumer.ts` + route: onay→raporlar approved + epic `staging_approved` + version-tamamlama→`preprod-approval` sorusu; red→bug. (await edilir, idempotent.)
 - [x] ~~**Staging `reports_index` gerçek dosya**~~ ✅ (2026-06-07). `writeReport` ile gerçek `.kortext/reports/gate-staging_*_*.md` dosyaları.
 - [x] ~~**Blocker-clear (Slice 2)**~~ ✅ (2026-06-07). Migration GEREKMEDİ — frontmatter tabanlı: ingest oto-block + closure oto-unblock (`to_do`). Eray kararı: otomatik 'blocked' (dürüst board).
-- [ ] **Bağımlılık üretimi — canlı koşu doğrulaması:** motor enforcement (simetri/dangling/epic-id + oto-block/unblock) hazır; gerçek planning ajanının artık `blocks`/`blocked_by` ürettiğini + bağımlılık-sıralı yürütmeyi taze canlı koşuyla teyit et.
-- [ ] **Preprod DEPLOY substratı** (yeni): version onaylanınca `preprod-approval` sorusu açılıyor ama gerçek preprod deploy hedefi yok. Staging'deki `Deployer` soyutlaması gibi bir `deployPreprod` + preprod ortamı gerek. Ayrıca preprod-onay tüketicisi (onay→prod? red→bug).
+- [x] ~~**Bağımlılık üretimi — canlı koşu doğrulaması**~~ ✅ (2026-06-07). Gerçek claude ajanı (DevVault) 39 item + `DV-E0N` epic + mantıksal bağımlılıklar üretti. **Bulgu:** ajan `depends_on` kullandı → ingester'a `blocked_by` alias'ı eklendi. Gerçek veride 38/39 auto-block + doğru çoklu-blocker auto-unblock doğrulandı.
+- [x] ~~**Preprod DEPLOY substratı + preprod-onay tüketicisi**~~ ✅ (2026-06-07). `deployPreprod`/`deployProd` (mock-first) + `consumePreprodApproval` (onay→released+deployProd, red→bug) + route. Zincir preprod-onayında biter (§5.11).
+- [ ] **Gerçek git main-merge/tag** (preprod follow-up): `deployProd` şu an mock; §5.11'in `development→main` merge + semver tag + prod push'unu gerçek git ile yapan `WorkflowDeployer.deployProd` (veya prod-deployment-cycle workflow) gerek.
+- [ ] **Full planning pipeline canlı dayanıklılık:** `dev:run planning-pipeline --executor=claude` step-1'i ürtti ama bir sonraki zenginleştirme adımında askıda kaldı (~70dk, kill). Adım-zaman aşımı / hung-claude tespiti + full 9-adım uçtan uca canlı koşu (auto-approve poller ile) ayrı teyit.
 - [ ] **Tam sayfalama** (gerekince, ~500+ item): şu an küçük adım yapıldı (`total`+`offset`+"N of M", cap 2000, filtre-öncelikli full fetch). Ölçek büyürse ayrı aggregate endpoint (epic roll-up tüm item üzerinden) + sayfalı kart fetch — [scope raporu mevcut].
 
 ---

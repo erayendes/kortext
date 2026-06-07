@@ -7,7 +7,23 @@
 
 ---
 
-## ⭐ Şu an (2026-06-07) — Motor takibi + CLI sertleştirme + sayfalama TAMAM ✅
+## ⭐ Şu an (2026-06-07) — Preprod substratı + CANLI KOŞU TEYİDİ TAMAM ✅
+
+**Preprod substratı:** §5.11 zinciri tamamlandı — `deployPreprod` + `deployProd` (mock-first) Deployer'a eklendi; version staging-onaylanınca `deployPreprod`→`preprod-approval` sorusu; `consumePreprodApproval` (onay→epic'ler `preprod_approved` + `deployProd` mekanik release; red→bug; idempotent) + route. Zincir preprod-onayında biter (prod gate'i yok, §5.11). Gerçek git main-merge/tag mock `deployProd`'a foldlandı (follow-up).
+
+**⭐ CANLI KOŞU TEYİDİ — gerçek claude ajanı, izole sandbox (DevVault, code DV):** Gerçek planning ajanı 39 item + 6 epic üretti. **Sonuç:**
+- ✅ Kodlu id'ler kusursuz: `DV-001`…`DV-039` + sentetik epic'ler `DV-E01`…`DV-E06`.
+- ✅ **Bağımlılıklar GERÇEKTEN üretildi** (39 item, mantıksal zincirler) — A2 talimat pekiştirmesi tuttu, esas belirsizlik çözüldü.
+- 🐛 **Canlı koşu gerçek bir kalibrasyon boşluğu yakaladı** (unit-test'in yakalayamayacağı): ajan `depends_on` yazdı (motorun beklediği `blocked_by` değil). **Fix: ingester `depends_on`'u `blocked_by` alias'ı kabul ediyor** ("LLM'i olduğu yerde karşıla"). Tip (`feature/chore`→`task`), status (`todo`→`to_do`), epic-etiketi→sentetik-epic normalizasyonları zaten çalışıyordu.
+- ✅ **Fix sonrası gerçek veride uçtan uca:** 39'un **38'i auto-block**, simetri türetildi, DV-001 kapanınca bağımlıları `to_do`'ya döndü ama **çoklu-blocker'lı DV-005 `blocked` kaldı** (doğru semantik). Bağımlılık-sıralı yürütme gerçek LLM çıktısında çalışıyor.
+
+**Not (kazı):** `dev:run --executor=claude` için `--binary`/`KORTEXT_CLAUDE_BIN` şart. Full pipeline (9 adım gerçek-LLM) bir sonraki zenginleştirme adımında ~70 dk askıda kaldı (kill); step-1 backlog'u (esas artefakt) erkenden üretmişti.
+
+**Durum:** **951 test yeşil**, typecheck temiz. Bu blok (preprod + alias) +2 commit → bu oturum toplam **bekleyen 10 commit** (`710a0df`..`6a9d683`), push EDİLMEDİ. **SIRADAKİ:** push (sen "push" deyince) + `npm publish`. Kalan follow-up'lar aşağıda + [TODO](./TODO.md).
+
+---
+
+## Önceki bu-devir — Motor takibi + CLI sertleştirme + sayfalama TAMAM ✅
 
 Eray'ın seçtiği 3 blok ([plan](../docs/superpowers/plans/2026-06-07-motor-cli-pagination.md), 3 paralel keşif → karar → TDD subagent'ları). **Hiç yeni migration gerekmedi** — biri hariç: staging metadata için `010` (nullable ADD COLUMN, güvenli).
 
