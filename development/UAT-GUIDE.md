@@ -21,12 +21,15 @@ kortext --version                         # 3.1.0 görmeli
 lsof -ti tcp:3200 | xargs kill 2>/dev/null; true   # eski :3200 daemon'u kapat
 ```
 
-### Adım 2 — Boş test projesi + başlat (terminal, tek komut)
+### Adım 2 — Proje klasörü + git bootstrap + başlat (terminal)
 ```bash
-mkdir -p ~/Documents/_codebase/kortext-uat-real && cd ~/Documents/_codebase/kortext-uat-real
+cd <proje-klasörün>                       # boş ya da mevcut bir proje
+kortext init --skip-preflight             # .kortext/ + .gitignore + şablonlar (daemon başlatmaz)
+# BUILD fazı git ŞART (worktree + development→main merge). Bootstrap:
+git init -b main && git add -A && git commit -m "kortext scaffold" && git branch development
 KORTEXT_DRIVE_ENABLED=1 KORTEXT_CLAUDE_BIN=$(which claude) kortext start .
 ```
-`start` `.kortext/`'i kurar + daemon'u 3200'de başlatır + **tarayıcıyı açar**. `KORTEXT_DRIVE_ENABLED=1` build fazını açar; `KORTEXT_CLAUDE_BIN` gerçek executor. Sonrası **tamamen GUI** (terminal kapanmasın).
+`init` `.kortext/`'i kurar (önce, ki `.gitignore` commit'e girsin); git bootstrap **`main` + `development` branch'lerini** yaratır (build fazının ön şartı); `start` daemon'u 3200'de başlatır + **tarayıcıyı açar**. `KORTEXT_DRIVE_ENABLED=1` build'i açar, `KORTEXT_CLAUDE_BIN` gerçek executor. Sonrası **tamamen GUI**. ⚠️ Ajanlar gerçek kodu bu repoya (worktree'lerde, `development`'a merge) yazar — kendi repon.
 
 ### Adım 3 — Onboarding (GUI)
 Sihirbazda: proje **adı** + **kod** (örn. `DV`) + **agent = Claude** (binary `/opt/homebrew/bin/claude`) + **BRD** (fikrini sade dille; sıralı özellikler → doğal bağımlılık). Onayla → motor **analiz**'i başlatır.
