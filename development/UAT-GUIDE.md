@@ -1,5 +1,66 @@
 # Kortext v3.1.0 — UAT Test Rehberi (Eray)
 
+---
+
+## ⭐ TAM & GERÇEK UAT — uçtan uca, gerçek Claude ajanı (2026-06-07)
+
+> Paketlenmiş `kortext` + **gerçek claude executor** ile fikir→backlog→kod→review→release zincirini GUI'de doğrular. Sen **+prime**'sın: kapıları tarayıcıda sen onaylarsın. Aşağıdaki §0-§10 eski tur-1 testidir, referans.
+
+### Önce bil (gerçekçi beklenti)
+- **Gerçek claude koşar** → her adım dakikalar sürer; tam zincir uzun. **İlk UAT'ı KÜÇÜK tut** (5-8 özellikli minik fikir). Beğenince büyüt.
+- **Maliyet:** gerçek claude = API/kullanım maliyeti.
+- **Takılma riski:** bir adım çok uzun "running" kalırsa (bilinen hung-claude follow-up'ı) o koşuyu durdur/retry. (Canlı teyitte bir adım ~70dk takıldı.)
+- **Sen +prime'sın:** hiçbir şey onayın olmadan kapıdan geçmez — UAT'ın özü bu.
+
+### Adım 1 — Paketle + global kur (terminal, tek sefer)
+```bash
+cd /Users/erayendes/Documents/_codebase/kortext
+npm run build && npm pack                 # → kortext-3.1.0.tgz
+npm install -g ./kortext-3.1.0.tgz        # gerçek `kortext`'i global kurar (eskiyi ezer)
+kortext --version                         # 3.1.0 görmeli
+lsof -ti tcp:3200 | xargs kill 2>/dev/null; true   # eski :3200 daemon'u kapat
+```
+
+### Adım 2 — Boş test projesi + başlat (terminal, tek komut)
+```bash
+mkdir -p ~/Documents/_codebase/kortext-uat-real && cd ~/Documents/_codebase/kortext-uat-real
+KORTEXT_DRIVE_ENABLED=1 KORTEXT_CLAUDE_BIN=$(which claude) kortext start .
+```
+`start` `.kortext/`'i kurar + daemon'u 3200'de başlatır + **tarayıcıyı açar**. `KORTEXT_DRIVE_ENABLED=1` build fazını açar; `KORTEXT_CLAUDE_BIN` gerçek executor. Sonrası **tamamen GUI** (terminal kapanmasın).
+
+### Adım 3 — Onboarding (GUI)
+Sihirbazda: proje **adı** + **kod** (örn. `DV`) + **agent = Claude** (binary `/opt/homebrew/bin/claude`) + **BRD** (fikrini sade dille; sıralı özellikler → doğal bağımlılık). Onayla → motor **analiz**'i başlatır.
+
+### Adım 4 — Analiz (GUI, +prime kapıları)
+"Active work"te koşan adımlar, "For review"da sana gelen +prime kapıları. Her artefaktı (BRD/PRD/TRD/references) incele → **Approve** (veya Reject + sebep). Onaylanınca motor **planning**'i başlatır.
+
+### Adım 5 — Planning → Board dolar (GUI)
+**Board**'da epic'ler + item'lar + **kodlu id'ler** (`DV-001`, `DV-E01`). **Bağımlılık doğrula:** bağımlısı olan item'lar **`blocked`**, köksüzler `to_do` (yeni bağımlılık-sıralı motor).
+
+### Adım 6 — Build fazı (GUI)
+Dashboard'da **"Auto"** (veya "Run once") → motor **bloksuz** item'ları gerçek claude ile kodlar (her biri ayrı git worktree). Blocker bitince bağımlıları otomatik `to_do`'ya düşer. Kodlanan item review'a girer → qa/security/designer + **UAT** sana gelir → Approve/Reject (Reject→motor bug açar).
+
+### Adım 7 — Epic → staging → version → preprod → release (GUI)
+Epic'in çocukları bitince → **staging** deploy (mock) + gate-persona raporları → **staging-onay** sorusu → Approve. Version'ın tüm epic'leri onaylı → **preprod** deploy + **preprod-onay** → Approve → motor **gerçek `development→main` merge + sürüm etiketi** (prod push hâlâ mock).
+
+### Doğrulama checklist
+- [ ] Onboarding→analiz→planning kesintisiz, +prime kapıları GUI'de
+- [ ] Board: kodlu id'ler + gerçek bağımlılıklar + `blocked` durumları
+- [ ] Build: bağımlılık sırasında kodlama, blocker bitince bağımlı açıldı
+- [ ] Review gate'leri + UAT +prime'a geldi, onay/red çalıştı (red→bug)
+- [ ] Epic→staging-onay, version→preprod-onay, son merge+tag
+
+### Temizlik
+```bash
+kortext stop            # tüm daemon'ları durdur
+kortext list            # kayıtlı projeler
+kortext purge <proje>   # test projesini sicilden + .kortext/ sil (sorar)
+```
+
+---
+
+## (Legacy) Faz 11-13 + CLI redesign tur-1 testi
+
 > Bu dosya **Faz 11-13'ün** (onboarding wizard + dashboard polish + foundation/ kategorisi + ALL-CAPS references + 12 workflow rewrite) **+ CLI redesign**'ın lokal kullanıcı doğrulamasıdır. main HEAD `6dc2fb6`+. Bu UAT npm publish'ten **önce** koşulur; pass ederse v3.1.0 release flow tetiklenir.
 > **Not:** CLI redesign implementation tamamlanana kadar UAT iki turda koşulur: (1) mevcut `init/serve` ile dashboard + foundation/ + workflow akışı, (2) v3.1 CLI redesign sonrası `start/stop/list/...` yeni komutlar + onboard akışı + multi-project. Aşağıdaki §1-§10 birinci turdur.
 > Hedef: yeni `.kortext/` mimari'sinin gerçek kurulumda çalıştığını + ekranların açıldığını + temel akışların kırılmadığını teyit etmek.
