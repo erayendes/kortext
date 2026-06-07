@@ -298,4 +298,6 @@ export type BlueprintSubmitResponse = {
   project: ProjectMeta;
   projectDir: string;
   initializedElsewhere: boolean;
+  handoffUrl?: string; // bootstrap-wizard handoff target (real daemon URL)
+  gitWarning?: string; // soft git-bootstrap warning, if any
 };
