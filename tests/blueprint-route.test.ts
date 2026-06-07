@@ -6,6 +6,7 @@ import express from 'express';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { blueprintRouter } from '../server/routes/blueprint.ts';
+import type { ProjectMeta } from '../server/blueprint/io.ts';
 
 let tmpRoot: string;
 let server: Server;
@@ -163,5 +164,86 @@ describe('POST /api/blueprint', () => {
       }),
     });
     expect(res.status).toBe(422);
+  });
+});
+
+describe('POST /api/blueprint — bootstrap (wizard) mode', () => {
+  it('delegates to createProject and returns handoffUrl', async () => {
+    const calls: Array<{ projectDir: string; meta: ProjectMeta; blueprintBody: string }> = [];
+    const app = express();
+    app.use(express.json());
+    app.use(
+      '/api',
+      blueprintRouter({
+        workspaceRoot: '/tmp/bootstrap-home',
+        bootstrap: true,
+        createProject: (input) => {
+          calls.push(input);
+          return { ok: true, handoffUrl: 'http://localhost:3201/', projectDir: input.projectDir };
+        },
+      }),
+    );
+    const s = await listen(app);
+    const port = (s.address() as AddressInfo).port;
+    try {
+      const res = await fetch(`http://localhost:${port}/api/blueprint`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          projectName: 'Acme',
+          projectCode: 'ACME',
+          projectType: 'new',
+          platforms: ['web'],
+          blueprintBody: '# BRD\n'.padEnd(60, 'x'),
+          executor: 'claude',
+          executorBinary: null,
+          projectDir: '/tmp/acme',
+        }),
+      });
+      expect(res.status).toBe(201);
+      const body = (await res.json()) as { handoffUrl: string };
+      expect(body.handoffUrl).toBe('http://localhost:3201/');
+      expect(calls).toHaveLength(1);
+      expect(calls[0]?.projectDir).toBe('/tmp/acme');
+      expect(calls[0]?.meta.code).toBe('ACME');
+    } finally {
+      await new Promise<void>((resolve) => s.close(() => resolve()));
+    }
+  });
+
+  it('returns 422 when projectDir is missing', async () => {
+    const app = express();
+    app.use(express.json());
+    app.use(
+      '/api',
+      blueprintRouter({
+        workspaceRoot: '/tmp/bootstrap-home',
+        bootstrap: true,
+        createProject: () => ({ ok: true, handoffUrl: 'x', projectDir: 'x' }),
+      }),
+    );
+    const s = await listen(app);
+    const port = (s.address() as AddressInfo).port;
+    try {
+      const res = await fetch(`http://localhost:${port}/api/blueprint`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          projectName: 'Acme',
+          projectCode: 'ACME',
+          projectType: 'new',
+          platforms: ['web'],
+          blueprintBody: '# BRD\n'.padEnd(60, 'x'),
+          executor: 'claude',
+          executorBinary: null,
+          projectDir: null,
+        }),
+      });
+      expect(res.status).toBe(422);
+      const body = await res.json();
+      expect(JSON.stringify(body)).toMatch(/director/i);
+    } finally {
+      await new Promise<void>((resolve) => s.close(() => resolve()));
+    }
   });
 });
