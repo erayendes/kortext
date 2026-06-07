@@ -6,6 +6,12 @@ export type CreateProjectInput = {
   blueprintBody: string;
 };
 
+// These are deliberately NARROWED adapter views of the real implementations,
+// not their full signatures — the wiring step (server/index.ts) adapts the real
+// fns to these shapes. Kept narrow so this module stays pure + unit-testable:
+//   - init        ← adapts initCommand(InitCommandInput)        (server/cli/init.ts)
+//   - startProject← adapts startProject(arg, StartDeps): StartResult (server/cli/cmd-start.ts)
+//   - bootstrapGit← adapts bootstrapGit(dir): BootstrapGitResult (server/cli/bootstrap-git.ts)
 export type CreateProjectDeps = {
   packageRoot: string;
   init: (dir: string) => { ok: boolean; errorMessage?: string };
