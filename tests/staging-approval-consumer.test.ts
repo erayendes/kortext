@@ -6,7 +6,8 @@
  * phase → bug created + response still returns question.
  */
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Deployer, DeployContext, PreprodDeployContext, ProdDeployContext, DeployOutcome } from '../server/engine/deployer.ts';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -486,5 +487,86 @@ describe('approvalRouter — staging-approval answer integration', () => {
     // No bugs created, no preprod questions
     expect(repos.backlog.list({ type: 'bug' })).toHaveLength(0);
     expect(repos.pendingQuestions.listOpen().find((pq) => pq.phase === 'preprod-approval')).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// checkVersionCompletion — deployPreprod integration
+// ---------------------------------------------------------------------------
+
+/** Minimal mock deployer for these tests. */
+function makeVersionDeployer(opts: { preprodOk?: boolean } = {}): Deployer & {
+  preprodCalls: PreprodDeployContext[];
+} {
+  const preprodCalls: PreprodDeployContext[] = [];
+  return {
+    name: 'version-mock-deployer',
+    async deployStaging(_ctx: DeployContext): Promise<DeployOutcome> {
+      return { ok: true, url: null };
+    },
+    async deployPreprod(ctx: PreprodDeployContext): Promise<DeployOutcome> {
+      preprodCalls.push(ctx);
+      return { ok: opts.preprodOk ?? true, url: null };
+    },
+    async deployProd(_ctx: ProdDeployContext): Promise<DeployOutcome> {
+      return { ok: true, url: null };
+    },
+    preprodCalls,
+  };
+}
+
+describe('checkVersionCompletion — deployPreprod fires before preprod-approval question', () => {
+  it('all epics staging-approved + deployPreprod ok → preprod-approval question enqueued', async () => {
+    seedEpic('D1', { version: 'v1.0' });
+    const deployer = makeVersionDeployer({ preprodOk: true });
+    const queue = new ApprovalQueue({ repos });
+    const q = makeAnswered({ answer: 'approve', metadata: { epicId: 'D1', version: 'v1.0' } });
+    await consumeStagingApproval(q, { repos, queue, deployer });
+
+    // deployPreprod was called
+    expect(deployer.preprodCalls).toHaveLength(1);
+    expect(deployer.preprodCalls[0]!.version).toBe('v1.0');
+
+    // preprod-approval question was enqueued
+    const open = repos.pendingQuestions.listOpen();
+    expect(open.find((pq) => pq.phase === 'preprod-approval')).toBeDefined();
+  });
+
+  it('all epics staging-approved + deployPreprod ok:false → NO preprod-approval question', async () => {
+    seedEpic('D2', { version: 'v2.0' });
+    const deployer = makeVersionDeployer({ preprodOk: false });
+    const queue = new ApprovalQueue({ repos });
+    const q = makeAnswered({ answer: 'approve', metadata: { epicId: 'D2', version: 'v2.0' } });
+    await consumeStagingApproval(q, { repos, queue, deployer });
+
+    // deployPreprod was called but returned not-ok
+    expect(deployer.preprodCalls).toHaveLength(1);
+
+    // preprod-approval question was NOT enqueued
+    const open = repos.pendingQuestions.listOpen();
+    expect(open.find((pq) => pq.phase === 'preprod-approval')).toBeUndefined();
+  });
+
+  it('no deployer passed → preprod-approval question still enqueued (backward compat)', async () => {
+    seedEpic('D3', { version: 'v3.0' });
+    const queue = new ApprovalQueue({ repos });
+    const q = makeAnswered({ answer: 'approve', metadata: { epicId: 'D3', version: 'v3.0' } });
+    // No deployer in deps
+    await consumeStagingApproval(q, { repos, queue });
+
+    const open = repos.pendingQuestions.listOpen();
+    expect(open.find((pq) => pq.phase === 'preprod-approval')).toBeDefined();
+  });
+
+  it('deployPreprod NOT called when not all epics are staging-approved', async () => {
+    seedEpic('D4a', { version: 'v4.0' });
+    seedEpic('D4b', { version: 'v4.0' }); // D4b remains unapproved
+    const deployer = makeVersionDeployer({ preprodOk: true });
+    const queue = new ApprovalQueue({ repos });
+    const q = makeAnswered({ answer: 'approve', metadata: { epicId: 'D4a', version: 'v4.0' } });
+    await consumeStagingApproval(q, { repos, queue, deployer });
+
+    // deployPreprod should NOT have been called (not all epics approved yet)
+    expect(deployer.preprodCalls).toHaveLength(0);
   });
 });

@@ -1,4 +1,4 @@
-import type { Deployer, DeployContext, DeployOutcome } from '../deployer.ts';
+import type { Deployer, DeployContext, DeployOutcome, PreprodDeployContext, ProdDeployContext } from '../deployer.ts';
 import type { Repositories } from '../../db/repositories/index.ts';
 import type { Executor } from '../executor.ts';
 import type { WorkflowDefinition } from '../workflow-parser.ts';
@@ -46,5 +46,45 @@ export class WorkflowDeployer implements Deployer {
       return { ok: true };
     }
     return { ok: false, reason: result.run.error_message ?? 'staging deploy run did not succeed' };
+  }
+
+  async deployPreprod(ctx: PreprodDeployContext): Promise<DeployOutcome> {
+    const def = this.deps.loadDeploymentWorkflow();
+    if (!def) {
+      return { ok: false, reason: 'preprod-deployment-cycle workflow not found' };
+    }
+
+    const graph = buildGraph(def);
+    const result = await runWorkflow(graph, this.deps.executor, this.deps.repos, {
+      triggeredBy: `deploy:preprod:version:${ctx.version}`,
+      registry: this.deps.registry,
+    });
+
+    if (result.run.status === 'succeeded') {
+      return { ok: true };
+    }
+    return { ok: false, reason: result.run.error_message ?? 'preprod deploy run did not succeed' };
+  }
+
+  /**
+   * Deploy to production — the mechanical `development→main` merge + prod deploy + tag (§5.11).
+   * Real git main-merge / tag is a follow-up; mock-first now (mirrors deployStaging pattern).
+   */
+  async deployProd(ctx: ProdDeployContext): Promise<DeployOutcome> {
+    const def = this.deps.loadDeploymentWorkflow();
+    if (!def) {
+      return { ok: false, reason: 'prod-deployment-cycle workflow not found' };
+    }
+
+    const graph = buildGraph(def);
+    const result = await runWorkflow(graph, this.deps.executor, this.deps.repos, {
+      triggeredBy: `deploy:prod:version:${ctx.version}`,
+      registry: this.deps.registry,
+    });
+
+    if (result.run.status === 'succeeded') {
+      return { ok: true };
+    }
+    return { ok: false, reason: result.run.error_message ?? 'prod deploy run did not succeed' };
   }
 }

@@ -1,4 +1,4 @@
-import type { DeployContext, DeployOutcome, Deployer } from '../deployer.ts';
+import type { DeployContext, DeployOutcome, Deployer, PreprodDeployContext, ProdDeployContext } from '../deployer.ts';
 
 export type MockDeployBehavior = {
   /** Force a failed deploy. */
@@ -22,6 +22,10 @@ export class MockDeployer implements Deployer {
   readonly name = 'mock-deployer';
   /** Epics deployStaging() was called for, in order. */
   readonly deployedFor: string[] = [];
+  /** Versions deployPreprod() was called for, in order. */
+  readonly preprodDeployedFor: string[] = [];
+  /** Versions deployProd() was called for, in order. */
+  readonly prodDeployedFor: string[] = [];
 
   constructor(private readonly behavior: (ctx: DeployContext) => MockDeployBehavior = () => ({})) {}
 
@@ -38,5 +42,15 @@ export class MockDeployer implements Deployer {
       return { ok: false, reason: cfg.reason ?? 'staging deploy failed' };
     }
     return { ok: true, url: cfg.url ?? `https://staging.example/${ctx.epicId}` };
+  }
+
+  async deployPreprod(ctx: PreprodDeployContext): Promise<DeployOutcome> {
+    this.preprodDeployedFor.push(ctx.version);
+    return { ok: true, url: null };
+  }
+
+  async deployProd(ctx: ProdDeployContext): Promise<DeployOutcome> {
+    this.prodDeployedFor.push(ctx.version);
+    return { ok: true, url: null };
   }
 }

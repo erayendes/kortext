@@ -1,7 +1,9 @@
 import { Router, type Request, type Response } from 'express';
 import type { Repositories } from '../db/repositories/index.ts';
 import type { ApprovalQueue } from '../orchestrator/approval-queue.ts';
+import type { Deployer } from '../engine/deployer.ts';
 import { consumeStagingApproval } from '../orchestrator/staging-approval-consumer.ts';
+import { consumePreprodApproval } from '../orchestrator/preprod-approval-consumer.ts';
 
 /**
  * REST surface for the human-in-the-loop approval flow.
@@ -14,6 +16,8 @@ import { consumeStagingApproval } from '../orchestrator/staging-approval-consume
 export type ApprovalRouterDeps = {
   repos: Repositories;
   queue: ApprovalQueue;
+  /** Deployer threaded in for staging-approval (deployPreprod) and preprod-approval (deployProd). */
+  deployer?: Deployer;
 };
 
 export function approvalRouter(deps: ApprovalRouterDeps): Router {
@@ -49,9 +53,28 @@ export function approvalRouter(deps: ApprovalRouterDeps): Router {
       // is logged but does NOT fail the answer (the question is already answered).
       if (answered.phase === 'staging-approval') {
         try {
-          await consumeStagingApproval(answered, { repos: deps.repos, queue: deps.queue });
+          await consumeStagingApproval(answered, {
+            repos: deps.repos,
+            queue: deps.queue,
+            deployer: deps.deployer,
+          });
         } catch (err: unknown) {
           console.error('[approvals] consumeStagingApproval error:', err);
+        }
+      }
+
+      // Run the preprod-approval consumer (chain ends at preprod per §5.11:
+      // approve → deployProd; reject → bug). Best-effort; a consumer error
+      // is logged but does NOT fail the answer.
+      if (answered.phase === 'preprod-approval' && deps.deployer) {
+        try {
+          await consumePreprodApproval(answered, {
+            repos: deps.repos,
+            queue: deps.queue,
+            deployer: deps.deployer,
+          });
+        } catch (err: unknown) {
+          console.error('[approvals] consumePreprodApproval error:', err);
         }
       }
 

@@ -30,7 +30,8 @@ import { integrationsRouter } from './routes/integrations.ts';
 import { envVarsRouter } from './routes/env-vars.ts';
 import { startCommand } from './cli/commands.ts';
 import { readProjectMeta, resolveBlueprintPaths } from './blueprint/io.ts';
-import type { ExecutorKind } from './cli/executor-factory.ts';
+import { createExecutor, type ExecutorKind } from './cli/executor-factory.ts';
+import { WorkflowDeployer } from './engine/executors/workflow-deployer.ts';
 import { getDb } from './db/client.ts';
 import { ApprovalQueue } from './orchestrator/approval-queue.ts';
 import { QueueGateController } from './orchestrator/queue-gate-controller.ts';
@@ -169,7 +170,25 @@ const app = express();
 app.use(express.json());
 app.use('/api', healthRouter);
 app.use('/api', dbInfoRouter);
-app.use('/api', approvalRouter({ repos, queue: approvalQueue }));
+// Build an approval deployer so the staging-approval and preprod-approval
+// consumers can fire deployPreprod / deployProd without a full composition
+// (which is built lazily by the driver). Executor is resolved from project.json
+// like the blueprint trigger; mock falls back safely when project.json is absent.
+const approvalDeployer = new WorkflowDeployer({
+  repos,
+  executor: (() => {
+    const meta = readProjectMeta(resolveBlueprintPaths(process.cwd()).projectJsonPath);
+    const kind = meta?.executor ?? 'mock';
+    const binary = meta?.executorBinary ?? defaultBinaryFor(kind);
+    return createExecutor(kind, {
+      binary: binary ?? '',
+      agentsDir,
+      logsDir: resolve(dirname(fileURLToPath(import.meta.url)), '..', '.kortext', 'data', 'logs'),
+    });
+  })(),
+  loadDeploymentWorkflow: () => workflowRegistry.get('deployment-cycle'),
+});
+app.use('/api', approvalRouter({ repos, queue: approvalQueue, deployer: approvalDeployer }));
 app.use('/api', runsRouter({ repos }));
 app.use('/api', handoversRouter({ repos }));
 app.use('/api', activityRouter({ repos }));

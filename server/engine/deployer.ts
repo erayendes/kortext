@@ -15,6 +15,24 @@ export type DeployContext = {
   signal?: AbortSignal;
 };
 
+/** Context for a pre-production deployment (version-level, after all epics staging-approved). */
+export type PreprodDeployContext = {
+  version: string;
+  /** Aborted when the surrounding run is cancelled. Implementations SHOULD honour it. */
+  signal?: AbortSignal;
+};
+
+/**
+ * Context for a production deployment (version-level, after preprod-approval).
+ * Represents the mechanical `development→main` merge + prod deploy + tag step (§5.11).
+ * Real git main-merge / tag is a follow-up; mock-first now.
+ */
+export type ProdDeployContext = {
+  version: string;
+  /** Aborted when the surrounding run is cancelled. Implementations SHOULD honour it. */
+  signal?: AbortSignal;
+};
+
 export type DeployOutcome = {
   ok: boolean;
   /** Staging URL on success. */
@@ -28,4 +46,11 @@ export interface Deployer {
   readonly name: string;
   /** Deploy the completed epic's integration branch to staging. */
   deployStaging(ctx: DeployContext): Promise<DeployOutcome>;
+  /** Deploy the version to pre-production (fires before the preprod-approval question). */
+  deployPreprod(ctx: PreprodDeployContext): Promise<DeployOutcome>;
+  /**
+   * Deploy the version to production — the mechanical `development→main` merge +
+   * prod deploy + tag (§5.11). Real git main-merge/tag is a follow-up; mock-first now.
+   */
+  deployProd(ctx: ProdDeployContext): Promise<DeployOutcome>;
 }
