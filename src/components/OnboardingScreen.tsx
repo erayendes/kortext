@@ -252,6 +252,13 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
     };
     try {
       const res = await apiPost<BlueprintSubmitResponse>('/api/blueprint', payload);
+      // Bootstrap-wizard handoff: the real project daemon now lives at handoffUrl.
+      // Keep the spinner ("Initializing…") on and hard-navigate the browser to it.
+      if (res.handoffUrl) {
+        setSubmitError(null);
+        window.location.href = res.handoffUrl;
+        return;
+      }
       // Reset the spinner state before navigating — otherwise on slow systems
       // the screen flashes "Initializing…" while the guard re-checks status.
       setSubmitting(false);
