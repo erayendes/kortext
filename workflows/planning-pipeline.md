@@ -25,6 +25,8 @@
 
    **🔗 Bağımlılıklar — ZORUNLU.** Mantıksal kurulum sırasını düşün: hangi item başka bir item bitmeden başlayamaz? Her item için, önce tamamlanması gereken item'ları `blocked_by: [<ID>, …]` listesine yaz (örn. bir özellik, altyapı kurulumuna bağlıysa `blocked_by: [TF-001]`). Tersini de `blocks:` ile ver (kurulum item'ı `blocks: [TF-005, TF-006]`). Gerçek bağımlılığı olmayan item'da boş liste bırak — **uydurma**. Referans verdiğin her id backlog'da var olmalı (dangling YASAK). **Her item'da `blocks` VE `blocked_by` alanları MUTLAKA bulunmalı — ilişki yoksa bile `[]` yaz, alanı ATLAMA** (motor eksik/asimetrik/dangling bağımlılıkları ingest'te yakalar ve uyarır). Bunlar Board'da kartın bağımlılık rozetinde + drawer'da görünür.
 
+   > **Motor şema toleransı (bilgi):** Kanonik alanlar `blocked_by`/`blocks` (yukarıdaki gibi yaz). Ama motor şu yaygın varyasyonları da kabul edip normalize eder, takılma: bağımlılık için `depends_on` (→ `blocked_by`), tip için `feature`/`chore`/`test` (→ `task`, orijinali saklanır), durum için `todo` (→ `to_do`), epic için düz `epic: <etiket>` (→ `type: epic` `<CODE>-E0N` türetilir). Yine de kanonik sözcüğü tercih et — netlik için.
+
    Her item şu alanlara sahip olmalı:
    - `id`: `<CODE>-NNN` (task/bug/debt) veya `<CODE>-E0X` (epic) — yukarıdaki konvansiyon. Slug DEĞİL.
    - `type`: `task` | `bug` | `debt` | `epic` | `spike` (ürün özellikleri → task, açık hatalar → bug, teknik borçlar → debt, üst seviye gruplama → **epic, en az bir tane zorunlu**)
