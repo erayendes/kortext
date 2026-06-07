@@ -106,6 +106,29 @@ describe('parseBacklogYaml', () => {
     expect(result.errors[0]).toMatch(/items/i);
   });
 
+  it('accepts `depends_on` as an alias for `blocked_by` (live-run calibration)', () => {
+    // Real planning agents reach for `depends_on` instead of `blocked_by`.
+    const yaml = [
+      'items:',
+      '  - id: A-1',
+      '    title: root',
+      '    type: task',
+      '  - id: A-2',
+      '    title: dependent',
+      '    type: task',
+      '    depends_on: [A-1]',
+    ].join('\n');
+    const result = parseBacklogYaml(yaml);
+    expect(result.errors).toHaveLength(0);
+    const a2 = result.items.find((i) => i.id === 'A-2')!;
+    expect(a2.blocked_by).toEqual(['A-1']);
+    // Explicit blocked_by wins over depends_on when both are present.
+    const both = parseBacklogYaml(
+      'items:\n  - id: B-1\n    title: t\n    type: task\n    blocked_by: [X]\n    depends_on: [Y]',
+    );
+    expect(both.items[0]!.blocked_by).toEqual(['X']);
+  });
+
   it('returns empty items and a parse error on invalid YAML', () => {
     // genuinely invalid YAML
     const result = parseBacklogYaml('items:\n  - [unclosed');
