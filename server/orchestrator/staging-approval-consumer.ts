@@ -7,26 +7,26 @@
  *   APPROVE — marks gate-staging reports approved, marks the epic
  *             frontmatter staging_approved=true, then checks whether every
  *             epic in the same version is now staging-approved and, if so,
- *             enqueues a `phase='preprod-approval'` question for +prime.
+ *             deploys to preprod then enqueues a `phase='preprod-approval'`
+ *             question for +prime.
  *
  *   REJECT  — opens a bug backlog item with the rejection reason as body.
  *
  * Convention (same as QueueReviewApprover): answer === 'approve' → approved;
  * anything else → rejected.
- *
- * NOTE: The preprod deployer substrate does not exist yet. The preprod-approval
- * question is enqueued here as a placeholder; the actual deploy step is a
- * follow-up (tracked in development/TODO.md).
  */
 
 import type { PendingQuestion } from '../db/schemas.ts';
 import type { Repositories } from '../db/repositories/index.ts';
 import type { ApprovalQueue } from './approval-queue.ts';
+import type { Deployer } from '../engine/deployer.ts';
 import { nextBacklogId } from '../routes/backlog.ts';
 
 export type ConsumeStagingApprovalDeps = {
   repos: Repositories;
   queue: ApprovalQueue;
+  /** Deployer used to fire preprod deploy before the preprod-approval question. */
+  deployer?: Deployer;
   /** Seam for deterministic timestamps in tests. Defaults to `new Date()`. */
   now?: () => Date;
 };
@@ -56,7 +56,7 @@ export async function consumeStagingApproval(
   const isApprove = question.answer === 'approve';
 
   if (isApprove) {
-    await handleApprove(epicId, version, repos, queue);
+    await handleApprove(epicId, version, repos, queue, deps.deployer);
   } else {
     handleReject(epicId, question.answer ?? 'rejected', repos);
   }
@@ -71,6 +71,7 @@ async function handleApprove(
   version: string | null,
   repos: Repositories,
   queue: ApprovalQueue,
+  deployer?: Deployer,
 ): Promise<void> {
   // 1. Mark this epic's gate-staging reports approved.
   const stagingReports = repos.reports.list({
@@ -97,21 +98,21 @@ async function handleApprove(
 
   // 3. Check whether every epic in this version is now staging-approved.
   if (version !== null) {
-    await checkVersionCompletion(version, repos, queue);
+    await checkVersionCompletion(version, repos, queue, deployer);
   }
 }
 
 /**
  * If every epic tagged with `version` now has `frontmatter.staging_approved === true`,
- * enqueue a `preprod-approval` question for +prime.
- *
- * NOTE: The preprod DEPLOY substrate does not exist yet — this enqueues the
- * question only. The actual deploy step is a follow-up.
+ * fire deployPreprod (when a deployer is available) and then enqueue a
+ * `preprod-approval` question for +prime. If the deploy fails, the question is
+ * NOT enqueued — the failure is logged and the function returns early.
  */
 async function checkVersionCompletion(
   version: string,
   repos: Repositories,
   queue: ApprovalQueue,
+  deployer?: Deployer,
 ): Promise<void> {
   const epics = repos.backlog.list({ type: 'epic', limit: 500 });
   const versionEpics = epics.filter((e) => e.version === version);
@@ -134,6 +135,20 @@ async function checkVersionCompletion(
           (q.metadata as { version?: string } | null)?.version === version,
       );
     if (alreadyQueued) return;
+
+    // Fire preprod deploy before presenting the question. A failed deploy blocks
+    // the question from being enqueued (fail-safe: don't approve an undeployed build).
+    if (deployer) {
+      const outcome = await deployer.deployPreprod({ version });
+      if (!outcome.ok) {
+        console.error(
+          `[staging-approval-consumer] preprod deploy for version ${version} failed:`,
+          outcome.reason,
+        );
+        return;
+      }
+    }
+
     queue.enqueue({
       runId: null,
       question: `All epics in version ${version} have been staging-approved. Ready to promote to pre-production?`,
