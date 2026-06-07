@@ -46,6 +46,7 @@ import { runtimeLayout } from '../server/paths.ts';
 import { runStdioServer } from '../mcp/stdio.ts';
 import { createInterface } from 'node:readline';
 import { startProject } from '../server/cli/cmd-start.ts';
+import { launchBootstrapWizard } from '../server/cli/cmd-bootstrap.ts';
 import { stopAll, pauseProject } from '../server/cli/cmd-lifecycle.ts';
 import { formatList, removeFromRegistry, purgeProject } from '../server/cli/cmd-projects.ts';
 import { updateCommandPlan } from '../server/cli/cmd-update.ts';
@@ -129,6 +130,21 @@ function openBrowser(url: string): void {
   } catch {
     // Best-effort — the URL is also printed by the server on listen.
   }
+}
+
+async function launchWizardAndOpen(): Promise<number> {
+  const res = launchBootstrapWizard({ packageRoot: packageRoot() });
+  if (!res.ok) {
+    console.error(res.message);
+    return 1;
+  }
+  console.log(`onboarding wizard → ${res.url}`);
+  const shouldOpen = !hasFlag('no-open') && process.env.KORTEXT_NO_OPEN !== '1';
+  if (shouldOpen) {
+    await new Promise((r) => setTimeout(r, 1200));
+    openBrowser(res.url);
+  }
+  return 0;
 }
 
 function packageRoot(): string {
@@ -249,6 +265,10 @@ async function main(): Promise<number> {
   }
 
   if (cmd === 'start') {
+    // `kortext start --new` always opens the wizard, even when projects exist.
+    if (hasFlag('new')) {
+      return launchWizardAndOpen();
+    }
     const result = startProject(args[1], {
       packageRoot: packageRoot(),
       cwd: process.cwd(),
@@ -270,12 +290,11 @@ async function main(): Promise<number> {
       console.log('Registered projects:');
       console.log(formatList(readRegistry()));
       console.log('\nStart one with: kortext start <project>');
+      console.log('Create a new one with: kortext start --new');
       return 0;
     }
     if (result.action === 'onboard') {
-      console.log('No Kortext project in this folder.');
-      console.log('Run `kortext start <path-to-project>` (it will scaffold + launch).');
-      return 0;
+      return launchWizardAndOpen();
     }
     console.error(result.message);
     return 1;
