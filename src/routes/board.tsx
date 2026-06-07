@@ -38,6 +38,7 @@ import {
   boardColumns,
   childrenOf,
   compareVersions,
+  defaultActiveVersionFromCounts,
   dependenciesOf,
   describeActivity,
   descriptionFromBody,
@@ -505,16 +506,23 @@ function ItemDrawer({
 function EpicDrawer({
   epic,
   items,
+  progress,
   onOpenItem,
   onClose,
 }: {
   epic: BacklogItem;
   items: BacklogItem[];
+  /** Total/done/pct from the aggregate roll-up — matches the rail EpicCard
+   *  (which also reads the aggregate), not the paginated `items` list. */
+  progress: { total: number; done: number; pct: number };
   onOpenItem: (id: string) => void;
   onClose: () => void;
 }) {
+  // Children LIST stays from the loaded cards (bounded; resolves on load-more);
+  // only the progress total/done/pct come from the aggregate so the percentage
+  // agrees with the rail card.
   const kids = childrenOf(items, epic.id);
-  const { total, done, pct } = epicProgress(items, epic.id);
+  const { total, done, pct } = progress;
   return (
     <>
       <div className="dr-head">
@@ -936,22 +944,15 @@ export function BoardRoute() {
   const [target, setTarget] = useState<DrawerTarget | null>(null);
   const [creating, setCreating] = useState(false);
 
-  // Default active version: first version (in ascending order) that still has
-  // unfinished non-epic items among the loaded cards. Matches old logic.
+  // Default active version: smallest version with open (non-done/cancelled)
+  // non-epic work, derived from the AGGREGATE's per-version counts — correct on
+  // the first aggregate load, before any cards arrive (removes the flicker).
+  // The user's explicit `versionChoice` (incl. the "All versions" null) wins.
+  const openByVersion = useMemo(() => aggData?.openByVersion ?? {}, [aggData]);
   const activeVersion = useMemo(() => {
     if (versionChoice !== undefined) return versionChoice;
-    for (const v of versions) {
-      const hasOpen = cards.some(
-        (it) =>
-          it.version === v &&
-          it.type !== 'epic' &&
-          it.status !== 'done' &&
-          it.status !== 'cancelled',
-      );
-      if (hasOpen) return v;
-    }
-    return null;
-  }, [versionChoice, versions, cards]);
+    return defaultActiveVersionFromCounts(openByVersion);
+  }, [versionChoice, openByVersion]);
 
   // ── Column bucketing from loaded cards ───────────────────────────────────────
   const columns = useMemo(() => {
@@ -1141,6 +1142,7 @@ export function BoardRoute() {
           <EpicDrawer
             epic={openEpic}
             items={cards}
+            progress={epicProgressFor(openEpic.id)}
             onClose={() => setTarget(null)}
             onOpenItem={(id) => setTarget({ kind: 'item', id })}
           />

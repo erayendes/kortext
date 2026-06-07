@@ -143,6 +143,13 @@ export type BacklogAggregate = {
   epicProgress: Record<string, { total: number; done: number }>;
   statusCounts: Record<string, number>;
   versions: string[];
+  /**
+   * Per-version count of OPEN (non-done/cancelled) non-epic items. The board
+   * derives its default active version from this so the choice is correct on
+   * the first aggregate load, before any cards arrive (no version flicker).
+   * Optional on the mirror because legacy fixtures/tests may omit it.
+   */
+  openByVersion?: Record<string, number>;
   assignees: string[];
   total: number;
 };

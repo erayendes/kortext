@@ -152,6 +152,22 @@ export function defaultActiveVersion(items: BacklogItem[]): string | null {
 }
 
 /**
+ * The version the board should open on, derived from the aggregate's per-version
+ * OPEN-item counts (not the paginated cards): the smallest version (by
+ * {@link compareVersions}) whose count is > 0. Correct on the first aggregate
+ * load — before any page of cards arrives — so the board never flashes
+ * "All versions" then snaps. Returns null when every version is complete / none.
+ */
+export function defaultActiveVersionFromCounts(
+  openByVersion: Record<string, number>,
+): string | null {
+  const versions = Object.keys(openByVersion)
+    .filter((v) => (openByVersion[v] ?? 0) > 0)
+    .sort(compareVersions);
+  return versions[0] ?? null;
+}
+
+/**
  * The distinct assignees across the board's non-epic items, alphabetical. Powers
  * the board's Assignee filter dropdown. Epics are excluded (rail-only); items
  * with no resolvable assignee are skipped.

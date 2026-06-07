@@ -225,6 +225,80 @@ describe('deployProd — first release (no main)', () => {
 });
 
 // ---------------------------------------------------------------------------
+// 7. Branch restore — server must not be left on `main`
+// ---------------------------------------------------------------------------
+
+describe('deployProd — restores the original branch', () => {
+  it('successful merge → repo is back on the ORIGINAL branch (development), not main', async () => {
+    // Start the deploy from `development` (where the long-running server lives).
+    git(repoRoot, 'checkout', 'development');
+    writeFileSync(join(repoRoot, 'feature.ts'), 'export const x = 1;\n');
+    git(repoRoot, 'add', 'feature.ts');
+    git(repoRoot, 'commit', '-m', 'implement feature');
+
+    const deployer = makeDeployer(repoRoot);
+    const out = await deployer.deployProd({ version: 'v1.0' });
+
+    expect(out.ok).toBe(true);
+    expect(git(repoRoot, 'symbolic-ref', '--short', 'HEAD')).toBe('development');
+
+    // The merge + tag still landed on main.
+    const tagType = git(repoRoot, 'cat-file', '-t', 'v1.0');
+    expect(tagType).toBe('tag');
+  });
+
+  it('merge conflict → back on the ORIGINAL branch AND conflict:true', async () => {
+    // development & main edit the same file → real conflict, started from development.
+    git(repoRoot, 'checkout', 'development');
+    writeFileSync(join(repoRoot, 'README.md'), '# from development\n');
+    git(repoRoot, 'add', 'README.md');
+    git(repoRoot, 'commit', '-m', 'dev edit');
+
+    git(repoRoot, 'checkout', 'main');
+    writeFileSync(join(repoRoot, 'README.md'), '# from main\n');
+    git(repoRoot, 'add', 'README.md');
+    git(repoRoot, 'commit', '-m', 'main edit');
+
+    // Go back to development as the starting branch before deploying.
+    git(repoRoot, 'checkout', 'development');
+
+    const deployer = makeDeployer(repoRoot);
+    const out = await deployer.deployProd({ version: 'v1.0' });
+
+    expect(out.ok).toBe(false);
+    expect(out.conflict).toBe(true);
+    expect(git(repoRoot, 'symbolic-ref', '--short', 'HEAD')).toBe('development');
+  });
+
+  it('non-merge failure (checkout fails) → ok:false, conflict:false', async () => {
+    // A file committed to main only; the same path left UNTRACKED while on
+    // development makes `git checkout main` fail BEFORE any merge runs.
+    git(repoRoot, 'checkout', 'main');
+    writeFileSync(join(repoRoot, 'mainonly.txt'), 'main-file\n');
+    git(repoRoot, 'add', 'mainonly.txt');
+    git(repoRoot, 'commit', '-m', 'main-only file');
+
+    git(repoRoot, 'checkout', 'development');
+    writeFileSync(join(repoRoot, 'feature.ts'), 'x\n');
+    git(repoRoot, 'add', 'feature.ts');
+    git(repoRoot, 'commit', '-m', 'dev work');
+    // Untracked collision with the committed main file → checkout main aborts.
+    writeFileSync(join(repoRoot, 'mainonly.txt'), 'untracked-collision\n');
+
+    const deployer = makeDeployer(repoRoot);
+    const out = await deployer.deployProd({ version: 'v1.0' });
+
+    expect(out.ok).toBe(false);
+    expect(out.conflict).toBe(false);
+    // Still on development (checkout never succeeded, restore is a no-op here).
+    expect(git(repoRoot, 'symbolic-ref', '--short', 'HEAD')).toBe('development');
+    // No tag created.
+    const tags = spawnSync('git', ['tag', '-l', 'v1.0'], { cwd: repoRoot, encoding: 'utf8' });
+    expect(tags.stdout.trim()).toBe('');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // 6. No repoRoot → falls back to prior workflow behavior
 // ---------------------------------------------------------------------------
 

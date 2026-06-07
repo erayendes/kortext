@@ -43,6 +43,10 @@ export type BacklogAggregate = {
   epicProgress: Record<string, { total: number; done: number }>;
   statusCounts: Record<string, number>;
   versions: string[];
+  /** Per-version count of OPEN (non-done/cancelled) non-epic items. Lets the
+   *  board pick its default active version from the aggregate (first paint),
+   *  before any page of cards has loaded — removing the version flicker. */
+  openByVersion: Record<string, number>;
   assignees: string[];
   total: number;
 };
@@ -64,6 +68,7 @@ export class BacklogRepository {
   private readonly aggregateStatusCountsStmt;
   private readonly aggregateEpicProgressStmt;
   private readonly aggregateVersionsStmt;
+  private readonly aggregateOpenByVersionStmt;
   private readonly aggregateAssigneesStmt;
   private readonly aggregateTotalStmt;
 
@@ -145,6 +150,15 @@ export class BacklogRepository {
     this.aggregateVersionsStmt = db.prepare(
       `SELECT DISTINCT version FROM backlog_items WHERE version IS NOT NULL AND version != '' ORDER BY version ASC`,
     );
+    this.aggregateOpenByVersionStmt = db.prepare(`
+      SELECT version, COUNT(*) as n
+      FROM backlog_items
+      WHERE type != 'epic'
+        AND status NOT IN ('done', 'cancelled')
+        AND version IS NOT NULL
+        AND version != ''
+      GROUP BY version
+    `);
     this.aggregateAssigneesStmt = db.prepare(
       `SELECT DISTINCT owner FROM backlog_items WHERE owner IS NOT NULL AND owner != '' AND type != 'epic' ORDER BY owner ASC`,
     );
@@ -335,13 +349,20 @@ export class BacklogRepository {
     const versionRows = this.aggregateVersionsStmt.all() as { version: string }[];
     const versions = versionRows.map((r) => r.version);
 
+    const openByVersionRows = this.aggregateOpenByVersionStmt.all() as {
+      version: string;
+      n: number;
+    }[];
+    const openByVersion: Record<string, number> = {};
+    for (const r of openByVersionRows) openByVersion[r.version] = r.n;
+
     const assigneeRows = this.aggregateAssigneesStmt.all() as { owner: string }[];
     const assignees = assigneeRows.map((r) => r.owner);
 
     const totalRow = this.aggregateTotalStmt.get() as { n: number };
     const total = totalRow.n;
 
-    return { epics, epicProgress, statusCounts, versions, assignees, total };
+    return { epics, epicProgress, statusCounts, versions, openByVersion, assignees, total };
   }
 
   countByStatus(status: BacklogStatus | null = null): number {
