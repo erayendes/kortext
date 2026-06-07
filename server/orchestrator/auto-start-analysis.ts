@@ -32,8 +32,11 @@ export function autoStartPendingAnalysis(deps: AutoStartDeps): AutoStartResult {
   if (!meta) return { started: false, reason: 'no-meta' };
 
   const workflowId = triggerWorkflowIdFor(meta.type);
-  const existing = deps.repos.runs.listRuns({ limit: 1000 });
-  if (existing.some((r) => r.workflow_id === workflowId)) {
+  // Idempotency: ask SQL for ANY run of this workflow (filtered + limited) rather
+  // than scanning a capped page of all runs — a capped scan could miss the
+  // historical run on a long-lived daemon and re-trigger analysis on restart.
+  const existing = deps.repos.runs.listRuns({ workflow_id: workflowId, limit: 1 });
+  if (existing.length > 0) {
     return { started: false, reason: 'already-ran', workflowId };
   }
   deps.trigger(workflowId);

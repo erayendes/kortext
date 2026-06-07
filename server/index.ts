@@ -112,6 +112,11 @@ if (indexSync.stepsWithoutPersona.length > 0) {
   );
 }
 
+// The ephemeral onboarding wizard daemon runs with KORTEXT_BOOTSTRAP=1: it hosts
+// onboarding in a scratch home, delegates project creation to its own dir
+// (blueprint `bootstrap` branch), and must NOT auto-start analysis for itself.
+const isBootstrapDaemon = process.env.KORTEXT_BOOTSTRAP === '1';
+
 // Reconcile zombie runs left behind by a previous crash/restart.
 const resumed = resumeOrphanedRuns(repos);
 if (resumed.recovered.length > 0) {
@@ -230,7 +235,7 @@ const triggerAnalysis = (workflowId: string) => {
 // Idempotent — guarded by an existing-run check, so a restart never re-triggers.
 // Skipped in bootstrap (wizard) mode: that scratch home has no approved
 // blueprint, and the blueprint route handles creation there instead.
-if (process.env.KORTEXT_BOOTSTRAP !== '1') {
+if (!isBootstrapDaemon) {
   const bpPaths = resolveBlueprintPaths(process.cwd());
   const auto = autoStartPendingAnalysis({
     repos,
@@ -291,7 +296,7 @@ app.use(
     // KORTEXT_BOOTSTRAP=1 marks the ephemeral wizard daemon: the chosen dir is
     // materialized into its own project (createProject) rather than written in
     // place, and the real daemon there auto-starts analysis on boot.
-    bootstrap: process.env.KORTEXT_BOOTSTRAP === '1',
+    bootstrap: isBootstrapDaemon,
     createProject: (input) =>
       createProjectAndLaunch(input, {
         packageRoot: process.env.KORTEXT_PACKAGE_ROOT ?? process.cwd(),
