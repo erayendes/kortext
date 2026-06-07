@@ -34,7 +34,7 @@ import type {
   ProjectType,
 } from '../lib/api-types.ts';
 
-const BLUEPRINT_SAMPLE = `# Project Blueprint — Acme CRM
+const BLUEPRINT_SAMPLE = `# BRD — Acme CRM
 
 ## Vision
 A lightweight CRM platform for SMB sales teams. Enables contact management, deal tracking, and automated follow-ups without enterprise complexity.
@@ -68,10 +68,10 @@ A lightweight CRM platform for SMB sales teams. Enables contact management, deal
 - Zero data loss guarantee
 `;
 
-const BLUEPRINT_PROMPT = `You are a product manager. Generate a Kortext blueprint.md based on the project info below.
+const BLUEPRINT_PROMPT = `You are a product manager. Generate a Kortext BRD.md (Business Requirements Document) based on the project info below.
 
-The blueprint.md must contain these sections:
-- # Project Blueprint — [Project Name]
+The BRD.md must contain these sections:
+- # BRD — [Project Name]
 - ## Vision (1-2 sentences of product vision)
 - ## Target Users (who is it for?)
 - ## Core Features (MVP — numbered list, each item bold heading + description)
@@ -200,11 +200,11 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
 
   const onFile = async (file: File) => {
     if (!/\.(md|txt)$/i.test(file.name)) {
-      setSubmitError('Blueprint must be a .md or .txt file');
+      setSubmitError('BRD must be a .md or .txt file');
       return;
     }
     if (file.size > 100 * 1024) {
-      setSubmitError('Blueprint file must be ≤ 100KB');
+      setSubmitError('BRD file must be ≤ 100KB');
       return;
     }
     const text = await file.text();
@@ -222,7 +222,7 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'blueprint.md';
+    a.download = 'BRD.md';
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -420,8 +420,8 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
           </Field>
 
           <Field
-            label="Blueprint"
-            hint="Upload the product blueprint markdown. operation-manager derives the backlog from it."
+            label="BRD"
+            hint="Upload the product BRD (Business Requirements Document) markdown. operation-manager derives the backlog from it."
             actions={
               <div style={{ display: 'flex', gap: 6 }}>
                 <HelperButton
@@ -447,7 +447,7 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
           >
             {showSample ? (
               <HelperPanel
-                title="blueprint.md — sample"
+                title="BRD.md — sample"
                 accent="default"
                 actions={
                   <>
@@ -465,7 +465,7 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
             ) : null}
             {showPrompt ? (
               <HelperPanel
-                title="Blueprint generator prompt"
+                title="BRD generator prompt"
                 accent="accent"
                 actions={
                   <>
@@ -502,7 +502,7 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
                   type="button"
                   onClick={clearBlueprint}
                   className="ob-x"
-                  aria-label="Remove blueprint file"
+                  aria-label="Remove BRD file"
                 >
                   <X size={12} />
                 </button>
@@ -540,7 +540,7 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
                     className="mono"
                     style={{ padding: '2px 6px', borderRadius: 4, fontSize: 12, background: 'var(--panel)' }}
                   >
-                    blueprint.md
+                    BRD.md
                   </span>{' '}
                   here
                 </div>
