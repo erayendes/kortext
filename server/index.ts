@@ -187,6 +187,9 @@ const approvalDeployer = new WorkflowDeployer({
     });
   })(),
   loadDeploymentWorkflow: () => workflowRegistry.get('deployment-cycle'),
+  // Real development→main merge + annotated version tag (§5.11).
+  // Prod push is a follow-up — CI/prod-push not wired here yet.
+  repoRoot: process.cwd(),
 });
 app.use('/api', approvalRouter({ repos, queue: approvalQueue, deployer: approvalDeployer }));
 app.use('/api', runsRouter({ repos }));

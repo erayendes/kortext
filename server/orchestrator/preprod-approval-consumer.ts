@@ -90,9 +90,28 @@ async function handleApprove(
     }
   }
 
-  // Mechanical prod release: development→main merge + prod deploy + tag (§5.11).
-  // Real git main-merge/tag is a follow-up; mock-first now.
-  await deployer.deployProd({ version });
+  // Mechanical prod release: development→main merge + annotated tag (§5.11).
+  // Prod push is a follow-up — WorkflowDeployer.deployProd does merge+tag only.
+  const outcome = await deployer.deployProd({ version });
+
+  // Surface a merge/deploy failure as a bug so it's visible in the backlog.
+  // The approval side-effects (preprod_approved markers) above are kept — the
+  // approval happened; the merge failure is a separate issue.
+  if (!outcome.ok) {
+    const epics = repos.backlog.list({ type: 'epic', limit: 500 });
+    const versionEpics = epics.filter((e) => e.version === version);
+    const firstEpic = versionEpics[0] ?? null;
+
+    const bugId = nextBacklogId(repos, 'bug');
+    repos.backlog.create({
+      id: bugId,
+      type: 'bug',
+      title: `Prod release failed: version ${version}`,
+      parent_id: firstEpic?.id ?? null,
+      body_md: outcome.reason ?? 'prod release failed (no reason provided)',
+      status: 'to_do',
+    });
+  }
 }
 
 // ---------------------------------------------------------------------------
