@@ -37,6 +37,7 @@ import {
 } from './blueprint/io.ts';
 import { autoStartPendingAnalysis } from './orchestrator/auto-start-analysis.ts';
 import { createProjectAndLaunch } from './blueprint/create-project.ts';
+import { scheduleBootstrapSelfExit } from './cli/cmd-bootstrap.ts';
 import { bootstrapGit } from './cli/bootstrap-git.ts';
 import { startProject } from './cli/cmd-start.ts';
 import { initCommand } from './cli/init.ts';
@@ -312,6 +313,10 @@ app.use(
         writeProjectMeta,
       }),
     onApproved: triggerAnalysis,
+    // After the wizard hands off to the real project daemon, it must stop
+    // holding port 3199 — it is unregistered, so `kortext stop` can't reap it.
+    // Guarded by KORTEXT_BOOTSTRAP so a real daemon never self-exits here.
+    onBootstrapHandoff: () => scheduleBootstrapSelfExit({ isBootstrap: isBootstrapDaemon }),
   }),
 );
 // §5.16 — the manual "start button": POST /api/drive runs one autonomous driver

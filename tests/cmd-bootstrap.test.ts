@@ -1,5 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
-import { launchBootstrapWizard, BOOTSTRAP_PORT } from '../server/cli/cmd-bootstrap.ts';
+import {
+  launchBootstrapWizard,
+  scheduleBootstrapSelfExit,
+  BOOTSTRAP_PORT,
+} from '../server/cli/cmd-bootstrap.ts';
 
 function deps(over = {}) {
   return {
@@ -46,5 +50,46 @@ describe('launchBootstrapWizard', () => {
     if (res.ok) return;
     expect(res.message).toMatch(/serve/i);
     expect(d.spawn).not.toHaveBeenCalled();
+  });
+});
+
+describe('scheduleBootstrapSelfExit', () => {
+  it('schedules exit(0) after the handoff delay when this is the bootstrap daemon', () => {
+    const exit = vi.fn();
+    const unref = vi.fn();
+    const setTimer = vi.fn((_fn: () => void, _ms: number) => ({ unref }));
+
+    const scheduled = scheduleBootstrapSelfExit({
+      isBootstrap: true,
+      delayMs: 2000,
+      setTimer,
+      exit,
+    });
+
+    expect(scheduled).toBe(true);
+    expect(setTimer).toHaveBeenCalledTimes(1);
+    const [scheduledFn, delay] = setTimer.mock.calls[0]!;
+    expect(delay).toBe(2000);
+    // The timer is unref'd so it never keeps the process alive on its own.
+    expect(unref).toHaveBeenCalledTimes(1);
+    // exit only fires when the scheduled callback runs, not synchronously.
+    expect(exit).not.toHaveBeenCalled();
+    scheduledFn();
+    expect(exit).toHaveBeenCalledWith(0);
+  });
+
+  it('does nothing when this is a real (non-bootstrap) daemon', () => {
+    const exit = vi.fn();
+    const setTimer = vi.fn((_fn: () => void, _ms: number) => ({ unref: vi.fn() }));
+
+    const scheduled = scheduleBootstrapSelfExit({
+      isBootstrap: false,
+      setTimer,
+      exit,
+    });
+
+    expect(scheduled).toBe(false);
+    expect(setTimer).not.toHaveBeenCalled();
+    expect(exit).not.toHaveBeenCalled();
   });
 });
