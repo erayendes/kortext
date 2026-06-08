@@ -14,6 +14,8 @@
 >   - id: PAY-003
 >     review_gates: [security_control]
 > ```
+>
+> **⛔ ZORUNLU — tepe anahtar `items:` OLMALI.** `backlog.patch.yaml`'in en üst satırı **mutlaka `items:`** olmalı; patch'in türü ne olursa olsun (bağımlılık, atama, versiyon…) **başka bir tepe anahtar KULLANMA** — `dependency_patches:`, `assignee_patches:`, `acceptance_patches:` gibi adlar **YANLIŞ**, motor bunları okuyamaz ve **tüm adım sessizce kaybolur**. Her zaman `items:` altında `id` + değişen alanlar.
 
 ## Backlog Tanımı
 
@@ -112,7 +114,17 @@
 
 ## Konsolidasyon
 
-1. **+operation-manager:** Nihai `backlog.yaml`'i baştan sona tara: drift, eksik alan (epic/versiyon/model boş kalan item), dangling `blocks`/`blocked_by` referansı, eksik Epic veya versiyon ilişkisi. **ID denetimi:** her id `<CODE>-NNN`/`<CODE>-E0X` desenine uymalı; slug/kebab-case id (`init-nextjs-project`) bulursan **hata olarak düzelt** (patch'te eski→yeni id veremezsin; bunun yerine raporun "açık riskler" bölümüne not düş, çünkü id yeniden yazımı step-1'de yapılmalıydı). **Bağımlılık denetimi:** her item'da `blocks` ve `blocked_by` alanları doldurulmuş mu (en az `[]`) — toptan boş kalmış çok-adımlı bir epic, step-1'in bağımlılıkları atladığına işarettir, yeniden incele. `blocked_by`/`blocks` referansları gerçek id'lere işaret etmeli; dangling olanı temizle. Bulduğun eksikleri **patch olarak** `backlog.patch.yaml`'e yaz (yalnız düzelttiğin item'lar, yalnız eksik alanlar) — tüm dosyayı yeniden yazma. Sonra planning özet raporu yaz: versiyon planı, Epic dağılımı, açık riskler, +prime kararına bırakılan kalemler. Rapor dosya adı `<scope>_<slug>_<ts>.md` desenine uymalı (örn. `planning-reports_taskflow_2026-06-05-1959.md`).
+1. **+operation-manager:** Nihai `backlog.yaml`'i baştan sona tara: drift, eksik alan (epic/versiyon/model boş kalan item), dangling `blocks`/`blocked_by` referansı, eksik Epic veya versiyon ilişkisi. **ID denetimi:** her id `<CODE>-NNN`/`<CODE>-E0X` desenine uymalı; slug/kebab-case id (`init-nextjs-project`) bulursan **hata olarak düzelt** (patch'te eski→yeni id veremezsin; bunun yerine raporun "açık riskler" bölümüne not düş, çünkü id yeniden yazımı step-1'de yapılmalıydı). **Bağımlılık denetimi:** her item'da `blocks` ve `blocked_by` alanları doldurulmuş mu (en az `[]`) — toptan boş kalmış çok-adımlı bir epic, step-1'in bağımlılıkları atladığına işarettir, yeniden incele. `blocked_by`/`blocks` referansları gerçek id'lere işaret etmeli; dangling olanı temizle. Bulduğun eksikleri **patch olarak** `backlog.patch.yaml`'e yaz (yalnız düzelttiğin item'lar, yalnız eksik alanlar) — tüm dosyayı yeniden yazma. **Tepe anahtar `items:` olmalı** (`dependency_patches:` gibi bir ad DEĞİL — motor okuyamaz). Bağımlılık patch örneği:
+   ```yaml
+   items:
+     - id: NOT-005
+       blocked_by: [NOT-001]
+       blocks: []
+     - id: NOT-001
+       blocked_by: []
+       blocks: [NOT-005]
+   ```
+   Sonra planning özet raporu yaz: versiyon planı, Epic dağılımı, açık riskler, +prime kararına bırakılan kalemler. Rapor dosya adı `<scope>_<slug>_<ts>.md` desenine uymalı (örn. `planning-reports_taskflow_2026-06-05-1959.md`).
 
    **Memory (kalıcı karar günlüğü):** Planlama sırasında alınan kalıcı kararları `.kortext/memory/decisions.md`'e yaz. Varsa önce oku ve **üstüne ekle** (silme). Her karar tek satır/madde: ne karar verildi + kısa gerekçe (örn. "Versiyonlama v0.1→v1.0 aşamalı — MVP'yi erken çıkarmak için", "Auth epic'i ilk sürüme alındı — tüm akışların ön koşulu"). Yoksa yeni dosya oluştur, en üste `# Decisions` başlığı koy.
    - inputs: `.kortext/foundation/PRD.md`, `.kortext/foundation/TRD.md`, `backlog-models-set`

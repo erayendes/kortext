@@ -1,4 +1,7 @@
 import { describe, expect, it, beforeEach } from 'vitest';
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { openDb } from '../server/db/client.ts';
 import type { Repositories } from '../server/db/repositories/index.ts';
 import {
@@ -8,6 +11,7 @@ import {
   enforceSymmetricDeps,
   patchBacklogItems,
   serializeBacklogToYaml,
+  ingestBacklogPatchFile,
 } from '../server/engine/backlog-ingest.ts';
 
 let repos: Repositories;
@@ -920,5 +924,155 @@ describe('A5: auto-block on ingest', () => {
     // enforceSymmetricDeps will add blocked_by:[TF-001] to TF-002
     ingestBacklogItems(repos, items);
     expect(repos.backlog.get('TF-002')!.status).toBe('blocked');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Critical-#1 (UAT 2026-06-08): planning enrichment silently lost
+// ---------------------------------------------------------------------------
+
+// A — the agent wrote a patch under a non-`items` top-level key
+// (`dependency_patches:`) → parser said "no items array found" → the whole
+// patch (and all enrichment) was dropped. The parser must accept the first
+// top-level array of id-bearing objects regardless of the key name.
+describe('Critical-#1 A: generic top-level array key (LLM uses a non-`items` key)', () => {
+  it('accepts a top-level array of id-bearing objects under any key (dependency_patches)', () => {
+    const { items, errors } = parseBacklogYaml(
+      'dependency_patches:\n  - id: NOT-001\n    blocked_by: [NOT-002]\n  - id: NOT-002\n    blocks: [NOT-001]\n',
+      { mode: 'patch' },
+    );
+    expect(errors).toHaveLength(0);
+    expect(items.map((i) => i.id).sort()).toEqual(['NOT-001', 'NOT-002']);
+    expect(items.find((i) => i.id === 'NOT-001')!.blocked_by).toEqual(['NOT-002']);
+  });
+
+  it('still prefers a canonical `items:` array when another array key is also present', () => {
+    const { items } = parseBacklogYaml(
+      'items:\n  - id: REAL-1\n    review_gates: [code_review]\nextra_patches:\n  - id: DECOY-1\n',
+      { mode: 'patch' },
+    );
+    expect(items.map((i) => i.id)).toEqual(['REAL-1']);
+  });
+
+  it('does NOT grab a non-item array (plain strings, no id field)', () => {
+    const { items, errors } = parseBacklogYaml('versions:\n  - v0.1\n  - v0.2\n', { mode: 'patch' });
+    expect(items).toHaveLength(0);
+    expect(errors.length).toBeGreaterThan(0);
+  });
+});
+
+// B — workflow tells the planning agent to write `assignee`, but the column is
+// `owner`. The alias must reach the owner column so the SQL-backed assignee
+// filter/aggregate works — without ever nulling an owner the engine already set.
+describe('Critical-#1 B: assignee→owner alias persists to the owner column', () => {
+  it('writes `assignee` to the owner column on full ingest', () => {
+    ingestBacklogItems(
+      repos,
+      parseBacklogYaml(
+        'items:\n  - id: NOT-001\n    type: task\n    title: X\n    assignee: +backend-developer\n',
+      ).items,
+    );
+    expect(repos.backlog.get('NOT-001')!.owner).toBe('+backend-developer');
+  });
+
+  it('accepts the `owner` key directly too', () => {
+    ingestBacklogItems(
+      repos,
+      parseBacklogYaml('items:\n  - id: NOT-002\n    type: task\n    title: Y\n    owner: +prime\n').items,
+    );
+    expect(repos.backlog.get('NOT-002')!.owner).toBe('+prime');
+  });
+
+  it('sets owner via a later enrichment patch (the real pipeline shape)', () => {
+    ingestBacklogItems(
+      repos,
+      parseBacklogYaml('items:\n  - id: NOT-003\n    type: task\n    title: Z\n').items,
+    );
+    expect(repos.backlog.get('NOT-003')!.owner).toBeNull();
+    patchBacklogItems(
+      repos,
+      parseBacklogYaml('items:\n  - id: NOT-003\n    assignee: +frontend-developer\n', {
+        mode: 'patch',
+      }).items,
+    );
+    expect(repos.backlog.get('NOT-003')!.owner).toBe('+frontend-developer');
+  });
+
+  it('a step-1 re-ingest with no assignee does NOT null an owner already set', () => {
+    ingestBacklogItems(
+      repos,
+      parseBacklogYaml('items:\n  - id: NOT-004\n    type: task\n    title: A\n').items,
+    );
+    patchBacklogItems(
+      repos,
+      parseBacklogYaml('items:\n  - id: NOT-004\n    assignee: +qa-engineer\n', { mode: 'patch' })
+        .items,
+    );
+    // step-1 rewrites the whole backlog.yaml (no assignee yet) → upsert update
+    ingestBacklogItems(
+      repos,
+      parseBacklogYaml('items:\n  - id: NOT-004\n    type: task\n    title: A\n').items,
+    );
+    expect(repos.backlog.get('NOT-004')!.owner).toBe('+qa-engineer'); // preserved
+  });
+});
+
+// C — acceptance_criteria has an existing home (frontmatter, rendered by
+// acChecklist). The only reason it vanished in UAT was that the patch under a
+// non-`items` key never parsed (A). With A fixed, AC delivered via any top-key
+// must land in frontmatter.
+describe('Critical-#1 C: acceptance_criteria survives a generic top-key patch', () => {
+  it('lands AC in frontmatter when delivered under a non-`items` key', () => {
+    ingestBacklogItems(
+      repos,
+      parseBacklogYaml('items:\n  - id: NOT-010\n    type: task\n    title: X\n').items,
+    );
+    const { items } = parseBacklogYaml(
+      'acceptance_patches:\n  - id: NOT-010\n    acceptance_criteria: ["kullanici giris yapar", "hatali sifre reddedilir"]\n',
+      { mode: 'patch' },
+    );
+    patchBacklogItems(repos, items);
+    expect(repos.backlog.get('NOT-010')!.frontmatter.acceptance_criteria).toEqual([
+      'kullanici giris yapar',
+      'hatali sifre reddedilir',
+    ]);
+  });
+});
+
+// D — a patch that yields zero updates because of parse errors used to be
+// swallowed (only a low-signal `…summary parse_errors:1`). A total drop must
+// emit a loud, distinct audit event so the dashboard surfaces it.
+describe('Critical-#1 D: a totally-dropped patch emits a distinct, visible audit event', () => {
+  it('emits backlog.patch.dropped when parse errors yield zero updates', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'kx-patch-'));
+    const file = join(dir, 'backlog.patch.yaml');
+    // No id-bearing array anywhere → 0 updates + a parse error.
+    writeFileSync(file, 'note: this is not a backlog patch\nmeta:\n  foo: bar\n', 'utf8');
+    try {
+      const res = ingestBacklogPatchFile(repos, file);
+      expect(res.parseErrors.length).toBeGreaterThan(0);
+      expect(res.updated).toHaveLength(0);
+      const dropped = repos.auditLog.list({ action: 'backlog.patch.dropped' });
+      expect(dropped.length).toBeGreaterThan(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('does NOT emit the dropped event when the patch applies cleanly', () => {
+    ingestBacklogItems(
+      repos,
+      parseBacklogYaml('items:\n  - id: NOT-020\n    type: task\n    title: X\n').items,
+    );
+    const dir = mkdtempSync(join(tmpdir(), 'kx-patch-'));
+    const file = join(dir, 'backlog.patch.yaml');
+    writeFileSync(file, 'dependency_patches:\n  - id: NOT-020\n    version: v0.1\n', 'utf8');
+    try {
+      const res = ingestBacklogPatchFile(repos, file);
+      expect(res.updated).toContain('NOT-020');
+      expect(repos.auditLog.list({ action: 'backlog.patch.dropped' })).toHaveLength(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

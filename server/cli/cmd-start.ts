@@ -18,9 +18,14 @@ export type StartTarget =
   | { kind: 'not-found'; arg: string };
 
 /**
- * Decide what `start [arg]` means. `exists` and `isSelf` are injectable for
- * tests. `isSelf` guards against binding Kortext's OWN package dir as a project —
- * its dev/demo `.kortext/` would otherwise be mistaken for a user project.
+ * Decide what `start [arg]` means. `exists`, `isSelf`, and `registryDir` are
+ * injectable for tests.
+ *   - `isSelf` guards against binding Kortext's OWN package dir as a project —
+ *     its dev/demo `.kortext/` would otherwise be mistaken for a user project.
+ *   - `registryDir` (default `~/.kortext`) lets us reject the HOME directory:
+ *     its `.kortext` IS the global registry, not a project. Without this, a bare
+ *     `kortext start` from home scaffolds home as a project named after the home
+ *     folder and pollutes the registry dir (UAT 2026-06-08 #4).
  */
 export function resolveStartTarget(
   reg: Registry,
@@ -28,25 +33,35 @@ export function resolveStartTarget(
   cwd: string,
   exists: (p: string) => boolean = existsSync,
   isSelf: (dir: string) => boolean = (dir) => isKortextPackageDir(dir),
+  registryDir: string = defaultRegistryDir(),
 ): StartTarget {
+  // A directory whose `.kortext` resolves to the global registry dir is the
+  // user's home — never a project root.
+  const isRegistryHome = (dir: string) =>
+    resolve(join(dir, '.kortext')) === resolve(registryDir);
+  const listOrOnboard = (): StartTarget =>
+    listProjects(reg).length > 0 ? { kind: 'list' } : { kind: 'onboard' };
+
   if (arg) {
     const bySlug = getProject(reg, arg);
     if (bySlug) return { kind: 'existing', slug: bySlug.slug };
     const asPath = isAbsolute(arg) ? arg : resolve(cwd, arg);
     if (isSelf(asPath)) return { kind: 'self' };
+    if (isRegistryHome(asPath)) return listOrOnboard();
     if (exists(asPath)) {
       const registered = listProjects(reg).find((p) => p.path === asPath);
       return registered ? { kind: 'existing', slug: registered.slug } : { kind: 'new-path', path: asPath };
     }
     return { kind: 'not-found', arg };
   }
-  // No arg: prefer the cwd if it is a kortext project.
-  if (exists(join(cwd, '.kortext'))) {
+  // No arg: prefer the cwd if it is a kortext project — but the home dir's
+  // .kortext is the GLOBAL REGISTRY, not a project, so never bind it.
+  if (exists(join(cwd, '.kortext')) && !isRegistryHome(cwd)) {
     if (isSelf(cwd)) return { kind: 'self' };
     const registered = listProjects(reg).find((p) => p.path === cwd);
     return registered ? { kind: 'existing', slug: registered.slug } : { kind: 'new-path', path: cwd };
   }
-  return listProjects(reg).length > 0 ? { kind: 'list' } : { kind: 'onboard' };
+  return listOrOnboard();
 }
 
 export type StartResult =
@@ -73,7 +88,7 @@ export function startProject(arg: string | undefined, deps: StartDeps): StartRes
 
   // Read + resolve outside the lock for cheap early-exit (list/onboard/not-found).
   const regPre = readRegistry(registryDir);
-  const target = resolveStartTarget(regPre, arg, deps.cwd);
+  const target = resolveStartTarget(regPre, arg, deps.cwd, existsSync, undefined, registryDir);
 
   if (target.kind === 'list') return { ok: false, action: 'list', message: 'Pick a project to start.' };
   if (target.kind === 'onboard') return { ok: false, action: 'onboard', message: 'No project here yet — run onboarding.' };

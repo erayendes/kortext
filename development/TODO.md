@@ -17,6 +17,57 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 
 ---
 
+## ✅ KRİTİK (ÇÖZÜLDÜ 2026-06-08 #4): Planning zenginleştirmesi sessizce kayboluyordu (UAT bulgusu)
+
+> **Belirti:** UAT'ta analiz + planning gerçek Claude ile koştu, **70 item** üretildi — ama Board'da **owner/assignee, parent_epic, version, review_gates, blocked_by hepsi `null`/boş**, tüm item'lar düz `to_do`. Planning'in en değerli çıktısı (kim, hangi epic, hangi sürüm, hangi kapı, bağımlılık) hiç persist olmadı.
+
+**Kök neden — patch parser yalnız `items:` kabul ediyor, ajan başka tepe-anahtar yazıyor.** `server/engine/backlog-ingest.ts` parse_backlog (satır ~109-157) sadece (a) tepe seviye `items:` dizisi veya (b) ` ```yaml ` fenced blok kabul ediyor. Ajanın ürettiği `backlog.patch.yaml` tepe anahtarı **`dependency_patches:`** (kanıt: `notlarim/.kortext/foundation/backlog.patch.yaml`) → `errors: ['no "items" array found']` → patch **tümüyle atlanıyor**. Aynı şey atama/epic/versiyon/model adımlarında da olmuş (hepsi null → hiçbiri parse edilmemiş). Activity'de 6× `backlog.patch.summary parse_errors:1`.
+
+**Düzeltilecekler (yeni oturum):** ✅ **TAMAM (2026-06-08 #4, A-F, +10 TDD test → 1037 yeşil, typecheck+build temiz).**
+- [x] ~~**(A — birincil) Generic tepe-anahtar kabulü**~~ ✅ — yeni `findItemArray` helper: `items:` yoksa tepe seviyedeki **ilk `id` taşıyan obje listesini** kabul eder (skaler diziler reddedilir → `versions: [v0.1]` yanlışlıkla yakalanmaz). Hem top-level hem fenced dalda. Canlı `dependency_patches:` dosyası artık parse oluyor.
+- [x] ~~**(B) `assignee`→`owner` alias**~~ ✅ — parser `owner`/`assignee`'yi `parsed.owner`'a çözer; yeni `repos.backlog.setOwner` (yalnız değer-set, asla null) ingest create/update + patch yollarına bağlandı. `updatePlanningFields` "owner'a dokunma" garantisi korundu → step-1 re-ingest atamayı silmez. Serializer da `owner` yazıyor.
+- [x] ~~**(C) `acceptance_criteria` için ev**~~ ✅ — AC zaten frontmatter'a iniyor + `acChecklist()` UI'da gösteriyor (faz-2/3); tek sorun patch'in hiç parse olmamasıydı (A). Test: generic tepe-anahtarla gelen AC frontmatter'a iniyor. Ek kolon/UI gerekmedi.
+- [x] ~~**(D) Sessiz başarısızlık**~~ ✅ — `ingestBacklogPatchFile`: parse_errors VAR + 0 update (tam kayıp) olduğunda **ayrı, görünür** `backlog.patch.dropped` audit olayı (eyleme dönük mesaj + tepe-anahtar ipucu). Düşük-sinyalli `summary parse_errors:1` artık tek başına değil. (Hard-fail YOK — iyi-huylu patch planning'i kırmasın diye; görünür uyarı.)
+- [x] ~~**(E) Tek paylaşılan patch dosyası overwrite**~~ ✅ (A+D ile kapandı) — motor her adımın çıktısını yazıldığı an ingest edip backlog.yaml'i yeniden serialize ediyor (sonraki adım ezmeden önce). Gerçek kayıp = sessiz parse-drop (A) + görünmezlik (D); ikisi de çözüldü. **Adım-başına ayrı dosya** ertelendi (A+D gerçek deliği kapattı, marjinal fayda).
+- [x] ~~**(F) workflow talimatı sertleştir**~~ ✅ — `workflows/planning-pipeline.md`: patch format bloğuna **⛔ tepe anahtar `items:` OLMALI** kuralı (`dependency_patches:` vb. YANLIŞ, adım sessizce kaybolur) + Konsolidasyon adımına somut bağımlılık patch örneği.
+
+---
+
+## ✅ Codex executor (ÇÖZÜLDÜ 2026-06-08 #4): `exec` alt-komutu eksikti (UAT bulgusu)
+
+> UAT'ta Codex executor seçildi → analiz pipeline'ı **1 saniyede çöktü**. Kök neden: `codex-cli-executor.ts` `args`'a hiç `exec` eklemiyordu → ham `codex` interaktif TUI olarak açılıyor → `stdin is not a terminal`, `code 1`.
+
+- [x] ~~**Codex executor'ı düzelt**~~ ✅ — `args = ['exec', '--sandbox', 'workspace-write', '--skip-git-repo-check', ...extraArgs]`. Flag'ler codex-cli 0.137.0'da `codex exec --help` ile doğrulandı; prompt argümansız → stdin'den okunur (mevcut akış korunur). +1 args-spy testi (`exec` ilk arg, sandbox=workspace-write). **Kalan:** gerçek-codex canlı smoke (UAT'ta Claude'la devam edildi).
+
+---
+
+## ✅ UX: çıplak `kortext start` (ÇÖZÜLDÜ 2026-06-08 #4) — env değişkeni artık gerekmiyor (UAT bulgusu)
+
+> Non-coder kullanıcı `KORTEXT_DRIVE_ENABLED=1 KORTEXT_CLAUDE_BIN=$(which claude) kortext start` yazmak zorunda kalıyordu. İkisi de kalktı.
+
+- [x] ~~**`KORTEXT_CLAUDE_BIN` otomatik bul**~~ ✅ — yeni `server/cli/binary-resolver.ts` (`resolveExecutorBinary`): env override > PATH+bilinen dizinlerde mutlak-yol keşfi (`whichSync`, detached daemon ince PATH'te bile bulur) > çıplak komut adı. `defaultBinaryFor` (server/index.ts) buna devredildi; antigravity→`agy` eşlemesi korundu. Sihirbaz binary-path alanı hâlâ override. +6 test.
+- [x] ~~**`KORTEXT_DRIVE_ENABLED` → varsayılan**~~ ✅ — `kortext start` ile doğan daemon artık driver'ı **varsayılan armed** başlatıyor (`buildDaemonEnv`: switch unset/boş ise `'1'`; kullanıcının açık `'0'`'ı hâlâ kazanır). Kapsam güvenli: çıplak prod sunucu node'u doğrudan koşar, spawnDaemon'dan geçmez → orada OFF kalır. Scheduler ("Auto") hâlâ ayrı/varsayılan kapalı — sadece düğmeler silahlandı. +6 test. (GUI toggle yerine "makul varsayılan" yolu seçildi.)
+
+---
+
+## ✅ Home dizininden `kortext start` (ÇÖZÜLDÜ 2026-06-08 #4): sihirbaz kirletmiyordu (UAT bulgusu)
+
+> cwd=home iken çıplak `kortext start` `~/.kortext`'i (global registry dizini) bir proje `.kortext`'i sanıp home'u "erayendes" projesi olarak iskeliyordu + auto-handoff tetiklenmedi → "elle cd && serve" fallback.
+
+**Kök neden:** `resolveStartTarget` (`server/cli/cmd-start.ts`) `cwd/.kortext` var mı diye bakıyordu; ama home'da bu **registry dizininin ta kendisi** (`defaultRegistryDir()` = `~/.kortext`).
+
+- [x] ~~**Registry-home guard'ı**~~ ✅ — `resolveStartTarget`'a `registryDir` parametresi + `isRegistryHome(dir)` (dir'in `.kortext`'i registry dizinine çözülüyorsa = home, asla proje değil). Hem arg hem no-arg dalında: home → `list`/`onboard` (sihirbaz), `new-path` değil. Kardeş gerçek proje dizinleri etkilenmez (guard yalnız home'a kapsamlı). +4 test. İkinci belirti (auto-handoff/serve fallback) kök düzelince giderildi: artık doğru `onboard` → sihirbaz.
+
+## 🤖 Çok-modelli executor — onboarding seçimi = operation-manager modeli (2026-06-08, UAT/Eray vizyonu)
+
+> Şu an executor **proje genelinde tek** (`project.json.executor`) — her persona/adım aynı CLI'yi kullanıyor. Eray'ın istediği model: onboarding'de seçilen executor **sadece operation-manager (orkestratör) içindir**; sonrasında **birden çok model eşzamanlı** çalışabilmeli (persona/görev bazında farklı executor — örn. analiz adımları agy, kritik kodlama claude, vb.).
+
+- [ ] **Onboarding semantiği:** "AI Executor" alanını "operation-manager modeli" olarak çerçevele (etiket + yardım metni). Bu seçim orkestratörün modeli olur.
+- [ ] **Persona→executor yönlendirmesi:** operation-manager alt-personaları kendi executor'larına atayabilsin; tek koşuda farklı CLI'ler paralel çalışsın. (Altyapı izi: geçmişte "persona-routed executor" konuşulmuştu — DECISIONS §7/Faz 4.) Worker-pool zaten eşzamanlı; eksik olan adım-bazında executor seçimi.
+- [ ] **Settings/Agents:** her persona için model/executor override edilebilir alan (v3.2 yazma kapsamıyla uyumlu).
+
+---
+
 ## 🚀 v3.1 release + CLI follow-up (2026-06-06)
 
 > v3.1 CLI per-project-daemon **tamam** (11 görev, 835 test, paketlenmiş smoke test geçti). Kalanlar:

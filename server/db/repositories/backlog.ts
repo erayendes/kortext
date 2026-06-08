@@ -60,6 +60,7 @@ export class BacklogRepository {
   private readonly updateFrontmatterStmt;
   private readonly updateReviewGatesStmt;
   private readonly updatePlanningStmt;
+  private readonly setOwnerStmt;
   private readonly setPreviewUrlStmt;
   private readonly deleteStmt;
   private readonly countStmt;
@@ -118,6 +119,9 @@ export class BacklogRepository {
         updated_at = @ts
       WHERE id = @id
     `);
+    this.setOwnerStmt = db.prepare(
+      'UPDATE backlog_items SET owner = @owner, updated_at = @ts WHERE id = @id',
+    );
     this.setPreviewUrlStmt = db.prepare(
       'UPDATE backlog_items SET preview_url = @preview_url, updated_at = @ts WHERE id = @id',
     );
@@ -313,6 +317,22 @@ export class BacklogRepository {
       body_md: fields.body_md,
       ts: Date.now(),
     });
+    if (result.changes === 0) {
+      throw new Error(`backlog item not found: ${id}`);
+    }
+    return this.get(id)!;
+  }
+
+  /**
+   * Set the assigned persona handle (`owner` column). Used by the planning
+   * ingest/patch path: the agent writes `assignee`/`owner`, which the engine
+   * maps here. Deliberately a separate, value-only setter (never null) so
+   * updatePlanningFields can keep its "never touch owner" guarantee — a step-1
+   * re-ingest that omits the assignee can't drag an assigned item back to
+   * unowned.
+   */
+  setOwner(id: string, owner: string): BacklogItem {
+    const result = this.setOwnerStmt.run({ id, owner, ts: Date.now() });
     if (result.changes === 0) {
       throw new Error(`backlog item not found: ${id}`);
     }

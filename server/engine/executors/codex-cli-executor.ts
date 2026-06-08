@@ -46,7 +46,20 @@ export class CodexCliExecutor implements Executor {
     );
     const prompt = buildPrompt(step, ctx, personaBody);
     const logPath = join(this.opts.logsDir, `run-${ctx.runId}-step-${ctx.runStepId}.log`);
-    const args = [...(this.opts.extraArgs ?? [])];
+    // `exec` runs Codex NON-interactively (the bare `codex` binary drops into a
+    // TUI and dies on piped stdin with "stdin is not a terminal" — UAT
+    // 2026-06-08). The prompt is read from stdin (no PROMPT arg → Codex reads
+    // stdin). `--sandbox workspace-write` is REQUIRED: the default read-only
+    // policy can't create the declared output files. `--skip-git-repo-check`
+    // lets it run in a fresh worktree that isn't its own git root.
+    // Callers can still append `--model` etc. via `extraArgs`.
+    const args = [
+      'exec',
+      '--sandbox',
+      'workspace-write',
+      '--skip-git-repo-check',
+      ...(this.opts.extraArgs ?? []),
+    ];
 
     const res = await spawnCli({
       binary: this.opts.binary,

@@ -7,7 +7,35 @@
 
 ---
 
-## ⭐ Şu an (2026-06-08 #2) — UAT turu + 4 UAT-güdümlü düzeltme TAMAM ✅
+## ⭐ Şu an (2026-06-08 #4) — UAT bulguları #1–#4 TDD ile DÜZELTİLDİ ✅ (rebuild + UAT'a devam)
+
+Önceki turun (#3) 4 düzeltilebilir bulgusu uçtan uca düzeltildi (TDD, **1054 test yeşil** [1027→+27], typecheck + build temiz). **Push EDİLMEDİ** (lokal commit'ler de henüz yok — working tree). Detay [TODO.md](./TODO.md)'de madde-madde.
+
+- **#1 🔴 KRİTİK — Planning enrichment sessizce kayboluyordu (A–F):** Kök neden doğrulandı (canlı `notlarim/.kortext/foundation/backlog.patch.yaml` tepe anahtarı `dependency_patches:` → parser yalnız `items:` kabul ediyordu → tüm patch atlanıyordu). **A:** yeni `findItemArray` — `items:` yoksa ilk `id`-taşıyan obje listesini kabul eder (skaler dizi reddedilir). **B:** `assignee`→`owner` alias + guarded `setOwner` (asla null'lamaz, re-ingest atamayı silmez). **C:** AC zaten frontmatter+`acChecklist`'te; A parse edince iniyor. **D:** tam-kayıpta görünür `backlog.patch.dropped` audit olayı. **E:** A+D ile kapandı (motor her adımı yazıldığı an ingest+reserialize). **F:** `planning-pipeline.md` "tepe anahtar `items:` OLMALI" sertleştirmesi + örnek. (+10 test)
+- **#2 🐛 Codex executor:** `args = ['exec','--sandbox','workspace-write','--skip-git-repo-check',...]` (flag'ler codex-cli 0.137.0 ile doğrulandı). (+1 test)
+- **#3 🧰 UX env:** yeni `binary-resolver.ts` (`resolveExecutorBinary` — PATH+bilinen dizinlerde mutlak-yol keşfi) → `KORTEXT_CLAUDE_BIN` gerekmez; `buildDaemonEnv` driver'ı `kortext start` daemon'unda **varsayılan armed** yapar → `KORTEXT_DRIVE_ENABLED` gerekmez (prod node yolu OFF kalır). (+12 test)
+- **#4 🧙 Home kirletme:** `resolveStartTarget`'a `isRegistryHome` guard'ı — home'un `.kortext`'i = global registry, asla proje değil → `onboard`/`list`. (+4 test)
+
+**SIRADAKİ:** (1) İstersen tek/dörtlü **commit** (push değil). (2) **Rebuild:** `npm run build && npm pack && npm install -g ./kortext-3.1.0.tgz` → #1–#4 kurulu kortext'e iner. (3) **UAT'a devam:** `kortext purge not --yes` ile sıfırla → temiz onboarding (Claude) → bu sefer enrichment Board'a iner (owner/version/epic/gate/deps dolu), bare `kortext start` env'siz çalışır. **Kalan UAT bulgusu:** #5 çok-modelli executor (özellik, [TODO](./TODO.md)). **Not:** canlı `not` (:3200) eski 70 item geriye dönük düzelmez (eski patch dosyaları üzerine yazıldı) — temiz koşu gerekir.
+
+---
+
+## ⭐ Önceki (2026-06-08 #3) — UAT turu (Claude executor, "Notlarım") → bulgular kaydedildi, düzeltme yeni oturuma
+
+Eray yeni bir uçtan-uca UAT koştu (temiz rebuild 3.1.0 → `kortext start` sihirbazı → "Notlarım" not-uygulaması, BRD `~/Downloads/BRDTEST.md`). **Analiz + planning gerçek Claude ile uçtan uca koştu**, +prime onay/revize kapıları çalıştı, **70 item** üretildi. 4 bulgu çıktı; Eray "bulguları kaydet + dosyaları güncelle, düzeltmeyi ayrı oturumda yaptıracağım, sonra UAT'a devam" dedi. **Bu turda kod düzeltmesi YAPILMADI** (sadece TODO/HANDOVER).
+
+**Bulgular (hepsi [TODO.md](./TODO.md)'de detaylı):**
+1. 🔴 **KRİTİK — Planning enrichment sessizce kayboluyor:** owner/epic/version/gates/blocked_by hepsi null, 70 item düz `to_do`. Kök neden: patch parser (`server/engine/backlog-ingest.ts`) yalnız `items:` kabul ediyor, ajan `dependency_patches:` (vb.) tepe-anahtar yazıyor → "no items array found" → patch atlanıyor. + `assignee`→`owner` alias yok, AC için kolon/UI yok, sessiz başarısızlık, tek paylaşılan patch dosyası 8+ adımda overwrite. (Alt-maddeler A-F.)
+2. 🐛 **Codex executor kırık:** `exec` alt-komutu hiç geçilmiyor → ham `codex` interaktif → "stdin is not a terminal". (UAT bu yüzden Claude'a geçti.)
+3. 🧰 **UX — çıplak `kortext start` yetmiyor:** `KORTEXT_CLAUDE_BIN` + `KORTEXT_DRIVE_ENABLED` env'i elle gerekiyor.
+4. 🧙 **Home dizininden `kortext start` sihirbazı kirletiyor:** cwd=home iken bootstrap sihirbazı `~/.kortext` oluşturup kendini `erayendes` projesi sandı + auto-handoff tetiklenmedi → "elle cd && serve" fallback. (Kurtarma: `kortext start <path>` ile doğrudan başlatıldı.)
+5. 🤖 **Çok-modelli executor vizyonu (Eray, özellik):** onboarding seçimi = operation-manager modeli; sonrası persona/görev bazında çok-model paralel.
+
+**SIRADAKİ:** Yeni oturum #1 (kritik, A-F) + #2 + #3 + #4'ü TDD ile düzeltsin → rebuild → Eray UAT'a kaldığı yerden (build / "Auto") devam edecek. **UAT ortamı ayakta:** proje `not` → `:3200`, 70 item `to_do`, build başlamadı. Düzeltme öncesi `kortext stop not && kortext purge not --yes` ile sıfırlanabilir.
+
+---
+
+## ⭐ Önceki (2026-06-08 #2) — UAT turu + 4 UAT-güdümlü düzeltme TAMAM ✅
 
 Eray gerçek bir **"ilk kez son kullanıcı"** UAT'ı koştu (temiz uninstall → paketten kurulum → `kortext start` sihirbazı → onboarding, **Antigravity/agy** executor ile). Bu turda kurulan **iş bölümü** ([[uat-division-of-labor]] hafızası): UAT operasyonlarını (install/start/onboarding/terminal) **Eray çalıştırır**; Claude sadece komut verir + bulunan bug'lar için **kod düzeltir**. 4 bulgu → 4 düzeltme (3 kod commit'i + docs), **1027 test yeşil**, typecheck + build temiz, **push EDİLDİ**.
 
