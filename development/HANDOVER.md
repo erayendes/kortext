@@ -15,7 +15,7 @@ Eray UAT'tan sonra: "dizini niye iki kez soruyorsun, daha projem yok ki — onu 
 
 **⭐ Final review KRİTİK bug yakaladı:** `KORTEXT_BOOTSTRAP=1` `spawnDaemon`'un `{...process.env}` mirası ile gerçek daemon'a sızıyordu → gerçek daemon kendini wizard sanıp **analizi hiç başlatmıyordu** (özellik sessizce ölü; unit testler spawn'ı mock'ladığı için kaçırmıştı). Fix: env'de `KORTEXT_BOOTSTRAP: ''` ile temizle (wizard'ın `cmd.env`'i korunur) + regresyon testi.
 
-**Durum:** **999 test yeşil**, typecheck + build temiz. 15 commit `--no-ff` ile **`main`'e lokal merge** edildi (branch silindi), **push EDİLMEDİ.** postinstall + UAT-GUIDE + UAT-SESSION-PROMPT yeni akışa güncellendi. **SIRADAKİ:** push (sen "push" deyince) + `npm publish` + sihirbaz self-shutdown follow-up (aşağıda).
+**Durum:** **1003 test yeşil**, typecheck + build temiz. Feature `main`'e lokal merge + bellboy self-shutdown (commit `0cd736d`) + docs, hepsi lokal, **push EDİLMEDİ.** postinstall + UAT-GUIDE + UAT-SESSION-PROMPT yeni akışa güncellendi. **SIRADAKİ:** push (sen "push" deyince) + `npm publish` + senin GUI-UAT turun.
 
 ---
 
@@ -174,8 +174,8 @@ Eray'ın seçtiği 3 alan ([plan](../docs/superpowers/plans/2026-06-06-phase3-en
 - [ ] **`npm publish`** — push sonrası son kasıtlı manuel adım. Yayın sonrası mevcut global `/opt/homebrew/bin/kortext` eski → `kortext update`.
 - [ ] **Senin GUI-UAT turun** — yeni `kortext start` → sihirbaz → dizin-seç → otomatik git → analiz akışını tarayıcıda gez ([UAT-SESSION-PROMPT](./UAT-SESSION-PROMPT.md) güncel).
 
-**🧙 Bootstrap sihirbazı follow-up'ı**
-- [ ] **Sihirbaz daemon self-shutdown** — `:3199` bootstrap sihirbazı handoff sonrası kendini kapatmıyor (kayıtsız olduğu için `kortext stop` durduramaz → port sızar, sıradaki `kortext start` çakışır). Geçici: elle `lsof -ti:3199 | xargs kill`. Kalıcı: blueprint bootstrap dalı 201 döndükten sonra `KORTEXT_BOOTSTRAP==='1'` guard'lı `process.exit(0)` (tarayıcının handoffUrl'i alıp yönlenmesine yetecek kısa gecikmeyle).
+**🧙 Bootstrap sihirbazı**
+- [x] ~~**Sihirbaz ("bellboy") daemon self-shutdown**~~ ✅ (2026-06-08, commit `0cd736d`). `scheduleBootstrapSelfExit` — `KORTEXT_BOOTSTRAP=1` guard'lı unref'li 2sn timer; blueprint bootstrap dalı handoff 201'ini flush edince wizard `process.exit(0)` yapar → `:3199` boşalır, sıradaki `kortext start` çakışmaz. +4 test (1003 yeşil). Elle kill gerekmez.
 
 **🔧 Motor follow-up'ları**
 - [ ] **Prod push (CI) substratı** — `deployProd` artık gerçek `development→main` merge + tag yapıyor ✅; ama `git push origin main`/CI tetikleme hâlâ yok (gerçek prod hedefi yok). Gerçek prod altyapısı gelince ekle.

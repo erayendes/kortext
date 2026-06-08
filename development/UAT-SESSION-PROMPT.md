@@ -54,7 +54,7 @@ kortext stop
 kortext purge <proje-slug> --yes
 lsof -ti:3199 | xargs kill
 ```
-- `kortext stop` sadece **kayıtlı** projeleri durdurur. Sihirbaz daemon'u (`:3199`) kayıtsızdır → `kortext stop` onu DURDURMAZ; bilinen takip işi (handoff sonrası kendini kapatmıyor). O yüzden `:3199`'u elle kapat (üstteki `lsof -ti:3199 | xargs kill`). Aksi halde sıradaki `kortext start` aynı portu bulamaz.
+- `kortext stop` sadece **kayıtlı** projeleri durdurur. Sihirbaz daemon'u (`:3199`) kayıtsızdır ama artık **handoff sonrası kendini kapatır** ("bellboy" self-shutdown, ~2sn) → normalde `:3199` kendiliğinden boşalır. Üstteki `lsof -ti:3199 | xargs kill` yalnız emniyet kemeri (örn. onboarding'i yarıda bırakıp hiç submit etmediysen).
 - Ardından test klasörünün içini boşalt (gerekirse `rm -rf <dizin> && mkdir <dizin>`) ve `lsof +D <dizin>` ile kalan ajan süreci kalmadığını doğrula. `:3199` + `:3200` boş + `kortext list` temiz olmalı.
 
 **Davranış kuralları:** `origin/main`'e ben **açıkça "push" demeden** push yok (lokal commit serbest). Büyük mimari kararları sormadan alma. Doğrulamadan "oldu" deme (curl/log/ekran göster).

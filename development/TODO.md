@@ -12,7 +12,7 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 - [x] ~~**Otomatik git bootstrap**~~ ✅ — `bootstrapGit`: yeni klasörde init+commit+`development`; mevcut repo'da yalnız `development` (dosyalara dokunmaz).
 - [x] ~~**`kortext start` → sihirbaz**~~ ✅ — proje yokken `launchBootstrapWizard`; `--new` bayrağı; gerçek daemon boot'ta `autoStartPendingAnalysis` (idempotent).
 - [x] ~~**Env-leak kritik bug**~~ ✅ — `KORTEXT_BOOTSTRAP` gerçek daemon'a sızıp auto-start'ı öldürüyordu; `spawnDaemon` env'i temizlendi + regresyon testi (final review yakaladı).
-- [ ] **⚠️ Sihirbaz daemon self-shutdown** — `:3199` bootstrap sihirbazı handoff sonrası kapanmıyor (kayıtsız → `kortext stop` durduramaz → port sızar → sıradaki `kortext start` çakışır). Geçici: `lsof -ti:3199 | xargs kill`. Kalıcı: blueprint bootstrap dalı 201 döndükten sonra `KORTEXT_BOOTSTRAP==='1'` guard'lı `process.exit(0)` (handoff'a yetecek kısa gecikme). [chip task açıldı]
+- [x] ~~**Sihirbaz ("bellboy") daemon self-shutdown**~~ ✅ (2026-06-08). `scheduleBootstrapSelfExit` (cmd-bootstrap.ts): `KORTEXT_BOOTSTRAP=1` guard'lı, unref'li 2sn timer → blueprint bootstrap dalı handoff 201'ini flush ettikten sonra (`onBootstrapHandoff`) wizard `process.exit(0)` yapar → `:3199` boşalır, sıradaki `kortext start` çakışmaz. +4 test (1003 yeşil). Elle `lsof -ti:3199 | xargs kill` artık gerekmez.
 - [ ] **Sihirbazdan "yeni klasör oluştur"** (kapsam dışı bırakıldı) — şu an mevcut bir klasör seçiliyor; istenirse picker'a "create folder" eklenir.
 
 ---
