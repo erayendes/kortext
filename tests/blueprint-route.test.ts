@@ -328,4 +328,131 @@ describe('POST /api/blueprint — bootstrap (wizard) mode', () => {
       await new Promise<void>((resolve) => s.close(() => resolve()));
     }
   });
+
+  it('passes the OS-free port from reserveFreePort into createProject', async () => {
+    let receivedPort: number | undefined;
+    const app = express();
+    app.use(express.json());
+    app.use(
+      '/api',
+      blueprintRouter({
+        workspaceRoot: '/tmp/bootstrap-home',
+        bootstrap: true,
+        reserveFreePort: async () => 3207,
+        confirmHealthy: async () => true,
+        createProject: (input) => {
+          receivedPort = input.port;
+          return { ok: true, handoffUrl: 'http://localhost:3207/', projectDir: input.projectDir };
+        },
+      }),
+    );
+    const s = await listen(app);
+    const port = (s.address() as AddressInfo).port;
+    try {
+      const res = await fetch(`http://localhost:${port}/api/blueprint`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          projectName: 'Acme',
+          projectCode: 'ACME',
+          projectType: 'new',
+          platforms: ['web'],
+          blueprintBody: '# BRD\n'.padEnd(60, 'x'),
+          executor: 'claude',
+          executorBinary: null,
+          projectDir: '/tmp/acme',
+        }),
+      });
+      expect(res.status).toBe(201);
+      expect(receivedPort).toBe(3207);
+    } finally {
+      await new Promise<void>((resolve) => s.close(() => resolve()));
+    }
+  });
+
+  it('refuses (422) and does NOT scaffold when the chosen dir is the kortext package dir', async () => {
+    let created = 0;
+    const app = express();
+    app.use(express.json());
+    app.use(
+      '/api',
+      blueprintRouter({
+        workspaceRoot: '/tmp/bootstrap-home',
+        bootstrap: true,
+        isSelfDir: () => true,
+        createProject: (input) => {
+          created += 1;
+          return { ok: true, handoffUrl: 'http://localhost:3201/', projectDir: input.projectDir };
+        },
+      }),
+    );
+    const s = await listen(app);
+    const port = (s.address() as AddressInfo).port;
+    try {
+      const res = await fetch(`http://localhost:${port}/api/blueprint`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          projectName: 'Acme',
+          projectCode: 'ACME',
+          projectType: 'new',
+          platforms: ['web'],
+          blueprintBody: '# BRD\n'.padEnd(60, 'x'),
+          executor: 'claude',
+          executorBinary: null,
+          projectDir: '/Users/me/kortext',
+        }),
+      });
+      expect(res.status).toBe(422);
+      expect(created).toBe(0);
+      const body = await res.json();
+      expect(JSON.stringify(body)).toMatch(/kortext/i);
+    } finally {
+      await new Promise<void>((resolve) => s.close(() => resolve()));
+    }
+  });
+
+  it('returns 503 and does NOT hand off when the daemon never becomes healthy', async () => {
+    let handoffs = 0;
+    const app = express();
+    app.use(express.json());
+    app.use(
+      '/api',
+      blueprintRouter({
+        workspaceRoot: '/tmp/bootstrap-home',
+        bootstrap: true,
+        confirmHealthy: async () => false,
+        createProject: (input) => ({
+          ok: true,
+          handoffUrl: 'http://localhost:3201/',
+          projectDir: input.projectDir,
+        }),
+        onBootstrapHandoff: () => {
+          handoffs += 1;
+        },
+      }),
+    );
+    const s = await listen(app);
+    const port = (s.address() as AddressInfo).port;
+    try {
+      const res = await fetch(`http://localhost:${port}/api/blueprint`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          projectName: 'Acme',
+          projectCode: 'ACME',
+          projectType: 'new',
+          platforms: ['web'],
+          blueprintBody: '# BRD\n'.padEnd(60, 'x'),
+          executor: 'claude',
+          executorBinary: null,
+          projectDir: '/tmp/acme',
+        }),
+      });
+      expect(res.status).toBe(503);
+      expect(handoffs).toBe(0);
+    } finally {
+      await new Promise<void>((resolve) => s.close(() => resolve()));
+    }
+  });
 });

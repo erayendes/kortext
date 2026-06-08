@@ -4,6 +4,8 @@ export type CreateProjectInput = {
   projectDir: string;
   meta: ProjectMeta;
   blueprintBody: string;
+  /** Preferred port (already probed OS-free) for the new project's daemon. */
+  port?: number;
 };
 
 // These are deliberately NARROWED adapter views of the real implementations,
@@ -18,7 +20,7 @@ export type CreateProjectDeps = {
   bootstrapGit: (dir: string) => { ok: boolean; warning?: string };
   startProject: (
     dir: string,
-    deps: { packageRoot: string; cwd: string },
+    deps: { packageRoot: string; cwd: string; port?: number },
   ) =>
     | { ok: true; url: string; slug: string; port: number }
     | { ok: false; message: string };
@@ -40,7 +42,7 @@ export function createProjectAndLaunch(
   input: CreateProjectInput,
   deps: CreateProjectDeps,
 ): CreateProjectResult {
-  const { projectDir, meta, blueprintBody } = input;
+  const { projectDir, meta, blueprintBody, port } = input;
 
   const scaffold = deps.init(projectDir);
   if (!scaffold.ok) {
@@ -57,6 +59,7 @@ export function createProjectAndLaunch(
   const launched = deps.startProject(projectDir, {
     packageRoot: deps.packageRoot,
     cwd: projectDir,
+    port,
   });
   if (!launched.ok) {
     return { ok: false, message: launched.message };

@@ -7,25 +7,33 @@ import {
 import { withRegistryLock } from '../registry/lock.ts';
 import { resolveDaemonCommand, spawnDaemon, isPidAlive } from '../registry/daemon.ts';
 import { readProjectMeta } from '../blueprint/io.ts';
+import { isKortextPackageDir } from '../registry/self-guard.ts';
 
 export type StartTarget =
   | { kind: 'existing'; slug: string }
   | { kind: 'new-path'; path: string }
   | { kind: 'list' }
   | { kind: 'onboard' }
+  | { kind: 'self' }
   | { kind: 'not-found'; arg: string };
 
-/** Decide what `start [arg]` means. `exists` is injectable for tests. */
+/**
+ * Decide what `start [arg]` means. `exists` and `isSelf` are injectable for
+ * tests. `isSelf` guards against binding Kortext's OWN package dir as a project —
+ * its dev/demo `.kortext/` would otherwise be mistaken for a user project.
+ */
 export function resolveStartTarget(
   reg: Registry,
   arg: string | undefined,
   cwd: string,
   exists: (p: string) => boolean = existsSync,
+  isSelf: (dir: string) => boolean = (dir) => isKortextPackageDir(dir),
 ): StartTarget {
   if (arg) {
     const bySlug = getProject(reg, arg);
     if (bySlug) return { kind: 'existing', slug: bySlug.slug };
     const asPath = isAbsolute(arg) ? arg : resolve(cwd, arg);
+    if (isSelf(asPath)) return { kind: 'self' };
     if (exists(asPath)) {
       const registered = listProjects(reg).find((p) => p.path === asPath);
       return registered ? { kind: 'existing', slug: registered.slug } : { kind: 'new-path', path: asPath };
@@ -34,6 +42,7 @@ export function resolveStartTarget(
   }
   // No arg: prefer the cwd if it is a kortext project.
   if (exists(join(cwd, '.kortext'))) {
+    if (isSelf(cwd)) return { kind: 'self' };
     const registered = listProjects(reg).find((p) => p.path === cwd);
     return registered ? { kind: 'existing', slug: registered.slug } : { kind: 'new-path', path: cwd };
   }
@@ -42,7 +51,7 @@ export function resolveStartTarget(
 
 export type StartResult =
   | { ok: true; slug: string; port: number; url: string; reused: boolean }
-  | { ok: false; action: 'list' | 'onboard' | 'not-found' | 'dev-mode'; message: string };
+  | { ok: false; action: 'list' | 'onboard' | 'not-found' | 'dev-mode' | 'self'; message: string };
 
 export type StartDeps = {
   packageRoot: string;
@@ -52,6 +61,8 @@ export type StartDeps = {
   init?: (path: string) => { ok: boolean; errorMessage?: string };
   spawn?: (cmd: ReturnType<typeof resolveDaemonCommand>) => number;
   now?: () => number;
+  /** Preferred port for a NEW project (e.g. one already probed OS-free). */
+  port?: number;
 };
 
 /** Launch (or relaunch) a project's daemon. */
@@ -67,6 +78,13 @@ export function startProject(arg: string | undefined, deps: StartDeps): StartRes
   if (target.kind === 'list') return { ok: false, action: 'list', message: 'Pick a project to start.' };
   if (target.kind === 'onboard') return { ok: false, action: 'onboard', message: 'No project here yet — run onboarding.' };
   if (target.kind === 'not-found') return { ok: false, action: 'not-found', message: `No project '${target.arg}'.` };
+  if (target.kind === 'self')
+    return {
+      ok: false,
+      action: 'self',
+      message:
+        "That folder is Kortext's own program directory — it can't be a project. cd into (or pick) a separate, empty folder for your project.",
+    };
 
   // new-path scaffold step (pure FS, no registry mutation) can run before the lock.
   if (target.kind === 'new-path' && !existsSync(join(target.path, '.kortext'))) {
@@ -88,7 +106,7 @@ export function startProject(arg: string | undefined, deps: StartDeps): StartRes
       // new-path: register (allocate port) and immediately persist.
       const meta = readProjectMeta(join(target.path, '.kortext', 'project.json'));
       const reg2 = registerProject(reg, {
-        code: meta?.code ?? '', name: meta?.name ?? '', path: target.path, now: now(),
+        code: meta?.code ?? '', name: meta?.name ?? '', path: target.path, now: now(), port: deps.port,
       });
       reg = reg2.reg;
       entry = reg2.entry;

@@ -101,11 +101,17 @@ export function removeProject(reg: Registry, slug: string): Registry {
 /** Register a new project root: derive slug, allocate a stable port. */
 export function registerProject(
   reg: Registry,
-  input: { code: string; name: string; path: string; now: number },
+  input: { code: string; name: string; path: string; now: number; port?: number },
 ): { reg: Registry; entry: ProjectEntry } {
   const taken = new Set(Object.keys(reg.projects));
   const slug = slugFor(input, taken);
-  const port = allocatePort(listProjects(reg).map((p) => p.port));
+  const claimed = listProjects(reg).map((p) => p.port);
+  // Honor a caller-chosen port (e.g. one already probed OS-free) as long as no
+  // other registered project holds it; otherwise fall back to auto-allocation.
+  const port =
+    input.port !== undefined && !claimed.includes(input.port)
+      ? input.port
+      : allocatePort(claimed);
   const entry: ProjectEntry = {
     slug, name: input.name || slug, path: input.path, port,
     pid: null, status: 'stopped', createdAt: input.now,

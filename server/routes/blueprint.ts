@@ -27,9 +27,22 @@ export type BlueprintRouterDeps = {
     projectDir: string;
     meta: ProjectMeta;
     blueprintBody: string;
+    port?: number;
   }) =>
     | { ok: true; handoffUrl: string; projectDir: string; gitWarning?: string }
     | { ok: false; message: string };
+  // Pick a port that is BOTH registry-unclaimed AND actually free at the OS level
+  // (catches foreign processes / dev servers the registry can't see). Injected so
+  // it stays testable; wired in server/index.ts to findAvailablePort.
+  reserveFreePort?: () => Promise<number>;
+  // Confirm the freshly-spawned daemon is really serving on its port before we
+  // hand the browser off — otherwise a port collision / crash strands the user on
+  // "Cannot GET /". Wired in server/index.ts to waitForHealthy.
+  confirmHealthy?: (url: string) => Promise<boolean>;
+  // Refuse to scaffold a project into Kortext's OWN package dir (its dev/demo
+  // .kortext/ would otherwise be mistaken for a user project). Wired in
+  // server/index.ts to isKortextPackageDir.
+  isSelfDir?: (dir: string) => boolean;
 };
 
 /**
@@ -159,10 +172,37 @@ export function blueprintRouter(deps: BlueprintRouterDeps): Router {
         });
         return;
       }
-      const created = deps.createProject({ projectDir: chosen, meta, blueprintBody });
+      if (deps.isSelfDir?.(chosen)) {
+        res.status(422).json({
+          error: 'validation_failed',
+          details: [
+            "That folder is Kortext's own program directory — pick a separate, empty folder for your project.",
+          ],
+        });
+        return;
+      }
+      // Choose a port that is actually free (not just registry-unclaimed) so the
+      // spawned daemon does not lose a race to a foreign process and EADDRINUSE.
+      const port = deps.reserveFreePort ? await deps.reserveFreePort() : undefined;
+      const created = deps.createProject({ projectDir: chosen, meta, blueprintBody, port });
       if (!created.ok) {
         res.status(500).json({ error: 'create_failed', message: created.message });
         return;
+      }
+      // Don't redirect the browser until the real daemon is confirmed serving on
+      // its port — otherwise a collision/crash lands the user on "Cannot GET /".
+      if (deps.confirmHealthy) {
+        const healthy = await deps.confirmHealthy(created.handoffUrl);
+        if (!healthy) {
+          res.status(503).json({
+            error: 'daemon_not_ready',
+            message:
+              `The project was created but its daemon did not come up at ${created.handoffUrl}. ` +
+              `The port may be held by another program — free it (see 'kortext list' / 'kortext stop') and run 'kortext start' again.`,
+            ...(created.gitWarning ? { gitWarning: created.gitWarning } : {}),
+          });
+          return;
+        }
       }
       res.status(201).json({
         ok: true,
