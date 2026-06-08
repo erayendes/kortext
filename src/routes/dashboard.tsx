@@ -124,6 +124,17 @@ export type ActivityEvent =
  * lifecycle the engine emits plus item transitions; unknown actions degrade to
  * a humanised form of the action key.
  */
+/** "product-analysis.1" → "product-analysis step 1" (leaves dot-less keys as-is). */
+function humanizeStepKey(key: string): string {
+  const m = key.match(/^(.*)\.(\d+)$/);
+  return m ? `${m[1]} step ${m[2]}` : key;
+}
+
+/** "+compliance-expert" → "compliance-expert"; null/empty stays null. */
+function cleanPersona(persona: string | null): string | null {
+  return persona ? persona.replace(/^\+/, '') : null;
+}
+
 export function describeAuditEvent(entry: {
   action: string;
   payload: Record<string, unknown>;
@@ -138,12 +149,24 @@ export function describeAuditEvent(entry: {
       return str('workflow_id') ? `completed ${str('workflow_id')}` : 'completed a workflow';
     case 'pipeline.failed':
       return str('workflow_id') ? `${str('workflow_id')} failed` : 'a workflow failed';
-    case 'pipeline.step.started':
-      return str('step_key') ? `started ${str('step_key')}` : 'started a step';
-    case 'pipeline.step.succeeded':
-      return str('step_key') ? `finished ${str('step_key')}` : 'finished a step';
-    case 'pipeline.step.failed':
-      return str('step_key') ? `step ${str('step_key')} failed` : 'a step failed';
+    case 'pipeline.step.started': {
+      const step = str('step_key');
+      if (!step) return 'started a step';
+      const who = cleanPersona(str('persona'));
+      return who ? `${who} started ${humanizeStepKey(step)}` : `started ${humanizeStepKey(step)}`;
+    }
+    case 'pipeline.step.succeeded': {
+      const step = str('step_key');
+      if (!step) return 'finished a step';
+      const who = cleanPersona(str('persona'));
+      return who ? `${who} finished ${humanizeStepKey(step)}` : `finished ${humanizeStepKey(step)}`;
+    }
+    case 'pipeline.step.failed': {
+      const step = str('step_key');
+      if (!step) return 'a step failed';
+      const who = cleanPersona(str('persona'));
+      return who ? `${who}'s ${humanizeStepKey(step)} failed` : `${humanizeStepKey(step)} failed`;
+    }
     case 'gate.awaiting-approval':
       return 'paused for your approval';
     case 'gate.answered':

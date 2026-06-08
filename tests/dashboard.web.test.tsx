@@ -187,6 +187,29 @@ describe('describeAuditEvent', () => {
     ).toBe('moved To do → In progress');
   });
 
+  it('names the agent and humanises the step for pipeline step events', () => {
+    expect(
+      describeAuditEvent({
+        actor: 'orchestrator',
+        action: 'pipeline.step.started',
+        payload: { step_key: 'product-analysis.1', persona: '+compliance-expert' },
+      }),
+    ).toBe('compliance-expert started product-analysis step 1');
+    expect(
+      describeAuditEvent({
+        actor: 'orchestrator',
+        action: 'pipeline.step.succeeded',
+        payload: { step_key: 'product-analysis.1', persona: '+compliance-expert' },
+      }),
+    ).toBe('compliance-expert finished product-analysis step 1');
+  });
+
+  it('still describes a step when the persona is missing', () => {
+    expect(
+      describeAuditEvent({ actor: 'x', action: 'pipeline.step.started', payload: { step_key: 'planning.3' } }),
+    ).toBe('started planning step 3');
+  });
+
   it('falls back to a humanised action for unknown events', () => {
     expect(describeAuditEvent({ actor: 'x', action: 'some.weird_action', payload: {} })).toBe('some weird action');
   });

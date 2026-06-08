@@ -325,7 +325,7 @@ export async function runWorkflow(
               action: 'pipeline.step.failed',
               resource_type: 'run_step',
               resource_id: String(runStepId),
-              payload: { run_id: run.id, step_key: stepKey, error: safetyError },
+              payload: { run_id: run.id, step_key: stepKey, persona: node.step.persona, error: safetyError },
             });
             if (!failedStepKey) {
               failedStepKey = stepKey;
@@ -343,7 +343,7 @@ export async function runWorkflow(
             action: 'pipeline.step.succeeded',
             resource_type: 'run_step',
             resource_id: String(runStepId),
-            payload: { run_id: run.id, step_key: stepKey },
+            payload: { run_id: run.id, step_key: stepKey, persona: node.step.persona },
           });
           done.add(stepKey);
           // A gated step, on completion, queues its approval. The scheduler
@@ -364,7 +364,7 @@ export async function runWorkflow(
             action: 'pipeline.step.failed',
             resource_type: 'run_step',
             resource_id: String(runStepId),
-            payload: { run_id: run.id, step_key: stepKey, error: result.errorMessage },
+            payload: { run_id: run.id, step_key: stepKey, persona: node.step.persona, error: result.errorMessage },
           });
           if (!failedStepKey) {
             failedStepKey = stepKey;
