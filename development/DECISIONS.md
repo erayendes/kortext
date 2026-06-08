@@ -962,3 +962,22 @@ Bu oturumun büyük işi paralel keşif ajanları (haritalama) → AskUserQuesti
 - **Vocab toleransı belgelendi:** planning-pipeline'a motor-kabul-eder notu (`depends_on`/`feature`/`chore`/`todo`/`epic:` etiketi normalize edilir).
 - **Doğrulanan zaten-bitmişler:** dashboard boş-durum dostça mesajları (#6) + CLI allocatePort mesajı/persist-before-spawn (#9) bu blokta zaten mevcuttu — Eray onayıyla ek yapılmadı.
 - **Durum:** 977 test yeşil, typecheck + build temiz.
+
+### 7.11 Onboarding-driven directory + otomatik git (2026-06-08)
+**Sorun (UAT'tan):** proje dizini İKİ yerde soruluyordu — terminalde `kortext start <dir>` (cwd'ye bağlanır) + onboarding ekranında "Project Directory" picker. Non-coder için kafa karıştırıcı ("daha projem yok, terminal neden klasör soruyor"); üstelik picker daemon'un kendi klasöründen başkasını gösterirse (`isElsewhere`) dosyalar yazılıp **iş hiç başlamıyordu** (sessiz tuzak). Ayrı dert: build fazı git+`development` dalı ister ama Kortext git bootstrap yapmıyordu → kullanıcı elle `git init`/`commit`/`branch` yazmak zorundaydı.
+
+**Kararlar (Eray, AskUserQuestion ile):**
+- **Tek doğruluk kaynağı = onboarding sihirbazı.** Dizin GUI'de seçilir, terminalde değil. (Eray "start-klasörü = proje"yi reddetti.)
+- **Giriş komutu `kortext start` kalır** (yeni komut yok). Proje yokken çıplak `kortext start` sihirbazı açar. (`kortext new` reddedildi.)
+- **Otomatik git bootstrap** proje oluşturulurken (`git init -b main` + ilk commit + `development`); mevcut repo'da sadece `development` garanti (dosyalara dokunmaz).
+- **Yaklaşım 1** (kesintisiz): sihirbaz daemon → seçilen dizinde gerçek daemon'u doğur → tarayıcı yönlendir → gerçek daemon boot'ta analizi başlatır. (Daha basit "oluştur + Aç butonu" reddedildi.)
+
+**Mimari (1 daemon : 1 klasör : 1 port kısıtının dayattığı):** Çalışan daemon **yeniden ev değiştiremez** (DB açık, port bağlı). Bu yüzden "dizini sihirbazda seç" zorunlu olarak şu desene varır: çıplak `kortext start` (proje yok) → **geçici bootstrap sihirbaz daemon'u** (`KORTEXT_BOOTSTRAP=1`, scratch home `~/.kortext/bootstrap`, port 3199, `projects.json`'a YAZILMAZ) onboarding'i gösterir → submit'te blueprint route'un **bootstrap dalı** `createProjectAndLaunch` çağırır (iskele → `bootstrapGit` → BRD/meta yaz → seçilen dizinde gerçek daemon'u `startProject` ile doğur) → 201 + `handoffUrl` → OnboardingScreen tarayıcıyı oraya yönlendirir → gerçek daemon boot'ta `autoStartPendingAnalysis` (onaylı BRD + hiç koşmamış → analizi tek sefer tetikler; SQL `workflow_id` filtreli idempotency). Route'un `onApproved`'ı `triggerAnalysis` adlı fonksiyona çıkarıldı (route ve boot aynı tetiği paylaşır).
+
+**Uygulama:** 9 TDD görevi, subagent-driven-development (her görev TDD subagent + iki-aşamalı review). 807→999 test. [spec](../docs/superpowers/specs/2026-06-07-onboarding-driven-directory-design.md) · [plan](../docs/superpowers/plans/2026-06-07-onboarding-driven-directory.md).
+
+**⭐ Final holistic review KRİTİK bir entegrasyon bug'ı yakaladı:** wizard daemon `KORTEXT_BOOTSTRAP=1` ile koşuyor; `spawnDaemon` çocuğun env'ini `{...process.env, ...cmd.env}` ile kuruyordu → doğurduğu **gerçek daemon flag'i miras alıp** kendini wizard sanıyor ve **boot auto-start'ı atlıyordu** → analiz hiç başlamaz, özelliğin tüm faydası sessizce ölü. Birim testleri kaçırmıştı (hepsi spawn'ı mock'luyordu). **Fix:** `env: { ...process.env, KORTEXT_BOOTSTRAP: '', ...cmd.env }` — normal daemon'da temizlenir, wizard'ın kendi `cmd.env`'i (`'1'`) sonradan geldiği için korunur. + sızmayı yakalayan regresyon testi. (Controller olarak reviewer'ın "Important" maddesini de kodda doğruladım — `createProject` `chosen` ile çağrılıyor, daemon-kökü riski yoktu; yanlış-pozitif olarak uygulanmadı.)
+
+**Bilinen follow-up:** bootstrap sihirbaz daemon'u (`:3199`) handoff sonrası **kendini kapatmıyor** → port sızar, `kortext stop` kayıtsız olduğu için onu durduramaz, sıradaki `kortext start` çakışır. Geçici: elle `lsof -ti:3199 | xargs kill`. Kalıcı düzeltme (handoff sonrası guard'lı self-exit) TODO'da.
+
+**Durum:** **999 test yeşil**, typecheck + build temiz. 15 commit → `--no-ff` ile **`main`'e lokal merge** edildi (branch silindi), **push EDİLMEDİ.** postinstall ipucu + UAT-GUIDE + UAT-SESSION-PROMPT yeni akışa güncellendi.

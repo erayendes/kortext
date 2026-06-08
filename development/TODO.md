@@ -4,6 +4,19 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 
 ---
 
+## 🧙 Onboarding-driven directory + otomatik git (2026-06-08)
+
+> Yeni akış **tamam** + `main`'e lokal merge (9 TDD görevi, 999 test). `kortext start` (proje yok) → sihirbaz → dizini GUI'de seç → otomatik git → gerçek daemon devri → boot auto-start. Detay [DECISIONS §7.11](./DECISIONS.md) · [plan](../docs/superpowers/plans/2026-06-07-onboarding-driven-directory.md).
+
+- [x] ~~**Dizini onboarding seçsin** (terminalde değil)~~ ✅ — bootstrap sihirbaz daemon'u (`:3199`, kayıtsız) + blueprint bootstrap dalı + `handoffUrl` devri.
+- [x] ~~**Otomatik git bootstrap**~~ ✅ — `bootstrapGit`: yeni klasörde init+commit+`development`; mevcut repo'da yalnız `development` (dosyalara dokunmaz).
+- [x] ~~**`kortext start` → sihirbaz**~~ ✅ — proje yokken `launchBootstrapWizard`; `--new` bayrağı; gerçek daemon boot'ta `autoStartPendingAnalysis` (idempotent).
+- [x] ~~**Env-leak kritik bug**~~ ✅ — `KORTEXT_BOOTSTRAP` gerçek daemon'a sızıp auto-start'ı öldürüyordu; `spawnDaemon` env'i temizlendi + regresyon testi (final review yakaladı).
+- [ ] **⚠️ Sihirbaz daemon self-shutdown** — `:3199` bootstrap sihirbazı handoff sonrası kapanmıyor (kayıtsız → `kortext stop` durduramaz → port sızar → sıradaki `kortext start` çakışır). Geçici: `lsof -ti:3199 | xargs kill`. Kalıcı: blueprint bootstrap dalı 201 döndükten sonra `KORTEXT_BOOTSTRAP==='1'` guard'lı `process.exit(0)` (handoff'a yetecek kısa gecikme). [chip task açıldı]
+- [ ] **Sihirbazdan "yeni klasör oluştur"** (kapsam dışı bırakıldı) — şu an mevcut bir klasör seçiliyor; istenirse picker'a "create folder" eklenir.
+
+---
+
 ## 🚀 v3.1 release + CLI follow-up (2026-06-06)
 
 > v3.1 CLI per-project-daemon **tamam** (11 görev, 835 test, paketlenmiş smoke test geçti). Kalanlar:
@@ -136,7 +149,9 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 
 ## CLI/Onboarding redesign — implementation kuyruğu
 
-Yön [DECISIONS Bölüm 0](./DECISIONS.md)'da onaylı. Sıralı adımlar:
+> **⚠️ Büyük ölçüde AŞILDI** — argv parser / global registry / postinstall / native picker / daemon lifecycle / purge-confirm / update / migration kararı **v3.1 ile** (DECISIONS §7.1), onboarding-driven directory + `kortext start`→sihirbaz + multi-project port **2026-06-08 ile** (DECISIONS §7.11) indi. Aşağısı tarihsel referans; gerçekten kalan tek şey sihirbaz self-shutdown (en üstte).
+
+Yön [DECISIONS Bölüm 0](./DECISIONS.md)'da onaylı. Sıralı adımlar (çoğu ✅):
 
 - [ ] **`bin/kortext.ts` argv parser** — 9 komut: `start [proje]`/`stop`/`pause [proje]`/`list`/`remove [proje]`/`purge [proje]`/`update`/`doctor`/`help`. `init`+`serve` → `start` içine konsolide.
 - [ ] **Global registry servisi** — `~/.kortext/projects.json` oku/yaz + lock; `server/registry/`.

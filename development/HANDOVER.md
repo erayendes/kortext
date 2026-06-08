@@ -7,7 +7,19 @@
 
 ---
 
-## ⭐ Şu an (2026-06-07 #2) — Gerçek prod merge + tam sayfalama + vocab TAMAM ✅
+## ⭐ Şu an (2026-06-08) — Onboarding-driven directory + otomatik git TAMAM ✅
+
+Eray UAT'tan sonra: "dizini niye iki kez soruyorsun, daha projem yok ki — onu onboarding'de seçiyorum." → tam bir tasarım turu (brainstorming → spec → plan → subagent-driven 9 görev). **Yeni akış:** non-coder herhangi bir yerde **`kortext start`** yazar → tarayıcıda sihirbaz açılır → proje bilgisi + BRD + **proje dizinini sihirbazda seç** → Kortext o klasörü iskeler, **git'i otomatik kurar** (init+commit+`development`), gerçek daemon'u doğurur, tarayıcı oraya geçer, **analiz kendiliğinden başlar**. Elle `cd`/`git` YOK.
+
+**Mimari (1 daemon:1 klasör:1 port kısıtı):** çıplak `kortext start` → geçici **bootstrap sihirbaz daemon'u** (`KORTEXT_BOOTSTRAP=1`, scratch home, `:3199`, kayıtsız) → submit'te blueprint route'un bootstrap dalı `createProjectAndLaunch` (iskele→`bootstrapGit`→BRD/meta→gerçek daemon doğur) → `handoffUrl` → tarayıcı yönlenir → gerçek daemon boot'ta `autoStartPendingAnalysis` (idempotent). Detay [DECISIONS §7.11](./DECISIONS.md) · [spec](../docs/superpowers/specs/2026-06-07-onboarding-driven-directory-design.md) · [plan](../docs/superpowers/plans/2026-06-07-onboarding-driven-directory.md).
+
+**⭐ Final review KRİTİK bug yakaladı:** `KORTEXT_BOOTSTRAP=1` `spawnDaemon`'un `{...process.env}` mirası ile gerçek daemon'a sızıyordu → gerçek daemon kendini wizard sanıp **analizi hiç başlatmıyordu** (özellik sessizce ölü; unit testler spawn'ı mock'ladığı için kaçırmıştı). Fix: env'de `KORTEXT_BOOTSTRAP: ''` ile temizle (wizard'ın `cmd.env`'i korunur) + regresyon testi.
+
+**Durum:** **999 test yeşil**, typecheck + build temiz. 15 commit `--no-ff` ile **`main`'e lokal merge** edildi (branch silindi), **push EDİLMEDİ.** postinstall + UAT-GUIDE + UAT-SESSION-PROMPT yeni akışa güncellendi. **SIRADAKİ:** push (sen "push" deyince) + `npm publish` + sihirbaz self-shutdown follow-up (aşağıda).
+
+---
+
+## Önceki bu-devir (2026-06-07 #2) — Gerçek prod merge + tam sayfalama + vocab TAMAM ✅
 
 Eray "3,5,6,8,9'u yap" dedi → sonuç: **#3 gerçek git prod release** (`deployProd` artık gerçek `development→main` merge + version tag; çakışma→bug; idempotent; sunucu orijinal branch'e döner; prod-push CI hâlâ mock). **#5 tam sayfalama** (`GET /api/backlog/aggregate` — roll-up/facet/per-version açık-iş sunucu-tarafı + "Daha fazla yükle" kart sayfalaması). **#8 vocab toleransı belgelendi**. **#6 (dashboard boş-durum) + #9 (CLI nüansları) zaten bitmişti** — Eray onayıyla ek yapılmadı. Final review 4 bulgu buldu+düzeltildi (branch-restore, conflict-flag scope, drawer-progress aggregate, version-flicker). Detay [DECISIONS §7.10](./DECISIONS.md).
 
@@ -157,9 +169,13 @@ Eray'ın seçtiği 3 alan ([plan](../docs/superpowers/plans/2026-06-06-phase3-en
 
 > Bu oturumda biten her şey [DECISIONS Bölüm 7](./DECISIONS.md)'de. Aşağısı = **gerçekten kalan**.
 
-**🚀 Yayın (tek aksiyon kalemi)**
-- [ ] **`npm publish`** — kod hazır + push edildi; son kasıtlı manuel adım. Yayın sonrası mevcut global `/opt/homebrew/bin/kortext` eski → `kortext update`.
-- [ ] **Senin GUI-UAT turun** — paketlenmiş akışı tarayıcıda gez (ben terminalden doğruladım: 2 daemon HTTP 200).
+**🚀 Yayın**
+- [ ] **push** — bu oturumun işi dahil tüm lokal commit'ler `origin/main`'e gönderilmedi (sen "push" deyince). `main` origin'den ~18 commit ileride.
+- [ ] **`npm publish`** — push sonrası son kasıtlı manuel adım. Yayın sonrası mevcut global `/opt/homebrew/bin/kortext` eski → `kortext update`.
+- [ ] **Senin GUI-UAT turun** — yeni `kortext start` → sihirbaz → dizin-seç → otomatik git → analiz akışını tarayıcıda gez ([UAT-SESSION-PROMPT](./UAT-SESSION-PROMPT.md) güncel).
+
+**🧙 Bootstrap sihirbazı follow-up'ı**
+- [ ] **Sihirbaz daemon self-shutdown** — `:3199` bootstrap sihirbazı handoff sonrası kendini kapatmıyor (kayıtsız olduğu için `kortext stop` durduramaz → port sızar, sıradaki `kortext start` çakışır). Geçici: elle `lsof -ti:3199 | xargs kill`. Kalıcı: blueprint bootstrap dalı 201 döndükten sonra `KORTEXT_BOOTSTRAP==='1'` guard'lı `process.exit(0)` (tarayıcının handoffUrl'i alıp yönlenmesine yetecek kısa gecikmeyle).
 
 **🔧 Motor follow-up'ları**
 - [ ] **Prod push (CI) substratı** — `deployProd` artık gerçek `development→main` merge + tag yapıyor ✅; ama `git push origin main`/CI tetikleme hâlâ yok (gerçek prod hedefi yok). Gerçek prod altyapısı gelince ekle.
@@ -170,7 +186,8 @@ Eray'ın seçtiği 3 alan ([plan](../docs/superpowers/plans/2026-06-06-phase3-en
 - [ ] İçerik kalibrasyonu (persona/workflow ince ayar) — ölü ref'ler temizlendi + vocab toleransı belgelendi; gerçek koşularda davranış gözlemiyle süren bir tur.
 - [ ] Sayfalama: EpicDrawer çocuk LİSTESİ hâlâ yüklü sayfadan (ilerleme sayısı aggregate'ten doğru; liste "Daha fazla yükle" ile tamamlanır) — büyük epic'lerde tam liste için ufak follow-up.
 
-> **Biten (bu blok):** gerçek git prod merge+tag (#3), tam sayfalama/aggregate (#5), vocab (#8); dashboard boş-durum (#6) + CLI nüansları (#9) zaten yeterliydi.
+> **Biten (2026-06-08):** onboarding-driven directory + otomatik git (9 TDD görevi, sihirbaz daemon → gerçek daemon devri → boot auto-start; kritik env-leak bug'ı final review'da yakalandı). [DECISIONS §7.11](./DECISIONS.md).
+> **Biten (önceki blok):** gerçek git prod merge+tag (#3), tam sayfalama/aggregate (#5), vocab (#8); dashboard boş-durum (#6) + CLI nüansları (#9) zaten yeterliydi.
 
 ---
 
