@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   slugFor, allocatePort, readRegistry, writeRegistry,
-  upsertProject, removeProject, getProject, listProjects,
+  upsertProject, removeProject, getProject, listProjects, registerProject,
   type Registry,
 } from '../server/registry/projects.ts';
 
@@ -56,6 +56,28 @@ describe('registry read/write round-trip', () => {
     let reg = upsertProject({ version: 1, projects: {} }, { slug: 'tf', name: 'T', path: '/p', port: 3200, pid: null, status: 'stopped', createdAt: 1 });
     reg = removeProject(reg, 'tf');
     expect(getProject(reg, 'tf')).toBeNull();
+  });
+});
+
+describe('registerProject port selection', () => {
+  it('honors an explicit, free port instead of auto-allocating', () => {
+    const { entry } = registerProject(
+      { version: 1, projects: {} },
+      { code: 'TF', name: 'TaskFlow', path: '/p', now: 1, port: 3207 },
+    );
+    expect(entry.port).toBe(3207);
+  });
+
+  it('falls back to auto-allocation when the explicit port is already claimed', () => {
+    let reg: Registry = { version: 1, projects: {} };
+    reg = upsertProject(reg, { slug: 'a', name: 'A', path: '/a', port: 3200, pid: null, status: 'stopped', createdAt: 1 });
+    const { entry } = registerProject(reg, { code: 'TF', name: 'TaskFlow', path: '/p', now: 1, port: 3200 });
+    expect(entry.port).toBe(3201);
+  });
+
+  it('auto-allocates when no explicit port is given (existing behavior)', () => {
+    const { entry } = registerProject({ version: 1, projects: {} }, { code: 'TF', name: 'TaskFlow', path: '/p', now: 1 });
+    expect(entry.port).toBe(3200);
   });
 });
 

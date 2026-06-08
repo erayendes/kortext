@@ -40,6 +40,10 @@ import { createProjectAndLaunch } from './blueprint/create-project.ts';
 import { scheduleBootstrapSelfExit } from './cli/cmd-bootstrap.ts';
 import { bootstrapGit } from './cli/bootstrap-git.ts';
 import { startProject } from './cli/cmd-start.ts';
+import { findAvailablePort } from './registry/port-probe.ts';
+import { waitForHealthy } from './registry/health-wait.ts';
+import { readRegistry, listProjects, defaultRegistryDir } from './registry/projects.ts';
+import { isKortextPackageDir } from './registry/self-guard.ts';
 import { initCommand } from './cli/init.ts';
 import { createExecutor, type ExecutorKind } from './cli/executor-factory.ts';
 import { WorkflowDeployer } from './engine/executors/workflow-deployer.ts';
@@ -304,7 +308,7 @@ app.use(
         init: (dir) => initCommand({ targetDir: dir, force: false }),
         bootstrapGit: (dir) => bootstrapGit(dir),
         startProject: (dir, d) => {
-          const r = startProject(dir, { packageRoot: d.packageRoot, cwd: d.cwd });
+          const r = startProject(dir, { packageRoot: d.packageRoot, cwd: d.cwd, port: d.port });
           return r.ok
             ? { ok: true, url: r.url, slug: r.slug, port: r.port }
             : { ok: false, message: r.message };
@@ -312,6 +316,17 @@ app.use(
         writeBlueprint,
         writeProjectMeta,
       }),
+    // OS-aware port reservation: skip ports the registry doesn't know are taken
+    // (foreign apps, dev servers, crashed-but-listening daemons).
+    reserveFreePort: () => {
+      const claimed = listProjects(readRegistry(defaultRegistryDir())).map((p) => p.port);
+      return findAvailablePort({ claimed });
+    },
+    // Poll the new daemon's health endpoint before handing the browser off.
+    confirmHealthy: (handoffUrl) =>
+      waitForHealthy({ url: new URL('api/health', handoffUrl).toString(), timeoutMs: 12_000, intervalMs: 200 }),
+    // Block onboarding from choosing Kortext's own package dir as the project dir.
+    isSelfDir: (dir) => isKortextPackageDir(dir),
     onApproved: triggerAnalysis,
     // After the wizard hands off to the real project daemon, it must stop
     // holding port 3199 — it is unregistered, so `kortext stop` can't reap it.

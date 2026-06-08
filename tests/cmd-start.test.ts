@@ -34,4 +34,12 @@ describe('resolveStartTarget', () => {
   it('unknown slug (no such path) → not-found', () => {
     expect(resolveStartTarget(reg, 'nope', '/cwd', () => false)).toEqual({ kind: 'not-found', arg: 'nope' });
   });
+  it('refuses to project-ify the kortext package dir when run there (bare start)', () => {
+    expect(
+      resolveStartTarget({ version: 1, projects: {} }, undefined, '/install/kortext', (p) => p.endsWith('.kortext'), () => true),
+    ).toEqual({ kind: 'self' });
+  });
+  it('refuses an explicit path that is the kortext package dir', () => {
+    expect(resolveStartTarget(reg, '/install/kortext', '/cwd', () => true, () => true)).toEqual({ kind: 'self' });
+  });
 });
