@@ -12,15 +12,22 @@ import { basename, dirname, isAbsolute, join } from 'node:path';
  * so a file produced via `writeReport` matches a workflow-declared template.
  */
 
-const SLUG_PATTERN = '[a-z0-9][a-z0-9-]*';
-// Canonical timestamp is YYYY-MM-DD-HHMM (markdown-sync.formatReportTimestamp),
+// The <slug> segment carries the project id (project.json.code, e.g. `NOT`) or
+// a lowercase scope — accept BOTH cases + digits + hyphen. Must not include `_`
+// (underscores separate the report-type / slug / ts segments) and must not start
+// with a hyphen.
+const SLUG_PATTERN = '[A-Za-z0-9][A-Za-z0-9-]*';
+// Canonical timestamp is YYYY-MM-DD_HH-MM-SS (markdown-sync.formatReportTimestamp),
 // but headless agents write report files via the raw Write tool and invent the
 // filename — they routinely emit looser, still date-shaped forms (compact
-// `20260605`, date-only `2026-06-05`, `20260605-1959`). Match a date with
-// optional separators and an optional time so a file that genuinely exists on
-// disk is never dropped as "not produced" over a timestamp-format nicety, while
-// still rejecting non-date junk (e.g. `draft`) in the <ts> slot.
-const TIMESTAMP_PATTERN = '\\d{4}-?\\d{2}-?\\d{2}(?:[-T ]?\\d{2}:?\\d{2}(?::?\\d{2})?)?';
+// `20260605`, date-only `2026-06-05`, `20260605-1959`, and the underscore form
+// `20260608_174649` / `2026-06-08_17-46-49` that crashed the UAT #5 planning
+// run). Match a date with optional separators and an optional time, allowing
+// `-`, `_`, `:`, `T`, or space between/within the parts, so a file that
+// genuinely exists on disk is never dropped as "not produced" over a
+// timestamp-format nicety — while still rejecting non-date junk (e.g. `draft`).
+const TIMESTAMP_PATTERN =
+  '\\d{4}[-_]?\\d{2}[-_]?\\d{2}(?:[-_T ]?\\d{2}[-_:]?\\d{2}(?:[-_:]?\\d{2})?)?';
 
 export type ResolvedOutput =
   | { kind: 'static'; absolutePath: string }
@@ -28,6 +35,33 @@ export type ResolvedOutput =
 
 export function isPatternedPath(declaredPath: string): boolean {
   return declaredPath.includes('<slug>') || declaredPath.includes('<ts>');
+}
+
+/**
+ * Distinguish a FILE output from a logical SIGNAL/marker output. Workflow steps
+ * declare both: real files (`.kortext/foundation/backlog.yaml`) and bare-token
+ * completion signals consumed by the next step's `inputs:` for DAG ordering
+ * (`backlog-drafted`, `staging-approved`, `item-in-test`). A signal has no file
+ * on disk — verifying it as one wrongly fails the step ("declared outputs not
+ * produced"), which crashed planning step-1 on the codex executor (UAT #7).
+ *
+ * Rule (per the workflow authoring convention): an output that contains a path
+ * separator `/` or a `.` (extension) is a file; anything else is a signal.
+ */
+export function isFileOutput(declaredOutput: string): boolean {
+  return declaredOutput.includes('/') || declaredOutput.includes('.');
+}
+
+/**
+ * Given a step's declared outputs, return the FILE outputs that were not
+ * produced on disk. Signal/marker outputs are exempt (their "production" is the
+ * step running to completion; DAG ordering already handles their availability).
+ * Shared by every CLI executor's "declared outputs not produced" check.
+ */
+export function findMissingFileOutputs(outputs: string[], worktreePath: string): string[] {
+  return outputs
+    .filter(isFileOutput)
+    .filter((rel) => findActualOutputFiles(rel, worktreePath).length === 0);
 }
 
 /**

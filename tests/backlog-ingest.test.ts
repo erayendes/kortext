@@ -1017,6 +1017,81 @@ describe('Critical-#1 B: assignee→owner alias persists to the owner column', (
   });
 });
 
+// B (UAT #5 regression) — the antigravity run wrote a correct enrichment patch
+// (`items:` carrying parent_epic + version + assignee + model + blocks) but the
+// summary showed `updated: 0` and owner stayed empty. Pin the full chain: one
+// realistic patch must update the row AND land the assignee in the owner column.
+describe('Critical-#1 B (UAT #5): a full enrichment patch persists owner + updates', () => {
+  it('updates the row and writes assignee→owner from a realistic patch', () => {
+    // step-1 skeleton: epic + a bare task.
+    ingestBacklogItems(
+      repos,
+      parseBacklogYaml(
+        'items:\n  - id: NOT-E01\n    type: epic\n    title: Altyapı\n  - id: NOT-005\n    type: task\n    title: Veritabanı şeması\n',
+      ).items,
+    );
+    expect(repos.backlog.get('NOT-005')!.owner).toBeNull();
+
+    // enrichment patch (the exact shape the antigravity agent produced).
+    const { items, errors } = parseBacklogYaml(
+      'items:\n' +
+        '  - id: NOT-005\n' +
+        '    parent_epic: NOT-E01\n' +
+        '    version: v0.1\n' +
+        '    assignee: +backend-developer\n' +
+        '    model: high-reasoning\n' +
+        '    blocks: []\n' +
+        '    blocked_by: []\n',
+      { mode: 'patch' },
+    );
+    expect(errors).toHaveLength(0);
+    const res = patchBacklogItems(repos, items);
+
+    expect(res.updated).toContain('NOT-005'); // NOT updated:0
+    const row = repos.backlog.get('NOT-005')!;
+    expect(row.owner).toBe('+backend-developer'); // assignee→owner persisted
+    expect(row.parent_id).toBe('NOT-E01');
+    expect(row.version).toBe('v0.1');
+    expect(row.model).toBe('high-reasoning');
+  });
+});
+
+// UAT #5 (real antigravity run): step-1 created only tasks (0 epics), and the
+// agent defined the epic containers in a LATER enrichment patch. patchBacklogItems
+// only UPDATED existing rows → the epics were skipped, so every task's
+// `parent_epic: NOT-E01` hit a FOREIGN KEY violation → owner/version/parent_id
+// for ALL tasks were silently dropped. A patch that carries a full epic
+// definition must CREATE it (epics first) so the tasks that reference it link.
+describe('Critical-#1 (UAT #5): patch creates missing epic containers (FK cascade fix)', () => {
+  it('creates a type:epic entry referenced by a task delta, then links + enriches', () => {
+    // The antigravity reality: step-1 made tasks only, no epic rows.
+    ingestBacklogItems(
+      repos,
+      parseBacklogYaml(
+        'items:\n  - id: NOT-001\n    type: task\n    title: Setup\n  - id: NOT-002\n    type: task\n    title: API\n',
+      ).items,
+    );
+    // Consolidation patch: defines the epics AND links/enriches the tasks.
+    const patch =
+      'items:\n' +
+      '  - id: NOT-E01\n    type: epic\n    title: Altyapı\n    version: v0.1\n' +
+      '  - id: NOT-001\n    parent_epic: NOT-E01\n    version: v0.1\n    assignee: +backend-developer\n' +
+      '  - id: NOT-002\n    parent_epic: NOT-E01\n    version: v0.2\n    assignee: +frontend-developer\n';
+    const res = patchBacklogItems(repos, parseBacklogYaml(patch, { mode: 'patch' }).items);
+
+    // The epic must exist now (created from the patch).
+    expect(repos.backlog.get('NOT-E01')?.type).toBe('epic');
+    // No FK failures — the tasks linked successfully.
+    expect(res.skipped.filter((s) => /FOREIGN KEY/.test(s.reason))).toHaveLength(0);
+    expect(res.updated).toContain('NOT-001');
+
+    const t1 = repos.backlog.get('NOT-001')!;
+    expect(t1.parent_id).toBe('NOT-E01'); // linked
+    expect(t1.version).toBe('v0.1');
+    expect(t1.owner).toBe('+backend-developer');
+  });
+});
+
 // C — acceptance_criteria has an existing home (frontmatter, rendered by
 // acChecklist). The only reason it vanished in UAT was that the patch under a
 // non-`items` key never parsed (A). With A fixed, AC delivered via any top-key
@@ -1071,6 +1146,26 @@ describe('Critical-#1 D: a totally-dropped patch emits a distinct, visible audit
       const res = ingestBacklogPatchFile(repos, file);
       expect(res.updated).toContain('NOT-020');
       expect(repos.auditLog.list({ action: 'backlog.patch.dropped' })).toHaveLength(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  // UAT #5: a patch parsed fine but every id was skipped (none matched an
+  // existing row) → updated:0 with NO parse error → the step still reported
+  // "succeeded" and the enrichment vanished silently. A 0-update patch must be
+  // visible regardless of whether the cause was a parse error or all-skipped.
+  it('emits backlog.patch.dropped when the patch parsed but updated 0 (all skipped)', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'kx-patch-'));
+    const file = join(dir, 'backlog.patch.yaml');
+    // Valid YAML, valid items — but the ids do not exist in the backlog.
+    writeFileSync(file, 'items:\n  - id: GHOST-1\n    version: v0.1\n', 'utf8');
+    try {
+      const res = ingestBacklogPatchFile(repos, file);
+      expect(res.parseErrors).toHaveLength(0);
+      expect(res.updated).toHaveLength(0);
+      expect(res.skipped.length).toBeGreaterThan(0);
+      expect(repos.auditLog.list({ action: 'backlog.patch.dropped' }).length).toBeGreaterThan(0);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

@@ -7,7 +7,72 @@
 
 ---
 
-## ⭐ Şu an (2026-06-08 #4) — UAT bulguları #1–#4 TDD ile DÜZELTİLDİ ✅ (rebuild + UAT'a devam)
+## ⭐ Şu an (2026-06-08 #8) — UAT #7'nin 3 kod bulgusu TDD ile ÇÖZÜLDÜ + GERÇEK-LLM KANITI ✅ (codex+antigravity)
+
+Yalnızca kod oturumu. UAT #7'nin üç bulgusu (sinyal-çıktı, rules-enjeksiyon, codex ≤8) düzeltildi, **gerçek koşularla kanıtlandı.** **1093 test yeşil** (1083→+10), typecheck + build temiz. **Push EDİLMEDİ.** Ayrı bir iş: **multi-model routing branch'i `main`'e merge edildi** (lokal, `cbe45b8`).
+
+- **#1 🔴 Sinyal-çıktı bug'ı:** `output-resolver` her çıktıyı dosya sanıyordu → `backlog-drafted` gibi bare-token sinyaller "not produced" → planning step-1 codex'te çöküyor (backlog yazıldığı halde DB 0). **Fix:** yeni `isFileOutput` (`/` veya `.` → dosya; aksi → sinyal) + `findMissingFileOutputs` ortak helper; 4 executor de bunu kullanıyor → sinyaller dosya doğrulamasından muaf. (+12 test)
+- **#2 🔴 rules/ enjekte edilmiyordu:** behavior.md/models.md ajan prompt'una hiç girmiyordu. **Fix:** yeni `rules-injection.ts` `buildRulesBlock` — **behavior.md her adıma** (evrensel) + adımın `inputs`'unda bildirdiği `rules/*.md` (model-atama adımı `rules/models.md`'i input bildiriyor → o adıma iner). Persona'dan sonra enjekte (cache-dostu). 4 executor + factory + 3 caller thread'lendi. (+10 test)
+- **#3 🟡 codex ≤8 yok sayıyordu (16 üretti):** `planning-pipeline.md` step-1'e granularite/kapsam-tavanı talimatı ("bir özellik=bir task; FE/BE/test ayrı item'a bölme; PRD/BRD sayı sınırı tavan").
+
+**⭐ GERÇEK-LLM KANITI:**
+- **Codex koşusu (#1+#3):** `succeeded`, **8 item** (16 değil), owner/parent_id/version/model **8/8**, epic 1. Step-1 artık çökmüyor (backlog ingest oldu). #2 kanıtı: codex `exec` aldığı prompt'u stdout'a yansıtıyor → step-1 logunda **behavior.md kuralları gerçek prompt'ta görünür**.
+- **Antigravity birleşik koşu (üçü bir arada, rules enjeksiyonu aktif):** `succeeded`, 8 item (7 task+1 epic), owner/parent_id/version/model **7/7** → regresyon yok, enrichment persist ediyor.
+
+**Not (ortam):** codex headless koşusu `~/.codex/config.toml`'daki **cloudflare MCP expired OAuth token**'da asılıyor (1 koşu 37dk boşa yandı, kill) — kod sorunu değil; o MCP girdisini kaldır/yenile.
+
+**SIRADAKİ:** (1) **Rebuild:** `npm run build && npm pack && npm install -g ./kortext-3.1.0.tgz`. (2) Eray temiz UAT (codex MCP düzeltildikten sonra codex ya da antigravity) → planning Board'da owner/epic/version/model dolu + ≤8. (3) İstersen commit (push'u sen söyle). Bekleyen lokal: routing merge (`cbe45b8`) + commit'siz UAT #7+#8 işi.
+
+---
+
+## ⭐ Önceki (2026-06-08 #7) — UAT (codex) → planning step-1 ÇÖKTÜ: sinyal-çıktı bug'ı (yeni oturum çözecek)
+
+Eray temiz UAT koştu (rebuild #6 kurulu → `kortext start` sihirbazı → "Notlarım", **codex** executor, BRD ≤8 notlu). **Codex fix'i #2 canlıda doğrulandı** (anında çökme yok, analiz 12 adım uçtan uca koştu, ~176s/adım — claude'un ~2 katı yavaş). AMA **planning ilk adımda çöktü**, enrichment hiç test edilemedi. **Bu turda kod düzeltmesi YOK** (sadece TODO/HANDOVER); Eray "başka oturumda çözeceğim, UAT'a birlikte devam" dedi.
+
+**🔴 Kök neden (TODO "KRİTİK UAT #7"):** Workflow adımları dosya + **sinyal/marker** çıktıları tanımlıyor (`backlog-drafted`, `backlog-assignees-set`, …). `output-resolver.findActualOutputFiles` **her çıktıyı dosya sanıyor** → `backlog-drafted` dosyası bulunamayınca `backlog-tanm.1` fail → `backlog.yaml` (16 item) yazıldığı halde **ingest edilmedi** (DB 0). 4 executor de sinyali dosya gibi doğruluyor; filtre yok. **#6 antigravity geçti çünkü marker dosyası yarattı; codex yaratmadı → patladı** (ajan davranışına bağlı kırılgan akış).
+
+**🔴 Ek bulgu (UAT #7):** `rules/` dosyaları (behavior.md/models.md/…) ajan prompt'una **hiç enjekte edilmiyor** — sadece dashboard/insan için. Ajan yalnız persona gövdesi + workflow adım talimatı + input **yolları** görüyor. "rules ajanları yönetir" beklentisi gerçekleşmiyor; `models.md` mapping'i ajana ulaşmıyor. (TODO "rules enjekte edilmiyor".) Workflows ise motor tarafından sadık takip ediliyor (adım adım besleniyor).
+
+**🟡 İkincil (UAT #7):** codex BRD "≤8 item" notunu yok saydı → **16 item** (antigravity 8 üretmişti). Kapsam kaldıracı executor-bağımlı. (Not: ≤8 BRD içinde = input dosyası; ajan kendi okumalı, enjekte edilmiyor — rules bulgusuyla bağlantılı.)
+
+**SIRADAKİ (yeni fix oturumu):** (1) Sinyal vs dosya çıktı ayrımı — bare-token (`/`/`.` yok) çıktılar dosya olarak doğrulanmasın; ortak helper. (2) **Gerçek codex koşusuyla** doğrula (planning step-1 geç → backlog ingest → enrichment dolu → planning succeeded). (3) codex ≤8 yok sayma. Sonra Eray ile UAT'a devam. **UAT ortamı ayakta:** `not` → :3200 (planning failed, backlog DB 0). Fix sonrası `kortext stop not && kortext purge not --yes` ile temiz başlanır.
+
+---
+
+## ⭐ Önceki (2026-06-08 #6) — Planning enrichment KÖKTEN ÇÖZÜLDÜ + GERÇEK-LLM KANITI ✅ (antigravity)
+
+Yalnızca kod oturumu (UAT değil). UAT #5 bulguları (planning çökmesi + enrichment kaybı) TDD ile düzeltildi, **gerçek antigravity koşusuyla uçtan uca kanıtlandı.** **1061 test yeşil** (1054→+7), typecheck + build temiz. **Push EDİLMEDİ.**
+
+**İki kök neden bulundu — ikincisi YALNIZ gerçek-LLM koşusunun gösterebildiği:**
+1. **Naming/çökme (planning failed):** konsolidasyon adımı `planning-reports_<slug>_<ts>.md` (olmayan tür) + output-resolver'ın ts regex'i antigravity'nin ayraç varyasyonunu (`_174649`) eşleştiremiyordu → adım fail → patch ingest olmadı. **Fix:** tek kanonik ts `YYYY-MM-DD_HH-MM-SS`; `output-resolver` TIMESTAMP/SLUG pattern'leri her ayraç (`-`/`_`/`:`/`T`/boşluk) + UPPERCASE project-id'yi tolere eder; `markdown-sync` aynı format (eski back-compat); `planning-reports`→`status-reports`.
+2. **🔴 FK cascade (enrichment kaybı — gerçek-LLM açığa çıkardı):** antigravity **step-1'de hiç epic üretmedi (0 epic)**, epic'leri sonraki patch'te tanımladı. `patchBacklogItems` yalnız güncellediği için epic'ler skip → task'ların `parent_epic` FK'i `FOREIGN KEY constraint failed` → 4 adım `0 updated` → owner/version/parent_id düştü. **Fix:** `patchBacklogItems` ön-geçişi eksik `type:epic` container'ları **önce yaratır** (FK hedefi olur).
+3. **Görünürlük:** `backlog.patch.dropped` artık `updated:0 && (parse_error VEYA hepsi-skipped)` durumunda da ateşlenir.
+
+**⭐ GERÇEK-LLM KANITI (harness, antigravity, "Notlarım" 8 item):**
+- **1. koşu (sadece naming fix):** planning **succeeded** ✓ ama FK bug'ı → owner/version/parent_id **0/8**, epics 0.
+- **2. koşu (FK fix dahil):** **owner 8/8, version 8/8, parent_id 8/8, model 8/8, epic 1, planning succeeded** ✅ — senin kriterin tam karşılandı. Ajan `status-reports_notlarim_<ts>` raporunu ayraçsız ts ile yazdı, robust resolver yine eşleştirdi (çökme yok).
+
+**Kapsam (Eray onayı):** odaklı = planning + resolver; diğer workflow'ların statik rapor adları (`test-reports.md` vb.) dokunulmadı (ayrı follow-up). **Bilgi:** antigravity bazı adımlarda epic üretmiyor + ara patch'lerde parse hatası veriyor (2/9) — motor artık ikisini de telafi ediyor (epic auto-create + dropped görünürlük), ama workflow talimatı epic-üretimini sertleştirmek ayrı bir kalite turu olabilir.
+
+**SIRADAKİ:** (1) **Rebuild:** `npm run build && npm pack && npm install -g ./kortext-3.1.0.tgz`. (2) Eray temiz UAT (antigravity) → onboarding→planning → Board'da owner/epic/version/model dolu görünmeli. (3) İstersen commit (push'u sen söyle).
+
+---
+
+## ⭐ Önceki (2026-06-08 #5) — UAT (antigravity, "Notlarım") → #1 PRATİKTE YENİDEN AÇIK + adlandırma kararı
+
+Eray temiz UAT koştu: rebuild (#1–#4 kurulu) → `kortext start <path>` → onboarding (**antigravity**, BRD'ye "≤8 item" kapsam notu) → analiz+planning. **Kapsam kaldıracı tuttu (8 item, 70 değil).** AMA enrichment **yine persist olmadı:** owner/parent_id/version/model **8/8 boş, 0 epic, planning-pipeline = failed.**
+
+**Neden #4 "çözüldü" ama yine patladı (nüans):** #4 fix'i Claude'la doğrulanmıştı (DECISIONS §917: kortext-v1, 127 item, hepsi dolu, step-8 succeeded). Bu UAT **antigravity** ile koştu ve ajan tarafı DOĞRU üretti (`backlog.patch.yaml` → `items:` + `parent_epic`+`version`+`assignee`+`model`+`blocks`), ama:
+- **Konsolidasyon adımı çöktü** → doğru patch **ingest edilmedi** → enrichment uçtu. Hata: `declared outputs not produced: planning-reports_<slug>_<ts>.md`. Antigravity raporu `planning-reports_notlarim_20260608_174649.md` (ts `_174649` = alt-çizgi + 6-haneli saat) yazdı; output-resolver'ın gevşetilmiş `<ts>` regex'i (DECISIONS §890: `-` ayraç + 4-haneli saat) bunu **hâlâ eşleştiremedi**. Executor/format kırılganlığı: bir ajanın yazdığı ts varyasyonu adımı çökertiyor.
+- Ara adımlar (`atama.1/2`) "succeeded" ama `updated: 0` → `assignee→owner` alias veya sessiz-başarısızlık şüphesi (canlıda doğrula).
+
+**Eray kararı (kök çözüm — DECISIONS §7'ye işlendi):** tüm rapor/dosya adları **tek desen** `report-type_project-id_<ts>` (örn. `status-reports_NOT_2026-06-08_17-46-49.md`), `<slug>`→**project-id (`code`)**, **tek ts formatı**; **`planning-reports` türü kaldırılır → `status-reports`'a indirgenir** (zaten template'i yok, çökme sebebi buydu). Detay [TODO.md](./TODO.md) "YENİDEN AÇIK #5" + "Rapor/dosya adlandırma standardı".
+
+**SIRADAKİ (yeni fix oturumu):** TODO'daki #5 + adlandırma standardını uygula (workflow ↔ template ↔ output-resolver hizala, tek ts deseni, planning-reports→status-reports, assignee alias + sessiz-başarısızlık görünürlüğü). **Gerçek-LLM (tercihen antigravity) koşusuyla doğrula** — "owner/epic/version/model dolu + planning succeeded" görülmeden kapatma. Sonra Eray UAT'ı **baştan** alacak. UAT ortamı kapatıldı (Eray durdurdu).
+
+---
+
+## ⭐ Önceki (2026-06-08 #4) — UAT bulguları #1–#4 TDD ile DÜZELTİLDİ ✅ (rebuild + UAT'a devam)
 
 Önceki turun (#3) 4 düzeltilebilir bulgusu uçtan uca düzeltildi (TDD, **1054 test yeşil** [1027→+27], typecheck + build temiz). **Push EDİLMEDİ** (lokal commit'ler de henüz yok — working tree). Detay [TODO.md](./TODO.md)'de madde-madde.
 

@@ -4,6 +4,42 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 
 ---
 
+## 🔴 KRİTİK (UAT #7, 2026-06-08, codex): "Sinyal çıktıları" dosya sanılıyor → planning step-1 çöküyor
+
+> **Belirti:** codex executor ile planning **ilk adımda** (`backlog-tanm.1` +engineering-manager) çöktü: `declared outputs not produced: backlog-drafted`. Gerçekte `backlog.yaml` **yazıldı** (16KB, `items:`, 16 item) ve codex `exit 0` döndü — ama adım fail olduğu için backlog **ingest edilmedi** (DB total 0). Enrichment hiç test edilemedi.
+
+**Kök neden:** Workflow adımları iki tür çıktı tanımlar — **dosya** (`.kortext/foundation/backlog.yaml`) ve **sinyal/marker** (`backlog-drafted`, `backlog-acceptance-set`, `backlog-security-marked`, `backlog-epics-linked`, `backlog-versions-set`, `backlog-assignees-set`, `backlog-models-set`, …). Ama `server/engine/output-resolver.ts` `findActualOutputFiles` **her çıktıyı dosya yolu sanıyor**: `backlog-drafted` → `worktree/backlog-drafted` dosyası arar, bulamaz → "not produced". Dört executor de (claude/codex/gemini/antigravity) `step.outputs.filter(rel => findActualOutputFiles(rel)===0)` ile **tüm** çıktıları dosya gibi doğruluyor; sinyal filtresi YOK.
+
+**Neden #6 (antigravity) geçti, codex patladı:** Sinyal yalnızca ajan **tesadüfen o isimde bir dosya yaratırsa** "geçiyor". Antigravity `backlog-drafted` marker dosyası oluşturmuş (geçti); codex sadece metinde "Çıktı durumu: backlog-drafted" yazıp dosya yaratmadı (patladı). Akış ajan davranışına bağlı → kırılgan.
+
+**Düzeltilecekler:** ✅ **TAMAM (2026-06-08 #8, TDD, +12 test).**
+- [x] ~~**Sinyal vs dosya ayrımı**~~ ✅ — yeni `output-resolver.isFileOutput` (`/` veya `.` içerir → dosya; aksi → sinyal) + `findMissingFileOutputs` ortak helper. 4 executor de (claude/codex/gemini/antigravity) bunu kullanıyor → bare-token sinyaller (`backlog-drafted`, `staging-approved`, …) **dosya olarak doğrulanmaz**, yalnız `.kortext/...` dosyaları kontrol edilir. +6 helper + 6 executor regresyon testi.
+- [ ] **Regresyon (gerçek codex):** koşu çalışıyor — sonuç HANDOVER #8'de.
+
+---
+
+## 🔴 (UAT #7) `rules/` dosyaları ajan prompt'una HİÇ enjekte edilmiyor
+
+> **Belirti/keşif:** Eray sordu — ajanlar `rules/behavior.md` gibi kuralları okuyor mu? **Hayır.** Hiçbir executor `rules/` içeriğini prompt'a koymuyor. `rulesDir` yalnız: (a) dashboard gösterimi (`server/index.ts:366` `/api/`), (b) `markdown-sync` salt-okunur doküman listesi, (c) ölü/yorum referansları (`backlog-ingest.ts` `models.md` yorumu; `harmful-output-filter.ts` `banned-phrases.md` "ileride yüklenecek" TODO'su — aktif değil).
+
+**Sonuç:** `behavior.md`, `models.md`, vb. runtime'da ajan için **görünmez**. Ajan prompt'una giren: persona gövdesi (`agents/<persona>.md`) + workflow adım talimatı (`step.description`) + input dosya **yolları** (içerik değil). Yani "rules ajanları yönetir" beklentisi şu an **gerçekleşmiyor** — kurallar yalnız insan/dashboard için duruyor, motor-prompt zincirine bağlı değil.
+
+**Düzeltilecekler:** ✅ **TAMAM (2026-06-08 #8, TDD, +10 test).**
+- [x] ~~**Karar + uygula (hibrit a+b)**~~ ✅ — yeni `server/engine/rules-injection.ts` `buildRulesBlock(stepInputs, rulesDir)`: **behavior.md evrensel her adıma** + adımın `inputs`'unda bildirdiği her `rules/*.md` (örn. model-atama adımı `rules/models.md` input'u var → o adıma iner). Persona gövdesinden SONRA enjekte edilir (cache-dostu, step-type'a göre stabil). 4 executor de bağlandı (claude system-prompt'a, codex/gemini/antigravity stdin'e); `rulesDir` factory → 3 caller (commands/index/server-drive) boyunca thread'lendi. +6 helper + 4 executor testi.
+- [x] ~~**`models.md` model-atama adımına ulaşıyor**~~ ✅ — workflow zaten `inputs: …, rules/models.md` bildiriyor; buildRulesBlock bunu yakalayıp o adımın prompt'una koyuyor. Ajan artık mapping'i görüyor (test: models.md içeriği o adımın prompt'unda).
+- [ ] **`banned-phrases.md`** safety filtresine bağlama — ayrı/kapsam dışı (bu tur prompt-enjeksiyonu odaklıydı).
+
+---
+
+## 🟡 (UAT #7) Codex BRD kapsam notunu (≤8 item) dikkate almıyor
+
+> BRDTEST.md'de "Toplam item sayısı 8'i geçmesin" notu vardı; codex **16 item** üretti. Antigravity aynı notla 8 üretmişti. Kapsam kaldıracı executor'a bağlı, codex'te tutmuyor.
+
+- [x] ~~**Granularite talimatı pekiştirildi**~~ ✅ (2026-06-08 #8) — `planning-pipeline.md` step-1'e **🎯 Kapsam ve granularite — ZORUNLU** bloğu: PRD/BRD'deki item-sayısı sınırı bir **tavandır, aşma**; "bir özellik = bir task" (FE/BE/test'i ayrı item'a BÖLME — review_gates+persona zaten paralel yürütür); şüphede **daha az/daha büyük** item. "tüm item'ları çıkar" → "kapsam sınırlarına uyarak çıkar" olarak yumuşatıldı (codex bunu literal alıp 16 üretmişti). Codex koşusunda item sayısı doğrulanacak (HANDOVER #8).
+- [ ] **Kalıcı çözüm (ayrı):** onboarding "proje boyutu" kontrolü — talimat pekiştirme yine de executor-bağımlı; deterministik tavan için onboarding sinyali daha sağlam.
+
+---
+
 ## 🧙 Onboarding-driven directory + otomatik git (2026-06-08)
 
 > Yeni akış **tamam** + `main`'e lokal merge (9 TDD görevi, 999 test). `kortext start` (proje yok) → sihirbaz → dizini GUI'de seç → otomatik git → gerçek daemon devri → boot auto-start. Detay [DECISIONS §7.11](./DECISIONS.md) · [plan](../docs/superpowers/plans/2026-06-07-onboarding-driven-directory.md).
@@ -57,6 +93,20 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 **Kök neden:** `resolveStartTarget` (`server/cli/cmd-start.ts`) `cwd/.kortext` var mı diye bakıyordu; ama home'da bu **registry dizininin ta kendisi** (`defaultRegistryDir()` = `~/.kortext`).
 
 - [x] ~~**Registry-home guard'ı**~~ ✅ — `resolveStartTarget`'a `registryDir` parametresi + `isRegistryHome(dir)` (dir'in `.kortext`'i registry dizinine çözülüyorsa = home, asla proje değil). Hem arg hem no-arg dalında: home → `list`/`onboard` (sihirbaz), `new-path` değil. Kardeş gerçek proje dizinleri etkilenmez (guard yalnız home'a kapsamlı). +4 test. İkinci belirti (auto-handoff/serve fallback) kök düzelince giderildi: artık doğru `onboard` → sihirbaz.
+
+## ✅ ÇÖZÜLDÜ (UAT #5 → fix oturumu #6, 2026-06-08): Planning çökmesi + naming standardı
+
+> Kök neden: konsolidasyon adımı `planning-reports_<slug>_<ts>.md` (olmayan tür) + output-resolver'ın ts regex'i antigravity'nin `_174649` formunu eşleştiremiyordu → adım fail → o adımın patch'i ingest olmadı. Odaklı kapsam (Eray onayı: planning + resolver).
+
+- [x] ~~**Konsolidasyon çökmesi → naming**~~ ✅ — `output-resolver.ts` TIMESTAMP_PATTERN her ayraç varyasyonunu (`-`/`_`/`:`/`T`/boşluk) + SLUG_PATTERN uppercase project-id'yi kabul eder. Test: antigravity'nin tam çökme formu `status-reports_notlarim_20260608_174649.md` + kanonik `status-reports_NOT_2026-06-08_17-46-49.md` eşleşir, çöp reddedilir.
+- [x] ~~**Tek adlandırma deseni**~~ ✅ — `report-type_project-id_<ts>`, tek ts `YYYY-MM-DD_HH-MM-SS`. `markdown-sync.formatReportTimestamp` + `REPORT_FILENAME_PATTERN` (yeni ts + UPPERCASE id; eski ts back-compat). planning-pipeline.md konsolidasyon adımı bu deseni dayatıyor. **Odaklı:** diğer workflow'ların statik adları (test-reports.md vb.) dokunulmadı — ayrı follow-up.
+- [x] ~~**`planning-reports` türünü kaldır**~~ ✅ — `planning-pipeline.md` artık `status-reports_<slug>_<ts>.md` yazar; kodda planning-reports referansı yok (gate `approver:` ile sürülüyor, ad değil).
+- [x] ~~**`assignee` → `owner` alias**~~ ✅ — #4'te eklenmişti; UAT #5 regresyon testiyle doğrulandı (antigravity patch şekli: parent_epic+version+assignee+model+blocks tek `items:` patch'inde → `updated>0` + owner persist). Canlı `updated:0` konsolidasyon çökmesinin sonucuydu, alias eksikliği değil.
+- [x] ~~**Sessiz başarısızlık görünürlüğü**~~ ✅ — `backlog.patch.dropped` audit olayı artık `updated:0 && (parse_error VEYA hepsi-skipped)` durumunda da ateşlenir (önceden yalnız parse_error). Eyleme dönük mesaj.
+- [x] ~~**🔴 İKİNCİ KÖK NEDEN — gerçek-LLM koşusunun açığa çıkardığı (FK cascade)**~~ ✅ — Antigravity koşusunda **step-1 hiç epic üretmedi (0 epic)**; ajan epic tanımlarını sonraki enrichment patch'inde yazdı. `patchBacklogItems` yalnız güncellediği için epic'ler "not found" → skip, sonra task'ların `parent_epic: NOT-E01` güncellemesi **`FOREIGN KEY constraint failed`** verdi → o adımın TÜM enrichment'i (owner/version/parent_id) düştü (4 adım `0 updated, 10 skipped`). **Fix:** `patchBacklogItems`'a ön-geçiş — patch'in tam tanımladığı eksik `type: epic` container'ları **önce yaratır** (FK hedefi var olur), sonra task güncellemeleri bağlanır. Bu, unit-test'in (epic'leri önceden yaratıyordu) yakalayamadığı, **yalnız gerçek-LLM koşusunun gösterdiği** bulgu. +1 test.
+- [ ] **Regresyon kanıtı (gerçek-LLM):** harness ile antigravity planning koşusu — sonuç HANDOVER #6'da. (1. koşu: naming fix tuttu/planning succeeded ama FK bug'ı owner/version'ı düşürdü → fix → 2. koşu doğrulaması.)
+
+---
 
 ## 🤖 Çok-modelli executor — onboarding seçimi = operation-manager modeli (2026-06-08, UAT/Eray vizyonu)
 

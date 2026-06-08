@@ -268,6 +268,7 @@ const approvalDeployer = new WorkflowDeployer({
     return createExecutor(kind, {
       binary: binary ?? '',
       agentsDir,
+      rulesDir: runtime.rulesDir,
       logsDir: resolve(dirname(fileURLToPath(import.meta.url)), '..', '.kortext', 'data', 'logs'),
     });
   })(),
@@ -344,6 +345,7 @@ const serverDrive = makeServerDrive({
   queue: approvalQueue,
   repoRoot: process.cwd(),
   agentsDir,
+  rulesDir: runtime.rulesDir,
   enabled: () => env.KORTEXT_DRIVE_ENABLED,
   resolveExecutor: () => {
     const meta = readProjectMeta(resolveBlueprintPaths(process.cwd()).projectJsonPath);

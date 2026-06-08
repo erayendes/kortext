@@ -101,6 +101,8 @@ v3.0 `init/serve` production'da kullanıcı yok (npm `kortext@3.0.0` EADDRINUSE 
 - **`reports/`** = per-file run-spesifik raporlar (`<scope>_<slug>_<ts>.md`)
 - **`foundation/`** = donmuş phase çıktıları (yeni)
 
+> **✅ Adlandırma standardı revizyonu (2026-06-08 #6, UAT #5 — UYGULANDI, odaklı kapsam):** `<scope>_<slug>_<ts>` deseni **tutarsızdı** (workflow/template/resolver farklı ts formatları → antigravity koşusunda planning çöktü). **Kanon:** her rapor/dosya adı `report-type_project-id_<ts>` — `<slug>` yerine **project-id (`project.json.code`, örn. NOT)**, **tek ts formatı `YYYY-MM-DD_HH-MM-SS`**. Örn. `status-reports_NOT_2026-06-08_17-46-49.md`. **`planning-reports` türü kaldırıldı** (template'i yoktu = çökme sebebi; planning özeti `status-reports`'a yazılır, planning-pipeline.md konsolidasyon adımı düzeltildi). **Uygulandı:** `markdown-sync.formatReportTimestamp`→canonical ts + `REPORT_FILENAME_PATTERN` (yeni ts + UPPERCASE project-id, eski ts back-compat); `output-resolver.ts` SLUG_PATTERN (uppercase) + TIMESTAMP_PATTERN (her ayraç varyasyonu: `-`/`_`/`:`/`T`/boşluk — antigravity `_174649` formu artık eşleşir, §890'ın bir adım ötesi). **Odaklı kapsam (Eray onayı):** sadece planning + resolver; diğer workflow'ların statik rapor adları (`test-reports.md` vb.) şimdilik dokunulmadı (ayrı follow-up).
+
 ALL-CAPS kısaltma standartları (PM/business dünyasının kanonik isimleri): AI ajan ve insan, "BRD" ifadesini "Business Requirements Document" diye direkt tanır.
 
 ### 1.2 References ALL-CAPS rename

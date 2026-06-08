@@ -32,6 +32,9 @@ export type ServerDriveDeps = {
   repoRoot: string;
   /** Directory with `[handle].md` persona files (used by non-mock executors). */
   agentsDir: string;
+  /** Directory with `rules/*.md` injected into agent prompts (UAT #7).
+   *  Optional — when omitted, prompts simply carry no rules block. */
+  rulesDir?: string;
   /** Reads the safety switch — env.KORTEXT_DRIVE_ENABLED. */
   enabled: () => boolean;
   /** Which agent substrate to run (resolved from project.json; mock fallback). */
@@ -79,6 +82,7 @@ export function makeServerDrive(deps: ServerDriveDeps): ServerDrive {
     const baseExecutor = createExecutor(kind, {
       binary: binary ?? '',
       agentsDir: deps.agentsDir,
+      rulesDir: deps.rulesDir,
       logsDir: resolve(deps.repoRoot, '.kortext', 'data', 'logs'),
       // MockExecutor doesn't read personas — skip handing it the registry.
       personaRegistry: kind === 'mock' ? undefined : deps.personas,
@@ -89,6 +93,7 @@ export function makeServerDrive(deps: ServerDriveDeps): ServerDrive {
       {
         binary: binary ?? '',
         agentsDir: deps.agentsDir,
+        rulesDir: deps.rulesDir,
         logsDir: resolve(deps.repoRoot, '.kortext', 'data', 'logs'),
         personaRegistry: kind === 'mock' ? undefined : deps.personas,
       },

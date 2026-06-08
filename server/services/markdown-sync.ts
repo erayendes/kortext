@@ -32,13 +32,16 @@ const DECISIONS_SINGLE_FILE = '.kortext/memory/decisions.md';
 const LEARNED_SINGLE_FILE = '.kortext/memory/learned.md';
 
 /**
- * Per-file report filename pattern (v3.1 spec section 6):
- *   <scope>_<slug>_<YYYY-MM-DD-HHMM>.md
+ * Per-file report filename pattern:
+ *   <report-type>_<project-id>_<YYYY-MM-DD_HH-MM-SS>.md   (canonical, UAT #5)
  *
- * scope and slug are kebab-case; underscores separate the three parts.
+ * report-type is kebab-case lowercase; the slug carries the project id
+ * (project.json.code, e.g. `NOT`) so it accepts UPPERCASE too. Underscores
+ * separate the three parts. The legacy `YYYY-MM-DD-HHMM` timestamp is still
+ * accepted so reports written before the standard change keep indexing.
  */
 export const REPORT_FILENAME_PATTERN =
-  /^([a-z][a-z0-9-]*)_([a-z0-9][a-z0-9-]*)_(\d{4}-\d{2}-\d{2}-\d{4})\.md$/;
+  /^([a-z][a-z0-9-]*)_([A-Za-z0-9][A-Za-z0-9-]*)_(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}|\d{4}-\d{2}-\d{2}-\d{4})\.md$/;
 
 export type ParsedReportFilename = {
   scope: string;
@@ -59,11 +62,15 @@ export function parseReportFilename(pathOrName: string): ParsedReportFilename | 
   return { scope, slug, timestamp };
 }
 
+// Canonical single timestamp format: YYYY-MM-DD_HH-MM-SS (UAT #5 standard).
+// One format everywhere — the engine writer, the workflow instructions, and the
+// output-resolver matcher all speak this shape, so an agent-written report and a
+// Kortext-written report are indistinguishable to the indexer.
 function formatReportTimestamp(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   return (
     `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}` +
-    `-${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}`
+    `_${pad(date.getUTCHours())}-${pad(date.getUTCMinutes())}-${pad(date.getUTCSeconds())}`
   );
 }
 

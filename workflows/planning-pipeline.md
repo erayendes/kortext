@@ -19,7 +19,9 @@
 
 ## Backlog Tanımı
 
-1. **+engineering-manager:** Backlog'u tek bir YAML dosyası olarak üret: `.kortext/foundation/backlog.yaml`. Dosya **sadece geçerli YAML** olmalı (markdown/prose/code-fence YOK), en üstte `items:` listesi. PRD + TRD'den tüm item'ları çıkar; her item ayrı satırda. Disiplin: atomik (tek başına anlaşılabilir, bağımsız geliştirilebilir, ayrı doğrulanabilir).
+1. **+engineering-manager:** Backlog'u tek bir YAML dosyası olarak üret: `.kortext/foundation/backlog.yaml`. Dosya **sadece geçerli YAML** olmalı (markdown/prose/code-fence YOK), en üstte `items:` listesi. PRD + TRD'deki kapsam sınırlarına **uyarak** item'ları çıkar; her item ayrı satırda. Disiplin: atomik (tek başına anlaşılabilir, bağımsız geliştirilebilir, ayrı doğrulanabilir).
+
+   **🎯 Kapsam ve granularite — ZORUNLU.** PRD/BRD'de bir **item sayısı sınırı** ya da kapsam notu varsa (örn. "toplam item 8'i geçmesin", "MVP", "küçük proje") bu bir **tavandır, aşma**. Sınır verilmişse o sayıyı geçme; verilmemişse projeyi makul, kaba-taneli item'lara böl. **Bir özellik = bir task** (varsayılan); aynı özelliğin frontend/backend/test parçalarını **ayrı item'lara BÖLME** (review_gates ve persona zaten o işi paralel yürütür). Şüphedeysen **daha az, daha büyük** item'ı tercih et — fazla bölmek backlog'u şişirir ve kapsam notunu ihlal eder. Epic container'lar bu sayıma dahil değildir.
 
    **🔑 ID konvansiyonu — ZORUNLU.** Önce `.kortext/project.json`'u oku ve `code` alanını al (örn. `"code": "TF"`). Her item id'si **`<CODE>-NNN`** desenine uymalı: task/bug/debt için sıralı üç haneli numara (`TF-001`, `TF-002`, `TF-003`…), epic container için `<CODE>-E01`, `<CODE>-E02`. **Slug/kebab-case id YASAK** — `init-nextjs-project`, `setup-github-actions-ci` gibi id'ler hatadır; bunlar başlık (`title`) olur, id olmaz. Numaraları tüm backlog boyunca tekilleştir (atlamadan artır). project.json okunamazsa proje adının baş harflerinden 2-4 harfli bir kod türet.
 
@@ -124,11 +126,11 @@
        blocked_by: []
        blocks: [NOT-005]
    ```
-   Sonra planning özet raporu yaz: versiyon planı, Epic dağılımı, açık riskler, +prime kararına bırakılan kalemler. Rapor dosya adı `<scope>_<slug>_<ts>.md` desenine uymalı (örn. `planning-reports_taskflow_2026-06-05-1959.md`).
+   Sonra planning özet raporu yaz: versiyon planı, Epic dağılımı, açık riskler, +prime kararına bırakılan kalemler. **Rapor türü `status-reports`** (ayrı bir `planning-reports` türü YOKTUR). Dosya adı **tek kanonik desen** `report-type_project-id_<ts>.md` olmalı: `status-reports_<PROJECT-ID>_<YYYY-MM-DD_HH-MM-SS>.md` — `<PROJECT-ID>` = `.kortext/project.json`'daki `code` (örn. `NOT`), `<ts>` = `YYYY-MM-DD_HH-MM-SS` (örn. `status-reports_NOT_2026-06-08_17-46-49.md`).
 
    **Memory (kalıcı karar günlüğü):** Planlama sırasında alınan kalıcı kararları `.kortext/memory/decisions.md`'e yaz. Varsa önce oku ve **üstüne ekle** (silme). Her karar tek satır/madde: ne karar verildi + kısa gerekçe (örn. "Versiyonlama v0.1→v1.0 aşamalı — MVP'yi erken çıkarmak için", "Auth epic'i ilk sürüme alındı — tüm akışların ön koşulu"). Yoksa yeni dosya oluştur, en üste `# Decisions` başlığı koy.
    - inputs: `.kortext/foundation/PRD.md`, `.kortext/foundation/TRD.md`, `backlog-models-set`
-   - outputs: `.kortext/foundation/backlog.patch.yaml`, `.kortext/reports/planning-reports_<slug>_<ts>.md`, `.kortext/memory/decisions.md`
+   - outputs: `.kortext/foundation/backlog.patch.yaml`, `.kortext/reports/status-reports_<slug>_<ts>.md`, `.kortext/memory/decisions.md`
    - approver: +prime
 
 **Sonraki akış:** `environment-setup`

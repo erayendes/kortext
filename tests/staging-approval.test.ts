@@ -232,9 +232,10 @@ describe('runStagingApproval — M2a: real writeReport files', () => {
     const files = readdirSync(reportsDir).filter((f) => f.startsWith('gate-staging_'));
     expect(files).toHaveLength(2);
 
-    // Each file must match the naming pattern: gate-staging_<slug>_<YYYY-MM-DD-HHMM>.md
+    // Each file must match the canonical naming pattern:
+    // gate-staging_<slug>_<YYYY-MM-DD_HH-MM-SS>.md (UAT #5 single ts format).
     for (const file of files) {
-      expect(file).toMatch(/^gate-staging_[a-z0-9][a-z0-9-]*_\d{4}-\d{2}-\d{2}-\d{4}\.md$/);
+      expect(file).toMatch(/^gate-staging_[a-z0-9][a-z0-9-]*_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.md$/);
     }
   });
 

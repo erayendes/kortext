@@ -617,8 +617,12 @@ export function ingestBacklogItems(
  *     `blocks` / `blocked_by` / `description` + unknown frontmatter keys:
  *     last-writer-wins — set only when the patch provides them.
  *   - `type` is never changed by a patch (the row keeps its kind).
- *   - An id that doesn't exist is skipped, never created (full ingest owns
- *     creation).
+ *   - An id that doesn't exist is skipped, never created — EXCEPT a fully
+ *     defined epic container (`type: epic` + title). Real agents (antigravity,
+ *     UAT #5) skip epics in step-1 and define them in a later enrichment patch;
+ *     creating them here lets the tasks that reference them via `parent_epic`
+ *     link instead of hitting a FOREIGN KEY violation that drops the whole
+ *     task enrichment.
  */
 export function patchBacklogItems(
   repos: Repositories,
@@ -629,8 +633,53 @@ export function patchBacklogItems(
 } {
   const updated: string[] = [];
   const skipped: { id: string; reason: string }[] = [];
+  const createdEpics = new Set<string>();
+
+  // Pre-pass: create any missing EPIC container the patch fully defines, so a
+  // task's `parent_id` FK target exists before the update pass links it. Without
+  // this, an entire planning run's owner/version/parent_id can be silently lost
+  // (UAT #5: 4 enrichment steps reported 0 updates from FK violations).
+  for (const item of parsed) {
+    if (!item.title || coerceItemType(item.type ?? '').type !== 'epic') continue;
+    if (repos.backlog.get(item.id) !== null) continue;
+    try {
+      const frontmatter: Record<string, unknown> = { ...(item.extra ?? {}) };
+      if (item.priority !== undefined) frontmatter['priority'] = item.priority;
+      if (item.acceptance_criteria !== undefined)
+        frontmatter['acceptance_criteria'] = item.acceptance_criteria;
+      if (item.blocks !== undefined) frontmatter['blocks'] = item.blocks;
+      if (item.blocked_by !== undefined) frontmatter['blocked_by'] = item.blocked_by;
+      repos.backlog.create({
+        id: item.id,
+        type: 'epic',
+        title: item.title,
+        parent_id: item.parent_id ?? null,
+        version: item.version ?? null,
+        model: item.model ?? null,
+        review_gates: (item.review_gates ?? []).filter((g) =>
+          VALID_GATES.has(g),
+        ) as import('../db/schemas.ts').Gate[],
+        frontmatter,
+        body_md: item.description ?? '',
+        status: 'to_do',
+      });
+      if (item.owner) repos.backlog.setOwner(item.id, item.owner);
+      repos.auditLog.append({
+        actor: 'engine',
+        action: 'backlog.patch.epic_created',
+        resource_type: 'backlog_item',
+        resource_id: item.id,
+        payload: { title: item.title },
+      });
+      createdEpics.add(item.id);
+      updated.push(item.id);
+    } catch (err) {
+      skipped.push({ id: item.id, reason: err instanceof Error ? err.message : String(err) });
+    }
+  }
 
   for (const item of parsed) {
+    if (createdEpics.has(item.id)) continue; // fully created in the pre-pass
     const existing = repos.backlog.get(item.id);
     if (existing === null) {
       skipped.push({ id: item.id, reason: 'not found (patch only updates)' });
@@ -804,12 +853,14 @@ export function ingestBacklogPatchFile(
     `[kortext] backlog patch: ${updated.length} updated, ${skipped.length} skipped, ${parseErrors.length} parse errors`,
   );
 
-  // D — Loud, distinct signal when an ENTIRE enrichment patch was lost (parse
-  // errors AND zero rows updated). The low-signal `.summary parse_errors:1` is
-  // easy to miss in the activity feed; a dropped enrichment step silently throws
-  // away owner/version/gates/deps (UAT 2026-06-08 critical #1). Surface it as its
-  // own event with an actionable message so it shows up, not just succeeds.
-  if (parseErrors.length > 0 && updated.length === 0) {
+  // D — Loud, distinct signal when an ENTIRE enrichment patch was lost: zero
+  // rows updated, whether the cause was a parse error OR every item being
+  // skipped (e.g. ids that don't match any backlog row). The low-signal
+  // `.summary` line is easy to miss; a dropped enrichment step silently throws
+  // away owner/version/gates/deps (UAT #1 + #5). Surface it as its own event
+  // with an actionable message so it shows up, not just "succeeds".
+  if (updated.length === 0 && (parseErrors.length > 0 || skipped.length > 0)) {
+    const cause = parseErrors.length > 0 ? 'parse error' : 'every item was skipped';
     repos.auditLog.append({
       actor: 'engine',
       action: 'backlog.patch.dropped',
@@ -817,10 +868,13 @@ export function ingestBacklogPatchFile(
       resource_id: basename(absolutePath),
       payload: {
         message:
-          'Enrichment patch produced 0 updates — the whole step was lost. ' +
-          'Check the patch top-level key (must be a list of items with `id`).',
+          `Enrichment patch produced 0 updates (${cause}) — the whole step was lost. ` +
+          'Check the patch top-level key (a list of items with `id`) and that the ' +
+          'ids match existing backlog items.',
         parse_errors: parseErrors.length,
-        parse_error_detail: parseErrors.slice(0, 20),
+        skipped: skipped.length,
+        ...(parseErrors.length > 0 ? { parse_error_detail: parseErrors.slice(0, 20) } : {}),
+        ...(skipped.length > 0 ? { skipped_detail: skipped.slice(0, 20) } : {}),
       },
     });
   }
