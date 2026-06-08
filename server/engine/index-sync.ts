@@ -109,7 +109,7 @@ export function syncRegistriesToDb(
       purpose,
       when_to_use: whenToUse,
       capabilities: [],
-      model_default: null,
+      model_default: def.model ?? null,
       source_path: `agents/${def.id}.md`,
     });
     personasUpserted += 1;
