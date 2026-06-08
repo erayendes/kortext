@@ -4,7 +4,7 @@ import type { PersonaRegistry } from '../engine/persona-registry.ts';
 import type { WorkflowDefinition } from '../engine/workflow-parser.ts';
 import { buildGraph } from '../engine/dag.ts';
 import { ItemLifecycle } from '../engine/item-lifecycle.ts';
-import { createExecutor, type ExecutorKind } from '../cli/executor-factory.ts';
+import { createExecutor, createRoutedExecutor, type ExecutorKind } from '../cli/executor-factory.ts';
 import { createComposition } from './composition.ts';
 import { driveReadyItems, type DriveResult } from './driver.ts';
 import type { ApprovalQueue } from './approval-queue.ts';
@@ -76,13 +76,23 @@ export function makeServerDrive(deps: ServerDriveDeps): ServerDrive {
       );
     }
     const { kind, binary } = deps.resolveExecutor();
-    const executor = createExecutor(kind, {
+    const baseExecutor = createExecutor(kind, {
       binary: binary ?? '',
       agentsDir: deps.agentsDir,
       logsDir: resolve(deps.repoRoot, '.kortext', 'data', 'logs'),
       // MockExecutor doesn't read personas — skip handing it the registry.
       personaRegistry: kind === 'mock' ? undefined : deps.personas,
     });
+    const executor = createRoutedExecutor(
+      deps.repos.personas.list(),
+      baseExecutor,
+      {
+        binary: binary ?? '',
+        agentsDir: deps.agentsDir,
+        logsDir: resolve(deps.repoRoot, '.kortext', 'data', 'logs'),
+        personaRegistry: kind === 'mock' ? undefined : deps.personas,
+      },
+    );
     const composition = createComposition({
       repos: deps.repos,
       executor,
