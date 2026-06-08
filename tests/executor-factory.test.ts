@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createExecutor } from '../server/cli/executor-factory.ts';
+import { createExecutor, createRoutedExecutor } from '../server/cli/executor-factory.ts';
 import { PersonaRoutedExecutor } from '../server/engine/executors/persona-routed-executor.ts';
 import { MockExecutor } from '../server/engine/executors/mock-executor.ts';
 import type { Executor, ExecutorContext } from '../server/engine/executor.ts';
@@ -112,5 +112,52 @@ describe('PersonaRoutedExecutor', () => {
       fallback: new MockExecutor(),
     });
     expect(routed.name).toMatch(/routed/);
+  });
+});
+
+describe('createRoutedExecutor', () => {
+  it('returns the fallback unchanged when no persona has a model_default', () => {
+    const fallback = createExecutor('mock', cliOpts);
+    const result = createRoutedExecutor(
+      [{ handle: '+developer', model_default: null }],
+      fallback,
+      cliOpts,
+    );
+    expect(result).toBe(fallback);
+  });
+
+  it('returns a PersonaRoutedExecutor when at least one override is set', () => {
+    const fallback = createExecutor('mock', cliOpts);
+    const result = createRoutedExecutor(
+      [{ handle: '+reviewer', model_default: 'mock' }],
+      fallback,
+      cliOpts,
+    );
+    expect(result).toBeInstanceOf(PersonaRoutedExecutor);
+  });
+
+  it('deduplicates: two personas with the same model_default share one executor via name', () => {
+    const fallback = createExecutor('mock', cliOpts);
+    const result = createRoutedExecutor(
+      [
+        { handle: '+dev', model_default: 'claude' },
+        { handle: '+qa', model_default: 'claude' },
+      ],
+      fallback,
+      cliOpts,
+    );
+    expect(result).toBeInstanceOf(PersonaRoutedExecutor);
+    expect(result.name).toMatch(/routed/);
+    expect(result.name).toMatch(/claude-cli/);
+  });
+
+  it('ignores entries with an unrecognised model_default value', () => {
+    const fallback = createExecutor('mock', cliOpts);
+    const result = createRoutedExecutor(
+      [{ handle: '+unknown', model_default: 'grok-4' }],
+      fallback,
+      cliOpts,
+    );
+    expect(result).toBe(fallback);
   });
 });
