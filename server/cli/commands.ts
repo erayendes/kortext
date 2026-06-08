@@ -27,6 +27,8 @@ export type StartCommandInput = {
   /** Required for non-mock executors. */
   executorBinary?: string;
   agentsDir?: string;
+  /** Rules dir (`rules/`). Defaults to the runtime package's rules. */
+  rulesDir?: string;
   logsDir?: string;
   concurrency?: number;
   /**
@@ -92,14 +94,16 @@ export async function startCommand(input: StartCommandInput): Promise<StartComma
   }
 
   const graph = buildGraph(def);
-  // v3.1: personas live in the npm package, not the project.
+  // v3.1: personas + rules live in the npm package, not the project.
   const agentsDir = input.agentsDir ?? runtimeLayout().agentsDir;
+  const rulesDir = input.rulesDir ?? runtimeLayout().rulesDir;
   // Mock executor doesn't read personas — skip the disk scan when possible.
   const personaRegistry =
     input.executor === 'mock' ? undefined : loadPersonasFromDir(agentsDir);
   const executor = createExecutor(input.executor, {
     binary: input.executorBinary ?? '',
     agentsDir,
+    rulesDir,
     // Per-project raw logs land under .kortext/data/logs (git-ignored).
     logsDir: input.logsDir ?? resolve(process.cwd(), '.kortext', 'data', 'logs'),
     personaRegistry,

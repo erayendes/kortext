@@ -26,6 +26,9 @@ export type ExecutorFactoryOptions = {
   agentsDir: string;
   /** Directory where per-step log files are written. */
   logsDir: string;
+  /** Directory containing `rules/*.md`. behavior.md + step-declared rules are
+   *  injected into the agent prompt after the persona body (UAT #7). */
+  rulesDir?: string;
   /** Optional extra CLI flags forwarded to the underlying executor. */
   extraArgs?: string[];
   /** Optional preloaded persona registry — preferred over disk-direct reads. */
@@ -44,6 +47,7 @@ export function createExecutor(
         binary: opts.binary,
         agentsDir: opts.agentsDir,
         logsDir: opts.logsDir,
+        rulesDir: opts.rulesDir,
         extraArgs: opts.extraArgs,
         personaRegistry: opts.personaRegistry,
       });
@@ -52,6 +56,7 @@ export function createExecutor(
         binary: opts.binary,
         agentsDir: opts.agentsDir,
         logsDir: opts.logsDir,
+        rulesDir: opts.rulesDir,
         extraArgs: opts.extraArgs,
         personaRegistry: opts.personaRegistry,
       });
@@ -60,6 +65,7 @@ export function createExecutor(
         binary: opts.binary,
         agentsDir: opts.agentsDir,
         logsDir: opts.logsDir,
+        rulesDir: opts.rulesDir,
         extraArgs: opts.extraArgs,
         personaRegistry: opts.personaRegistry,
       });
@@ -68,6 +74,7 @@ export function createExecutor(
         binary: opts.binary,
         agentsDir: opts.agentsDir,
         logsDir: opts.logsDir,
+        rulesDir: opts.rulesDir,
         extraArgs: opts.extraArgs,
         personaRegistry: opts.personaRegistry,
       });

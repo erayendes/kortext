@@ -4,9 +4,65 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   findActualOutputFiles,
+  findMissingFileOutputs,
+  isFileOutput,
   isPatternedPath,
   resolveDeclaredOutput,
 } from '../server/engine/output-resolver.ts';
+
+// UAT #7 (codex): workflow steps declare two kinds of output — real FILES
+// (`.kortext/foundation/backlog.yaml`) and logical SIGNALS / markers
+// (`backlog-drafted`, `staging-approved`). The executor must only verify files
+// on disk; a bare-token signal has no file and used to fail the step with
+// "declared outputs not produced", crashing planning step-1 on codex.
+describe('isFileOutput', () => {
+  it('treats path/extension outputs as files', () => {
+    expect(isFileOutput('.kortext/foundation/backlog.yaml')).toBe(true);
+    expect(isFileOutput('.kortext/reports/status-reports_<slug>_<ts>.md')).toBe(true);
+    expect(isFileOutput('release-notes.md')).toBe(true); // bare filename w/ extension
+  });
+  it('treats bare-token outputs (no / or .) as signals, not files', () => {
+    for (const sig of [
+      'backlog-drafted',
+      'backlog-assignees-set',
+      'staging-approved',
+      'preprod-reviewed',
+      'item-in-test',
+      'repo-initialized',
+    ]) {
+      expect(isFileOutput(sig)).toBe(false);
+    }
+  });
+});
+
+describe('findMissingFileOutputs', () => {
+  let tmp: string;
+  beforeEach(() => {
+    tmp = mkdtempSync(join(tmpdir(), 'missing-outputs-'));
+  });
+  afterEach(() => {
+    rmSync(tmp, { recursive: true, force: true });
+  });
+
+  it('exempts signal outputs and only reports missing FILES', () => {
+    mkdirSync(join(tmp, '.kortext/foundation'), { recursive: true });
+    writeFileSync(join(tmp, '.kortext/foundation/backlog.yaml'), 'items: []');
+    // Both the file (exists) and the signal are declared → nothing missing.
+    expect(
+      findMissingFileOutputs(['.kortext/foundation/backlog.yaml', 'backlog-drafted'], tmp),
+    ).toEqual([]);
+  });
+
+  it('reports a genuinely missing file (signal still exempt)', () => {
+    expect(
+      findMissingFileOutputs(['.kortext/foundation/backlog.yaml', 'backlog-drafted'], tmp),
+    ).toEqual(['.kortext/foundation/backlog.yaml']);
+  });
+
+  it('a signal-only step is never "missing" (no file to check)', () => {
+    expect(findMissingFileOutputs(['staging-approved'], tmp)).toEqual([]);
+  });
+});
 
 describe('isPatternedPath', () => {
   it('detects <slug> placeholder', () => {
@@ -71,6 +127,34 @@ describe('resolveDeclaredOutput', () => {
     expect(r.filenameRegex.test('planning-reports_planning_draft.md')).toBe(false);
     // Still anchored on the .md extension.
     expect(r.filenameRegex.test('planning-reports_planning_20260605xmd')).toBe(false);
+  });
+
+  // UAT #5 (2026-06-08, antigravity): the agent wrote
+  // `planning-reports_notlarim_20260608_174649.md` (underscore date-time
+  // separator + 6-digit no-separator time). The pre-#5 regex matched only a
+  // `-` separator + 4-digit time, so the file existed on disk but the step
+  // crashed with "declared outputs not produced" → the correct enrichment
+  // patch never ingested. The resolver must accept the underscore form.
+  it('matches the antigravity timestamp form that crashed planning (regression)', () => {
+    const r = resolveDeclaredOutput('.kortext/reports/status-reports_<slug>_<ts>.md', worktree);
+    if (r.kind !== 'pattern') throw new Error('expected pattern');
+    // The exact crash form (underscore sep + HHMMSS, no separators in time).
+    expect(r.filenameRegex.test('status-reports_notlarim_20260608_174649.md')).toBe(true);
+    // The new canonical: project-id (UPPERCASE code) + YYYY-MM-DD_HH-MM-SS.
+    expect(r.filenameRegex.test('status-reports_NOT_2026-06-08_17-46-49.md')).toBe(true);
+    // Old canonical still matches (no regression).
+    expect(r.filenameRegex.test('status-reports_planning_2026-06-05-1959.md')).toBe(true);
+    // Junk in the <ts> slot still rejected.
+    expect(r.filenameRegex.test('status-reports_NOT_draft.md')).toBe(false);
+  });
+
+  it('accepts an UPPERCASE project-id as the <slug> (project.json.code)', () => {
+    const r = resolveDeclaredOutput('.kortext/reports/status-reports_<slug>_<ts>.md', worktree);
+    if (r.kind !== 'pattern') throw new Error('expected pattern');
+    expect(r.filenameRegex.test('status-reports_NOT_2026-06-08_17-46-49.md')).toBe(true);
+    expect(r.filenameRegex.test('status-reports_TF_2026-06-08_17-46-49.md')).toBe(true);
+    // still lowercase-friendly
+    expect(r.filenameRegex.test('status-reports_acme_2026-06-08_17-46-49.md')).toBe(true);
   });
 
   it('supports absolute declared paths', () => {

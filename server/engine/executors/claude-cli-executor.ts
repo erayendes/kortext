@@ -1,7 +1,8 @@
 import { join } from 'node:path';
 import type { Executor, ExecutorContext, ExecutorResult } from '../executor.ts';
 import type { WorkflowStep } from '../workflow-parser.ts';
-import { findActualOutputFiles } from '../output-resolver.ts';
+import { findMissingFileOutputs } from '../output-resolver.ts';
+import { buildRulesBlock } from '../rules-injection.ts';
 import { spawnCliWithRetry, tailLines } from './cli-spawn.ts';
 import { readPersonaPrompt, type PersonaRegistry } from '../persona-registry.ts';
 
@@ -72,6 +73,9 @@ export type ClaudeCliExecutorOptions = {
   binary: string;
   agentsDir: string;
   logsDir: string;
+  /** Rules dir (`rules/`). behavior.md is injected into every step's system
+   *  prompt; a rule the step declares in `inputs` is injected too (UAT #7). */
+  rulesDir?: string;
   /** Preferred persona source. When set, agentsDir is only a fallback. */
   personaRegistry?: PersonaRegistry;
   /** Extra args appended after the default ones. Useful for `--model` etc. */
@@ -103,7 +107,8 @@ export class ClaudeCliExecutor implements Executor {
       step.persona,
       this.opts.personaRegistry ?? { agentsDir: this.opts.agentsDir },
     );
-    const systemPrompt = buildSystemPrompt(personaBody);
+    const rulesBlock = buildRulesBlock(step.inputs, this.opts.rulesDir);
+    const systemPrompt = buildSystemPrompt(personaBody, rulesBlock);
     const prompt = buildUserPrompt(step, ctx);
     const logPath = join(this.opts.logsDir, `run-${ctx.runId}-step-${ctx.runStepId}.log`);
 
@@ -177,9 +182,7 @@ export class ClaudeCliExecutor implements Executor {
       };
     }
 
-    const missing = step.outputs.filter(
-      (rel) => findActualOutputFiles(rel, ctx.worktreePath).length === 0,
-    );
+    const missing = findMissingFileOutputs(step.outputs, ctx.worktreePath);
     if (missing.length > 0) {
       return {
         ok: false,
@@ -209,14 +212,22 @@ function formatPathList(paths: string[]): string {
  * (runId, runStepId, timestamps, cwd) — anything that varies per step
  * would bust the prompt cache.
  */
-export function buildSystemPrompt(personaBody: string): string {
-  if (personaBody.length === 0) return CLAUDE_HEADLESS_CONTRACT;
+export function buildSystemPrompt(personaBody: string, rulesBlock = ''): string {
+  const rulesSection = rulesBlock
+    ? `
+
+═══════════════════════════════════════════════════════════════════════
+RULES
+═══════════════════════════════════════════════════════════════════════
+${rulesBlock}`
+    : '';
+  if (personaBody.length === 0) return `${CLAUDE_HEADLESS_CONTRACT}${rulesSection}`;
   return `${CLAUDE_HEADLESS_CONTRACT}
 
 ═══════════════════════════════════════════════════════════════════════
 PERSONA
 ═══════════════════════════════════════════════════════════════════════
-${personaBody}`;
+${personaBody}${rulesSection}`;
 }
 
 /**

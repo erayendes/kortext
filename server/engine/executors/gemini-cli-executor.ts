@@ -1,7 +1,8 @@
 import { join } from 'node:path';
 import type { Executor, ExecutorContext, ExecutorResult } from '../executor.ts';
 import type { WorkflowStep } from '../workflow-parser.ts';
-import { findActualOutputFiles } from '../output-resolver.ts';
+import { findMissingFileOutputs } from '../output-resolver.ts';
+import { buildRulesBlock } from '../rules-injection.ts';
 import { spawnCli, tailLines } from './cli-spawn.ts';
 import { readPersonaPrompt, type PersonaRegistry } from '../persona-registry.ts';
 
@@ -22,6 +23,9 @@ export type GeminiCliExecutorOptions = {
   binary: string;
   agentsDir: string;
   logsDir: string;
+  /** Rules dir (`rules/`). behavior.md + step-declared rules injected after the
+   *  persona body (UAT #7). */
+  rulesDir?: string;
   /** Preferred persona source. When set, agentsDir is only a fallback. */
   personaRegistry?: PersonaRegistry;
   extraArgs?: string[];
@@ -40,7 +44,7 @@ export class GeminiCliExecutor implements Executor {
       step.persona,
       this.opts.personaRegistry ?? { agentsDir: this.opts.agentsDir },
     );
-    const prompt = buildPrompt(step, ctx, personaBody);
+    const prompt = buildPrompt(step, ctx, personaBody, buildRulesBlock(step.inputs, this.opts.rulesDir));
     const logPath = join(this.opts.logsDir, `run-${ctx.runId}-step-${ctx.runStepId}.log`);
     const args = [...(this.opts.extraArgs ?? [])];
 
@@ -70,9 +74,7 @@ export class GeminiCliExecutor implements Executor {
       };
     }
 
-    const missing = step.outputs.filter(
-      (rel) => findActualOutputFiles(rel, ctx.worktreePath).length === 0,
-    );
+    const missing = findMissingFileOutputs(step.outputs, ctx.worktreePath);
     if (missing.length > 0) {
       return {
         ok: false,
@@ -86,10 +88,16 @@ export class GeminiCliExecutor implements Executor {
   }
 }
 
-function buildPrompt(step: WorkflowStep, ctx: ExecutorContext, personaBody: string): string {
+function buildPrompt(
+  step: WorkflowStep,
+  ctx: ExecutorContext,
+  personaBody: string,
+  rulesBlock = '',
+): string {
   const inputs = step.inputs.length > 0 ? step.inputs.join(', ') : '(none)';
   const outputs = step.outputs.length > 0 ? step.outputs.join(', ') : '(none)';
-  return `${personaBody}
+  const rules = rulesBlock ? `\n\n--- Rules ---\n${rulesBlock}` : '';
+  return `${personaBody}${rules}
 
 --- Gemini Step ---
 Workflow: ${ctx.workflowId}

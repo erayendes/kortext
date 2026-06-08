@@ -59,6 +59,21 @@ describe('parseReportFilename', () => {
     ).toBeNull();
     expect(parseReportFilename('TEST_slug_2026-05-24-1100.md')).toBeNull();
   });
+
+  it('parses the new canonical timestamp YYYY-MM-DD_HH-MM-SS', () => {
+    expect(
+      parseReportFilename('status-reports_NOT_2026-06-08_17-46-49.md'),
+    ).toEqual({
+      scope: 'status-reports',
+      slug: 'NOT',
+      timestamp: '2026-06-08_17-46-49',
+    });
+  });
+
+  it('accepts an UPPERCASE project-id slug (project.json.code)', () => {
+    const parsed = parseReportFilename('test-reports_TF_2026-06-08_17-46-49.md');
+    expect(parsed?.slug).toBe('TF');
+  });
 });
 
 describe('MarkdownSyncService.writeReport', () => {
@@ -72,8 +87,9 @@ describe('MarkdownSyncService.writeReport', () => {
       body_md: '# Login flow\n\nTests passed.\n',
       timestamp: new Date(Date.UTC(2026, 4, 24, 14, 32)), // 2026-05-24 14:32 UTC
     });
+    // Canonical single timestamp format: YYYY-MM-DD_HH-MM-SS (UAT #5 standard).
     expect(markdown_path).toBe(
-      '.kortext/reports/test-reports_login-flow_2026-05-24-1432.md',
+      '.kortext/reports/test-reports_login-flow_2026-05-24_14-32-00.md',
     );
     const row = repos.reports.get(reportId);
     expect(row?.scope).toBe('test-reports');

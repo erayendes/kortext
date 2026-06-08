@@ -13,6 +13,7 @@ let tmpRoot: string;
 let workdir: string;
 let agentsDir: string;
 let logsDir: string;
+let rulesDir: string;
 
 function makeMockBinary(name: string, body: string): string {
   const path = join(tmpRoot, name);
@@ -52,14 +53,19 @@ beforeEach(() => {
   workdir = join(tmpRoot, 'work');
   agentsDir = join(tmpRoot, 'agents');
   logsDir = join(tmpRoot, 'logs');
+  rulesDir = join(tmpRoot, 'rules');
   mkdirSync(workdir, { recursive: true });
   mkdirSync(agentsDir, { recursive: true });
   mkdirSync(logsDir, { recursive: true });
+  mkdirSync(rulesDir, { recursive: true });
   // seed a persona file
   writeFileSync(
     join(agentsDir, 'backend-developer.md'),
     '# backend-developer\n\nSen sunucu tarafı geliştiricisin.\n',
   );
+  // seed rules — behavior is universal; models is step-declared (UAT #7)
+  writeFileSync(join(rulesDir, 'behavior.md'), '# Behavior\n\nBEHAVIOR_RULE_MARKER: write files.');
+  writeFileSync(join(rulesDir, 'models.md'), '# Models\n\nMODELS_RULE_MARKER: routine→fast.');
 });
 
 afterEach(() => {
@@ -344,4 +350,85 @@ describe('GeminiCliExecutor', () => {
     expect(result.outputSummary).toContain('gemini ran');
     expect(exec.name).toBe('gemini-cli');
   });
+});
+
+// UAT #7: rules/ must reach the agent. behavior.md → every step; a rule a step
+// declares in `inputs` (rules/models.md on the model step) → that step.
+describe('rules injection into prompts (UAT #7)', () => {
+  it('claude: behavior.md lands in the system prompt for ANY step', async () => {
+    const argsFile = join(tmpRoot, 'claude-rules-args');
+    const bin = makeMockBinary('claude-rules', `printf '%s\\n' "$@" > "${argsFile}"\necho ok`);
+    const exec = new ClaudeCliExecutor({ binary: bin, agentsDir, logsDir, rulesDir });
+    await exec.execute(makeStep({ inputs: [] }), makeCtx());
+    const args = readFileSync(argsFile, 'utf8');
+    expect(args).toContain('BEHAVIOR_RULE_MARKER'); // behavior universal
+    expect(args).not.toContain('MODELS_RULE_MARKER'); // models not declared here
+  });
+
+  it('claude: a step that declares rules/models.md gets the models rule too', async () => {
+    const argsFile = join(tmpRoot, 'claude-rules-args2');
+    const bin = makeMockBinary('claude-rules2', `printf '%s\\n' "$@" > "${argsFile}"\necho ok`);
+    const exec = new ClaudeCliExecutor({ binary: bin, agentsDir, logsDir, rulesDir });
+    await exec.execute(makeStep({ inputs: ['backlog-assignees-set', 'rules/models.md'] }), makeCtx());
+    const args = readFileSync(argsFile, 'utf8');
+    expect(args).toContain('BEHAVIOR_RULE_MARKER');
+    expect(args).toContain('MODELS_RULE_MARKER');
+  });
+
+  it('codex: behavior.md lands in the stdin prompt', async () => {
+    const stdinFile = join(tmpRoot, 'codex-rules-stdin');
+    const bin = makeMockBinary('codex-rules', `cat > "${stdinFile}"\necho ok`);
+    const exec = new CodexCliExecutor({ binary: bin, agentsDir, logsDir, rulesDir });
+    await exec.execute(makeStep({ inputs: [] }), makeCtx());
+    expect(readFileSync(stdinFile, 'utf8')).toContain('BEHAVIOR_RULE_MARKER');
+  });
+
+  it('gemini: behavior.md lands in the stdin prompt', async () => {
+    const stdinFile = join(tmpRoot, 'gemini-rules-stdin');
+    const bin = makeMockBinary('gemini-rules', `cat > "${stdinFile}"\necho ok`);
+    const exec = new GeminiCliExecutor({ binary: bin, agentsDir, logsDir, rulesDir });
+    await exec.execute(makeStep({ inputs: [] }), makeCtx());
+    expect(readFileSync(stdinFile, 'utf8')).toContain('BEHAVIOR_RULE_MARKER');
+  });
+});
+
+// UAT #7: planning step-1 declares `outputs: .kortext/foundation/backlog.yaml,
+// backlog-drafted`. The bare-token `backlog-drafted` is a SIGNAL, not a file —
+// it must NOT be verified on disk. Codex wrote backlog.yaml + exit 0 but the
+// step failed with "declared outputs not produced: backlog-drafted", so the
+// backlog never ingested. Every executor must exempt signal outputs.
+describe('signal vs file outputs (UAT #7)', () => {
+  const Executors = [
+    ['claude', (o: never) => new ClaudeCliExecutor(o)],
+    ['codex', (o: never) => new CodexCliExecutor(o)],
+    ['gemini', (o: never) => new GeminiCliExecutor(o)],
+  ] as const;
+
+  for (const [name, make] of Executors) {
+    it(`${name}: a step that writes its FILE output + a signal succeeds`, async () => {
+      // Mock binary writes only the declared FILE; never the signal token.
+      const bin = makeMockBinary(
+        `${name}-signal`,
+        `mkdir -p .kortext/foundation && echo "items: []" > .kortext/foundation/backlog.yaml\necho ok`,
+      );
+      const exec = make({ binary: bin, agentsDir, logsDir } as never);
+      const step = makeStep({
+        outputs: ['.kortext/foundation/backlog.yaml', 'backlog-drafted'],
+      });
+      const result = await exec.execute(step, makeCtx());
+      expect(result.ok).toBe(true); // signal not treated as a missing file
+    });
+
+    it(`${name}: a genuinely missing FILE still fails the step`, async () => {
+      const bin = makeMockBinary(`${name}-nofile`, `echo ok`); // writes nothing
+      const exec = make({ binary: bin, agentsDir, logsDir } as never);
+      const step = makeStep({
+        outputs: ['.kortext/foundation/backlog.yaml', 'backlog-drafted'],
+      });
+      const result = await exec.execute(step, makeCtx());
+      expect(result.ok).toBe(false);
+      expect(result.errorMessage).toContain('backlog.yaml');
+      expect(result.errorMessage).not.toContain('backlog-drafted'); // signal exempt
+    });
+  }
 });
