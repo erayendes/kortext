@@ -96,6 +96,28 @@ describe('loadPersonasFromDir', () => {
     expect(() => loadPersonasFromDir(join(tmpRoot, 'missing'))).toThrow();
   });
 
+  it('reads - model: bullet into the model field', () => {
+    writePersona(
+      tmpRoot,
+      'routed-dev.md',
+      `# routed-dev\n\n- description: A routed developer.\n- model: gemini\n\n## identity\n\nYou are routed.\n`,
+    );
+    const reg = loadPersonasFromDir(tmpRoot);
+    const p = reg.get('+routed-dev');
+    expect(p?.model).toBe('gemini');
+  });
+
+  it('sets model to null when - model: bullet is absent', () => {
+    writePersona(
+      tmpRoot,
+      'plain-dev.md',
+      `# plain-dev\n\n- description: No model override.\n\n## identity\n\nYou are plain.\n`,
+    );
+    const reg = loadPersonasFromDir(tmpRoot);
+    const p = reg.get('+plain-dev');
+    expect(p?.model).toBeNull();
+  });
+
   it('loads the real agents/ directory with all 14 personas and no errors', () => {
     const reg = loadPersonasFromDir(resolve(process.cwd(), 'agents'));
     expect(reg.errors()).toEqual([]);

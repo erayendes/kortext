@@ -29,6 +29,8 @@ export type PersonaDefinition = {
   id: string;
   /** Short one-line description from the `- description:` bullet. */
   description: string;
+  /** Optional executor kind override declared via `- model: <kind>`. */
+  model: string | null;
   /** Full file body, used verbatim as the system prompt prefix. */
   systemPrompt: string;
 };
@@ -51,6 +53,7 @@ export type PersonaRegistry = {
 
 const H1_RE = /^#\s+([\w-]+)\s*$/;
 const DESCRIPTION_RE = /^-\s*description\s*:\s*(.+?)\s*$/i;
+const MODEL_RE = /^-\s*model\s*:\s*(.+?)\s*$/i;
 
 export function parsePersonaMarkdown(
   source: string,
@@ -60,6 +63,7 @@ export function parsePersonaMarkdown(
 
   let handleId: string | null = null;
   let description: string | null = null;
+  let model: string | null = null;
 
   for (const raw of lines) {
     const line = raw.replace(/\r$/, '');
@@ -79,7 +83,12 @@ export function parsePersonaMarkdown(
       }
     }
 
-    if (handleId !== null && description !== null) break;
+    if (model === null) {
+      const mo = line.match(MODEL_RE);
+      if (mo?.[1]) {
+        model = mo[1];
+      }
+    }
   }
 
   if (!handleId) {
@@ -93,6 +102,7 @@ export function parsePersonaMarkdown(
     handle: `+${handleId}`,
     id: handleId,
     description,
+    model,
     systemPrompt: source,
   };
 }
