@@ -9,7 +9,7 @@
 
 ## ⭐ Şu an (2026-06-08 #8) — UAT #7'nin 3 kod bulgusu TDD ile ÇÖZÜLDÜ + GERÇEK-LLM KANITI ✅ (codex+antigravity)
 
-Yalnızca kod oturumu. UAT #7'nin üç bulgusu (sinyal-çıktı, rules-enjeksiyon, codex ≤8) düzeltildi, **gerçek koşularla kanıtlandı.** **1093 test yeşil** (1083→+10), typecheck + build temiz. **Push EDİLMEDİ.** Ayrı bir iş: **multi-model routing branch'i `main`'e merge edildi** (lokal, `cbe45b8`).
+Yalnızca kod oturumu. UAT #7'nin üç bulgusu (sinyal-çıktı, rules-enjeksiyon, codex ≤8) düzeltildi, **gerçek koşularla kanıtlandı.** **1093 test yeşil** (1083→+10), typecheck + build temiz. Ayrı bir iş: **multi-model routing branch'i `main`'e merge edildi** (`cbe45b8`). **PUSH EDİLDİ** (`8f5ba2a..75a6167`, 8 commit: routing + UAT #5–#8 fix'leri + routing plan) — `main == origin/main`.
 
 - **#1 🔴 Sinyal-çıktı bug'ı:** `output-resolver` her çıktıyı dosya sanıyordu → `backlog-drafted` gibi bare-token sinyaller "not produced" → planning step-1 codex'te çöküyor (backlog yazıldığı halde DB 0). **Fix:** yeni `isFileOutput` (`/` veya `.` → dosya; aksi → sinyal) + `findMissingFileOutputs` ortak helper; 4 executor de bunu kullanıyor → sinyaller dosya doğrulamasından muaf. (+12 test)
 - **#2 🔴 rules/ enjekte edilmiyordu:** behavior.md/models.md ajan prompt'una hiç girmiyordu. **Fix:** yeni `rules-injection.ts` `buildRulesBlock` — **behavior.md her adıma** (evrensel) + adımın `inputs`'unda bildirdiği `rules/*.md` (model-atama adımı `rules/models.md`'i input bildiriyor → o adıma iner). Persona'dan sonra enjekte (cache-dostu). 4 executor + factory + 3 caller thread'lendi. (+10 test)
@@ -21,7 +21,7 @@ Yalnızca kod oturumu. UAT #7'nin üç bulgusu (sinyal-çıktı, rules-enjeksiyo
 
 **Not (ortam):** codex headless koşusu `~/.codex/config.toml`'daki **cloudflare MCP expired OAuth token**'da asılıyor (1 koşu 37dk boşa yandı, kill) — kod sorunu değil; o MCP girdisini kaldır/yenile.
 
-**SIRADAKİ:** (1) **Rebuild:** `npm run build && npm pack && npm install -g ./kortext-3.1.0.tgz`. (2) Eray temiz UAT (codex MCP düzeltildikten sonra codex ya da antigravity) → planning Board'da owner/epic/version/model dolu + ≤8. (3) İstersen commit (push'u sen söyle). Bekleyen lokal: routing merge (`cbe45b8`) + commit'siz UAT #7+#8 işi.
+**SIRADAKİ:** (1) **Rebuild:** `npm run build && npm pack && npm install -g ./kortext-3.1.0.tgz`. (2) Eray temiz UAT (codex MCP düzeltildi → codex ya da antigravity) → planning Board'da owner/epic/version/model dolu + ≤8. (3) `npm publish` (kasıtlı manuel adım). Her şey push edildi; bekleyen lokal commit yok.
 
 ---
 

@@ -4,7 +4,7 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 
 ---
 
-## 🔴 KRİTİK (UAT #7, 2026-06-08, codex): "Sinyal çıktıları" dosya sanılıyor → planning step-1 çöküyor
+## ✅ ÇÖZÜLDÜ (UAT #7 → #8, 2026-06-08): "Sinyal çıktıları" dosya sanılıyordu → planning step-1 codex'te çöküyordu
 
 > **Belirti:** codex executor ile planning **ilk adımda** (`backlog-tanm.1` +engineering-manager) çöktü: `declared outputs not produced: backlog-drafted`. Gerçekte `backlog.yaml` **yazıldı** (16KB, `items:`, 16 item) ve codex `exit 0` döndü — ama adım fail olduğu için backlog **ingest edilmedi** (DB total 0). Enrichment hiç test edilemedi.
 
@@ -18,7 +18,7 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 
 ---
 
-## 🔴 (UAT #7) `rules/` dosyaları ajan prompt'una HİÇ enjekte edilmiyor
+## ✅ ÇÖZÜLDÜ (UAT #7 → #8) `rules/` dosyaları ajan prompt'una enjekte edilmiyordu
 
 > **Belirti/keşif:** Eray sordu — ajanlar `rules/behavior.md` gibi kuralları okuyor mu? **Hayır.** Hiçbir executor `rules/` içeriğini prompt'a koymuyor. `rulesDir` yalnız: (a) dashboard gösterimi (`server/index.ts:366` `/api/`), (b) `markdown-sync` salt-okunur doküman listesi, (c) ölü/yorum referansları (`backlog-ingest.ts` `models.md` yorumu; `harmful-output-filter.ts` `banned-phrases.md` "ileride yüklenecek" TODO'su — aktif değil).
 
@@ -31,7 +31,7 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 
 ---
 
-## 🟡 (UAT #7) Codex BRD kapsam notunu (≤8 item) dikkate almıyor
+## ✅ ÇÖZÜLDÜ (UAT #7 → #8) Codex BRD kapsam notunu (≤8 item) dikkate almıyordu
 
 > BRDTEST.md'de "Toplam item sayısı 8'i geçmesin" notu vardı; codex **16 item** üretti. Antigravity aynı notla 8 üretmişti. Kapsam kaldıracı executor'a bağlı, codex'te tutmuyor.
 
@@ -104,7 +104,7 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 - [x] ~~**`assignee` → `owner` alias**~~ ✅ — #4'te eklenmişti; UAT #5 regresyon testiyle doğrulandı (antigravity patch şekli: parent_epic+version+assignee+model+blocks tek `items:` patch'inde → `updated>0` + owner persist). Canlı `updated:0` konsolidasyon çökmesinin sonucuydu, alias eksikliği değil.
 - [x] ~~**Sessiz başarısızlık görünürlüğü**~~ ✅ — `backlog.patch.dropped` audit olayı artık `updated:0 && (parse_error VEYA hepsi-skipped)` durumunda da ateşlenir (önceden yalnız parse_error). Eyleme dönük mesaj.
 - [x] ~~**🔴 İKİNCİ KÖK NEDEN — gerçek-LLM koşusunun açığa çıkardığı (FK cascade)**~~ ✅ — Antigravity koşusunda **step-1 hiç epic üretmedi (0 epic)**; ajan epic tanımlarını sonraki enrichment patch'inde yazdı. `patchBacklogItems` yalnız güncellediği için epic'ler "not found" → skip, sonra task'ların `parent_epic: NOT-E01` güncellemesi **`FOREIGN KEY constraint failed`** verdi → o adımın TÜM enrichment'i (owner/version/parent_id) düştü (4 adım `0 updated, 10 skipped`). **Fix:** `patchBacklogItems`'a ön-geçiş — patch'in tam tanımladığı eksik `type: epic` container'ları **önce yaratır** (FK hedefi var olur), sonra task güncellemeleri bağlanır. Bu, unit-test'in (epic'leri önceden yaratıyordu) yakalayamadığı, **yalnız gerçek-LLM koşusunun gösterdiği** bulgu. +1 test.
-- [ ] **Regresyon kanıtı (gerçek-LLM):** harness ile antigravity planning koşusu — sonuç HANDOVER #6'da. (1. koşu: naming fix tuttu/planning succeeded ama FK bug'ı owner/version'ı düşürdü → fix → 2. koşu doğrulaması.)
+- [x] ~~**Regresyon kanıtı (gerçek-LLM)**~~ ✅ — antigravity (#6) + codex (#8) koşuları: 1. naming koşusu planning'i `succeeded` yaptı ama FK bug'ı owner/version'ı düşürdü → FK fix → 2. koşu owner/epic/version/model **8/8 dolu + succeeded**. Codex de aynı (8/8). Detay HANDOVER #6/#8.
 
 ---
 
@@ -113,7 +113,7 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 > Şu an executor **proje genelinde tek** (`project.json.executor`) — her persona/adım aynı CLI'yi kullanıyor. Eray'ın istediği model: onboarding'de seçilen executor **sadece operation-manager (orkestratör) içindir**; sonrasında **birden çok model eşzamanlı** çalışabilmeli (persona/görev bazında farklı executor — örn. analiz adımları agy, kritik kodlama claude, vb.).
 
 - [ ] **Onboarding semantiği:** "AI Executor" alanını "operation-manager modeli" olarak çerçevele (etiket + yardım metni). Bu seçim orkestratörün modeli olur.
-- [ ] **Persona→executor yönlendirmesi:** operation-manager alt-personaları kendi executor'larına atayabilsin; tek koşuda farklı CLI'ler paralel çalışsın. (Altyapı izi: geçmişte "persona-routed executor" konuşulmuştu — DECISIONS §7/Faz 4.) Worker-pool zaten eşzamanlı; eksik olan adım-bazında executor seçimi.
+- [x] ~~**Persona→executor yönlendirmesi (motor)**~~ ✅ (2026-06-08, merge `cbe45b8`) — persona markdown'ında opsiyonel `- model: <kind>` → `personas.model_default` (DB) → `createRoutedExecutor` drive anında base executor'ı `PersonaRoutedExecutor` ile sarıyor (örn. +architect→claude, +reviewer→gemini). Worktree branch'i main'e merge edildi (1065→1093 test). **Kalan:** onboarding semantiği + Settings UI (aşağıda).
 - [ ] **Settings/Agents:** her persona için model/executor override edilebilir alan (v3.2 yazma kapsamıyla uyumlu).
 
 ---
