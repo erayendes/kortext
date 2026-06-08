@@ -7,6 +7,25 @@
 
 ---
 
+## ⭐ Şu an (2026-06-08 #2) — UAT turu + 4 UAT-güdümlü düzeltme TAMAM ✅
+
+Eray gerçek bir **"ilk kez son kullanıcı"** UAT'ı koştu (temiz uninstall → paketten kurulum → `kortext start` sihirbazı → onboarding, **Antigravity/agy** executor ile). Bu turda kurulan **iş bölümü** ([[uat-division-of-labor]] hafızası): UAT operasyonlarını (install/start/onboarding/terminal) **Eray çalıştırır**; Claude sadece komut verir + bulunan bug'lar için **kod düzeltir**. 4 bulgu → 4 düzeltme (3 kod commit'i + docs), **1027 test yeşil**, typecheck + build temiz, **push EDİLDİ**.
+
+**Düzeltmeler:**
+1. **Onboarding'den GitHub Repository alanı kaldırıldı** (`OnboardingScreen.tsx`) — sandbox akışında kafa karıştırıyordu.
+2. **OS-farkında port seçimi + hazırlık doğrulaması** (yeni `server/registry/port-probe.ts` + `health-wait.ts`) — **ana bug:** bir dev/preview sunucusu `:3200`'ü işgal etmişti; `allocatePort` sadece registry'ye baktığı için (gerçek OS portunu değil) yeni daemon'a dolu portu verdi → EADDRINUSE → daemon öldü → tarayıcı "Cannot GET /". Artık port gerçekten boş mu diye probe edilir + handoff'tan önce daemon sağlığı doğrulanır (değilse 503 + net mesaj). Disiplinli teşhisle bulundu (log: "dashboard mounted" doğruydu, sorun port çakışmasıydı).
+3. **Aktivite mesajları insanlaştırıldı** (`dashboard.tsx` + `worker-pool.ts`) — `started product-analysis.1` → `compliance-expert started product-analysis step 1` (persona zaten payload'daydı, kullanılmıyordu).
+4. **Self-dir guard** (yeni `server/registry/self-guard.ts`) — Kortext kendi paket dizinini proje yapmayı reddeder (`kortext start` → 'self', onboarding → 422). Eray'ın gereksinimi: "kortext dizininde proje olmasın ve kurulamasın". Sinyal: `package.json` adı `"kortext"`.
+
+**Detay:** [DECISIONS §7.12](./DECISIONS.md).
+
+**SIRADAKİ (yeni oturum + temiz rebuild):**
+- **Temiz rebuild:** uninstall + `npm run build && npm pack && npm install -g ./kortext-3.1.0.tgz` → 4 düzeltme kurulu `kortext`'e iner. ([UAT-SESSION-PROMPT](./UAT-SESSION-PROMPT.md) güncel.)
+- **Ortam temizliği (yeni oturumdan önce):** `kortext stop demo && kortext purge demo --yes` (repo'da yanlışlıkla açılmış demo daemon'u + bayat `.kortext`'i kaldırır — guard sonrası bir daha olmaz). `pass` (Milowda Pass, :3201, stopped) kayıtlı — UAT'a devam için `kortext purge pass --yes` ile sıfırla ya da `kortext start pass` ile sürdür. Stray preview sunucusu `:3200`/`:5173`'ü kapabilir → harness yönetiyor (preview_stop).
+- **UAT'a devam:** rebuild sonrası temiz onboarding turu (Antigravity), build fazına kadar git.
+
+---
+
 ## ⭐ Şu an (2026-06-08) — Onboarding-driven directory + otomatik git TAMAM ✅
 
 Eray UAT'tan sonra: "dizini niye iki kez soruyorsun, daha projem yok ki — onu onboarding'de seçiyorum." → tam bir tasarım turu (brainstorming → spec → plan → subagent-driven 9 görev). **Yeni akış:** non-coder herhangi bir yerde **`kortext start`** yazar → tarayıcıda sihirbaz açılır → proje bilgisi + BRD + **proje dizinini sihirbazda seç** → Kortext o klasörü iskeler, **git'i otomatik kurar** (init+commit+`development`), gerçek daemon'u doğurur, tarayıcı oraya geçer, **analiz kendiliğinden başlar**. Elle `cd`/`git` YOK.
