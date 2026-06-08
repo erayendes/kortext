@@ -19,6 +19,10 @@ export type BlueprintRouterDeps = {
   workspaceRoot: string;
   onApproved?: (workflowId: string) => Promise<void> | void;
   bootstrap?: boolean; // this daemon is the ephemeral wizard
+  // Called once the wizard has handed off to the real project daemon and the
+  // 201 (with handoffUrl) has been sent. The wizard uses this to schedule its
+  // own shutdown so it stops holding port 3199 — see scheduleBootstrapSelfExit.
+  onBootstrapHandoff?: () => void;
   createProject?: (input: {
     projectDir: string;
     meta: ProjectMeta;
@@ -169,6 +173,9 @@ export function blueprintRouter(deps: BlueprintRouterDeps): Router {
         handoffUrl: created.handoffUrl,
         ...(created.gitWarning ? { gitWarning: created.gitWarning } : {}),
       });
+      // Handoff done: let the ephemeral wizard daemon schedule its own exit so it
+      // stops holding port 3199. Fires only after the 201 is flushed above.
+      deps.onBootstrapHandoff?.();
       return;
     }
 

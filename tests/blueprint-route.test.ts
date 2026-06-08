@@ -211,6 +211,88 @@ describe('POST /api/blueprint — bootstrap (wizard) mode', () => {
     }
   });
 
+  it('schedules wizard self-shutdown after a successful handoff', async () => {
+    let handoffs = 0;
+    const app = express();
+    app.use(express.json());
+    app.use(
+      '/api',
+      blueprintRouter({
+        workspaceRoot: '/tmp/bootstrap-home',
+        bootstrap: true,
+        createProject: (input) => ({
+          ok: true,
+          handoffUrl: 'http://localhost:3201/',
+          projectDir: input.projectDir,
+        }),
+        onBootstrapHandoff: () => {
+          handoffs += 1;
+        },
+      }),
+    );
+    const s = await listen(app);
+    const port = (s.address() as AddressInfo).port;
+    try {
+      const res = await fetch(`http://localhost:${port}/api/blueprint`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          projectName: 'Acme',
+          projectCode: 'ACME',
+          projectType: 'new',
+          platforms: ['web'],
+          blueprintBody: '# BRD\n'.padEnd(60, 'x'),
+          executor: 'claude',
+          executorBinary: null,
+          projectDir: '/tmp/acme',
+        }),
+      });
+      expect(res.status).toBe(201);
+      expect(handoffs).toBe(1);
+    } finally {
+      await new Promise<void>((resolve) => s.close(() => resolve()));
+    }
+  });
+
+  it('does NOT schedule self-shutdown when createProject fails', async () => {
+    let handoffs = 0;
+    const app = express();
+    app.use(express.json());
+    app.use(
+      '/api',
+      blueprintRouter({
+        workspaceRoot: '/tmp/bootstrap-home',
+        bootstrap: true,
+        createProject: () => ({ ok: false, message: 'launch failed' }),
+        onBootstrapHandoff: () => {
+          handoffs += 1;
+        },
+      }),
+    );
+    const s = await listen(app);
+    const port = (s.address() as AddressInfo).port;
+    try {
+      const res = await fetch(`http://localhost:${port}/api/blueprint`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          projectName: 'Acme',
+          projectCode: 'ACME',
+          projectType: 'new',
+          platforms: ['web'],
+          blueprintBody: '# BRD\n'.padEnd(60, 'x'),
+          executor: 'claude',
+          executorBinary: null,
+          projectDir: '/tmp/acme',
+        }),
+      });
+      expect(res.status).toBe(500);
+      expect(handoffs).toBe(0);
+    } finally {
+      await new Promise<void>((resolve) => s.close(() => resolve()));
+    }
+  });
+
   it('returns 422 when projectDir is missing', async () => {
     const app = express();
     app.use(express.json());
