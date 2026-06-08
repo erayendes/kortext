@@ -42,4 +42,40 @@ describe('resolveStartTarget', () => {
   it('refuses an explicit path that is the kortext package dir', () => {
     expect(resolveStartTarget(reg, '/install/kortext', '/cwd', () => true, () => true)).toEqual({ kind: 'self' });
   });
+
+  // The home dir's `.kortext` IS the global registry dir, not a project. Running
+  // bare `kortext start` from home must NOT scaffold home as a project named
+  // after the home folder (UAT 2026-06-08 #4). It should onboard / list instead.
+  describe('home directory is never a project (its .kortext is the registry)', () => {
+    const HOME = '/Users/x';
+    const REGISTRY = '/Users/x/.kortext';
+    // cwd=home and home/.kortext exists — but it's the registry, not a project.
+    const existsHomeKortext = (p: string) => p === '/Users/x/.kortext';
+
+    it('bare start from home, empty registry → onboard (wizard), not new-path', () => {
+      const target = resolveStartTarget(
+        { version: 1, projects: {} }, undefined, HOME, existsHomeKortext, undefined, REGISTRY,
+      );
+      expect(target).toEqual({ kind: 'onboard' });
+    });
+
+    it('bare start from home, populated registry → list, not new-path', () => {
+      const target = resolveStartTarget(reg, undefined, HOME, existsHomeKortext, undefined, REGISTRY);
+      expect(target).toEqual({ kind: 'list' });
+    });
+
+    it('explicit `kortext start <home>` is not a project either → onboard', () => {
+      const target = resolveStartTarget(
+        { version: 1, projects: {} }, HOME, '/anything', () => true, undefined, REGISTRY,
+      );
+      expect(target).toEqual({ kind: 'onboard' });
+    });
+
+    it('a real sibling project dir still registers (guard is scoped to home only)', () => {
+      const target = resolveStartTarget(
+        { version: 1, projects: {} }, undefined, '/Users/x/myproject', () => true, undefined, REGISTRY,
+      );
+      expect(target).toEqual({ kind: 'new-path', path: '/Users/x/myproject' });
+    });
+  });
 });

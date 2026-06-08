@@ -26,6 +26,10 @@ export type ParsedBacklogItem = {
   parent_id?: string;
   /** Per-item LLM model preference (per rules/models.md) → `model` column. */
   model?: string;
+  /** Assigned persona handle (the workflow writes `assignee`; `owner` is also
+   *  accepted) → the `owner` column. Only ever set when provided, so a step-1
+   *  re-ingest that omits it never nulls an assignment a later step made. */
+  owner?: string;
   /** A human-readable epic LABEL the agent wrote as `epic:` instead of a proper
    *  `parent_epic` id (e.g. `epic: Infrastructure`). When no explicit parent_id
    *  is given, the ingester synthesizes a real `type: epic` item from this label
@@ -51,6 +55,10 @@ const KNOWN_ITEM_KEYS = new Set([
   'parent_epic',
   'parent',
   'model',
+  // Assignment: the workflow instructs `assignee`; `owner` is the column name.
+  // Both map to the owner column (see ParsedBacklogItem.owner), not frontmatter.
+  'owner',
+  'assignee',
   // A bare `epic:` LABEL is consumed into a synthesized epic (see epic_label),
   // not dumped into frontmatter.
   'epic',
@@ -91,9 +99,40 @@ export function coerceItemType(raw: string): { type: string; original?: string }
 // ---------------------------------------------------------------------------
 
 /**
+ * Find a usable item list inside a parsed YAML object. Prefers the instructed
+ * `items:` key, but falls back to the FIRST top-level array whose entries are
+ * id-bearing objects — agents frequently invent their own top key
+ * (`dependency_patches:`, `acceptance_patches:`, …) for an enrichment patch.
+ * Without this, such a patch parses to "no items array found" and the entire
+ * enrichment step is silently dropped (UAT 2026-06-08, critical #1).
+ *
+ * A plain array of scalars (e.g. `versions: [v0.1, v0.2]`) is NOT a match — we
+ * require at least one object carrying a string `id`, so unrelated lists are
+ * never mistaken for the backlog.
+ */
+function findItemArray(obj: Record<string, unknown>): unknown[] | null {
+  if (Array.isArray(obj['items'])) return obj['items'] as unknown[];
+  for (const value of Object.values(obj)) {
+    if (
+      Array.isArray(value) &&
+      value.some(
+        (el) =>
+          el !== null &&
+          typeof el === 'object' &&
+          typeof (el as Record<string, unknown>)['id'] === 'string',
+      )
+    ) {
+      return value;
+    }
+  }
+  return null;
+}
+
+/**
  * Parse the agent-written backlog into items. Two accepted shapes (agents lean
  * toward the second even when asked for the first):
- *   1. A pure YAML document with a top-level `items:` list (the instructed form).
+ *   1. A pure YAML document with a top-level `items:` list (the instructed form),
+ *      or — as a fallback — any other top-level array of id-bearing objects.
  *   2. Markdown prose containing one or more ```yaml fenced blocks — each block
  *      a list of items, a single item object, or an `{ items: [...] }` doc.
  * The fenced fallback makes ingestion robust to the model's natural formatting.
@@ -114,12 +153,9 @@ export function parseBacklogYaml(
   } catch (err) {
     topErr = err instanceof Error ? err.message : String(err);
   }
-  if (
-    topDoc &&
-    typeof topDoc === 'object' &&
-    Array.isArray((topDoc as Record<string, unknown>)['items'])
-  ) {
-    return validateRawItems((topDoc as Record<string, unknown>)['items'] as unknown[], mode);
+  if (topDoc && typeof topDoc === 'object' && !Array.isArray(topDoc)) {
+    const arr = findItemArray(topDoc as Record<string, unknown>);
+    if (arr) return validateRawItems(arr, mode);
   }
 
   // Shape 2: collect items from ```yaml fenced blocks embedded in markdown.
@@ -143,7 +179,8 @@ export function parseBacklogYaml(
     if (Array.isArray(block)) raw.push(...block);
     else if (block && typeof block === 'object') {
       const o = block as Record<string, unknown>;
-      if (Array.isArray(o['items'])) raw.push(...(o['items'] as unknown[]));
+      const arr = findItemArray(o);
+      if (arr) raw.push(...arr);
       else if (typeof o['id'] === 'string') raw.push(o);
     }
   }
@@ -245,6 +282,14 @@ function validateRawItems(
     }
     if (typeof obj['model'] === 'string' && obj['model'].trim() !== '') {
       parsed.model = obj['model'].trim();
+    }
+    // Assignment: the planning agent writes `assignee` (per planning-pipeline.md
+    // "Atama" step), but the DB column is `owner`. Accept `owner` first, fall
+    // back to `assignee` — either way the assignment reaches the owner column
+    // (so the SQL-backed assignee filter/aggregate works, not just the avatar).
+    const rawOwner = obj['owner'] ?? obj['assignee'];
+    if (typeof rawOwner === 'string' && rawOwner.trim() !== '') {
+      parsed.owner = rawOwner.trim();
     }
     // A bare `epic:` label (not an id). Held aside for synthesis in the ingester
     // only when no explicit parent_epic/parent id was supplied.
@@ -464,6 +509,11 @@ export function ingestBacklogItems(
         created.push(id);
       }
 
+      // Assignment lives in the owner column, not planning fields — apply it
+      // only when this ingest actually carries one, so a later re-ingest that
+      // omits the assignee never clears it.
+      if (item.owner) repos.backlog.setOwner(id, item.owner);
+
       repos.auditLog.append({
         actor: 'engine',
         action: exists ? 'backlog.ingest.update' : 'backlog.ingest',
@@ -614,6 +664,8 @@ export function patchBacklogItems(
         frontmatter,
         body_md: item.description ?? existing.body_md,
       });
+      // Assignment column (owner) — set only when the patch provides it.
+      if (item.owner) repos.backlog.setOwner(item.id, item.owner);
       repos.auditLog.append({
         actor: 'engine',
         action: 'backlog.patch',
@@ -652,6 +704,7 @@ export function serializeBacklogToYaml(repos: Repositories): string {
 
   const items = rows.map((r) => {
     const o: Record<string, unknown> = { id: r.id, type: r.type, title: r.title };
+    if (r.owner) o['owner'] = r.owner;
     if (r.parent_id) o['parent_epic'] = r.parent_id;
     if (r.version) o['version'] = r.version;
     if (r.model) o['model'] = r.model;
@@ -750,6 +803,27 @@ export function ingestBacklogPatchFile(
   console.log(
     `[kortext] backlog patch: ${updated.length} updated, ${skipped.length} skipped, ${parseErrors.length} parse errors`,
   );
+
+  // D — Loud, distinct signal when an ENTIRE enrichment patch was lost (parse
+  // errors AND zero rows updated). The low-signal `.summary parse_errors:1` is
+  // easy to miss in the activity feed; a dropped enrichment step silently throws
+  // away owner/version/gates/deps (UAT 2026-06-08 critical #1). Surface it as its
+  // own event with an actionable message so it shows up, not just succeeds.
+  if (parseErrors.length > 0 && updated.length === 0) {
+    repos.auditLog.append({
+      actor: 'engine',
+      action: 'backlog.patch.dropped',
+      resource_type: 'run',
+      resource_id: basename(absolutePath),
+      payload: {
+        message:
+          'Enrichment patch produced 0 updates — the whole step was lost. ' +
+          'Check the patch top-level key (must be a list of items with `id`).',
+        parse_errors: parseErrors.length,
+        parse_error_detail: parseErrors.slice(0, 20),
+      },
+    });
+  }
 
   repos.auditLog.append({
     actor: 'engine',

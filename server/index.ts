@@ -46,6 +46,7 @@ import { readRegistry, listProjects, defaultRegistryDir } from './registry/proje
 import { isKortextPackageDir } from './registry/self-guard.ts';
 import { initCommand } from './cli/init.ts';
 import { createExecutor, type ExecutorKind } from './cli/executor-factory.ts';
+import { resolveExecutorBinary } from './cli/binary-resolver.ts';
 import { WorkflowDeployer } from './engine/executors/workflow-deployer.ts';
 import { getDb } from './db/client.ts';
 import { ApprovalQueue } from './orchestrator/approval-queue.ts';
@@ -173,16 +174,12 @@ const safetyGuards: SafetyGuards = {
   },
 };
 
-// PATH lookup defaults when the wizard doesn't supply a custom binary path.
-// `claude` and `agy` are both on PATH after their respective installers run;
-// callers can override via the wizard's "binary path" field if needed.
+// Binary defaults when the wizard doesn't supply a custom path. resolveExecutorBinary
+// auto-discovers the CLI to an absolute path (PATH + known install dirs), so a
+// non-coder never has to export KORTEXT_<KIND>_BIN; an explicit env override
+// still wins, and the wizard's "binary path" field overrides everything upstream.
 function defaultBinaryFor(executor: ExecutorKind): string | undefined {
-  if (executor === 'claude') return process.env.KORTEXT_CLAUDE_BIN ?? 'claude';
-  if (executor === 'antigravity')
-    return process.env.KORTEXT_ANTIGRAVITY_BIN ?? 'agy';
-  if (executor === 'codex') return process.env.KORTEXT_CODEX_BIN ?? 'codex';
-  if (executor === 'gemini') return process.env.KORTEXT_GEMINI_BIN ?? 'gemini';
-  return undefined;
+  return resolveExecutorBinary(executor);
 }
 
 // Shared analysis trigger. Extracted from the blueprint route's `onApproved`

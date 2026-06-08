@@ -303,6 +303,36 @@ describe('CodexCliExecutor', () => {
     const result = await exec.execute(makeStep(), makeCtx());
     expect(result.ok).toBe(false);
   });
+
+  // Without the `exec` subcommand the raw `codex` binary opens an interactive
+  // TUI and dies on piped stdin ("stdin is not a terminal") — the exact UAT
+  // 2026-06-08 failure. The executor must run `codex exec …` non-interactively
+  // with a writable sandbox (default read-only never produces output files).
+  it('passes the `exec` subcommand + writable sandbox before extra args', async () => {
+    const argsFile = join(tmpRoot, 'codex-observed-args');
+    const bin = makeMockBinary(
+      'codex-spy',
+      `printf '%s\\n' "$@" > "${argsFile}"\necho ok`,
+    );
+    const exec = new CodexCliExecutor({
+      binary: bin,
+      agentsDir,
+      logsDir,
+      extraArgs: ['--model', 'gpt-5-codex'],
+    });
+    const result = await exec.execute(makeStep(), makeCtx());
+    expect(result.ok).toBe(true);
+    const args = readFileSync(argsFile, 'utf8').split('\n').filter(Boolean);
+    // `exec` must be the FIRST arg (a subcommand, not a flag).
+    expect(args[0]).toBe('exec');
+    expect(args).toContain('--skip-git-repo-check');
+    const sandboxIdx = args.indexOf('--sandbox');
+    expect(sandboxIdx).toBeGreaterThanOrEqual(0);
+    expect(args[sandboxIdx + 1]).toBe('workspace-write');
+    // caller extras still come through, after the defaults
+    expect(args).toContain('--model');
+    expect(args).toContain('gpt-5-codex');
+  });
 });
 
 describe('GeminiCliExecutor', () => {

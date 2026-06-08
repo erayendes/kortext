@@ -40,6 +40,34 @@ export function isPidAlive(pid: number | null): boolean {
   }
 }
 
+/**
+ * Build the environment for a CLI-launched project daemon. Two non-obvious
+ * defaults, both scoped to `kortext start` (a deliberate local action) — a bare
+ * production server runs node directly and never goes through here:
+ *   - KORTEXT_BOOTSTRAP is CLEARED so a real daemon spawned from inside the
+ *     wizard daemon (which runs with KORTEXT_BOOTSTRAP=1) doesn't inherit the
+ *     flag and wrongly suppress its own boot auto-start.
+ *   - KORTEXT_DRIVE_ENABLED defaults to '1' (arm the autonomous driver) so a
+ *     non-coder never has to export it just to make the "Run"/"Auto" buttons
+ *     work. An explicit value from the user's environment (even '0') still wins.
+ * `cmd.env` is spread last so a specific launch can still override anything.
+ */
+export function buildDaemonEnv(
+  baseEnv: NodeJS.ProcessEnv,
+  cmdEnv: Record<string, string>,
+): Record<string, string> {
+  const merged: Record<string, string> = {};
+  for (const [k, v] of Object.entries(baseEnv)) {
+    if (typeof v === 'string') merged[k] = v;
+  }
+  merged.KORTEXT_BOOTSTRAP = '';
+  if (merged.KORTEXT_DRIVE_ENABLED === undefined || merged.KORTEXT_DRIVE_ENABLED === '') {
+    merged.KORTEXT_DRIVE_ENABLED = '1';
+  }
+  Object.assign(merged, cmdEnv);
+  return merged;
+}
+
 /** Spawn the daemon detached, logging to <project>/.kortext/data/logs/daemon.log. Returns pid. */
 export function spawnDaemon(cmd: DaemonCommand): number {
   const logDir = join(cmd.cwd, '.kortext', 'data', 'logs');
@@ -47,13 +75,7 @@ export function spawnDaemon(cmd: DaemonCommand): number {
   const logFd = openSync(join(logDir, 'daemon.log'), 'a');
   const child = spawn(cmd.command, cmd.args, {
     cwd: cmd.cwd,
-    // Clear KORTEXT_BOOTSTRAP from the inherited env BEFORE applying cmd.env.
-    // A real project daemon spawned from INSIDE the wizard daemon (which runs
-    // with KORTEXT_BOOTSTRAP=1) would otherwise inherit the flag via
-    // ...process.env and wrongly suppress its own boot auto-start. The wizard's
-    // own launch still wins because cmd-bootstrap sets KORTEXT_BOOTSTRAP in
-    // cmd.env, which is spread last.
-    env: { ...process.env, KORTEXT_BOOTSTRAP: '', ...cmd.env },
+    env: buildDaemonEnv(process.env, cmd.env),
     detached: true,
     stdio: ['ignore', logFd, logFd],
   });
