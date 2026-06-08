@@ -179,4 +179,29 @@ describe('syncRegistriesToDb', () => {
     expect(repos.personas.list()).toHaveLength(4); // +backend-developer + 3 synthetic
     expect(repos.workflowSteps.list('wf-1')).toHaveLength(1);
   });
+
+  it('stores model_default from persona - model: bullet', () => {
+    writeAgent(
+      'model-aware-dev',
+      `# model-aware-dev\n\n- description: Has model override.\n- model: gemini\n\n## purpose\n\nDo model work.\n`,
+    );
+    const personas = loadPersonasFromDir(agentsDir);
+    const workflows = loadWorkflowsFromDir(workflowsDir);
+
+    syncRegistriesToDb({ personas, workflows }, repos);
+
+    const row = repos.personas.get('+model-aware-dev');
+    expect(row?.model_default).toBe('gemini');
+  });
+
+  it('stores null model_default when no - model: bullet', () => {
+    writeAgent('plain-dev');
+    const personas = loadPersonasFromDir(agentsDir);
+    const workflows = loadWorkflowsFromDir(workflowsDir);
+
+    syncRegistriesToDb({ personas, workflows }, repos);
+
+    const row = repos.personas.get('+plain-dev');
+    expect(row?.model_default).toBeNull();
+  });
 });
