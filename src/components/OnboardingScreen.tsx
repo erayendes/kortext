@@ -16,6 +16,7 @@ import type {
   BlueprintSubmitInput,
   BlueprintSubmitResponse,
   ExecutorChoice,
+  ExistingProject,
   ProjectType,
 } from '../lib/api-types.ts';
 
@@ -123,6 +124,49 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
   const [projectDir, setProjectDir] = useState('');
   const [browsing, setBrowsing] = useState(false);
   const [initializedAt, setInitializedAt] = useState<string | null>(null);
+  // GUI-first project picker (UAT #10): a bare `kortext start` opens this wizard
+  // even when projects exist. List them here so the user can resume one (→ its
+  // daemon starts + the browser hands off) or scroll down to create a new one.
+  const [existingProjects, setExistingProjects] = useState<ExistingProject[]>([]);
+  const [startingSlug, setStartingSlug] = useState<string | null>(null);
+  const [startError, setStartError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    apiGet<{ projects: ExistingProject[] }>('/api/projects')
+      .then((res) => {
+        if (alive) setExistingProjects(res.projects ?? []);
+      })
+      .catch(() => {
+        if (alive) setExistingProjects([]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // Resume a registered project: start (or reuse) its daemon, then hand the
+  // browser off to it — the same redirect the new-project flow uses.
+  const resumeProject = async (slug: string) => {
+    if (startingSlug) return;
+    setStartingSlug(slug);
+    setStartError(null);
+    try {
+      const res = await apiPost<{ ok: boolean; handoffUrl?: string }>(
+        `/api/projects/${slug}/start`,
+        {},
+      );
+      if (res.handoffUrl) {
+        window.location.href = res.handoffUrl;
+        return;
+      }
+      setStartError('Could not start that project.');
+      setStartingSlug(null);
+    } catch {
+      setStartError('Could not start that project.');
+      setStartingSlug(null);
+    }
+  };
 
   // Prefill with the daemon's own workspace (where .kortext/ goes by default).
   // blueprintPath is "<root>/.kortext/foundation/BRD.md".
@@ -341,6 +385,59 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
             background: 'var(--card)',
           }}
         >
+          {existingProjects.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--fg)' }}>
+                Open an existing project
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {existingProjects.map((p) => (
+                  <button
+                    key={p.slug}
+                    type="button"
+                    disabled={startingSlug !== null}
+                    onClick={() => void resumeProject(p.slug)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      textAlign: 'left',
+                      border: '1px solid var(--border)',
+                      borderRadius: 10,
+                      padding: '12px 14px',
+                      background: 'var(--panel)',
+                      color: 'var(--fg)',
+                      cursor: startingSlug ? 'default' : 'pointer',
+                      opacity: startingSlug && startingSlug !== p.slug ? 0.5 : 1,
+                      font: 'inherit',
+                    }}
+                  >
+                    <FolderOpen style={{ width: 16, height: 16, color: 'var(--fg-muted)', flexShrink: 0 }} />
+                    <span style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1, minWidth: 0 }}>
+                      <span style={{ fontSize: 13.5, fontWeight: 600 }}>{p.name}</span>
+                      <span className="mono" style={{ fontSize: 11, color: 'var(--fg-faint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {p.path}
+                      </span>
+                    </span>
+                    <span style={{ fontSize: 11, color: 'var(--fg-muted)', flexShrink: 0 }}>
+                      {startingSlug === p.slug ? 'Starting…' : `:${p.port} · ${p.status}`}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              {startError && (
+                <div style={{ fontSize: 12, color: 'var(--red)' }}>{startError}</div>
+              )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 }}>
+                <span style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                <span style={{ fontSize: 11, color: 'var(--fg-faint)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  or create a new project
+                </span>
+                <span style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+              </div>
+            </div>
+          )}
+
           <Field label="Project Name" hint="Display name across all views." error={nameError}>
             <input
               className="input"

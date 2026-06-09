@@ -4,6 +4,18 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 
 ---
 
+## ✅ ÇÖZÜLDÜ (UAT #10, 2026-06-09 #10e, Claude) — Çıplak `kortext start` + mevcut proje varsa: sihirbaz açılsın, projeler de listelensin
+
+> **Eski davranış:** Mevcut proje(ler) varken çıplak `kortext start` terminalde metin liste basıp "kortext start <project> / --new kullan" diyordu. GUI-first değil — kullanıcı terminale komut yazmak zorundaydı.
+
+**Yapıldı (TDD, 1184 test yeşil, typecheck + build temiz — push EDİLMEDİ):**
+- ✅ **bin dispatch:** bare `start` + proje var (`action === 'list'`) → terminal listesi yerine **`launchWizardAndOpen`** (sihirbazı aç). Terminal listesi `--no-open`/headless **fallback** olarak kaldı.
+- ✅ **Yeni API (`server/routes/projects.ts`):** `GET /api/projects` (registry'den kayıtlı projeler — slug/name/path/port/status/url) + `POST /api/projects/:slug/start` (`startProject` → `{handoffUrl}` + wizard self-exit). index.ts'te mount edildi (`readRegistry`/`startProject`/`onHandoff` wiring).
+- ✅ **Wizard UI (`OnboardingScreen`):** kartın başında "Open an existing project" bölümü — `/api/projects`'ten çeker, her satır tıklanınca `POST .../start` → `handoffUrl`'e yönlenir; altında "or create a new project" ayracı + mevcut onboarding formu.
+- ✅ **Kanıt:** route testleri (6) + uçtan-uca harness — registry'den 2 proje listelenir, tıkla → daemon başlar + tarayıcı handoff + wizard kapanır; bilinmeyen slug → 404.
+
+---
+
 ## ✅ ÇÖZÜLDÜ (KRİTİK UAT #10, 2026-06-09 #10d, Claude) — Gate-fail sonsuz bounce döngüsü → 3. fail'de +prime'a (gerekçeyle) tırmandır
 
 > **Belirti (canlı):** T03/T04 `design_review`'i **8 fail** etti (17 koşu, 15+ dk ilerleme yok) → sonsuz bounce churn, hiç done olmadı. Gate-fail bounce'ında **max-retry/escalation YOK**.

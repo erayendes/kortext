@@ -7,7 +7,28 @@
 
 ---
 
-## ⭐ Şu an (2026-06-09 #10d) — Gate-fail SONSUZ bounce döngüsü → 3. fail'de +prime'a (gerekçeyle) tırmandırma
+## ⭐ Şu an (2026-06-09 #10e) — Çıplak `kortext start` artık HER ZAMAN sihirbazı açar + mevcut projeleri listeler (GUI-first)
+
+Yalnızca kod oturumu (UAT değil). Mevcut proje varken çıplak `kortext start` terminalde metin liste basıyordu (GUI-first değil). Artık her durumda **sihirbazı açar**; sihirbaz mevcut projeleri listeler. TDD ile yapıldı. **1184 test yeşil** (1178→+6), typecheck + build temiz. **PUSH EDİLMEDİ** — Eray "push" diyene dek local.
+
+- **bin dispatch (`bin/kortext.ts`):** bare `start` + proje var (`action==='list'`) → terminal listesi yerine `launchWizardAndOpen()`. Terminal listesi `--no-open`/headless (CI) **fallback**'i olarak kaldı.
+- **Yeni route (`server/routes/projects.ts`):** `GET /api/projects` → kayıtlı projeler (slug/name/path/port/status/url, `serializeProjects` saf+testli); `POST /api/projects/:slug/start` → `startProject(slug)` → `{handoffUrl}` + `onHandoff` (wizard self-exit). 404 bilinmeyen slug, 502 start fail. index.ts'te bootstrap wiring ile mount.
+- **Wizard UI (`OnboardingScreen`):** kartın başında "Open an existing project" — `/api/projects`'ten çeker, satıra tıkla → `POST .../start` → `window.location = handoffUrl`. Altında "or create a new project" ayracı + mevcut yeni-proje formu. `ExistingProject` tipi api-types'ta.
+
+**KANIT:** route testleri (GET list / POST start / 404 / 502) + uçtan-uca harness (gerçek `projectsRouter` + örnek registry): 2 proje listelenir, "Acme"ye tıkla → daemon başlar (`startProject` çağrıldı) + `handoffUrl` döner + wizard kapanmayı planlar (onHandoff:1); bilinmeyen slug → 404. Harness commit edilmedi.
+
+**SIRADAKİ:** Eray "push" derse commit + push. Sonra rebuild + UAT: terminalden `kortext start` (proje varken) → tarayıcıda sihirbaz açılmalı, "Open an existing project" altında projeler görünmeli; birine tıkla → o proje açılmalı; "yeni proje" ile onboarding.
+
+**Rebuild (Eray çalıştırır):**
+```bash
+cd /Users/erayendes/Documents/_codebase/kortext
+npm run build && npm pack && npm install -g ./kortext-3.1.0.tgz
+kortext stop not && kortext purge not --yes
+```
+
+---
+
+## ⭐ Önceki (2026-06-09 #10d) — Gate-fail SONSUZ bounce döngüsü → 3. fail'de +prime'a (gerekçeyle) tırmandırma
 
 Yalnızca kod oturumu (UAT değil). UAT-build'de çıkan 🔴 KRİTİK bulgu (design_review 8× fail → sonsuz churn, escalation yok) TDD ile çözüldü. **1178 test yeşil** (1162→+16), typecheck + build temiz. **PUSH EDİLDİ** (`13b131f..2338327`, tek commit) — `main == origin/main`.
 
