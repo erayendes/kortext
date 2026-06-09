@@ -58,9 +58,15 @@ describe('deriveActiveAgents', () => {
     expect(rows.map((r) => r.handle)).toEqual(['+busy2', '+busy', '+queued']);
   });
 
-  it('flags a blocked lead item with the blocked tone', () => {
-    const rows = deriveActiveAgents([item({ id: 'A', owner: '+dev', status: 'blocked' })]);
-    expect(rows[0]!.tone).toBe('blocked');
+  it('flags a derived-locked lead item (open dependency) with the blocked tone', () => {
+    // BLK is an open blocker; A depends on it → A is derived-locked even though
+    // its real status is to_do (UAT #10 — no `blocked` status).
+    const rows = deriveActiveAgents([
+      item({ id: 'BLK', owner: '+other', status: 'in_progress' }),
+      item({ id: 'A', owner: '+dev', status: 'to_do', frontmatter: { blocked_by: ['BLK'] } }),
+    ]);
+    const dev = rows.find((r) => r.handle === '+dev')!;
+    expect(dev.tone).toBe('blocked');
   });
 
   it('returns [] when nobody has open work', () => {

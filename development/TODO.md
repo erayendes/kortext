@@ -4,6 +4,36 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 
 ---
 
+## 🔴 KRİTİK UAT #10 (2026-06-09) — Gate-fail sonsuz bounce döngüsü → 3. fail'de +prime'a (gerekçeyle) tırmandır
+
+> **Belirti (canlı):** T03/T04 `design_review` gate'ini sürekli fail etti (design_review **8 fail**, T03 in_progress↔test **12/9 kez**, 17 koşu) ama hep yeniden kodlanıp aynı şekilde fail oldu → **sonsuz bounce churn**, hiç done olmadı, epic kapanmadı, 15+ dk ilerleme yok. Gate-fail bounce'ında **max-retry / escalation YOK** → kör döngü. (Pozitif yan: gate gerçekten yargılıyor #4 + fallback codex devraldı #10 — ama döngü kesilmiyor.)
+
+**Eray kararı — N. fail'de +prime'a tırmandırma:**
+- [ ] **Eşik: 3. fail (2 retry).** Gate fail → bounce + yeniden dene; bu **3 kez** olursa (item+gate başına sayaç) artık otomatik bounce ETME → **+prime'a tırmandır**, item'ı duraklat.
+- [ ] **Kanal: mevcut Inbox / `pending_questions` (ApprovalQueue).** Yeni altyapı yok — staging/gate onaylarıyla aynı yerden. Soru: item + gate + seçenekler `[Yine de onayla] / [Şu talimatla revize et] / [Bırak]`.
+- [ ] **GEREKÇE ZORUNLU:** tırmandırma sorusu **gate'in NEDEN fail ettiğini** taşımalı — verdict raporundaki somut bulgular + başarısız AC'ler (`ac_results` fail olanlar, designer/qa'nın yazdığı reddetme gerekçesi) +prime'a gösterilsin. Kuru "fail etti" değil; "şu kriterler şu yüzden geçmedi" özeti Inbox sorusunun gövdesinde.
+- [ ] **+prime cevabı işlensin:** Onayla → gate override-pass, item ilerler. Revize+talimat → developer'a +prime yönlendirmesiyle bir tur (kör değil, yönlü). Bırak → item iptal/blocked, epic'i tıkamasın.
+- [ ] **Sayaç sıfırlama:** +prime "revize+talimat" derse sayaç sıfırlansın (yönlü yeni şans); yoksa eşik kalıcı olur.
+
+---
+
+## ✅ ÇÖZÜLDÜ (UAT #10, 2026-06-09 #10c, Claude) — `blocked` ayrı status/sütun OLMAKTAN ÇIKARILDI → türetilen KİLİT bayrağı
+
+> **Eski yanlış davranış:** Bağımlılığı olan item'lar ingest'te `blocked` STATUS'üne çekiliyordu ve To Do'dan çıkıyordu. Eray'ın modeli: `blocked` bir lane/status değil — mevcut status'ün üstüne binen, bağımlılıktan TÜRETİLEN bir KİLİT bayrağı.
+
+**Karar (AskUserQuestion):** `blocked` durumunu **tamamen kaldır** (enum + DB CHECK + lifecycle) + manuel "Mark blocked" özelliğini de kaldır. Kilidin tek kaynağı bağımlılık-türevi.
+
+**Yapıldı (TDD, 1162 test yeşil, typecheck + build temiz):**
+- ✅ **Türetilen kilit:** yeni `isBlocked(item, byId)` (`build-order.ts`) — `blocked_by` dolu ve blocker'ı terminal (done/cancelled) değilse kilitli. UI aynası `isLocked`/`lockedBlockers` (`board-drawer.ts`). Item'ın asıl status'ü (`to_do`/`in_progress`/…) korunur.
+- ✅ **Auto-block kaldırıldı:** `backlog-ingest.ts` A5 döngüsü status'ü artık değiştirmiyor — kilitli item `to_do`'da KALIR. `backlog.auto_blocked` audit'i de gitti.
+- ✅ **`blocked` status'ten silindi:** Zod enum (`schemas.ts`) + frontend mirror (`api-types.ts`) + DB CHECK (migration **011**, tablo rebuild + mevcut `blocked`→`to_do` dönüşümü).
+- ✅ **Lifecycle:** `block`/`unblock` transition'ları kaldırıldı; `cancel.from`'dan `blocked` çıktı (`item-lifecycle.ts`). Route `TRANSITION_ACTIONS`'tan `block`/`unblock` çıktı.
+- ✅ **Manuel block özelliği silindi:** `block.ts` + `blocker-clear.ts` + `closure` çağrısı + testleri kaldırıldı (dependents türev olarak kendiliğinden çözülür, yazma yok).
+- ✅ **Board:** ayrı "Blocked" sütunu YOK (5 sütuna döndü). Kilitli item kendi status sütununda **🔒 rozeti + soluk stil**; drawer'da "🔒 Locked · waiting on …" banner. `whose-turn`/`doctor`/`agents-panel` türev kilide geçti.
+- ✅ **Gerçek-LLM gereksiz (deterministik):** uçtan-uca harness (gerçek ingest + scheduler + closure) ile kanıtlandı — T01→T02→T03 zinciri: kilitli item To Do'da kalır 🔒, blocker `done` olunca türev kilit açılır (yazma yok), driver sırayla alır.
+
+---
+
 ## ✅ ÇÖZÜLDÜ (UAT #10, 2026-06-09 #10b, Claude) — Çıplak `parent_epic` referansı → FK cascade → enrichment kayboluyordu
 
 > **Belirti:** Claude koşusunda planning enrichment patch'leri (epic-link + version) **0 updated, 14 skipped, DROPPED**. `skipped_detail`: 14 item da `FOREIGN KEY constraint failed`. Sonuç: epic 0, parent_id 0, version 0, model 0 (gate'ler tuttu çünkü ayrı patch'te ve FK'siz). UAT #5'in tekrarı, farklı tetikleyiciyle — **#6 FK-autocreate fix'i bu varyantı kapsamıyor.**

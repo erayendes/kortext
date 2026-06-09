@@ -139,20 +139,25 @@ describe('runDoctor — stale locks', () => {
   });
 });
 
-describe('runDoctor — blocked items', () => {
-  it('warns when there are items stuck in blocked status', () => {
+describe('runDoctor — locked (dependency-blocked) items', () => {
+  it('warns when items are derived-locked by an open dependency', () => {
     writeFileSync(join(agentsDir, 'dev.md'), personaMd('dev'));
     writeFileSync(join(wfDir, 'wf.md'), workflowMd('wf', '+dev'));
-    repos.backlog.create({ id: 'T1', type: 'task', title: 't1' });
-    repos.backlog.create({ id: 'T2', type: 'task', title: 't2' });
-    repos.backlog.transitionStatus('T1', 'blocked');
-    repos.backlog.transitionStatus('T2', 'blocked');
+    // BLK is an open (to_do) blocker; T1 + T2 depend on it → derived-locked,
+    // but they keep their real status (to_do) — there is no `blocked` status.
+    repos.backlog.create({ id: 'BLK', type: 'task', title: 'blocker' });
+    repos.backlog.create({
+      id: 'T1', type: 'task', title: 't1', frontmatter: { blocked_by: ['BLK'] },
+    });
+    repos.backlog.create({
+      id: 'T2', type: 'task', title: 't2', frontmatter: { blocked_by: ['BLK'] },
+    });
 
     const report = run();
     expect(report.summary.blockedItems).toBe(2);
     const item = report.findings.find((f) => f.category === 'item');
     expect(item?.severity).toBe('warn');
-    expect(item?.message).toMatch(/2 blocked/i);
+    expect(item?.message).toMatch(/2 locked/i);
   });
 });
 

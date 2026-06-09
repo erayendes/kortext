@@ -7,7 +7,45 @@
 
 ---
 
-## ⭐ Şu an (2026-06-09 #10b) — UAT #10'un 3 BULGUSU DA ÇÖZÜLDÜ: çıplak parent_epic FK + Board blocked sütunu + çok-executor fallback
+## ⭐ Şu an (2026-06-09 UAT-build) — Build fazı CANLI: 3 fix kanıtlandı + 1 yeni KRİTİK bulgu (bounce döngüsü)
+
+Eray temiz UAT koştu (antigravity, executors chain `[antigravity, codex]`). Build fazı uçtan uca izlendi. **3 fix canlı kanıtlandı:**
+- ✅ **#10 FK/epic enrichment:** epic auto-create çalıştı — epic 1, owner 11/11, version 11/11, model 10/10, parent_id 10/10, **FK/dropped YOK** (önceki Claude turunda 14 FK fail'di).
+- ✅ **#9c sıralı build:** T01 (blocker'sız) tek başına başladı; done olunca bağımlıları (T02/T03/T04/T09) açıldı — UAT #9'daki "hepsi aynı anda → merge conflict" stall'ı YOK. T01 gerçek git merge → done.
+- ✅ **#4 gerçek gate + #2 bounce-retry:** T01 `quality_control` **fail → re-implement → pass (attempt 2) → merged → done**; AC kutucukları gate'çe işaretlendi; preview_url `localhost:5173` geldi.
+- ✅ **#10 fallback:** agy kotası ortada **yine doldu (429, boş çıktı)** → motor recoverable algılayıp **codex'e fallback** etti (daemon log kanıtlı) → pipeline durmadı.
+
+**🔴 YENİ KRİTİK BULGU (TODO "KRİTİK UAT #10 — bounce döngüsü"):** T03/T04 `design_review`'i **8 kez fail** etti → sonsuz bounce churn (17 koşu, 15+ dk ilerleme yok). Gate-fail bounce'ında **max-retry/escalation yok**. **Eray kararı:** 3. fail'de (2 retry) item'ı duraklat → **+prime'a Inbox'tan tırmandır**, soru **fail gerekçesini** (verdict bulguları + başarısız AC) taşısın; +prime [onayla/revize+talimat/bırak]. Detay TODO. **UAT Eray tarafından durduruldu** (churn boşa yakmasın) — `kortext stop not`.
+
+**SIRADAKİ (yeni fix oturumu):** TODO "KRİTİK UAT #10 — bounce döngüsü" uygula (3-fail eşik + Inbox escalation + gerekçe + +prime cevabı + sayaç reset). Sonra UAT baştan.
+
+---
+
+## ⭐ Önceki (2026-06-09 #10c) — `blocked` ayrı status/sütun OLMAKTAN TAMAMEN ÇIKARILDI → türetilen KİLİT bayrağı
+
+Yalnızca kod oturumu (UAT değil). Eray'ın modeli kuruldu: `blocked` bir lane/status değil — bağımlılıktan **türetilen** bir kilit bayrağı, item'ın asıl status'ünün (genelde `to_do`) ÜSTÜNE biner. **AskUserQuestion kararı: `blocked` durumunu + manuel "Mark blocked" özelliğini TAMAMEN KALDIR.** TDD ile yapıldı, **1162 test yeşil** (1168→−6: block/blocker-clear testleri silindi, isBlocked + migration-011 testleri eklendi), typecheck + build temiz. **PUSH EDİLMEDİ** — Eray "push" diyene dek local.
+
+- **Türetilen kilit:** yeni `isBlocked(item, byId)` (`server/orchestrator/build-order.ts`) — `blocked_by` dolu + blocker terminal (done/cancelled) değilse kilitli; dangling = çözülmüş. UI aynası `isLocked`/`lockedBlockers` (`src/lib/board-drawer.ts`).
+- **Auto-block SİLİNDİ:** `backlog-ingest.ts` A5 artık status'e dokunmuyor → kilitli item `to_do`'da KALIR (çıkmaz). `backlog.auto_blocked` audit'i gitti.
+- **`blocked` enum'dan + DB'den silindi:** Zod `BacklogStatusSchema` + `api-types.ts` + DB CHECK (**migration 011** tablo rebuild, mevcut `blocked`→`to_do` dönüşümü, `blocked_by` korunur).
+- **Lifecycle:** `block`/`unblock` transition'ları + `cancel.from`'daki `blocked` kaldırıldı. Route `TRANSITION_ACTIONS`'tan da çıktı.
+- **Manuel block özelliği komple silindi:** `server/orchestrator/block.ts` + `blocker-clear.ts` + `closure` çağrısı + `tests/block.test.ts` + `tests/blocker-clear.test.ts`. Dependents türev olarak kendiliğinden açılır (yazma yok).
+- **Board:** ayrı "Blocked" sütunu YOK → 5 sütun. Kilitli item kendi status sütununda **🔒 rozet + soluk (opacity 0.6)**; drawer'da "🔒 Locked · waiting on T01" banner + Status satırında "· 🔒 locked". `whose-turn`/`doctor`/`agents-panel` türev kilide geçti (doctor "N locked item(s)").
+
+**KANIT (deterministik uçtan-uca harness — gerçek-LLM gereksiz, çünkü saf status/scheduling mekaniği):** gerçek DB + ingest + scheduler + closure ile T01→T02→T03 `blocked_by` zinciri: ingest sonrası **3'ü de `to_do`**, T02/T03 **🔒 türev-kilitli**, `selectBuildableItems`=[T01]. T01 `done` → T02 **hâlâ `to_do`** ama kilit AÇILDI (yazma yok), buildable=[T02]. T02 `done` → T03 açıldı, buildable=[T03]. Zincir sırayla aktı. Harness commit edilmedi.
+
+**SIRADAKİ:** Eray "push" derse commit + push. Sonra rebuild + temiz UAT: bağımlılıklı item To Do'da 🔒 ile durur, sırası gelince başlar; ayrı Blocked sütunu yok.
+
+**Rebuild (Eray çalıştırır):**
+```bash
+cd /Users/erayendes/Documents/_codebase/kortext
+npm run build && npm pack && npm install -g ./kortext-3.1.0.tgz
+kortext stop not && kortext purge not --yes
+```
+
+---
+
+## ⭐ Önceki (2026-06-09 #10b) — UAT #10'un 3 BULGUSU DA ÇÖZÜLDÜ: çıplak parent_epic FK + Board blocked sütunu + çok-executor fallback
 
 Yalnızca kod oturumu. UAT #10'un kritik (çıplak `parent_epic` → FK → enrichment kaybı) + iki 🟠 bulgusu (Board blocked sütunu, çok-executor fallback) TDD ile çözüldü; kritik bulgu gerçek Claude koşusuyla doğrulandı. **1168 test yeşil** (1124→+44), typecheck + build temiz. **PUSH EDİLDİ** (`03196ca..c44d514`, tek commit) — `main == origin/main`. 🟠 bulgular paralel ajanlarla (Stream A board, Stream B fallback).
 

@@ -63,10 +63,6 @@ describe('whoseTurn — §5.9 #5 board derivation', () => {
     expect(whoseTurn(item({ status: 'cancelled', owner: '+backend-developer' }))).toEqual([]);
   });
 
-  it('blocked → +prime (prime resolves the block; §5.9 #9 intent)', () => {
-    expect(whoseTurn(item({ status: 'blocked', owner: '+backend-developer' }))).toEqual(['+prime']);
-  });
-
   // Characterization: lock the interpretive/edge contracts Eray approved.
   it('to_do assigned → the owner (waiting to start)', () => {
     expect(whoseTurn(item({ status: 'to_do', owner: '+backend-developer' }))).toEqual([

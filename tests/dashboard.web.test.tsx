@@ -60,8 +60,10 @@ describe('itemStatusBars', () => {
     expect(todo.barPct).toBe(100); // busiest segment
   });
 
-  it('ignores statuses outside the canonical set (blocked, cancelled)', () => {
-    const items = [item({ id: 'X', status: 'blocked' }), item({ id: 'Y', status: 'cancelled' })];
+  it('ignores statuses outside the canonical set (cancelled)', () => {
+    // `cancelled` is a real status but is intentionally not one of the five
+    // dashboard bars, so it must not contribute to the total.
+    const items = [item({ id: 'Y', status: 'cancelled' })];
     const { total } = itemStatusBars(items);
     expect(total).toBe(0);
   });

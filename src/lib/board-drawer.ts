@@ -6,7 +6,7 @@
  * mapping, the acceptance-criteria checklist derivation, epic child/progress
  * roll-ups, and date formatting — so they can be unit-tested in isolation.
  */
-import type { ActivityEntry, BacklogItem, Gate } from './api-types.ts';
+import type { BacklogItem, Gate } from './api-types.ts';
 
 export type BadgeTone =
   | 'purple'
@@ -32,8 +32,6 @@ export function statusBadge(status: BacklogItem['status']): { label: string; ton
       return { label: 'Review', tone: 'amber' };
     case 'test':
       return { label: 'Test', tone: 'blue' };
-    case 'blocked':
-      return { label: 'Blocked', tone: 'red' };
     case 'cancelled':
       return { label: 'Cancelled', tone: 'neutral' };
     case 'to_do':
@@ -256,15 +254,17 @@ export type BoardTransition =
   | 'test'
   | 'review'
   | 'bounce'
-  | 'done'
-  | 'block'
-  | 'unblock';
+  | 'done';
 
 /**
  * The legal human-override moves from a given status — mirrors the backend
  * ItemLifecycle TRANSITIONS so the drawer only ever offers buttons the engine
  * will accept. `primary` marks the forward move (styled as the primary button);
- * terminal states (done/cancelled) offer nothing. Keep in sync with
+ * terminal states (done/cancelled) offer nothing.
+ *
+ * UAT #10: there is no "Mark blocked" / "Unblock" — `blocked` is not a status.
+ * A dependency lock is derived (see {@link isLocked}); the only way to clear it
+ * is to finish the blocking item. Keep in sync with
  * server/engine/item-lifecycle.ts.
  */
 export function availableTransitions(
@@ -274,24 +274,17 @@ export function availableTransitions(
     case 'to_do':
       return [{ action: 'start', label: 'Start', primary: true }];
     case 'in_progress':
-      return [
-        { action: 'test', label: 'Send to test', primary: true },
-        { action: 'block', label: 'Mark blocked', primary: false },
-      ];
+      return [{ action: 'test', label: 'Send to test', primary: true }];
     case 'test':
       return [
         { action: 'review', label: 'Move to review', primary: true },
         { action: 'bounce', label: 'Bounce back', primary: false },
-        { action: 'block', label: 'Mark blocked', primary: false },
       ];
     case 'review':
       return [
         { action: 'done', label: 'Mark done', primary: true },
         { action: 'bounce', label: 'Bounce back', primary: false },
-        { action: 'block', label: 'Mark blocked', primary: false },
       ];
-    case 'blocked':
-      return [{ action: 'unblock', label: 'Unblock', primary: true }];
     default:
       return []; // done, cancelled — terminal
   }
@@ -363,31 +356,28 @@ export function checklistFromSection(
 // ---------------------------------------------------------------------------
 // Board columns
 //
-// The board is six fixed workflow lanes; Epic is NOT a status — epics live in
-// the left filter rail, tasks/bugs/debt flow through the columns. `blocked` now
-// has its OWN dedicated column (UAT #10): a blocked item is dependency-locked,
-// not running, so it must never appear under "In progress" (where 13 blocked
-// items once read as "In progress 13" and misled the user). It sits in a
-// distinct red 🔒 Blocked lane, immediately after In progress — where unblock
-// returns it. This supersedes the older "blocked folds into in_progress" rule
-// (DECISIONS §12.3). `cancelled` is still hidden from the board.
+// The board is five fixed workflow lanes; Epic is NOT a status — epics live in
+// the left filter rail, tasks/bugs/debt flow through the columns. There is NO
+// separate "Blocked" column (UAT #10): a dependency-locked item stays in its
+// own real column (usually To Do for a never-started item) and the card carries
+// a 🔒 lock overlay (see {@link isLocked}) instead of moving lanes. `cancelled`
+// is hidden from the board.
 // ---------------------------------------------------------------------------
 
-export type BoardColumnKey = 'to_do' | 'in_progress' | 'blocked' | 'test' | 'review' | 'done';
+export type BoardColumnKey = 'to_do' | 'in_progress' | 'test' | 'review' | 'done';
 
-/** The six columns, left→right, each with its dot color (matches index.css). */
+/** The five columns, left→right, each with its dot color (matches index.css). */
 export const BOARD_COLUMNS: { key: BoardColumnKey; name: string; color: string }[] = [
   { key: 'to_do', name: 'To do', color: '#7B7F87' },
   { key: 'in_progress', name: 'In progress', color: '#D2A24C' },
-  { key: 'blocked', name: '🔒 Blocked', color: '#E5484D' },
   { key: 'test', name: 'Test', color: '#5E84D2' },
   { key: 'review', name: 'Review', color: '#9B82CE' },
   { key: 'done', name: 'Done', color: '#4CB782' },
 ];
 
 /**
- * The board column an item belongs in. `blocked` maps to its own dedicated
- * Blocked column (UAT #10 — it must never look like "In progress"); `cancelled`
+ * The board column an item belongs in. A locked item is NOT a separate column —
+ * it stays in its real status column with a 🔒 overlay (UAT #10). `cancelled`
  * returns null (hidden from the board).
  */
 export function columnKeyForStatus(status: BacklogItem['status']): BoardColumnKey | null {
@@ -396,8 +386,6 @@ export function columnKeyForStatus(status: BacklogItem['status']): BoardColumnKe
       return 'to_do';
     case 'in_progress':
       return 'in_progress';
-    case 'blocked':
-      return 'blocked';
     case 'test':
       return 'test';
     case 'review':
@@ -417,7 +405,9 @@ export type BoardColumn = {
 };
 
 /**
- * Bucket backlog items into the five board columns, preserving input order.
+ * Bucket backlog items into the five board columns by their REAL status,
+ * preserving input order. A dependency-locked item is NOT pulled out — it stays
+ * in its status column (the card carries a 🔒 overlay; see {@link isLocked}).
  * Epics (rail-only) and cancelled items are dropped.
  */
 export function boardColumns(items: BacklogItem[]): BoardColumn[] {
@@ -494,36 +484,33 @@ export function gateProgress(item: BacklogItem): { done: number; total: number }
 }
 
 // ---------------------------------------------------------------------------
-// Blocked-state introspection (read from the item's activity feed)
+// Derived dependency lock (UAT #10) — the UI mirror of the server's
+// orchestrator/build-order.ts `isBlocked`. `blocked` is not a status; an item
+// is "locked" when its `blocked_by` lists a dependency that is not yet terminal
+// (done/cancelled). The card overlays a 🔒 badge + dimmed style; the item keeps
+// its real column. A dangling/unknown blocker (not in `byId`) counts as
+// resolved — never a permanent lock.
 // ---------------------------------------------------------------------------
 
-/** The newest audit entry recording a `block` transition, if any. */
-function latestBlockEntry(activity: ActivityEntry[]): ActivityEntry | null {
-  let best: ActivityEntry | null = null;
-  for (const e of activity) {
-    if (e.action !== 'item_transition') continue;
-    if (e.payload?.transition !== 'block' && e.payload?.to !== 'blocked') continue;
-    if (!best || e.created_at > best.created_at) best = e;
-  }
-  return best;
+const TERMINAL_STATUSES: ReadonlySet<BacklogItem['status']> = new Set(['done', 'cancelled']);
+
+/** The open (non-terminal) blockers of an item, given the items it can see. */
+export function lockedBlockers(
+  item: { frontmatter: Record<string, unknown> },
+  byId: Map<string, BacklogItem>,
+): string[] {
+  return toIdArray(item.frontmatter.blocked_by).filter((depId) => {
+    const dep = byId.get(depId);
+    return dep != null && !TERMINAL_STATUSES.has(dep.status);
+  });
 }
 
-/** The reason captured when the item was last blocked (null if none / unset). */
-export function blockReasonFromActivity(activity: ActivityEntry[]): string | null {
-  const e = latestBlockEntry(activity);
-  const reason = e?.payload?.reason;
-  return typeof reason === 'string' && reason.length > 0 ? reason : null;
-}
-
-/**
- * The status a blocked item came from (the `from` of its last block move) — so
- * the drawer can show "In progress · blocked" rather than just "blocked".
- */
-export function underlyingStatusFromActivity(
-  activity: ActivityEntry[],
-): BacklogItem['status'] | null {
-  const from = latestBlockEntry(activity)?.payload?.from;
-  return typeof from === 'string' ? (from as BacklogItem['status']) : null;
+/** True when the item has at least one open blocker (derived lock flag). */
+export function isLocked(
+  item: { frontmatter: Record<string, unknown> },
+  byId: Map<string, BacklogItem>,
+): boolean {
+  return lockedBlockers(item, byId).length > 0;
 }
 
 // ---------------------------------------------------------------------------

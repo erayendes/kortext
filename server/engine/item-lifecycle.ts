@@ -28,9 +28,12 @@ export type ItemTransition =
   | 'review'   // test → review                  (gate-join all-pass / 0-gate; §5.8)
   | 'bounce'   // test | review → in_progress     (gate fail OR uat reject; §5.8)
   | 'done'     // review → done
-  | 'block'    // in_progress | test | review → blocked
-  | 'unblock'  // blocked → in_progress
   | 'cancel';  // any non-terminal → cancelled
+//
+// NOTE (UAT #10): there is no `block`/`unblock` transition. `blocked` is not a
+// status — a dependency lock is DERIVED (build-order.ts `isBlocked`) and shown
+// as a 🔒 overlay on the item's real column. An item with unresolved
+// `blocked_by` simply waits in `to_do`; nothing moves it to a separate lane.
 
 export type CreateItemInput = {
   id: string;
@@ -53,9 +56,7 @@ const TRANSITIONS: Record<ItemTransition, { from: BacklogStatus[]; to: BacklogSt
   review:  { from: ['test'], to: 'review' },
   bounce:  { from: ['test', 'review'], to: 'in_progress' },
   done:    { from: ['review'], to: 'done' },
-  block:   { from: ['in_progress', 'test', 'review'], to: 'blocked' },
-  unblock: { from: ['blocked'], to: 'in_progress' },
-  cancel:  { from: ['to_do', 'in_progress', 'test', 'review', 'blocked'], to: 'cancelled' },
+  cancel:  { from: ['to_do', 'in_progress', 'test', 'review'], to: 'cancelled' },
 };
 
 const TERMINAL_STATES: ReadonlySet<BacklogStatus> = new Set(['done', 'cancelled']);

@@ -110,10 +110,11 @@ export type BacklogItem = {
   id: string;
   type: 'epic' | 'task' | 'bug' | 'debt' | 'spike' | 'hotfix';
   title: string;
+  // UAT #10: no `blocked` status — a dependency lock is derived (isLocked) and
+  // shown as a 🔒 overlay on the item's real column.
   status:
     | 'to_do'
     | 'in_progress'
-    | 'blocked'
     | 'test'
     | 'review'
     | 'done'

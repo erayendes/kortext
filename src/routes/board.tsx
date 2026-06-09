@@ -21,7 +21,6 @@ import {
   ArrowRight,
   Ban,
   Check,
-  CircleStop,
   ExternalLink,
   Link2,
   Plus,
@@ -37,7 +36,6 @@ import {
   acChecklist,
   assigneeOf,
   availableTransitions,
-  blockReasonFromActivity,
   boardColumns,
   childrenOf,
   compareVersions,
@@ -46,10 +44,11 @@ import {
   describeActivity,
   descriptionFromBody,
   epicProgress,
+  isLocked,
   itemGates,
+  lockedBlockers,
   previewLinkOf,
   statusBadge,
-  underlyingStatusFromActivity,
   type BoardTransition,
 } from '../lib/board-drawer.ts';
 
@@ -122,18 +121,39 @@ function useActivity(itemId: string | null) {
 // Card (one task/bug/debt in a column)
 // ---------------------------------------------------------------------------
 
-function Card({ item, onOpen, index }: { item: BacklogItem; onOpen: () => void; index: number }) {
-  const blocked = item.status === 'blocked';
+function Card({
+  item,
+  byId,
+  onOpen,
+  index,
+}: {
+  item: BacklogItem;
+  byId: Map<string, BacklogItem>;
+  onOpen: () => void;
+  index: number;
+}) {
+  // UAT #10: a dependency lock is DERIVED — the card stays in its own column
+  // (To Do for a never-started item) with a 🔒 overlay + dimmed style.
+  const locked = isLocked(item, byId);
   const gates = itemGates(item);
   const deps = dependenciesOf(item).blockedBy;
   return (
     <div
-      className={`card rise${blocked ? ' block' : ''}`}
+      className={`card rise${locked ? ' block' : ''}`}
       onClick={onOpen}
-      style={{ animationDelay: `${index * 30}ms`, ...(item.status === 'done' ? { opacity: 0.62 } : {}) }}
+      style={{
+        animationDelay: `${index * 30}ms`,
+        ...(item.status === 'done' ? { opacity: 0.62 } : {}),
+        ...(locked ? { opacity: 0.6 } : {}),
+      }}
     >
       <div className="c-top">
         <TypePill type={item.type} />
+        {locked && (
+          <span title="Locked — waiting on a dependency" style={{ fontSize: 12 }}>
+            🔒
+          </span>
+        )}
         <span className="c-id mono">{item.id}</span>
       </div>
       <div className="c-title">{item.title}</div>
@@ -223,10 +243,12 @@ function EpicCard({
 
 function ItemDrawer({
   item,
+  byId,
   onClose,
   onMutated,
 }: {
   item: BacklogItem;
+  byId: Map<string, BacklogItem>;
   onClose: () => void;
   onMutated: () => void;
 }) {
@@ -239,10 +261,11 @@ function ItemDrawer({
   const ac = acChecklist(item.frontmatter);
   const gates = itemGates(item);
   const deps = dependenciesOf(item);
-  const blocked = item.status === 'blocked';
-  const blockReason = blocked ? blockReasonFromActivity(activity) : null;
-  const underlying = blocked ? underlyingStatusFromActivity(activity) : null;
-  const columnLabel = statusBadge((underlying ?? item.status) as BacklogItem['status']).label;
+  // UAT #10: the lock is DERIVED — the item keeps its real status; we overlay a
+  // lock banner listing the still-open blockers.
+  const locked = isLocked(item, byId);
+  const openBlockers = locked ? lockedBlockers(item, byId) : [];
+  const columnLabel = statusBadge(item.status).label;
   const previewUrl = previewLinkOf(item);
 
   async function toggleAc(index: number, done: boolean) {
@@ -278,12 +301,10 @@ function ItemDrawer({
 
   async function transition(action: BoardTransition) {
     if (busy) return;
-    const reason =
-      action === 'block' ? window.prompt('Reason for blocking (optional):') ?? undefined : undefined;
     setBusy(true);
     setError(null);
     try {
-      await apiPost(`/api/backlog/${item.id}/transition`, { action, reason });
+      await apiPost(`/api/backlog/${item.id}/transition`, { action });
       onMutated();
       reloadActivity();
     } catch {
@@ -318,12 +339,15 @@ function ItemDrawer({
           <div className="dr-desc">{descriptionFromBody(item.body_md)}</div>
         )}
 
-        {blocked && (
+        {locked && (
           <div className="dr-block">
             <Ban />
             <span>
-              Blocked
-              <span className="br"> · {blockReason ?? 'reason not set'}</span>
+              🔒 Locked
+              <span className="br">
+                {' '}
+                · waiting on {openBlockers.join(', ')}
+              </span>
             </span>
           </div>
         )}
@@ -340,7 +364,7 @@ function ItemDrawer({
             <span className="dr-mk">Status</span>
             <span className="dr-mv">
               {columnLabel}
-              {blocked && <span style={{ color: 'var(--red)', fontSize: 11 }}> · blocked</span>}
+              {locked && <span style={{ color: 'var(--red)', fontSize: 11 }}> · 🔒 locked</span>}
             </span>
           </div>
           {item.parent_id && (
@@ -495,27 +519,25 @@ function ItemDrawer({
           {secondary.map((m) => (
             <button
               key={m.action}
-              className={`btn btn-sm ${m.action === 'block' ? 'btn-stop' : 'btn-line'}`}
+              className="btn btn-sm btn-line"
               style={{ flex: 1 }}
               disabled={busy}
               onClick={() => transition(m.action)}
             >
               {m.action === 'bounce' && <ArrowLeft style={{ width: 13, height: 13 }} />}
-              {m.action === 'block' && <CircleStop style={{ width: 13, height: 13 }} />}
               {m.label}
             </button>
           ))}
           {primary && (
             <button
               key={primary.action}
-              className={`btn btn-sm ${primary.action === 'unblock' ? 'btn-approve' : 'btn-pri'}`}
+              className="btn btn-sm btn-pri"
               style={{ flex: 1 }}
               disabled={busy}
               onClick={() => transition(primary.action)}
             >
-              {primary.action === 'unblock' && <Check style={{ width: 13, height: 13 }} />}
               {primary.label}
-              {primary.action !== 'unblock' && <ArrowRight style={{ width: 13, height: 13 }} />}
+              <ArrowRight style={{ width: 13, height: 13 }} />
             </button>
           )}
         </div>
@@ -543,6 +565,7 @@ function EpicDrawer({
   // only the progress total/done/pct come from the aggregate so the percentage
   // agrees with the rail card.
   const kids = childrenOf(items, epic.id);
+  const byId = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const { total, done, pct } = progress;
   return (
     <>
@@ -589,11 +612,8 @@ function EpicDrawer({
                 <span className="ep-kid-id">{k.id}</span>
                 <span className="ep-kid-t">{k.title}</span>
                 <span className="ep-kid-st">
-                  {k.status === 'blocked' ? (
-                    <span style={{ color: 'var(--red)' }}>blocked</span>
-                  ) : (
-                    statusBadge(k.status).label
-                  )}
+                  {statusBadge(k.status).label}
+                  {isLocked(k, byId) && <span style={{ color: 'var(--red)' }}> 🔒</span>}
                 </span>
               </div>
             ))
@@ -975,6 +995,10 @@ export function BoardRoute() {
     return defaultActiveVersionFromCounts(openByVersion);
   }, [versionChoice, openByVersion]);
 
+  // Lookup over all loaded cards — feeds the derived dependency-lock (UAT #10)
+  // so cards/drawers can tell whether an item is waiting on an open blocker.
+  const cardsById = useMemo(() => new Map(cards.map((c) => [c.id, c])), [cards]);
+
   // ── Column bucketing from loaded cards ───────────────────────────────────────
   const columns = useMemo(() => {
     const cols = boardColumns(cards);
@@ -1115,6 +1139,7 @@ export function BoardRoute() {
                     <Card
                       key={card.id}
                       item={card}
+                      byId={cardsById}
                       index={i}
                       onOpen={() => setTarget({ kind: 'item', id: card.id })}
                     />
@@ -1157,7 +1182,7 @@ export function BoardRoute() {
           />
         )}
         {!creating && openItem && (
-          <ItemDrawer item={openItem} onClose={() => setTarget(null)} onMutated={refresh} />
+          <ItemDrawer item={openItem} byId={cardsById} onClose={() => setTarget(null)} onMutated={refresh} />
         )}
         {!creating && openEpic && (
           <EpicDrawer

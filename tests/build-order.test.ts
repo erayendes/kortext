@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { selectBuildableItems } from '../server/orchestrator/build-order.ts';
+import { selectBuildableItems, isBlocked } from '../server/orchestrator/build-order.ts';
 import type { BacklogItem } from '../server/db/schemas.ts';
 
 // UAT #9 #1+#2: the build/drive scheduler used to run EVERY to_do item in
@@ -86,5 +86,48 @@ describe('selectBuildableItems', () => {
   it('treats a dangling blocker (id not present) as resolved (no permanent stall)', () => {
     const items = [item({ id: 'T1', version: 'v0.1', frontmatter: { blocked_by: ['GHOST'] } })];
     expect(ids(selectBuildableItems(items))).toEqual(['T1']);
+  });
+});
+
+// `blocked` is no longer a status — it's a DERIVED lock flag. An item is
+// "locked" when it has a `blocked_by` dependency that is not yet terminal
+// (done/cancelled). The item keeps its real status (to_do / in_progress / …);
+// the lock is just an overlay used by the board (🔒 badge) and the scheduler.
+describe('isBlocked (derived lock flag)', () => {
+  const byId = (items: BacklogItem[]) => new Map(items.map((i) => [i.id, i]));
+
+  it('is true when a blocker is not yet terminal', () => {
+    const blocker = item({ id: 'T1', status: 'in_progress' });
+    const dependent = item({ id: 'T2', frontmatter: { blocked_by: ['T1'] } });
+    expect(isBlocked(dependent, byId([blocker, dependent]))).toBe(true);
+  });
+
+  it('is false when every blocker is terminal (done)', () => {
+    const blocker = item({ id: 'T1', status: 'done' });
+    const dependent = item({ id: 'T2', frontmatter: { blocked_by: ['T1'] } });
+    expect(isBlocked(dependent, byId([blocker, dependent]))).toBe(false);
+  });
+
+  it('is false when the blocker is cancelled (terminal)', () => {
+    const blocker = item({ id: 'T1', status: 'cancelled' });
+    const dependent = item({ id: 'T2', frontmatter: { blocked_by: ['T1'] } });
+    expect(isBlocked(dependent, byId([blocker, dependent]))).toBe(false);
+  });
+
+  it('is false when the blocker is dangling (missing id = resolved)', () => {
+    const dependent = item({ id: 'T2', frontmatter: { blocked_by: ['GHOST'] } });
+    expect(isBlocked(dependent, byId([dependent]))).toBe(false);
+  });
+
+  it('is false when there are no blockers at all', () => {
+    const it1 = item({ id: 'T1' });
+    expect(isBlocked(it1, byId([it1]))).toBe(false);
+  });
+
+  it('is true if ANY blocker is still open (mixed terminal + open)', () => {
+    const done = item({ id: 'T1', status: 'done' });
+    const open = item({ id: 'T2', status: 'to_do' });
+    const dependent = item({ id: 'T3', frontmatter: { blocked_by: ['T1', 'T2'] } });
+    expect(isBlocked(dependent, byId([done, open, dependent]))).toBe(true);
   });
 });
