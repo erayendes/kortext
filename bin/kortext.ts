@@ -287,6 +287,14 @@ async function main(): Promise<number> {
       return 0;
     }
     if (result.action === 'list') {
+      // GUI-first (UAT #10): a bare `start` with existing projects opens the
+      // wizard, which lists those projects (pick one → it starts) and offers a
+      // "new project" path. The terminal list below is the --no-open / headless
+      // fallback so scripts + CI still get a usable answer.
+      const shouldOpen = !hasFlag('no-open') && process.env.KORTEXT_NO_OPEN !== '1';
+      if (shouldOpen) {
+        return launchWizardAndOpen();
+      }
       console.log('Registered projects:');
       console.log(formatList(readRegistry()));
       console.log('\nStart one with: kortext start <project>');

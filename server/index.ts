@@ -23,6 +23,7 @@ import { workflowsRouter } from './routes/workflows.ts';
 import { backlogRouter } from './routes/backlog.ts';
 import { docsRouter } from './routes/docs.ts';
 import { blueprintRouter } from './routes/blueprint.ts';
+import { projectsRouter } from './routes/projects.ts';
 import { driveRouter } from './routes/drive.ts';
 import { projectMetaRouter } from './routes/project-meta.ts';
 import { hooksRouter } from './routes/hooks.ts';
@@ -299,6 +300,23 @@ app.use('/api', projectMetaRouter({ workspaceRoot: process.cwd() }));
 app.use('/api', hooksRouter({ projectRoot: process.cwd() }));
 app.use('/api', integrationsRouter({ projectRoot: process.cwd() }));
 app.use('/api', envVarsRouter({ projectRoot: process.cwd() }));
+// GUI-first project picker (UAT #10): the wizard lists registered projects and
+// can start a chosen one, handing the browser off to its daemon. After a
+// handoff the bootstrap wizard schedules its own shutdown (same as blueprint).
+app.use(
+  '/api',
+  projectsRouter({
+    readRegistry: () => readRegistry(defaultRegistryDir()),
+    startProject: (slug) => {
+      const r = startProject(slug, {
+        packageRoot: process.env.KORTEXT_PACKAGE_ROOT ?? process.cwd(),
+        cwd: process.cwd(),
+      });
+      return r.ok ? { ok: true, url: r.url } : { ok: false, message: r.message };
+    },
+    onHandoff: () => scheduleBootstrapSelfExit({ isBootstrap: isBootstrapDaemon }),
+  }),
+);
 app.use(
   '/api',
   blueprintRouter({

@@ -74,6 +74,19 @@ export type PendingQuestion = {
   metadata?: Record<string, unknown> | null;
 };
 
+/**
+ * A registered project as the onboarding wizard lists it (GET /api/projects).
+ * Mirrors the server's ProjectSummary (server/routes/projects.ts).
+ */
+export type ExistingProject = {
+  slug: string;
+  name: string;
+  path: string;
+  port: number;
+  status: 'running' | 'paused' | 'stopped';
+  url: string;
+};
+
 export type DecisionStatus = 'proposed' | 'accepted' | 'superseded' | 'rejected';
 
 export type DecisionIndex = {
