@@ -9,7 +9,7 @@
 
 ## ⭐ Şu an (2026-06-09 #10d) — Gate-fail SONSUZ bounce döngüsü → 3. fail'de +prime'a (gerekçeyle) tırmandırma
 
-Yalnızca kod oturumu (UAT değil). UAT-build'de çıkan 🔴 KRİTİK bulgu (design_review 8× fail → sonsuz churn, escalation yok) TDD ile çözüldü. **1178 test yeşil** (1162→+16), typecheck + build temiz. **PUSH EDİLMEDİ** — Eray "push" diyene dek local.
+Yalnızca kod oturumu (UAT değil). UAT-build'de çıkan 🔴 KRİTİK bulgu (design_review 8× fail → sonsuz churn, escalation yok) TDD ile çözüldü. **1178 test yeşil** (1162→+16), typecheck + build temiz. **PUSH EDİLDİ** (`13b131f..2338327`, tek commit) — `main == origin/main`.
 
 - **Sayaç (yeni altyapı YOK):** `gateFailCount(repos, itemId, gate)` — `gate_runs`'taki `fail` satırlarını item+gate başına sayar, **son reset baseline'ından** sonrakileri (monotonik `gate_runs.id` üzerinden — ms çakışması yok). Eşik `MAX_GATE_FAILS = 3` (2 retry).
 - **Escalation (`server/orchestrator/gate-escalation.ts`):** 3. fail'de `runTestCycle` artık **bounce ETMİYOR** → item `test`'te DURAKLAR + +prime'a Inbox sorusu (`pending_questions`, phase `gate-escalation`). Açık escalation varken `runTestCycle` gate'leri **yeniden koşmuyor** (`paused` — churn yok).
