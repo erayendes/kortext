@@ -9,6 +9,7 @@ import { ItemLifecycle } from '../server/engine/item-lifecycle.ts';
 import { loadPersonasFromDir } from '../server/engine/persona-registry.ts';
 import { MockGateExecutor } from '../server/engine/executors/mock-gate-executor.ts';
 import { runTestCycle, TEST_GATES, GATE_PERSONA } from '../server/orchestrator/test-cycle.ts';
+import { ApprovalQueue } from '../server/orchestrator/approval-queue.ts';
 import { readAcceptanceCriteria } from '../server/engine/acceptance-criteria.ts';
 import type { Gate } from '../server/db/schemas.ts';
 
@@ -230,5 +231,77 @@ describe('runTestCycle — join (§5.9 #4)', () => {
     await expect(
       runTestCycle('GHOST', { repos, lifecycle: lc, gateExecutor: new MockGateExecutor(() => ({})) }),
     ).rejects.toThrow(/not found/i);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// KRİTİK UAT #10 — gate-fail escalation (3rd fail → pause + +prime, no churn)
+// ---------------------------------------------------------------------------
+
+describe('runTestCycle — gate-fail escalation (UAT #10)', () => {
+  const alwaysFailDesign = new MockGateExecutor((ctx: { gate: Gate }) =>
+    ctx.gate === 'design_review'
+      ? { fail: true, findings: 'contrast 2.1:1 fails WCAG AA; no focus ring' }
+      : {},
+  );
+
+  /** Walk a bounced (in_progress) item back into the test column for a re-test. */
+  function reTest(lc: ItemLifecycle, id: string): void {
+    lc.transition(id, 'test', '+backend-developer');
+  }
+
+  it('bounces on the 1st and 2nd fail, then ESCALATES on the 3rd (item paused in test)', async () => {
+    const lc = seedItemInTest('T01', ['design_review']);
+    const queue = new ApprovalQueue({ repos });
+    const deps = { repos, lifecycle: lc, gateExecutor: alwaysFailDesign, queue };
+
+    const a1 = await runTestCycle('T01', deps);
+    expect(a1.outcome).toBe('bounced');
+    expect(repos.backlog.get('T01')?.status).toBe('in_progress');
+    reTest(lc, 'T01');
+
+    const a2 = await runTestCycle('T01', deps);
+    expect(a2.outcome).toBe('bounced');
+    reTest(lc, 'T01');
+
+    // 3rd fail → escalate, NOT bounce. Item stays in `test` (paused).
+    const a3 = await runTestCycle('T01', deps);
+    expect(a3.outcome).toBe('escalated');
+    expect(repos.backlog.get('T01')?.status).toBe('test');
+
+    // A +prime question is now open in the Inbox, carrying the concrete reason.
+    const open = repos.pendingQuestions.listOpen();
+    expect(open).toHaveLength(1);
+    expect(open[0]!.phase).toBe('gate-escalation');
+    expect(open[0]!.question).toContain('contrast 2.1:1 fails WCAG AA');
+  });
+
+  it('a paused item (open escalation) is NOT re-run — no churn while +prime decides', async () => {
+    const lc = seedItemInTest('T01', ['design_review']);
+    const queue = new ApprovalQueue({ repos });
+    const deps = { repos, lifecycle: lc, gateExecutor: alwaysFailDesign, queue };
+
+    await runTestCycle('T01', deps); reTest(lc, 'T01');
+    await runTestCycle('T01', deps); reTest(lc, 'T01');
+    await runTestCycle('T01', deps); // escalates
+    const gateRunsBefore = repos.gateRuns.listForItem('T01').length;
+
+    const paused = await runTestCycle('T01', deps);
+    expect(paused.outcome).toBe('paused');
+    // No new gate_run rows — the gates did NOT re-run.
+    expect(repos.gateRuns.listForItem('T01').length).toBe(gateRunsBefore);
+    // Still exactly one open escalation (not re-enqueued).
+    expect(repos.pendingQuestions.listOpen()).toHaveLength(1);
+  });
+
+  it('without a queue wired, the 3rd fail still bounces (back-compat, no escalation)', async () => {
+    const lc = seedItemInTest('T01', ['design_review']);
+    const deps = { repos, lifecycle: lc, gateExecutor: alwaysFailDesign }; // no queue
+
+    await runTestCycle('T01', deps); reTest(lc, 'T01');
+    await runTestCycle('T01', deps); reTest(lc, 'T01');
+    const a3 = await runTestCycle('T01', deps);
+    expect(a3.outcome).toBe('bounced');
+    expect(repos.backlog.get('T01')?.status).toBe('in_progress');
   });
 });

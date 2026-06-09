@@ -4,6 +4,13 @@ import type { ItemLifecycle } from '../engine/item-lifecycle.ts';
 import type { GateExecutor, GateOutcome } from '../engine/gate-executor.ts';
 import { applyCriterionToggle, readAcceptanceCriteria } from '../engine/acceptance-criteria.ts';
 import type { AcResult } from '../engine/gate-verdict.ts';
+import type { ApprovalQueue } from './approval-queue.ts';
+import {
+  MAX_GATE_FAILS,
+  gateFailCount,
+  findOpenEscalation,
+  escalateGate,
+} from './gate-escalation.ts';
 
 /**
  * The gates that run in PARALLEL in the `test` column. `uat` is intentionally
@@ -30,12 +37,21 @@ export type TestCycleResult = {
   itemId: string;
   /** 1-based test cycle this run produced. */
   attempt: number;
-  /** 'review' = all gates passed (or none selected); 'bounced' = ≥1 failed → in_progress. */
-  outcome: 'review' | 'bounced';
-  /** The gate_runs created for this attempt. */
+  /**
+   * - `review`    = all gates passed (or none selected) → review.
+   * - `bounced`   = ≥1 failed (under the escalation threshold) → in_progress.
+   * - `escalated` = a gate hit MAX_GATE_FAILS → +prime question raised, item
+   *                 paused in `test` (no auto-bounce; UAT #10).
+   * - `paused`    = the item already has an open escalation → gates NOT re-run
+   *                 (no churn while +prime decides).
+   */
+  outcome: 'review' | 'bounced' | 'escalated' | 'paused';
+  /** The gate_runs created for this attempt (empty when `paused`). */
   gates: GateRun[];
-  /** Which gates failed (empty when outcome === 'review'). */
+  /** Which gates failed (empty when outcome === 'review' / 'paused'). */
   failed: Gate[];
+  /** The gate escalated to +prime (only when outcome === 'escalated'). */
+  escalatedGate?: Gate;
 };
 
 export type TestCycleDeps = {
@@ -46,6 +62,12 @@ export type TestCycleDeps = {
   by?: string;
   /** Override the gate → persona map (tests). Default GATE_PERSONA. */
   personaForGate?: (gate: Gate) => string | null;
+  /**
+   * The Inbox queue. When wired, a gate that fails MAX_GATE_FAILS times is
+   * escalated to +prime instead of bounced forever (UAT #10). Left undefined
+   * (plain CLI / older callers), the cycle bounces as before — no escalation.
+   */
+  queue?: ApprovalQueue;
 };
 
 /**
@@ -104,6 +126,19 @@ export async function runTestCycle(itemId: string, deps: TestCycleDeps): Promise
     );
   }
 
+  // UAT #10: if this item is already escalated (an open +prime question), do NOT
+  // re-run the gates — it is paused awaiting a human decision. Re-running would
+  // be the very churn the escalation exists to stop.
+  if (deps.queue && findOpenEscalation(repos, itemId)) {
+    return {
+      itemId,
+      attempt: repos.gateRuns.currentAttempt(itemId),
+      outcome: 'paused',
+      gates: [],
+      failed: [],
+    };
+  }
+
   const attempt = repos.gateRuns.currentAttempt(itemId) + 1;
   const selected = item.review_gates.filter((g) => TEST_GATES.includes(g));
 
@@ -148,6 +183,22 @@ export async function runTestCycle(itemId: string, deps: TestCycleDeps): Promise
       attempt > 1 ? `gates passed (attempt ${attempt})` : 'gates passed',
     );
     return { itemId, attempt, outcome: 'review', gates, failed: [] };
+  }
+
+  // UAT #10 — escalation gate: if a failing gate has now failed MAX_GATE_FAILS
+  // times (since its last reset), do NOT auto-bounce into another blind retry.
+  // Pause the item in `test` and escalate to +prime (with the concrete reason)
+  // through the Inbox. Only when a queue is wired — otherwise bounce as before.
+  if (deps.queue) {
+    const overThreshold = failed.filter(
+      (g) => gateFailCount(repos, itemId, g) >= MAX_GATE_FAILS,
+    );
+    if (overThreshold.length > 0) {
+      const escalatedGate = overThreshold[0]!;
+      escalateGate({ repos, queue: deps.queue }, itemId, escalatedGate, gateFailCount(repos, itemId, escalatedGate));
+      // Item stays in `test` (paused) — no lifecycle transition.
+      return { itemId, attempt, outcome: 'escalated', gates, failed, escalatedGate };
+    }
   }
 
   lifecycle.transition(itemId, 'bounce', by, `gate fail: ${failed.join(', ')}`);
