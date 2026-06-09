@@ -30,9 +30,26 @@ export type ProjectMeta = {
   platforms: string[];
   githubRepo: string | null;
   executor: ExecutorChoice;
+  /**
+   * Ordered fallback chain (UAT #10). The primary executor sits first; when it
+   * recoverably fails (quota / 429 / rate-limit / empty-output) the engine falls
+   * over to the next. Optional for back-compat — when absent the chain is just
+   * `[executor]`. Use {@link executorChain} to read the effective ordered list.
+   */
+  executors?: ExecutorChoice[];
   executorBinary: string | null;
   createdAt: number;
 };
+
+/**
+ * The effective ordered executor chain for a project (UAT #10). Returns the
+ * explicit `executors` priority list when set and non-empty; otherwise the
+ * single `executor` as a one-element chain (back-compat).
+ */
+export function executorChain(meta: ProjectMeta): ExecutorChoice[] {
+  if (meta.executors && meta.executors.length > 0) return meta.executors;
+  return [meta.executor];
+}
 
 export type BlueprintPaths = {
   workspaceRoot: string;
@@ -155,6 +172,19 @@ export function readProjectMeta(projectJsonPath: string): ProjectMeta | null {
       typeof parsed.createdAt === 'number'
     ) {
       const exec: ExecutorChoice = normalizeExecutor(parsed.executor);
+      // UAT #10: optional ordered fallback chain. Validate each entry via
+      // normalizeExecutor and DROP invalids (normalizeExecutor maps unknowns to
+      // 'mock', so we re-check membership against the raw value to drop rather
+      // than silently rewrite to mock). Absent or fully-invalid → undefined, so
+      // executorChain() falls back to the single `executor`.
+      let executors: ExecutorChoice[] | undefined;
+      if (Array.isArray(parsed.executors)) {
+        const valid = parsed.executors.filter(
+          (e): e is ExecutorChoice =>
+            typeof e === 'string' && EXECUTOR_CHOICES.includes(e as ExecutorChoice),
+        );
+        executors = valid.length > 0 ? valid : undefined;
+      }
       return {
         name: parsed.name,
         code: parsed.code,
@@ -162,6 +192,7 @@ export function readProjectMeta(projectJsonPath: string): ProjectMeta | null {
         platforms: parsed.platforms.filter((p): p is string => typeof p === 'string'),
         githubRepo: typeof parsed.githubRepo === 'string' ? parsed.githubRepo : null,
         executor: exec,
+        ...(executors ? { executors } : {}),
         executorBinary:
           typeof parsed.executorBinary === 'string' ? parsed.executorBinary : null,
         createdAt: parsed.createdAt,

@@ -1,5 +1,7 @@
 import { existsSync, mkdirSync, readdirSync, renameSync, statSync } from 'node:fs';
 import { basename, dirname, isAbsolute, join } from 'node:path';
+import { isRecoverableCliFailure } from './executors/cli-spawn.ts';
+import type { ExecutorResult } from './executor.ts';
 
 /**
  * Per-file report output paths (v3.1 spec §6 / Faz 13) use placeholders in
@@ -88,6 +90,51 @@ export function sweepSignalMarkers(outputs: string[], worktreePath: string): str
     }
   }
   return moved;
+}
+
+/**
+ * UAT #10: build the ExecutorResult for an exit-0 run whose declared FILE
+ * outputs are missing. Shared by all four CLI executors so they classify the
+ * "agent produced nothing" case identically.
+ *
+ * Two shapes:
+ *   - RECOVERABLE — the run produced no usable output because of a quota /
+ *     rate-limit / 429 / empty-output condition (the agy 429 shape). The
+ *     errorMessage names the likely cause and `recoverable: true` tells the
+ *     FallbackExecutor to try the next executor instead of hard-failing.
+ *   - HARD — the agent did real work (non-empty, non-quota stdout) but simply
+ *     didn't write the file. That's a genuine bug; it must fail fast (not
+ *     recoverable) so the chain doesn't silently mask it.
+ */
+export function buildMissingOutputResult(args: {
+  missing: string[];
+  kind: string;
+  stdoutTail: string;
+  stderrTail: string;
+  logPath: string;
+  outputSummary?: string;
+}): ExecutorResult {
+  const recoverable = isRecoverableCliFailure({
+    exitCode: 0,
+    stdoutTail: args.stdoutTail,
+    stderrTail: args.stderrTail,
+    aborted: false,
+  });
+  if (recoverable) {
+    return {
+      ok: false,
+      recoverable: true,
+      errorMessage: `${args.kind} produced no output (possible quota/rate-limit — 429); declared outputs missing: ${args.missing.join(', ')}`,
+      logPath: args.logPath,
+      outputSummary: args.outputSummary,
+    };
+  }
+  return {
+    ok: false,
+    errorMessage: `declared outputs not produced: ${args.missing.join(', ')}`,
+    logPath: args.logPath,
+    outputSummary: args.outputSummary,
+  };
 }
 
 /**

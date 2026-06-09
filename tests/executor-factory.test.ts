@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createExecutor, createRoutedExecutor } from '../server/cli/executor-factory.ts';
+import { createExecutor, createFallbackExecutor, createRoutedExecutor } from '../server/cli/executor-factory.ts';
 import { PersonaRoutedExecutor } from '../server/engine/executors/persona-routed-executor.ts';
 import { MockExecutor } from '../server/engine/executors/mock-executor.ts';
 import type { Executor, ExecutorContext } from '../server/engine/executor.ts';
@@ -159,5 +159,25 @@ describe('createRoutedExecutor', () => {
       cliOpts,
     );
     expect(result).toBe(fallback);
+  });
+});
+
+describe('createFallbackExecutor (UAT #10)', () => {
+  it('returns the bare executor for a single-entry chain (zero-cost passthrough)', () => {
+    const ex = createFallbackExecutor(['claude'], cliOpts);
+    expect(ex.name).toBe('claude-cli');
+    expect(ex.name).not.toContain('fallback');
+  });
+
+  it('wraps a multi-entry chain in a FallbackExecutor whose name reflects the order', () => {
+    const ex = createFallbackExecutor(['antigravity', 'claude', 'codex'], cliOpts);
+    expect(ex.name).toContain('fallback');
+    expect(ex.name).toContain('antigravity');
+    expect(ex.name).toContain('claude');
+    expect(ex.name).toContain('codex');
+  });
+
+  it('throws on an empty chain', () => {
+    expect(() => createFallbackExecutor([], cliOpts)).toThrow();
   });
 });

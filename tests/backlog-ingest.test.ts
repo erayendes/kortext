@@ -1092,6 +1092,63 @@ describe('Critical-#1 (UAT #5): patch creates missing epic containers (FK cascad
   });
 });
 
+// UAT #10 (real Claude run): the agent skipped the epic container ENTIRELY and
+// wrote a BARE `parent_epic: NOT-E01` reference on every task — no `type:epic`
+// item defined anywhere. The #6 pre-pass only created epics that the patch
+// declares as `type:epic` items, so the bare reference had no FK target → all 14
+// tasks hit `FOREIGN KEY constraint failed` → owner/version/parent_id ALL
+// dropped atomically. Fix: synthesize the epic from the bare reference too, and
+// never let one bad FK drop the rest of an item's enrichment.
+describe('Critical (UAT #10): bare parent_epic ref auto-creates the epic + field-level FK resilience', () => {
+  it('creates an epic for a bare parent_epic reference defined nowhere', () => {
+    // step-1: tasks only, NO epic, NO type:epic item anywhere.
+    ingestBacklogItems(
+      repos,
+      parseBacklogYaml(
+        'items:\n  - id: NOT-001\n    type: task\n    title: A\n  - id: NOT-002\n    type: task\n    title: B\n',
+      ).items,
+    );
+    // enrichment patch: BARE parent_epic ref (no type:epic NOT-E01) + version + assignee + model.
+    const patch =
+      'items:\n' +
+      '  - id: NOT-001\n    parent_epic: NOT-E01\n    version: v0.1\n    assignee: +backend-developer\n    model: high-reasoning\n' +
+      '  - id: NOT-002\n    parent_epic: NOT-E01\n    version: v0.2\n    assignee: +frontend-developer\n    model: fast-reasoning\n';
+    const res = patchBacklogItems(repos, parseBacklogYaml(patch, { mode: 'patch' }).items);
+
+    // The epic is synthesized from the bare reference.
+    expect(repos.backlog.get('NOT-E01')?.type).toBe('epic');
+    // NO FK failures → nothing dropped.
+    expect(res.skipped.filter((s) => /FOREIGN KEY/.test(s.reason))).toHaveLength(0);
+
+    const t1 = repos.backlog.get('NOT-001')!;
+    expect(t1.parent_id).toBe('NOT-E01'); // linked
+    expect(t1.version).toBe('v0.1');
+    expect(t1.owner).toBe('+backend-developer');
+    expect(t1.model).toBe('high-reasoning');
+    const t2 = repos.backlog.get('NOT-002')!;
+    expect(t2.parent_id).toBe('NOT-E01');
+    expect(t2.version).toBe('v0.2');
+    expect(t2.owner).toBe('+frontend-developer');
+  });
+
+  it('does NOT re-create an epic that already exists in the backlog', () => {
+    ingestBacklogItems(
+      repos,
+      parseBacklogYaml(
+        'items:\n  - id: NOT-E01\n    type: epic\n    title: Real Epic\n  - id: NOT-001\n    type: task\n    title: A\n',
+      ).items,
+    );
+    patchBacklogItems(
+      repos,
+      parseBacklogYaml('items:\n  - id: NOT-001\n    parent_epic: NOT-E01\n    version: v0.1\n', {
+        mode: 'patch',
+      }).items,
+    );
+    expect(repos.backlog.get('NOT-E01')!.title).toBe('Real Epic'); // untouched, not clobbered
+    expect(repos.backlog.get('NOT-001')!.parent_id).toBe('NOT-E01');
+  });
+});
+
 // C — acceptance_criteria has an existing home (frontmatter, rendered by
 // acChecklist). The only reason it vanished in UAT was that the patch under a
 // non-`items` key never parsed (A). With A fixed, AC delivered via any top-key

@@ -2,11 +2,13 @@
  * Board (Session 3) — the v6 kanban board + item/epic detail drawer.
  *
  * Layout maps 1:1 to `wireframe-v6-hifi.html` → `.board-scroll`:
- *   [ epic-rail (filter) ] [ To do | In progress | Test | Review | Done ]
+ *   [ epic-rail (filter) ] [ To do | In progress | 🔒 Blocked | Test | Review | Done ]
  *
  * Epics are NOT a status — they live in the left rail and act as a filter over
- * the columns. `blocked` is an orthogonal flag (DECISIONS §12.3), drawn as a red
- * card inside its underlying column, never a column of its own. All data is real
+ * the columns. `blocked` has its OWN dedicated red column (UAT #10) so locked
+ * items never read as "In progress"; the card keeps its red flag + dep count.
+ * The column list is driven by BOARD_COLUMNS / columnKeyForStatus (board-drawer).
+ * All data is real
  * (GET /api/backlog); mutations (AC toggle, status transitions) hit the live
  * endpoints and refresh both the board and the open drawer.
  *

@@ -6,6 +6,7 @@ import { GeminiCliExecutor } from '../engine/executors/gemini-cli-executor.ts';
 import { AntigravityCliExecutor } from '../engine/executors/antigravity-cli-executor.ts';
 import type { PersonaRegistry } from '../engine/persona-registry.ts';
 import { PersonaRoutedExecutor } from '../engine/executors/persona-routed-executor.ts';
+import { FallbackExecutor, type FallbackEntry } from '../engine/executors/fallback-executor.ts';
 import { resolveExecutorBinary } from './binary-resolver.ts';
 
 /**
@@ -118,4 +119,32 @@ export function createRoutedExecutor(
 
   if (routes.size === 0) return fallback;
   return new PersonaRoutedExecutor({ routes, fallback });
+}
+
+/**
+ * Build an Executor for an ORDERED fallback chain of kinds (UAT #10).
+ *
+ * Each kind in the chain gets its OWN binary via resolveExecutorBinary(kind),
+ * so a chain like `['antigravity','claude','codex']` spawns `agy`, then
+ * `claude`, then `codex` as it falls over. `opts.binary` is used as the
+ * last-resort default (e.g. when a kind's binary can't be auto-discovered).
+ *
+ * Zero-cost passthrough: a single-element chain returns the bare executor (no
+ * FallbackExecutor wrapper), so existing single-executor projects behave
+ * exactly as before. An empty chain is a programmer error and throws.
+ */
+export function createFallbackExecutor(
+  chain: ExecutorKind[],
+  opts: ExecutorFactoryOptions & { log?: (message: string) => void },
+): Executor {
+  if (chain.length === 0) {
+    throw new Error('createFallbackExecutor requires a non-empty chain');
+  }
+  const build = (kind: ExecutorKind): Executor => {
+    const binary = kind === 'mock' ? '' : resolveExecutorBinary(kind) ?? opts.binary;
+    return createExecutor(kind, { ...opts, binary });
+  };
+  if (chain.length === 1) return build(chain[0]!);
+  const entries: FallbackEntry[] = chain.map((kind) => ({ kind, executor: build(kind) }));
+  return new FallbackExecutor(entries, opts.log ? { log: opts.log } : {});
 }

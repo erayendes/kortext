@@ -80,6 +80,12 @@ type FormState = {
   blueprintFile: File | null;
   blueprintBody: string;
   executor: ExecutorChoice | null;
+  /**
+   * Ordered fallback executors (UAT #10). When the primary recoverably fails
+   * (quota / 429 / empty output), the engine falls over to these in order. An
+   * empty string means "no fallback at this slot".
+   */
+  fallbacks: (ExecutorChoice | '')[];
   executorBinary: string;
 };
 
@@ -91,6 +97,7 @@ const INITIAL_STATE: FormState = {
   blueprintFile: null,
   blueprintBody: '',
   executor: null,
+  fallbacks: ['', ''],
   executorBinary: '',
 };
 
@@ -215,6 +222,13 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
     if (state.executor === null) return;
     setSubmitting(true);
     setSubmitError(null);
+    // UAT #10: ordered fallback chain — primary first, then chosen fallbacks,
+    // de-duplicated. The server also leads the chain with the primary and
+    // validates, but we keep the payload clean.
+    const executors: ExecutorChoice[] = [];
+    for (const choice of [state.executor, ...state.fallbacks]) {
+      if (choice && !executors.includes(choice)) executors.push(choice);
+    }
     const payload: BlueprintSubmitInput = {
       projectName: state.projectName.trim(),
       projectCode: state.projectCode.trim().toUpperCase(),
@@ -223,6 +237,7 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
       blueprintBody: state.blueprintBody,
       githubRepo: null,
       executor: state.executor,
+      executors,
       executorBinary:
         state.executorBinary.trim().length > 0 ? state.executorBinary.trim() : null,
       projectDir: projectDir.trim().length > 0 ? projectDir.trim() : null,
@@ -586,6 +601,47 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
                   setState((s) => ({ ...s, executorBinary: e.target.value }))
                 }
               />
+            )}
+            {state.executor !== null && state.executor !== 'mock' && (
+              <div style={{ marginTop: 12 }}>
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: 'var(--text-muted)',
+                    marginBottom: 6,
+                  }}
+                >
+                  Fallbacks (optional, in order) — if the one above hits a quota /
+                  rate-limit, Kortext automatically tries these next.
+                </div>
+                <div style={{ display: 'grid', gap: 6 }}>
+                  {state.fallbacks.map((fb, idx) => (
+                    <select
+                      key={idx}
+                      className="input"
+                      style={{ fontSize: 13 }}
+                      value={fb}
+                      onChange={(e) =>
+                        setState((s) => {
+                          const next = [...s.fallbacks];
+                          next[idx] = e.target.value as ExecutorChoice | '';
+                          return { ...s, fallbacks: next };
+                        })
+                      }
+                    >
+                      <option value="">{`Fallback ${idx + 1} — none`}</option>
+                      {EXECUTOR_OPTIONS.filter(
+                        (opt) =>
+                          opt.value !== 'mock' && opt.value !== state.executor,
+                      ).map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  ))}
+                </div>
+              </div>
             )}
           </Field>
 

@@ -326,7 +326,7 @@ describe('descriptionFromBody', () => {
   });
 });
 
-describe('columnKeyForStatus (blocked is an orthogonal flag, not a column)', () => {
+describe('columnKeyForStatus (blocked has its own column — UAT #10)', () => {
   it('maps each workflow status to its own column', () => {
     expect(columnKeyForStatus('to_do')).toBe('to_do');
     expect(columnKeyForStatus('in_progress')).toBe('in_progress');
@@ -335,24 +335,35 @@ describe('columnKeyForStatus (blocked is an orthogonal flag, not a column)', () 
     expect(columnKeyForStatus('done')).toBe('done');
   });
 
-  it('folds blocked into In progress (DECISIONS §12.3 — blocked = flag, lands on unblock)', () => {
-    expect(columnKeyForStatus('blocked')).toBe('in_progress');
+  it('maps blocked to its own dedicated column, NOT in_progress (UAT #10 — blocked must never look "In progress")', () => {
+    expect(columnKeyForStatus('blocked')).toBe('blocked');
+    expect(columnKeyForStatus('blocked')).not.toBe('in_progress');
   });
 
-  it('returns null for cancelled (hidden from the 5-column board)', () => {
+  it('returns null for cancelled (hidden from the board)', () => {
     expect(columnKeyForStatus('cancelled')).toBeNull();
   });
 });
 
 describe('boardColumns', () => {
-  it('exposes the five columns in left-to-right workflow order', () => {
+  it('exposes the six columns in left-to-right workflow order, with Blocked after In progress', () => {
     expect(BOARD_COLUMNS.map((c) => c.key)).toEqual([
       'to_do',
       'in_progress',
+      'blocked',
       'test',
       'review',
       'done',
     ]);
+  });
+
+  it('includes a Blocked column with a distinct lock/red color', () => {
+    const blocked = BOARD_COLUMNS.find((c) => c.key === 'blocked');
+    expect(blocked).toBeDefined();
+    expect(blocked!.name).toMatch(/blocked/i);
+    // distinct from the in_progress amber — its own red/lock color
+    const inProgress = BOARD_COLUMNS.find((c) => c.key === 'in_progress');
+    expect(blocked!.color).not.toBe(inProgress!.color);
   });
 
   it('routes tasks/bugs/debt into columns, drops epics (they live in the rail) and cancelled', () => {
@@ -367,8 +378,9 @@ describe('boardColumns', () => {
     const cols = boardColumns(items);
     const byKey = Object.fromEntries(cols.map((c) => [c.key, c.cards.map((x) => x.id)]));
     expect(byKey.to_do).toEqual(['T01']);
-    // blocked T03 folds in next to the genuinely in-progress T02
-    expect(byKey.in_progress).toEqual(['T02', 'T03']);
+    // blocked T03 now lands in its own Blocked column, never in In progress
+    expect(byKey.in_progress).toEqual(['T02']);
+    expect(byKey.blocked).toEqual(['T03']);
     expect(byKey.test).toEqual([]);
     expect(byKey.done).toEqual(['T04']);
     // epic + cancelled never appear as cards

@@ -363,35 +363,41 @@ export function checklistFromSection(
 // ---------------------------------------------------------------------------
 // Board columns
 //
-// The board is five fixed workflow lanes; Epic is NOT a status — epics live in
-// the left filter rail, tasks/bugs/debt flow through the columns. `blocked` is
-// an orthogonal flag (DECISIONS §12.3), not its own column: a blocked item is
-// drawn in the column it would return to on unblock (in_progress) with a red
-// card flag, never in a separate "Blocked" lane.
+// The board is six fixed workflow lanes; Epic is NOT a status — epics live in
+// the left filter rail, tasks/bugs/debt flow through the columns. `blocked` now
+// has its OWN dedicated column (UAT #10): a blocked item is dependency-locked,
+// not running, so it must never appear under "In progress" (where 13 blocked
+// items once read as "In progress 13" and misled the user). It sits in a
+// distinct red 🔒 Blocked lane, immediately after In progress — where unblock
+// returns it. This supersedes the older "blocked folds into in_progress" rule
+// (DECISIONS §12.3). `cancelled` is still hidden from the board.
 // ---------------------------------------------------------------------------
 
-export type BoardColumnKey = 'to_do' | 'in_progress' | 'test' | 'review' | 'done';
+export type BoardColumnKey = 'to_do' | 'in_progress' | 'blocked' | 'test' | 'review' | 'done';
 
-/** The five columns, left→right, each with its dot color (matches index.css). */
+/** The six columns, left→right, each with its dot color (matches index.css). */
 export const BOARD_COLUMNS: { key: BoardColumnKey; name: string; color: string }[] = [
   { key: 'to_do', name: 'To do', color: '#7B7F87' },
   { key: 'in_progress', name: 'In progress', color: '#D2A24C' },
+  { key: 'blocked', name: '🔒 Blocked', color: '#E5484D' },
   { key: 'test', name: 'Test', color: '#5E84D2' },
   { key: 'review', name: 'Review', color: '#9B82CE' },
   { key: 'done', name: 'Done', color: '#4CB782' },
 ];
 
 /**
- * The board column an item belongs in. `blocked` folds into `in_progress`
- * (where unblock lands it); `cancelled` returns null (hidden from the board).
+ * The board column an item belongs in. `blocked` maps to its own dedicated
+ * Blocked column (UAT #10 — it must never look like "In progress"); `cancelled`
+ * returns null (hidden from the board).
  */
 export function columnKeyForStatus(status: BacklogItem['status']): BoardColumnKey | null {
   switch (status) {
     case 'to_do':
       return 'to_do';
     case 'in_progress':
-    case 'blocked':
       return 'in_progress';
+    case 'blocked':
+      return 'blocked';
     case 'test':
       return 'test';
     case 'review':

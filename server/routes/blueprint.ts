@@ -84,6 +84,7 @@ export function blueprintRouter(deps: BlueprintRouterDeps): Router {
       blueprintBody: string;
       githubRepo: string | null;
       executor: string;
+      executors: unknown;
       executorBinary: string | null;
       projectDir: string | null;
     }>;
@@ -125,6 +126,11 @@ export function blueprintRouter(deps: BlueprintRouterDeps): Router {
     }
 
     const executor: ExecutorChoice = normalizeExecutor(body.executor);
+    // UAT #10: optional ordered fallback chain. Validate + de-dupe each entry;
+    // ensure the primary (`executor`) leads the chain. Persisted as `executors`
+    // (primary first) alongside the single `executor` for back-compat. When the
+    // client sends nothing meaningful, the chain is just `[executor]`.
+    const executors = buildExecutorChain(body.executors, executor);
     const executorBinary: string | null =
       typeof body.executorBinary === 'string' && body.executorBinary.trim().length > 0
         ? body.executorBinary.trim()
@@ -156,6 +162,7 @@ export function blueprintRouter(deps: BlueprintRouterDeps): Router {
       platforms,
       githubRepo,
       executor,
+      executors,
       executorBinary,
       createdAt: Date.now(),
     };
@@ -264,4 +271,26 @@ export function blueprintRouter(deps: BlueprintRouterDeps): Router {
   });
 
   return r;
+}
+
+/**
+ * Build the persisted executor fallback chain from an untrusted client value
+ * (UAT #10). The primary `executor` always leads; the rest are the client's
+ * ordered fallbacks, validated via normalizeExecutor and de-duplicated. Unknown
+ * values normalize to 'mock' — we keep that (it's a valid choice) but never let
+ * a fallback duplicate an earlier entry. Returns a list with the primary first.
+ */
+function buildExecutorChain(raw: unknown, primary: ExecutorChoice): ExecutorChoice[] {
+  const chain: ExecutorChoice[] = [primary];
+  const seen = new Set<ExecutorChoice>([primary]);
+  if (Array.isArray(raw)) {
+    for (const entry of raw) {
+      if (typeof entry !== 'string') continue;
+      const normalized = normalizeExecutor(entry);
+      if (seen.has(normalized)) continue;
+      seen.add(normalized);
+      chain.push(normalized);
+    }
+  }
+  return chain;
 }
