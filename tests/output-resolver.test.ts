@@ -8,7 +8,9 @@ import {
   isFileOutput,
   isPatternedPath,
   resolveDeclaredOutput,
+  sweepSignalMarkers,
 } from '../server/engine/output-resolver.ts';
+import { existsSync, readFileSync as fsReadFileSync } from 'node:fs';
 
 // UAT #7 (codex): workflow steps declare two kinds of output — real FILES
 // (`.kortext/foundation/backlog.yaml`) and logical SIGNALS / markers
@@ -61,6 +63,43 @@ describe('findMissingFileOutputs', () => {
 
   it('a signal-only step is never "missing" (no file to check)', () => {
     expect(findMissingFileOutputs(['staging-approved'], tmp)).toEqual([]);
+  });
+});
+
+// UAT #9 #7: agents create files named after SIGNAL outputs (backlog-drafted,
+// item-in-test) in the worktree/project root — unacceptable clutter. After a
+// step, the engine sweeps any such bare-token file into .kortext/temp/.
+describe('sweepSignalMarkers', () => {
+  let tmp: string;
+  beforeEach(() => {
+    tmp = mkdtempSync(join(tmpdir(), 'sweep-'));
+  });
+  afterEach(() => rmSync(tmp, { recursive: true, force: true }));
+
+  it('moves signal-marker files from the root into .kortext/temp/', () => {
+    writeFileSync(join(tmp, 'backlog-drafted'), '');
+    writeFileSync(join(tmp, 'item-in-test'), '');
+    const moved = sweepSignalMarkers(['backlog-drafted', 'item-in-test'], tmp);
+    expect(moved.sort()).toEqual(['backlog-drafted', 'item-in-test']);
+    expect(existsSync(join(tmp, 'backlog-drafted'))).toBe(false); // gone from root
+    expect(existsSync(join(tmp, '.kortext/temp/backlog-drafted'))).toBe(true); // in temp
+  });
+
+  it('never touches real FILE outputs or unrelated files', () => {
+    mkdirSync(join(tmp, '.kortext/foundation'), { recursive: true });
+    writeFileSync(join(tmp, '.kortext/foundation/backlog.yaml'), 'items: []');
+    writeFileSync(join(tmp, 'README.md'), 'hi');
+    const moved = sweepSignalMarkers(
+      ['.kortext/foundation/backlog.yaml', 'backlog-drafted'],
+      tmp,
+    );
+    expect(moved).toEqual([]); // backlog.yaml is a file (not swept); no signal file existed
+    expect(existsSync(join(tmp, '.kortext/foundation/backlog.yaml'))).toBe(true);
+    expect(existsSync(join(tmp, 'README.md'))).toBe(true);
+  });
+
+  it('is a no-op when the signal file was not created (agent did not write it)', () => {
+    expect(sweepSignalMarkers(['backlog-drafted'], tmp)).toEqual([]);
   });
 });
 

@@ -8,6 +8,7 @@ import type { WorktreeHandle } from '../engine/worktree.ts';
 import type { ResolutionRegistry } from './resolution-registry.ts';
 import type { PreviewManager } from './test-preview.ts';
 import { runWorkflow } from '../engine/worker-pool.ts';
+import { selectBuildableItems } from './build-order.ts';
 
 /**
  * A per-item worktree lease — the item's isolated working copy (base=`development`,
@@ -165,15 +166,15 @@ export async function runItem(itemId: string, deps: RunItemDeps): Promise<RunIte
     if (previewManager) {
       try {
         await previewManager.startFor(itemId, lease.path);
-        // Persist the URL only for items explicitly flagged runnable in their
-        // frontmatter (preview: true). Unflagged items start a preview in-memory
-        // for backwards compatibility but do not write to the DB.
-        const itemForPreview = repos.backlog.get(itemId);
-        if (itemForPreview?.frontmatter?.preview === true) {
-          const url = previewManager.urlFor(itemId);
-          if (url) {
-            repos.backlog.setPreviewUrl(itemId, url);
-          }
+        // Persist the live URL whenever a preview actually came up, so it
+        // reaches the user (#8). Previously this was gated on
+        // `frontmatter.preview === true`, which meant the computed URL was
+        // started in-memory but never written to the DB / surfaced in the UI.
+        // The preview lifecycle is unchanged — closure still calls stopFor,
+        // which clears the URL.
+        const url = previewManager.urlFor(itemId);
+        if (url) {
+          repos.backlog.setPreviewUrl(itemId, url);
         }
       } catch {
         // preview is best-effort; the item is on `test` regardless
@@ -195,16 +196,18 @@ export type RunReadyItemsDeps = RunItemDeps & {
 };
 
 /**
- * Kick off a development-cycle run for every ready (to_do) item, with bounded
+ * Kick off a development-cycle run for every BUILDABLE item, with bounded
  * concurrency (§5.9 #10). Each item runs via {@link runItem} in its own worktree.
- * in_progress items are already being worked — only fresh to_do items are picked.
  *
- * The conditional "which items are ready" is a plain orchestrator-layer query
- * over DB status (§5.13), not anything the engine decides.
+ * Buildability is decided by {@link selectBuildableItems} (UAT #9 #1+#2): the
+ * earliest open version first, only dependency-ready items (blockers `done`),
+ * and bounced `in_progress` items are retried. This replaces the old "every
+ * `to_do` item in parallel" query that ignored blocked_by/version and caused
+ * merge-conflict stalls.
  */
 export async function runReadyItems(deps: RunReadyItemsDeps): Promise<RunItemResult[]> {
   const max = Math.max(1, deps.maxConcurrent ?? 3);
-  const ready = deps.repos.backlog.list({ status: 'to_do', limit: 1000 });
+  const ready = selectBuildableItems(deps.repos.backlog.list({ limit: 100_000 }));
 
   const results: RunItemResult[] = [];
   let cursor = 0;

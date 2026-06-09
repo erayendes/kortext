@@ -118,6 +118,22 @@ Deployment öncesinde veya sonrasında:
 2. Sonuçları +devops-engineer ve +delivery-manager'a bildir
 3. Sorun varsa deployment'ı durdurmak için hemen raporla
 
+### 5. Quality Control Gate — Verdict Raporu
+**Kategori:** `routine`
+
+`quality_control` gate'inde item `test` kolonuna geldiğinde, item'ın worktree'sindeki kodu (ve varsa live preview URL'ini) incele ve **makine-okunur bir karar raporu** yaz. Mekanik "çalıştım → geçti" YOK — karar yalnızca rapordaki `verdict` alanından gelir.
+
+- **Çıktı yolu (tam):** `.kortext/reports/quality_control-reports_<slug>_<ts>.md`
+- **Frontmatter:**
+  ```yaml
+  verdict: pass | fail
+  ac_results:
+    - text: "<acceptance criterion metni>"
+      status: met | unmet
+  ```
+- **Gövde:** insan-okunur bulgular.
+- **STRICT kural:** Her acceptance criterion'ı **tek tek** davranış olarak doğrula. **Herhangi bir kriter `unmet`** ya da gerçek bir bug/regresyon varsa → `verdict: fail`. Fail → item kodlamaya geri döner.
+
 ## artifacts
 
 - `workspace/references/test-strategy.md`

@@ -120,6 +120,7 @@ export function createComposition(deps: CompositionDeps): Composition {
   // fresh step opened on the item's run (so the dashboard timeline shows it).
   const gateExecutor = new AgentGateExecutor({
     executor,
+    repos,
     resolveRunContext: (ctx) => {
       const rc = resolution.runContextFor(ctx.itemId);
       if (!rc) {

@@ -179,6 +179,21 @@ Pull Request açıldığında veya görev denetim gerektirdiğinde:
 3. Karar ver: **Approve** (onayla), **Request Changes** (düzeltme iste) veya **Block** (kritik ihlal durumunda durdur).
 4. Her geri bildirim somut ve yapıcı olmalıdır.
 
+#### Code Review Gate — Verdict Raporu
+
+`code_review` gate'inde item `test` kolonuna geldiğinde, item'ın worktree'sindeki kodu incele ve **makine-okunur bir karar raporu** yaz. Mekanik "çalıştım → geçti" YOK — karar yalnızca rapordaki `verdict` alanından gelir.
+
+- **Çıktı yolu (tam):** `.kortext/reports/code_review-reports_<slug>_<ts>.md`
+- **Frontmatter:**
+  ```yaml
+  verdict: pass | fail
+  ac_results:
+    - text: "<acceptance criterion metni>"
+      status: met | unmet
+  ```
+- **Gövde:** insan-okunur bulgular (dosya/satır, sorun, öneri).
+- **STRICT kural:** Her acceptance criterion'ın kodda test edilebilir bir karşılığı olduğunu **tek tek** doğrula. **Herhangi bir kriter `unmet`** ya da gerçek bir hata/risk/anti-pattern varsa → `verdict: fail`. Fail → item kodlamaya geri döner.
+
 ### 9. Task Assignment & Technical Debt Management
 **Kategori:** `routine`
 

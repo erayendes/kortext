@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import type { Executor, ExecutorContext, ExecutorResult } from '../executor.ts';
 import type { WorkflowStep } from '../workflow-parser.ts';
-import { findMissingFileOutputs } from '../output-resolver.ts';
+import { findMissingFileOutputs, sweepSignalMarkers } from '../output-resolver.ts';
 import { buildRulesBlock } from '../rules-injection.ts';
 import { spawnCliWithRetry, tailLines } from './cli-spawn.ts';
 import { readPersonaPrompt, type PersonaRegistry } from '../persona-registry.ts';
@@ -181,6 +181,10 @@ export class ClaudeCliExecutor implements Executor {
         outputSummary: tailLines(res.stdoutTail, this.opts.summaryTailLines ?? 20),
       };
     }
+
+    // UAT #9 #7: keep the project root clean — move stray signal-marker files
+    // the agent wrote (backlog-drafted, item-in-test, …) into .kortext/temp/.
+    sweepSignalMarkers(step.outputs, ctx.worktreePath);
 
     const missing = findMissingFileOutputs(step.outputs, ctx.worktreePath);
     if (missing.length > 0) {

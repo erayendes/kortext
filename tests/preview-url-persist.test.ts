@@ -112,7 +112,7 @@ describe('preview URL persistence via runItem', () => {
     expect(stored?.preview_url).toBe(liveUrl);
   });
 
-  it('item NOT flagged (no frontmatter.preview) → preview_url stays null after run', async () => {
+  it('item NOT flagged → preview_url IS persisted now (UAT #9 #8: surface the live URL)', async () => {
     const lc = makeLifecycle();
     lc.create({ id: 'PU2', type: 'task', title: 'No preview flag' });
 
@@ -131,10 +131,12 @@ describe('preview URL persistence via runItem', () => {
     });
 
     expect(result.outcome).toBe('implemented');
-    // preview is started in-memory (existing behaviour), but must NOT be persisted
-    // because the item wasn't flagged.
+    // #8: the live preview URL now persists whenever a preview comes up — the old
+    // `frontmatter.preview === true` gate was dropped so the user always sees it.
+    const liveUrl = previewManager.urlFor('PU2');
+    expect(liveUrl).not.toBeNull();
     const stored = repos.backlog.get('PU2');
-    expect(stored?.preview_url).toBeNull();
+    expect(stored?.preview_url).toBe(liveUrl);
   });
 
   it('item flagged preview:true but build fails → preview_url stays null', async () => {

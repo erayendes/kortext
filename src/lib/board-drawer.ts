@@ -90,6 +90,19 @@ export function assigneeOf(item: {
   return typeof fm === 'string' && fm.length > 0 ? fm : null;
 }
 
+/**
+ * The live-preview URL to surface in the item drawer, or null when there is
+ * none. The orchestrator writes `preview_url` when it brings up the local test
+ * preview from the item's worktree (§5.7); the drawer renders a "Canlı önizleme"
+ * link only when this returns a non-empty (trimmed) string.
+ */
+export function previewLinkOf(item: { preview_url?: string | null }): string | null {
+  const url = item.preview_url;
+  if (typeof url !== 'string') return null;
+  const trimmed = url.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
 // ---------------------------------------------------------------------------
 // Version filter (Board · UAT §A)
 //
@@ -295,9 +308,14 @@ export function describeActivity(entry: {
   payload: Record<string, unknown>;
 }): string {
   if (entry.action === 'item_transition') {
-    const { from, to } = entry.payload;
+    const { from, to, reason } = entry.payload;
     if (typeof from === 'string' && typeof to === 'string') {
-      return `${entry.actor} moved ${statusBadge(from as BacklogItem['status']).label} → ${statusBadge(to as BacklogItem['status']).label}`;
+      const base = `${entry.actor} moved ${statusBadge(from as BacklogItem['status']).label} → ${statusBadge(to as BacklogItem['status']).label}`;
+      // UAT #9 #3: surface WHY an item was sent back (e.g. "merge conflict: …").
+      // The reason is recorded on every transition but was dropped from the feed.
+      return typeof reason === 'string' && reason.trim() !== ''
+        ? `${base} — ${reason}`
+        : base;
     }
   }
   if (entry.action === 'item_ac_toggle') {

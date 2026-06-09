@@ -1,4 +1,5 @@
 import type { GateContext, GateExecutor, GateOutcome } from '../gate-executor.ts';
+import type { AcResult } from '../gate-verdict.ts';
 
 export type MockGateBehavior = {
   /** Force this gate to fail. */
@@ -7,6 +8,8 @@ export type MockGateBehavior = {
   findings?: string | null;
   /** Delay before resolving, ms. Default 0. Use to make parallel overlap observable. */
   durationMs?: number;
+  /** Per-criterion judgments the gate "rendered" — test-cycle applies these to the item AC. */
+  acResults?: AcResult[];
 };
 
 /**
@@ -35,7 +38,7 @@ export class MockGateExecutor implements GateExecutor {
       if (cfg.durationMs && cfg.durationMs > 0) {
         await new Promise<void>((resolve) => setTimeout(resolve, cfg.durationMs));
       }
-      return { pass: !cfg.fail, findings: cfg.findings ?? null };
+      return { pass: !cfg.fail, findings: cfg.findings ?? null, acResults: cfg.acResults };
     } finally {
       this.inFlight -= 1;
     }

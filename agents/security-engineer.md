@@ -111,6 +111,22 @@ Periyodik olarak:
 3. Güvenlik yamalarını takip et ve uygulanması için görev aç
 4. `workspace/reports/security-reports.md` dosyasını güncel tut
 
+### 4. Security Control Gate — Verdict Raporu
+**Kategori:** `routine`
+
+`security_control` gate'inde item `test` kolonuna geldiğinde, item'ın worktree'sindeki kodu (ve varsa live preview URL'ini) incele ve **makine-okunur bir karar raporu** yaz. Mekanik "çalıştım → geçti" YOK — karar yalnızca rapordaki `verdict` alanından gelir.
+
+- **Çıktı yolu (tam):** `.kortext/reports/security_control-reports_<slug>_<ts>.md`
+- **Frontmatter:**
+  ```yaml
+  verdict: pass | fail
+  ac_results:
+    - text: "<acceptance criterion metni>"
+      status: met | unmet
+  ```
+- **Gövde:** insan-okunur güvenlik bulguları (açık, konum, etki).
+- **STRICT kural:** Auth, secret yönetimi, veri işleme, erişim kontrolü, injection ve compliance açısından her acceptance criterion'ı **tek tek** değerlendir. **Herhangi bir güvenlik açığı** veya `unmet` kriter varsa → `verdict: fail`. Fail → item kodlamaya geri döner.
+
 ## artifacts
 
 - `workspace/references/security-rules.md`
