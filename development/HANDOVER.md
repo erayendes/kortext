@@ -23,7 +23,7 @@ Eray temiz UAT koştu (antigravity, executors chain `[antigravity, codex]`). Bui
 
 ## ⭐ Önceki (2026-06-09 #10c) — `blocked` ayrı status/sütun OLMAKTAN TAMAMEN ÇIKARILDI → türetilen KİLİT bayrağı
 
-Yalnızca kod oturumu (UAT değil). Eray'ın modeli kuruldu: `blocked` bir lane/status değil — bağımlılıktan **türetilen** bir kilit bayrağı, item'ın asıl status'ünün (genelde `to_do`) ÜSTÜNE biner. **AskUserQuestion kararı: `blocked` durumunu + manuel "Mark blocked" özelliğini TAMAMEN KALDIR.** TDD ile yapıldı, **1162 test yeşil** (1168→−6: block/blocker-clear testleri silindi, isBlocked + migration-011 testleri eklendi), typecheck + build temiz. **PUSH EDİLMEDİ** — Eray "push" diyene dek local.
+Yalnızca kod oturumu (UAT değil). Eray'ın modeli kuruldu: `blocked` bir lane/status değil — bağımlılıktan **türetilen** bir kilit bayrağı, item'ın asıl status'ünün (genelde `to_do`) ÜSTÜNE biner. **AskUserQuestion kararı: `blocked` durumunu + manuel "Mark blocked" özelliğini TAMAMEN KALDIR.** TDD ile yapıldı, **1162 test yeşil** (1168→−6: block/blocker-clear testleri silindi, isBlocked + migration-011 testleri eklendi), typecheck + build temiz. **PUSH EDİLDİ** (`ecc5553..29f5519`, tek commit) — `main == origin/main`.
 
 - **Türetilen kilit:** yeni `isBlocked(item, byId)` (`server/orchestrator/build-order.ts`) — `blocked_by` dolu + blocker terminal (done/cancelled) değilse kilitli; dangling = çözülmüş. UI aynası `isLocked`/`lockedBlockers` (`src/lib/board-drawer.ts`).
 - **Auto-block SİLİNDİ:** `backlog-ingest.ts` A5 artık status'e dokunmuyor → kilitli item `to_do`'da KALIR (çıkmaz). `backlog.auto_blocked` audit'i gitti.
