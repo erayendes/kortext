@@ -1052,3 +1052,34 @@ Mevcut proje(ler) varken çıplak `kortext start` terminalde metin liste basıp 
 - **index.ts wiring:** `readRegistry(defaultRegistryDir())` + `startProject(slug, {packageRoot, cwd})` + `onHandoff: scheduleBootstrapSelfExit({isBootstrap})` — blueprint route'un createProject/handoff deseninin aynısı. Bootstrap daemon global registry'yi okuduğu için tüm projeleri görür.
 - **Wizard UI (`OnboardingScreen`):** kart başında "Open an existing project" bölümü — `/api/projects`'ten çeker; satır tıkla → `POST .../start` → `window.location.href = handoffUrl` (yeni-proje submit'inin kullandığı aynı handoff redirect'i). Altında "or create a new project" ayracı. `ExistingProject` tipi `api-types.ts`'te (server `ProjectSummary` aynası). Projeler yoksa bölüm hiç render olmaz (eski tek-form görünümü).
 - **Kanıt:** 6 route testi (serialize saf + GET + POST start + 404 + 502) + uçtan-uca harness (gerçek router + örnek registry: 2 proje listelenir, tıkla→daemon başlar+handoff+wizard self-exit, ghost→404). **1184 test yeşil**, typecheck+build temiz. Push yok (Eray "push" diyene dek).
+
+---
+
+## Bölüm 15 — Token/maliyet optimizasyonu kararları (UAT #10f+#10g, 2026-06-09)
+
+**Status:** Koda döküldü + push edildi (`0156412`). 1235 test yeşil. Bağlam: UAT #10'da kotalar çok hızlı bitti — codex oturum logları **25M input / 0.3M output** gösterdi; design_review 8× bounce'ta her retry tam bağlamı yeniden yolladı. (Not: UAT #10a-e turlarının ayrıntılı tarihçesi TODO.md'nin ✅ ÇÖZÜLDÜ bölümlerinde + HANDOVER'da; bu bölüm yalnız token/maliyet kararlarını kaydeder.)
+
+### 15.1 "Önce ölç, sonra kıs" (Eray kararı, AskUserQuestion)
+4 aday değerlendirildi (cache, input kırpma, görünürlük, ince retry). Eray'ın seçimi: önce **görünürlük** (hangi item/gate ne kadar yakıyor — GUI'de), sonra **akıllı retry** (gerçek tasarruf). Gerekçe: ölçüm olmadan hiçbir optimizasyonun işe yaradığı kanıtlanamaz; ikisi de verimi düşürmez.
+
+### 15.2 Usage telemetrisi: nullable JSON kolonu + tek-kaynak şema
+Per-step token/maliyet `run_steps.usage_metadata` + `gate_runs.usage_metadata`'da (migration 012, nullable TEXT/JSON — eski satırlar NULL, kırılma yok; şekil migrationsız büyüyebilir). `UsageMetadataSchema` (schemas.ts) tek kaynak; engine re-export, frontend elle mirror. Alternatif (ayrı usage tablosu) reddedildi — satır zaten adım/gate'e 1:1, JOIN yükü gereksiz.
+
+### 15.3 Executor'lar arası normalizasyon: claude konvansiyonu
+Üç CLI üç farklı semantik veriyor; rollup'ın toplanabilir olması için hepsi claude konvansiyonuna çevrilir: `input_tokens` = **cached-HARİÇ** input, `cache_read_input_tokens` ayrı. Codex `input_tokens` cached'i içerir (OpenAI konvansiyonu) → çıkarılır; gemini `tokens.input` zaten `prompt - cached` → doğrudan alınır; gemini `output` = candidates + thoughts. Yalnız claude $ maliyeti verir; codex/gemini'de `total_cost_usd` boş kalır.
+
+### 15.4 Usage kaynağı: log kazıma DEĞİL, stdout
+TODO'daki "kendi loglarından kazıma" fikri gereksiz çıktı: `codex exec --json` usage'ı stdout'a basıyor (`turn.completed` — canlı probe ile doğrulandı), gemini `--output-format json` tek zarfta `stats` veriyor (resmi doc + kaynak; binary kurulu olmadığından canlı teyit ilk gerçek koşuya kaldı — parser toleranslı, beklenmedik şekilde adımı asla fail ettirmez). Oturum-dosyası korelasyonu (cwd+mtime; paralel gate'lerde belirsiz) bu sayede hiç kurulmadı.
+
+### 15.5 Akıllı retry: bounce bulguları tek-atış directive olarak taşır
+Gate-fail bounce'ı fail eden gate'lerin bulgularını `frontmatter.revision_directive`'e yazar; `runItem` dev-cycle'a `reviseFeedback` olarak geçirir ve koşudan sonra TEMİZLER (tek-atış — bayat bulgu sonraki turu yönlendirmesin). Adım-içi revise nedeni (mid-run gate reddi) directive'den ÖNCELİKLİ. Yan kazanç: +prime escalation-revise'ın yazdığı ama hiçbir yerin okumadığı `revision_directive` canlandı. "Diff de ekle" fikri ertelendi — bulgular küçük ve hedefli, diff büyük ve çoğu zaman gereksiz.
+
+### 15.6 Cache bayrağı diye bir şey yok (araştırma bulgusu)
+Codex/gemini'de açılacak bir cache bayrağı YOK — cache sağlayıcı tarafında otomatik ve zaten çalışıyor (kanıt: codex oturum logunda 537K/619K cached ≈ %87; claude probe'unda cache_read 11908). Asıl kaldıraç prefix-stable prompt sırasıydı; o Faz 12.7'de yapılmıştı. Yakalanan `cache_read_input_tokens` cache verimini artık GUI'de kanıtlıyor. Gemini notu: cached sayacı yalnız API-key kullanıcılarında görünür (OAuth'ta görünmez).
+
+### 15.7 agy kota-uyarısı: console satırı değil, audit olayı
+agy token vermiyor (kota-bazlı) → en azından kota tükenmesi GÖRÜNÜR olmalı. `FallbackExecutor.onFallover` kancası + `falloverAuditSink`: recoverable fallover `executor.fallover` audit olayı olarak Activity feed'e düşer ("⚠ antigravity hit a quota/rate limit — fell over to claude"). Best-effort — audit yazımı asla zinciri kıramaz. Alternatif (UsageMetadata'ya warning alanı) reddedildi: uyarı bir olaydır, telemetri değil.
+
+### 15.8 Input kırpma: içerik değil, yapısal israf
+Tek gerçek mühendislik israfı bulundu ve kesildi: step'in input'u olan `rules/*.md` hem system prompt'a enjekte ediliyor hem Inputs listesinde duruyordu → kontrat "input'ları oku" dediği için ajan aynı içeriği iki kez okuyordu. `filterInjectedRuleInputs` enjeksiyon koşuluyla birebir parite kurar (var + okunabilir + boş değil). Kontrat 3. kural "Read each Input file" → "relevant to the Task" (user-prompt'taki "if relevant" diliyle tutarlı). **İçerik kalibrasyonu bilinçli ERTELENDİ:** behavior.md 16 KB ama cache'li; kuralları budamak davranış riski taşır (hangi kural hangi UAT fix'ine bağlı belirsiz) → ayrı tur, Eray onayıyla.
+
