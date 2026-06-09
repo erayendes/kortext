@@ -14,3 +14,8 @@ coverage/
 .cursor/
 .idea/
 .vscode/
+
+# Throwaway artifacts from browser-MCP / brainstorm / UAT sessions (not source)
+.playwright-mcp/
+.superpowers/
+wizard-*.png
