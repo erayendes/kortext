@@ -31,9 +31,9 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 ### 7. ✅ ÇÖZÜLDÜ — Sinyal-marker dosyaları proje kökünü kirletmiyor
 - Yeni `output-resolver.sweepSignalMarkers` — her adım sonrası, ajanın köke yazdığı bare-token sinyal dosyalarını (`backlog-drafted`, `item-in-test`, …) **`.kortext/temp/`'e taşır** (dosya çıktılarına dokunmaz). 4 executor de exit-0 sonrası çağırıyor. +3 test. Proje kökü temiz kalır.
 
-### 8. ✅ ÇÖZÜLDÜ (bounded) — Preview URL yüzeye çıktı; staging zinciri canlı doğrulanıyor
+### 8. ✅ ÇÖZÜLDÜ (bounded) — Preview URL yüzeye çıktı; staging→prod zinciri canlı DOĞRULANDI
 - **Preview URL:** `/api/backlog` zaten serialize ediyormuş (regresyon testi eklendi); `run-item.ts`'teki `frontmatter.preview===true` kapısı kaldırıldı → preview gelince **her zaman persist** edilir; drawer'da "Canlı önizleme" linki (`previewLinkOf` + board.tsx). +testler.
-- **Staging zinciri:** Build stall (#1/#2) gidince epic→staging→onay→preprod→prod (gerçek git merge+tag) zincirine ulaşılabilir. **Gerçek-LLM build harness'i ile uçtan uca doğrulanıyor** (sonuç HANDOVER #9c'de). Kapsam dışı: gerçek `git push origin main`/CI (gerçek prod hedefi yok).
+- **Staging zinciri DOĞRULANDI:** Gerçek antigravity build koşusunda epic→staging→onay→preprod→onay→**prod release** uçtan uca koştu — epic `staging_approved`+`preprod_approved`, **git tag `v0.1`**, main log `Release v0.1: merge development into main`. Kapsam dışı: gerçek `git push origin main`/CI (gerçek prod hedefi yok).
 
 > **8/8 ÇÖZÜLDÜ** (#9b: #1/#2/#3/#6/#7 + #9c: #4/#5/#8). TDD, 1124 test yeşil, typecheck+build temiz. Gate'ler katı (verdict + AC), preview görünür, sıralı build. Gerçek-LLM build koşusu canlı kanıt için çalıştırıldı.
 
@@ -49,7 +49,7 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 
 **Düzeltilecekler:** ✅ **TAMAM (2026-06-08 #8, TDD, +12 test).**
 - [x] ~~**Sinyal vs dosya ayrımı**~~ ✅ — yeni `output-resolver.isFileOutput` (`/` veya `.` içerir → dosya; aksi → sinyal) + `findMissingFileOutputs` ortak helper. 4 executor de (claude/codex/gemini/antigravity) bunu kullanıyor → bare-token sinyaller (`backlog-drafted`, `staging-approved`, …) **dosya olarak doğrulanmaz**, yalnız `.kortext/...` dosyaları kontrol edilir. +6 helper + 6 executor regresyon testi.
-- [ ] **Regresyon (gerçek codex):** koşu çalışıyor — sonuç HANDOVER #8'de.
+- [x] ~~**Regresyon (gerçek codex)**~~ ✅ — codex koşusu: `succeeded`, 8 item, owner/parent_id/version/model 8/8 (HANDOVER #8). Sinyal/rules/≤8 fix'leri canlı tuttu.
 
 ---
 

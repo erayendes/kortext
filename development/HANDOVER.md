@@ -9,7 +9,7 @@
 
 ## ⭐ Şu an (2026-06-09 #9c) — UAT #9'un 8 BULGUSU DA ÇÖZÜLDÜ ✅ (gate verdict + deploy + build sıralama)
 
-Yalnızca kod oturumu. UAT #9'un 8 build-fazı bulgusu (sıralama, retry, UI sebep, gate-verdict, design, prime, temp dosya, deploy zinciri) TDD ile çözüldü; **gerçek antigravity BUILD koşusuyla canlı doğrulandı.** **1124 test yeşil**, typecheck + build temiz. **Push EDİLMEDİ.** Plan onaylı, paralel ajanlarla yürütüldü (Stream A gate, Stream B preview).
+Yalnızca kod oturumu. UAT #9'un 8 build-fazı bulgusu (sıralama, retry, UI sebep, gate-verdict, design, prime, temp dosya, deploy zinciri) TDD ile çözüldü; **gerçek antigravity BUILD koşusuyla canlı doğrulandı.** **1124 test yeşil**, typecheck + build temiz. **PUSH EDİLDİ** (`651f0d3..ee3da45`, tek commit) — `main == origin/main`. Plan onaylı, paralel ajanlarla yürütüldü (Stream A gate, Stream B preview).
 
 - **#1 🔴 Build sıralaması (stall kökü):** yeni `server/orchestrator/build-order.ts` `selectBuildableItems` — en erken version → dependency-ready (blocker'lar `done`) item'lar; `runReadyItems` bunu kullanıyor. **#2 🔴 bounced retry:** `in_progress` item'lar da aday. (+7 test)
 - **#3 🟠 UI sebep:** `describeActivity` artık bounce sebebini gösteriyor (`… Review → In progress — merge conflict: …`).
@@ -25,7 +25,7 @@ Yalnızca kod oturumu. UAT #9'un 8 build-fazı bulgusu (sıralama, retry, UI seb
 - **Gerçek git merge:** development log → `Merge kortext/run-1 into development` + gerçek kod commit'leri ("implement note-taking functionality", "add index.html structure and styles"), **conflict YOK**.
 - **TAM DEPLOY ZİNCİRİ (#8) UÇTAN UCA:** epic done → **staging deploy → staging onayı → version tamamlanması → preprod deploy → preprod onayı → prod release**. DB+git ile kanıtlandı: epic `staging_approved=true` + `preprod_approved=true`; **git tag `v0.1`**; main log `Release v0.1: merge development into main` (gerçek dev→main merge). Kronik kırık nokta artık uçtan uca çalışıyor. (Prod push kapsam dışı — gerçek remote yok.)
 
-**SIRADAKİ:** Rebuild + Eray temiz build UAT (sıralı yürütme, gate'ler gerçekten yargılıyor mu, preview linki, staging). Push (Eray "push" deyince). Docs güncel.
+**SIRADAKİ:** Rebuild (`npm run build && npm pack && npm install -g ./kortext-3.1.0.tgz`) + Eray temiz build UAT (sıralı yürütme, gate'ler gerçekten yargılıyor mu + AC kutucukları, preview linki, kötü tasarım bounce, staging→...→release zinciri). İstenirse `npm publish`. Docs güncel.
 
 ---
 
