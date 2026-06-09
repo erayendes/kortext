@@ -164,6 +164,8 @@ export async function runTestCycle(itemId: string, deps: TestCycleDeps): Promise
       }
       repos.gateRuns.transition(row.id, outcome.pass ? 'pass' : 'fail', {
         findings: outcome.findings ?? null,
+        // UAT #10 Faz 1 — persist what this gate spent ("which gate burned how much").
+        usage_metadata: outcome.usage ?? null,
       });
       // #4 — the gate marks the item's AC checkboxes from its per-criterion
       // verdict. Best-effort: a bad match or a write error never throws the cycle.
@@ -201,6 +203,32 @@ export async function runTestCycle(itemId: string, deps: TestCycleDeps): Promise
     }
   }
 
+  // UAT #10 Faz 2 — "akıllı retry": hand the failing gates' findings to the next
+  // dev turn instead of bouncing blind. Recorded as a one-shot revision_directive
+  // on the item; run-item folds it into the re-code prompt (then clears it). This
+  // both cuts wasted full-context retries and revives the previously-dead
+  // revision_directive field (also written by the +prime escalation-revise path).
+  recordBounceDirective(repos, itemId, gates);
+
   lifecycle.transition(itemId, 'bounce', by, `gate fail: ${failed.join(', ')}`);
   return { itemId, attempt, outcome: 'bounced', gates, failed };
+}
+
+/**
+ * Compose the failing gates' findings into a one-shot revision directive and
+ * record it on the item (UAT #10 Faz 2). The directive is what the agent reads
+ * on its next dev turn — "fix THIS", not "code it again from scratch".
+ */
+function recordBounceDirective(repos: Repositories, itemId: string, gates: GateRun[]): void {
+  const failed = gates.filter((g) => g.status === 'fail');
+  if (failed.length === 0) return;
+  const body = failed
+    .map((g) => `- ${g.gate}: ${g.findings?.trim() || '(no findings recorded)'}`)
+    .join('\n');
+  const item = repos.backlog.get(itemId);
+  if (!item) return;
+  repos.backlog.updateFrontmatter(itemId, {
+    ...item.frontmatter,
+    revision_directive: `A prior attempt failed these gates — address each finding, do not start over:\n${body}`,
+  });
 }

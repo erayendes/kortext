@@ -4,6 +4,30 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 
 ---
 
+## ✅ ÇÖZÜLDÜ (UAT #10, 2026-06-09 #10f, Claude) — Token/maliyet optimizasyonu: önce ölç (görünürlük), sonra kıs (akıllı retry)
+
+> **Ölçüm:** Codex oturum logları 06-08+06-09 **~25.3M token** (input 25.0M / output 308K). Kök: **input baskın** (her adım tüm bağlamı yeniden gönderiyor) + **bounce döngüsü token'ı katlıyor** (design_review 8 fail × 17 koşu). Araştırma sonrası karar (Eray, AskUserQuestion): **"önce ölç, sonra kıs"** — 2 faz. Detay [plan](../../.claude/plans/todo-md-token-maliyet-optimizasyonu-rippling-crescent.md).
+
+**Yapıldı (TDD, 1212 test yeşil, typecheck + build temiz — push EDİLMEDİ):**
+
+**Faz 1 — Token/maliyet görünürlüğü (ÖLÇ):**
+- [x] ~~**Yakalama**~~ ✅ — `claude` executor `--output-format json` ile koşar; yeni saf `parseClaudeUsage` (regex; tail-truncation + bilimsel-notasyon dayanıklı) `usage` + `total_cost_usd`'yi `ExecutorResult.usage`'a çıkarır. **Canlı doğrulandı:** gerçek claude koşusu usage+cost verdi, **cache_read 11908 tok** (prompt-cache zaten çalışıyor). Codex/gemini usage log-scraping + agy kota-uyarısı ayrı follow-up (şimdilik boş döner).
+- [x] ~~**Kalıcılık**~~ ✅ — migration **012**: `run_steps.usage_metadata` + `gate_runs.usage_metadata` (nullable JSON). `UsageMetadataSchema` (schemas.ts) tek-kaynak; engine tipi re-export + frontend mirror. worker-pool dev-cycle adımlarına, test-cycle gate'lere usage yazar (AgentGateExecutor usage'ı taşır). Bozuk JSON okuması çökmez (tolerant preprocess).
+- [x] ~~**Görünürlük (GUI)**~~ ✅ — yeni `GET /api/backlog/:id/usage` (`rollupItemUsage`: coding + gate'ler toplamı + per-gate kırılım). Item drawer'da **"Token / maliyet"** bölümü: item toplamı + dev-cycle + her gate ne kadar yaktı + cache-okuma tasarrufu. **Canlı API doğrulandı** (toplam $0.71, per-gate kırılım, 256K cache-read).
+
+**Faz 2 — Akıllı retry (KIS):**
+- [x] ~~**Kör retry bitti**~~ ✅ — gate fail → bounce'ta fail eden gate'lerin **bulguları** `frontmatter.revision_directive`'e yazılır (`test-cycle.recordBounceDirective`); `runItem` bunu okuyup dev-cycle prompt'una (`ctx.reviseFeedback` → `buildUserPrompt`, makine zaten vardı) enjekte eder, sonra **tek-atış temizler**. Ajan körü körüne aynı hatayı tekrar etmek yerine bulguyu düzeltir → tekrarlanan tam-bağlam retry'ları azalır (TODO'nun "fail gerekçesi + diff" fikri). **Yan kazanç:** yazılan-ama-hiç-okunmayan `revision_directive` (+ `+prime` escalation-revise yolu) canlandı.
+
+**Follow-up turu (2026-06-09 #10g, Claude — TDD, 1235 test yeşil, typecheck + build temiz, push EDİLMEDİ):**
+- [x] ~~**Codex usage**~~ ✅ — log kazımaya GEREK KALMADI: `codex exec --json` usage'ı doğrudan stdout'a basıyor (`turn.completed` event'i — **gerçek codex 0.137.0 ile canlı doğrulandı**). Yeni `parseCodexUsage`: turn'leri toplar + normalize eder (codex `input_tokens` cached'i İÇERİR → çıkarılır; claude konvansiyonuyla tutarlı rollup). Dolar maliyeti yok (codex vermiyor).
+- [x] ~~**Gemini usage**~~ ✅ — `gemini --output-format json` (v0.6.0'dan beri GA) tek zarf basar: `{response, stats, error?}`; yeni `parseGeminiUsage` `stats.models.*.tokens`'ı toplar (`input` zaten cached-hariç; `roles` çift-sayım yapılmaz). ⚠ **Canlı doğrulama bekliyor:** gemini binary bu makinede kurulu değil — format resmi doc + kaynaktan (headless.md + uiTelemetry.ts) alındı; parser toleranslı (beklenmedik şekil → usage yok, adım fail OLMAZ).
+- [x] ~~**agy kota-uyarısı**~~ ✅ — `FallbackExecutor`'a `onFallover` kancası + `falloverAuditSink`: recoverable fallover (agy 429 → claude) artık `executor.fallover` audit olayı olarak Activity feed'e düşer — GUI'de "⚠ antigravity hit a quota/rate limit — fell over to claude" okunur (3 composition noktası bağlandı: index/server-drive/commands). Audit yazımı best-effort, zinciri asla kıramaz.
+- [x] ~~**Cache bayrakları (codex/gemini)**~~ ✅ (araştırma sonucu: **bayrak diye bir şey yok, cache otomatik**) — kanıt: codex oturum logunda `cached_input_tokens: 537K / 619K input` (cache zaten %87 vuruyor); gemini'de implicit caching (cached sayacı API-key kullanıcılarında görünür, OAuth'ta görünmez). Yapılacak iş prefix-stable prompt sırasıydı — o zaten Faz 12.7'de yapılmıştı. Artık `cache_read_input_tokens` yakalandığı için cache verimi item drawer'da GÖRÜNÜR.
+- [x] ~~**Gereksiz input kırp (yapısal)**~~ ✅ — **çift-gönderim fix'i:** step'in input'u olan `rules/*.md` (örn. model-atama adımının `rules/models.md`'si) hem system prompt'a enjekte ediliyor HEM Inputs listesinde duruyordu → kontrat "input'ları oku" dediği için ajan aynı içeriği İKİNCİ kez okuyordu. Yeni `filterInjectedRuleInputs` (enjeksiyon koşuluyla birebir parite: var + okunabilir + boş değil) 4 executor'da da enjekte edilen rule'u Inputs listesinden düşürür. + Kontrat kural 3 yumuşatıldı: "Read each Input file" → "Read the Input files **relevant to the Task**" (gereksiz büyük dosya okumaları azalır; user-prompt'taki "if relevant" diliyle tutarlı).
+- [ ] **İçerik kalibrasyonu (ölçüldü, ayrı karar):** `rules/behavior.md` 16 KB (~4K token, her adımda — ama claude'da cache'li, codex/gemini'de stable prefix'te) · en büyük persona `engineering-manager.md` 13.8 KB. Kırpma davranış riski taşır (hangi kural hangi UAT fix'ine bağlı) → Eray onayıyla ayrı tur.
+
+---
+
 ## ✅ ÇÖZÜLDÜ (UAT #10, 2026-06-09 #10e, Claude) — Çıplak `kortext start` + mevcut proje varsa: sihirbaz açılsın, projeler de listelensin
 
 > **Eski davranış:** Mevcut proje(ler) varken çıplak `kortext start` terminalde metin liste basıp "kortext start <project> / --new kullan" diyordu. GUI-first değil — kullanıcı terminale komut yazmak zorundaydı.

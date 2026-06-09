@@ -1,5 +1,6 @@
 import type { GateContext, GateExecutor, GateOutcome } from '../gate-executor.ts';
 import type { AcResult } from '../gate-verdict.ts';
+import type { UsageMetadata } from '../../db/schemas.ts';
 
 export type MockGateBehavior = {
   /** Force this gate to fail. */
@@ -10,6 +11,8 @@ export type MockGateBehavior = {
   durationMs?: number;
   /** Per-criterion judgments the gate "rendered" — test-cycle applies these to the item AC. */
   acResults?: AcResult[];
+  /** Token/cost telemetry surfaced into gate_runs.usage_metadata (UAT #10 Faz 1). */
+  usage?: UsageMetadata;
 };
 
 /**
@@ -38,7 +41,12 @@ export class MockGateExecutor implements GateExecutor {
       if (cfg.durationMs && cfg.durationMs > 0) {
         await new Promise<void>((resolve) => setTimeout(resolve, cfg.durationMs));
       }
-      return { pass: !cfg.fail, findings: cfg.findings ?? null, acResults: cfg.acResults };
+      return {
+        pass: !cfg.fail,
+        findings: cfg.findings ?? null,
+        acResults: cfg.acResults,
+        usage: cfg.usage,
+      };
     } finally {
       this.inFlight -= 1;
     }

@@ -14,6 +14,7 @@ import {
 } from '../engine/item-lifecycle.ts';
 import { applyCriterionToggle } from '../engine/acceptance-criteria.ts';
 import type { PersonaRegistry } from '../engine/persona-registry.ts';
+import { rollupItemUsage } from '../orchestrator/usage-rollup.ts';
 
 /**
  * GET  /api/backlog        — list backlog items (filters: type, status, owner, parent_id)
@@ -292,6 +293,24 @@ export function backlogRouter(deps: BacklogRouterDeps): Router {
       .filter((e) => !excluded.has(e.action))
       .slice(0, 50);
     res.json({ activity });
+  });
+
+  // Per-item token/cost rollup (UAT #10 Faz 1). Folds usage_metadata off the
+  // item's dev-cycle run_steps + gate_runs into a total + per-gate breakdown so
+  // the drawer can show "hangi item/gate ne kadar yaktı".
+  r.get('/backlog/:id/usage', (req, res) => {
+    const id = req.params.id;
+    if (typeof id !== 'string' || id.length === 0) {
+      res.status(400).json({ error: 'invalid_id' });
+      return;
+    }
+    if (!deps.repos.backlog.get(id)) {
+      res.status(404).json({ error: 'not_found' });
+      return;
+    }
+    const steps = deps.repos.runs.listStepsForItem(id);
+    const gateRuns = deps.repos.gateRuns.listForItem(id);
+    res.json(rollupItemUsage(steps, gateRuns));
   });
 
   // Post a human comment on an item. Comments live in the audit log (action

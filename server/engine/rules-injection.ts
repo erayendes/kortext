@@ -24,6 +24,37 @@ const RULES_INPUT_RE = /(?:^|\/)rules\/([\w-]+\.md)$/;
  * Returns '' when nothing is available (no rulesDir / no readable files), so an
  * executor can inject it unconditionally.
  */
+/**
+ * Remove from a step's input list every `rules/<name>.md` entry that
+ * {@link buildRulesBlock} injects into the prompt (UAT #10 — gereksiz input
+ * kırp). The headless contract tells the agent to read its Inputs; leaving an
+ * already-injected rule in the list makes it Read the same content a second
+ * time — pure token waste. Mirrors the injection condition exactly: an entry is
+ * dropped only when it matches the rules pattern AND the file exists under
+ * `rulesDir` AND is readable AND non-empty (i.e. it really was injected — the
+ * same three conditions buildRulesBlock applies). With no rulesDir, nothing was
+ * injected, so the list is returned untouched.
+ */
+export function filterInjectedRuleInputs(
+  stepInputs: string[],
+  rulesDir: string | undefined,
+): string[] {
+  if (!rulesDir) return stepInputs;
+  return stepInputs.filter((input) => {
+    const m = input.match(RULES_INPUT_RE);
+    if (!m?.[1]) return true;
+    const path = join(rulesDir, m[1]);
+    if (!existsSync(path)) return true;
+    try {
+      // Mirror buildRulesBlock exactly: an empty/unreadable file is NOT
+      // injected, so the entry must stay in the Inputs list.
+      return readFileSync(path, 'utf8').trim().length === 0;
+    } catch {
+      return true;
+    }
+  });
+}
+
 export function buildRulesBlock(stepInputs: string[], rulesDir: string | undefined): string {
   if (!rulesDir) return '';
 

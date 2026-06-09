@@ -1,8 +1,8 @@
 import { join } from 'node:path';
-import type { Executor, ExecutorContext, ExecutorResult } from '../executor.ts';
+import type { Executor, ExecutorContext, ExecutorResult, UsageMetadata } from '../executor.ts';
 import type { WorkflowStep } from '../workflow-parser.ts';
 import { buildMissingOutputResult, findMissingFileOutputs, sweepSignalMarkers } from '../output-resolver.ts';
-import { buildRulesBlock } from '../rules-injection.ts';
+import { buildRulesBlock, filterInjectedRuleInputs } from '../rules-injection.ts';
 import { isRecoverableCliFailure, spawnCliWithRetry, tailLines } from './cli-spawn.ts';
 import { readPersonaPrompt, type PersonaRegistry } from '../persona-registry.ts';
 
@@ -64,7 +64,7 @@ const CLAUDE_HEADLESS_CONTRACT = [
   '     that EXACT path and the deliverable body. Paths are relative to your cwd.',
   '  2. Do NOT paste the deliverable in your text answer. The Write tool call is',
   '     the only acceptable channel.',
-  '  3. Read each Input file (if any) before writing Outputs.',
+  '  3. Read the Input files relevant to the Task before writing Outputs.',
   '  4. After every Output is on disk, reply with ONE short confirmation line.',
   '  5. Do not ask clarifying questions — no human is present to answer.',
 ].join('\n');
@@ -109,7 +109,14 @@ export class ClaudeCliExecutor implements Executor {
     );
     const rulesBlock = buildRulesBlock(step.inputs, this.opts.rulesDir);
     const systemPrompt = buildSystemPrompt(personaBody, rulesBlock);
-    const prompt = buildUserPrompt(step, ctx);
+    // UAT #10 — gereksiz input kırp: a rules/*.md already injected into the
+    // system prompt is dropped from the Inputs list, so the agent doesn't Read
+    // the same content a second time. rulesBlock above uses the ORIGINAL list.
+    const displayStep: WorkflowStep = {
+      ...step,
+      inputs: filterInjectedRuleInputs(step.inputs, this.opts.rulesDir),
+    };
+    const prompt = buildUserPrompt(displayStep, ctx);
     const logPath = join(this.opts.logsDir, `run-${ctx.runId}-step-${ctx.runStepId}.log`);
 
     // claude CLI must run in non-interactive print mode for headless workflow
@@ -129,8 +136,16 @@ export class ClaudeCliExecutor implements Executor {
     // `--exclude-dynamic-system-prompt-sections` keeps cwd/git/env info out
     // of the cached system prompt so cache reuse extends across worktrees.
     // Callers can still append model overrides etc. via `extraArgs`.
+    // `--output-format json` makes the CLI print a single result envelope
+    // (incl. `usage` + `total_cost_usd`) instead of plain text, so we can
+    // capture per-step token/cost (UAT #10 Faz 1). It only changes the final
+    // summary channel — tool use + file writes are unaffected — and the
+    // recoverable/quota detection still works because it matches markers in the
+    // text regardless of format (the json `result`/stderr still carry them).
     const args = [
       '--print',
+      '--output-format',
+      'json',
       '--dangerously-skip-permissions',
       '--setting-sources',
       'project,local',
@@ -173,6 +188,10 @@ export class ClaudeCliExecutor implements Executor {
       };
     }
 
+    // Token/cost telemetry rides on every exit-0 path (UAT #10 Faz 1): even a
+    // run that wrote no file still spent tokens, so the dashboard sees the burn.
+    const usage = parseClaudeUsage(res.stdoutTail) ?? undefined;
+
     if (res.exitCode !== 0) {
       return {
         ok: false,
@@ -180,6 +199,7 @@ export class ClaudeCliExecutor implements Executor {
         errorMessage: `cli exited with code ${res.exitCode}`,
         logPath,
         outputSummary: tailLines(res.stdoutTail, this.opts.summaryTailLines ?? 20),
+        usage,
       };
     }
 
@@ -189,20 +209,24 @@ export class ClaudeCliExecutor implements Executor {
 
     const missing = findMissingFileOutputs(step.outputs, ctx.worktreePath);
     if (missing.length > 0) {
-      return buildMissingOutputResult({
-        missing,
-        kind: this.name,
-        stdoutTail: res.stdoutTail,
-        stderrTail: res.stderrTail,
-        logPath,
-        outputSummary: tailLines(res.stdoutTail, this.opts.summaryTailLines ?? 20),
-      });
+      return {
+        ...buildMissingOutputResult({
+          missing,
+          kind: this.name,
+          stdoutTail: res.stdoutTail,
+          stderrTail: res.stderrTail,
+          logPath,
+          outputSummary: tailLines(res.stdoutTail, this.opts.summaryTailLines ?? 20),
+        }),
+        usage,
+      };
     }
 
     return {
       ok: true,
       outputSummary: tailLines(res.stdoutTail, this.opts.summaryTailLines ?? 20),
       logPath,
+      usage,
     };
   }
 }
@@ -210,6 +234,50 @@ export class ClaudeCliExecutor implements Executor {
 function formatPathList(paths: string[]): string {
   if (paths.length === 0) return '  (none)';
   return paths.map((p) => `  - ${p}`).join('\n');
+}
+
+/**
+ * Pull per-step token/cost out of the claude CLI's `--output-format json` stdout
+ * (UAT #10 Faz 1). The envelope shape is
+ *   { …, total_cost_usd, usage: { input_tokens, output_tokens,
+ *     cache_read_input_tokens, cache_creation_input_tokens, … } }
+ *
+ * We extract by regex rather than JSON.parse on purpose: the spawn helper keeps
+ * only the last 64 KiB of stdout, so a long `result` string (which precedes
+ * `usage` in the envelope) can push the opening brace out of the buffer and break
+ * strict parsing — but every numeric field is uniquely named, so a per-field
+ * regex survives front-truncation. Returns null when no field is present (the CLI
+ * was run in plain-text mode, or the step printed only a confirmation line).
+ */
+export function parseClaudeUsage(stdout: string): UsageMetadata | null {
+  const text = stdout.trim();
+  if (!text) return null;
+
+  const intField = (name: string): number | undefined => {
+    const m = new RegExp(`"${name}"\\s*:\\s*(\\d+)`).exec(text);
+    return m ? Number(m[1]) : undefined;
+  };
+  const floatField = (name: string): number | undefined => {
+    // Allow an exponent: Node serializes near-zero costs as `1e-7`, which a
+    // mantissa-only pattern would truncate to `1` (off by orders of magnitude).
+    const m = new RegExp(`"${name}"\\s*:\\s*([0-9]+(?:\\.[0-9]+)?(?:[eE][-+]?[0-9]+)?)`).exec(text);
+    return m ? Number(m[1]) : undefined;
+  };
+
+  const fields = {
+    input_tokens: intField('input_tokens'),
+    output_tokens: intField('output_tokens'),
+    cache_read_input_tokens: intField('cache_read_input_tokens'),
+    cache_creation_input_tokens: intField('cache_creation_input_tokens'),
+    total_cost_usd: floatField('total_cost_usd'),
+  };
+  if (Object.values(fields).every((v) => v === undefined)) return null;
+
+  const usage: UsageMetadata = { executor: 'claude-cli' };
+  for (const [k, v] of Object.entries(fields)) {
+    if (v !== undefined) (usage as Record<string, unknown>)[k] = v;
+  }
+  return usage;
 }
 
 /**

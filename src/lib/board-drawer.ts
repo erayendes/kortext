@@ -322,6 +322,14 @@ export function describeActivity(entry: {
     if (typeof text === 'string') return `${entry.actor}: ${text}`;
   }
   if (entry.action === 'backlog.ingest') return `${entry.actor} added this item from planning`;
+  // UAT #10 — "agy kota-uyarısı": a quota-exhausted executor falling over to the
+  // next one in the chain must read as a warning, not a raw identifier.
+  if (entry.action === 'executor.fallover') {
+    const { from, to } = entry.payload;
+    if (typeof from === 'string' && typeof to === 'string') {
+      return `⚠ ${from} hit a quota/rate limit — fell over to ${to}`;
+    }
+  }
   // Humanise unknown action keys ("backlog.ingest" → "backlog ingest") so the
   // feed never shows a raw dotted identifier.
   return `${entry.actor} ${entry.action.replace(/[._]/g, ' ')}`;

@@ -6,7 +6,9 @@ import {
   type GateRun,
   type GateRunInsert,
   type GateRunStatus,
+  type UsageMetadata,
 } from '../schemas.ts';
+import { packJson } from '../json.ts';
 
 type GateRunRow = {
   id: number;
@@ -18,6 +20,7 @@ type GateRunRow = {
   findings: string | null;
   created_at: number;
   ended_at: number | null;
+  usage_metadata: string | null;
 };
 
 const TERMINAL_GATE_STATUSES: ReadonlySet<GateRunStatus> = new Set(['pass', 'fail']);
@@ -58,6 +61,7 @@ export class GateRunsRepository {
       UPDATE gate_runs SET
         status = @status,
         findings = COALESCE(@findings, findings),
+        usage_metadata = COALESCE(@usage_metadata, usage_metadata),
         ended_at = CASE WHEN @is_terminal = 1 THEN @ts ELSE ended_at END
       WHERE id = @id
     `);
@@ -103,7 +107,7 @@ export class GateRunsRepository {
   transition(
     id: number,
     status: GateRunStatus,
-    opts: { findings?: string | null } = {},
+    opts: { findings?: string | null; usage_metadata?: UsageMetadata | null } = {},
   ): GateRun {
     GateRunStatusSchema.parse(status);
     const result = this.transitionStmt.run({
@@ -112,6 +116,7 @@ export class GateRunsRepository {
       ts: Date.now(),
       is_terminal: TERMINAL_GATE_STATUSES.has(status) ? 1 : 0,
       findings: opts.findings ?? null,
+      usage_metadata: opts.usage_metadata != null ? packJson(opts.usage_metadata) : null,
     });
     if (result.changes === 0) throw new Error(`gate_run not found: ${id}`);
     return this.get(id)!;

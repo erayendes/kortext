@@ -30,7 +30,7 @@ import {
 } from 'lucide-react';
 import { Drawer } from '../components/v6/Drawer.tsx';
 import { apiGet, apiPost, formatElapsed, usePolling } from '../lib/api.ts';
-import type { ActivityEntry, BacklogAggregate, BacklogItem } from '../lib/api-types.ts';
+import type { ActivityEntry, BacklogAggregate, BacklogItem, ItemUsage } from '../lib/api-types.ts';
 import { personaPalette } from '../lib/persona-colors.ts';
 import {
   acChecklist,
@@ -115,6 +115,31 @@ function useActivity(itemId: string | null) {
     reload();
   }, [itemId, reload]);
   return { activity, reload };
+}
+
+// Usage hook — fetch an item's token/cost rollup on demand (UAT #10 Faz 1).
+function useItemUsage(itemId: string | null) {
+  const [usage, setUsage] = useState<ItemUsage | null>(null);
+  useEffect(() => {
+    setUsage(null);
+    if (!itemId) return;
+    void apiGet<ItemUsage>(`/api/backlog/${itemId}/usage`)
+      .then(setUsage)
+      .catch(() => setUsage(null));
+  }, [itemId]);
+  return usage;
+}
+
+/** Compact token count: 12453 → "12.5K", 2_100_000 → "2.1M". */
+function fmtTokens(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return String(Math.round(n));
+}
+/** Dollar cost: <$0.01 keeps 4 decimals so tiny spends are visible. */
+function fmtCost(usd: number): string {
+  if (usd <= 0) return '—';
+  return usd < 0.01 ? `$${usd.toFixed(4)}` : `$${usd.toFixed(2)}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -253,6 +278,7 @@ function ItemDrawer({
   onMutated: () => void;
 }) {
   const { activity, reload: reloadActivity } = useActivity(item.id);
+  const usage = useItemUsage(item.id);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [comment, setComment] = useState('');
@@ -456,6 +482,41 @@ function ItemDrawer({
                 </span>
               </div>
             ))}
+          </div>
+        )}
+
+        {usage && usage.total.input_tokens + usage.total.output_tokens > 0 && (
+          <div className="dr-grp">
+            <div className="dr-sec">
+              Token / maliyet ·{' '}
+              {fmtTokens(usage.total.input_tokens + usage.total.output_tokens)} tok ·{' '}
+              {fmtCost(usage.total.total_cost_usd)}
+            </div>
+            <div className="gate-row">
+              <span className="gn">Kodlama (dev-cycle)</span>
+              <span className="gate-st" style={{ color: 'var(--fg-faint)' }}>
+                {fmtTokens(usage.coding.input_tokens + usage.coding.output_tokens)} tok ·{' '}
+                {fmtCost(usage.coding.total_cost_usd)}
+              </span>
+            </div>
+            {usage.gates.map((g, i) => (
+              <div key={`${g.gate}-${g.attempt}-${i}`} className="gate-row">
+                <span className="gn">
+                  {g.gate.replace(/_/g, ' ')} · deneme {g.attempt}
+                </span>
+                <span className="gate-st" style={{ color: 'var(--fg-faint)' }}>
+                  {g.usage
+                    ? `${fmtTokens((g.usage.input_tokens ?? 0) + (g.usage.output_tokens ?? 0))} tok · ${fmtCost(g.usage.total_cost_usd ?? 0)}`
+                    : '—'}
+                </span>
+              </div>
+            ))}
+            {usage.total.cache_read_input_tokens > 0 && (
+              <div className="dr-desc" style={{ marginTop: 6, marginBottom: 0, fontSize: 11 }}>
+                Cache okuma: {fmtTokens(usage.total.cache_read_input_tokens)} tok — prompt-cache
+                tasarrufu (tam fiyat ödenmedi)
+              </div>
+            )}
           </div>
         )}
 

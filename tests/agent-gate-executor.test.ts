@@ -84,6 +84,25 @@ describe('AgentGateExecutor — gate judged by a real persona agent (capstone C5
     expect(out.acResults).toEqual([{ text: 'User can log in', status: 'unmet' }]);
   });
 
+  it('carries the executor token/cost usage up onto the gate outcome (Faz 1)', async () => {
+    seedItem('X', 'Login works', [{ text: 'User can log in', done: false }]);
+    const report = '.kortext/reports/code_review-reports_X_2026-06-09_10-00-00.md';
+    const usage = { executor: 'claude-cli', input_tokens: 1800, output_tokens: 120, total_cost_usd: 0.03 };
+    const exec: Executor = {
+      name: 'usage-writer',
+      async execute(_step, ctx): Promise<ExecutorResult> {
+        const abs = join(ctx.worktreePath, report);
+        mkdirSync(join(abs, '..'), { recursive: true });
+        writeFileSync(abs, '---\nverdict: pass\n---\nok\n');
+        return { ok: true, outputSummary: 'ok', usage };
+      },
+    };
+    const gx = new AgentGateExecutor({ executor: exec, resolveRunContext: ctxFor, repos });
+    const out = await gx.runGate({ itemId: 'X', gate: 'code_review', persona: '+engineering-manager', attempt: 1 });
+    expect(out.pass).toBe(true);
+    expect(out.usage).toEqual(usage);
+  });
+
   it('agent ran clean but produced NO report file → STRICT fail', async () => {
     seedItem('X', 'Login works', [{ text: 'User can log in', done: false }]);
     const gx = new AgentGateExecutor({

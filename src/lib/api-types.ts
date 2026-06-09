@@ -46,6 +46,8 @@ export type RunStep = {
   log_path: string | null;
   output_summary: string | null;
   error_message: string | null;
+  /** Token/cost telemetry (UAT #10 Faz 1). Optional on the mirror; NULL on legacy rows. */
+  usage_metadata?: UsageMetadata | null;
 };
 
 export type PendingQuestion = {
@@ -123,6 +125,44 @@ export type Gate =
   | 'security_control'
   | 'design_review'
   | 'uat';
+
+/**
+ * Per-step token/cost telemetry — mirrors server/db/schemas.ts UsageMetadataSchema
+ * (UAT #10 Faz 1). Token fields are optional (claude reports a full block; other
+ * CLIs report little or nothing).
+ */
+export type UsageMetadata = {
+  executor: string;
+  input_tokens?: number;
+  output_tokens?: number;
+  cache_read_input_tokens?: number;
+  cache_creation_input_tokens?: number;
+  total_cost_usd?: number;
+};
+
+/** Summed token/cost — mirrors server/orchestrator/usage-rollup.ts UsageTotals. */
+export type UsageTotals = {
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_input_tokens: number;
+  cache_creation_input_tokens: number;
+  total_cost_usd: number;
+};
+
+/** One gate run's spend in the per-item rollup. */
+export type GateUsage = {
+  gate: Gate;
+  attempt: number;
+  status: 'pending' | 'running' | 'pass' | 'fail';
+  usage: UsageMetadata | null;
+};
+
+/** GET /api/backlog/:id/usage — per-item token/cost rollup (UAT #10 Faz 1). */
+export type ItemUsage = {
+  total: UsageTotals;
+  coding: UsageTotals;
+  gates: GateUsage[];
+};
 
 export type BacklogItem = {
   id: string;

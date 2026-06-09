@@ -109,6 +109,14 @@ export type RunWorkflowOptions = {
    * dev-cycle steps against, keeping one run row per item (no orphan).
    */
   existingRun?: Run;
+  /**
+   * UAT #10 Faz 2 — "akıllı retry". When a bounced item is re-coded, runItem
+   * passes the item's recorded revision_directive here; every step that has no
+   * per-step revise reason inherits it as ExecutorContext.reviseFeedback, so the
+   * dev-cycle prompt tells the agent which gate findings to address rather than
+   * re-coding blind. One-shot: runItem clears the directive after the run.
+   */
+  reviseDirective?: string;
 };
 
 export type RunWorkflowResult = {
@@ -282,7 +290,9 @@ export async function runWorkflow(
     runStepId,
     worktreePath: options.worktreePath ?? process.cwd(),
     signal: aborter.signal,
-    reviseFeedback: reviseReasonByKey.get(stepKey),
+    // Per-step revise reason (mid-run gate rejection) wins; otherwise the item's
+    // bounce directive (Faz 2) applies to the whole dev-cycle re-code.
+    reviseFeedback: reviseReasonByKey.get(stepKey) ?? options.reviseDirective,
   });
 
   const launch = (stepKey: string): void => {
@@ -319,6 +329,7 @@ export async function runWorkflow(
               output_summary: result.outputSummary ?? null,
               error_message: safetyError,
               log_path: result.logPath ?? null,
+              usage_metadata: result.usage ?? null,
             });
             repos.auditLog.append({
               actor: 'safety',
@@ -337,6 +348,7 @@ export async function runWorkflow(
           repos.runs.transitionStep(runStepId, 'succeeded', {
             output_summary: result.outputSummary ?? null,
             log_path: result.logPath ?? null,
+            usage_metadata: result.usage ?? null,
           });
           repos.auditLog.append({
             actor: executor.name,
@@ -358,6 +370,7 @@ export async function runWorkflow(
             output_summary: result.outputSummary ?? null,
             error_message: result.errorMessage ?? 'unknown failure',
             log_path: result.logPath ?? null,
+            usage_metadata: result.usage ?? null,
           });
           repos.auditLog.append({
             actor: executor.name,

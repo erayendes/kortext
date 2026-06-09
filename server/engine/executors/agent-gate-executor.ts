@@ -95,8 +95,11 @@ export class AgentGateExecutor implements GateExecutor {
     };
 
     const result = await this.deps.executor.execute(step, execCtx);
+    // Token/cost the gate persona spent rides on every outcome (UAT #10 Faz 1),
+    // even a fail — a gate that burned tokens to reject still cost something.
+    const usage = result.usage;
     if (!result.ok) {
-      return { pass: false, findings: result.errorMessage ?? result.outputSummary ?? null };
+      return { pass: false, findings: result.errorMessage ?? result.outputSummary ?? null, usage };
     }
 
     // Locate the report the agent wrote and read its machine-readable verdict.
@@ -107,6 +110,7 @@ export class AgentGateExecutor implements GateExecutor {
         findings:
           'gate produced no verdict report — the persona must write ' +
           `${declaredOutput} with frontmatter \`verdict: pass|fail\``,
+        usage,
       };
     }
 
@@ -117,10 +121,11 @@ export class AgentGateExecutor implements GateExecutor {
       return {
         pass: false,
         findings: `gate verdict report unreadable: ${err instanceof Error ? err.message : String(err)}`,
+        usage,
       };
     }
 
     const verdict = parseGateVerdict(reportText);
-    return { pass: verdict.pass, findings: verdict.findings, acResults: verdict.acResults };
+    return { pass: verdict.pass, findings: verdict.findings, acResults: verdict.acResults, usage };
   }
 }

@@ -47,7 +47,7 @@ import { waitForHealthy } from './registry/health-wait.ts';
 import { readRegistry, listProjects, defaultRegistryDir } from './registry/projects.ts';
 import { isKortextPackageDir } from './registry/self-guard.ts';
 import { initCommand } from './cli/init.ts';
-import { createFallbackExecutor, type ExecutorKind } from './cli/executor-factory.ts';
+import { createFallbackExecutor, falloverAuditSink, type ExecutorKind } from './cli/executor-factory.ts';
 import { resolveExecutorBinary } from './cli/binary-resolver.ts';
 import { WorkflowDeployer } from './engine/executors/workflow-deployer.ts';
 import { getDb } from './db/client.ts';
@@ -278,6 +278,8 @@ const approvalDeployer = new WorkflowDeployer({
       agentsDir,
       rulesDir: runtime.rulesDir,
       logsDir: resolve(dirname(fileURLToPath(import.meta.url)), '..', '.kortext', 'data', 'logs'),
+      // Quota/429 fallover lands in the audit feed (GUI) — UAT #10 follow-up.
+      onFallover: falloverAuditSink(repos.auditLog),
     });
   })(),
   loadDeploymentWorkflow: () => workflowRegistry.get('deployment-cycle'),

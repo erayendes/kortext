@@ -12,7 +12,9 @@ import {
   type RunStep,
   type RunStepInsert,
   type RunStepStatus,
+  type UsageMetadata,
 } from '../schemas.ts';
+import { packJson } from '../json.ts';
 
 type RunRow = {
   id: number;
@@ -39,6 +41,7 @@ type StepRow = {
   log_path: string | null;
   output_summary: string | null;
   error_message: string | null;
+  usage_metadata: string | null;
 };
 
 const TERMINAL_RUN_STATUSES: ReadonlySet<RunStatus> = new Set([
@@ -61,6 +64,7 @@ export class RunsRepository {
   private readonly insertStepStmt;
   private readonly selectStepStmt;
   private readonly listStepsStmt;
+  private readonly listStepsForItemStmt;
   private readonly transitionStepStmt;
 
   constructor(private readonly db: Database.Database) {
@@ -100,6 +104,14 @@ export class RunsRepository {
     this.listStepsStmt = db.prepare(
       'SELECT * FROM run_steps WHERE run_id = ? ORDER BY step_index',
     );
+    // Every step across all of an item's runs (UAT #10 Faz 1 — per-item usage
+    // rollup). Joins through runs.item_id; ordered by step id (chronological).
+    this.listStepsForItemStmt = db.prepare(`
+      SELECT rs.* FROM run_steps rs
+      JOIN runs r ON r.id = rs.run_id
+      WHERE r.item_id = ?
+      ORDER BY rs.id
+    `);
     this.transitionStepStmt = db.prepare(`
       UPDATE run_steps SET
         status = @status,
@@ -107,7 +119,8 @@ export class RunsRepository {
         ended_at = CASE WHEN @is_terminal = 1 THEN @ts ELSE ended_at END,
         output_summary = COALESCE(@output_summary, output_summary),
         error_message = COALESCE(@error_message, error_message),
-        log_path = COALESCE(@log_path, log_path)
+        log_path = COALESCE(@log_path, log_path),
+        usage_metadata = COALESCE(@usage_metadata, usage_metadata)
       WHERE id = @id
     `);
   }
@@ -193,6 +206,12 @@ export class RunsRepository {
     return rows.map((r) => RunStepSchema.parse(r));
   }
 
+  /** Every run_step across all of `itemId`'s runs (per-item usage rollup). */
+  listStepsForItem(itemId: string): RunStep[] {
+    const rows = this.listStepsForItemStmt.all(itemId) as StepRow[];
+    return rows.map((r) => RunStepSchema.parse(r));
+  }
+
   transitionStep(
     id: number,
     status: RunStepStatus,
@@ -200,6 +219,8 @@ export class RunsRepository {
       output_summary?: string | null;
       error_message?: string | null;
       log_path?: string | null;
+      /** Token/cost telemetry (UAT #10 Faz 1). COALESCE: null preserves prior. */
+      usage_metadata?: UsageMetadata | null;
     } = {},
   ): RunStep {
     RunStepStatusSchema.parse(status);
@@ -211,6 +232,7 @@ export class RunsRepository {
       output_summary: opts.output_summary ?? null,
       error_message: opts.error_message ?? null,
       log_path: opts.log_path ?? null,
+      usage_metadata: opts.usage_metadata != null ? packJson(opts.usage_metadata) : null,
     });
     if (result.changes === 0) throw new Error(`run_step not found: ${id}`);
     return this.getStep(id)!;

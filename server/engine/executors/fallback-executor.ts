@@ -30,14 +30,32 @@ export type FallbackEntry = {
   executor: Executor;
 };
 
+/**
+ * One recoverable fallthrough (UAT #10 follow-up — "agy kota-uyarısı"). Most
+ * commonly: agy hit its 429 quota and the chain moved on to the next executor.
+ * Handed to `onFallover` so the composition can surface it in the audit feed
+ * (GUI Activity) instead of only a console line.
+ */
+export type FalloverInfo = {
+  from: ExecutorKind;
+  to: ExecutorKind;
+  stepKey: string;
+  runId: number;
+  runStepId: number;
+  reason: string;
+};
+
 export type FallbackExecutorOptions = {
   /** Sink for fallthrough diagnostics. Defaults to console.warn. */
   log?: (message: string) => void;
+  /** Fired on every recoverable fallthrough (quota/429/transient). Optional. */
+  onFallover?: (info: FalloverInfo) => void;
 };
 
 export class FallbackExecutor implements Executor {
   readonly name: string;
   private readonly log: (message: string) => void;
+  private readonly onFallover?: (info: FalloverInfo) => void;
 
   constructor(
     private readonly chain: FallbackEntry[],
@@ -47,6 +65,7 @@ export class FallbackExecutor implements Executor {
       throw new Error('FallbackExecutor requires at least one executor in the chain');
     }
     this.log = opts.log ?? ((m: string) => console.warn(m));
+    this.onFallover = opts.onFallover;
     this.name = `fallback(${chain.map((e) => e.kind).join('→')})`;
   }
 
@@ -74,6 +93,16 @@ export class FallbackExecutor implements Executor {
       this.log(
         `[fallback] ${entry.kind} (${entry.executor.name}) failed recoverably on step ${step.key} (${last.errorMessage ?? 'unknown error'}) — falling over to ${next.kind} (${next.executor.name})`,
       );
+      // Surface the fallover (quota warning) to whoever is listening — the
+      // composition writes it into the audit feed so it shows in the GUI.
+      this.onFallover?.({
+        from: entry.kind,
+        to: next.kind,
+        stepKey: step.key,
+        runId: ctx.runId,
+        runStepId: ctx.runStepId,
+        reason: last.errorMessage ?? 'unknown error',
+      });
     }
     return last;
   }

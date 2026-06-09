@@ -1,8 +1,8 @@
 import { join } from 'node:path';
-import type { Executor, ExecutorContext, ExecutorResult } from '../executor.ts';
+import type { Executor, ExecutorContext, ExecutorResult, UsageMetadata } from '../executor.ts';
 import type { WorkflowStep } from '../workflow-parser.ts';
 import { buildMissingOutputResult, findMissingFileOutputs, sweepSignalMarkers } from '../output-resolver.ts';
-import { buildRulesBlock } from '../rules-injection.ts';
+import { buildRulesBlock, filterInjectedRuleInputs } from '../rules-injection.ts';
 import { isRecoverableCliFailure, spawnCli, tailLines } from './cli-spawn.ts';
 import { readPersonaPrompt, type PersonaRegistry } from '../persona-registry.ts';
 
@@ -48,7 +48,14 @@ export class CodexCliExecutor implements Executor {
       step.persona,
       this.opts.personaRegistry ?? { agentsDir: this.opts.agentsDir },
     );
-    const prompt = buildPrompt(step, ctx, personaBody, buildRulesBlock(step.inputs, this.opts.rulesDir));
+    // Rules block from the ORIGINAL inputs; the prompt's Inputs list drops the
+    // already-injected rules (UAT #10 — no double-send).
+    const rulesBlock = buildRulesBlock(step.inputs, this.opts.rulesDir);
+    const displayStep: WorkflowStep = {
+      ...step,
+      inputs: filterInjectedRuleInputs(step.inputs, this.opts.rulesDir),
+    };
+    const prompt = buildPrompt(displayStep, ctx, personaBody, rulesBlock);
     const logPath = join(this.opts.logsDir, `run-${ctx.runId}-step-${ctx.runStepId}.log`);
     // `exec` runs Codex NON-interactively (the bare `codex` binary drops into a
     // TUI and dies on piped stdin with "stdin is not a terminal" — UAT
@@ -56,9 +63,13 @@ export class CodexCliExecutor implements Executor {
     // stdin). `--sandbox workspace-write` is REQUIRED: the default read-only
     // policy can't create the declared output files. `--skip-git-repo-check`
     // lets it run in a fresh worktree that isn't its own git root.
+    // `--json` streams events to stdout as JSONL; each turn's `turn.completed`
+    // event carries token usage (UAT #10 Faz 1 — verified live, codex 0.137.0).
+    // Only the stdout format changes — the agent loop / file writes don't.
     // Callers can still append `--model` etc. via `extraArgs`.
     const args = [
       'exec',
+      '--json',
       '--sandbox',
       'workspace-write',
       '--skip-git-repo-check',
@@ -77,6 +88,9 @@ export class CodexCliExecutor implements Executor {
     });
 
     const tail = tailLines(res.stdoutTail, this.opts.summaryTailLines ?? 20);
+    // Token telemetry rides on every non-killed exit (UAT #10 Faz 1): a run
+    // that failed output validation still spent tokens.
+    const usage = parseCodexUsage(res.stdoutTail) ?? undefined;
 
     if (res.aborted) return { ok: false, errorMessage: 'aborted by signal', logPath };
     if (res.exitCode === null) {
@@ -89,6 +103,7 @@ export class CodexCliExecutor implements Executor {
         errorMessage: `cli exited with code ${res.exitCode}`,
         logPath,
         outputSummary: tail,
+        usage,
       };
     }
 
@@ -98,18 +113,68 @@ export class CodexCliExecutor implements Executor {
 
     const missing = findMissingFileOutputs(step.outputs, ctx.worktreePath);
     if (missing.length > 0) {
-      return buildMissingOutputResult({
-        missing,
-        kind: this.name,
-        stdoutTail: res.stdoutTail,
-        stderrTail: res.stderrTail,
-        logPath,
-        outputSummary: tail,
-      });
+      return {
+        ...buildMissingOutputResult({
+          missing,
+          kind: this.name,
+          stdoutTail: res.stdoutTail,
+          stderrTail: res.stderrTail,
+          logPath,
+          outputSummary: tail,
+        }),
+        usage,
+      };
     }
 
-    return { ok: true, outputSummary: tail, logPath };
+    return { ok: true, outputSummary: tail, logPath, usage };
   }
+}
+
+/**
+ * Pull token usage out of `codex exec --json` JSONL stdout (UAT #10 Faz 1).
+ * Each turn ends with a `turn.completed` event (verified live, codex 0.137.0):
+ *
+ *   {"type":"turn.completed","usage":{"input_tokens":N,
+ *     "cached_input_tokens":N,"output_tokens":N,"reasoning_output_tokens":N}}
+ *
+ * Multi-turn runs emit one per turn — sum them. JSONL is naturally robust to
+ * the spawn helper's 64 KiB tail cap: only the first (possibly cut) line fails
+ * to parse and is skipped; complete lines still count.
+ *
+ * Normalization: codex `input_tokens` INCLUDES the cached subset (OpenAI
+ * convention) while UsageMetadata follows claude's convention (input = uncached
+ * only, cache reads separate). We subtract so cross-executor rollups add up.
+ * Codex reports no dollar cost — `total_cost_usd` stays unset.
+ */
+export function parseCodexUsage(stdout: string): UsageMetadata | null {
+  let input = 0;
+  let cached = 0;
+  let output = 0;
+  let seen = false;
+  for (const line of stdout.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed.includes('"turn.completed"')) continue;
+    try {
+      const evt = JSON.parse(trimmed) as {
+        type?: string;
+        usage?: { input_tokens?: number; cached_input_tokens?: number; output_tokens?: number };
+      };
+      if (evt.type !== 'turn.completed' || !evt.usage) continue;
+      seen = true;
+      input += evt.usage.input_tokens ?? 0;
+      cached += evt.usage.cached_input_tokens ?? 0;
+      output += evt.usage.output_tokens ?? 0;
+    } catch {
+      // Cut or malformed line (tail truncation) — skip, count the rest.
+    }
+  }
+  if (!seen) return null;
+  return {
+    executor: 'codex-cli',
+    input_tokens: Math.max(0, input - cached),
+    output_tokens: output,
+    cache_read_input_tokens: cached,
+  };
 }
 
 function buildPrompt(
