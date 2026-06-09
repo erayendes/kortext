@@ -4,7 +4,11 @@ import type { PersonaRegistry } from '../engine/persona-registry.ts';
 import type { WorkflowDefinition } from '../engine/workflow-parser.ts';
 import { buildGraph } from '../engine/dag.ts';
 import { ItemLifecycle } from '../engine/item-lifecycle.ts';
-import { createExecutor, createRoutedExecutor, type ExecutorKind } from '../cli/executor-factory.ts';
+import {
+  createFallbackExecutor,
+  createRoutedExecutor,
+  type ExecutorKind,
+} from '../cli/executor-factory.ts';
 import { createComposition } from './composition.ts';
 import { driveReadyItems, type DriveResult } from './driver.ts';
 import type { ApprovalQueue } from './approval-queue.ts';
@@ -37,8 +41,14 @@ export type ServerDriveDeps = {
   rulesDir?: string;
   /** Reads the safety switch — env.KORTEXT_DRIVE_ENABLED. */
   enabled: () => boolean;
-  /** Which agent substrate to run (resolved from project.json; mock fallback). */
-  resolveExecutor: () => { kind: ExecutorKind; binary?: string };
+  /**
+   * Which agent substrate(s) to run (resolved from project.json; mock fallback).
+   * `chain` is the ORDERED fallback list (UAT #10) — primary first; when an
+   * executor recoverably fails (quota/429/empty) the engine falls over to the
+   * next. A single-entry chain behaves exactly as a single executor. `binary` is
+   * the primary's binary (each chain kind resolves its own via the factory).
+   */
+  resolveExecutor: () => { chain: ExecutorKind[]; binary?: string };
   /** Branch item worktrees fork from (§5.11). Default 'development'. */
   baseBranch?: string;
 };
@@ -78,14 +88,19 @@ export function makeServerDrive(deps: ServerDriveDeps): ServerDrive {
         "cannot drive: the 'development-cycle' workflow is not loaded — check the workflows directory",
       );
     }
-    const { kind, binary } = deps.resolveExecutor();
-    const baseExecutor = createExecutor(kind, {
+    const { chain, binary } = deps.resolveExecutor();
+    const primaryKind = chain[0];
+    const logsDir = resolve(deps.repoRoot, '.kortext', 'data', 'logs');
+    // UAT #10: build the ORDERED fallback chain. A single-entry chain is a
+    // zero-cost passthrough (createFallbackExecutor returns the bare executor),
+    // so single-executor projects behave exactly as before. MockExecutor doesn't
+    // read personas — skip the registry when the primary is mock.
+    const baseExecutor = createFallbackExecutor(chain, {
       binary: binary ?? '',
       agentsDir: deps.agentsDir,
       rulesDir: deps.rulesDir,
-      logsDir: resolve(deps.repoRoot, '.kortext', 'data', 'logs'),
-      // MockExecutor doesn't read personas — skip handing it the registry.
-      personaRegistry: kind === 'mock' ? undefined : deps.personas,
+      logsDir,
+      personaRegistry: primaryKind === 'mock' ? undefined : deps.personas,
     });
     const executor = createRoutedExecutor(
       deps.repos.personas.list(),
@@ -94,8 +109,8 @@ export function makeServerDrive(deps: ServerDriveDeps): ServerDrive {
         binary: binary ?? '',
         agentsDir: deps.agentsDir,
         rulesDir: deps.rulesDir,
-        logsDir: resolve(deps.repoRoot, '.kortext', 'data', 'logs'),
-        personaRegistry: kind === 'mock' ? undefined : deps.personas,
+        logsDir,
+        personaRegistry: primaryKind === 'mock' ? undefined : deps.personas,
       },
     );
     const composition = createComposition({

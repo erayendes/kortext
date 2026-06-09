@@ -678,12 +678,67 @@ export function patchBacklogItems(
     }
   }
 
+  // Pre-pass 2 (UAT #10): synthesize an epic for every BARE `parent_epic: <id>`
+  // reference that is defined NOWHERE — not a `type:epic` patch item (handled
+  // above) and not already in the backlog. Real agents (Claude UAT #10) skip the
+  // epic container entirely and just point tasks at a bare id; without a target
+  // the parent_id link FK-fails and the whole item's enrichment is dropped. The
+  // id is all we have, so it doubles as the placeholder title (a later step or
+  // human can rename it).
+  for (const item of parsed) {
+    const parentRef = item.parent_id;
+    if (!parentRef || createdEpics.has(parentRef)) continue;
+    if (repos.backlog.get(parentRef) !== null) continue; // real epic/item already exists
+    try {
+      repos.backlog.create({
+        id: parentRef,
+        type: 'epic',
+        title: parentRef,
+        parent_id: null,
+        version: null,
+        model: null,
+        review_gates: [],
+        frontmatter: {},
+        body_md: '',
+        status: 'to_do',
+      });
+      repos.auditLog.append({
+        actor: 'engine',
+        action: 'backlog.patch.epic_synthesized',
+        resource_type: 'backlog_item',
+        resource_id: parentRef,
+        payload: { from: 'bare parent_epic reference', referenced_by: item.id },
+      });
+      createdEpics.add(parentRef);
+      updated.push(parentRef);
+    } catch (err) {
+      skipped.push({ id: parentRef, reason: err instanceof Error ? err.message : String(err) });
+    }
+  }
+
   for (const item of parsed) {
     if (createdEpics.has(item.id)) continue; // fully created in the pre-pass
     const existing = repos.backlog.get(item.id);
     if (existing === null) {
       skipped.push({ id: item.id, reason: 'not found (patch only updates)' });
       continue;
+    }
+
+    // Field-level FK resilience (UAT #10): resolve parent_id safely. After the
+    // pre-passes every referenced epic should exist; if a parent STILL doesn't
+    // resolve (synthesis failed / truly dangling), SKIP the link but keep the
+    // rest of the enrichment — one bad FK must never atomically drop the item's
+    // version/owner/model.
+    let resolvedParentId = item.parent_id ?? existing.parent_id;
+    if (item.parent_id && repos.backlog.get(item.parent_id) === null) {
+      resolvedParentId = existing.parent_id;
+      repos.auditLog.append({
+        actor: 'engine',
+        action: 'backlog.patch.dangling_parent',
+        resource_type: 'backlog_item',
+        resource_id: item.id,
+        payload: { parent_ref: item.parent_id, message: 'parent epic unresolved — link skipped, other fields kept' },
+      });
     }
 
     // review_gates: additive union (drop unknown gates, dedupe).
@@ -706,7 +761,7 @@ export function patchBacklogItems(
       repos.backlog.updatePlanningFields(item.id, {
         type: existing.type, // patches never change the work-item kind
         title: item.title ?? existing.title,
-        parent_id: item.parent_id ?? existing.parent_id,
+        parent_id: resolvedParentId,
         version: item.version ?? existing.version,
         model: item.model ?? existing.model,
         review_gates: reviewGates,

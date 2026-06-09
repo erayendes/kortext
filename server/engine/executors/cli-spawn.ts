@@ -214,6 +214,11 @@ const TRANSIENT_MARKERS: RegExp[] = [
   /rate.?limit/i,
   /\b429\b/,
   /\b5(?:00|02|03|04|29)\b/,
+  // Quota / resource-exhaustion shapes. UAT #10: antigravity (`agy`) returned
+  // `RESOURCE_EXHAUSTED (code 429): Individual quota reached` — a recoverable
+  // failure that should trigger fallback to the next executor, not a hard stop.
+  /resource_exhausted/i,
+  /\bquota\b/i,
 ];
 
 /**
@@ -229,6 +234,54 @@ export function isTransientCliFailure(
 ): boolean {
   if (res.aborted) return false;
   if (res.exitCode === 0) return false;
+  const haystack = `${res.stdoutTail}\n${res.stderrTail}`;
+  return TRANSIENT_MARKERS.some((re) => re.test(haystack));
+}
+
+/**
+ * The UAT #10 antigravity 429 shape: the CLI hit `RESOURCE_EXHAUSTED (code
+ * 429)`, printed the quota error, and *still exited 0* with no real
+ * deliverable. `isTransientCliFailure` deliberately ignores exit-0 results
+ * (it's the success path), so it never catches this — yet the run produced
+ * nothing useful and SHOULD fall over to the next executor.
+ *
+ * This predicate recognises the "exit-0 but the agent produced no meaningful
+ * stdout" case. It is intentionally narrow: only an exit-0 run with an
+ * effectively empty stdout tail counts. A genuinely empty-but-successful run
+ * (agent wrote files, said nothing) is rare for chatty agent CLIs — and the
+ * caller still validates declared file outputs separately, so a false positive
+ * here only widens the recoverable set, never silently drops a good result.
+ */
+export function isEmptyOutputExitZero(
+  res: Pick<SpawnCliResult, 'exitCode' | 'stdoutTail' | 'aborted'>,
+): boolean {
+  if (res.aborted) return false;
+  if (res.exitCode !== 0) return false;
+  return res.stdoutTail.trim().length === 0;
+}
+
+/**
+ * Unified "is this failure worth falling over to the next executor?" predicate,
+ * used by the CLI executors and FallbackExecutor (UAT #10).
+ *
+ * Recoverable when ANY of:
+ *   - it's a transient failure (network/overload/rate-limit/429/quota — non-zero
+ *     exit with a known marker), OR
+ *   - the CLI exited 0 but produced no meaningful stdout (the agy 429 shape), OR
+ *   - the haystack matches a quota/429/rate-limit marker even on exit 0 (the CLI
+ *     printed the quota error but didn't signal it through the exit code).
+ *
+ * Never recoverable when the run was aborted (honour the cancel).
+ */
+export function isRecoverableCliFailure(
+  res: Pick<SpawnCliResult, 'exitCode' | 'stdoutTail' | 'stderrTail' | 'aborted'>,
+): boolean {
+  if (res.aborted) return false;
+  if (isTransientCliFailure(res)) return true;
+  if (isEmptyOutputExitZero(res)) return true;
+  // Exit-0 quota/429 that DID print a marker but produced (some) other noise:
+  // catch it even though isTransientCliFailure skips exit-0 and the stdout is
+  // not strictly empty.
   const haystack = `${res.stdoutTail}\n${res.stderrTail}`;
   return TRANSIENT_MARKERS.some((re) => re.test(haystack));
 }

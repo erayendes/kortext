@@ -9,7 +9,7 @@ import {
   type SafetyGuards,
   type GateController,
 } from '../engine/worker-pool.ts';
-import { createExecutor, type ExecutorKind } from './executor-factory.ts';
+import { createFallbackExecutor, type ExecutorKind } from './executor-factory.ts';
 import type { ApprovalQueue } from '../orchestrator/approval-queue.ts';
 import { chainNextWorkflow } from '../orchestrator/pipeline-chainer.ts';
 import { runtimeLayout } from '../paths.ts';
@@ -26,6 +26,13 @@ export type StartCommandInput = {
   executor: ExecutorKind;
   /** Required for non-mock executors. */
   executorBinary?: string;
+  /**
+   * Optional ORDERED fallback chain (UAT #10). When set, the run uses these
+   * executors in priority order — on a recoverable failure (quota/429/empty) it
+   * falls over to the next. `executor` stays the primary (chain[0]) for the
+   * binary-required guard + back-compat. When unset, the chain is `[executor]`.
+   */
+  executorChain?: ExecutorKind[];
   agentsDir?: string;
   /** Rules dir (`rules/`). Defaults to the runtime package's rules. */
   rulesDir?: string;
@@ -100,7 +107,14 @@ export async function startCommand(input: StartCommandInput): Promise<StartComma
   // Mock executor doesn't read personas — skip the disk scan when possible.
   const personaRegistry =
     input.executor === 'mock' ? undefined : loadPersonasFromDir(agentsDir);
-  const executor = createExecutor(input.executor, {
+  // UAT #10: build from the ORDERED fallback chain. A single-entry chain (the
+  // default `[executor]`) is a zero-cost passthrough — identical to the old
+  // single-executor path.
+  const chain: ExecutorKind[] =
+    input.executorChain && input.executorChain.length > 0
+      ? input.executorChain
+      : [input.executor];
+  const executor = createFallbackExecutor(chain, {
     binary: input.executorBinary ?? '',
     agentsDir,
     rulesDir,

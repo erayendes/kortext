@@ -150,6 +150,49 @@ describe('POST /api/blueprint', () => {
     expect(triggered).toEqual(['existing-project-analysis']);
   });
 
+  it('persists an ordered executor fallback chain (UAT #10), primary first + de-duped', async () => {
+    const res = await fetch(`${baseUrl}/api/blueprint`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        projectName: 'Chain Co',
+        projectCode: 'CHN',
+        projectType: 'new',
+        platforms: ['Web'],
+        blueprintBody: '# valid body content here for chain\n',
+        githubRepo: null,
+        executor: 'antigravity',
+        // Client sends fallbacks; primary should lead, duplicate antigravity dropped.
+        executors: ['claude', 'codex', 'antigravity'],
+      }),
+    });
+    expect(res.status).toBe(201);
+    const metaPath = join(tmpRoot, '.kortext', 'project.json');
+    const meta = JSON.parse(readFileSync(metaPath, 'utf8')) as ProjectMeta;
+    expect(meta.executor).toBe('antigravity');
+    expect(meta.executors).toEqual(['antigravity', 'claude', 'codex']);
+  });
+
+  it('defaults the chain to [executor] when no fallbacks are sent', async () => {
+    const res = await fetch(`${baseUrl}/api/blueprint`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        projectName: 'Solo Co',
+        projectCode: 'SOLO',
+        projectType: 'new',
+        platforms: ['Web'],
+        blueprintBody: '# valid body content here for solo\n',
+        githubRepo: null,
+        executor: 'claude',
+      }),
+    });
+    expect(res.status).toBe(201);
+    const metaPath = join(tmpRoot, '.kortext', 'project.json');
+    const meta = JSON.parse(readFileSync(metaPath, 'utf8')) as ProjectMeta;
+    expect(meta.executors).toEqual(['claude']);
+  });
+
   it('rejects malformed github repos', async () => {
     const res = await fetch(`${baseUrl}/api/blueprint`, {
       method: 'POST',

@@ -1,9 +1,9 @@
 import { join } from 'node:path';
 import type { Executor, ExecutorContext, ExecutorResult } from '../executor.ts';
 import type { WorkflowStep } from '../workflow-parser.ts';
-import { findMissingFileOutputs, sweepSignalMarkers } from '../output-resolver.ts';
+import { buildMissingOutputResult, findMissingFileOutputs, sweepSignalMarkers } from '../output-resolver.ts';
 import { buildRulesBlock } from '../rules-injection.ts';
-import { spawnCliWithRetry, tailLines } from './cli-spawn.ts';
+import { isRecoverableCliFailure, spawnCliWithRetry, tailLines } from './cli-spawn.ts';
 import { readPersonaPrompt, type PersonaRegistry } from '../persona-registry.ts';
 
 /**
@@ -176,6 +176,7 @@ export class ClaudeCliExecutor implements Executor {
     if (res.exitCode !== 0) {
       return {
         ok: false,
+        recoverable: isRecoverableCliFailure(res),
         errorMessage: `cli exited with code ${res.exitCode}`,
         logPath,
         outputSummary: tailLines(res.stdoutTail, this.opts.summaryTailLines ?? 20),
@@ -188,12 +189,14 @@ export class ClaudeCliExecutor implements Executor {
 
     const missing = findMissingFileOutputs(step.outputs, ctx.worktreePath);
     if (missing.length > 0) {
-      return {
-        ok: false,
-        errorMessage: `declared outputs not produced: ${missing.join(', ')}`,
+      return buildMissingOutputResult({
+        missing,
+        kind: this.name,
+        stdoutTail: res.stdoutTail,
+        stderrTail: res.stderrTail,
         logPath,
         outputSummary: tailLines(res.stdoutTail, this.opts.summaryTailLines ?? 20),
-      };
+      });
     }
 
     return {

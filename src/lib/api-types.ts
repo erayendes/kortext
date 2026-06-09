@@ -276,6 +276,8 @@ export type ProjectMeta = {
   platforms: string[];
   githubRepo: string | null;
   executor: ExecutorChoice;
+  /** Ordered fallback chain (UAT #10), primary first. Optional for back-compat. */
+  executors?: ExecutorChoice[];
   executorBinary: string | null;
   createdAt: number;
 };
@@ -294,6 +296,8 @@ export type BlueprintSubmitInput = {
   blueprintBody: string;
   githubRepo: string | null;
   executor: ExecutorChoice;
+  /** Ordered fallback chain (UAT #10), primary first. Primary == `executor`. */
+  executors?: ExecutorChoice[];
   executorBinary: string | null;
   projectDir: string | null;
 };

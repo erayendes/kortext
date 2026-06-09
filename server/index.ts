@@ -30,6 +30,7 @@ import { integrationsRouter } from './routes/integrations.ts';
 import { envVarsRouter } from './routes/env-vars.ts';
 import { startCommand } from './cli/commands.ts';
 import {
+  executorChain,
   readProjectMeta,
   resolveBlueprintPaths,
   writeBlueprint,
@@ -45,7 +46,7 @@ import { waitForHealthy } from './registry/health-wait.ts';
 import { readRegistry, listProjects, defaultRegistryDir } from './registry/projects.ts';
 import { isKortextPackageDir } from './registry/self-guard.ts';
 import { initCommand } from './cli/init.ts';
-import { createExecutor, type ExecutorKind } from './cli/executor-factory.ts';
+import { createFallbackExecutor, type ExecutorKind } from './cli/executor-factory.ts';
 import { resolveExecutorBinary } from './cli/binary-resolver.ts';
 import { WorkflowDeployer } from './engine/executors/workflow-deployer.ts';
 import { getDb } from './db/client.ts';
@@ -194,11 +195,15 @@ const triggerAnalysis = (workflowId: string) => {
     resolveBlueprintPaths(process.cwd()).projectJsonPath,
   );
   const executor = projectMeta?.executor ?? 'mock';
+  // UAT #10: the ordered fallback chain (primary first). executor stays the
+  // primary for the binary-required guard + back-compat logging.
+  const chain: ExecutorKind[] = projectMeta ? executorChain(projectMeta) : ['mock'];
   const executorBinary =
     projectMeta?.executorBinary ?? defaultBinaryFor(executor);
 
   console.log(
     `[kortext] blueprint trigger: workflow=${workflowId} executor=${executor}` +
+      (chain.length > 1 ? ` fallback=[${chain.join('→')}]` : '') +
       (executorBinary ? ` binary=${executorBinary}` : ''),
   );
 
@@ -210,6 +215,7 @@ const triggerAnalysis = (workflowId: string) => {
     workflowsDir,
     workflowId,
     executor,
+    executorChain: chain,
     executorBinary,
     agentsDir,
     safety: safetyGuards,
@@ -263,9 +269,10 @@ const approvalDeployer = new WorkflowDeployer({
   repos,
   executor: (() => {
     const meta = readProjectMeta(resolveBlueprintPaths(process.cwd()).projectJsonPath);
-    const kind = meta?.executor ?? 'mock';
-    const binary = meta?.executorBinary ?? defaultBinaryFor(kind);
-    return createExecutor(kind, {
+    // UAT #10: deployment steps also use the ordered fallback chain.
+    const chain: ExecutorKind[] = meta ? executorChain(meta) : ['mock'];
+    const binary = meta?.executorBinary ?? defaultBinaryFor(chain[0]!);
+    return createFallbackExecutor(chain, {
       binary: binary ?? '',
       agentsDir,
       rulesDir: runtime.rulesDir,
@@ -349,8 +356,12 @@ const serverDrive = makeServerDrive({
   enabled: () => env.KORTEXT_DRIVE_ENABLED,
   resolveExecutor: () => {
     const meta = readProjectMeta(resolveBlueprintPaths(process.cwd()).projectJsonPath);
-    const kind = meta?.executor ?? 'mock';
-    return { kind, binary: meta?.executorBinary ?? defaultBinaryFor(kind) };
+    // UAT #10: the ORDERED fallback chain. When project.json has no chain the
+    // helper yields `[executor]` (or ['mock'] when meta is absent), so the
+    // single-executor behaviour is unchanged.
+    const chain: ExecutorKind[] = meta ? executorChain(meta) : ['mock'];
+    const primary = chain[0]!;
+    return { chain, binary: meta?.executorBinary ?? defaultBinaryFor(primary) };
   },
 });
 app.use('/api', driveRouter({ enabled: serverDrive.enabled, drive: serverDrive.drive }));

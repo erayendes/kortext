@@ -35,7 +35,7 @@ function baseDeps(overrides: Partial<ServerDriveDeps> = {}): ServerDriveDeps {
     repoRoot: tmpRoot,
     agentsDir: join(tmpRoot, 'agents'),
     enabled: () => true,
-    resolveExecutor: () => ({ kind: 'mock' }),
+    resolveExecutor: () => ({ chain: ['mock'] }),
     ...overrides,
   };
 }
@@ -65,7 +65,7 @@ describe('makeServerDrive — assembles the driver runtime from server-loaded pi
       baseDeps({
         resolveExecutor: () => {
           execResolves++;
-          return { kind: 'mock' };
+          return { chain: ['mock'] };
         },
       }),
     );

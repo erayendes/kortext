@@ -7,7 +7,39 @@
 
 ---
 
-## ⭐ Şu an (2026-06-09 #9c) — UAT #9'un 8 BULGUSU DA ÇÖZÜLDÜ ✅ (gate verdict + deploy + build sıralama)
+## ⭐ Şu an (2026-06-09 #10b) — KRİTİK UAT #10 ÇÖZÜLDÜ: çıplak parent_epic → epic auto-create + alan-bazlı FK dayanıklılığı
+
+Yalnızca kod oturumu. UAT #10'un kritik bulgusu (çıplak `parent_epic` referansı → FK cascade → enrichment kaybı) TDD ile çözüldü. **1126 test yeşil** (1124→+2), typecheck + build temiz. **Push EDİLMEDİ.** (UAT #10'un 🟠 ek bulguları — Board blocked sütunu, çok-executor fallback — bu turun kapsamı değil, TODO'da açık.)
+
+- **Kök neden:** Claude step-1'de hiç `type:epic` item üretmedi, sonra 14 task'a **çıplak `parent_epic: E01`** yazdı; E01 container hiç yok → FK fail → atomik → owner/version/model 0. #6 auto-create yalnız patch'te `type:epic` item olarak bildirilen epic'i kapsıyordu, çıplak referansı değil.
+- **Fix 1 (motor — çıplak ref auto-create):** `patchBacklogItems` 2. ön-geçişi — parse edilen item'ların `parent_id`'lerinden karşılığı olmayan her id için **eksik `type:epic` container'ı önce yaratır** (id=başlık; `backlog.patch.epic_synthesized` audit). FK hedefi hep var.
+- **Fix 2 (alan-bazlı dayanıklılık):** update-pass `parent_id`'yi güvenli çözer — çözülemezse linki atlar ama version/owner/model'i yazar (`backlog.patch.dangling_parent`); tek geçersiz FK tüm enrichment'i atomik düşürmez. (+2 test)
+- **Fix 3 (workflow ikincil):** `planning-pipeline.md` step-1: "her `parent_epic: X` için `id: X, type: epic` satırı OLMALI" sertleştirmesi.
+
+**GERÇEK-LLM KANITI (Claude):** planning **succeeded**, 11 item (8 task + 3 epic), **owner/parent_id/version/model 8/8 dolu** — UAT #10'un regresyonu (0/0/0) gitti; patch'ler `8/7/11 updated, 0 skipped` (önceki `0 updated, 14 skipped FK` değil). **Nüans:** bu koşuda Claude gerçek `type:epic` item üretti (3 epic) → çıplak-ref auto-create yolu (synthEpics=0) tetiklenmedi; canlı koşu **sonucu** (enrichment persist), yeni bare-ref-synthesis yolu ise **unit testlerle** (deterministik) kanıtlı. İkisi birlikte her ajan varyasyonunu kapsar.
+
+**SIRADAKİ:** Rebuild + Eray temiz UAT (baştan). agy kotası açılınca antigravity'le de doğrula. Push (Eray "push" deyince).
+
+---
+
+## ⭐ Önceki (2026-06-09 #10) — UAT (Claude): enrichment YİNE düştü (çıplak parent_epic → FK) + 3 ek bulgu
+
+Eray temiz UAT koştu (Claude executor — agy **kota doldu**, 429, bu yüzden Claude'a geçildi). Analiz uçtan uca koştu (LEGAL/GROWTH/PRD/TRD/PFD gerçek dosyalar, boş-çıktı yok). Planning'e geçildi (14 item — ≤8 tavanı yine aşıldı, Eray "etme" dedi, not yok). **Bu turda kod düzeltmesi YOK** (sadece TODO/HANDOVER); başka oturumda fixlenecek, sonra UAT baştan.
+
+**🔴 KRİTİK — Enrichment yine kayboldu (UAT #5'in varyantı, #6 fix kapsamıyor):** Planning epic-link + version patch'leri **0 updated, 14 skipped → DROPPED**; `skipped_detail` = 14× `FOREIGN KEY constraint failed`. Kök neden: Claude step-1'de **hiç `type:epic` item üretmedi**, sonra 14 task'a **çıplak `parent_epic: E01` referansı** yazdı; E01 container hiç yok → FK fail → atomik → version de düştü. #6 auto-create yalnız patch'te `type:epic` item olarak bildirilen epic'i yaratıyor, çıplak referansı kapsamıyor. → epic/parent_id/version/model **0** (gate'ler tuttu, ayrı/FK'siz). Detay [TODO.md](./TODO.md) "KRİTİK UAT #10".
+
+**🟠 Ek bulgular (TODO'da):**
+- **Çok-executor öncelik sıralı fallback** (Eray özelliği): onboarding'de birden çok executor + öncelik; biri fail/kota → sıradakine düş. + agy 429/boş-çıktı **sessiz fail** → görünür mesaj + fallback/retry tetikle.
+- **Board `blocked` item'ları "IN PROGRESS" sütununda gösteriyor** (yanıltıcı): 13 blocked item In Progress'te göründü, gerçek in_progress 0. Ayrı "Blocked" sütunu / "🔒 kilitli" rozeti gerek.
+- **≤8 kapsam tavanı executor-bağımsız tutmuyor** (Claude 14, codex 16 üretmişti) — Eray "not alma" dedi, kayıt yok; bilgi olarak burada.
+
+**Pozitif:** auto-block çalıştı (13 blocked/1 to_do — bağımlılık kapılaması aktif); analiz Claude'la temiz (boş-çıktı yok); gate-marking patch'leri uygulandı (upd 10/11/13).
+
+**SIRADAKİ (yeni fix oturumu):** TODO "KRİTİK UAT #10" — çıplak `parent_epic` referansından epic auto-create + FK ihlalinde alan-bazlı dayanıklılık (tek geçersiz FK tüm item enrichment'ini çöpe atmasın); gerçek **Claude** koşusuyla doğrula (epic+owner+version+model dolu). Sonra Eray UAT'ı **baştan** alacak. **UAT ortamı ayakta:** `not` → :3200 (planning enrichment düşük). Fix sonrası `kortext stop not && kortext purge not --yes`.
+
+---
+
+## ⭐ Önceki (2026-06-09 #9c) — UAT #9'un 8 BULGUSU DA ÇÖZÜLDÜ ✅ (gate verdict + deploy + build sıralama)
 
 Yalnızca kod oturumu. UAT #9'un 8 build-fazı bulgusu (sıralama, retry, UI sebep, gate-verdict, design, prime, temp dosya, deploy zinciri) TDD ile çözüldü; **gerçek antigravity BUILD koşusuyla canlı doğrulandı.** **1124 test yeşil**, typecheck + build temiz. **PUSH EDİLDİ** (`651f0d3..ee3da45`, tek commit) — `main == origin/main`. Plan onaylı, paralel ajanlarla yürütüldü (Stream A gate, Stream B preview).
 

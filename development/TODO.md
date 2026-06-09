@@ -4,6 +4,39 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 
 ---
 
+## ✅ ÇÖZÜLDÜ (UAT #10, 2026-06-09 #10b, Claude) — Çıplak `parent_epic` referansı → FK cascade → enrichment kayboluyordu
+
+> **Belirti:** Claude koşusunda planning enrichment patch'leri (epic-link + version) **0 updated, 14 skipped, DROPPED**. `skipped_detail`: 14 item da `FOREIGN KEY constraint failed`. Sonuç: epic 0, parent_id 0, version 0, model 0 (gate'ler tuttu çünkü ayrı patch'te ve FK'siz). UAT #5'in tekrarı, farklı tetikleyiciyle — **#6 FK-autocreate fix'i bu varyantı kapsamıyor.**
+
+**Kök neden:** Ajan (Claude) backlog.yaml step-1'de **hiç `type: epic` item üretmedi**, sonra patch'te 14 task'a **`parent_epic: E01` (çıplak referans)** yazdı — ama **E01 container'ı ne backlog'da ne patch'te `type:epic` item olarak var**. `patchBacklogItems` FK hedefi bulamıyor → her item `FOREIGN KEY constraint failed` → atomik fail → **aynı item satırındaki `version` de düşüyor** (kümülatif patch). Ajan kendi yorumunda bile itiraf ediyor: *"backlog.yaml adım 1'den hiçbir type:epic item içermeden çıktı… Epic container item adım 1'de eklenmeliydi."*
+
+**Neden #6 yakalamadı:** #6 ön-geçişi yalnız **patch'te `type: epic` item olarak bildirilen** epic'leri yaratıyor. Burada epic item olarak değil **çıplak `parent_epic: <id>` referansı** olarak geldi → sentezlenecek container yok → FK fail. (antigravity #6'da ajan epic'i item/`epic:` label olarak yazdığı için tutmuştu — saf executor varyasyonu.)
+
+**Düzeltilecekler:** ✅ **TAMAM (2026-06-09 #10b, TDD, +2 test → 1126 yeşil).**
+- [x] ~~**Çıplak `parent_epic` referansından epic auto-create**~~ ✅ — `patchBacklogItems`'a 2. ön-geçiş: parse edilen item'ların `parent_id` değerlerinden patch'te/backlog'da **karşılığı olmayan** her id için **eksik `type:epic` container'ı önce yaratır** (id başlık olur; `backlog.patch.epic_synthesized` audit). #6'nın `type:epic`-in-patch yoluna ek. FK hedefi her zaman var olur.
+- [x] ~~**FK ihlalinde item'ı tümden düşürme**~~ ✅ — update-pass artık `parent_id`'yi güvenli çözüyor: çözülemezse (sentez başarısız/dangling) **linki atlar ama version/owner/model'i yazar** (`backlog.patch.dangling_parent` audit). Tek geçersiz FK enrichment'i atomik çöpe atmaz. `updatePlanningFields` artık FK-throw etmiyor.
+- [x] ~~**Regresyon (gerçek Claude)**~~ ✅ — Claude koşusu: `succeeded`, 11 item (8 task+3 epic), **owner/parent_id/version/model 8/8** (regresyon 0/0/0 gitti). Nüans: Claude bu sefer gerçek epic üretti → bare-ref yolu tetiklenmedi (synthEpics=0); o yol unit-test'li. agy kotası açılınca antigravity de denenecek.
+- [x] ~~**Workflow pekiştirme (ikincil)**~~ ✅ — `planning-pipeline.md` step-1: "her `parent_epic: X` için listede `id: X, type: epic` satırı OLMALI; çıplak referans motorun en sık kırıldığı yer" sertleştirmesi (asıl güvence motor auto-create, talimat çift-güvence).
+
+---
+
+## ✅ ÇÖZÜLDÜ (UAT #10, 2026-06-09 #10b) — Board `blocked` item'ları artık ayrı "🔒 Blocked" sütununda
+
+> **Belirti:** "IN PROGRESS 13" görünüyordu ama 13'ü de **`blocked`**, gerçek in_progress 0. Board kolon eşlemesinde blocked için ayrı sütun yoktu → "In Progress"e düşüyordu.
+
+- [x] ~~**Board'a "Blocked" sütunu**~~ ✅ — `board-drawer.ts`: `BoardColumnKey`'e `'blocked'` + `BOARD_COLUMNS`'a `🔒 Blocked` sütunu (kırmızı `#E5484D`, in_progress'ten sonra); `columnKeyForStatus('blocked')` artık `'blocked'` (in_progress DEĞİL). Kart zaten red `block` stili + dependency-count rozeti gösteriyor → kilitli net görünür. `blocked` ASLA In Progress gibi görünmüyor. +board testleri (76).
+
+---
+
+## ✅ ÇÖZÜLDÜ (UAT #10, 2026-06-09 #10b) — Çok-executor öncelik sıralı fallback + boş-çıktı/429 görünürlüğü
+
+> **Tetikleyen:** agy `RESOURCE_EXHAUSTED (429)` → exit-0 + boş çıktı → yanıltıcı "declared outputs not produced" → pipeline sert fail.
+
+- [x] ~~**1. Çok-executor öncelik + otomatik fallback**~~ ✅ — `project.json`'a `executors?: ExecutorChoice[]` (öncelik listesi; `executorChain(meta)` helper, tek `executor`'a geri-uyumlu). Yeni `FallbackExecutor` (`fallback-executor.ts`) sıralı zinciri sarar: recoverable hata (transient/429/boş) → sıradaki executor'a düşer (hangisinin neden fail ettiğini loglar), hard hata → fail-fast. `createFallbackExecutor` factory (tek-girişli = zero-cost passthrough). server-drive/index/commands wiring. Onboarding'de primary + sıralı fallback seçimi. +35 test.
+- [x] ~~**2. Boş-çıktı / 429 görünür + recoverable**~~ ✅ — `cli-spawn.ts`: `RESOURCE_EXHAUSTED`/`quota` marker'ları + `isEmptyOutputExitZero` (agy 429 şekli) + `isRecoverableCliFailure` predicate. `output-resolver.buildMissingOutputResult`: exit-0 boş/kota durumunda **net mesaj** (`"<kind> produced no output (possible quota/rate-limit — 429)"` + `recoverable:true`); gerçek çıktı var ama dosya yoksa eski "declared outputs not produced" (non-recoverable). 4 executor de bağlandı → FallbackExecutor recoverable'ı görüp fallback tetikler.
+
+---
+
 ## 🔶 UAT #9 (2026-06-08, antigravity) — Build fazı: 5/8 ÇÖZÜLDÜ (#9b oturumu), 3 derin kaldı (#4/#5/#8)
 
 > Bağlam: analiz→planning→build→**gerçek kod** ilk kez uçtan uca koştu (not uygulaması: index.html/css/js + vitest testleri üretildi). Build fazında 8 sorun. **Çözülenler #1/#2/#3/#6/#7 (TDD, 1105 test yeşil); kalan #4/#5/#8 derin (gate-verdict mekaniği + staging zinciri).**

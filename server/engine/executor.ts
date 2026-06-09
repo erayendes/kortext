@@ -31,6 +31,15 @@ export type ExecutorResult = {
   outputSummary?: string;
   logPath?: string;
   errorMessage?: string;
+  /**
+   * Set by an executor when its failure is RECOVERABLE — i.e. the FallbackExecutor
+   * should try the next executor in the chain rather than failing the run (UAT
+   * #10: a quota/429/empty-output failure, or a transient network blip). A hard
+   * failure (bad model, real declared-output-missing with non-empty output)
+   * leaves this unset/false so the chain fails fast. Only meaningful when
+   * `ok === false`.
+   */
+  recoverable?: boolean;
 };
 
 export interface Executor {
