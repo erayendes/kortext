@@ -9,7 +9,7 @@
 
 ## ⭐ Şu an (2026-06-09 #10e) — Çıplak `kortext start` artık HER ZAMAN sihirbazı açar + mevcut projeleri listeler (GUI-first)
 
-Yalnızca kod oturumu (UAT değil). Mevcut proje varken çıplak `kortext start` terminalde metin liste basıyordu (GUI-first değil). Artık her durumda **sihirbazı açar**; sihirbaz mevcut projeleri listeler. TDD ile yapıldı. **1184 test yeşil** (1178→+6), typecheck + build temiz. **PUSH EDİLMEDİ** — Eray "push" diyene dek local.
+Yalnızca kod oturumu (UAT değil). Mevcut proje varken çıplak `kortext start` terminalde metin liste basıyordu (GUI-first değil). Artık her durumda **sihirbazı açar**; sihirbaz mevcut projeleri listeler. TDD ile yapıldı. **1184 test yeşil** (1178→+6), typecheck + build temiz. **PUSH EDİLDİ** (`e56a70a..5d92868`, tek commit) — `main == origin/main`.
 
 - **bin dispatch (`bin/kortext.ts`):** bare `start` + proje var (`action==='list'`) → terminal listesi yerine `launchWizardAndOpen()`. Terminal listesi `--no-open`/headless (CI) **fallback**'i olarak kaldı.
 - **Yeni route (`server/routes/projects.ts`):** `GET /api/projects` → kayıtlı projeler (slug/name/path/port/status/url, `serializeProjects` saf+testli); `POST /api/projects/:slug/start` → `startProject(slug)` → `{handoffUrl}` + `onHandoff` (wizard self-exit). 404 bilinmeyen slug, 502 start fail. index.ts'te bootstrap wiring ile mount.
