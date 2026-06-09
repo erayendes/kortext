@@ -6,7 +6,11 @@ import { GeminiCliExecutor } from '../engine/executors/gemini-cli-executor.ts';
 import { AntigravityCliExecutor } from '../engine/executors/antigravity-cli-executor.ts';
 import type { PersonaRegistry } from '../engine/persona-registry.ts';
 import { PersonaRoutedExecutor } from '../engine/executors/persona-routed-executor.ts';
-import { FallbackExecutor, type FallbackEntry } from '../engine/executors/fallback-executor.ts';
+import {
+  FallbackExecutor,
+  type FallbackEntry,
+  type FalloverInfo,
+} from '../engine/executors/fallback-executor.ts';
 import { resolveExecutorBinary } from './binary-resolver.ts';
 
 /**
@@ -135,7 +139,11 @@ export function createRoutedExecutor(
  */
 export function createFallbackExecutor(
   chain: ExecutorKind[],
-  opts: ExecutorFactoryOptions & { log?: (message: string) => void },
+  opts: ExecutorFactoryOptions & {
+    log?: (message: string) => void;
+    /** Fired on every recoverable fallthrough (quota/429) — see falloverAuditSink. */
+    onFallover?: (info: FalloverInfo) => void;
+  },
 ): Executor {
   if (chain.length === 0) {
     throw new Error('createFallbackExecutor requires a non-empty chain');
@@ -146,5 +154,45 @@ export function createFallbackExecutor(
   };
   if (chain.length === 1) return build(chain[0]!);
   const entries: FallbackEntry[] = chain.map((kind) => ({ kind, executor: build(kind) }));
-  return new FallbackExecutor(entries, opts.log ? { log: opts.log } : {});
+  return new FallbackExecutor(entries, {
+    ...(opts.log ? { log: opts.log } : {}),
+    ...(opts.onFallover ? { onFallover: opts.onFallover } : {}),
+  });
+}
+
+/**
+ * The standard `onFallover` sink (UAT #10 follow-up — "agy kota-uyarısı"):
+ * writes one `executor.fallover` audit event per recoverable fallthrough, so a
+ * quota-exhausted executor (agy 429 → claude) is VISIBLE in the GUI Activity
+ * feed instead of only a console line. Best-effort: a failed audit write never
+ * breaks the executor chain.
+ */
+export function falloverAuditSink(auditLog: {
+  append: (input: {
+    actor: string;
+    action: string;
+    resource_type?: string | null;
+    resource_id?: string | null;
+    payload?: Record<string, unknown>;
+  }) => unknown;
+}): (info: FalloverInfo) => void {
+  return (info) => {
+    try {
+      auditLog.append({
+        actor: 'fallback',
+        action: 'executor.fallover',
+        resource_type: 'run_step',
+        resource_id: String(info.runStepId),
+        payload: {
+          from: info.from,
+          to: info.to,
+          step_key: info.stepKey,
+          run_id: info.runId,
+          reason: info.reason,
+        },
+      });
+    } catch {
+      // Telemetry must never take down the run.
+    }
+  };
 }

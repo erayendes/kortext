@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { buildRulesBlock } from '../server/engine/rules-injection.ts';
+import { buildRulesBlock, filterInjectedRuleInputs } from '../server/engine/rules-injection.ts';
 
 // UAT #7: rules/*.md (behavior.md, models.md) were NEVER injected into any
 // agent prompt — they existed only for the dashboard. The agent therefore
@@ -17,6 +17,44 @@ beforeEach(() => {
   writeFileSync(join(rulesDir, 'branching.md'), '# Branching\n\nFeature branches off development.');
 });
 afterEach(() => rmSync(rulesDir, { recursive: true, force: true }));
+
+// UAT #10 — gereksiz input kırp: a rules/*.md the step declares is ALREADY
+// injected into the prompt by buildRulesBlock; listing it again under "Inputs"
+// makes the agent Read the same content a second time (the headless contract
+// tells it to read inputs) = double-spent tokens. filterInjectedRuleInputs
+// removes from the Inputs list exactly what buildRulesBlock injected — and
+// ONLY that (no rulesDir / missing file → the entry stays, the agent must
+// still read it itself).
+describe('filterInjectedRuleInputs', () => {
+  it('drops a rules input that buildRulesBlock injects', () => {
+    expect(
+      filterInjectedRuleInputs(['backlog-assignees-set', 'rules/models.md'], rulesDir),
+    ).toEqual(['backlog-assignees-set']);
+  });
+
+  it('keeps non-rule inputs untouched', () => {
+    expect(filterInjectedRuleInputs(['docs/api.md', '.kortext/foundation/PRD.md'], rulesDir)).toEqual([
+      'docs/api.md',
+      '.kortext/foundation/PRD.md',
+    ]);
+  });
+
+  it('keeps a rules input when rulesDir is undefined (nothing was injected)', () => {
+    expect(filterInjectedRuleInputs(['rules/models.md'], undefined)).toEqual(['rules/models.md']);
+  });
+
+  it('keeps a rules input whose file does not exist (it was not injected)', () => {
+    expect(filterInjectedRuleInputs(['rules/nonexistent.md'], rulesDir)).toEqual([
+      'rules/nonexistent.md',
+    ]);
+  });
+
+  it('keeps a rules input whose file is empty (buildRulesBlock skips empty files)', () => {
+    writeFileSync(join(rulesDir, 'empty.md'), '   \n');
+    expect(buildRulesBlock(['rules/empty.md'], rulesDir)).not.toContain('empty.md');
+    expect(filterInjectedRuleInputs(['rules/empty.md'], rulesDir)).toEqual(['rules/empty.md']);
+  });
+});
 
 describe('buildRulesBlock', () => {
   it('always injects behavior.md (universal), regardless of step inputs', () => {

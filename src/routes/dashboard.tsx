@@ -196,6 +196,13 @@ export function describeAuditEvent(entry: {
       if (text) return `commented: "${text}"`;
       return 'commented';
     }
+    // UAT #10 — "agy kota-uyarısı": quota fallover reads as a warning.
+    case 'executor.fallover': {
+      const from = str('from');
+      const to = str('to');
+      if (from && to) return `⚠ ${from} hit a quota/rate limit — fell over to ${to}`;
+      return '⚠ executor quota/rate limit — fell over';
+    }
     default:
       return entry.action.replace(/[._]/g, ' ');
   }

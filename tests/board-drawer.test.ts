@@ -218,6 +218,20 @@ describe('descriptionFromBody', () => {
   });
 
   describe('describeActivity', () => {
+    it('phrases an executor fallover as a quota warning (UAT #10 — agy kota-uyarısı)', () => {
+      expect(
+        describeActivity({
+          actor: 'fallback',
+          action: 'executor.fallover',
+          payload: {
+            from: 'antigravity',
+            to: 'claude',
+            reason: 'antigravity-cli produced no output (possible quota/rate-limit — 429)',
+          },
+        }),
+      ).toBe('⚠ antigravity hit a quota/rate limit — fell over to claude');
+    });
+
     it('humanizes a status transition with readable status labels', () => {
       expect(
         describeActivity({

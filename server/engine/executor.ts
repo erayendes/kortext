@@ -1,4 +1,7 @@
 import type { WorkflowStep } from './workflow-parser.ts';
+import type { UsageMetadata } from '../db/schemas.ts';
+
+export type { UsageMetadata };
 
 /**
  * Common interface every step executor (mock or real CLI) must implement.
@@ -40,6 +43,12 @@ export type ExecutorResult = {
    * `ok === false`.
    */
   recoverable?: boolean;
+  /**
+   * Token/cost telemetry for this step, when the executor could capture it
+   * (UAT #10 Faz 1). Unset when the CLI gives nothing. Flows through the worker
+   * pool / gate cycle into run_steps.usage_metadata / gate_runs.usage_metadata.
+   */
+  usage?: UsageMetadata;
 };
 
 export interface Executor {

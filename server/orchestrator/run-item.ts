@@ -107,6 +107,16 @@ export async function runItem(itemId: string, deps: RunItemDeps): Promise<RunIte
     lifecycle.transition(itemId, 'start', by);
   }
 
+  // UAT #10 Faz 2 — "akıllı retry": a bounced item carries a revision_directive
+  // (the prior gate findings, recorded by runTestCycle, or a +prime revise). Fold
+  // it into the dev-cycle so the agent fixes THOSE findings instead of re-coding
+  // blind. One-shot: cleared after the run so a later turn isn't re-directed by
+  // stale findings.
+  const reviseDirective =
+    typeof item.frontmatter.revision_directive === 'string' && item.frontmatter.revision_directive.length > 0
+      ? item.frontmatter.revision_directive
+      : undefined;
+
   // Pre-create the item's dev-cycle run FIRST (FK closes: item_id is set) so the
   // worktree — and the resolution ledger — key off a real run id. This is where
   // the run/item impedance actually closes (§5.14); the engine then executes the
@@ -138,8 +148,22 @@ export async function runItem(itemId: string, deps: RunItemDeps): Promise<RunIte
       worktreePath: lease.path,
       registry, // ← block can cancel the live run by item (W1)
       triggeredBy: by,
+      reviseDirective, // ← Faz 2: gate findings fed into the re-code prompt
     });
     run = result.run;
+    // One-shot: the dev turn has now seen the directive — clear it so the next
+    // run isn't re-directed by stale findings. Re-read first (the build may have
+    // touched frontmatter); a fresh gate fail will record a new directive.
+    if (reviseDirective !== undefined) {
+      const fresh = repos.backlog.get(itemId);
+      if (fresh) {
+        const { revision_directive: _consumed, ...rest } = fresh.frontmatter as Record<
+          string,
+          unknown
+        >;
+        repos.backlog.updateFrontmatter(itemId, rest);
+      }
+    }
   } catch (err) {
     // The engine threw (e.g. a misconfigured gate) — quarantine, drop the stale
     // ledger entry, then rethrow.

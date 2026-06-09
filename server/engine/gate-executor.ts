@@ -1,4 +1,4 @@
-import type { Gate } from '../db/schemas.ts';
+import type { Gate, UsageMetadata } from '../db/schemas.ts';
 
 /**
  * Gate execution abstraction — the gate-cycle counterpart of {@link Executor}.
@@ -33,6 +33,12 @@ export type GateOutcome = {
    * when the executor produced no machine-readable verdict.
    */
   acResults?: AcResult[];
+  /**
+   * Token/cost the gate's persona agent spent (UAT #10 Faz 1). Carried up from
+   * the underlying {@link Executor} result so test-cycle can persist it on the
+   * gate_run — the "which gate burned how much" view. Absent for mock/older runs.
+   */
+  usage?: UsageMetadata;
 };
 
 export interface GateExecutor {

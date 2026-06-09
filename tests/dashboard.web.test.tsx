@@ -160,6 +160,16 @@ describe('formatAge', () => {
 });
 
 describe('describeAuditEvent', () => {
+  it('phrases an executor fallover as a quota warning (UAT #10)', () => {
+    expect(
+      describeAuditEvent({
+        actor: 'fallback',
+        action: 'executor.fallover',
+        payload: { from: 'antigravity', to: 'claude', reason: '429' },
+      }),
+    ).toBe('⚠ antigravity hit a quota/rate limit — fell over to claude');
+  });
+
   it('phrases pipeline lifecycle events', () => {
     expect(
       describeAuditEvent({ actor: 'orchestrator', action: 'pipeline.succeeded', payload: { workflow_id: 'planning-pipeline' } }),

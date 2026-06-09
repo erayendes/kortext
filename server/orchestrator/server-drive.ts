@@ -7,6 +7,7 @@ import { ItemLifecycle } from '../engine/item-lifecycle.ts';
 import {
   createFallbackExecutor,
   createRoutedExecutor,
+  falloverAuditSink,
   type ExecutorKind,
 } from '../cli/executor-factory.ts';
 import { createComposition } from './composition.ts';
@@ -101,6 +102,9 @@ export function makeServerDrive(deps: ServerDriveDeps): ServerDrive {
       rulesDir: deps.rulesDir,
       logsDir,
       personaRegistry: primaryKind === 'mock' ? undefined : deps.personas,
+      // Quota/429 fallover lands in the audit feed (GUI Activity) — "agy
+      // kota-uyarısı", UAT #10 follow-up.
+      onFallover: falloverAuditSink(deps.repos.auditLog),
     });
     const executor = createRoutedExecutor(
       deps.repos.personas.list(),

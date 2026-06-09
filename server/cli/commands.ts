@@ -9,7 +9,7 @@ import {
   type SafetyGuards,
   type GateController,
 } from '../engine/worker-pool.ts';
-import { createFallbackExecutor, type ExecutorKind } from './executor-factory.ts';
+import { createFallbackExecutor, falloverAuditSink, type ExecutorKind } from './executor-factory.ts';
 import type { ApprovalQueue } from '../orchestrator/approval-queue.ts';
 import { chainNextWorkflow } from '../orchestrator/pipeline-chainer.ts';
 import { runtimeLayout } from '../paths.ts';
@@ -121,6 +121,8 @@ export async function startCommand(input: StartCommandInput): Promise<StartComma
     // Per-project raw logs land under .kortext/data/logs (git-ignored).
     logsDir: input.logsDir ?? resolve(process.cwd(), '.kortext', 'data', 'logs'),
     personaRegistry,
+    // Quota/429 fallover lands in the audit feed (GUI) — UAT #10 follow-up.
+    onFallover: falloverAuditSink(input.repos.auditLog),
   });
   // Only arm the gates when a controller is present to answer them. Passing
   // `gates` without a `gateController` would make the worker-pool throw at the

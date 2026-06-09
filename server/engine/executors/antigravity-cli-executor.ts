@@ -2,7 +2,7 @@ import { join } from 'node:path';
 import type { Executor, ExecutorContext, ExecutorResult } from '../executor.ts';
 import type { WorkflowStep } from '../workflow-parser.ts';
 import { buildMissingOutputResult, findMissingFileOutputs, sweepSignalMarkers } from '../output-resolver.ts';
-import { buildRulesBlock } from '../rules-injection.ts';
+import { buildRulesBlock, filterInjectedRuleInputs } from '../rules-injection.ts';
 import { isRecoverableCliFailure, spawnCli, tailLines } from './cli-spawn.ts';
 import { readPersonaPrompt, type PersonaRegistry } from '../persona-registry.ts';
 
@@ -53,7 +53,7 @@ const AGY_HEADLESS_CONTRACT = [
   '     your current working directory.',
   '  2. Do NOT paste the deliverable in your text answer. The file tool call',
   '     is the only acceptable channel.',
-  '  3. Read each Input file (if any) before writing Outputs.',
+  '  3. Read the Input files relevant to the Task before writing Outputs.',
   '  4. After every Output is on disk, reply with ONE short confirmation line.',
   '  5. Do not ask clarifying questions — no human is present to answer.',
   '═══════════════════════════════════════════════════════════════════════',
@@ -88,7 +88,14 @@ export class AntigravityCliExecutor implements Executor {
       step.persona,
       this.opts.personaRegistry ?? { agentsDir: this.opts.agentsDir },
     );
-    const prompt = buildPrompt(step, ctx, personaBody, buildRulesBlock(step.inputs, this.opts.rulesDir));
+    // Rules block from the ORIGINAL inputs; the prompt's Inputs list drops the
+    // already-injected rules (UAT #10 — no double-send).
+    const rulesBlock = buildRulesBlock(step.inputs, this.opts.rulesDir);
+    const displayStep: WorkflowStep = {
+      ...step,
+      inputs: filterInjectedRuleInputs(step.inputs, this.opts.rulesDir),
+    };
+    const prompt = buildPrompt(displayStep, ctx, personaBody, rulesBlock);
     const logPath = join(this.opts.logsDir, `run-${ctx.runId}-step-${ctx.runStepId}.log`);
 
     // Headless agent defaults. `-p` for non-interactive print mode,

@@ -273,6 +273,43 @@ export const RunInsertSchema = z.object({
 });
 export type RunInsert = z.input<typeof RunInsertSchema>;
 
+// ---------- usage / cost telemetry (UAT #10 Faz 1) ----------
+
+/**
+ * Per-step token/cost captured from an executor CLI. Token fields are optional —
+ * the claude CLI emits a full `usage` block + `total_cost_usd` via
+ * `--output-format json`; codex/gemini need separate scraping, antigravity is
+ * quota-based and reports nothing. Persisted as a JSON blob on run_steps /
+ * gate_runs (migration 012). This is the single backend source of truth — the
+ * engine `UsageMetadata` type re-exports it, and src/lib/api-types.ts mirrors it.
+ */
+export const UsageMetadataSchema = z.object({
+  executor: z.string().min(1),
+  input_tokens: z.number().nonnegative().optional(),
+  output_tokens: z.number().nonnegative().optional(),
+  cache_read_input_tokens: z.number().nonnegative().optional(),
+  cache_creation_input_tokens: z.number().nonnegative().optional(),
+  total_cost_usd: z.number().nonnegative().optional(),
+});
+export type UsageMetadata = z.infer<typeof UsageMetadataSchema>;
+
+/**
+ * A TEXT column carrying a {@link UsageMetadataSchema} JSON blob (or NULL).
+ * Tolerates the raw SQLite string (rows read via `SELECT *`), an already-parsed
+ * object, or null/undefined — so `RunStepSchema.parse(row)` works on a raw row.
+ */
+export const UsageMetadataColumn = z.preprocess((v) => {
+  if (typeof v !== 'string') return v ?? null;
+  if (v.length === 0) return null;
+  // A corrupt blob must not crash row reads (these schemas parse on every
+  // run_step / gate_run read) — mirror unpackJson's tolerant fallback.
+  try {
+    return JSON.parse(v);
+  } catch {
+    return null;
+  }
+}, UsageMetadataSchema.nullable());
+
 // ---------- run_steps ----------
 
 export const RunStepStatusSchema = z.enum([
@@ -296,6 +333,8 @@ export const RunStepSchema = z.object({
   log_path: z.string().nullable(),
   output_summary: z.string().nullable(),
   error_message: z.string().nullable(),
+  // Token/cost telemetry for this step (migration 012). NULL on legacy rows.
+  usage_metadata: UsageMetadataColumn,
 });
 export type RunStep = z.infer<typeof RunStepSchema>;
 
@@ -458,6 +497,8 @@ export const GateRunSchema = z.object({
   findings: z.string().nullable(),
   created_at: Timestamp,
   ended_at: Timestamp.nullable(),
+  // Token/cost telemetry for this gate run (migration 012). NULL on legacy rows.
+  usage_metadata: UsageMetadataColumn,
 });
 export type GateRun = z.infer<typeof GateRunSchema>;
 

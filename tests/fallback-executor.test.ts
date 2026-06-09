@@ -102,6 +102,53 @@ describe('FallbackExecutor', () => {
     expect(c.calls).toBe(1);
   });
 
+  // UAT #10 follow-up — "agy kota-uyarısı": a recoverable fallthrough (most
+  // commonly agy's 429 quota) must be observable beyond a console line, so the
+  // composition can write it into the audit feed (GUI Activity).
+  it('fires onFallover with from/to/reason when it falls through (Faz 1)', async () => {
+    const first = new StubExecutor('antigravity-cli', recoverableFail);
+    const second = new StubExecutor('claude-cli', success);
+    const onFallover = vi.fn();
+    const fb = new FallbackExecutor(
+      [
+        { kind: 'antigravity', executor: first },
+        { kind: 'claude', executor: second },
+      ],
+      { log: () => {}, onFallover },
+    );
+    await fb.execute(makeStep(), makeCtx());
+    expect(onFallover).toHaveBeenCalledTimes(1);
+    expect(onFallover).toHaveBeenCalledWith({
+      from: 'antigravity',
+      to: 'claude',
+      stepKey: 'p.1',
+      runId: 1,
+      runStepId: 1,
+      reason: 'antigravity-cli produced no output (possible quota/rate-limit — 429)',
+    });
+  });
+
+  it('does NOT fire onFallover on success or on a hard fail (Faz 1)', async () => {
+    const onFallover = vi.fn();
+    const okFb = new FallbackExecutor(
+      [
+        { kind: 'antigravity', executor: new StubExecutor('a', success) },
+        { kind: 'claude', executor: new StubExecutor('c', success) },
+      ],
+      { onFallover },
+    );
+    await okFb.execute(makeStep(), makeCtx());
+    const hardFb = new FallbackExecutor(
+      [
+        { kind: 'antigravity', executor: new StubExecutor('a', hardFail) },
+        { kind: 'claude', executor: new StubExecutor('c', success) },
+      ],
+      { log: () => {}, onFallover },
+    );
+    await hardFb.execute(makeStep(), makeCtx());
+    expect(onFallover).not.toHaveBeenCalled();
+  });
+
   it('fails fast on a HARD (non-recoverable) failure — does NOT try the next', async () => {
     const first = new StubExecutor('antigravity-cli', hardFail);
     const second = new StubExecutor('claude-cli', success);

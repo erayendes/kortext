@@ -1,4 +1,4 @@
-import type { Executor, ExecutorContext, ExecutorResult } from '../executor.ts';
+import type { Executor, ExecutorContext, ExecutorResult, UsageMetadata } from '../executor.ts';
 import type { WorkflowStep } from '../workflow-parser.ts';
 
 export type MockStepBehavior = {
@@ -8,6 +8,8 @@ export type MockStepBehavior = {
   fail?: boolean;
   /** Output summary string surfaced into run_steps.output_summary. */
   summary?: string;
+  /** Token/cost telemetry surfaced into run_steps.usage_metadata (UAT #10 Faz 1). */
+  usage?: UsageMetadata;
 };
 
 /**
@@ -60,8 +62,8 @@ export class MockExecutor implements Executor {
     this.endedOrder.push(step.key);
 
     if (cfg.fail) {
-      return { ok: false, errorMessage: cfg.summary ?? 'mock-forced-failure' };
+      return { ok: false, errorMessage: cfg.summary ?? 'mock-forced-failure', usage: cfg.usage };
     }
-    return { ok: true, outputSummary: cfg.summary ?? `mock:${step.key}` };
+    return { ok: true, outputSummary: cfg.summary ?? `mock:${step.key}`, usage: cfg.usage };
   }
 }

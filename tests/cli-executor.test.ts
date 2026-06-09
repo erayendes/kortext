@@ -109,6 +109,46 @@ describe('ClaudeCliExecutor', () => {
     expect(result.outputSummary).toContain('write api/health endpoint');
   });
 
+  it('omits an injected rules file from the Inputs list (UAT #10 — no double-send)', async () => {
+    // rules/models.md is injected into the system prompt by buildRulesBlock;
+    // listing it under Inputs too makes the agent Read the same content again.
+    const bin = makeMockBinary('claude-echo-stdin-rules', `cat`);
+    const exec = new ClaudeCliExecutor({ binary: bin, agentsDir, logsDir, rulesDir });
+    const result = await exec.execute(
+      makeStep({ inputs: ['docs/api.md', 'rules/models.md'] }),
+      makeCtx(),
+    );
+    expect(result.ok).toBe(true);
+    expect(result.outputSummary).toContain('docs/api.md');
+    expect(result.outputSummary).not.toContain('rules/models.md');
+  });
+
+  it('requests structured json output so usage is captured (Faz 1)', async () => {
+    // mock echoes its args; the executor must ask for --output-format json.
+    const bin = makeMockBinary('claude-args', `echo "$@"\nexit 0`);
+    const exec = new ClaudeCliExecutor({ binary: bin, agentsDir, logsDir });
+    const result = await exec.execute(makeStep(), makeCtx());
+    expect(result.ok).toBe(true);
+    expect(result.outputSummary).toContain('--output-format json');
+  });
+
+  it('captures token usage + cost from the json result envelope (Faz 1)', async () => {
+    const envelope =
+      '{"type":"result","total_cost_usd":0.0423,"usage":{"input_tokens":2500,"output_tokens":450,"cache_read_input_tokens":2100,"cache_creation_input_tokens":100}}';
+    const bin = makeMockBinary('claude-usage', `echo '${envelope}'\nexit 0`);
+    const exec = new ClaudeCliExecutor({ binary: bin, agentsDir, logsDir });
+    const result = await exec.execute(makeStep(), makeCtx());
+    expect(result.ok).toBe(true);
+    expect(result.usage).toEqual({
+      executor: 'claude-cli',
+      input_tokens: 2500,
+      output_tokens: 450,
+      cache_read_input_tokens: 2100,
+      cache_creation_input_tokens: 100,
+      total_cost_usd: 0.0423,
+    });
+  });
+
   it('honours AbortSignal — kills the child', async () => {
     // long-running mock binary
     const bin = makeMockBinary(
@@ -294,6 +334,29 @@ describe('ClaudeCliExecutor', () => {
 });
 
 describe('CodexCliExecutor', () => {
+  it('requests JSONL event output so usage is captured (Faz 1)', async () => {
+    const bin = makeMockBinary('codex-args-json', `echo "$@"\nexit 0`);
+    const exec = new CodexCliExecutor({ binary: bin, agentsDir, logsDir });
+    const result = await exec.execute(makeStep(), makeCtx());
+    expect(result.ok).toBe(true);
+    expect(result.outputSummary).toContain('--json');
+  });
+
+  it('captures + normalizes token usage from turn.completed events (Faz 1)', async () => {
+    const line =
+      '{"type":"turn.completed","usage":{"input_tokens":21503,"cached_input_tokens":2432,"output_tokens":17,"reasoning_output_tokens":10}}';
+    const bin = makeMockBinary('codex-usage', `echo '${line}'\nexit 0`);
+    const exec = new CodexCliExecutor({ binary: bin, agentsDir, logsDir });
+    const result = await exec.execute(makeStep(), makeCtx());
+    expect(result.ok).toBe(true);
+    expect(result.usage).toEqual({
+      executor: 'codex-cli',
+      input_tokens: 21503 - 2432, // normalized: codex input INCLUDES cached
+      output_tokens: 17,
+      cache_read_input_tokens: 2432,
+    });
+  });
+
   it('runs the configured codex binary', async () => {
     const bin = makeMockBinary('codex-mock', `echo "codex ran"`);
     const exec = new CodexCliExecutor({ binary: bin, agentsDir, logsDir });
@@ -342,6 +405,29 @@ describe('CodexCliExecutor', () => {
 });
 
 describe('GeminiCliExecutor', () => {
+  it('requests json output so usage is captured (Faz 1)', async () => {
+    const bin = makeMockBinary('gemini-args-json', `echo "$@"\nexit 0`);
+    const exec = new GeminiCliExecutor({ binary: bin, agentsDir, logsDir });
+    const result = await exec.execute(makeStep(), makeCtx());
+    expect(result.ok).toBe(true);
+    expect(result.outputSummary).toContain('--output-format json');
+  });
+
+  it('captures token usage from the stats envelope (Faz 1)', async () => {
+    const envelope =
+      '{"response":"ok","stats":{"models":{"gemini-2.5-pro":{"api":{"totalRequests":1},"tokens":{"input":1200,"prompt":4200,"candidates":300,"total":4700,"cached":3000,"thoughts":200,"tool":0}}}}}';
+    const bin = makeMockBinary('gemini-usage', `echo '${envelope}'\nexit 0`);
+    const exec = new GeminiCliExecutor({ binary: bin, agentsDir, logsDir });
+    const result = await exec.execute(makeStep(), makeCtx());
+    expect(result.ok).toBe(true);
+    expect(result.usage).toEqual({
+      executor: 'gemini-cli',
+      input_tokens: 1200,
+      output_tokens: 500,
+      cache_read_input_tokens: 3000,
+    });
+  });
+
   it('runs the configured gemini binary', async () => {
     const bin = makeMockBinary('gemini-mock', `echo "gemini ran"`);
     const exec = new GeminiCliExecutor({ binary: bin, agentsDir, logsDir });
