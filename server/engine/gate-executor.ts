@@ -21,10 +21,18 @@ export type GateContext = {
   signal?: AbortSignal;
 };
 
+import type { AcResult } from './gate-verdict.ts';
+
 /** A gate's verdict. `findings` is the write-up surfaced into gate_runs.findings (typically on fail). */
 export type GateOutcome = {
   pass: boolean;
   findings?: string | null;
+  /**
+   * Per-acceptance-criterion judgments the gate persona rendered (#4). The
+   * orchestrator applies these to the item's AC checklist (best-effort). Absent
+   * when the executor produced no machine-readable verdict.
+   */
+  acResults?: AcResult[];
 };
 
 export interface GateExecutor {

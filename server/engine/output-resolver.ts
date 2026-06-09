@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, renameSync, statSync } from 'node:fs';
 import { basename, dirname, isAbsolute, join } from 'node:path';
 
 /**
@@ -62,6 +62,32 @@ export function findMissingFileOutputs(outputs: string[], worktreePath: string):
   return outputs
     .filter(isFileOutput)
     .filter((rel) => findActualOutputFiles(rel, worktreePath).length === 0);
+}
+
+/**
+ * After a step, move any file an agent wrote into the worktree root that is
+ * named after a SIGNAL output (bare-token marker like `backlog-drafted`,
+ * `item-in-test`) into `.kortext/temp/`. Agents create these despite signals
+ * being verification-exempt (UAT #8); they must never clutter the user's
+ * project root (UAT #9 #7). Best-effort: a failure to move one never throws.
+ * Returns the names actually moved.
+ */
+export function sweepSignalMarkers(outputs: string[], worktreePath: string): string[] {
+  const moved: string[] = [];
+  const tempDir = join(worktreePath, '.kortext', 'temp');
+  for (const out of outputs) {
+    if (isFileOutput(out)) continue; // only bare-token signals
+    const src = join(worktreePath, out);
+    try {
+      if (!existsSync(src) || !statSync(src).isFile()) continue;
+      mkdirSync(tempDir, { recursive: true });
+      renameSync(src, join(tempDir, out));
+      moved.push(out);
+    } catch {
+      // Best-effort cleanup — never fail a step over a stray marker.
+    }
+  }
+  return moved;
 }
 
 /**

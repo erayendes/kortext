@@ -7,7 +7,47 @@
 
 ---
 
-## ⭐ Şu an (2026-06-08 #8) — UAT #7'nin 3 kod bulgusu TDD ile ÇÖZÜLDÜ + GERÇEK-LLM KANITI ✅ (codex+antigravity)
+## ⭐ Şu an (2026-06-09 #9c) — UAT #9'un 8 BULGUSU DA ÇÖZÜLDÜ ✅ (gate verdict + deploy + build sıralama)
+
+Yalnızca kod oturumu. UAT #9'un 8 build-fazı bulgusu (sıralama, retry, UI sebep, gate-verdict, design, prime, temp dosya, deploy zinciri) TDD ile çözüldü; **gerçek antigravity BUILD koşusuyla canlı doğrulandı.** **1124 test yeşil**, typecheck + build temiz. **Push EDİLMEDİ.** Plan onaylı, paralel ajanlarla yürütüldü (Stream A gate, Stream B preview).
+
+- **#1 🔴 Build sıralaması (stall kökü):** yeni `server/orchestrator/build-order.ts` `selectBuildableItems` — en erken version → dependency-ready (blocker'lar `done`) item'lar; `runReadyItems` bunu kullanıyor. **#2 🔴 bounced retry:** `in_progress` item'lar da aday. (+7 test)
+- **#3 🟠 UI sebep:** `describeActivity` artık bounce sebebini gösteriyor (`… Review → In progress — merge conflict: …`).
+- **#4 🔴 Gate-verdict (KATI):** `AgentGateExecutor` gate adımını AC + "verdict raporu yaz" ile zenginleştirir; ajan `verdict: pass|fail` + `ac_results` yazar; yeni `gate-verdict.ts` parse eder; rapor/verdict yok → strict fail; `test-cycle` AC kutucuklarını işaretler. Fail → bounce. **#5 🔴 design:** `designer.md` gerçek tasarım-review + kalite kriterleri (WCAG AA, hiyerarşi, …) → kötü UI FAIL.
+- **#6 🟠 +prime gate:** `planning-pipeline.md` insan-döngü (uat gate + +prime item) talimatı.
+- **#7 🟠 temp dosya:** `sweepSignalMarkers` bare-token sinyal dosyalarını `.kortext/temp/`'e taşır (4 executor).
+- **#8 ⚠️ deploy zinciri (bounded):** preview URL `/api/backlog`'ta + drawer'da "Canlı önizleme" linki; `frontmatter.preview` kapısı kalktı → her zaman persist. Staging→preprod→prod (gerçek git merge+tag) build stall gidince ulaşılır. Prod push YOK (gerçek hedef yok).
+
+**⭐ GERÇEK-LLM BUILD KANITI (antigravity, harness, epic + NOT-001→NOT-002 blocked_by zinciri + quality_control gate):**
+- **Serileştirme (#1/#2):** NOT-001 done@pass-1, NOT-002 started@pass-2 → **SERIAL OK**. NOT-002 (blocked_by NOT-001) blocker bitene kadar **başlamadı** (pass-1 impl=1, paralel-aynı-tabandan YOK). Final: NOT-001/002/E01 hepsi **done**.
+- **Strict gate (#4) GERÇEK kanıt:** `gate_runs` → NOT-001 quality_control `status: pass`, persona `+qa-engineer`, findings = **gerçek qa raporu** ("Karar: PASS (Geçti)", her AC tek tek değerlendirilmiş + smoke test koşulmuş). Gate artık mekanik DEĞİL — ajan `verdict: pass` yazdı, `parseGateVerdict` okudu.
+- **AC kutucukları (#4):** NOT-001 AC'lerin **ikisi de `done: true`** → gate ajanının `ac_results`'ı motor tarafından işaretlendi (Eray'ın "AC gerçekten kontrol edilsin" isteği canlı kanıtlandı).
+- **Gerçek git merge:** development log → `Merge kortext/run-1 into development` + gerçek kod commit'leri ("implement note-taking functionality", "add index.html structure and styles"), **conflict YOK**.
+- **TAM DEPLOY ZİNCİRİ (#8) UÇTAN UCA:** epic done → **staging deploy → staging onayı → version tamamlanması → preprod deploy → preprod onayı → prod release**. DB+git ile kanıtlandı: epic `staging_approved=true` + `preprod_approved=true`; **git tag `v0.1`**; main log `Release v0.1: merge development into main` (gerçek dev→main merge). Kronik kırık nokta artık uçtan uca çalışıyor. (Prod push kapsam dışı — gerçek remote yok.)
+
+**SIRADAKİ:** Rebuild + Eray temiz build UAT (sıralı yürütme, gate'ler gerçekten yargılıyor mu, preview linki, staging). Push (Eray "push" deyince). Docs güncel.
+
+---
+
+## ⭐ Önceki (2026-06-08 #9) — UAT: planning→build→KOD ilk kez çalıştı 🎉 ama build/merge/sıralama/kalite kırık (8 bulgu)
+
+Eray temiz UAT koştu (antigravity, #8 fixleri kurulu, "Notlarım"). **Büyük kilometre taşı:** analiz→planning→**build→gerçek kod** ilk kez uçtan uca koştu — not uygulaması üretildi (`index.html`, `css/main.css`, `js/{app,storage,utils}.js` + vitest testleri). #6/#8 fixleri **tuttu** (planning succeeded, 5 item ≤8, owner/version/model dolu, epic var). **Bu turda kod düzeltmesi YOK** (sadece TODO/HANDOVER); Eray "bulguları yaz, başka oturumda fixlenecek" dedi.
+
+**🔴 Build fazı 8 bulgu (detay [TODO.md](./TODO.md) "UAT #9"):**
+1. **Build sıralaması yok (stall kök nedeni):** 5 item aynı ms'de paralel başladı, `blocked_by` zinciri (T01→T02→T03→T04) yok sayıldı → hepsi aynı `development` tabanından kodlandı → ilki temiz merge (done), diğer 4'ü **merge conflict** → `review→in_progress`. Eray'ın istediği sıra: **version → epic → item-bağımlılığı**.
+2. **Geri dönen görev START almıyor:** conflict sonrası item `in_progress`'te asılı, yeni dev-cycle tetiklenmiyor → kalıcı stall (motor boşta).
+3. **Geri-gönderme sebebi UI'da yok:** sebep veride var (`merge conflict: ...`) ama Board göstermiyor.
+4. **AC mekanik geçiyor:** `test→review` `reason=gates passed` otomatik; review_gates (quality/security/design) gerçek doğrulama yapmıyor → AC kutucukları işaretsiz.
+5. **Tasarım berbat:** designer/`design_review` gerçekten devreye girmemiş (madde 4 ile bağlantılı).
+6. **+prime görevi/kapısı yok:** insan-döngü kapısı (uat gate / prime task) hiç üretilmedi.
+7. **Sinyal-marker dosyaları proje kökünü kirletiyor (KABUL EDİLEMEZ):** `backlog-drafted` vb. + `item-in-test` köke yazılmış → `.kortext/temp/`'e taşınmalı.
+8. **local URL / staging / preprod:** kronik kırık nokta; build stall yüzünden bu turda da ulaşılamadı.
+
+**SIRADAKİ (yeni fix oturumu):** TODO "UAT #9" 8 maddesini ele al — öncelik: #1 (version→epic→dep sıralı yürütme) + #2 (geri-dönen görev restart) → bunlar stall'ı çözer; sonra #4/#5 (gerçek gate/review + design kalite), #7 (temp dosya), #3/#6 (görünürlük + prime), #8 (staging/preprod zinciri). Her fix gerçek-LLM koşusuyla doğrulanmalı. **UAT ortamı ayakta:** `not` → :3200 (build merge-conflict'te takılı). Fix sonrası `kortext stop not && kortext purge not --yes` ile temiz başlanır.
+
+---
+
+## ⭐ Önceki (2026-06-08 #8) — UAT #7'nin 3 kod bulgusu TDD ile ÇÖZÜLDÜ + GERÇEK-LLM KANITI ✅ (codex+antigravity)
 
 Yalnızca kod oturumu. UAT #7'nin üç bulgusu (sinyal-çıktı, rules-enjeksiyon, codex ≤8) düzeltildi, **gerçek koşularla kanıtlandı.** **1093 test yeşil** (1083→+10), typecheck + build temiz. Ayrı bir iş: **multi-model routing branch'i `main`'e merge edildi** (`cbe45b8`). **PUSH EDİLDİ** (`8f5ba2a..75a6167`, 8 commit: routing + UAT #5–#8 fix'leri + routing plan) — `main == origin/main`.
 

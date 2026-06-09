@@ -9,6 +9,7 @@ import { ItemLifecycle } from '../server/engine/item-lifecycle.ts';
 import { loadPersonasFromDir } from '../server/engine/persona-registry.ts';
 import { MockGateExecutor } from '../server/engine/executors/mock-gate-executor.ts';
 import { runTestCycle, TEST_GATES, GATE_PERSONA } from '../server/orchestrator/test-cycle.ts';
+import { readAcceptanceCriteria } from '../server/engine/acceptance-criteria.ts';
 import type { Gate } from '../server/db/schemas.ts';
 
 let tmpRoot: string;
@@ -165,6 +166,50 @@ describe('runTestCycle — join (§5.9 #4)', () => {
     expect(repos.backlog.get('T01')?.status).toBe('review');
     // Both cycles preserved in history; the join only read attempt 2.
     expect(repos.gateRuns.listForItem('T01')).toHaveLength(2);
+  });
+
+  it('a gate returning acResults marks the item AC done flags (#4)', async () => {
+    const lc = seedItemInTest('T01', ['quality_control']);
+    repos.backlog.updateFrontmatter('T01', {
+      acceptance_criteria: [
+        { text: 'User can log in', done: false },
+        { text: 'Errors are shown', done: false },
+      ],
+    });
+    // Re-walk to test (updateFrontmatter does not change status; item already in test).
+    const result = await runTestCycle('T01', {
+      repos,
+      lifecycle: lc,
+      gateExecutor: new MockGateExecutor(() => ({
+        acResults: [
+          { text: 'User can log in', status: 'met' },
+          { text: 'Errors are shown', status: 'unmet' },
+        ],
+      })),
+    });
+    expect(result.outcome).toBe('review');
+    const ac = readAcceptanceCriteria(repos.backlog.get('T01')!.frontmatter);
+    expect(ac).toEqual([
+      { text: 'User can log in', done: true },
+      { text: 'Errors are shown', done: false },
+    ]);
+  });
+
+  it('AC marking is best-effort — an unmatched acResult never throws the cycle', async () => {
+    const lc = seedItemInTest('T01', ['quality_control']);
+    repos.backlog.updateFrontmatter('T01', {
+      acceptance_criteria: [{ text: 'User can log in', done: false }],
+    });
+    const result = await runTestCycle('T01', {
+      repos,
+      lifecycle: lc,
+      gateExecutor: new MockGateExecutor(() => ({
+        acResults: [{ text: 'A criterion that does not exist on the item', status: 'met' }],
+      })),
+    });
+    expect(result.outcome).toBe('review');
+    const ac = readAcceptanceCriteria(repos.backlog.get('T01')!.frontmatter);
+    expect(ac).toEqual([{ text: 'User can log in', done: false }]);
   });
 
   it('throws when the item is not in the test column', async () => {

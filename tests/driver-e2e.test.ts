@@ -72,6 +72,18 @@ class WorktreeWritingExecutor implements Executor {
   readonly name = 'worktree-writer';
   async execute(step: WorkflowStep, ctx: ExecutorContext): Promise<ExecutorResult> {
     if (ctx.signal.aborted) return { ok: false, errorMessage: 'aborted' };
+    // A test-cycle gate step: write a passing machine-readable verdict report to
+    // the declared output path so the STRICT gate (#4) reads a `verdict: pass`.
+    if (ctx.workflowId.startsWith('gate:')) {
+      const declared = step.outputs[0];
+      if (declared) {
+        const rel = declared.replace('<slug>', 'NOT').replace('<ts>', '2026-06-09_10-00-00');
+        const abs = join(ctx.worktreePath, rel);
+        mkdirSync(join(abs, '..'), { recursive: true });
+        writeFileSync(abs, '---\nverdict: pass\n---\nall acceptance criteria met\n');
+      }
+      return { ok: true, outputSummary: `gate ${step.key}` };
+    }
     // Only the dev-cycle build commits, and only inside a per-item worktree
     // (path under the test repo's worktree root, never the host repo root).
     const inItemWorktree =

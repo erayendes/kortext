@@ -20,6 +20,7 @@ import {
   Ban,
   Check,
   CircleStop,
+  ExternalLink,
   Link2,
   Plus,
   Tag,
@@ -44,6 +45,7 @@ import {
   descriptionFromBody,
   epicProgress,
   itemGates,
+  previewLinkOf,
   statusBadge,
   underlyingStatusFromActivity,
   type BoardTransition,
@@ -239,6 +241,7 @@ function ItemDrawer({
   const blockReason = blocked ? blockReasonFromActivity(activity) : null;
   const underlying = blocked ? underlyingStatusFromActivity(activity) : null;
   const columnLabel = statusBadge((underlying ?? item.status) as BacklogItem['status']).label;
+  const previewUrl = previewLinkOf(item);
 
   async function toggleAc(index: number, done: boolean) {
     if (busy) return;
@@ -342,6 +345,22 @@ function ItemDrawer({
             <div className="dr-mrow">
               <span className="dr-mk">Parent epic</span>
               <span className="dr-mv mono">{item.parent_id}</span>
+            </div>
+          )}
+          {previewUrl && (
+            <div className="dr-mrow">
+              <span className="dr-mk">Canlı önizleme</span>
+              <span className="dr-mv">
+                <a
+                  href={previewUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--blue, #5E84D2)' }}
+                >
+                  <ExternalLink style={{ width: 12, height: 12 }} />
+                  {previewUrl}
+                </a>
+              </span>
             </div>
           )}
         </div>

@@ -103,6 +103,31 @@ Göreve başlamadan önce `workspace/memory/context/` dizinindeki tüm aktif gö
 2. Tasarım sistemiyle uyumu doğrula
 3. Sapmaları tespit et ve düzeltme talebi gönder
 
+### 4. Design Review Gate — Verdict Raporu
+**Kategori:** `routine`
+
+`design_review` gate'inde item `test` kolonuna geldiğinde, item'ın live preview URL'ini (yoksa worktree'deki UI kodunu) incele ve **makine-okunur bir karar raporu** yaz. Mekanik "çalıştım → geçti" YOK — karar yalnızca rapordaki `verdict` alanından gelir.
+
+- **Çıktı yolu (tam):** `.kortext/reports/design_review-reports_<slug>_<ts>.md`
+- **Frontmatter:**
+  ```yaml
+  verdict: pass | fail
+  ac_results:
+    - text: "<acceptance criterion metni>"
+      status: met | unmet
+  ```
+- **Gövde:** insan-okunur tasarım bulguları (hangi ekran/bileşen, neyin yanlış, nasıl düzeltilir).
+
+**Kalite kriterleri (her birini değerlendir):**
+- **Görsel hiyerarşi:** Önem sırası net mi? Birincil aksiyon öne çıkıyor mu?
+- **Spacing & hizalama:** Tutarlı boşluk skalası, ızgara hizası; rastgele/eşit-olmayan padding yok.
+- **Renk kontrastı:** Metin ve etkileşimli öğeler **WCAG AA** (normal metin ≥ 4.5:1, büyük metin ≥ 3:1) sağlıyor mu?
+- **Tutarlılık:** Token'lar (renk, tipografi, radius, gölge) tasarım sistemine uyuyor; tek-seferlik (one-off) değerler yok.
+- **Responsive:** Mobil/tablet/masaüstü kırılım noktalarında düzen bozulmuyor; taşma/kesilme yok.
+
+**STRICT kural:** Her acceptance criterion'ı ve yukarıdaki her kalite kriterini **tek tek** değerlendir. **Kötü UI** (zayıf hiyerarşi, hizasız/eşit-olmayan spacing, AA-altı kontrast, tutarsızlık, kırık responsive) veya `unmet` bir kriter varsa → **gate'i FAIL et** (`verdict: fail`). Fail → item kodlamaya geri döner. "İdare eder" geçer not değildir.
+
 ## artifacts
 
 - `workspace/references/design-system.md`
+- `.kortext/reports/design_review-reports_<slug>_<ts>.md` (gate verdict raporu)

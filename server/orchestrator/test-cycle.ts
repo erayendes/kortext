@@ -2,6 +2,8 @@ import type { Repositories } from '../db/repositories/index.ts';
 import type { Gate, GateRun } from '../db/schemas.ts';
 import type { ItemLifecycle } from '../engine/item-lifecycle.ts';
 import type { GateExecutor, GateOutcome } from '../engine/gate-executor.ts';
+import { applyCriterionToggle, readAcceptanceCriteria } from '../engine/acceptance-criteria.ts';
+import type { AcResult } from '../engine/gate-verdict.ts';
 
 /**
  * The gates that run in PARALLEL in the `test` column. `uat` is intentionally
@@ -45,6 +47,36 @@ export type TestCycleDeps = {
   /** Override the gate → persona map (tests). Default GATE_PERSONA. */
   personaForGate?: (gate: Gate) => string | null;
 };
+
+/**
+ * Apply a gate's per-criterion verdict to the item's AC checklist (#4). Each
+ * acResult is matched to an AC by text (exact, then trimmed); a match toggles
+ * `done = (status === 'met')` via {@link applyCriterionToggle}, attributed to the
+ * gate persona. Best-effort: unmatched criteria and write errors are swallowed so
+ * AC marking can never throw the test cycle. The item is re-read per result so
+ * concurrent gates do not clobber each other's writes.
+ */
+function applyGateAcResults(
+  repos: Repositories,
+  itemId: string,
+  acResults: AcResult[] | undefined,
+  by: string,
+): void {
+  if (!acResults || acResults.length === 0) return;
+  for (const ac of acResults) {
+    try {
+      const item = repos.backlog.get(itemId);
+      if (!item) return;
+      const list = readAcceptanceCriteria(item.frontmatter);
+      let index = list.findIndex((c) => c.text === ac.text);
+      if (index < 0) index = list.findIndex((c) => c.text.trim() === ac.text.trim());
+      if (index < 0) continue;
+      applyCriterionToggle(repos, { id: itemId, index, done: ac.status === 'met', by });
+    } catch {
+      // Best-effort — never fail the cycle over an AC mark.
+    }
+  }
+}
 
 /**
  * Run the test-column gate cycle for an item already in `test` (§5.9 #4).
@@ -98,6 +130,9 @@ export async function runTestCycle(itemId: string, deps: TestCycleDeps): Promise
       repos.gateRuns.transition(row.id, outcome.pass ? 'pass' : 'fail', {
         findings: outcome.findings ?? null,
       });
+      // #4 — the gate marks the item's AC checkboxes from its per-criterion
+      // verdict. Best-effort: a bad match or a write error never throws the cycle.
+      applyGateAcResults(repos, itemId, outcome.acResults, persona ?? by);
     }),
   );
 

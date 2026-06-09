@@ -220,6 +220,98 @@ describe('runItem — per-item run + worktree keystone (capstone B1, §5.9 #10)'
   });
 });
 
+describe('runItem — live-preview URL persistence (#8)', () => {
+  /** A minimal PreviewManager stand-in: records start/url/stop calls. */
+  function mockPreview(url: string | null) {
+    const started: string[] = [];
+    const stopped: string[] = [];
+    const manager = {
+      async startFor(itemId: string) {
+        started.push(itemId);
+        return { itemId, url, port: 4173 } as never;
+      },
+      async stopFor(itemId: string) {
+        stopped.push(itemId);
+        return true;
+      },
+      urlFor() {
+        return url;
+      },
+    };
+    return { manager, started, stopped };
+  }
+
+  it('persists preview_url for an item even WITHOUT frontmatter.preview === true', async () => {
+    const lc = makeLifecycle();
+    lc.create({ id: 'P1', type: 'task', title: 'P1' }); // no preview flag
+    const acq = mockAcquirer();
+    const pv = mockPreview('http://127.0.0.1:4173');
+
+    const result = await runItem('P1', {
+      repos,
+      lifecycle: lc,
+      executor: new MockExecutor(() => ({ durationMs: 1 })),
+      graph: buildGraph(devCycleWf),
+      acquireWorktree: async (id) => {
+        acq.calls.push(id);
+        return acq.fn(id);
+      },
+      registry: new RunRegistry(),
+      previewManager: pv.manager as never,
+    });
+
+    expect(result.outcome).toBe('implemented');
+    expect(pv.started).toEqual(['P1']);
+    // The URL reaches the user: it is persisted on the item regardless of flag.
+    expect(repos.backlog.get('P1')?.preview_url).toBe('http://127.0.0.1:4173');
+  });
+
+  it('still persists preview_url when the item IS flagged preview: true', async () => {
+    const lc = makeLifecycle();
+    lc.create({ id: 'P2', type: 'task', title: 'P2' });
+    repos.backlog.updateFrontmatter('P2', { preview: true });
+    const acq = mockAcquirer();
+    const pv = mockPreview('http://127.0.0.1:5000');
+
+    await runItem('P2', {
+      repos,
+      lifecycle: lc,
+      executor: new MockExecutor(() => ({ durationMs: 1 })),
+      graph: buildGraph(devCycleWf),
+      acquireWorktree: async (id) => {
+        acq.calls.push(id);
+        return acq.fn(id);
+      },
+      registry: new RunRegistry(),
+      previewManager: pv.manager as never,
+    });
+
+    expect(repos.backlog.get('P2')?.preview_url).toBe('http://127.0.0.1:5000');
+  });
+
+  it('leaves preview_url null when the preview yields no URL', async () => {
+    const lc = makeLifecycle();
+    lc.create({ id: 'P3', type: 'task', title: 'P3' });
+    const acq = mockAcquirer();
+    const pv = mockPreview(null); // preview started but produced no URL
+
+    await runItem('P3', {
+      repos,
+      lifecycle: lc,
+      executor: new MockExecutor(() => ({ durationMs: 1 })),
+      graph: buildGraph(devCycleWf),
+      acquireWorktree: async (id) => {
+        acq.calls.push(id);
+        return acq.fn(id);
+      },
+      registry: new RunRegistry(),
+      previewManager: pv.manager as never,
+    });
+
+    expect(repos.backlog.get('P3')?.preview_url).toBeNull();
+  });
+});
+
 describe('runReadyItems — bounded-concurrency scheduler (capstone B1, §5.9 #10)', () => {
   it('runs every ready to_do item, each reaching test', async () => {
     const lc = makeLifecycle();
@@ -262,14 +354,14 @@ describe('runReadyItems — bounded-concurrency scheduler (capstone B1, §5.9 #1
     expect(repos.backlog.list({ status: 'test', limit: 100 })).toHaveLength(5); // all still ran
   });
 
-  it('ignores items that are not to_do (in_progress/test left untouched)', async () => {
+  it('builds to_do + retries bounced in_progress (UAT #9 #2); leaves test/review/terminal', async () => {
     const lc = makeLifecycle();
-    lc.create({ id: 'T1', type: 'task', title: 'T1' }); // to_do
+    lc.create({ id: 'T1', type: 'task', title: 'T1' }); // to_do → built
     lc.create({ id: 'IP', type: 'task', title: 'IP' });
-    lc.transition('IP', 'start', 'x'); // in_progress
+    lc.transition('IP', 'start', 'x'); // in_progress (bounced/returned) → RETRIED
     lc.create({ id: 'TS', type: 'task', title: 'TS' });
     lc.transition('TS', 'start', 'x');
-    lc.transition('TS', 'test', 'x'); // test
+    lc.transition('TS', 'test', 'x'); // test → untouched (already past build)
     const acq = mockAcquirer();
     const results = await runReadyItems({
       repos,
@@ -282,10 +374,9 @@ describe('runReadyItems — bounded-concurrency scheduler (capstone B1, §5.9 #1
       },
       registry: new RunRegistry(),
     });
-    expect(results).toHaveLength(1);
-    expect(acq.calls).toEqual(['T1']); // only the to_do item
-    expect(repos.backlog.get('IP')?.status).toBe('in_progress'); // untouched
-    expect(repos.backlog.get('TS')?.status).toBe('test'); // untouched
+    expect(results).toHaveLength(2);
+    expect(acq.calls.sort()).toEqual(['IP', 'T1']); // to_do + bounced in_progress
+    expect(repos.backlog.get('TS')?.status).toBe('test'); // in-flight, untouched
   });
 });
 

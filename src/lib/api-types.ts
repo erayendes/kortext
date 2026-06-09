@@ -122,6 +122,12 @@ export type BacklogItem = {
   parent_id: string | null;
   version: string | null;
   /**
+   * The local live-preview URL brought up from the item's worktree on `test`
+   * entry (server/orchestrator/test-preview.ts). Null until a preview starts;
+   * cleared by closure. Optional on the mirror because legacy fixtures omit it.
+   */
+  preview_url?: string | null;
+  /**
    * The review gates selected for this item (the applicable set). Optional on
    * the frontend mirror because legacy fixtures/tests omit it; the live API
    * always sends an array (often empty).

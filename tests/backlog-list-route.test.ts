@@ -113,6 +113,27 @@ describe('GET /api/backlog — total + offset (P1)', () => {
     expect(body.items).toHaveLength(2);
   });
 
+  it('serializes preview_url on the list response (so the UI can link to it)', async () => {
+    const a = app();
+    const [id] = await seedTasks(a, 1);
+    repos.backlog.setPreviewUrl(id!, 'http://127.0.0.1:4173');
+
+    const { body } = await call(a, 'GET', '/api/backlog');
+    const found = body.items.find((it: any) => it.id === id);
+    expect(found).toBeDefined();
+    expect(found.preview_url).toBe('http://127.0.0.1:4173');
+  });
+
+  it('serializes preview_url on the single-item response', async () => {
+    const a = app();
+    const [id] = await seedTasks(a, 1);
+    repos.backlog.setPreviewUrl(id!, 'http://127.0.0.1:4173');
+
+    const { status, body } = await call(a, 'GET', `/api/backlog/${id}`);
+    expect(status).toBe(200);
+    expect(body.item.preview_url).toBe('http://127.0.0.1:4173');
+  });
+
   it('clampLimit accepts up to 2000 and clamps above that', async () => {
     const a = app();
     await seedTasks(a, 3);

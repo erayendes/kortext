@@ -8,6 +8,7 @@ import { openDb } from '../server/db/client.ts';
 import type { Repositories } from '../server/db/repositories/index.ts';
 import { ApprovalQueue } from '../server/orchestrator/approval-queue.ts';
 import { MockExecutor } from '../server/engine/executors/mock-executor.ts';
+import type { Executor } from '../server/engine/executor.ts';
 import { parseWorkflowMarkdown } from '../server/engine/workflow-parser.ts';
 import { createComposition } from '../server/orchestrator/composition.ts';
 
@@ -40,16 +41,33 @@ function initRepo(root: string) {
   git(root, 'branch', 'development');
 }
 
-function makeComposition() {
+function makeComposition(executor: Executor = new MockExecutor(() => ({ durationMs: 1 }))) {
   return createComposition({
     repos,
-    executor: new MockExecutor(() => ({ durationMs: 1 })),
+    executor,
     queue: new ApprovalQueue({ repos, pollIntervalMs: 15 }),
     repoRoot,
     baseBranch: 'development',
     loadDeploymentWorkflow: () => deploymentWf,
     preview: { command: 'node', args: ['-e', 'setInterval(()=>{},1000)'] },
   });
+}
+
+/** A gate persona stand-in that writes a passing verdict report to the worktree. */
+function passingGateExecutor(): Executor {
+  return {
+    name: 'gate-pass',
+    async execute(step, ctx) {
+      const declared = step.outputs[0];
+      if (declared) {
+        const rel = declared.replace('<slug>', 'NOT').replace('<ts>', '2026-06-09_10-00-00');
+        const abs = join(ctx.worktreePath, rel);
+        mkdirSync(join(abs, '..'), { recursive: true });
+        writeFileSync(abs, '---\nverdict: pass\n---\nall good\n');
+      }
+      return { ok: true, outputSummary: 'gate ok' };
+    },
+  };
 }
 
 beforeEach(() => {
@@ -147,7 +165,7 @@ describe('createComposition — wires the real adapters to the resolution ledger
   });
 
   it('the gate executor opens a step on the item run and runs it in the worktree (C5)', async () => {
-    const c = makeComposition();
+    const c = makeComposition(passingGateExecutor());
     repos.backlog.create({ id: 'A4', type: 'task', title: 'A4' });
     const run = repos.runs.createRun({
       workflow_id: 'development-cycle',
@@ -156,7 +174,9 @@ describe('createComposition — wires the real adapters to the resolution ledger
       worktree_path: null,
       triggered_by: 'test',
     });
-    c.resolution.record('A4', { runId: run.id, worktreePath: '/wt/A4', handle: null });
+    const wt = join(tmpRoot, 'wt-A4');
+    mkdirSync(wt, { recursive: true });
+    c.resolution.record('A4', { runId: run.id, worktreePath: wt, handle: null });
 
     const before = repos.runs.listSteps(run.id).length;
     const out = await c.gateExecutor.runGate({

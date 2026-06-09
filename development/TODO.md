@@ -4,6 +4,41 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 
 ---
 
+## 🔶 UAT #9 (2026-06-08, antigravity) — Build fazı: 5/8 ÇÖZÜLDÜ (#9b oturumu), 3 derin kaldı (#4/#5/#8)
+
+> Bağlam: analiz→planning→build→**gerçek kod** ilk kez uçtan uca koştu (not uygulaması: index.html/css/js + vitest testleri üretildi). Build fazında 8 sorun. **Çözülenler #1/#2/#3/#6/#7 (TDD, 1105 test yeşil); kalan #4/#5/#8 derin (gate-verdict mekaniği + staging zinciri).**
+
+### 1. ✅ ÇÖZÜLDÜ — Build sıralaması: version → epic → item-bağımlılığı (STALL kök nedeni)
+- **Kök neden:** `runReadyItems` tüm `to_do` item'ları paralel başlatıyordu; `blocked_by` planning'in son patch'inde set ediliyor (step-1'den sonra) → auto-block tetiklenmiyor → hepsi `to_do` → hepsi aynı `development` tabanından paralel → merge conflict.
+- **Fix:** yeni `server/orchestrator/build-order.ts` `selectBuildableItems` — **en erken açık version → yalnız dependency-ready (blocker'ları `done`) item'lar**. `runReadyItems` artık bunu kullanıyor (epic/terminal/test/review hariç; dangling blocker = resolved). +7 test.
+
+### 2. ✅ ÇÖZÜLDÜ — Geri dönen (bounced) görev yeniden START alıyor
+- `selectBuildableItems` artık `in_progress` (bounced) item'ları da aday alıyor → conflict sonrası item taze dev-cycle alıp **güncel `development`'tan** yeniden kodlanıyor (conflict çözülür). #1 zaten conflict'i büyük ölçüde önler (sıralı); bu güvenlik ağı. +regresyon testi güncellendi.
+
+### 3. ✅ ÇÖZÜLDÜ — Geri-gönderme sebebi UI'da görünüyor
+- Sebep (`merge conflict: …`) zaten `audit_log`'da (`item_transition.reason`) ama `describeActivity` onu düşürüyordu. Fix: drawer activity satırı artık `… moved Review → In progress — merge conflict: …` gösteriyor. +2 test.
+
+### 4. ✅ ÇÖZÜLDÜ (#9c oturumu) — Gate'ler gerçek verdict veriyor + AC kontrol ediliyor
+- **Kök neden:** `AgentGateExecutor` gate adımını **boş inputs/outputs + tek satır açıklama** ile sentezliyordu ve ajan **çökmeden çalıştıysa** `{pass:true}` dönüyordu — gerçek verdict'i veya AC'leri hiç okumuyordu.
+- **Fix (KATI — Eray kararı):** Gate adımı artık zengin (item başlığı + AC listesi + "her AC'yi yargıla, verdict raporunu ŞU yola yaz"). Ajan `.kortext/reports/<gate>-reports_<slug>_<ts>.md`'ye `verdict: pass|fail` + `ac_results` yazar; yeni `server/engine/gate-verdict.ts` `parseGateVerdict` okur; rapor yok/verdict yok → **strict fail**. `test-cycle` `ac_results`'ı item'ın AC kutucuklarına uygular (`applyCriterionToggle`, by: gate persona). Fail → item bounce (#2 ile yeniden kodlanır). +7 gate-verdict + güncellenmiş agent-gate-executor/test-cycle/composition/driver-e2e testleri. Persona+workflow talimatları güncellendi (qa/security/designer/EM + test-cycle.md).
+
+### 5. ✅ ÇÖZÜLDÜ (#4 ile) — Tasarım kalitesi gate'i gerçek
+- `design_review` gate'i artık gerçek verdict veriyor → kötü UI FAIL → item bounce olur. `agents/designer.md`'ye gerçek tasarım-review rapor çıktısı + somut kalite kriterleri (görsel hiyerarşi, hizalama/boşluk, WCAG AA kontrast, tutarlılık, responsive) + "kötü UI'da gate'i FAIL et" talimatı eklendi.
+
+### 6. ✅ ÇÖZÜLDÜ (talimat) — +prime görev/gate üretimi pekiştirildi
+- `planning-pipeline.md` gate seçim talimatına **🧑 İnsan-döngü ZORUNLU** eklendi: kullanıcıya dönük her kritik akışta en az bir item'a `uat` gate'i; insan-müdahale işleri (domain/API key/bütçe/yasal) ayrı item + `assignee: +prime`; her backlog'da en az bir insan-döngü noktası. (Etki gerçek-LLM koşusunda doğrulanacak — talimat-bağımlı.)
+
+### 7. ✅ ÇÖZÜLDÜ — Sinyal-marker dosyaları proje kökünü kirletmiyor
+- Yeni `output-resolver.sweepSignalMarkers` — her adım sonrası, ajanın köke yazdığı bare-token sinyal dosyalarını (`backlog-drafted`, `item-in-test`, …) **`.kortext/temp/`'e taşır** (dosya çıktılarına dokunmaz). 4 executor de exit-0 sonrası çağırıyor. +3 test. Proje kökü temiz kalır.
+
+### 8. ✅ ÇÖZÜLDÜ (bounded) — Preview URL yüzeye çıktı; staging zinciri canlı doğrulanıyor
+- **Preview URL:** `/api/backlog` zaten serialize ediyormuş (regresyon testi eklendi); `run-item.ts`'teki `frontmatter.preview===true` kapısı kaldırıldı → preview gelince **her zaman persist** edilir; drawer'da "Canlı önizleme" linki (`previewLinkOf` + board.tsx). +testler.
+- **Staging zinciri:** Build stall (#1/#2) gidince epic→staging→onay→preprod→prod (gerçek git merge+tag) zincirine ulaşılabilir. **Gerçek-LLM build harness'i ile uçtan uca doğrulanıyor** (sonuç HANDOVER #9c'de). Kapsam dışı: gerçek `git push origin main`/CI (gerçek prod hedefi yok).
+
+> **8/8 ÇÖZÜLDÜ** (#9b: #1/#2/#3/#6/#7 + #9c: #4/#5/#8). TDD, 1124 test yeşil, typecheck+build temiz. Gate'ler katı (verdict + AC), preview görünür, sıralı build. Gerçek-LLM build koşusu canlı kanıt için çalıştırıldı.
+
+---
+
 ## ✅ ÇÖZÜLDÜ (UAT #7 → #8, 2026-06-08): "Sinyal çıktıları" dosya sanılıyordu → planning step-1 codex'te çöküyordu
 
 > **Belirti:** codex executor ile planning **ilk adımda** (`backlog-tanm.1` +engineering-manager) çöktü: `declared outputs not produced: backlog-drafted`. Gerçekte `backlog.yaml` **yazıldı** (16KB, `items:`, 16 item) ve codex `exit 0` döndü — ama adım fail olduğu için backlog **ingest edilmedi** (DB total 0). Enrichment hiç test edilemedi.
@@ -206,14 +241,14 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 
 > Motor/şema epic §5.9 ana iş **bitti + main'de** (lifecycle + capstone + son montaj + driver + `POST /api/drive` + scheduler). Tarihçe [DECISIONS §5](./DECISIONS.md). Aşağısı = dilim-içi ertelenen, numaralı maddeye girmeyen alt-işler.
 
-- [ ] **`gate_runs` uat verdict** — uat red sebebi şu an `audit_log`'da; `gate_runs` satırına yazmak için `attempt` tuzağı çözülmeli (0-test-gate + tekrarlı-bounce'ta `UNIQUE(item_id, attempt, gate='uat')` çakışır → `attempt`'i item alanı yap veya test-cycle marker üretsin).
-- [ ] **Handover-on-close** — kapanış başarılıysa (merge ok) `HandoverEngine.record()` ile kapanış handover'ı (developer→prime, completed/next).
-- [ ] **blocker-temizle (§5.9 #6)** — KARŞILIKSIZ: item bağımlılık modeli (`blocked_on`/`blocks`) şemada yok. Bağımlılık modeli tasarlanırsa kapanışta downstream item'ları unblock et. (Eray: şimdilik ertele.)
-- [ ] **Gate-persona staging raporları (§5.11)** — epic'te gate koşmuş personalar (qa/security/designer/EM/devops) tek-dosya rapor yazar (paralel), motor toplar.
-- [ ] **Prime staging onayı (§5.11)** — staging deploy sonrası motor prime'a "staging onayı" sorar; onay→version ilerler, red→bug açılır.
-- [ ] **Epic-status-flip** — epic bittiğinde epic item'ını board'da `done` göster (epic'ler review→done yolundan geçmiyor → container-completion için ayrı geçiş/türetilmiş done).
+- [x] ~~**`gate_runs` uat verdict**~~ ✅ (doğrulandı 2026-06-09) — `review-cycle.ts` uat için `gate_runs` satırı yazıyor (`attempt = priorUatCount + 1` → `UNIQUE(item_id, attempt, gate='uat')` çakışması yok).
+- [x] ~~**Handover-on-close**~~ ✅ — `closure.ts:99-104` "B3 — handover-on-close": merge ok'ta `handoverEngine.record(...)` (driver-e2e testi handover yazıldığını assert ediyor).
+- [ ] **blocker-temizle (§5.9 #6)** — closure'da `clearBlockedDependents` var ama `blocked` status-flip modeli ayrı; UAT #9 #1 fix'i bağımlılığı scheduler'da (`selectBuildableItems`) çözüyor. (Eray: şema-tabanlı blocked modeli ertelendi.)
+- [x] ~~**Gate-persona staging raporları (§5.11)**~~ ✅ — `staging-approval.ts` gate koşmuş personalar için gerçek `.kortext/reports/gate-staging_*` dosyaları yazıp `reports_index`'e kaydeder (`reportsRegistered`).
+- [x] ~~**Prime staging onayı (§5.11)**~~ ✅ — `staging-approval.ts` + `staging-approval-consumer.ts` + route: staging deploy sonrası prime'a soru; onay→version ilerler→preprod, red→bug. **UAT #9 #9c'de canlı kanıtlandı** (Q#1 staging→Q#2 preprod→prod release `v0.1`).
+- [x] ~~**Epic-status-flip**~~ ✅ — `epic-completion.ts:75-81` epic'in tüm çocukları terminal+≥1 done olunca epic'i `done`'a çevirir (direct write). Canlı build'de NOT-E01 `done` oldu.
 - [ ] **Board "sıra kimde" rozetini bağla (src/)** — `whoseTurn(item)` türetimi hazır (`server/orchestrator/whose-turn.ts`) ama tüketen UI yok. Kart üstüne dönen persona rozetleri (test→paralel, review→+prime, in_progress→owner).
-- [ ] **Preview wiring + persistence** — item `test`'e girince `previewManager.startFor`; closure'da `stopFor`. "Çalıştırılabilir/UI görev mi?" koşulu (§5.7, flag ile gate'le). Preview URL'i gate'ler + prime UAT'a sun (`runtime_artifacts`'a `preview` kind'ı veya item-merkezli sakla).
+- [x] ~~**Preview wiring + persistence**~~ ✅ — `previewManager.startFor` (test-girişi) + `stopFor` (closure) zaten vardı; **UAT #9 #8'de persistence** eklendi (flag kalktı → her zaman kaydet) + `/api/backlog` serialize + drawer "Canlı önizleme" linki + gate adımı preview URL'i ajana veriyor. (Kalan ince: "çalıştırılabilir görev mi" tespiti şimdilik "her zaman".)
 
 ---
 
@@ -221,7 +256,7 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 
 - [ ] **#9 global arama** — header ⌘K paleti var ama gerçek arama backend'ine bağlı değil ("SOON").
 - [ ] **#10 terminal = komut girişi** — şu an salt-okunur run-history timeline; gerçek komut girişi.
-- [ ] **Canlı gate pass/fail** — `gate_runs` panelde (şu an gate'ler body `## Review Gates`'ten statik).
+- [ ] **Canlı gate pass/fail** — `gate_runs` panelde (şu an gate'ler `itemGates` ile statik; UI gate_runs'ı tüketmiyor — `board-drawer.ts:433` notu). **Artık gerçek verdict verisi var** (UAT #9 #4 → gate_runs gerçek pass/fail + findings) → API'de expose + drawer'da göster bekliyor.
 - [ ] **Global parçaları gerçek veriye bağla** — v6'da ⌘K/bildirim/terminal kabuk-seviyesinde çalışıyor, gerçek veri akışına tam bağlanması.
 - [ ] **Version selector semantiği** — proje sürümü / snapshot / release? netleştir.
 

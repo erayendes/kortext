@@ -23,6 +23,7 @@ import {
   compareVersions,
   sortedVersions,
   defaultActiveVersion,
+  previewLinkOf,
 } from '../src/lib/board-drawer.ts';
 import type { ActivityEntry, BacklogItem } from '../src/lib/api-types.ts';
 
@@ -232,6 +233,33 @@ describe('descriptionFromBody', () => {
           actor: '+prime',
           action: 'item_transition',
           payload: { from: 'to_do', to: 'in_progress' },
+        }),
+      ).toBe('+prime moved To do → In progress');
+    });
+
+    it('surfaces the transition reason (UAT #9 #3: merge-conflict bounce)', () => {
+      expect(
+        describeActivity({
+          actor: 'orchestrator',
+          action: 'item_transition',
+          payload: {
+            from: 'review',
+            to: 'in_progress',
+            transition: 'bounce',
+            reason: 'merge conflict: merge kortext/run-2 -> development failed',
+          },
+        }),
+      ).toBe(
+        'orchestrator moved Review → In progress — merge conflict: merge kortext/run-2 -> development failed',
+      );
+    });
+
+    it('omits the reason suffix when there is none', () => {
+      expect(
+        describeActivity({
+          actor: '+prime',
+          action: 'item_transition',
+          payload: { from: 'to_do', to: 'in_progress', reason: null },
         }),
       ).toBe('+prime moved To do → In progress');
     });
@@ -538,6 +566,27 @@ describe('assigneesOf', () => {
 
   it('returns [] when nobody is assigned', () => {
     expect(assigneesOf([item({ id: 'A', owner: null })])).toEqual([]);
+  });
+});
+
+describe('previewLinkOf (live preview URL surfaced in the drawer)', () => {
+  it('returns the preview_url when it is a non-empty string', () => {
+    expect(previewLinkOf(item({ id: 'T1', preview_url: 'http://127.0.0.1:4173' }))).toBe(
+      'http://127.0.0.1:4173',
+    );
+  });
+
+  it('trims surrounding whitespace', () => {
+    expect(previewLinkOf(item({ id: 'T1', preview_url: '  http://127.0.0.1:4173  ' }))).toBe(
+      'http://127.0.0.1:4173',
+    );
+  });
+
+  it('returns null when preview_url is null, empty, blank, or absent', () => {
+    expect(previewLinkOf(item({ id: 'T1', preview_url: null }))).toBeNull();
+    expect(previewLinkOf(item({ id: 'T1', preview_url: '' }))).toBeNull();
+    expect(previewLinkOf(item({ id: 'T1', preview_url: '   ' }))).toBeNull();
+    expect(previewLinkOf(item({ id: 'T1' }))).toBeNull(); // field absent
   });
 });
 
