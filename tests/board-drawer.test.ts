@@ -14,8 +14,8 @@ import {
   BOARD_COLUMNS,
   itemGates,
   gateProgress,
-  blockReasonFromActivity,
-  underlyingStatusFromActivity,
+  isLocked,
+  lockedBlockers,
   dependenciesFromBody,
   dependenciesOf,
   assigneeOf,
@@ -25,7 +25,7 @@ import {
   defaultActiveVersion,
   previewLinkOf,
 } from '../src/lib/board-drawer.ts';
-import type { ActivityEntry, BacklogItem } from '../src/lib/api-types.ts';
+import type { BacklogItem } from '../src/lib/api-types.ts';
 
 function item(partial: Partial<BacklogItem> & Pick<BacklogItem, 'id'>): BacklogItem {
   return {
@@ -52,10 +52,9 @@ describe('statusBadge', () => {
     expect(statusBadge('done')).toEqual({ label: 'Done', tone: 'green' });
   });
 
-  it('maps review to amber, test to blue, blocked to red — matching their column dot colors', () => {
+  it('maps review to amber, test to blue — matching their column dot colors', () => {
     expect(statusBadge('review')).toEqual({ label: 'Review', tone: 'amber' });
     expect(statusBadge('test')).toEqual({ label: 'Test', tone: 'blue' });
-    expect(statusBadge('blocked')).toEqual({ label: 'Blocked', tone: 'red' });
   });
 
   it('maps to_do and cancelled to a neutral badge', () => {
@@ -191,32 +190,24 @@ describe('descriptionFromBody', () => {
       ]);
     });
 
-    it('in_progress → Send to test (primary) + Mark blocked', () => {
+    // UAT #10: no "Mark blocked" / "Unblock" — `blocked` is not a status.
+    it('in_progress → Send to test (no block button)', () => {
       expect(availableTransitions('in_progress')).toEqual([
         { action: 'test', label: 'Send to test', primary: true },
-        { action: 'block', label: 'Mark blocked', primary: false },
       ]);
     });
 
-    it('test → Move to review (primary) + Bounce back + Mark blocked', () => {
+    it('test → Move to review (primary) + Bounce back (no block button)', () => {
       expect(availableTransitions('test')).toEqual([
         { action: 'review', label: 'Move to review', primary: true },
         { action: 'bounce', label: 'Bounce back', primary: false },
-        { action: 'block', label: 'Mark blocked', primary: false },
       ]);
     });
 
-    it('review → Mark done (primary) + Bounce back + Mark blocked', () => {
+    it('review → Mark done (primary) + Bounce back (no block button)', () => {
       expect(availableTransitions('review')).toEqual([
         { action: 'done', label: 'Mark done', primary: true },
         { action: 'bounce', label: 'Bounce back', primary: false },
-        { action: 'block', label: 'Mark blocked', primary: false },
-      ]);
-    });
-
-    it('blocked → Unblock', () => {
-      expect(availableTransitions('blocked')).toEqual([
-        { action: 'unblock', label: 'Unblock', primary: true },
       ]);
     });
 
@@ -326,7 +317,7 @@ describe('descriptionFromBody', () => {
   });
 });
 
-describe('columnKeyForStatus (blocked has its own column — UAT #10)', () => {
+describe('columnKeyForStatus (no separate Blocked column — UAT #10)', () => {
   it('maps each workflow status to its own column', () => {
     expect(columnKeyForStatus('to_do')).toBe('to_do');
     expect(columnKeyForStatus('in_progress')).toBe('in_progress');
@@ -335,52 +326,41 @@ describe('columnKeyForStatus (blocked has its own column — UAT #10)', () => {
     expect(columnKeyForStatus('done')).toBe('done');
   });
 
-  it('maps blocked to its own dedicated column, NOT in_progress (UAT #10 — blocked must never look "In progress")', () => {
-    expect(columnKeyForStatus('blocked')).toBe('blocked');
-    expect(columnKeyForStatus('blocked')).not.toBe('in_progress');
-  });
-
   it('returns null for cancelled (hidden from the board)', () => {
     expect(columnKeyForStatus('cancelled')).toBeNull();
   });
 });
 
 describe('boardColumns', () => {
-  it('exposes the six columns in left-to-right workflow order, with Blocked after In progress', () => {
+  it('exposes exactly five columns in left-to-right workflow order (no Blocked lane)', () => {
     expect(BOARD_COLUMNS.map((c) => c.key)).toEqual([
       'to_do',
       'in_progress',
-      'blocked',
       'test',
       'review',
       'done',
     ]);
   });
 
-  it('includes a Blocked column with a distinct lock/red color', () => {
-    const blocked = BOARD_COLUMNS.find((c) => c.key === 'blocked');
-    expect(blocked).toBeDefined();
-    expect(blocked!.name).toMatch(/blocked/i);
-    // distinct from the in_progress amber — its own red/lock color
-    const inProgress = BOARD_COLUMNS.find((c) => c.key === 'in_progress');
-    expect(blocked!.color).not.toBe(inProgress!.color);
+  it('has no Blocked column — a lock is a card overlay, not a lane (UAT #10)', () => {
+    expect(BOARD_COLUMNS.find((c) => (c.key as string) === 'blocked')).toBeUndefined();
   });
 
-  it('routes tasks/bugs/debt into columns, drops epics (they live in the rail) and cancelled', () => {
+  it('routes tasks/bugs/debt into columns by REAL status, drops epics and cancelled', () => {
+    // A locked item (blocked_by an open dep) stays in its own status column.
     const items = [
       item({ id: 'E01', type: 'epic', status: 'in_progress' }),
       item({ id: 'T01', status: 'to_do' }),
       item({ id: 'T02', status: 'in_progress' }),
-      item({ id: 'T03', status: 'blocked' }),
+      item({ id: 'T03', status: 'to_do', frontmatter: { blocked_by: ['T02'] } }),
       item({ id: 'T04', status: 'done' }),
       item({ id: 'T05', status: 'cancelled' }),
     ];
     const cols = boardColumns(items);
     const byKey = Object.fromEntries(cols.map((c) => [c.key, c.cards.map((x) => x.id)]));
-    expect(byKey.to_do).toEqual(['T01']);
-    // blocked T03 now lands in its own Blocked column, never in In progress
+    // The locked T03 stays in To Do alongside T01 — it never moves lanes.
+    expect(byKey.to_do).toEqual(['T01', 'T03']);
     expect(byKey.in_progress).toEqual(['T02']);
-    expect(byKey.blocked).toEqual(['T03']);
     expect(byKey.test).toEqual([]);
     expect(byKey.done).toEqual(['T04']);
     // epic + cancelled never appear as cards
@@ -444,55 +424,39 @@ describe('itemGates / gateProgress (item-based gate strip → AC/QC/SE/DS/CR)', 
   });
 });
 
-describe('blockReasonFromActivity', () => {
-  const entry = (over: Partial<ActivityEntry>): ActivityEntry => ({
-    id: 1,
-    actor: '+prime',
-    action: 'item_transition',
-    resource_type: 'backlog_item',
-    resource_id: 'T03',
-    payload: {},
-    created_at: 0,
-    ...over,
+describe('isLocked / lockedBlockers (derived dependency lock — UAT #10)', () => {
+  const byId = (items: BacklogItem[]) => new Map(items.map((i) => [i.id, i]));
+
+  it('isLocked is true when a blocker is still open (non-terminal)', () => {
+    const blocker = item({ id: 'T01', status: 'in_progress' });
+    const dep = item({ id: 'T02', status: 'to_do', frontmatter: { blocked_by: ['T01'] } });
+    expect(isLocked(dep, byId([blocker, dep]))).toBe(true);
+    expect(lockedBlockers(dep, byId([blocker, dep]))).toEqual(['T01']);
   });
 
-  it('returns the reason from the most recent block transition', () => {
-    const activity = [
-      entry({ id: 2, created_at: 200, payload: { transition: 'block', reason: 'awaiting DNS / SPF' } }),
-      entry({ id: 1, created_at: 100, payload: { transition: 'start' } }),
-    ];
-    expect(blockReasonFromActivity(activity)).toBe('awaiting DNS / SPF');
+  it('isLocked is false when every blocker is terminal (done/cancelled)', () => {
+    const done = item({ id: 'T01', status: 'done' });
+    const cancelled = item({ id: 'T02', status: 'cancelled' });
+    const dep = item({ id: 'T03', frontmatter: { blocked_by: ['T01', 'T02'] } });
+    expect(isLocked(dep, byId([done, cancelled, dep]))).toBe(false);
+    expect(lockedBlockers(dep, byId([done, cancelled, dep]))).toEqual([]);
   });
 
-  it('returns null when the block carried no reason or there is no block entry', () => {
-    expect(blockReasonFromActivity([entry({ payload: { transition: 'block', reason: null } })])).toBeNull();
-    expect(blockReasonFromActivity([entry({ payload: { transition: 'start' } })])).toBeNull();
-    expect(blockReasonFromActivity([])).toBeNull();
-  });
-});
-
-describe('underlyingStatusFromActivity (the column a blocked item came from)', () => {
-  const entry = (over: Partial<ActivityEntry>): ActivityEntry => ({
-    id: 1,
-    actor: '+prime',
-    action: 'item_transition',
-    resource_type: 'backlog_item',
-    resource_id: 'T03',
-    payload: {},
-    created_at: 0,
-    ...over,
+  it('isLocked is false when the blocker is unknown/dangling (treated as resolved)', () => {
+    const dep = item({ id: 'T02', frontmatter: { blocked_by: ['GHOST'] } });
+    expect(isLocked(dep, byId([dep]))).toBe(false);
   });
 
-  it('reads the `from` status of the latest block transition', () => {
-    const activity = [
-      entry({ id: 2, created_at: 200, payload: { from: 'test', to: 'blocked', transition: 'block' } }),
-      entry({ id: 1, created_at: 100, payload: { from: 'to_do', to: 'in_progress', transition: 'start' } }),
-    ];
-    expect(underlyingStatusFromActivity(activity)).toBe('test');
+  it('isLocked is false when there are no blockers', () => {
+    const free = item({ id: 'T01' });
+    expect(isLocked(free, byId([free]))).toBe(false);
   });
 
-  it('returns null when there is no block transition on record', () => {
-    expect(underlyingStatusFromActivity([entry({ payload: { transition: 'start' } })])).toBeNull();
+  it('lockedBlockers lists only the still-open blockers (mixed)', () => {
+    const done = item({ id: 'T01', status: 'done' });
+    const open = item({ id: 'T02', status: 'to_do' });
+    const dep = item({ id: 'T03', frontmatter: { blocked_by: ['T01', 'T02'] } });
+    expect(lockedBlockers(dep, byId([done, open, dep]))).toEqual(['T02']);
   });
 });
 

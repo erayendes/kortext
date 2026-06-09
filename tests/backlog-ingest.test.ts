@@ -831,11 +831,15 @@ describe('A4: dangling-reference audit log warnings', () => {
 });
 
 // ---------------------------------------------------------------------------
-// A5 — Auto-block on ingest
+// A5 — Dependency lock is DERIVED, never a status (UAT #10)
 // ---------------------------------------------------------------------------
+// `blocked` is no longer a status. An item with an unresolved `blocked_by`
+// dependency STAYS in `to_do` (a never-started item) — the lock is a derived
+// flag (build-order.ts `isBlocked`) the board overlays as 🔒, not a column the
+// item moves into. Ingest must therefore never change status on dependency.
 
-describe('A5: auto-block on ingest', () => {
-  it('TF-002 blocked_by:[TF-001] (TF-001 is to_do) → TF-002 becomes blocked', () => {
+describe('A5: dependency lock is derived (no `blocked` status)', () => {
+  it('TF-002 blocked_by:[TF-001] (TF-001 is to_do) → TF-002 STAYS to_do', () => {
     const { items } = parseBacklogYaml(`items:
   - id: TF-001
     type: task
@@ -848,18 +852,15 @@ describe('A5: auto-block on ingest', () => {
     ingestBacklogItems(repos, items);
 
     expect(repos.backlog.get('TF-001')!.status).toBe('to_do');
-    expect(repos.backlog.get('TF-002')!.status).toBe('blocked');
+    // Locked, but the status is untouched — it waits in To Do.
+    expect(repos.backlog.get('TF-002')!.status).toBe('to_do');
 
-    // Audit log entry written
+    // The defunct auto-block audit action is never emitted.
     const logs = repos.auditLog.list({ action: 'backlog.auto_blocked' });
-    expect(logs.length).toBeGreaterThan(0);
-    const entry = logs.find((l) => l.resource_id === 'TF-002');
-    expect(entry).toBeDefined();
-    expect((entry!.payload['blockedBy'] as string[])).toContain('TF-001');
+    expect(logs.length).toBe(0);
   });
 
   it('item with all-terminal deps (done blocker) → stays to_do', () => {
-    // Ingest TF-001 first and mark it done via direct write
     ingestBacklogItems(
       repos,
       parseBacklogYaml(`items:
@@ -870,7 +871,6 @@ describe('A5: auto-block on ingest', () => {
     );
     repos.backlog.transitionStatus('TF-001', 'done');
 
-    // Now ingest TF-002 blocked_by TF-001 (which is done → terminal)
     ingestBacklogItems(
       repos,
       parseBacklogYaml(`items:
@@ -884,7 +884,7 @@ describe('A5: auto-block on ingest', () => {
     expect(repos.backlog.get('TF-002')!.status).toBe('to_do');
   });
 
-  it('dangling blocker (dep not in DB) treated as terminal → item stays to_do', () => {
+  it('dangling blocker (dep not in DB) → item stays to_do', () => {
     const { items } = parseBacklogYaml(`items:
   - id: TF-002
     type: task
@@ -892,11 +892,10 @@ describe('A5: auto-block on ingest', () => {
     blocked_by: [TF-GHOST]
 `);
     ingestBacklogItems(repos, items);
-    // TF-GHOST doesn't exist → treated as terminal → TF-002 not blocked
     expect(repos.backlog.get('TF-002')!.status).toBe('to_do');
   });
 
-  it('epic is never auto-blocked even with an unresolved blocked_by', () => {
+  it('epic with an unresolved blocked_by also stays to_do', () => {
     const { items } = parseBacklogYaml(`items:
   - id: TF-001
     type: task
@@ -907,11 +906,10 @@ describe('A5: auto-block on ingest', () => {
     blocked_by: [TF-001]
 `);
     ingestBacklogItems(repos, items);
-    // TF-001 is to_do (non-terminal), but TF-E01 is epic → must NOT be blocked
     expect(repos.backlog.get('TF-E01')!.status).toBe('to_do');
   });
 
-  it('same-batch blocker: TF-001 blocks TF-002, both ingested together', () => {
+  it('same-batch blocker: TF-001 blocks TF-002 → TF-002 stays to_do', () => {
     const { items } = parseBacklogYaml(`items:
   - id: TF-001
     type: task
@@ -921,9 +919,9 @@ describe('A5: auto-block on ingest', () => {
     type: task
     title: Task Two
 `);
-    // enforceSymmetricDeps will add blocked_by:[TF-001] to TF-002
+    // enforceSymmetricDeps adds blocked_by:[TF-001] to TF-002, but no status change.
     ingestBacklogItems(repos, items);
-    expect(repos.backlog.get('TF-002')!.status).toBe('blocked');
+    expect(repos.backlog.get('TF-002')!.status).toBe('to_do');
   });
 });
 

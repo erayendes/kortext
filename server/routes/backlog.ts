@@ -45,8 +45,6 @@ const TRANSITION_ACTIONS = new Set<ItemTransition>([
   'review',
   'bounce',
   'done',
-  'block',
-  'unblock',
   'cancel',
 ]);
 

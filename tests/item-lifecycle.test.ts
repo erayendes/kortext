@@ -84,14 +84,6 @@ describe('ItemLifecycle.transition — happy paths', () => {
     expect(lc.transition('T', 'done', '+qa-engineer').status).toBe('done');
   });
 
-  it('block then unblock: in_progress → block → blocked → unblock → in_progress', () => {
-    const lc = makeLifecycle();
-    lc.create({ id: 'T', type: 'task', title: 't' });
-    lc.transition('T', 'start', '+backend-developer');
-    expect(lc.transition('T', 'block', '+backend-developer', 'waiting on +db-admin').status).toBe('blocked');
-    expect(lc.transition('T', 'unblock', '+backend-developer').status).toBe('in_progress');
-  });
-
   it('cancel works from any non-terminal state', () => {
     const lc = makeLifecycle();
     lc.create({ id: 'T1', type: 'task', title: 't1' });
@@ -145,19 +137,6 @@ describe('ItemLifecycle.transition — happy paths', () => {
     lc.transition('T', 'start', '+backend-developer');
     expect(lc.transition('T', 'test', '+backend-developer').status).toBe('test');
     expect(lc.transition('T', 'review', '+qa-engineer').status).toBe('review');
-  });
-
-  it('block from test: in_progress → test → block → blocked → unblock → in_progress', () => {
-    const lc = makeLifecycle();
-    lc.create({ id: 'T', type: 'task', title: 't' });
-    lc.transition('T', 'start', '+backend-developer');
-    lc.transition('T', 'test', '+backend-developer');
-    expect(lc.transition('T', 'block', '+qa-engineer', 'flaky env').status).toBe(
-      'blocked',
-    );
-    expect(lc.transition('T', 'unblock', '+backend-developer').status).toBe(
-      'in_progress',
-    );
   });
 
   it('cancel works from test', () => {

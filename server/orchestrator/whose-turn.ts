@@ -23,9 +23,8 @@ export function whoseTurn(item: BacklogItem): string[] {
   if (item.status === 'done' || item.status === 'cancelled') {
     return []; // terminal — owner stays set for history, but nobody acts.
   }
-  if (item.status === 'blocked') {
-    return ['+prime']; // prime resolves the block (§5.9 #9 routes blocks to prime).
-  }
-  // to_do / in_progress → the owner (waiting to start / building).
+  // to_do / in_progress → the owner (waiting to start / building). A dependency
+  // lock (derived isBlocked) does NOT change whose turn it is: the item stays
+  // the owner's to start once its blockers clear (UAT #10 — no +prime handoff).
   return item.owner ? [item.owner] : [];
 }

@@ -7,7 +7,7 @@
  * Pure + unit-tested; the component is just chrome over this.
  */
 import type { BacklogItem } from './api-types.ts';
-import { assigneeOf, statusBadge } from './board-drawer.ts';
+import { assigneeOf, isLocked, statusBadge } from './board-drawer.ts';
 
 export type AgentTone = 'working' | 'blocked' | 'queued';
 
@@ -28,12 +28,14 @@ const STATUS_RANK: Partial<Record<BacklogItem['status'], number>> = {
   in_progress: 5,
   test: 4,
   review: 3,
-  blocked: 2,
   to_do: 1,
 };
 
-function toneFor(status: BacklogItem['status']): AgentTone {
-  if (status === 'blocked') return 'blocked';
+// UAT #10: `blocked` is not a status. A "blocked" tone means the agent's lead
+// item is derived-locked (waiting on an open dependency); the lock overrides the
+// working/queued tone the bare status would yield.
+function toneFor(status: BacklogItem['status'], locked: boolean): AgentTone {
+  if (locked) return 'blocked';
   if (status === 'in_progress' || status === 'test' || status === 'review') return 'working';
   return 'queued';
 }
@@ -47,6 +49,7 @@ const TONE_RANK: Record<AgentTone, number> = { working: 2, blocked: 1, queued: 0
  * open items they hold, then by handle.
  */
 export function deriveActiveAgents(items: BacklogItem[]): AgentRow[] {
+  const byId = new Map(items.map((i) => [i.id, i]));
   const byAgent = new Map<string, BacklogItem[]>();
   for (const it of items) {
     if (it.type === 'epic') continue;
@@ -69,7 +72,7 @@ export function deriveActiveAgents(items: BacklogItem[]): AgentRow[] {
       leadItemId: lead.id,
       leadStatus: lead.status,
       statusLabel: statusBadge(lead.status).label,
-      tone: toneFor(lead.status),
+      tone: toneFor(lead.status, isLocked(lead, byId)),
     });
   }
 

@@ -51,6 +51,24 @@ function blockedBy(item: BacklogItem): string[] {
   return Array.isArray(bb) ? bb.filter((x): x is string => typeof x === 'string') : [];
 }
 
+/**
+ * Derived LOCK flag — `blocked` is NOT a status (Eray's model, UAT #10).
+ *
+ * An item is "locked" when it lists a `blocked_by` dependency that is not yet
+ * terminal (done/cancelled). The item keeps its real status (to_do /
+ * in_progress / …); this overlay drives the board's 🔒 badge + the scheduler's
+ * readiness gate — nothing ever moves into a separate `blocked` column.
+ *
+ * A dangling blocker (id not present in `byId`) is treated as resolved, so a
+ * stale dependency reference can never cause a permanent lock.
+ */
+export function isBlocked(item: BacklogItem, byId: Map<string, BacklogItem>): boolean {
+  return blockedBy(item).some((depId) => {
+    const dep = byId.get(depId);
+    return dep != null && !TERMINAL.has(dep.status);
+  });
+}
+
 export function selectBuildableItems(items: BacklogItem[]): BacklogItem[] {
   const byId = new Map(items.map((i) => [i.id, i]));
 

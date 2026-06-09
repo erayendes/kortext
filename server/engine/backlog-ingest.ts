@@ -527,54 +527,12 @@ export function ingestBacklogItems(
     }
   }
 
-  // A5 — Auto-block on ingest: for each newly-CREATED item (not updates, which
-  // may already be in-flight) with `blocked_by` deps that are NOT terminal, flip
-  // status to `blocked` via a direct write (mirror of epic-completion.ts pattern).
-  // Epics are containers — never auto-blocked. Only `to_do` items are touched
-  // (an update that was already in_progress/blocked/etc is left untouched).
-  const TERMINAL_STATUSES = new Set(['done', 'cancelled']);
-  for (const id of created) {
-    const row = repos.backlog.get(id);
-    if (!row) continue;
-    // Epics are containers — skip.
-    if (row.type === 'epic') continue;
-    // Only auto-block items that are still at the fresh to_do status.
-    if (row.status !== 'to_do') continue;
-
-    const blockedBy = Array.isArray(row.frontmatter['blocked_by'])
-      ? (row.frontmatter['blocked_by'] as string[])
-      : [];
-    if (blockedBy.length === 0) continue;
-
-    // Check if ANY blocker is non-terminal (i.e. present and not done/cancelled).
-    const hasActiveBlocker = blockedBy.some((depId) => {
-      const dep = repos.backlog.get(depId);
-      // Dangling (not found) → treated as terminal (resolved) — no block.
-      if (!dep) return false;
-      return !TERMINAL_STATUSES.has(dep.status);
-    });
-
-    if (!hasActiveBlocker) continue;
-
-    // At least one unresolved blocker → block the item.
-    try {
-      repos.backlog.transitionStatus(id, 'blocked');
-      repos.auditLog.append({
-        actor: 'engine',
-        action: 'backlog.auto_blocked',
-        resource_type: 'backlog_item',
-        resource_id: id,
-        payload: {
-          blockedBy: blockedBy.filter((depId) => {
-            const dep = repos.backlog.get(depId);
-            return dep && !TERMINAL_STATUSES.has(dep.status);
-          }),
-        },
-      });
-    } catch {
-      // Best-effort — a failure here must not abort the ingest result.
-    }
-  }
+  // A5 (UAT #10) — NO auto-block. `blocked` is not a status; a dependency lock
+  // is DERIVED at read time (build-order.ts `isBlocked`) and overlaid as a 🔒
+  // badge on the item's real column. Ingest leaves status untouched: an item
+  // with an unresolved `blocked_by` simply waits in `to_do` until the scheduler
+  // (selectBuildableItems) sees its blockers go terminal. There is nothing to
+  // write here.
 
   // A4 — Dangling-reference warnings (warn-only, no mutation).
   // After all rows are written, build the set of known ids in this batch so we

@@ -11,6 +11,7 @@ import { HandoverEngine } from '../server/engine/handover.ts';
 import { MockMerger } from '../server/engine/executors/mock-merger.ts';
 import { MockDeployer } from '../server/engine/executors/mock-deployer.ts';
 import { runClosure } from '../server/orchestrator/closure.ts';
+import { isBlocked } from '../server/orchestrator/build-order.ts';
 
 let tmpRoot: string;
 let agentsDir: string;
@@ -253,25 +254,26 @@ describe('runClosure → handover-on-close (B3)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// M1 — Auto-unblock dependents on closure (blocker-clear wiring)
+// M1 (UAT #10) — Dependency lock is DERIVED; closure never mutates dependents
 // ---------------------------------------------------------------------------
+// `blocked` is no longer a status. A dependent with an unresolved `blocked_by`
+// waits in `to_do` (derived-locked). Closing its blocker doesn't write to the
+// dependent — the lock simply evaporates because `isBlocked` now reads false.
 
-describe('runClosure → auto-unblock dependents (M1)', () => {
-  it('successful merge of the blocker → the dependent (blocked) item ends to_do', async () => {
-    // Seed blocker + dependent.
+describe('runClosure → dependents stay to_do; lock is derived (M1)', () => {
+  it('successful merge of the blocker → dependent stays to_do and is now unlocked', async () => {
     const lc = makeLifecycle();
-    // The blocker item (to be closed via runClosure).
     lc.create({ id: 'BLK-001', type: 'task', title: 'BLK-001' });
     lc.transition('BLK-001', 'start', '+backend-developer');
     lc.transition('BLK-001', 'test', '+backend-developer');
     lc.transition('BLK-001', 'review', 'orchestrator');
 
-    // The dependent item: ingest it as blocked with blocked_by pointing at BLK-001.
+    // The dependent waits in to_do with a blocked_by pointing at BLK-001.
     repos.backlog.create({
       id: 'DEP-001',
       type: 'task',
       title: 'DEP-001',
-      status: 'blocked',
+      status: 'to_do',
       frontmatter: { blocked_by: ['BLK-001'] },
     });
 
@@ -283,13 +285,14 @@ describe('runClosure → auto-unblock dependents (M1)', () => {
     });
 
     expect(result.outcome).toBe('done');
-    // Blocker is done
     expect(repos.backlog.get('BLK-001')!.status).toBe('done');
-    // Dependent was unblocked → back to to_do so the driver can pick it
-    expect(repos.backlog.get('DEP-001')!.status).toBe('to_do');
+    // Dependent never moved — still to_do — but is now derived-unlocked.
+    const dep = repos.backlog.get('DEP-001')!;
+    expect(dep.status).toBe('to_do');
+    expect(isBlocked(dep, new Map(repos.backlog.list({ limit: 100 }).map((i) => [i.id, i])))).toBe(false);
   });
 
-  it('bounce (failed merge) → dependent stays blocked', async () => {
+  it('bounce (failed merge) → dependent stays to_do but is still locked', async () => {
     const lc = makeLifecycle();
     lc.create({ id: 'BLK-002', type: 'task', title: 'BLK-002' });
     lc.transition('BLK-002', 'start', '+backend-developer');
@@ -300,7 +303,7 @@ describe('runClosure → auto-unblock dependents (M1)', () => {
       id: 'DEP-002',
       type: 'task',
       title: 'DEP-002',
-      status: 'blocked',
+      status: 'to_do',
       frontmatter: { blocked_by: ['BLK-002'] },
     });
 
@@ -312,8 +315,11 @@ describe('runClosure → auto-unblock dependents (M1)', () => {
     });
 
     expect(result.outcome).toBe('bounced');
-    // Blocker bounced back to in_progress — not done, so dependent stays blocked
+    // Blocker bounced back to in_progress — not terminal, so the dependent is
+    // still derived-locked, and still parked in to_do.
     expect(repos.backlog.get('BLK-002')!.status).toBe('in_progress');
-    expect(repos.backlog.get('DEP-002')!.status).toBe('blocked');
+    const dep = repos.backlog.get('DEP-002')!;
+    expect(dep.status).toBe('to_do');
+    expect(isBlocked(dep, new Map(repos.backlog.list({ limit: 100 }).map((i) => [i.id, i])))).toBe(true);
   });
 });

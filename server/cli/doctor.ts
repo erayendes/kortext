@@ -2,6 +2,7 @@ import type { Repositories } from '../db/repositories/index.ts';
 import type { WorkflowRegistry } from '../engine/workflow-loader.ts';
 import type { PersonaRegistry } from '../engine/persona-registry.ts';
 import { findUnknownPersonas, SYNTHETIC_PERSONA_HANDLES } from '../engine/consistency.ts';
+import { isBlocked } from '../orchestrator/build-order.ts';
 
 /**
  * `kortext doctor` — health snapshot across registries and runtime state.
@@ -137,15 +138,19 @@ export function runDoctor(opts: DoctorOptions): DoctorReport {
     });
   }
 
-  // ---- blocked items ----
-  const blockedCount = opts.repos.backlog.countByStatus('blocked');
+  // ---- locked (dependency-blocked) items ----
+  // `blocked` is not a status (UAT #10) — the lock is DERIVED: an item whose
+  // `blocked_by` lists a non-terminal dependency. Count those, not a column.
+  const allItems = opts.repos.backlog.list({ limit: 100_000 });
+  const byId = new Map(allItems.map((i) => [i.id, i]));
+  const blockedCount = allItems.filter((i) => isBlocked(i, byId)).length;
   if (blockedCount === 0) {
-    findings.push({ category: 'item', severity: 'ok', message: 'no blocked items' });
+    findings.push({ category: 'item', severity: 'ok', message: 'no locked items' });
   } else {
     findings.push({
       category: 'item',
       severity: 'warn',
-      message: `${blockedCount} blocked item(s)`,
+      message: `${blockedCount} locked item(s) (waiting on dependencies)`,
     });
   }
 

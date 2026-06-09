@@ -35,10 +35,13 @@ export const BacklogItemTypeSchema = z.enum([
 ]);
 export type BacklogItemType = z.infer<typeof BacklogItemTypeSchema>;
 
+// UAT #10: `blocked` is NOT a status. A dependency lock is DERIVED at read time
+// (orchestrator/build-order.ts `isBlocked`) and overlaid as a 🔒 badge on the
+// item's real column — it never moves the item into a separate lane. An item
+// waiting on an unresolved `blocked_by` simply stays in `to_do`.
 export const BacklogStatusSchema = z.enum([
   'to_do',
   'in_progress',
-  'blocked',
   'test',
   'review',
   'done',
