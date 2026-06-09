@@ -77,7 +77,9 @@ export async function driveReadyItems(deps: DriveDeps): Promise<DriveResult> {
   // parallel — the slow part is the agent, not any shared state.
   const inTest = repos.backlog.list({ status: 'test', limit: 1000 });
   const tested: TestCycleResult[] = await mapWithPool(inTest, max, (item) =>
-    runTestCycle(item.id, { repos, lifecycle, gateExecutor, by }),
+    // `queue` arms gate-fail escalation (UAT #10): a gate that fails 3× pauses
+    // the item + raises a +prime Inbox question instead of bouncing forever.
+    runTestCycle(item.id, { repos, lifecycle, gateExecutor, by, queue: c.queue }),
   );
 
   // Phase 3 — review/closure for everything now in `review`. Two passes: the uat

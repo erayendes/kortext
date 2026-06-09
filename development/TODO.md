@@ -4,16 +4,17 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 
 ---
 
-## 🔴 KRİTİK UAT #10 (2026-06-09) — Gate-fail sonsuz bounce döngüsü → 3. fail'de +prime'a (gerekçeyle) tırmandır
+## ✅ ÇÖZÜLDÜ (KRİTİK UAT #10, 2026-06-09 #10d, Claude) — Gate-fail sonsuz bounce döngüsü → 3. fail'de +prime'a (gerekçeyle) tırmandır
 
-> **Belirti (canlı):** T03/T04 `design_review` gate'ini sürekli fail etti (design_review **8 fail**, T03 in_progress↔test **12/9 kez**, 17 koşu) ama hep yeniden kodlanıp aynı şekilde fail oldu → **sonsuz bounce churn**, hiç done olmadı, epic kapanmadı, 15+ dk ilerleme yok. Gate-fail bounce'ında **max-retry / escalation YOK** → kör döngü. (Pozitif yan: gate gerçekten yargılıyor #4 + fallback codex devraldı #10 — ama döngü kesilmiyor.)
+> **Belirti (canlı):** T03/T04 `design_review`'i **8 fail** etti (17 koşu, 15+ dk ilerleme yok) → sonsuz bounce churn, hiç done olmadı. Gate-fail bounce'ında **max-retry/escalation YOK**.
 
-**Eray kararı — N. fail'de +prime'a tırmandırma:**
-- [ ] **Eşik: 3. fail (2 retry).** Gate fail → bounce + yeniden dene; bu **3 kez** olursa (item+gate başına sayaç) artık otomatik bounce ETME → **+prime'a tırmandır**, item'ı duraklat.
-- [ ] **Kanal: mevcut Inbox / `pending_questions` (ApprovalQueue).** Yeni altyapı yok — staging/gate onaylarıyla aynı yerden. Soru: item + gate + seçenekler `[Yine de onayla] / [Şu talimatla revize et] / [Bırak]`.
-- [ ] **GEREKÇE ZORUNLU:** tırmandırma sorusu **gate'in NEDEN fail ettiğini** taşımalı — verdict raporundaki somut bulgular + başarısız AC'ler (`ac_results` fail olanlar, designer/qa'nın yazdığı reddetme gerekçesi) +prime'a gösterilsin. Kuru "fail etti" değil; "şu kriterler şu yüzden geçmedi" özeti Inbox sorusunun gövdesinde.
-- [ ] **+prime cevabı işlensin:** Onayla → gate override-pass, item ilerler. Revize+talimat → developer'a +prime yönlendirmesiyle bir tur (kör değil, yönlü). Bırak → item iptal/blocked, epic'i tıkamasın.
-- [ ] **Sayaç sıfırlama:** +prime "revize+talimat" derse sayaç sıfırlansın (yönlü yeni şans); yoksa eşik kalıcı olur.
+**Yapıldı (TDD, 1178 test yeşil, typecheck + build temiz — push EDİLMEDİ):**
+- ✅ **Eşik: 3. fail (2 retry).** `gateFailCount(repos, itemId, gate)` — `gate_runs` fail satırlarını item+gate başına, son reset baseline'ından (monotonik `gate_runs.id`) sonra sayar. `MAX_GATE_FAILS = 3`. **Yeni altyapı yok.**
+- ✅ **Escalation:** `runTestCycle` 3. fail'de bounce etmiyor → item `test`'te DURAKLAR + `escalateGate` Inbox'a (`pending_questions`, phase `gate-escalation`) +prime sorusu düşürür. Açık escalation varken `runTestCycle` → `paused` (gate yeniden koşmaz, churn yok).
+- ✅ **GEREKÇE:** soru gövdesi gate verdict findings + karşılanmamış AC'leri taşır (`buildEscalationReason`). Kuru "fail" değil.
+- ✅ **+prime cevabı (`consumeGateEscalation`, approvals route dispatch):** `approve`→override-pass→`review` · `revise: <talimat>`→directive item'a (`frontmatter.revision_directive`+comment)+**sayaç reset**+`in_progress` · `drop`→`cancelled`.
+- ✅ **UI:** Inbox `gate-escalation` için 3 buton (Approve/Revise/Drop) + Revise talimat kutusu (`buildEscalationAnswer` testli).
+- ✅ **Kanıt:** deterministik uçtan-uca harness — design_review 1./2.→bounce, 3.→escalated (paused, tek Inbox sorusu, gerçek findings+unmet AC, 3 seçenek), 4. pass paused; +prime'ın approve/revise/drop'u doğru sonuç + revise sayaç sıfırlar.
 
 ---
 

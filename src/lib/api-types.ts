@@ -67,6 +67,11 @@ export type PendingQuestion = {
   artifact_path?: string | null;
   persona?: string | null;
   phase?: string | null;
+  /**
+   * Consumer metadata (e.g. staging-approval `epicId`/`version`, gate-escalation
+   * `itemId`/`gate`). Optional on the mirror; the live API sends it where set.
+   */
+  metadata?: Record<string, unknown> | null;
 };
 
 export type DecisionStatus = 'proposed' | 'accepted' | 'superseded' | 'rejected';

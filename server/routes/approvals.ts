@@ -4,6 +4,8 @@ import type { ApprovalQueue } from '../orchestrator/approval-queue.ts';
 import type { Deployer } from '../engine/deployer.ts';
 import { consumeStagingApproval } from '../orchestrator/staging-approval-consumer.ts';
 import { consumePreprodApproval } from '../orchestrator/preprod-approval-consumer.ts';
+import { consumeGateEscalation } from '../orchestrator/gate-escalation.ts';
+import { ESCALATION_PHASE } from '../orchestrator/gate-escalation.ts';
 
 /**
  * REST surface for the human-in-the-loop approval flow.
@@ -60,6 +62,18 @@ export function approvalRouter(deps: ApprovalRouterDeps): Router {
           });
         } catch (err: unknown) {
           console.error('[approvals] consumeStagingApproval error:', err);
+        }
+      }
+
+      // Run the gate-escalation consumer (UAT #10): +prime's decision on a
+      // gate that failed 3× — approve (override-pass → review), revise (directed
+      // bounce + counter reset), or drop (cancel). Best-effort; a consumer error
+      // is logged but does NOT fail the answer (the question is already answered).
+      if (answered.phase === ESCALATION_PHASE) {
+        try {
+          consumeGateEscalation(answered, { repos: deps.repos });
+        } catch (err: unknown) {
+          console.error('[approvals] consumeGateEscalation error:', err);
         }
       }
 

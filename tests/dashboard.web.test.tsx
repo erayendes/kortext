@@ -8,6 +8,7 @@ import {
   buildActivityFeed,
   formatAge,
   STATUS_SEGMENTS,
+  buildEscalationAnswer,
 } from '../src/routes/dashboard.tsx';
 import type {
   ActivityEntry,
@@ -242,5 +243,26 @@ describe('buildActivityFeed', () => {
       [{ id: 4, decision_id: 'D-2', title: 'pick db', status: 'accepted', markdown_path: 'x', item_id: null, tags: [], created_at: 0, decided_at: 40 }],
     );
     expect(feed.map((e) => e.kind)).toEqual(['handover', 'decision', 'audit']);
+  });
+});
+
+describe('buildEscalationAnswer (gate-escalation Inbox answer — UAT #10)', () => {
+  it('approve → "approve"', () => {
+    expect(buildEscalationAnswer('approve')).toBe('approve');
+  });
+
+  it('drop → "drop"', () => {
+    expect(buildEscalationAnswer('drop')).toBe('drop');
+  });
+
+  it('revise with a directive → "revise: <directive>"', () => {
+    expect(buildEscalationAnswer('revise', '  use a darker text color  ')).toBe(
+      'revise: use a darker text color',
+    );
+  });
+
+  it('revise with no directive → bare "revise"', () => {
+    expect(buildEscalationAnswer('revise', '')).toBe('revise');
+    expect(buildEscalationAnswer('revise')).toBe('revise');
   });
 });

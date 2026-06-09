@@ -7,7 +7,30 @@
 
 ---
 
-## ⭐ Şu an (2026-06-09 UAT-build) — Build fazı CANLI: 3 fix kanıtlandı + 1 yeni KRİTİK bulgu (bounce döngüsü)
+## ⭐ Şu an (2026-06-09 #10d) — Gate-fail SONSUZ bounce döngüsü → 3. fail'de +prime'a (gerekçeyle) tırmandırma
+
+Yalnızca kod oturumu (UAT değil). UAT-build'de çıkan 🔴 KRİTİK bulgu (design_review 8× fail → sonsuz churn, escalation yok) TDD ile çözüldü. **1178 test yeşil** (1162→+16), typecheck + build temiz. **PUSH EDİLMEDİ** — Eray "push" diyene dek local.
+
+- **Sayaç (yeni altyapı YOK):** `gateFailCount(repos, itemId, gate)` — `gate_runs`'taki `fail` satırlarını item+gate başına sayar, **son reset baseline'ından** sonrakileri (monotonik `gate_runs.id` üzerinden — ms çakışması yok). Eşik `MAX_GATE_FAILS = 3` (2 retry).
+- **Escalation (`server/orchestrator/gate-escalation.ts`):** 3. fail'de `runTestCycle` artık **bounce ETMİYOR** → item `test`'te DURAKLAR + +prime'a Inbox sorusu (`pending_questions`, phase `gate-escalation`). Açık escalation varken `runTestCycle` gate'leri **yeniden koşmuyor** (`paused` — churn yok).
+- **GEREKÇE zorunlu:** soru gövdesi gate'in **somut bulgularını** (verdict findings: "contrast 2.1:1, focus ring yok") + **karşılanmamış AC'leri** taşır. Kuru "fail" değil.
+- **+prime cevabı (`consumeGateEscalation`, approvals route'ta dispatch):** `approve` → override-pass → `review`'e ilerle · `revise: <talimat>` → talimatı item'a yaz (`frontmatter.revision_directive` + comment) + **sayacı SIFIRLA** + `in_progress`'e yönlü bounce · `drop` → `cancelled` (epic'i tıkamaz).
+- **UI (Inbox):** `gate-escalation` sorusu için 3 buton (Approve / Revise / Drop) + Revise talimat metin kutusu (`buildEscalationAnswer` saf yardımcı, testli). Diğer sorular eskisi gibi binary.
+
+**KANIT (deterministik uçtan-uca harness — gerçek runTestCycle + ApprovalQueue + consumer):** design_review 1.→bounce, 2.→bounce, **3.→escalated** (item `test`'te duraklar, Inbox'ta TEK soru, gerçek findings + unmet AC içerir, 3 seçenek). 4. pass `paused` (gate yeniden koşmaz). +prime'ın 3 cevabı: approve→`review`, revise→`in_progress`+sayaç 0+directive yazılı, drop→`cancelled`. Escalation `gate_runs`'ı okur → mock-vs-gerçek-LLM aynı; gerçek +designer'ın 8× fail'i zaten canlı UAT'ta görüldü (bu bug). Harness commit edilmedi.
+
+**SIRADAKİ:** Eray "push" derse commit + push. Sonra rebuild + UAT baştan: kötü UI item'ı 2 retry sonra Inbox'ta gerekçeli soruya düşmeli; +prime revize/onayla/bırak seçebilmeli — sonsuz churn olmamalı.
+
+**Rebuild (Eray çalıştırır):**
+```bash
+cd /Users/erayendes/Documents/_codebase/kortext
+npm run build && npm pack && npm install -g ./kortext-3.1.0.tgz
+kortext stop not && kortext purge not --yes
+```
+
+---
+
+## ⭐ Önceki (2026-06-09 UAT-build) — Build fazı CANLI: 3 fix kanıtlandı + 1 yeni KRİTİK bulgu (bounce döngüsü)
 
 Eray temiz UAT koştu (antigravity, executors chain `[antigravity, codex]`). Build fazı uçtan uca izlendi. **3 fix canlı kanıtlandı:**
 - ✅ **#10 FK/epic enrichment:** epic auto-create çalıştı — epic 1, owner 11/11, version 11/11, model 10/10, parent_id 10/10, **FK/dropped YOK** (önceki Claude turunda 14 FK fail'di).

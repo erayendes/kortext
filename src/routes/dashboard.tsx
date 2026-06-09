@@ -704,18 +704,29 @@ function PrimeRow({
   onDone: () => void;
 }) {
   const [busy, setBusy] = useState(false);
+  const [directive, setDirective] = useState('');
+  // UAT #10: a gate-escalation question (a gate that failed 3×) is decided by
+  // +prime with three choices — Approve (override-pass) / Revise (one directed
+  // retry) / Drop (cancel) — instead of the binary approve/request-changes.
+  const isEscalation = q.phase === 'gate-escalation';
+  const itemIdFromMeta =
+    isEscalation && q.metadata && typeof (q.metadata as { itemId?: unknown }).itemId === 'string'
+      ? ((q.metadata as { itemId: string }).itemId)
+      : null;
   const run = q.run_id != null ? runs.find((r) => r.id === q.run_id) ?? null : null;
-  const item = run?.item_id ? items.find((i) => i.id === run.item_id) ?? null : null;
+  const item =
+    (itemIdFromMeta ? items.find((i) => i.id === itemIdFromMeta) ?? null : null) ??
+    (run?.item_id ? items.find((i) => i.id === run.item_id) ?? null : null);
   const type = item ? TYPE_PILL[item.type] : { label: 'Review', color: '#9B82CE' };
   const idLabel = item?.id ?? (q.run_id != null ? `run #${q.run_id}` : `Q-${q.id}`);
   const persona = item ? assigneeOf(item) : null;
 
-  async function answer(kind: 'approve' | 'reject') {
+  async function post(answerStr: string) {
     if (busy) return;
     setBusy(true);
     try {
       await apiPost(`/api/questions/${q.id}/answer`, {
-        answer: pickChoice(q.choices, kind),
+        answer: answerStr,
         answered_by: '+you',
       });
       onDone();
@@ -723,6 +734,10 @@ function PrimeRow({
       // Surface failure by re-enabling the actions; the poll will reconcile.
       setBusy(false);
     }
+  }
+
+  async function answer(kind: 'approve' | 'reject') {
+    await post(pickChoice(q.choices, kind));
   }
 
   return (
@@ -743,26 +758,92 @@ function PrimeRow({
       {persona ? <Avatar handle={persona} size={18} /> : null}
       {persona ? <span className="w-name">{short(persona)}</span> : null}
       <span className="prime-age">{formatAge(q.created_at)}</span>
-      <div className="prime-acts">
-        <button
-          type="button"
-          className="btn btn-sm btn-approve"
-          disabled={busy}
-          onClick={() => answer('approve')}
-        >
-          Approve
-        </button>
-        <button
-          type="button"
-          className="btn btn-line btn-sm"
-          disabled={busy}
-          onClick={() => answer('reject')}
-        >
-          Request changes
-        </button>
-      </div>
+      {isEscalation ? (
+        <div className="prime-acts" style={{ gap: 6 }}>
+          <input
+            value={directive}
+            placeholder="Revise instruction (optional)…"
+            disabled={busy}
+            onChange={(e) => setDirective(e.target.value)}
+            style={{
+              flex: 1,
+              minWidth: 140,
+              background: 'var(--panel)',
+              border: '1px solid var(--border-strong)',
+              borderRadius: 7,
+              color: 'var(--fg)',
+              font: 'inherit',
+              fontSize: 12,
+              padding: '6px 9px',
+              outline: 'none',
+            }}
+          />
+          <button
+            type="button"
+            className="btn btn-sm btn-approve"
+            disabled={busy}
+            title="Override the gate and ship this item"
+            onClick={() => post(buildEscalationAnswer('approve'))}
+          >
+            Approve
+          </button>
+          <button
+            type="button"
+            className="btn btn-sm btn-pri"
+            disabled={busy}
+            title="Send back for one directed retry with your instruction"
+            onClick={() => post(buildEscalationAnswer('revise', directive))}
+          >
+            Revise
+          </button>
+          <button
+            type="button"
+            className="btn btn-line btn-sm"
+            disabled={busy}
+            title="Cancel this item so it does not block its epic"
+            onClick={() => post(buildEscalationAnswer('drop'))}
+          >
+            Drop
+          </button>
+        </div>
+      ) : (
+        <div className="prime-acts">
+          <button
+            type="button"
+            className="btn btn-sm btn-approve"
+            disabled={busy}
+            onClick={() => answer('approve')}
+          >
+            Approve
+          </button>
+          <button
+            type="button"
+            className="btn btn-line btn-sm"
+            disabled={busy}
+            onClick={() => answer('reject')}
+          >
+            Request changes
+          </button>
+        </div>
+      )}
     </div>
   );
+}
+
+/**
+ * Compose the answer string for a gate-escalation question (UAT #10). The
+ * consumer (gate-escalation.ts) treats `approve`/`drop` as exact and anything
+ * else as a `revise` whose text (after an optional `revise:` prefix) is the
+ * directive handed to the next directed dev turn.
+ */
+export function buildEscalationAnswer(
+  kind: 'approve' | 'revise' | 'drop',
+  directive?: string,
+): string {
+  if (kind === 'approve') return 'approve';
+  if (kind === 'drop') return 'drop';
+  const trimmed = (directive ?? '').trim();
+  return trimmed ? `revise: ${trimmed}` : 'revise';
 }
 
 /** Pick the choice that best matches the intent; fall back to a sane default. */
