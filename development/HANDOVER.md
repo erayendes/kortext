@@ -7,18 +7,20 @@
 
 ---
 
-## ⭐ Şu an (2026-06-09 #10b) — KRİTİK UAT #10 ÇÖZÜLDÜ: çıplak parent_epic → epic auto-create + alan-bazlı FK dayanıklılığı
+## ⭐ Şu an (2026-06-09 #10b) — UAT #10'un 3 BULGUSU DA ÇÖZÜLDÜ: çıplak parent_epic FK + Board blocked sütunu + çok-executor fallback
 
-Yalnızca kod oturumu. UAT #10'un kritik bulgusu (çıplak `parent_epic` referansı → FK cascade → enrichment kaybı) TDD ile çözüldü. **1126 test yeşil** (1124→+2), typecheck + build temiz. **Push EDİLMEDİ.** (UAT #10'un 🟠 ek bulguları — Board blocked sütunu, çok-executor fallback — bu turun kapsamı değil, TODO'da açık.)
+Yalnızca kod oturumu. UAT #10'un kritik (çıplak `parent_epic` → FK → enrichment kaybı) + iki 🟠 bulgusu (Board blocked sütunu, çok-executor fallback) TDD ile çözüldü; kritik bulgu gerçek Claude koşusuyla doğrulandı. **1168 test yeşil** (1124→+44), typecheck + build temiz. **PUSH EDİLDİ** (`03196ca..c44d514`, tek commit) — `main == origin/main`. 🟠 bulgular paralel ajanlarla (Stream A board, Stream B fallback).
 
 - **Kök neden:** Claude step-1'de hiç `type:epic` item üretmedi, sonra 14 task'a **çıplak `parent_epic: E01`** yazdı; E01 container hiç yok → FK fail → atomik → owner/version/model 0. #6 auto-create yalnız patch'te `type:epic` item olarak bildirilen epic'i kapsıyordu, çıplak referansı değil.
 - **Fix 1 (motor — çıplak ref auto-create):** `patchBacklogItems` 2. ön-geçişi — parse edilen item'ların `parent_id`'lerinden karşılığı olmayan her id için **eksik `type:epic` container'ı önce yaratır** (id=başlık; `backlog.patch.epic_synthesized` audit). FK hedefi hep var.
 - **Fix 2 (alan-bazlı dayanıklılık):** update-pass `parent_id`'yi güvenli çözer — çözülemezse linki atlar ama version/owner/model'i yazar (`backlog.patch.dangling_parent`); tek geçersiz FK tüm enrichment'i atomik düşürmez. (+2 test)
 - **Fix 3 (workflow ikincil):** `planning-pipeline.md` step-1: "her `parent_epic: X` için `id: X, type: epic` satırı OLMALI" sertleştirmesi.
+- **🟠 Board blocked sütunu:** `board-drawer.ts`'e ayrı `🔒 Blocked` sütunu; `columnKeyForStatus('blocked')` → `'blocked'` (in_progress DEĞİL). Kilitli işler "In Progress" gibi görünmüyor.
+- **🟠 Çok-executor fallback + 429:** `project.json.executors[]` öncelik zinciri + `FallbackExecutor` (recoverable/429/boş-çıktı → sıradakine düş); `cli-spawn` 429/quota/empty-exit-0 tanır; `buildMissingOutputResult` net mesaj verir. Onboarding'de primary+fallback seçimi. Tek-executor = zero-cost.
 
 **GERÇEK-LLM KANITI (Claude):** planning **succeeded**, 11 item (8 task + 3 epic), **owner/parent_id/version/model 8/8 dolu** — UAT #10'un regresyonu (0/0/0) gitti; patch'ler `8/7/11 updated, 0 skipped` (önceki `0 updated, 14 skipped FK` değil). **Nüans:** bu koşuda Claude gerçek `type:epic` item üretti (3 epic) → çıplak-ref auto-create yolu (synthEpics=0) tetiklenmedi; canlı koşu **sonucu** (enrichment persist), yeni bare-ref-synthesis yolu ise **unit testlerle** (deterministik) kanıtlı. İkisi birlikte her ajan varyasyonunu kapsar.
 
-**SIRADAKİ:** Rebuild + Eray temiz UAT (baştan). agy kotası açılınca antigravity'le de doğrula. Push (Eray "push" deyince).
+**SIRADAKİ:** Rebuild (`npm run build && npm pack && npm install -g ./kortext-3.1.0.tgz`) + Eray temiz UAT (baştan): planning enrichment dolu, Board blocked ayrı sütunda, executor fail edince fallback. agy kotası açılınca antigravity de denenir.
 
 ---
 
