@@ -8,7 +8,7 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 
 > **Ölçüm:** Codex oturum logları 06-08+06-09 **~25.3M token** (input 25.0M / output 308K). Kök: **input baskın** (her adım tüm bağlamı yeniden gönderiyor) + **bounce döngüsü token'ı katlıyor** (design_review 8 fail × 17 koşu). Araştırma sonrası karar (Eray, AskUserQuestion): **"önce ölç, sonra kıs"** — 2 faz. Detay [plan](../../.claude/plans/todo-md-token-maliyet-optimizasyonu-rippling-crescent.md).
 
-**Yapıldı (TDD, 1212 test yeşil, typecheck + build temiz — push EDİLMEDİ):**
+**Yapıldı (TDD, 1212 test yeşil, typecheck + build temiz — PUSH EDİLDİ `0156412`):**
 
 **Faz 1 — Token/maliyet görünürlüğü (ÖLÇ):**
 - [x] ~~**Yakalama**~~ ✅ — `claude` executor `--output-format json` ile koşar; yeni saf `parseClaudeUsage` (regex; tail-truncation + bilimsel-notasyon dayanıklı) `usage` + `total_cost_usd`'yi `ExecutorResult.usage`'a çıkarır. **Canlı doğrulandı:** gerçek claude koşusu usage+cost verdi, **cache_read 11908 tok** (prompt-cache zaten çalışıyor). Codex/gemini usage log-scraping + agy kota-uyarısı ayrı follow-up (şimdilik boş döner).
@@ -18,7 +18,7 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 **Faz 2 — Akıllı retry (KIS):**
 - [x] ~~**Kör retry bitti**~~ ✅ — gate fail → bounce'ta fail eden gate'lerin **bulguları** `frontmatter.revision_directive`'e yazılır (`test-cycle.recordBounceDirective`); `runItem` bunu okuyup dev-cycle prompt'una (`ctx.reviseFeedback` → `buildUserPrompt`, makine zaten vardı) enjekte eder, sonra **tek-atış temizler**. Ajan körü körüne aynı hatayı tekrar etmek yerine bulguyu düzeltir → tekrarlanan tam-bağlam retry'ları azalır (TODO'nun "fail gerekçesi + diff" fikri). **Yan kazanç:** yazılan-ama-hiç-okunmayan `revision_directive` (+ `+prime` escalation-revise yolu) canlandı.
 
-**Follow-up turu (2026-06-09 #10g, Claude — TDD, 1235 test yeşil, typecheck + build temiz, push EDİLMEDİ):**
+**Follow-up turu (2026-06-09 #10g, Claude — TDD, 1235 test yeşil, typecheck + build temiz, PUSH EDİLDİ `0156412`):**
 - [x] ~~**Codex usage**~~ ✅ — log kazımaya GEREK KALMADI: `codex exec --json` usage'ı doğrudan stdout'a basıyor (`turn.completed` event'i — **gerçek codex 0.137.0 ile canlı doğrulandı**). Yeni `parseCodexUsage`: turn'leri toplar + normalize eder (codex `input_tokens` cached'i İÇERİR → çıkarılır; claude konvansiyonuyla tutarlı rollup). Dolar maliyeti yok (codex vermiyor).
 - [x] ~~**Gemini usage**~~ ✅ — `gemini --output-format json` (v0.6.0'dan beri GA) tek zarf basar: `{response, stats, error?}`; yeni `parseGeminiUsage` `stats.models.*.tokens`'ı toplar (`input` zaten cached-hariç; `roles` çift-sayım yapılmaz). ⚠ **Canlı doğrulama bekliyor:** gemini binary bu makinede kurulu değil — format resmi doc + kaynaktan (headless.md + uiTelemetry.ts) alındı; parser toleranslı (beklenmedik şekil → usage yok, adım fail OLMAZ).
 - [x] ~~**agy kota-uyarısı**~~ ✅ — `FallbackExecutor`'a `onFallover` kancası + `falloverAuditSink`: recoverable fallover (agy 429 → claude) artık `executor.fallover` audit olayı olarak Activity feed'e düşer — GUI'de "⚠ antigravity hit a quota/rate limit — fell over to claude" okunur (3 composition noktası bağlandı: index/server-drive/commands). Audit yazımı best-effort, zinciri asla kıramaz.
@@ -32,7 +32,7 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 
 > **Eski davranış:** Mevcut proje(ler) varken çıplak `kortext start` terminalde metin liste basıp "kortext start <project> / --new kullan" diyordu. GUI-first değil — kullanıcı terminale komut yazmak zorundaydı.
 
-**Yapıldı (TDD, 1184 test yeşil, typecheck + build temiz — push EDİLMEDİ):**
+**Yapıldı (TDD, 1184 test yeşil, typecheck + build temiz — PUSH EDİLDİ `5d92868`):**
 - ✅ **bin dispatch:** bare `start` + proje var (`action === 'list'`) → terminal listesi yerine **`launchWizardAndOpen`** (sihirbazı aç). Terminal listesi `--no-open`/headless **fallback** olarak kaldı.
 - ✅ **Yeni API (`server/routes/projects.ts`):** `GET /api/projects` (registry'den kayıtlı projeler — slug/name/path/port/status/url) + `POST /api/projects/:slug/start` (`startProject` → `{handoffUrl}` + wizard self-exit). index.ts'te mount edildi (`readRegistry`/`startProject`/`onHandoff` wiring).
 - ✅ **Wizard UI (`OnboardingScreen`):** kartın başında "Open an existing project" bölümü — `/api/projects`'ten çeker, her satır tıklanınca `POST .../start` → `handoffUrl`'e yönlenir; altında "or create a new project" ayracı + mevcut onboarding formu.
@@ -44,7 +44,7 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 
 > **Belirti (canlı):** T03/T04 `design_review`'i **8 fail** etti (17 koşu, 15+ dk ilerleme yok) → sonsuz bounce churn, hiç done olmadı. Gate-fail bounce'ında **max-retry/escalation YOK**.
 
-**Yapıldı (TDD, 1178 test yeşil, typecheck + build temiz — push EDİLMEDİ):**
+**Yapıldı (TDD, 1178 test yeşil, typecheck + build temiz — PUSH EDİLDİ `2338327`):**
 - ✅ **Eşik: 3. fail (2 retry).** `gateFailCount(repos, itemId, gate)` — `gate_runs` fail satırlarını item+gate başına, son reset baseline'ından (monotonik `gate_runs.id`) sonra sayar. `MAX_GATE_FAILS = 3`. **Yeni altyapı yok.**
 - ✅ **Escalation:** `runTestCycle` 3. fail'de bounce etmiyor → item `test`'te DURAKLAR + `escalateGate` Inbox'a (`pending_questions`, phase `gate-escalation`) +prime sorusu düşürür. Açık escalation varken `runTestCycle` → `paused` (gate yeniden koşmaz, churn yok).
 - ✅ **GEREKÇE:** soru gövdesi gate verdict findings + karşılanmamış AC'leri taşır (`buildEscalationReason`). Kuru "fail" değil.
