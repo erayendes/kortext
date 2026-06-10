@@ -9,7 +9,7 @@
 
 ## ⭐ Şu an (2026-06-09 #10h) — Epic auto-create BASE full-mode ingest'e de uygulandı → backlog artık BOŞ kalmıyor
 
-Yalnızca kod oturumu (UAT değil). UAT #10h'in 🔴 KRİTİK bulgusu (çıplak `parent_epic` + `type:epic` container yok → base full-mode ingest FK → backlog total 0) TDD ile çözüldü. **1241 test yeşil**, typecheck + build temiz. **PUSH EDİLMEDİ** — Eray "push" diyene dek local.
+Yalnızca kod oturumu (UAT değil). UAT #10h'in 🔴 KRİTİK bulgusu (çıplak `parent_epic` + `type:epic` container yok → base full-mode ingest FK → backlog total 0) TDD ile çözüldü. **1241 test yeşil**, typecheck + build temiz. **PUSH EDİLDİ** (`ebfdb8b..cc3c72c`, tek commit) — `main == origin/main`.
 
 - **Tek ortak helper `synthesizeMissingEpics(repos, parsed)`** (`backlog-ingest.ts`): `type:epic` container'ı OLMAYAN + DB'de bulunmayan her çıplak `parent_id` için placeholder epic'i (id=title) ÖNCE yaratır. **Hem base full-mode `ingestBacklogItems` HEM patch-mode `patchBacklogItems` aynı helper'ı çağırıyor** (tek kaynak; eski patch-içi Pre-pass 2 bununla değişti). Audit `backlog.epic_synthesized`.
 - **FK-dayanıklı base insert:** full-mode insert loop'unda `parent_id` çözülemiyorsa item DÜŞMEZ — link null'lanır + `backlog.ingest.dangling_parent` uyarısı, item + enrichment (version/owner/model) yine yazılır. Backlog ASLA boş kalmaz (Eray şartı).
