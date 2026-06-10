@@ -10,6 +10,7 @@ import {
   deriveSyntheticEpics,
   enforceSymmetricDeps,
   patchBacklogItems,
+  synthesizeMissingEpics,
   serializeBacklogToYaml,
   ingestBacklogPatchFile,
 } from '../server/engine/backlog-ingest.ts';
@@ -1144,6 +1145,100 @@ describe('Critical (UAT #10): bare parent_epic ref auto-creates the epic + field
     );
     expect(repos.backlog.get('NOT-E01')!.title).toBe('Real Epic'); // untouched, not clobbered
     expect(repos.backlog.get('NOT-001')!.parent_id).toBe('NOT-E01');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// KRİTİK UAT #10h — BASE full-mode ingest must auto-create missing epics too.
+// Live UAT (antigravity→codex→claude): the agent wrote 8 tasks with a BARE
+// `parent_epic: <id>` and NO type:epic container, sent through full-mode
+// ingestBacklog (backlog-tanm.1, NOT a patch) → every task hit FOREIGN KEY
+// constraint failed → created 0 → backlog DB empty. The #10 epic-auto-create
+// pre-pass only ran in patchBacklogItems; full-mode never synthesized the epic.
+// ---------------------------------------------------------------------------
+
+describe('synthesizeMissingEpics (shared base/patch pre-pass)', () => {
+  it('creates a placeholder epic for a bare parent_id defined nowhere', () => {
+    const { items } = parseBacklogYaml(
+      'items:\n  - id: T-1\n    type: task\n    title: A\n    parent_epic: GHOST-E01\n',
+    );
+    const res = synthesizeMissingEpics(repos, items);
+    expect(res.created).toEqual(['GHOST-E01']);
+    expect(repos.backlog.get('GHOST-E01')?.type).toBe('epic');
+  });
+
+  it('does NOT synthesize when the parent is a type:epic item in the same batch', () => {
+    const { items } = parseBacklogYaml(
+      'items:\n  - id: E01\n    type: epic\n    title: Real\n  - id: T-1\n    type: task\n    title: A\n    parent_epic: E01\n',
+    );
+    const res = synthesizeMissingEpics(repos, items);
+    expect(res.created).toEqual([]); // the real epic will be created by the insert loop
+    expect(repos.backlog.get('E01')).toBeNull(); // pre-pass did not pre-empt it
+  });
+
+  it('does NOT synthesize when the parent already exists in the DB', () => {
+    ingestBacklogItems(
+      repos,
+      parseBacklogYaml('items:\n  - id: E01\n    type: epic\n    title: Real\n').items,
+    );
+    const { items } = parseBacklogYaml(
+      'items:\n  - id: T-1\n    type: task\n    title: A\n    parent_epic: E01\n',
+    );
+    const res = synthesizeMissingEpics(repos, items);
+    expect(res.created).toEqual([]);
+    expect(repos.backlog.get('E01')!.title).toBe('Real'); // untouched
+  });
+});
+
+describe('KRİTİK UAT #10h: base full-mode ingest auto-creates the missing epic', () => {
+  it('creates a synthesized epic for bare parent_epic refs → backlog NOT empty', () => {
+    // The exact live shape: tasks only, bare parent_epic, NO type:epic container.
+    const yaml =
+      'items:\n' +
+      '  - id: NOT-001\n    type: task\n    title: A\n    parent_epic: NOT-E01\n    version: v0.1\n    assignee: +backend-developer\n    model: high\n' +
+      '  - id: NOT-002\n    type: task\n    title: B\n    parent_epic: NOT-E01\n    version: v0.1\n    assignee: +frontend-developer\n';
+    const res = ingestBacklogItems(repos, parseBacklogYaml(yaml).items);
+
+    // The epic is synthesized; both tasks land WITHOUT a FK failure.
+    expect(repos.backlog.get('NOT-E01')?.type).toBe('epic');
+    expect(res.skipped.filter((s) => /FOREIGN KEY/.test(s.reason))).toHaveLength(0);
+    expect(res.created).toEqual(expect.arrayContaining(['NOT-E01', 'NOT-001', 'NOT-002']));
+
+    const t1 = repos.backlog.get('NOT-001')!;
+    expect(t1.parent_id).toBe('NOT-E01'); // linked, not dropped
+    expect(t1.version).toBe('v0.1');
+    expect(t1.owner).toBe('+backend-developer');
+    expect(t1.model).toBe('high');
+    // Backlog is NOT empty — the whole point of the fix.
+    expect(repos.backlog.list({ limit: 100 }).length).toBeGreaterThan(0);
+  });
+
+  it('uses the real epic when a type:epic container IS present (no duplicate synth)', () => {
+    const yaml =
+      'items:\n' +
+      '  - id: NOT-E01\n    type: epic\n    title: Real Epic\n' +
+      '  - id: NOT-001\n    type: task\n    title: A\n    parent_epic: NOT-E01\n';
+    ingestBacklogItems(repos, parseBacklogYaml(yaml).items);
+    expect(repos.backlog.get('NOT-E01')!.title).toBe('Real Epic'); // not a placeholder
+    expect(repos.backlog.get('NOT-001')!.parent_id).toBe('NOT-E01');
+  });
+
+  it('never drops a child when its epic container is unwritable — links to a synthesized epic', () => {
+    // A type:epic container with NO title is dropped at parse; the child must
+    // NOT be lost. Synthesis re-creates the epic from the bare reference so the
+    // child lands linked (backlog NEVER empty), no FK failure.
+    const yaml =
+      'items:\n' +
+      '  - id: BROKE-E01\n    type: epic\n' + // no title → dropped at parse
+      '  - id: BROKE-001\n    type: task\n    title: Orphan\n    parent_epic: BROKE-E01\n    version: v0.2\n';
+    const res = ingestBacklogItems(repos, parseBacklogYaml(yaml).items);
+
+    const child = repos.backlog.get('BROKE-001');
+    expect(child).not.toBeNull(); // NOT dropped
+    expect(child!.version).toBe('v0.2'); // enrichment kept
+    expect(child!.parent_id).toBe('BROKE-E01'); // linked to the synthesized epic
+    expect(repos.backlog.get('BROKE-E01')?.type).toBe('epic'); // placeholder epic exists
+    expect(res.skipped.filter((s) => /FOREIGN KEY/.test(s.reason))).toHaveLength(0);
   });
 });
 
