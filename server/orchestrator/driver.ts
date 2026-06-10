@@ -67,6 +67,11 @@ export async function driveReadyItems(deps: DriveDeps): Promise<DriveResult> {
     registry,
     resolution,
     previewManager,
+    // No-op guard (UAT #10i): a dev-cycle that exits 0 but writes no code (a
+    // fallover agent that only read files) is treated as a recoverable failure
+    // — the item stays in_progress and retries instead of shipping an empty
+    // worktree to the gates.
+    worktreeChanged: c.worktreeChanged,
     maxConcurrent: deps.maxConcurrent,
     by,
   });

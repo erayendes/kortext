@@ -7,7 +7,29 @@
 
 ---
 
-## ⭐ Şu an (2026-06-09 #10h) — Epic auto-create BASE full-mode ingest'e de uygulandı → backlog artık BOŞ kalmıyor
+## ⭐ Şu an (2026-06-09 #10i) — No-op implementation tespiti: kod yazmayan dev-cycle artık başarı sayılmıyor → sonsuz gate churn bitti
+
+Yalnızca kod oturumu (UAT değil). UAT #10i'in 🔴 KRİTİK bulgusu (fallover implementation dosya okuyup `exit 0` dönüyor ama kod YAZMIYOR → worktree boş → tüm gate'ler haklı fail → churn) TDD ile çözüldü. **1246 test yeşil** (1241→+5), typecheck + build temiz. **PUSH EDİLMEDİ** — Eray "push" diyene dek local.
+
+- **No-op tespiti (asıl fix, #1):** `runItem` artık `exit 0` dönen dev-cycle'ı **worktree'de dosya değişmediyse** (base'e göre byte-aynı) başarı SAYMIYOR → recoverable fail (`outcome:'failed'`, item `in_progress` KALIR, worktree karantina, `backlog.implementation.noop` audit). Item bir sonraki driver pass'inde tekrar denenir; boş worktree gate'lere HİÇ ulaşmaz. ("Boş çıktı=recoverable" sinyal mantığının dosya-üretim karşılığı.)
+- **`worktreeHasChanges(path, baseBranch)` (`worktree.ts`):** uncommitted (`git status --porcelain`) VEYA base'in önünde commit (`rev-list base..HEAD`) → değişti. Git cevaplayamazsa **fail-open** (true) — gerçek build asla yanlışlıkla atılmaz, yalnız KANITLANMIŞ boş worktree bloklanır. composition `worktreeChanged`'i bununla wire eder (handle varsa); mock lease (handle yok) → true (eski testler aynı).
+- **#2 fallover executor kalitesi — config DOĞRU:** codex executor zaten `--sandbox workspace-write` + `cwd: ctx.worktreePath` kullanıyor (yazma izni + doğru cwd var). "Oku ama yazma" davranışsal (prompt/ajan kararı), config bug'ı değil → no-op guard hangi sebep olursa olsun yakalar (doğru katman).
+- **#3 worktree base — tasarım gereği:** her worktree güncel `development`'tan branch'lenir (`WorktreeManager.acquire(-B branch path development)`). Aynı pass'te paralel item'lar birbirinin merge'ini görmez (izolasyon, doğru); sonraki pass güncel development'tan fork'lar. Defect yok.
+
+**KANIT (deterministik uçtan-uca harness — gerçek composition + gerçek git worktree):** Pass 1 no-op executor (okur, exit 0, yazmaz) → item `in_progress` KALIR, **gate churn YOK** (`gate_runs` 0), `backlog.implementation.noop` audit. Pass 2 kod yazan executor → item `done`'a ilerler. Canlı hatayı birebir üretir + fix'i kanıtlar; gerçek-LLM gereksiz (fix saf orkestrasyon mekaniği). Harness commit edilmedi.
+
+**SIRADAKİ:** Eray "push" derse commit + push. Sonra rebuild + temiz UAT: agy kota-dolu olsa bile boş worktree gate'lere ulaşmamalı, item retry'lanmalı; kod yazılınca ilerlemeli.
+
+**Rebuild (Eray çalıştırır):**
+```bash
+cd /Users/erayendes/Documents/_codebase/kortext
+npm run build && npm pack && npm install -g ./kortext-3.1.0.tgz
+kortext stop not && kortext purge not --yes
+```
+
+---
+
+## ⭐ Önceki (2026-06-09 #10h) — Epic auto-create BASE full-mode ingest'e de uygulandı → backlog artık BOŞ kalmıyor
 
 Yalnızca kod oturumu (UAT değil). UAT #10h'in 🔴 KRİTİK bulgusu (çıplak `parent_epic` + `type:epic` container yok → base full-mode ingest FK → backlog total 0) TDD ile çözüldü. **1241 test yeşil**, typecheck + build temiz. **PUSH EDİLDİ** (`ebfdb8b..cc3c72c`, tek commit) — `main == origin/main`.
 

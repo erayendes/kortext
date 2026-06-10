@@ -4,6 +4,32 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 
 ---
 
+## ✅ ÇÖZÜLDÜ (KRİTİK UAT #10, 2026-06-09 #10i, Claude) — Fallover sonrası implementation kod yazmıyordu → no-op tespiti
+
+> **Belirti:** Build'de neredeyse her item her gate'i fail etti; gate raporları net: *"worktree yalnız `.env.example/.gitignore/AGENTS.md` içeriyor; uygulama kodu YOK → FAIL."* **Kök neden:** agy kotası doldu (429) → implementation codex/claude fallover'a düştü → fallover koşuları dosyaları OKUYUP `exit 0` dönüyor ama kod YAZMIYOR → worktree boş ama "succeeded" → item `test`'e geçiyor → gate boş worktree'yi haklı reddediyor → sonsuz churn.
+
+**Yapıldı (TDD, 1246 test yeşil, typecheck + build temiz — push EDİLMEDİ):**
+- ✅ **No-op tespiti (asıl fix):** `runItem`, `exit 0` dönen dev-cycle'ı worktree base'e göre byte-aynıysa başarı SAYMIYOR → recoverable fail (item `in_progress` KALIR → driver retry; worktree karantina; `backlog.implementation.noop` audit). Boş worktree gate'lere ulaşmaz. Enjekte `worktreeChanged` (test git-siz); composition gerçek check'i wire eder.
+- ✅ **`worktreeHasChanges(path, baseBranch)` (`worktree.ts`):** uncommitted (`status --porcelain`) VEYA base'in önünde commit (`rev-list base..HEAD`) → değişti. Git cevaplayamazsa fail-open (gerçek build asla yanlış atılmaz).
+- ✅ **#2 (config doğru):** codex executor zaten `--sandbox workspace-write` + `cwd: worktreePath` — yazma izni + doğru cwd var. "Oku ama yazma" davranışsal; no-op guard sebepten bağımsız yakalar.
+- ✅ **#3 (tasarım gereği):** worktree güncel `development`'tan branch'lenir; aynı-pass paralel item'lar birbirinin merge'ini görmez (izolasyon). Defect yok.
+- ✅ **Kanıt:** uçtan-uca harness (gerçek composition + git worktree) — Pass 1 no-op executor → item `in_progress` kalır + gate_runs 0 + noop audit; Pass 2 kod yazan executor → item `done`. Canlı hatayı birebir üretip fix'i kanıtlar.
+
+---
+
+## 🟠 UAT #10 (2026-06-09) — Çelişkili durum: item hem "Review/done" hem "🔒 Locked · waiting on …" + gate "pending" ama token harcanmış
+
+> **Belirti (canlı, T08 "Birim ve Entegrasyon Testleri"):** Drawer'da **Status: Review · 🔒 Locked · "waiting on T03, T04"**, **Quality control: pending** gösteriyor — AMA aynı item'da quality_control **deneme-1'de 42.7K token** harcanmış (gate gerçekte koşmuş) ve **DB'de status = done**. Blocker'lar: T03 done, **T04 in_progress** (bitmemiş).
+
+**Kök neden (kilit bayrağı geçmiş-aşama item'a yanlış uygulanıyor):** T08, blocker'ları (T03+T04) bittiğinde unlock olup koştu → gate geçti → done. Sonra **T04 gate-fail ile `in_progress`'e geri bounce etti** → kilit bayrağı **anlık blocker durumundan** türetildiği için T08 yeniden "locked · waiting on T04" görünüyor — oysa T08 zaten **done**. Sonuç: aynı kartta **done/review** + **locked/pending** çelişkisi; drawer'daki gate "pending" gerçeği yansıtmıyor (gate koştu, token harcandı).
+
+**Düzeltilecekler (yeni oturum):**
+- [ ] **Kilit bayrağı yalnız "henüz başlamamış" item'a uygulansın:** item `done`/`review`/`test` (yani çalışmış/ilerlemiş) ise blocker sonradan regrese olsa bile **"locked · waiting" gösterme** — geçmiş aşamayı geri-kilitleme. (Eray'ın modeli: kilit = To Do'daki başlamamış işin rozeti; başlamış/bitmiş item geri kilitlenmez.)
+- [ ] **Gate rozeti gerçek durumu yansıtsın:** drawer'da gate "pending" derken aynı gate'te token harcanmış/`gate_runs`'ta pass/fail varsa → "pending" YANLIŞ. Gate badge `gate_runs` son durumundan (pass/fail/running/pending) türetilsin; harcanan token "pending" ile çelişmesin.
+- [ ] (bağlantılı) Blocker regrese olunca (T04 bounce) zaten-done bağımlı item'ın ne olacağını netleştir: done kalsın mı (büyük ihtimalle evet, kodu merge'lendi) yoksa yeniden mi doğrulansın — ama "done + locked-waiting" çelişkili görüntüsü olmasın.
+
+---
+
 ## 🟠 UAT #10 (2026-06-09) — Yetim (orphan) daemon temizliği: purge/stop canlı süreci de öldürmeli
 
 > **Belirti:** Her UAT turunda :3200'de kayıtsız bir "uninitialized" daemon kalıyor → yeni proje :3201'e düşüyor. **Kök:** `kortext purge`/`stop` yalnız registry'ye kayıtlı projeleri yönetir; daemon'lar detached+unref'li doğduğu için önceki turlarda purge registry kaydını sildi ama OS sürecini öldürmedi → süreç portta asılı yetim kaldı. Sadece `lsof -ti:<port> | xargs kill` ulaşıyor. Eray: yetim kalmamalılar.

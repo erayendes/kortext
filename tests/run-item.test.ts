@@ -118,6 +118,59 @@ describe('runItem — per-item run + worktree keystone (capstone B1, §5.9 #10)'
     expect(repos.backlog.get('B5')?.status).toBe('test');
   });
 
+  // UAT #10i: a dev-cycle that exits 0 but writes NO code (a fallover agent that
+  // read files but never wrote — worktree unchanged vs its base) must NOT be
+  // counted as success. Shipping the empty worktree to `test` makes every gate
+  // correctly reject it → infinite bounce. The no-op is a (recoverable) failure:
+  // the item stays in_progress so the driver retries.
+  it('a no-op implementation (worktree unchanged) is a failure, not success', async () => {
+    const lc = makeLifecycle();
+    lc.create({ id: 'NOOP', type: 'task', title: 'NOOP' });
+    const acq = mockAcquirer();
+    const result = await runItem('NOOP', {
+      repos,
+      lifecycle: lc,
+      executor: new MockExecutor(() => ({ durationMs: 1 })), // exit 0…
+      graph: buildGraph(devCycleWf),
+      acquireWorktree: async (id) => {
+        acq.calls.push(id);
+        return acq.fn(id);
+      },
+      registry: new RunRegistry(),
+      worktreeChanged: async () => false, // …but produced no file changes
+    });
+
+    expect(result.outcome).toBe('failed');
+    expect(result.worktree).toBeNull();
+    // Item stays in_progress (the driver re-picks it) — NOT advanced to test.
+    expect(repos.backlog.get('NOOP')?.status).toBe('in_progress');
+    // Worktree quarantined (released with success:false).
+    expect(acq.released).toEqual([{ itemId: 'NOOP', success: false }]);
+    // A visible audit record so the dashboard can surface the no-op.
+    const noop = repos.auditLog.list({ action: 'backlog.implementation.noop', resource_id: 'NOOP' });
+    expect(noop.length).toBe(1);
+  });
+
+  it('a real implementation (worktree changed) advances to test as before', async () => {
+    const lc = makeLifecycle();
+    lc.create({ id: 'REAL', type: 'task', title: 'REAL' });
+    const acq = mockAcquirer();
+    const result = await runItem('REAL', {
+      repos,
+      lifecycle: lc,
+      executor: new MockExecutor(() => ({ durationMs: 1 })),
+      graph: buildGraph(devCycleWf),
+      acquireWorktree: async (id) => {
+        acq.calls.push(id);
+        return acq.fn(id);
+      },
+      registry: new RunRegistry(),
+      worktreeChanged: async () => true, // produced code
+    });
+    expect(result.outcome).toBe('implemented');
+    expect(repos.backlog.get('REAL')?.status).toBe('test');
+  });
+
   it('idempotent dev-cycle exit: item concurrently advanced to test during build does not throw', async () => {
     const lc = makeLifecycle();
     lc.create({ id: 'IDEM', type: 'task', title: 'IDEM' }); // to_do

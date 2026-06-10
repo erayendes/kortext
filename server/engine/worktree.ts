@@ -233,3 +233,33 @@ export class WorktreeManager {
     }).trim();
   }
 }
+
+/**
+ * Did this worktree actually produce code? (UAT #10i no-op detection.)
+ *
+ * True when the worktree has diverged from `baseBranch` in either direction:
+ *   - uncommitted changes (`git status --porcelain` non-empty), OR
+ *   - commits ahead of base (`git rev-list <base>..HEAD` non-zero).
+ *
+ * A fallover agent that only READ files (exit 0, nothing written/committed)
+ * leaves the worktree byte-identical to its base → false, so runItem can treat
+ * the run as a no-op and retry instead of shipping an empty worktree to `test`.
+ *
+ * Fails OPEN: if git can't answer (not a worktree, detached state, error) we
+ * return true so a genuine build is never wrongly discarded — the guard only
+ * ever blocks a worktree we can PROVE is unchanged.
+ */
+export function worktreeHasChanges(worktreePath: string, baseBranch: string): boolean {
+  const run = (...args: string[]): string =>
+    execFileSync('git', ['-C', worktreePath, ...args], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    }).trim();
+  try {
+    if (run('status', '--porcelain') !== '') return true; // uncommitted work
+    const ahead = run('rev-list', '--count', `${baseBranch}..HEAD`);
+    return Number(ahead) > 0; // committed work beyond the base
+  } catch {
+    return true; // can't prove it's unchanged → don't block
+  }
+}
