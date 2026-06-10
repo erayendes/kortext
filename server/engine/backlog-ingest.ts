@@ -427,6 +427,74 @@ export function enforceSymmetricDeps(items: ParsedBacklogItem[]): ParsedBacklogI
   return items.map((orig) => byId.get(orig.id) ?? orig);
 }
 
+/**
+ * Synthesize a placeholder epic for every BARE `parent_epic: <id>` reference
+ * that is defined NOWHERE — not a `type:epic` item in this batch (those are
+ * created by the caller's own insert/pre-pass) and not already in the backlog.
+ *
+ * This is the single source for the UAT #10 / #10h epic auto-create, shared by
+ * BOTH ingest paths:
+ *   - full-mode `ingestBacklogItems` (backlog-tanm.1): real agents (live UAT)
+ *     wrote tasks with a bare `parent_epic` and NO `type:epic` container → every
+ *     task insert hit a FOREIGN KEY violation → `created 0` → backlog EMPTY.
+ *   - patch-mode `patchBacklogItems`: enrichment patches reference the epic by
+ *     bare id, dropping the whole item's owner/version/model on the FK miss.
+ *
+ * The id is all we have, so it doubles as the placeholder title (a later step or
+ * a human can rename it). Returns the created epic ids + any create failures.
+ * Best-effort per id — one failure never blocks the others.
+ */
+export function synthesizeMissingEpics(
+  repos: Repositories,
+  parsed: ParsedBacklogItem[],
+): { created: string[]; skipped: { id: string; reason: string }[] } {
+  const created: string[] = [];
+  const skipped: { id: string; reason: string }[] = [];
+
+  // Ids the batch defines as epic containers — the caller creates these, so a
+  // bare reference to one is NOT missing (don't pre-empt it with a placeholder).
+  const batchEpicIds = new Set(
+    parsed
+      .filter((i) => coerceItemType(i.type ?? '').type === 'epic')
+      .map((i) => i.id),
+  );
+  const handled = new Set<string>();
+
+  for (const item of parsed) {
+    const parentRef = item.parent_id;
+    if (!parentRef || handled.has(parentRef)) continue;
+    if (batchEpicIds.has(parentRef)) continue; // defined in-batch as a type:epic
+    if (repos.backlog.get(parentRef) !== null) continue; // already a real row
+    try {
+      repos.backlog.create({
+        id: parentRef,
+        type: 'epic',
+        title: parentRef,
+        parent_id: null,
+        version: null,
+        model: null,
+        review_gates: [],
+        frontmatter: {},
+        body_md: '',
+        status: 'to_do',
+      });
+      repos.auditLog.append({
+        actor: 'engine',
+        action: 'backlog.epic_synthesized',
+        resource_type: 'backlog_item',
+        resource_id: parentRef,
+        payload: { from: 'bare parent_epic reference', referenced_by: item.id },
+      });
+      created.push(parentRef);
+      handled.add(parentRef);
+    } catch (err) {
+      skipped.push({ id: parentRef, reason: err instanceof Error ? err.message : String(err) });
+    }
+  }
+
+  return { created, skipped };
+}
+
 export function ingestBacklogItems(
   repos: Repositories,
   parsed: ParsedBacklogItem[],
@@ -446,6 +514,14 @@ export function ingestBacklogItems(
 
   // Enforce symmetric dep invariants (additive only — never removes entries).
   parsed = enforceSymmetricDeps(parsed);
+
+  // UAT #10h: synthesize an epic for every BARE `parent_epic: <id>` that has no
+  // `type:epic` container in this batch — the live failure that left the backlog
+  // EMPTY (every task FK-failed). Shared with patch-mode (single source). Run
+  // BEFORE the insert loop so the parent FK target exists.
+  const synth = synthesizeMissingEpics(repos, parsed);
+  for (const id of synth.created) created.push(id);
+  for (const s of synth.skipped) skipped.push(s);
 
   // Epics first (stable): parent_id is a real FK (foreign_keys = ON), so a child
   // task linking to an epic in the same batch must see the epic row already
@@ -485,10 +561,30 @@ export function ingestBacklogItems(
     if (droppedGates.length > 0) frontmatter['dropped_gates'] = droppedGates;
     if (originalType) frontmatter['original_type'] = originalType;
 
+    // FK resilience (UAT #10h): a `parent_id` that resolves to no row (an epic
+    // that failed to write, a truly dangling ref synthesis couldn't cover) would
+    // FK-fail the WHOLE insert and drop the item — the bug that emptied the
+    // backlog. Null the link + warn instead, so the item (and its enrichment)
+    // still lands. Epics sort first, so a real in-batch parent already exists.
+    let resolvedParentId = item.parent_id ?? null;
+    if (resolvedParentId !== null && repos.backlog.get(resolvedParentId) === null) {
+      repos.auditLog.append({
+        actor: 'engine',
+        action: 'backlog.ingest.dangling_parent',
+        resource_type: 'backlog_item',
+        resource_id: id,
+        payload: {
+          parent_ref: resolvedParentId,
+          message: 'parent epic unresolved — link skipped, item kept',
+        },
+      });
+      resolvedParentId = null;
+    }
+
     const planningFields = {
       type: coercedType as import('../db/schemas.ts').BacklogItemType,
       title,
-      parent_id: item.parent_id ?? null,
+      parent_id: resolvedParentId,
       version: item.version ?? null,
       model: item.model ?? null,
       review_gates: validGates as import('../db/schemas.ts').Gate[],
@@ -636,43 +732,16 @@ export function patchBacklogItems(
     }
   }
 
-  // Pre-pass 2 (UAT #10): synthesize an epic for every BARE `parent_epic: <id>`
-  // reference that is defined NOWHERE — not a `type:epic` patch item (handled
-  // above) and not already in the backlog. Real agents (Claude UAT #10) skip the
-  // epic container entirely and just point tasks at a bare id; without a target
-  // the parent_id link FK-fails and the whole item's enrichment is dropped. The
-  // id is all we have, so it doubles as the placeholder title (a later step or
-  // human can rename it).
-  for (const item of parsed) {
-    const parentRef = item.parent_id;
-    if (!parentRef || createdEpics.has(parentRef)) continue;
-    if (repos.backlog.get(parentRef) !== null) continue; // real epic/item already exists
-    try {
-      repos.backlog.create({
-        id: parentRef,
-        type: 'epic',
-        title: parentRef,
-        parent_id: null,
-        version: null,
-        model: null,
-        review_gates: [],
-        frontmatter: {},
-        body_md: '',
-        status: 'to_do',
-      });
-      repos.auditLog.append({
-        actor: 'engine',
-        action: 'backlog.patch.epic_synthesized',
-        resource_type: 'backlog_item',
-        resource_id: parentRef,
-        payload: { from: 'bare parent_epic reference', referenced_by: item.id },
-      });
-      createdEpics.add(parentRef);
-      updated.push(parentRef);
-    } catch (err) {
-      skipped.push({ id: parentRef, reason: err instanceof Error ? err.message : String(err) });
-    }
+  // Pre-pass 2 (UAT #10 / #10h): synthesize an epic for every BARE
+  // `parent_epic: <id>` reference defined NOWHERE — via the SHARED helper that
+  // full-mode ingest uses too (single source). Pre-pass 1 above already created
+  // the `type:epic` patch items; this covers the bare-reference case.
+  const synth = synthesizeMissingEpics(repos, parsed);
+  for (const id of synth.created) {
+    createdEpics.add(id);
+    updated.push(id);
   }
+  for (const s of synth.skipped) skipped.push(s);
 
   for (const item of parsed) {
     if (createdEpics.has(item.id)) continue; // fully created in the pre-pass
