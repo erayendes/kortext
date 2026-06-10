@@ -10,6 +10,7 @@ import {
   WorktreeManager,
   WorktreeLimitError,
   WorktreeError,
+  worktreeHasChanges,
 } from '../server/engine/worktree.ts';
 
 let tmpRoot: string;
@@ -223,6 +224,37 @@ describe('WorktreeManager', () => {
     writeFileSync(join(h.path, 'note.md'), '# hello');
     // we should be able to read the file from outside
     expect(readFileSync(join(h.path, 'note.md'), 'utf8')).toBe('# hello');
+    mgr.release(h, { success: true });
+  });
+});
+
+describe('worktreeHasChanges (UAT #10i — did the dev-cycle produce code?)', () => {
+  it('is false for a fresh worktree byte-identical to its base (a no-op run)', () => {
+    git(repoRoot, 'branch', 'development');
+    const mgr = new WorktreeManager({ repoRoot, baseBranch: 'development' });
+    const h = mgr.acquire(makeRun());
+    // No file written, no commit — exactly the fallover "read but never wrote" case.
+    expect(worktreeHasChanges(h.path, h.baseBranch)).toBe(false);
+    mgr.release(h, { success: true });
+  });
+
+  it('is true when the run committed new code', () => {
+    git(repoRoot, 'branch', 'development');
+    const mgr = new WorktreeManager({ repoRoot, baseBranch: 'development' });
+    const h = mgr.acquire(makeRun());
+    writeFileSync(join(h.path, 'index.html'), '<!doctype html>\n');
+    git(h.path, 'add', 'index.html');
+    git(h.path, 'commit', '-m', 'implement landing page');
+    expect(worktreeHasChanges(h.path, h.baseBranch)).toBe(true);
+    mgr.release(h, { success: true });
+  });
+
+  it('is true when the run left uncommitted changes', () => {
+    git(repoRoot, 'branch', 'development');
+    const mgr = new WorktreeManager({ repoRoot, baseBranch: 'development' });
+    const h = mgr.acquire(makeRun());
+    writeFileSync(join(h.path, 'app.js'), 'console.log(1)\n'); // unstaged
+    expect(worktreeHasChanges(h.path, h.baseBranch)).toBe(true);
     mgr.release(h, { success: true });
   });
 });

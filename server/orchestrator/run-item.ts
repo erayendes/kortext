@@ -58,6 +58,18 @@ export type RunItemDeps = {
    * fails the build (the item still reaches `test`). Closure stops it.
    */
   previewManager?: PreviewManager;
+  /**
+   * Did the dev-cycle actually produce code? (UAT #10i) A run that exits 0 but
+   * leaves the worktree byte-identical to its base (a fallover agent that read
+   * files but never wrote) is a NO-OP, not a success — advancing it to `test`
+   * ships an empty worktree the gates correctly reject → infinite bounce. When
+   * this returns false the run is treated as a recoverable failure (item stays
+   * in_progress → the driver retries). Injected so unit tests stay git-free;
+   * composition wires the real `git diff/status` check via the worktree handle.
+   * Left undefined (older callers / tests), the guard is OFF — behavior is
+   * unchanged.
+   */
+  worktreeChanged?: (lease: WorktreeLease) => boolean | Promise<boolean>;
   /** Actor recorded on lifecycle transitions/audit. Default 'orchestrator'. */
   by?: string;
 };
@@ -173,6 +185,29 @@ export async function runItem(itemId: string, deps: RunItemDeps): Promise<RunIte
   }
 
   if (run.status === 'succeeded') {
+    // No-op guard (UAT #10i): a dev-cycle that exits 0 but produced NO file
+    // changes (worktree identical to its base — a fallover agent that read but
+    // never wrote) is NOT a real implementation. Advancing it to `test` ships an
+    // empty worktree that every gate rightly fails → infinite bounce. Treat it
+    // as a recoverable failure: keep the item in_progress (the driver retries),
+    // quarantine the worktree, and record a visible audit event.
+    const produced = deps.worktreeChanged ? await deps.worktreeChanged(lease) : true;
+    if (!produced) {
+      repos.auditLog.append({
+        actor: by,
+        action: 'backlog.implementation.noop',
+        resource_type: 'backlog_item',
+        resource_id: itemId,
+        payload: {
+          runId: run0.id,
+          message: 'dev-cycle exited 0 but produced no file changes — worktree unchanged vs base; retrying',
+        },
+      });
+      await lease.release({ success: false });
+      resolution?.forget(itemId);
+      return { itemId, run, outcome: 'failed', worktree: null };
+    }
+
     // Development-cycle exit (§5.8): in_progress → test. Worktree is kept alive —
     // closure (C2) merges it to development and releases it then (ledger kept).
     //

@@ -1,7 +1,7 @@
 import type { Repositories } from '../db/repositories/index.ts';
 import type { Executor } from '../engine/executor.ts';
 import type { WorkflowDefinition } from '../engine/workflow-parser.ts';
-import { WorktreeManager, type WorktreeHandle } from '../engine/worktree.ts';
+import { WorktreeManager, worktreeHasChanges, type WorktreeHandle } from '../engine/worktree.ts';
 import { RunRegistry } from '../engine/run-registry.ts';
 import { GitMerger } from '../engine/executors/git-merger.ts';
 import { AgentGateExecutor } from '../engine/executors/agent-gate-executor.ts';
@@ -82,6 +82,12 @@ export type Composition = {
   markdownSync: MarkdownSyncService;
   /** The per-item worktree acquirer runItem injects (keyed by run id, real handle). */
   acquireWorktree: (itemId: string, runId: number) => Promise<WorktreeLease>;
+  /**
+   * No-op guard (UAT #10i): true when the item's worktree actually diverged from
+   * its base (code was written/committed). runItem treats a false here as a
+   * recoverable failure so an empty fallover run never reaches `test`.
+   */
+  worktreeChanged: (lease: WorktreeLease) => boolean;
 };
 
 /**
@@ -187,6 +193,12 @@ export function createComposition(deps: CompositionDeps): Composition {
     };
   };
 
+  // No-op detection (UAT #10i): a real worktree handle lets us ask git whether
+  // any code was produced. A mock lease (no handle) can't be checked → assume
+  // changed so non-git tests behave as before.
+  const worktreeChanged = (lease: WorktreeLease): boolean =>
+    lease.handle ? worktreeHasChanges(lease.path, lease.handle.baseBranch) : true;
+
   return {
     repos,
     executor,
@@ -202,5 +214,6 @@ export function createComposition(deps: CompositionDeps): Composition {
     handoverEngine,
     markdownSync,
     acquireWorktree,
+    worktreeChanged,
   };
 }
