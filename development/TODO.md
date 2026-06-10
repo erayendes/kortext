@@ -4,6 +4,16 @@ Açık iş listesi. **Bitmiş işler buradan çıkarılır** → tarihçe [DECIS
 
 ---
 
+## 🟠 UAT #10 (2026-06-09) — Yetim (orphan) daemon temizliği: purge/stop canlı süreci de öldürmeli
+
+> **Belirti:** Her UAT turunda :3200'de kayıtsız bir "uninitialized" daemon kalıyor → yeni proje :3201'e düşüyor. **Kök:** `kortext purge`/`stop` yalnız registry'ye kayıtlı projeleri yönetir; daemon'lar detached+unref'li doğduğu için önceki turlarda purge registry kaydını sildi ama OS sürecini öldürmedi → süreç portta asılı yetim kaldı. Sadece `lsof -ti:<port> | xargs kill` ulaşıyor. Eray: yetim kalmamalılar.
+
+- [ ] **purge/stop canlı süreci de öldürsün (atomik):** kayıt silinirken kayıtlı PID/port'tan süreç de sonlandırılsın.
+- [ ] **Orphan-sweep komutu:** registry'de olmayan ama kortext portlarında (3199–32xx) yaşayan daemon'ları bul+kapat (`kortext doctor` / `kortext stop --all --orphans`).
+- [ ] **Daemon self-check (bellboy genişletme):** gerçek daemon periyodik "registry'de kayıtlı mıyım?" baksın; değilse kendini kapatsın (şu an yalnız :3199 sihirbazı self-shutdown yapıyor).
+
+---
+
 ## ✅ ÇÖZÜLDÜ (KRİTİK UAT #10, 2026-06-09 #10h, Claude) — Epic auto-create BASE full-mode ingest'i kapsamıyordu → backlog BOŞ
 
 > **Belirti:** Temiz UAT (antigravity→codex→claude). Backlog DB **tamamen boş (total 0)** — `backlog.ingest.summary` full-mode: `created 0, skipped 8`, 8 task da `FOREIGN KEY constraint failed`. **Kök neden:** ajan 8 task'ı çıplak `parent_epic: <id>` + `type:epic` container OLMADAN yazdı; BASE full-mode ingest eksik epic'i önce yaratmıyordu → her insert FK ihlali → backlog boş. #10 epic-auto-create yalnız `patchBacklogItems`'taydı, full-mode'u kapsamıyordu.
