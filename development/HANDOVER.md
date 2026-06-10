@@ -9,7 +9,7 @@
 
 ## ⭐ Şu an (2026-06-09 #10i) — No-op implementation tespiti: kod yazmayan dev-cycle artık başarı sayılmıyor → sonsuz gate churn bitti
 
-Yalnızca kod oturumu (UAT değil). UAT #10i'in 🔴 KRİTİK bulgusu (fallover implementation dosya okuyup `exit 0` dönüyor ama kod YAZMIYOR → worktree boş → tüm gate'ler haklı fail → churn) TDD ile çözüldü. **1246 test yeşil** (1241→+5), typecheck + build temiz. **PUSH EDİLMEDİ** — Eray "push" diyene dek local.
+Yalnızca kod oturumu (UAT değil). UAT #10i'in 🔴 KRİTİK bulgusu (fallover implementation dosya okuyup `exit 0` dönüyor ama kod YAZMIYOR → worktree boş → tüm gate'ler haklı fail → churn) TDD ile çözüldü. **1246 test yeşil** (1241→+5), typecheck + build temiz. **PUSH EDİLDİ** (`6e8e7c5..53d88b5`, tek commit) — `main == origin/main`.
 
 - **No-op tespiti (asıl fix, #1):** `runItem` artık `exit 0` dönen dev-cycle'ı **worktree'de dosya değişmediyse** (base'e göre byte-aynı) başarı SAYMIYOR → recoverable fail (`outcome:'failed'`, item `in_progress` KALIR, worktree karantina, `backlog.implementation.noop` audit). Item bir sonraki driver pass'inde tekrar denenir; boş worktree gate'lere HİÇ ulaşmaz. ("Boş çıktı=recoverable" sinyal mantığının dosya-üretim karşılığı.)
 - **`worktreeHasChanges(path, baseBranch)` (`worktree.ts`):** uncommitted (`git status --porcelain`) VEYA base'in önünde commit (`rev-list base..HEAD`) → değişti. Git cevaplayamazsa **fail-open** (true) — gerçek build asla yanlışlıkla atılmaz, yalnız KANITLANMIŞ boş worktree bloklanır. composition `worktreeChanged`'i bununla wire eder (handle varsa); mock lease (handle yok) → true (eski testler aynı).
