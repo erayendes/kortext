@@ -6,6 +6,7 @@ import {
   ingestBacklogFile,
   ingestBacklogPatchFile,
   writeBacklogYamlFromDb,
+  ensureBacklogStructure,
 } from './engine/backlog-ingest.ts';
 import express from 'express';
 import { env } from './config/env.ts';
@@ -162,13 +163,19 @@ const safetyGuards: SafetyGuards = {
     // what resolveBlueprintPaths expects (it re-appends `.kortext/project.json`).
     const projectRoot = dirname(dirname(dirname(absolutePath)));
     const meta = readProjectMeta(resolveBlueprintPaths(projectRoot).projectJsonPath);
-    const ingestOpts = meta?.code ? { code: meta.code } : undefined;
+    // code → default epic id `<CODE>-E01`; name → its title. Both feed the
+    // ingest-time epic floor (UAT #10k): the board shows ≥1 epic from the
+    // moment the backlog lands, not only after planning succeeds.
+    const ingestOpts = {
+      ...(meta?.code ? { code: meta.code } : {}),
+      ...(meta?.name ? { defaultEpicTitle: meta.name } : {}),
+    };
     if (base === 'backlog.yaml') {
       ingestBacklogFile(repos, absolutePath, ingestOpts);
       // Normalize the file from the DB (e.g. surface synthesized epics).
       writeBacklogYamlFromDb(repos, absolutePath);
     } else if (base === 'backlog.patch.yaml') {
-      ingestBacklogPatchFile(repos, absolutePath);
+      ingestBacklogPatchFile(repos, absolutePath, ingestOpts);
       // Re-serialize the canonical file so the NEXT persona reads the merged,
       // fully-enriched state instead of the stale step-1 skeleton.
       writeBacklogYamlFromDb(repos, join(dirname(absolutePath), 'backlog.yaml'));
@@ -230,10 +237,36 @@ const triggerAnalysis = (workflowId: string) => {
   }).then((result) => {
     if (!result.ok) {
       console.warn(`[kortext] blueprint trigger failed: ${result.errorMessage}`);
-    } else {
-      console.log(
-        `[kortext] blueprint trigger ok: workflow=${workflowId} run=${result.runId} status=${result.status}`,
-      );
+      return;
+    }
+    console.log(
+      `[kortext] blueprint trigger ok: workflow=${workflowId} run=${result.runId} status=${result.status}`,
+    );
+    // UAT #10j — engine-side structural floor. The chain has just finished
+    // planning (chainThroughWorkflowId='planning-pipeline'); guarantee a
+    // buildable backlog regardless of which executor ran: ≥1 epic with every
+    // task parented, a dependency chain when the agent produced none, and a
+    // sane version split. Each guarantee is idempotent + conservative, so a
+    // well-formed plan is left untouched. Then re-serialize the canonical file
+    // so the board + the next consumer see the normalized structure.
+    if (result.status === 'succeeded') {
+      try {
+        const code = projectMeta?.code ? projectMeta.code : undefined;
+        const struct = ensureBacklogStructure(repos, {
+          code,
+          defaultEpicTitle: projectMeta?.name || 'Backlog',
+        });
+        if (struct.createdEpic || struct.chained.length > 0 || struct.versionCollapsedTo) {
+          console.log(
+            `[kortext] structural floor: epic=${struct.createdEpic ?? '—'} ` +
+              `parented=${struct.parented.length} chained=${struct.chained.length} ` +
+              `version=${struct.versionCollapsedTo ?? '—'}`,
+          );
+          writeBacklogYamlFromDb(repos, join(layout.foundation, 'backlog.yaml'));
+        }
+      } catch (err) {
+        console.warn('[kortext] structural floor failed (non-fatal):', err);
+      }
     }
   });
 };

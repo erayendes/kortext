@@ -11,6 +11,10 @@ import {
   WorktreeLimitError,
   WorktreeError,
   worktreeHasChanges,
+  hasMeaningfulCodeChange,
+  worktreeHasMeaningfulChanges,
+  worktreeHasMeaningfulCommit,
+  commitWorktreeChanges,
 } from '../server/engine/worktree.ts';
 
 let tmpRoot: string;
@@ -256,5 +260,201 @@ describe('worktreeHasChanges (UAT #10i — did the dev-cycle produce code?)', ()
     writeFileSync(join(h.path, 'app.js'), 'console.log(1)\n'); // unstaged
     expect(worktreeHasChanges(h.path, h.baseBranch)).toBe(true);
     mgr.release(h, { success: true });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// UAT #10L — the #10i guard only asked "did ANYTHING change?". Live codex runs
+// slipped past it by touching config/doc files (.env.example, .gitignore,
+// AGENTS.md) while producing ZERO app code — the worktree "changed" but every
+// gate rightly failed ("no code to review") → infinite bounce. A dev-cycle
+// success now requires a MEANINGFUL code change: at least one changed file
+// with an app/code extension (.html/.css/.js/.ts/…).
+// ---------------------------------------------------------------------------
+
+describe('hasMeaningfulCodeChange (UAT #10L classifier)', () => {
+  it('accepts app/code files', () => {
+    expect(hasMeaningfulCodeChange(['index.html'])).toBe(true);
+    expect(hasMeaningfulCodeChange(['style.css'])).toBe(true);
+    expect(hasMeaningfulCodeChange(['app.js'])).toBe(true);
+    expect(hasMeaningfulCodeChange(['src/main.ts'])).toBe(true);
+    expect(hasMeaningfulCodeChange(['api/server.py'])).toBe(true);
+    // One code file among noise is enough.
+    expect(hasMeaningfulCodeChange(['.gitignore', 'notes.md', 'src/App.tsx'])).toBe(true);
+  });
+
+  it('rejects config/doc-only change sets (the live codex case)', () => {
+    // EXACTLY what UAT #10L found in every codex worktree:
+    expect(hasMeaningfulCodeChange(['.env.example', '.gitignore', 'AGENTS.md'])).toBe(false);
+    expect(hasMeaningfulCodeChange(['README.md'])).toBe(false);
+    expect(hasMeaningfulCodeChange(['package.json', 'config.yml'])).toBe(false);
+    expect(hasMeaningfulCodeChange([])).toBe(false);
+  });
+});
+
+describe('worktreeHasMeaningfulChanges (UAT #10L — did the dev-cycle produce CODE?)', () => {
+  it('is false when the run only touched config/doc files (live codex no-op)', () => {
+    git(repoRoot, 'branch', 'development');
+    const mgr = new WorktreeManager({ repoRoot, baseBranch: 'development' });
+    const h = mgr.acquire(makeRun());
+    writeFileSync(join(h.path, '.env.example'), 'PORT=3000\n');
+    writeFileSync(join(h.path, 'AGENTS.md'), '# agents\n');
+    git(h.path, 'add', '-A');
+    git(h.path, 'commit', '-m', 'setup only');
+    expect(worktreeHasMeaningfulChanges(h.path, h.baseBranch)).toBe(false);
+    mgr.release(h, { success: true });
+  });
+
+  it('is true when the run committed real app code', () => {
+    git(repoRoot, 'branch', 'development');
+    const mgr = new WorktreeManager({ repoRoot, baseBranch: 'development' });
+    const h = mgr.acquire(makeRun());
+    writeFileSync(join(h.path, 'index.html'), '<!doctype html>\n');
+    git(h.path, 'add', 'index.html');
+    git(h.path, 'commit', '-m', 'implement landing page');
+    expect(worktreeHasMeaningfulChanges(h.path, h.baseBranch)).toBe(true);
+    mgr.release(h, { success: true });
+  });
+
+  it('is true for uncommitted app code too', () => {
+    git(repoRoot, 'branch', 'development');
+    const mgr = new WorktreeManager({ repoRoot, baseBranch: 'development' });
+    const h = mgr.acquire(makeRun());
+    writeFileSync(join(h.path, 'app.js'), 'console.log(1)\n'); // unstaged
+    expect(worktreeHasMeaningfulChanges(h.path, h.baseBranch)).toBe(true);
+    mgr.release(h, { success: true });
+  });
+
+  it('is false for a byte-identical worktree (the original #10i case still holds)', () => {
+    git(repoRoot, 'branch', 'development');
+    const mgr = new WorktreeManager({ repoRoot, baseBranch: 'development' });
+    const h = mgr.acquire(makeRun());
+    expect(worktreeHasMeaningfulChanges(h.path, h.baseBranch)).toBe(false);
+    mgr.release(h, { success: true });
+  });
+
+  it('fails OPEN when git cannot answer — a genuine build is never wrongly discarded', () => {
+    expect(worktreeHasMeaningfulChanges(join(tmpRoot, 'not-a-repo'), 'development')).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// UAT #10M — the agent writes files into its worktree but NEVER `git commit`s
+// them. The merger grafts the (commit-less) feature branch onto `development`,
+// which carries NOTHING → empty merge → code silently lost → fake "done". The
+// engine must commit the agent's work itself before the item leaves for `test`,
+// and the no-op guard must judge COMMITTED history (what the merge carries), not
+// the dirty working tree (what the gates happen to read).
+// ---------------------------------------------------------------------------
+
+describe('commitWorktreeChanges (UAT #10M — engine commits the agent left-behind work)', () => {
+  it('commits the uncommitted files the agent wrote and returns true', () => {
+    git(repoRoot, 'branch', 'development');
+    const mgr = new WorktreeManager({ repoRoot, baseBranch: 'development' });
+    const h = mgr.acquire(makeRun());
+    // Agent wrote real app code but (the #10M bug) never committed it.
+    writeFileSync(join(h.path, 'index.html'), '<!doctype html>\n');
+    writeFileSync(join(h.path, 'app.js'), 'console.log(1)\n');
+
+    const committed = commitWorktreeChanges(h.path, 'engine: commit agent work');
+
+    expect(committed).toBe(true);
+    // Nothing left dirty — the work is now on the branch HEAD.
+    expect(git(h.path, 'status', '--porcelain')).toBe('');
+    expect(git(h.path, 'log', '--oneline').split('\n')[0]).toContain('engine: commit agent work');
+    mgr.release(h, { success: true });
+  });
+
+  it('returns false when the worktree has nothing new to commit', () => {
+    git(repoRoot, 'branch', 'development');
+    const mgr = new WorktreeManager({ repoRoot, baseBranch: 'development' });
+    const h = mgr.acquire(makeRun());
+    // Clean worktree (no agent output at all).
+    expect(commitWorktreeChanges(h.path, 'engine: nothing')).toBe(false);
+    mgr.release(h, { success: true });
+  });
+
+  it('commits even when the worktree has no committer identity configured (robust in a bare CI checkout)', () => {
+    // A repo with NO user.name/user.email — git commit would normally refuse.
+    const bare = join(tmpRoot, 'noid');
+    execFileSync('mkdir', ['-p', bare]);
+    git(bare, 'init', '--initial-branch=main');
+    git(bare, 'config', 'user.email', 'seed@kortext.dev');
+    git(bare, 'config', 'user.name', 'Seed');
+    writeFileSync(join(bare, 'README.md'), '# x\n');
+    git(bare, 'add', 'README.md');
+    git(bare, 'commit', '-m', 'seed');
+    git(bare, 'branch', 'development');
+    // Drop identity AFTER the seed commit so the worktree inherits no identity.
+    execFileSync('git', ['-C', bare, 'config', '--unset', 'user.email']);
+    execFileSync('git', ['-C', bare, 'config', '--unset', 'user.name']);
+
+    const mgr = new WorktreeManager({ repoRoot: bare, baseBranch: 'development' });
+    const h = mgr.acquire(makeRun());
+    writeFileSync(join(h.path, 'main.js'), 'export const x = 1\n');
+
+    expect(commitWorktreeChanges(h.path, 'engine: identity-less commit')).toBe(true);
+    expect(git(h.path, 'status', '--porcelain')).toBe('');
+    mgr.release(h, { success: true });
+  });
+
+  it('after an engine commit, the merge actually carries the files into development (the #10M end-to-end fix)', () => {
+    git(repoRoot, 'branch', 'development');
+    const mgr = new WorktreeManager({ repoRoot, baseBranch: 'development' });
+    const h = mgr.acquire(makeRun());
+    // Agent writes but never commits — the exact failing case.
+    writeFileSync(join(h.path, 'index.html'), '<!doctype html>\n');
+    expect(git(h.path, 'status', '--porcelain')).not.toBe(''); // dirty, untracked
+
+    // Engine commits, THEN the merger releases with merge.
+    commitWorktreeChanges(h.path, 'engine: commit agent work');
+    mgr.release(h, { success: true, merge: true });
+
+    // development now actually has the file (before the fix this was empty).
+    git(repoRoot, 'checkout', 'development');
+    expect(existsSync(join(repoRoot, 'index.html'))).toBe(true);
+  });
+
+  it('returns false (never throws) when pointed at a non-repo', () => {
+    expect(commitWorktreeChanges(join(tmpRoot, 'not-a-repo'), 'x')).toBe(false);
+  });
+});
+
+describe('worktreeHasMeaningfulCommit (UAT #10M — judge COMMITTED history, not the dirty tree)', () => {
+  it('is FALSE when app code is only UNCOMMITTED — it would not survive the merge', () => {
+    git(repoRoot, 'branch', 'development');
+    const mgr = new WorktreeManager({ repoRoot, baseBranch: 'development' });
+    const h = mgr.acquire(makeRun());
+    // Real app code, but never committed → the merge would carry nothing.
+    writeFileSync(join(h.path, 'app.js'), 'console.log(1)\n');
+    expect(worktreeHasMeaningfulCommit(h.path, h.baseBranch)).toBe(false);
+    mgr.release(h, { success: true });
+  });
+
+  it('is TRUE when app code is COMMITTED', () => {
+    git(repoRoot, 'branch', 'development');
+    const mgr = new WorktreeManager({ repoRoot, baseBranch: 'development' });
+    const h = mgr.acquire(makeRun());
+    writeFileSync(join(h.path, 'index.html'), '<!doctype html>\n');
+    git(h.path, 'add', 'index.html');
+    git(h.path, 'commit', '-m', 'implement landing page');
+    expect(worktreeHasMeaningfulCommit(h.path, h.baseBranch)).toBe(true);
+    mgr.release(h, { success: true });
+  });
+
+  it('is FALSE when only config/doc was committed (no app file in the merge)', () => {
+    git(repoRoot, 'branch', 'development');
+    const mgr = new WorktreeManager({ repoRoot, baseBranch: 'development' });
+    const h = mgr.acquire(makeRun());
+    writeFileSync(join(h.path, 'README.md'), '# notes\n');
+    writeFileSync(join(h.path, '.gitignore'), 'node_modules\n');
+    git(h.path, 'add', '-A');
+    git(h.path, 'commit', '-m', 'docs only');
+    expect(worktreeHasMeaningfulCommit(h.path, h.baseBranch)).toBe(false);
+    mgr.release(h, { success: true });
+  });
+
+  it('fails OPEN when git cannot answer', () => {
+    expect(worktreeHasMeaningfulCommit(join(tmpRoot, 'not-a-repo'), 'development')).toBe(true);
   });
 });

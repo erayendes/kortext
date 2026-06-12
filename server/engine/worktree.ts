@@ -263,3 +263,142 @@ export function worktreeHasChanges(worktreePath: string, baseBranch: string): bo
     return true; // can't prove it's unchanged → don't block
   }
 }
+
+/**
+ * Extensions that count as a MEANINGFUL implementation deliverable (UAT #10L).
+ * Docs (.md/.txt), dotfiles (.gitignore/.env*), and bare config (.json/.yml/
+ * .toml) do NOT count on their own — the live codex no-op wrote exactly
+ * `.env.example` + `.gitignore` + `AGENTS.md` and slipped past the #10i
+ * "anything changed?" guard while every gate rightly failed on "no code".
+ */
+const CODE_EXTENSIONS = new Set([
+  'html', 'htm', 'css', 'scss', 'sass', 'less',
+  'js', 'mjs', 'cjs', 'jsx', 'ts', 'tsx', 'vue', 'svelte',
+  'py', 'rb', 'go', 'rs', 'java', 'kt', 'kts', 'swift',
+  'c', 'cc', 'cpp', 'h', 'hpp', 'm', 'mm', 'cs', 'php', 'sql', 'sh', 'bash',
+]);
+
+/** Does this change set contain at least one app/code file? (Pure — testable without git.) */
+export function hasMeaningfulCodeChange(changedFiles: string[]): boolean {
+  return changedFiles.some((f) => {
+    const base = f.split('/').pop() ?? f;
+    const dot = base.lastIndexOf('.');
+    if (dot <= 0) return false; // dotfiles (.gitignore) and extension-less files
+    return CODE_EXTENSIONS.has(base.slice(dot + 1).toLowerCase());
+  });
+}
+
+/**
+ * Did this worktree produce a MEANINGFUL code change? (UAT #10L — tightens the
+ * #10i guard.) True when at least one file changed vs `baseBranch` (uncommitted
+ * OR committed) has an app/code extension. A run that only touched config/doc
+ * files (the live codex pattern) is a no-op: advancing it to `test` ships a
+ * code-less worktree every gate rejects → infinite bounce.
+ *
+ * Fails OPEN like worktreeHasChanges: if git can't answer we return true so a
+ * genuine build is never wrongly discarded.
+ */
+export function worktreeHasMeaningfulChanges(worktreePath: string, baseBranch: string): boolean {
+  const run = (...args: string[]): string =>
+    execFileSync('git', ['-C', worktreePath, ...args], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    }).trim();
+  try {
+    const files = new Set<string>();
+    // Uncommitted paths (porcelain: "XY <path>" or "XY <old> -> <new>").
+    for (const line of run('status', '--porcelain').split('\n')) {
+      if (!line.trim()) continue;
+      const path = line.slice(3);
+      const renamed = path.split(' -> ');
+      files.add(renamed[renamed.length - 1]!);
+    }
+    // Committed paths beyond the base.
+    for (const line of run('diff', '--name-only', `${baseBranch}...HEAD`).split('\n')) {
+      if (line.trim()) files.add(line.trim());
+    }
+    return hasMeaningfulCodeChange([...files]);
+  } catch {
+    return true; // can't prove it's meaningless → don't block
+  }
+}
+
+/**
+ * Did this worktree COMMIT a meaningful code change vs its base? (UAT #10M.)
+ *
+ * Looks ONLY at committed history (`base...HEAD`) — uncommitted files are
+ * irrelevant here because the merger grafts COMMITS onto `development`, not the
+ * working tree. The engine commits the agent's work before this runs (run-item),
+ * so a worktree with no committed app/code file beyond base is a genuine no-op →
+ * the item bounces and retries instead of producing an empty merge dressed up as
+ * "done". This is the #10M tightening of {@link worktreeHasMeaningfulChanges},
+ * which (correctly for #10L) also counted UNCOMMITTED app code — but uncommitted
+ * code never survives the merge, so it must not green-light a `test` transition.
+ *
+ * Fails OPEN like its siblings: a git error returns true so a genuine build is
+ * never wrongly discarded.
+ */
+export function worktreeHasMeaningfulCommit(worktreePath: string, baseBranch: string): boolean {
+  const run = (...args: string[]): string =>
+    execFileSync('git', ['-C', worktreePath, ...args], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    }).trim();
+  try {
+    const files = run('diff', '--name-only', `${baseBranch}...HEAD`)
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean);
+    return hasMeaningfulCodeChange(files);
+  } catch {
+    return true; // can't prove it's meaningless → don't block
+  }
+}
+
+/**
+ * Commit whatever the agent left in the worktree — engine-side (UAT #10M).
+ *
+ * Coding agents (codex especially) frequently WRITE files but never `git commit`
+ * them. The merger then grafts the commit-less feature branch onto `development`,
+ * which carries NOTHING → empty merge → the code is silently lost and the item
+ * is a fake "done". Staging (`git add -A`) and committing here, before the item
+ * leaves for `test`, guarantees the tree the gates read is the exact tree the
+ * merge carries.
+ *
+ * Returns true when a commit was actually created, false when there was nothing
+ * to commit (the agent already committed, or wrote nothing). Best-effort: any
+ * git failure returns false rather than throwing — the committed-only no-op
+ * guard ({@link worktreeHasMeaningfulCommit}) then catches the empty tree and
+ * bounces the item, so a commit hiccup degrades to a retry, never a crash.
+ *
+ * Robust in a bare checkout: inline `user.name`/`user.email` so a worktree with
+ * no committer identity still commits, `--no-verify` so a project pre-commit
+ * hook can't block the engine, and `commit.gpgsign=false` so signing never
+ * prompts.
+ */
+export function commitWorktreeChanges(worktreePath: string, message: string): boolean {
+  const run = (...args: string[]): string =>
+    execFileSync('git', ['-C', worktreePath, ...args], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    }).trim();
+  try {
+    run('add', '-A');
+    // `diff --cached --quiet` exits 0 when nothing is staged, 1 when there is.
+    try {
+      run('diff', '--cached', '--quiet');
+      return false; // nothing staged → nothing to commit
+    } catch {
+      // non-zero exit → staged changes exist; fall through to commit
+    }
+    run(
+      '-c', 'user.name=Kortext Engine',
+      '-c', 'user.email=engine@kortext.local',
+      '-c', 'commit.gpgsign=false',
+      'commit', '--no-verify', '-m', message,
+    );
+    return true;
+  } catch {
+    return false; // best-effort: the committed-only guard catches an empty tree
+  }
+}

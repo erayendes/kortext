@@ -118,6 +118,40 @@ describe('runItem — per-item run + worktree keystone (capstone B1, §5.9 #10)'
     expect(repos.backlog.get('B5')?.status).toBe('test');
   });
 
+  // UAT #10L: the implementation prompt never carried THE ITEM — the dev-cycle
+  // step text says "implement the item assigned to you" without saying which
+  // item or what it requires. runItem must surface the item (id/title/
+  // description/acceptance criteria) to every step's ExecutorContext so the
+  // agent has something concrete to build instead of exploring and exiting 0.
+  it('passes the backlog item context to the executor (UAT #10L)', async () => {
+    const lc = makeLifecycle();
+    lc.create({ id: 'CTX', type: 'task', title: 'Landing page hero' });
+    repos.backlog.updateFrontmatter('CTX', {
+      acceptance_criteria: ['hero renders', 'responsive at 380px'],
+    });
+    let seen: string | undefined;
+    const capture = {
+      name: 'capture',
+      async execute(_step: unknown, ctx: { itemContext?: string }) {
+        seen = ctx.itemContext;
+        return { ok: true };
+      },
+    };
+    const acq = mockAcquirer();
+    await runItem('CTX', {
+      repos,
+      lifecycle: lc,
+      executor: capture as never,
+      graph: buildGraph(devCycleWf),
+      acquireWorktree: async (id) => acq.fn(id),
+      registry: new RunRegistry(),
+    });
+    expect(seen).toBeDefined();
+    expect(seen).toContain('CTX');
+    expect(seen).toContain('Landing page hero');
+    expect(seen).toContain('hero renders');
+  });
+
   // UAT #10i: a dev-cycle that exits 0 but writes NO code (a fallover agent that
   // read files but never wrote — worktree unchanged vs its base) must NOT be
   // counted as success. Shipping the empty worktree to `test` makes every gate
@@ -149,6 +183,66 @@ describe('runItem — per-item run + worktree keystone (capstone B1, §5.9 #10)'
     // A visible audit record so the dashboard can surface the no-op.
     const noop = repos.auditLog.list({ action: 'backlog.implementation.noop', resource_id: 'NOOP' });
     expect(noop.length).toBe(1);
+  });
+
+  // UAT #10M: coding agents write files but frequently never `git commit` them.
+  // An uncommitted worktree merges as EMPTY (the merger grafts the commit-less
+  // branch) → code silently lost → fake "done". The engine must commit the
+  // worktree itself, on success, BEFORE the no-op guard runs (the guard now
+  // judges committed history) and before the item leaves for `test`.
+  it('commits the worktree engine-side before the no-op guard, on a successful build (UAT #10M)', async () => {
+    const lc = makeLifecycle();
+    lc.create({ id: 'COMMIT', type: 'task', title: 'COMMIT' });
+    const acq = mockAcquirer();
+    const order: string[] = [];
+    const result = await runItem('COMMIT', {
+      repos,
+      lifecycle: lc,
+      executor: new MockExecutor(() => ({ durationMs: 1 })),
+      graph: buildGraph(devCycleWf),
+      acquireWorktree: async (id) => {
+        acq.calls.push(id);
+        return acq.fn(id);
+      },
+      registry: new RunRegistry(),
+      commitWorktree: () => {
+        order.push('commit');
+        return true;
+      },
+      worktreeChanged: () => {
+        order.push('guard');
+        return true;
+      },
+    });
+    expect(result.outcome).toBe('implemented');
+    // Commit happens first, THEN the no-op guard reads committed history.
+    expect(order).toEqual(['commit', 'guard']);
+    expect(repos.backlog.get('COMMIT')?.status).toBe('test');
+  });
+
+  // A failed build never reaches the success branch → nothing to commit.
+  it('does NOT commit the worktree when the build failed (UAT #10M)', async () => {
+    const lc = makeLifecycle();
+    lc.create({ id: 'NOCOMMIT', type: 'task', title: 'NOCOMMIT' });
+    const acq = mockAcquirer();
+    let committed = false;
+    const result = await runItem('NOCOMMIT', {
+      repos,
+      lifecycle: lc,
+      executor: new MockExecutor(() => ({ fail: true })),
+      graph: buildGraph(devCycleWf),
+      acquireWorktree: async (id) => {
+        acq.calls.push(id);
+        return acq.fn(id);
+      },
+      registry: new RunRegistry(),
+      commitWorktree: () => {
+        committed = true;
+        return true;
+      },
+    });
+    expect(result.outcome).toBe('failed');
+    expect(committed).toBe(false);
   });
 
   it('a real implementation (worktree changed) advances to test as before', async () => {

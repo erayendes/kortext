@@ -70,6 +70,17 @@ export type RunItemDeps = {
    * unchanged.
    */
   worktreeChanged?: (lease: WorktreeLease) => boolean | Promise<boolean>;
+  /**
+   * Commit the worktree's changes engine-side BEFORE the item leaves for `test`
+   * (UAT #10M). Coding agents (codex especially) write files but never `git
+   * commit` them; the merger then grafts a commit-less branch onto `development`
+   * and silently drops the code → empty merge dressed up as "done". Committing
+   * here makes the tree the gates read the exact tree the merge carries, and
+   * lets {@link worktreeChanged} judge COMMITTED history. Returns whether a
+   * commit was actually created (false = nothing to commit). Injected so unit
+   * tests stay git-free; left undefined the step is skipped (older callers).
+   */
+  commitWorktree?: (lease: WorktreeLease) => boolean | Promise<boolean>;
   /** Actor recorded on lifecycle transitions/audit. Default 'orchestrator'. */
   by?: string;
 };
@@ -87,6 +98,34 @@ export type RunItemResult = {
 };
 
 const READY: ReadonlySet<string> = new Set(['to_do', 'in_progress']);
+
+/**
+ * Render the backlog item as the prompt block every dev-cycle step receives
+ * (ExecutorContext.itemContext — UAT #10L). Before this, NO executor was ever
+ * told WHICH item to implement: the workflow step text says "implement the
+ * item assigned to you" and nothing else — codex explored the worktree and
+ * exited 0 without writing code. Keep it plain text (every CLI's prompt
+ * builder embeds it verbatim).
+ */
+export function buildItemContext(item: {
+  id: string;
+  type: string;
+  title: string;
+  body_md: string;
+  frontmatter: Record<string, unknown>;
+}): string {
+  const ac = item.frontmatter['acceptance_criteria'];
+  const criteria =
+    Array.isArray(ac) && ac.length > 0
+      ? ac.map((c) => `  - ${String(c)}`).join('\n')
+      : '  (none declared)';
+  return `Item:     ${item.id} (${item.type})
+Title:    ${item.title}
+Description:
+${item.body_md?.trim() || '  (none)'}
+Acceptance criteria (the implementation is judged against these):
+${criteria}`;
+}
 
 /**
  * Spawn the development-cycle run for a ready backlog item (§5.9 #10 — the
@@ -161,6 +200,7 @@ export async function runItem(itemId: string, deps: RunItemDeps): Promise<RunIte
       registry, // ← block can cancel the live run by item (W1)
       triggeredBy: by,
       reviseDirective, // ← Faz 2: gate findings fed into the re-code prompt
+      itemContext: buildItemContext(item), // ← UAT #10L: the agent finally knows WHICH item
     });
     run = result.run;
     // One-shot: the dev turn has now seen the directive — clear it so the next
@@ -185,12 +225,25 @@ export async function runItem(itemId: string, deps: RunItemDeps): Promise<RunIte
   }
 
   if (run.status === 'succeeded') {
-    // No-op guard (UAT #10i): a dev-cycle that exits 0 but produced NO file
-    // changes (worktree identical to its base — a fallover agent that read but
-    // never wrote) is NOT a real implementation. Advancing it to `test` ships an
-    // empty worktree that every gate rightly fails → infinite bounce. Treat it
-    // as a recoverable failure: keep the item in_progress (the driver retries),
-    // quarantine the worktree, and record a visible audit event.
+    // UAT #10M — commit the worktree engine-side BEFORE the no-op guard and the
+    // eventual merge. The agent often writes files but never commits them; an
+    // uncommitted worktree merges as EMPTY (the merger grafts the feature
+    // branch, which carries no commit) → the code is silently lost and the item
+    // is a fake "done". Committing here guarantees the work the gates read is
+    // the work the merge carries, and lets the no-op guard judge COMMITTED
+    // history. Best-effort + ordered first: a commit hiccup leaves nothing
+    // committed, and the guard below then bounces the item (never an empty merge).
+    if (deps.commitWorktree) {
+      await deps.commitWorktree(lease);
+    }
+
+    // No-op guard (UAT #10i/#10L/#10M): a dev-cycle that exits 0 but COMMITTED
+    // no meaningful code (worktree identical to its base, or only config/doc, or
+    // the agent left everything uncommitted) is NOT a real implementation.
+    // Advancing it to `test` ships an empty worktree that every gate rightly
+    // fails → infinite bounce, and the merge that follows would be empty. Treat
+    // it as a recoverable failure: keep the item in_progress (the driver
+    // retries), quarantine the worktree, and record a visible audit event.
     const produced = deps.worktreeChanged ? await deps.worktreeChanged(lease) : true;
     if (!produced) {
       repos.auditLog.append({
@@ -200,7 +253,8 @@ export async function runItem(itemId: string, deps: RunItemDeps): Promise<RunIte
         resource_id: itemId,
         payload: {
           runId: run0.id,
-          message: 'dev-cycle exited 0 but produced no file changes — worktree unchanged vs base; retrying',
+          message:
+            'dev-cycle exited 0 but produced no meaningful code change (worktree unchanged vs base, or config/doc-only — no app file written); retrying',
         },
       });
       await lease.release({ success: false });

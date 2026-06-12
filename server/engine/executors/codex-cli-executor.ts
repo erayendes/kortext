@@ -55,7 +55,7 @@ export class CodexCliExecutor implements Executor {
       ...step,
       inputs: filterInjectedRuleInputs(step.inputs, this.opts.rulesDir),
     };
-    const prompt = buildPrompt(displayStep, ctx, personaBody, rulesBlock);
+    const prompt = buildCodexPrompt(displayStep, ctx, personaBody, rulesBlock);
     const logPath = join(this.opts.logsDir, `run-${ctx.runId}-step-${ctx.runStepId}.log`);
     // `exec` runs Codex NON-interactively (the bare `codex` binary drops into a
     // TUI and dies on piped stdin with "stdin is not a terminal" — UAT
@@ -177,7 +177,18 @@ export function parseCodexUsage(stdout: string): UsageMetadata | null {
   };
 }
 
-function buildPrompt(
+/**
+ * UAT #10L — the old prompt ended with bare metadata (`Outputs: item-in-test`)
+ * and codex took it as a briefing, not an order: it READ files and exited 0
+ * without writing any code, while antigravity (whose prompt ends with "Now
+ * perform the Task… invoke your write tool") produced code from the same step.
+ * The sandbox was never the problem (`--sandbox workspace-write`, cwd=worktree).
+ * The prompt now (a) carries the work item (ctx.itemContext), (b) carries gate
+ * findings on a bounced re-code (ctx.reviseFeedback), and (c) ends with an
+ * explicit implementation mandate: create/modify real files; reading alone is
+ * a failed run. Exported for direct prompt-contract tests.
+ */
+export function buildCodexPrompt(
   step: WorkflowStep,
   ctx: ExecutorContext,
   personaBody: string,
@@ -186,14 +197,28 @@ function buildPrompt(
   const inputs = step.inputs.length > 0 ? step.inputs.join(', ') : '(none)';
   const outputs = step.outputs.length > 0 ? step.outputs.join(', ') : '(none)';
   const rules = rulesBlock ? `\n\n--- Rules ---\n${rulesBlock}` : '';
+  const item = ctx.itemContext ? `\n--- Work Item (implement THIS) ---\n${ctx.itemContext}\n` : '';
+  const revise = ctx.reviseFeedback
+    ? `\n--- REVISION REQUESTED — a previous attempt was rejected ---\nAddress these findings in the files you write:\n${ctx.reviseFeedback}\n`
+    : '';
   return `${personaBody}${rules}
 
 --- Codex Step ---
 Workflow: ${ctx.workflowId}
 Phase:    ${step.phase}
 Persona:  ${step.persona ?? '(none)'}
+CWD:      ${ctx.worktreePath}
 Task:     ${step.description}
 Inputs:   ${inputs}
 Outputs:  ${outputs}
+${item}${revise}
+--- Mandate ---
+Now perform the Task by creating and/or modifying real files under the CWD
+above. This is a non-interactive implementation run: you MUST leave concrete
+file changes behind (application code, then a git commit if git is available).
+Reading files alone is NOT an acceptable outcome — a run that ends with no
+file changes is treated as failed and retried. Do not ask questions; decide
+and implement. If a declared Output is a file path, write that exact path.
+End with one short confirmation line listing the files you wrote.
 `;
 }

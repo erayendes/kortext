@@ -7,7 +7,137 @@
 
 ---
 
-## ⭐ Şu an (2026-06-09 #10i) — No-op implementation tespiti: kod yazmayan dev-cycle artık başarı sayılmıyor → sonsuz gate churn bitti
+## ⭐ Şu an (2026-06-12 #10M kod) — Üretilen kod artık development'a MERGE OLUYOR: motor worktree'yi commit ediyor (boş-merge bug'ı kapandı)
+
+Yalnızca kod oturumu. UAT #10M'in dört kod maddesi TDD ile çözüldü. **1288 test yeşil** (1275→+13), typecheck + build + `npm pack` temiz. **PUSH EDİLMEDİ / commit edilmedi** — #10j/#10k/#10L ile aynı çalışma ağacında, Eray "push" diyene dek local.
+
+- **Kök neden (commit/merge impedansı):** ajan worktree'ye dosya YAZIYOR ama `git commit` ETMİYOR → üç görünüm uyuşmuyor: (1) ajan dosyayı **untracked** bırakır; (2) gate'ler **çalışma ağacını** okur (dosyayı görür → pass); (3) `WorktreeManager.release(merge:true)` **branch HEAD**'i merge eder (commit yok → boş). Sonuç: `development` boş merge alır → sahte "done".
+- **1. Motor commit (`commitWorktreeChanges`, `worktree.ts`):** `git add -A` + (staged varsa) commit; inline `user.name/email` + `--no-verify` + `commit.gpgsign=false` ile kimliksiz/hook'lu checkout'ta da çalışır, best-effort (hata=false, asla throw). `runItem` başarı dalında **no-op guard'dan önce** `commitWorktree(lease)` çağırır (`run-item.ts` yeni opsiyonel dep); composition wire eder, driver geçirir.
+- **2. No-op guard COMMIT'e bağlandı (`worktreeHasMeaningfulCommit`, `worktree.ts`):** yalnız `base...HEAD` commit'li tarihçeye bakar (kirli ağaca değil — merge commit taşır). Composition `worktreeChanged`'i `worktreeHasMeaningfulChanges`→`worktreeHasMeaningfulCommit`'e geçti: commit'li app dosyası yoksa bounce. (Eski `worktreeHasMeaningfulChanges` + #10L testleri duruyor.)
+- **3. Gate ↔ merge tutarlılığı:** motor commit `test`'e geçişten önce (faz 1) çalıştığı için gate'in okuduğu ağaç = merger'ın taşıdığı commit'li ağaç. Commit üç görünümü eşitler.
+- **4. Regresyon (executor-bağımsız, deterministik):** `driver-e2e.test.ts` `WritesButNeverCommitsExecutor` (gerçek `index.html`+`src/main.js` yazar, **commit etmez** = canlı codex deseni) → drive sonrası `development`'ta dosyalar **gerçekten var**, item done. Fix'siz RED: yalnız `README.md` (boş merge kanıtlandı). + boş ajan koşusu bounce + noop audit, boş merge yok.
+
+**SIRADAKİ (Eray, tam-zincir UAT):** rebuild + temiz UAT → build'i sonuna kadar koştur: codex/antigravity ile `development`'ta app dosyaları (`index.html`, `src/`) gerçekten görünsün, item done sahte olmasın. Kalan açık TODO'lar: model→`--model` bağlama, build-start görünürlüğü.
+
+**Rebuild (Eray çalıştırır):**
+```bash
+cd /Users/erayendes/Documents/_codebase/kortext
+npm install -g ./kortext-3.1.0.tgz
+kortext stop not; kortext purge not --yes
+```
+(`.tgz` bu oturumda yeniden üretildi.)
+
+---
+
+## ⭐ Önceki (2026-06-09 UAT #10M, codex primary) — Çok fix CANLI tuttu ✅ ama üretilen KOD MERGE'E GİRMİYOR (yeni KRİTİK)
+
+Eray temiz UAT koştu (codex→antigravity→claude, :3201), planning'i sonuna kadar onayladı + Auto. **Bu turda CANLI kanıtlananlar:**
+- ✅ **#10k epic erken** (`default_epic`, 9 task bağlı, planning devam ederken).
+- ✅ **version-collapse floor:** `backlog.structure.version_collapsed` → codex 10 versiyona bölmüştü, floor **tek v0.1'e topladı**.
+- ✅ **bağımlılık floor:** blocked_by 8 → sıralı build.
+- ✅ **#10L codex KOD YAZIYOR:** run-3 worktree'de `index.html` + `src/{theme.js,main.js,styles.css}` (gerçek tema kodu). Gate'ler bu kodu **okuyup haklı geçti** (gate_runs findings gerçek).
+
+**🔴 KRİTİK YENİ (TODO "UAT #10M"):** Üretilen kod **`development`'a merge OLMUYOR.** T08 done + 3 gate pass + "merged to development" diyor ama development'ta **yalnız `kortext scaffold` commit'i** var, kod yok. Kök: **dev-cycle worktree'yi commit ETMİYOR** (`git status` = `?? index.html ?? src/` untracked); ajan (codex) commit yapmadı, Kortext merge ederken commit'li hali aldığı için **boş merge** → kod kaybolur. Gate worktree'nin commit'siz dosyalarını okuyup pass veriyor ama merge boş → **sahte done.** Sorun KORTEXT integrasyon katmanında (codex'te değil — codex kodu yazdı). Eray durdurdu.
+
+**SIRADAKİ (yeni fix oturumu):** (1) merge öncesi MOTOR `git add -A && commit` (ajan commit etmese bile); (2) no-op guard'ı commit'li diff'e bağla (boş merge done sayılmasın); (3) gate↔merge aynı ağaç durumunu görsün; codex+antigravity ile development'ta app dosyaları gerçekten görünsün. Detay [TODO.md](./TODO.md). **UAT ortamı:** `not` :3201 durduruldu → `kortext purge not --yes`.
+
+---
+
+## ⭐ Önceki (2026-06-11 #10L kod) — Codex implementation artık KOD YAZIYOR (canlı kanıtlı) + anlamlı-kod guard'ı + version-floor v0.1
+
+Yalnızca kod oturumu. UAT #10L'nin üç maddesi TDD ile çözüldü. **1275 test yeşil** (1258→+17), typecheck + build + `npm pack` temiz. **PUSH EDİLMEDİ / commit edilmedi** — #10j/#10k ile aynı çalışma ağacında, Eray "push" diyene dek local.
+
+- **1. Kök neden = PROMPT (sandbox/cwd DEĞİL** — `--sandbox workspace-write` + cwd=worktree zaten doğruydu**):**
+  - **(a) Item hiç prompt'a girmiyordu:** dev-cycle adımı "sana atanan item'ı uygula" diyor ama HANGİ item olduğunu hiçbir executor'a söylemiyordu. Fix: `ExecutorContext.itemContext` — `runItem` item'ı (id/başlık/açıklama/acceptance criteria) `buildItemContext` (`run-item.ts`) ile render edip `runWorkflow`'a geçirir; 4 CLI executor da prompt'a basar ("Work Item (implement THIS)").
+  - **(b) Codex prompt'unda emir yoktu:** çıplak metadata ile bitiyordu (antigravity'nin "Now perform the Task… invoke your write tool" emri vardı → kod yazıyordu; saf executor varyansı). Fix: codex (+aynı zafiyetteki gemini) prompt'una CWD satırı + `--- Mandate ---` ("create/modify real files; reading alone is NOT acceptable — no file changes = failed and retried") + revize-geri-bildirim bloğu (gate bulguları artık codex re-code'una da ulaşıyor; eskiden yalnız claude'a gidiyordu).
+- **2. No-op guard sıkılaştı (#10i → #10L):** `worktreeHasMeaningfulChanges` (`worktree.ts`) — değişen dosyalar (uncommitted + committed, rename-aware) içinde **en az 1 app/kod uzantısı** (.html/.css/.js/.ts/.py/… ~30 uzantı) yoksa dev-cycle succeeded SAYILMAZ → recoverable-fail + retry. Canlı codex deseni (yalnız `.env.example`+`.gitignore`+`AGENTS.md`) artık yakalanıyor; .md/.json/.yml/dotfile TEK BAŞINA yetmez; git cevaplayamazsa fail-open (#10i kuralı). Composition wiring bu fonksiyona geçti; noop audit mesajı güncellendi.
+- **3. Version-floor:** `ensureBacklogStructure` — hiçbir item'da version yoksa (hepsi None; canlı koşuda codex'in version patch'i parse-error'la düşmüştü) tüm item'lara **varsayılan v0.1** (`versionDefaulted` sonucu + `backlog.structure.version_defaulted` audit). Kısmî-versiyonlu backlog'a dokunmaz.
+- **CANLI KANIT (executor-katmanı, bu oturumda koşuldu):** gerçek dev-cycle adım metni + örnek item ("not alma app'i") ile gerçek CLI'lar: **codex 0.139.0 → 58 sn'de index.html + style.css + app.js + test.js** (önceden: 0 dosya, okuyup exit 0); **antigravity (agy) → 18 sn'de aynı set** (regresyon yok). İkisinde de `worktreeHasMeaningfulChanges` = true. Doğrulama scripti scratch'ti (commit edilmedi).
+
+**SIRADAKİ (Eray, tam-zincir UAT):** rebuild + temiz UAT → build'i sonuna kadar koştur: implementation kod üretsin, **gate'ler geçsin**, item done'a varsın. Fix codex içindi → ilk koşuda primary=codex denenebilir. Kalan açık TODO'lar: model→`--model` bağlama, build-start görünürlüğü.
+
+**Rebuild (Eray çalıştırır):**
+```bash
+cd /Users/erayendes/Documents/_codebase/kortext
+npm install -g ./kortext-3.1.0.tgz
+kortext stop not; kortext purge not --yes
+```
+(`.tgz` bu oturumda yeniden üretildi.)
+
+---
+
+## ⭐ Önceki (2026-06-09 UAT #10L, codex primary) — #10k epic CANLI KANITLANDI ✅ ama codex IMPLEMENTATION kod yazmıyor → build churn (yeni KRİTİK)
+
+Eray temiz UAT koştu (zincir codex→antigravity→claude, :3200), planning'i sonuna kadar onayladı, Auto açtı. **Kanıtlananlar:**
+- ✅ **#10k epic ERKEN canlı tuttu:** backlog-tanm.1 biter bitmez (planning daha devam ederken) `backlog.structure.default_epic {"parented":8,"reason":"agent produced no epic"}` → epic 1 + 8 task bağlı. Eray'ın "epic olmuyor" şikâyeti **çözüldü.**
+- ✅ **Bağımlılık floor:** planning bitince `backlog.structure.derived_deps` → blocked_by 7 → sıralı build.
+- ✅ owner 8, model 9, epic-link 8, FK yok.
+
+**🔴 KRİTİK YENİ (TODO "UAT #10L"):** Build'de codex **implementation kod YAZMIYOR** — hiçbir worktree'de app dosyası yok (run-3/run-4: 0 .html/.css/.js), development boş. İlk item: impl `exit 0` → test → **3 gate de fail** ("denetlenecek kod yok") → bounce → re-impl (yine boş) → churn. (a) Codex `exec` implementation'da dosya üretmiyor (okuyup exit 0); antigravity yazıyordu → executor-bağımlı. (b) #10i no-op tespiti codex'i kapsamadı (boş worktree'yi succeeded saydı). Eray durdurdu.
+
+**🟠 Yan bulgular:** version hâlâ `None` (codex version patch'i **parse-error** ile dropped + floor None'ları toplayamıyor → **floor hiç version yoksa varsayılan v0.1 ATAMALI**). Model→`--model` bağlanmıyor (item.model kozmetik, ayrı TODO).
+
+**SIRADAKİ (yeni fix oturumu):** (1) codex `exec` implementation gerçekten kod yazsın (cwd/sandbox/prompt-çerçeve) + (2) no-op tespitini sıkılaştır (beklenen output/app dosyası yoksa recoverable-fail) + (3) version-floor varsayılan v0.1. **codex VE antigravity ile** doğrula. Operasyonel: doğrulanana kadar UAT primary=antigravity. **UAT ortamı:** `not` :3200 durduruldu → `kortext purge not --yes`.
+
+---
+
+## ⭐ Önceki (2026-06-11 #10k kod) — Epic-garanti İNGEST ANINA taşındı: Board planning'in ilk saniyesinden epic gösterir
+
+Yalnızca kod oturumu (UAT değil). UAT #10k'nın kök nedeni (epic-garanti yalnız planning-COMPLETION hook'unda → planning boyunca "epic 0", erken durdurulan koşuda epic HİÇ yok) TDD ile çözüldü. **1258 test yeşil** (1253→+5), typecheck + build + `npm pack` temiz. **PUSH EDİLMEDİ / commit edilmedi** — #10j ile aynı çalışma ağacında, Eray "push" diyene dek local.
+
+- **`ensureEpicFloor(repos, opts)` (`backlog-ingest.ts`):** #10j'deki epic-garanti `ensureBacklogStructure`'dan ayrıldı (davranış aynı: hiç epic yoksa `<CODE>-E01` sentezle + köksüz task'ları bağla; idempotent, çift epic imkânsız).
+- **İngest-anı tetik (asıl fix):** `ingestBacklogFile` (backlog-tanm.1'in backlog.yaml'ı) VE `ingestBacklogPatchFile` (her enrichment patch'i) sonunda taban çalışır → backlog DB'ye düştüğü an epics≥1, Board ilk andan epic gösterir, planning succeeded BEKLENMEZ. `index.ts` ingest opts'a `defaultEpicTitle` (proje adı) eklendi; epic taban console-log + `backlog.structure.default_epic` audit ile görünür.
+- **Muhafazakâr:** ajan sonradan gerçek epic + `parent_epic` üretirse task'lar ona taşınır (test kilitliyor); completion-hook'taki `ensureBacklogStructure` duruyor (artık normalde no-op, son savunma hattı; deps + versiyon garantileri hâlâ yalnız orada).
+- **(ikincil)** `planning-pipeline.md` step-1: "sıfır `type: epic` = geçersiz çıktı" sertleştirmesi.
+
+**SIRADAKİ (Eray, CANLI doğrulama):** rebuild + temiz UAT başlat; backlog-tanm.1 biter bitmez (planning daha SÜRERKEN) Board'da epic≥1 + task'lar bağlı görünmeli — succeeded beklemeye gerek yok. Planning'i sonuna kadar onaylarsan #10i implementation'ın gerçek kod üretimi de canlı test edilir (hâlâ bekleyen madde).
+
+**Rebuild (Eray çalıştırır):**
+```bash
+cd /Users/erayendes/Documents/_codebase/kortext
+npm install -g ./kortext-3.1.0.tgz
+kortext stop not; kortext purge not --yes
+```
+(`.tgz` bu oturumda üretildi — `npm run build && npm pack` tekrar gerekmiyor.)
+
+---
+
+## ⭐ Önceki (2026-06-09 UAT #10k, codex primary) — Canlı: versiyon + bağımlılık DÜZELDİ; epic-garanti DOĞRULANAMADI (planning erken durduruldu)
+
+Eray temiz UAT koştu (zincir codex→antigravity→claude, :3200). **Planning sırasında (konsolidasyon onay kapısında) gözlendi** — sonra Eray stop etti, build'e gelinmedi. Canlı bulgular:
+- ✅ **Versiyon düzeldi:** 12 item **tek `v0.1`** (önceki codex turu 10 versiyona bölmüştü). #10j versiyon-toplama tutuyor gibi.
+- ✅ **Bağımlılık düzeldi:** **blocked_by 11/12** (önceki codex turu 0'dı) → sıralı build çalışacak. (Bu enrichment patch'lerden geldi; auto-block aktif.)
+- ✅ owner/model 12/12, FK/dropped yok.
+- ⚠️ **Epic 0 — ama REGRESYON DEĞİL:** `ensureBacklogStructure` epic-garanti hook'u **planning-completion'da** (`status==='succeeded'`) çalışıyor; bu koşu konsolidasyon onayında **durdurulduğu için planning succeeded OLMADI** → hook hiç tetiklenmedi → epic 0 beklenen. **Epic auto-create'in CANLI tetiklendiği henüz görülmedi** (harness'te kanıtlı, gerçek-LLM tamamlanmış planning'de doğrulanmalı).
+
+**SIRADAKİ:** Temiz UAT'ı planning'i **sonuna kadar onaylayarak** koştur (durdurma) → planning succeeded olunca: (a) epic auto-create CANLI tetikleniyor mu (epics>0), (b) build başlıyor mu, (c) **#10i implementation gerçek kod üretiyor mu** (hâlâ canlı test edilmedi — build'e hiç gelinmedi). Açık TODO'lar: model→`--model` bağlama (kozmetik), epic-CANLI doğrulama. **UAT ortamı:** `not` :3200 (durduruldu) → temiz başlatmadan önce `kortext purge not --yes`.
+
+---
+
+## ⭐ Önceki (2026-06-09 #10j) — Motor-tarafı yapısal zemin: epic + bağımlılık + versiyon GARANTİ (executor-bağımsız)
+
+Yalnızca kod oturumu (UAT değil). UAT #10j'in 🔴 KRİTİK bulgusunun **(A) yapı kısmı** (codex BRD'yi yok saydı: 18 item, 0 epic, 0 dependency, ~10 versiyon → yapısız backlog → build başlatılamaz) TDD ile çözüldü. **1253 test yeşil** (1246→+7), typecheck + build temiz. **PUSH EDİLMEDİ** — Eray "push" diyene dek local.
+
+- **Tek motor garantisi `ensureBacklogStructure(repos, opts)` (`backlog-ingest.ts`)** — planning bittiğinde çalışır, **hangi executor koştuğundan bağımsız**, idempotent + muhafazakâr (sağlam çıktıya dokunmaz):
+  - **1. Epic garantisi:** hiç epic yoksa + köksüz task varsa → **1 varsayılan epic** sentezler (`<CODE>-E01`, başlık=proje adı) + tüm köksüz task'ları ona bağlar. Board asla epic'siz kalmaz.
+  - **2. Bağımlılık:** hiç `blocked_by` yoksa → id sırasına göre **lineer zincir** türetir (T-2→T-1, T-3→T-2…) → 18 paralel-aynı-tabandan yerine sıralı build (UAT #9 stall'ı önlenir).
+  - **3. Versiyon aklı:** versiyonlar item-sayısının yarısından fazlaya parçalanmışsa (≈<2 item/versiyon — codex'in 18 item/10 versiyonu) → en erken versiyona toplar.
+- **Wiring:** `index.ts` planning-completion hook'unda (`triggerAnalysis` `.then`, chain `planning-pipeline`'a ulaştıktan sonra `status==='succeeded'`) çağrılır; sonra `backlog.yaml` DB'den yeniden serialize edilir (Board + sonraki tüketici normalize yapıyı görür). Best-effort (hata planning'i bozmaz).
+
+**KANIT (deterministik harness — codex-bozuk çıktıyı birebir üretir):** 18 task, 0 epic, 0 dep, 10 versiyon → `ensureBacklogStructure` → **1 epic** (hepsi bağlı), **17/17 bağımlılık zinciri**, **versiyon 10→1 (v0.1)**, ve `selectBuildableItems` artık **18 paralel yerine TEK build head** (NOT-001) görüyor. Motor garantisi executor-bağımsız olduğu için gerçek-codex koşusu gereksiz (fix ingest sonrası DB durumunda çalışır). Harness commit edilmedi.
+
+**SIRADAKİ:** Eray "push" derse commit + push. **Kalanlar (bu turda DEĞİL):** (A2) talimat sertleştirme (planning-pipeline.md item-tavanı + tek-versiyon) ikincil; **(B) build-start** — planning sonrası build otomatik tetiklenmiyor / kullanıcının net "Başlat" yolu yok (ayrı bulgu, TODO'da). Rebuild + temiz UAT: planning sonrası Board'da 1 epic + sıralı + tek versiyon görünmeli.
+
+**Rebuild (Eray çalıştırır):**
+```bash
+cd /Users/erayendes/Documents/_codebase/kortext
+npm run build && npm pack && npm install -g ./kortext-3.1.0.tgz
+kortext stop not && kortext purge not --yes
+```
+
+---
+
+## ⭐ Önceki (2026-06-09 #10i) — No-op implementation tespiti: kod yazmayan dev-cycle artık başarı sayılmıyor → sonsuz gate churn bitti
 
 Yalnızca kod oturumu (UAT değil). UAT #10i'in 🔴 KRİTİK bulgusu (fallover implementation dosya okuyup `exit 0` dönüyor ama kod YAZMIYOR → worktree boş → tüm gate'ler haklı fail → churn) TDD ile çözüldü. **1246 test yeşil** (1241→+5), typecheck + build temiz. **PUSH EDİLDİ** (`6e8e7c5..53d88b5`, tek commit) — `main == origin/main`.
 
