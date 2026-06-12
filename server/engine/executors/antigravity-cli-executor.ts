@@ -197,7 +197,14 @@ CWD:      ${ctx.worktreePath}
 
 Task:
 ${step.description}
-
+${
+  ctx.itemContext
+    ? `
+Work Item (implement THIS):
+${ctx.itemContext}
+`
+    : ''
+}
 Inputs (read first if relevant):
 ${formatPathList(step.inputs)}
 

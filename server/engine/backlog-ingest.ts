@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { basename } from 'node:path';
 import yaml from 'js-yaml';
 import type { Repositories } from '../db/repositories/index.ts';
+import type { BacklogItem } from '../db/schemas.ts';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -495,6 +496,227 @@ export function synthesizeMissingEpics(
   return { created, skipped };
 }
 
+// ---------------------------------------------------------------------------
+// Engine-side structural floor (UAT #10j) — executor-INDEPENDENT.
+//
+// The planning workflow INSTRUCTS the agent to produce epics, dependencies, and
+// a sane version split — but instructions are executor-dependent (codex ignored
+// them: 18 items, 0 epics, 0 deps, ~10 versions). The engine must guarantee a
+// buildable structure no matter which agent ran, so the board is never
+// epic-less and the driver never faces N parallel-from-the-same-base items.
+//
+// Run once when planning completes. Each guarantee is idempotent + conservative:
+// it only fires when a whole dimension is missing/pathological, so a well-formed
+// agent output (antigravity) is left untouched.
+// ---------------------------------------------------------------------------
+
+export type EnsureStructureOptions = {
+  /** Project code → default epic id `${code}-E01`. Defaults to 'E'. */
+  code?: string;
+  /** Title for a synthesized default epic. Default 'Backlog'. */
+  defaultEpicTitle?: string;
+};
+
+export type EnsureStructureResult = {
+  /** The default epic id created (null when epics already existed). */
+  createdEpic: string | null;
+  /** Tasks re-parented onto the default epic. */
+  parented: string[];
+  /** Items given a derived `blocked_by` (the linear fallback chain). */
+  chained: string[];
+  /** The version everything was collapsed to (null when versions were fine). */
+  versionCollapsedTo: string | null;
+  /** The default version assigned when NO item had one (null otherwise — UAT #10L). */
+  versionDefaulted: string | null;
+};
+
+/** Numeric-segment version compare so v0.2 < v0.10 (NOT a lexical sort). */
+function compareVersionLabels(a: string, b: string): number {
+  const seg = (v: string) =>
+    v.replace(/^[^\d]*/, '').split('.').map((s) => (Number.isFinite(Number(s)) ? Number(s) : 0));
+  const sa = seg(a);
+  const sb = seg(b);
+  for (let i = 0; i < Math.max(sa.length, sb.length); i++) {
+    const d = (sa[i] ?? 0) - (sb[i] ?? 0);
+    if (d !== 0) return d;
+  }
+  return 0;
+}
+
+/** Rewrite one planning field on an item, preserving everything else. */
+function rewritePlanning(
+  repos: Repositories,
+  item: BacklogItem,
+  change: Partial<{ parent_id: string | null; version: string | null }>,
+): void {
+  repos.backlog.updatePlanningFields(item.id, {
+    type: item.type,
+    title: item.title,
+    parent_id: change.parent_id !== undefined ? change.parent_id : item.parent_id,
+    version: change.version !== undefined ? change.version : item.version,
+    model: item.model,
+    review_gates: item.review_gates,
+    frontmatter: item.frontmatter,
+    body_md: item.body_md,
+  });
+}
+
+/** The epic-guarantee slice of the structural floor (see EnsureStructureResult). */
+export type EpicFloorResult = Pick<EnsureStructureResult, 'createdEpic' | 'parented'>;
+
+/**
+ * Epic guarantee — no epic anywhere → synthesize one default epic + parent
+ * every root-less task to it. The board is never epic-less.
+ *
+ * UAT #10k: runs AT INGEST TIME (the moment the backlog lands in the DB, and
+ * again after every enrichment patch), not only in the planning-completion
+ * hook — a run stopped mid-planning used to never get an epic at all, and the
+ * board showed "epic 0" for the whole planning phase. Idempotent: once any
+ * epic exists (synthesized or agent-produced) this is a no-op, so repeated
+ * ingests never duplicate it and a later real epic from the agent wins.
+ */
+export function ensureEpicFloor(
+  repos: Repositories,
+  opts?: EnsureStructureOptions,
+): EpicFloorResult {
+  const result: EpicFloorResult = { createdEpic: null, parented: [] };
+  const all = repos.backlog.list({ limit: 100_000 });
+  const nonEpics = all.filter((i) => i.type !== 'epic');
+  const epics = all.filter((i) => i.type === 'epic');
+
+  if (epics.length === 0 && nonEpics.length > 0) {
+    const code = (opts?.code ?? '').trim() || 'E';
+    let epicId = `${code}-E01`;
+    if (repos.backlog.get(epicId) !== null) epicId = `${code}-E01-default`;
+    try {
+      repos.backlog.create({
+        id: epicId,
+        type: 'epic',
+        title: opts?.defaultEpicTitle ?? 'Backlog',
+        parent_id: null,
+        version: null,
+        model: null,
+        review_gates: [],
+        frontmatter: {},
+        body_md: '',
+        status: 'to_do',
+      });
+      result.createdEpic = epicId;
+      for (const it of nonEpics) {
+        if (it.parent_id) continue;
+        rewritePlanning(repos, it, { parent_id: epicId });
+        result.parented.push(it.id);
+      }
+      repos.auditLog.append({
+        actor: 'engine',
+        action: 'backlog.structure.default_epic',
+        resource_type: 'backlog_item',
+        resource_id: epicId,
+        payload: { parented: result.parented.length, reason: 'agent produced no epic' },
+      });
+    } catch {
+      // Best-effort floor — a failure here must never break the ingest/planning result.
+    }
+  }
+  return result;
+}
+
+export function ensureBacklogStructure(
+  repos: Repositories,
+  opts?: EnsureStructureOptions,
+): EnsureStructureResult {
+  const result: EnsureStructureResult = {
+    createdEpic: null,
+    parented: [],
+    chained: [],
+    versionCollapsedTo: null,
+    versionDefaulted: null,
+  };
+
+  // 1. Epic guarantee — shared with ingest-time (UAT #10k); normally a no-op
+  //    here because the floor already ran when the backlog was ingested.
+  const floor = ensureEpicFloor(repos, opts);
+  result.createdEpic = floor.createdEpic;
+  result.parented = floor.parented;
+
+  const all = repos.backlog.list({ limit: 100_000 });
+  const nonEpics = all.filter((i) => i.type !== 'epic');
+
+  // 2. Dependency guarantee — the agent produced NO `blocked_by` anywhere →
+  //    derive a linear chain (ordered by id) so items build setup→…→last in
+  //    sequence instead of N-parallel-from-the-same-base (the UAT #9 stall).
+  const anyDep = nonEpics.some((i) => {
+    const bb = i.frontmatter['blocked_by'];
+    return Array.isArray(bb) && bb.length > 0;
+  });
+  if (!anyDep && nonEpics.length > 1) {
+    const ordered = [...nonEpics].sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
+    for (let i = 1; i < ordered.length; i++) {
+      const cur = repos.backlog.get(ordered[i]!.id);
+      if (!cur) continue;
+      repos.backlog.updateFrontmatter(cur.id, {
+        ...cur.frontmatter,
+        blocked_by: [ordered[i - 1]!.id],
+      });
+      result.chained.push(cur.id);
+    }
+    if (result.chained.length > 0) {
+      repos.auditLog.append({
+        actor: 'engine',
+        action: 'backlog.structure.derived_deps',
+        resource_type: 'backlog_item',
+        resource_id: ordered[0]!.id,
+        payload: { chained: result.chained.length, reason: 'agent produced no dependencies' },
+      });
+    }
+  }
+
+  // 3. Version sanity — a tiny backlog fragmented across many versions (fewer
+  //    than ~2 items per version) is pathological (codex: 18 items / ~10
+  //    versions while the BRD asked for one). Collapse to the earliest version.
+  const versioned = nonEpics.filter((i) => i.version);
+  const distinct = [...new Set(versioned.map((i) => i.version as string))];
+  // 3b. Version floor (UAT #10L) — the agent produced NO versions at all (the
+  //     live case: codex's version patch was dropped on a parse error, leaving
+  //     every item None). Default everything to v0.1 so the version-gated build
+  //     order (selectBuildableItems) has a real version to open. Conservative:
+  //     only when ALL items are version-less — a partially-versioned backlog is
+  //     the enrichment's business, not ours.
+  if (versioned.length === 0 && nonEpics.length > 0) {
+    for (const it of nonEpics) {
+      const fresh = repos.backlog.get(it.id);
+      if (fresh && !fresh.version) rewritePlanning(repos, fresh, { version: 'v0.1' });
+    }
+    result.versionDefaulted = 'v0.1';
+    repos.auditLog.append({
+      actor: 'engine',
+      action: 'backlog.structure.version_defaulted',
+      resource_type: 'backlog_item',
+      resource_id: nonEpics[0]!.id,
+      payload: { to: 'v0.1', items: nonEpics.length, reason: 'agent produced no versions' },
+    });
+  }
+  if (distinct.length > 1 && distinct.length > nonEpics.length / 2) {
+    const earliest = [...distinct].sort(compareVersionLabels)[0]!;
+    for (const it of nonEpics) {
+      const fresh = repos.backlog.get(it.id);
+      if (fresh && fresh.version && fresh.version !== earliest) {
+        rewritePlanning(repos, fresh, { version: earliest });
+      }
+    }
+    result.versionCollapsedTo = earliest;
+    repos.auditLog.append({
+      actor: 'engine',
+      action: 'backlog.structure.version_collapsed',
+      resource_type: 'backlog_item',
+      resource_id: earliest,
+      payload: { from: distinct.length, to: earliest, reason: 'version over-fragmentation' },
+    });
+  }
+
+  return result;
+}
+
 export function ingestBacklogItems(
   repos: Repositories,
   parsed: ParsedBacklogItem[],
@@ -864,23 +1086,40 @@ export function writeBacklogYamlFromDb(repos: Repositories, absolutePath: string
 export function ingestBacklogFile(
   repos: Repositories,
   absolutePath: string,
-  opts?: { code?: string },
+  opts?: { code?: string; defaultEpicTitle?: string },
 ): {
   created: string[];
   updated: string[];
   skipped: { id: string; reason: string }[];
   parseErrors: string[];
+  epicFloor: EpicFloorResult;
 } {
   let text: string;
   try {
     text = readFileSync(absolutePath, 'utf8');
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    return { created: [], updated: [], skipped: [], parseErrors: [`read failed: ${msg}`] };
+    return {
+      created: [],
+      updated: [],
+      skipped: [],
+      parseErrors: [`read failed: ${msg}`],
+      epicFloor: { createdEpic: null, parented: [] },
+    };
   }
 
   const { items, errors: parseErrors } = parseBacklogYaml(text);
   const { created, updated, skipped } = ingestBacklogItems(repos, items, opts);
+
+  // UAT #10k — the backlog just landed in the DB; guarantee ≥1 epic with every
+  // root-less task parented RIGHT NOW, so the board shows an epic from the
+  // first moment of planning (not only after the run reaches `succeeded`).
+  const epicFloor = ensureEpicFloor(repos, opts);
+  if (epicFloor.createdEpic) {
+    console.log(
+      `[kortext] epic floor (ingest): created ${epicFloor.createdEpic}, parented ${epicFloor.parented.length} task(s)`,
+    );
+  }
 
   console.log(
     `[kortext] backlog ingest: ${created.length} created, ${updated.length} updated, ${skipped.length} skipped, ${parseErrors.length} parse errors`,
@@ -903,7 +1142,7 @@ export function ingestBacklogFile(
     },
   });
 
-  return { created, updated, skipped, parseErrors };
+  return { created, updated, skipped, parseErrors, epicFloor };
 }
 
 /**
@@ -915,21 +1154,38 @@ export function ingestBacklogFile(
 export function ingestBacklogPatchFile(
   repos: Repositories,
   absolutePath: string,
+  opts?: { code?: string; defaultEpicTitle?: string },
 ): {
   updated: string[];
   skipped: { id: string; reason: string }[];
   parseErrors: string[];
+  epicFloor: EpicFloorResult;
 } {
   let text: string;
   try {
     text = readFileSync(absolutePath, 'utf8');
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    return { updated: [], skipped: [], parseErrors: [`read failed: ${msg}`] };
+    return {
+      updated: [],
+      skipped: [],
+      parseErrors: [`read failed: ${msg}`],
+      epicFloor: { createdEpic: null, parented: [] },
+    };
   }
 
   const { items, errors: parseErrors } = parseBacklogYaml(text, { mode: 'patch' });
   const { updated, skipped } = patchBacklogItems(repos, items);
+
+  // UAT #10k — re-guarantee the epic floor after EVERY enrichment step too:
+  // a no-op when an epic already exists (the common case), a repair when the
+  // step-1 path somehow left the DB epic-less. Never duplicates.
+  const epicFloor = ensureEpicFloor(repos, opts);
+  if (epicFloor.createdEpic) {
+    console.log(
+      `[kortext] epic floor (patch): created ${epicFloor.createdEpic}, parented ${epicFloor.parented.length} task(s)`,
+    );
+  }
 
   console.log(
     `[kortext] backlog patch: ${updated.length} updated, ${skipped.length} skipped, ${parseErrors.length} parse errors`,
@@ -975,5 +1231,5 @@ export function ingestBacklogPatchFile(
     },
   });
 
-  return { updated, skipped, parseErrors };
+  return { updated, skipped, parseErrors, epicFloor };
 }

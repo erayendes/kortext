@@ -27,6 +27,15 @@ export type ExecutorContext = {
    * the first attempt. Executors that build a prompt should fold it in.
    */
   reviseFeedback?: string;
+  /**
+   * The backlog item this run is implementing, pre-rendered as a prompt block
+   * (id, title, description, acceptance criteria — UAT #10L). Set by runItem on
+   * dev-cycle runs; unset on pipeline runs (analysis/planning) that have no
+   * item. Executors that build a prompt MUST fold it in: without it the
+   * dev-cycle step text says "implement the item assigned to you" without ever
+   * saying WHICH item — codex read files and exited 0 (zero code written).
+   */
+  itemContext?: string;
 };
 
 export type ExecutorResult = {

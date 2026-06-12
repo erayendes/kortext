@@ -1,7 +1,12 @@
 import type { Repositories } from '../db/repositories/index.ts';
 import type { Executor } from '../engine/executor.ts';
 import type { WorkflowDefinition } from '../engine/workflow-parser.ts';
-import { WorktreeManager, worktreeHasChanges, type WorktreeHandle } from '../engine/worktree.ts';
+import {
+  WorktreeManager,
+  worktreeHasMeaningfulCommit,
+  commitWorktreeChanges,
+  type WorktreeHandle,
+} from '../engine/worktree.ts';
 import { RunRegistry } from '../engine/run-registry.ts';
 import { GitMerger } from '../engine/executors/git-merger.ts';
 import { AgentGateExecutor } from '../engine/executors/agent-gate-executor.ts';
@@ -83,11 +88,19 @@ export type Composition = {
   /** The per-item worktree acquirer runItem injects (keyed by run id, real handle). */
   acquireWorktree: (itemId: string, runId: number) => Promise<WorktreeLease>;
   /**
-   * No-op guard (UAT #10i): true when the item's worktree actually diverged from
-   * its base (code was written/committed). runItem treats a false here as a
-   * recoverable failure so an empty fallover run never reaches `test`.
+   * No-op guard (UAT #10i/#10L/#10M): true when the item's worktree COMMITTED a
+   * meaningful code change vs its base. runItem treats a false here as a
+   * recoverable failure so an empty fallover run never reaches `test` — and,
+   * since the merge carries commits, an uncommitted worktree never counts.
    */
   worktreeChanged: (lease: WorktreeLease) => boolean;
+  /**
+   * Commit the item's worktree engine-side before it leaves for `test` (UAT
+   * #10M) — the agent's uncommitted work would otherwise merge as empty and the
+   * code would be silently lost. Returns whether a commit was created. Mock
+   * leases (no handle) → false (git-free tests).
+   */
+  commitWorktree: (lease: WorktreeLease) => boolean;
 };
 
 /**
@@ -193,11 +206,28 @@ export function createComposition(deps: CompositionDeps): Composition {
     };
   };
 
-  // No-op detection (UAT #10i): a real worktree handle lets us ask git whether
-  // any code was produced. A mock lease (no handle) can't be checked → assume
-  // changed so non-git tests behave as before.
+  // Engine-side commit (UAT #10M): the agent writes files but frequently never
+  // commits them; an uncommitted worktree merges as EMPTY → code silently lost →
+  // fake "done". Commit the worktree before the no-op guard + the merge so the
+  // tree the gates read is the tree the merge carries. A mock lease (no handle)
+  // can't be committed → false (git-free tests behave as before).
+  const commitWorktree = (lease: WorktreeLease): boolean =>
+    lease.handle
+      ? commitWorktreeChanges(
+          lease.path,
+          `kortext: commit ${lease.handle.branch} (engine — agent left work uncommitted)`,
+        )
+      : false;
+
+  // No-op detection (UAT #10i → #10L → #10M): a real worktree handle lets us ask
+  // git whether MEANINGFUL code was COMMITTED — at least one committed file with
+  // an app/code extension. Committed (not the dirty tree) because the merge
+  // carries commits: an uncommitted change never survives. A config/doc-only
+  // change set (the live codex pattern: .env.example + .gitignore + AGENTS.md)
+  // no longer counts. A mock lease (no handle) can't be checked → assume changed
+  // so non-git tests behave as before.
   const worktreeChanged = (lease: WorktreeLease): boolean =>
-    lease.handle ? worktreeHasChanges(lease.path, lease.handle.baseBranch) : true;
+    lease.handle ? worktreeHasMeaningfulCommit(lease.path, lease.handle.baseBranch) : true;
 
   return {
     repos,
@@ -215,5 +245,6 @@ export function createComposition(deps: CompositionDeps): Composition {
     markdownSync,
     acquireWorktree,
     worktreeChanged,
+    commitWorktree,
   };
 }

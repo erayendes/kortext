@@ -72,6 +72,10 @@ export async function driveReadyItems(deps: DriveDeps): Promise<DriveResult> {
     // — the item stays in_progress and retries instead of shipping an empty
     // worktree to the gates.
     worktreeChanged: c.worktreeChanged,
+    // UAT #10M: commit the worktree engine-side before `test`/merge — the agent
+    // writes files but frequently never commits, so an uncommitted worktree
+    // would merge as empty and the code would be silently lost.
+    commitWorktree: c.commitWorktree,
     maxConcurrent: deps.maxConcurrent,
     by,
   });

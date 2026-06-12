@@ -117,6 +117,12 @@ export type RunWorkflowOptions = {
    * re-coding blind. One-shot: runItem clears the directive after the run.
    */
   reviseDirective?: string;
+  /**
+   * UAT #10L — the backlog item this run implements, pre-rendered as a prompt
+   * block (id/title/description/acceptance criteria). Inherited by every step's
+   * ExecutorContext so the implementation agent knows WHAT to build.
+   */
+  itemContext?: string;
 };
 
 export type RunWorkflowResult = {
@@ -293,6 +299,8 @@ export async function runWorkflow(
     // Per-step revise reason (mid-run gate rejection) wins; otherwise the item's
     // bounce directive (Faz 2) applies to the whole dev-cycle re-code.
     reviseFeedback: reviseReasonByKey.get(stepKey) ?? options.reviseDirective,
+    // UAT #10L — the item being implemented (dev-cycle runs only).
+    itemContext: options.itemContext,
   });
 
   const launch = (stepKey: string): void => {

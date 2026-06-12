@@ -11,7 +11,9 @@ import {
   enforceSymmetricDeps,
   patchBacklogItems,
   synthesizeMissingEpics,
+  ensureBacklogStructure,
   serializeBacklogToYaml,
+  ingestBacklogFile,
   ingestBacklogPatchFile,
 } from '../server/engine/backlog-ingest.ts';
 
@@ -1319,5 +1321,232 @@ describe('Critical-#1 D: a totally-dropped patch emits a distinct, visible audit
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// KRİTİK UAT #10j — engine-side structural floor (executor-independent).
+// codex-primary planning produced 18 items with epic 0, parent_epic 0,
+// blocked_by 0, split across ~10 versions (the BRD asked for one version, one
+// epic). The agent ignored the workflow instructions; the ENGINE must guarantee
+// a buildable structure regardless of which executor ran.
+// ---------------------------------------------------------------------------
+
+describe('ensureBacklogStructure (UAT #10j engine guarantee)', () => {
+  function task(id: string, over: Record<string, unknown> = {}) {
+    repos.backlog.create({
+      id, type: 'task', title: id, status: 'to_do',
+      parent_id: null, version: null, model: null, review_gates: [],
+      frontmatter: {}, body_md: '', ...over,
+    });
+  }
+
+  it('synthesizes ONE default epic + parents every root-less task when no epic exists', () => {
+    task('T-1'); task('T-2'); task('T-3');
+    const res = ensureBacklogStructure(repos, { code: 'NOT' });
+
+    const epics = repos.backlog.list({ type: 'epic', limit: 100 });
+    expect(epics).toHaveLength(1);
+    expect(res.createdEpic).toBe(epics[0]!.id);
+    // Every task is now parented to that epic (board is never epic-less).
+    for (const id of ['T-1', 'T-2', 'T-3']) {
+      expect(repos.backlog.get(id)!.parent_id).toBe(epics[0]!.id);
+    }
+  });
+
+  it('does NOT create a default epic when one already exists', () => {
+    repos.backlog.create({
+      id: 'NOT-E01', type: 'epic', title: 'Real', status: 'to_do',
+      parent_id: null, version: null, model: null, review_gates: [], frontmatter: {}, body_md: '',
+    });
+    task('T-1', { parent_id: 'NOT-E01' });
+    const res = ensureBacklogStructure(repos, { code: 'NOT' });
+    expect(res.createdEpic).toBeNull();
+    expect(repos.backlog.list({ type: 'epic', limit: 100 })).toHaveLength(1);
+  });
+
+  it('derives a linear dependency chain when the agent produced NO blocked_by', () => {
+    task('T-1'); task('T-2'); task('T-3');
+    const res = ensureBacklogStructure(repos, { code: 'NOT' });
+    // T-1 is the head; T-2 waits on T-1; T-3 waits on T-2 (not 3 parallel-from-base).
+    expect(repos.backlog.get('T-1')!.frontmatter.blocked_by ?? []).toEqual([]);
+    expect(repos.backlog.get('T-2')!.frontmatter.blocked_by).toEqual(['T-1']);
+    expect(repos.backlog.get('T-3')!.frontmatter.blocked_by).toEqual(['T-2']);
+    expect(res.chained).toEqual(['T-2', 'T-3']);
+  });
+
+  it('does NOT touch dependencies when the agent already produced some', () => {
+    task('T-1'); task('T-2', { frontmatter: { blocked_by: ['T-1'] } }); task('T-3');
+    const res = ensureBacklogStructure(repos, { code: 'NOT' });
+    expect(res.chained).toEqual([]);
+    expect(repos.backlog.get('T-3')!.frontmatter.blocked_by ?? []).toEqual([]); // untouched
+  });
+
+  it('collapses a pathologically version-fragmented backlog to its earliest version', () => {
+    task('T-1', { version: 'v0.1' });
+    task('T-2', { version: 'v0.2' });
+    task('T-3', { version: 'v0.3' });
+    task('T-4', { version: 'v0.10' });
+    const res = ensureBacklogStructure(repos, { code: 'NOT' });
+    expect(res.versionCollapsedTo).toBe('v0.1');
+    for (const id of ['T-1', 'T-2', 'T-3', 'T-4']) {
+      expect(repos.backlog.get(id)!.version).toBe('v0.1');
+    }
+  });
+
+  // UAT #10L side-finding: codex's version patch was dropped (parse error) so
+  // EVERY item ended with version=None — and the floor only COLLAPSED existing
+  // versions, it never filled missing ones. An all-None backlog must get a
+  // default version so the version-gated build order has something to work with.
+  it('assigns default v0.1 to every item when the agent produced NO versions at all', () => {
+    task('T-1'); task('T-2'); task('T-3');
+    const res = ensureBacklogStructure(repos, { code: 'NOT' });
+    expect(res.versionDefaulted).toBe('v0.1');
+    for (const id of ['T-1', 'T-2', 'T-3']) {
+      expect(repos.backlog.get(id)!.version).toBe('v0.1');
+    }
+  });
+
+  it('does NOT default versions when at least one item already has one', () => {
+    task('T-1', { version: 'v0.2' }); task('T-2');
+    const res = ensureBacklogStructure(repos, { code: 'NOT' });
+    expect(res.versionDefaulted).toBeNull();
+    expect(repos.backlog.get('T-2')!.version).toBeNull(); // untouched (conservative)
+  });
+
+  it('leaves a reasonably-versioned backlog untouched', () => {
+    task('T-1', { version: 'v0.1' });
+    task('T-2', { version: 'v0.1' });
+    task('T-3', { version: 'v0.2' });
+    task('T-4', { version: 'v0.2' });
+    const res = ensureBacklogStructure(repos, { code: 'NOT' });
+    expect(res.versionCollapsedTo).toBeNull();
+    expect(repos.backlog.get('T-3')!.version).toBe('v0.2'); // unchanged
+  });
+
+  it('is idempotent — a second run creates no new epic and re-chains nothing', () => {
+    task('T-1'); task('T-2');
+    ensureBacklogStructure(repos, { code: 'NOT' });
+    const res2 = ensureBacklogStructure(repos, { code: 'NOT' });
+    expect(res2.createdEpic).toBeNull();
+    expect(res2.chained).toEqual([]);
+    expect(repos.backlog.list({ type: 'epic', limit: 100 })).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// KRİTİK UAT #10k — the epic guarantee must fire AT INGEST TIME, not only in
+// the planning-COMPLETION hook. In live codex runs the board showed "epic 0"
+// throughout planning, and a run stopped before `succeeded` never got an epic
+// at all (the #10j floor was wired only to the completion hook). The floor
+// must run the moment the backlog lands in the DB (step-1 full ingest) and be
+// re-guaranteed after every enrichment patch — idempotent, never duplicating.
+// ---------------------------------------------------------------------------
+
+describe('epic floor at ingest time (UAT #10k)', () => {
+  const EPICLESS_YAML = [
+    'items:',
+    '  - id: NOT-001',
+    '    type: task',
+    '    title: Setup',
+    '  - id: NOT-002',
+    '    type: task',
+    '    title: Feature',
+    '',
+  ].join('\n');
+
+  function inTmpDir<T>(name: string, content: string, fn: (file: string) => T): T {
+    const dir = mkdtempSync(join(tmpdir(), 'kx-floor-'));
+    const file = join(dir, name);
+    writeFileSync(file, content, 'utf8');
+    try {
+      return fn(file);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  it('full ingest of an epic-less backlog.yaml synthesizes the default epic IMMEDIATELY', () => {
+    inTmpDir('backlog.yaml', EPICLESS_YAML, (file) => {
+      const res = ingestBacklogFile(repos, file, { code: 'NOT', defaultEpicTitle: 'Notly' });
+      const epics = repos.backlog.list({ type: 'epic', limit: 100 });
+      expect(epics).toHaveLength(1);
+      expect(epics[0]!.id).toBe('NOT-E01');
+      expect(epics[0]!.title).toBe('Notly');
+      // Every task is parented the moment the backlog exists — no waiting for
+      // planning to succeed before the board shows an epic.
+      expect(repos.backlog.get('NOT-001')!.parent_id).toBe('NOT-E01');
+      expect(repos.backlog.get('NOT-002')!.parent_id).toBe('NOT-E01');
+      expect(res.epicFloor.createdEpic).toBe('NOT-E01');
+    });
+  });
+
+  it('does NOT synthesize a default epic when the agent produced its own', () => {
+    const yamlWithEpic = [
+      'items:',
+      '  - id: NOT-E01',
+      '    type: epic',
+      '    title: Real epic',
+      '  - id: NOT-001',
+      '    type: task',
+      '    title: Setup',
+      '    parent_epic: NOT-E01',
+      '',
+    ].join('\n');
+    inTmpDir('backlog.yaml', yamlWithEpic, (file) => {
+      const res = ingestBacklogFile(repos, file, { code: 'NOT', defaultEpicTitle: 'Notly' });
+      expect(res.epicFloor.createdEpic).toBeNull();
+      expect(repos.backlog.list({ type: 'epic', limit: 100 })).toHaveLength(1);
+    });
+  });
+
+  it('enrichment patches keep the floor intact — no duplicate epic, links preserved', () => {
+    inTmpDir('backlog.yaml', EPICLESS_YAML, (file) => {
+      ingestBacklogFile(repos, file, { code: 'NOT', defaultEpicTitle: 'Notly' });
+    });
+    inTmpDir('backlog.patch.yaml', 'items:\n  - id: NOT-001\n    version: v0.1\n', (file) => {
+      const res = ingestBacklogPatchFile(repos, file, { code: 'NOT', defaultEpicTitle: 'Notly' });
+      expect(res.epicFloor.createdEpic).toBeNull(); // already guaranteed — no duplicate
+    });
+    expect(repos.backlog.list({ type: 'epic', limit: 100 })).toHaveLength(1);
+    expect(repos.backlog.get('NOT-001')!.parent_id).toBe('NOT-E01');
+    expect(repos.backlog.get('NOT-001')!.version).toBe('v0.1'); // enrichment landed too
+  });
+
+  it('a patch-file ingest guarantees the floor when the DB has tasks but no epic', () => {
+    // Simulates a DB that predates the ingest-time floor (or a step-1 path that
+    // bypassed it): tasks exist, epic does not. The NEXT patch must repair it.
+    repos.backlog.create({
+      id: 'NOT-001', type: 'task', title: 'Setup', status: 'to_do',
+      parent_id: null, version: null, model: null, review_gates: [], frontmatter: {}, body_md: '',
+    });
+    inTmpDir('backlog.patch.yaml', 'items:\n  - id: NOT-001\n    version: v0.1\n', (file) => {
+      const res = ingestBacklogPatchFile(repos, file, { code: 'NOT', defaultEpicTitle: 'Notly' });
+      expect(res.epicFloor.createdEpic).toBe('NOT-E01');
+    });
+    expect(repos.backlog.list({ type: 'epic', limit: 100 })).toHaveLength(1);
+    expect(repos.backlog.get('NOT-001')!.parent_id).toBe('NOT-E01');
+  });
+
+  it('a later REAL epic from a patch wins — tasks reparent to it, default epic stays single', () => {
+    inTmpDir('backlog.yaml', EPICLESS_YAML, (file) => {
+      ingestBacklogFile(repos, file, { code: 'NOT', defaultEpicTitle: 'Notly' });
+    });
+    const patch = [
+      'items:',
+      '  - id: NOT-E02',
+      '    type: epic',
+      '    title: Agent epic',
+      '  - id: NOT-001',
+      '    parent_epic: NOT-E02',
+      '',
+    ].join('\n');
+    inTmpDir('backlog.patch.yaml', patch, (file) => {
+      const res = ingestBacklogPatchFile(repos, file, { code: 'NOT', defaultEpicTitle: 'Notly' });
+      expect(res.epicFloor.createdEpic).toBeNull();
+    });
+    // The agent's real epic owns the task now; the default epic is not duplicated.
+    expect(repos.backlog.get('NOT-001')!.parent_id).toBe('NOT-E02');
+    expect(repos.backlog.list({ type: 'epic', limit: 100 })).toHaveLength(2);
   });
 });

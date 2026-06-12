@@ -113,7 +113,10 @@ describe('runWorkflow + safety guards', () => {
 
     expect(result.run.status).toBe('succeeded');
     const items = repos.backlog.list({});
-    expect(items.map((i) => i.id).sort()).toEqual(['T-1', 'T-2']);
+    // E-E01 is the ingest-time epic floor (UAT #10k): an epic-less backlog is
+    // repaired with a default epic the moment it lands, tasks parented to it.
+    expect(items.map((i) => i.id).sort()).toEqual(['E-E01', 'T-1', 'T-2']);
+    expect(repos.backlog.get('T-1')?.parent_id).toBe('E-E01');
     expect(repos.backlog.get('T-1')?.review_gates).toEqual(['code_review']);
   });
 

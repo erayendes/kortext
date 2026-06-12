@@ -181,14 +181,27 @@ function buildPrompt(
   const inputs = step.inputs.length > 0 ? step.inputs.join(', ') : '(none)';
   const outputs = step.outputs.length > 0 ? step.outputs.join(', ') : '(none)';
   const rules = rulesBlock ? `\n\n--- Rules ---\n${rulesBlock}` : '';
+  // UAT #10L parity with codex: work item + revise feedback + an explicit
+  // implementation mandate (bare metadata reads as a briefing, not an order).
+  const item = ctx.itemContext ? `\n--- Work Item (implement THIS) ---\n${ctx.itemContext}\n` : '';
+  const revise = ctx.reviseFeedback
+    ? `\n--- REVISION REQUESTED — a previous attempt was rejected ---\nAddress these findings in the files you write:\n${ctx.reviseFeedback}\n`
+    : '';
   return `${personaBody}${rules}
 
 --- Gemini Step ---
 Workflow: ${ctx.workflowId}
 Phase:    ${step.phase}
 Persona:  ${step.persona ?? '(none)'}
+CWD:      ${ctx.worktreePath}
 Task:     ${step.description}
 Inputs:   ${inputs}
 Outputs:  ${outputs}
+${item}${revise}
+--- Mandate ---
+Now perform the Task by creating and/or modifying real files under the CWD
+above. Reading files alone is NOT an acceptable outcome — a run that ends with
+no file changes is treated as failed and retried. If a declared Output is a
+file path, write that exact path. End with one short confirmation line.
 `;
 }

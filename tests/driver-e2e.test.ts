@@ -89,8 +89,9 @@ class WorktreeWritingExecutor implements Executor {
     const inItemWorktree =
       ctx.workflowId === 'development-cycle' && ctx.worktreePath.startsWith(repoRoot + '/.kortext');
     if (inItemWorktree) {
-      const file = join(ctx.worktreePath, `feature-${step.key.replace(/[^\w.-]/g, '_')}.txt`);
-      writeFileSync(file, `built by ${step.persona ?? 'agent'}\n`);
+      // .js, not .txt — the #10L no-op guard requires a real app/code file.
+      const file = join(ctx.worktreePath, `feature-${step.key.replace(/[^\w.-]/g, '_')}.js`);
+      writeFileSync(file, `// built by ${step.persona ?? 'agent'}\n`);
       git(ctx.worktreePath, 'add', '-A');
       git(ctx.worktreePath, 'commit', '-m', `implement ${step.key}`);
     }
@@ -98,10 +99,43 @@ class WorktreeWritingExecutor implements Executor {
   }
 }
 
-function makeComposition() {
+/**
+ * UAT #10M — the REAL failing agent: it writes real app code into the worktree
+ * but NEVER `git commit`s it (exactly what live codex did). Without the engine-
+ * side commit, the merge grafts a commit-less branch onto development → empty
+ * merge → code lost. With the fix, runItem commits the worktree before `test`
+ * and the file reaches development.
+ */
+class WritesButNeverCommitsExecutor implements Executor {
+  readonly name = 'writes-no-commit';
+  async execute(step: WorkflowStep, ctx: ExecutorContext): Promise<ExecutorResult> {
+    if (ctx.signal.aborted) return { ok: false, errorMessage: 'aborted' };
+    if (ctx.workflowId.startsWith('gate:')) {
+      const declared = step.outputs[0];
+      if (declared) {
+        const rel = declared.replace('<slug>', 'NOT').replace('<ts>', '2026-06-09_10-00-00');
+        const abs = join(ctx.worktreePath, rel);
+        mkdirSync(join(abs, '..'), { recursive: true });
+        writeFileSync(abs, '---\nverdict: pass\n---\nall acceptance criteria met\n');
+      }
+      return { ok: true, outputSummary: `gate ${step.key}` };
+    }
+    const inItemWorktree =
+      ctx.workflowId === 'development-cycle' && ctx.worktreePath.startsWith(repoRoot + '/.kortext');
+    if (inItemWorktree) {
+      // Writes a real app file but DELIBERATELY does not commit — the #10M bug.
+      writeFileSync(join(ctx.worktreePath, 'index.html'), '<!doctype html>\n<h1>built</h1>\n');
+      mkdirSync(join(ctx.worktreePath, 'src'), { recursive: true });
+      writeFileSync(join(ctx.worktreePath, 'src', 'main.js'), 'console.log("hi")\n');
+    }
+    return { ok: true, outputSummary: `built ${step.key}` };
+  }
+}
+
+function makeComposition(executor: Executor = new WorktreeWritingExecutor()) {
   return createComposition({
     repos,
-    executor: new WorktreeWritingExecutor(),
+    executor,
     queue: new ApprovalQueue({ repos, pollIntervalMs: 15 }),
     repoRoot,
     baseBranch: 'development',
@@ -211,6 +245,50 @@ describe('driveReadyItems — end-to-end pull-through (capstone composition 4, �
     expect(deployRuns).toHaveLength(1);
     expect(deployRuns[0]?.triggered_by).toContain('EP');
     expect(deployRuns[0]?.status).toBe('succeeded');
+  });
+
+  // UAT #10M regression — the agent writes real app code but never commits it.
+  // The engine must commit the worktree before `test` so the merge actually
+  // carries the files into development. Before the fix, development was empty
+  // (commit-less branch → empty merge → fake "done").
+  it('an agent that writes but never commits still lands its code in development (UAT #10M)', async () => {
+    const c = makeComposition(new WritesButNeverCommitsExecutor());
+    const lc = makeLifecycle();
+    lc.create({ id: 'M1', type: 'task', title: 'M1' }); // to_do, no gates
+
+    await driveReadyItems({ composition: c, lifecycle: lc, graph: buildGraph(devCycleWf) });
+
+    expect(repos.backlog.get('M1')?.status).toBe('done');
+    // The crux: development actually contains the agent's files, not an empty merge.
+    git(repoRoot, 'checkout', 'development');
+    const tree = git(repoRoot, 'ls-tree', '-r', '--name-only', 'development');
+    expect(tree).toContain('index.html');
+    expect(tree).toContain('src/main.js');
+  });
+
+  // The agent wrote NOTHING (or only uncommitted junk that yields no commit):
+  // the engine commit produces no commit, the committed-only no-op guard fires,
+  // and the item bounces instead of an empty merge being dressed up as "done".
+  it('an empty agent run never produces an empty merge marked done (UAT #10M)', async () => {
+    class NoOpExecutor implements Executor {
+      readonly name = 'noop';
+      async execute(step: WorkflowStep, ctx: ExecutorContext): Promise<ExecutorResult> {
+        if (ctx.workflowId.startsWith('gate:')) return { ok: true };
+        return { ok: true, outputSummary: `read-only ${step.key}` }; // writes nothing
+      }
+    }
+    const c = makeComposition(new NoOpExecutor());
+    const lc = makeLifecycle();
+    lc.create({ id: 'M2', type: 'task', title: 'M2' });
+
+    await driveReadyItems({ composition: c, lifecycle: lc, graph: buildGraph(devCycleWf) });
+
+    // Not done — bounced back to in_progress for retry; no empty merge.
+    expect(repos.backlog.get('M2')?.status).toBe('in_progress');
+    const devLog = git(repoRoot, 'log', '--oneline', 'development');
+    expect(devLog).not.toMatch(/Merge kortext\/run-\d+ into development/);
+    const noop = repos.auditLog.list({ action: 'backlog.implementation.noop', resource_id: 'M2' });
+    expect(noop.length).toBe(1);
   });
 
   it('a clean pass with nothing ready is a no-op (empty result, no runs)', async () => {
