@@ -1,72 +1,111 @@
 /**
- * Footer — engine entry (⚙ Kortext) · theme toggle · daemon status · agents /
- * worktrees / terminal triggers.
+ * Footer — design-handoff status bar (app.js `shell()` footer).
  *
- * "⚙ Kortext" navigates into the engine scope (which swaps the sidebar to the
- * engine menu — see Sidebar). The agents/worktrees/terminal items dispatch
- * window events for later sessions to wire to their up-panels.
+ *   daemon :PORT · agents (running · waiting · awaiting) · worktrees   |   review · Terminal
+ *
+ * Counts are live and reflect *real agent runtime* — derived from `/api/runs`
+ * (the same lens the Terminal `status` command uses), NOT backlog item statuses:
+ *   running  → runs executing right now
+ *   queued   → runs lined up, waiting for an agent to start them
+ *   awaiting → runs paused on a gate / approval
+ * worktrees come from the same runs. The daemon entry is a static health light
+ * (not a popover). Each clickable foot-item opens its popover via a window event.
  */
-import { Link } from '@tanstack/react-router';
-import { Cog, Contrast, GitBranch, Terminal, ChevronUp } from 'lucide-react';
-import { useTheme } from './theme.ts';
+import { Bot, GitBranch, ShieldUser, Terminal, ChevronUp } from 'lucide-react';
+import { usePolling } from '../lib/api.ts';
+import { emitShell } from './shell-events.ts';
+import type { Run } from '../lib/api-types.ts';
 
-function emit(name: 'open-agents' | 'open-worktrees' | 'open-terminal'): void {
-  window.dispatchEvent(new CustomEvent(name));
+/** Open a footer popover anchored under the foot-item that was clicked. */
+function openPop(
+  name: 'open-agents' | 'open-worktrees' | 'open-review' | 'open-terminal',
+  el: HTMLElement,
+): void {
+  emitShell(name, { rect: el.getBoundingClientRect() });
 }
 
+type DriveLite = { armed: boolean; inFlight: boolean };
+
 export function Footer() {
-  const { theme, toggle } = useTheme();
+  const runs = usePolling<{ runs: Run[] }>('/api/runs', 5000);
+  const drive = usePolling<DriveLite>('/api/drive', 4000);
+
+  const runList = runs.data?.runs ?? [];
+  // Real agent runtime, straight from the run records (matches the Terminal).
+  const running = runList.filter((r) => r.status === 'running').length;
+  const queued = runList.filter((r) => r.status === 'queued').length;
+  const awaiting = runList.filter((r) => r.status === 'awaiting_approval').length;
+  // A drive pass spans several agent sub-steps; individual runs flip
+  // running→succeeded fast, so the count alone can read 0 mid-pass. `driving`
+  // (inFlight) is the honest "the house is working right now" signal.
+  const driving = drive.data?.inFlight ?? false;
+
+  const worktrees = new Set(
+    runList
+      .filter((r) => (r.status === 'running' || r.status === 'awaiting_approval') && r.worktree_path)
+      .map((r) => r.worktree_path),
+  ).size;
+
+  // The daemon dot is a live health light: green only while the backend is
+  // actually answering polls, red the moment a poll errors (process gone).
+  const connected = !runs.error && runs.data != null;
 
   return (
     <footer className="footer">
-      <Link to="/kortext/llm-auth" className="f-item" style={{ cursor: 'pointer' }}>
-        <Cog style={{ width: 16, height: 16 }} />
-        Kortext
-      </Link>
+      <span className="foot-item" style={{ cursor: 'default' }} title="Kortext daemon">
+        <span
+          className="foot-dot"
+          style={{ background: connected ? 'var(--green)' : 'var(--red)' }}
+        />
+        <span className="mono">daemon :3200</span>
+      </span>
 
-      <div
-        className="theme-btn"
-        onClick={toggle}
-        title={`Theme: ${theme}`}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            toggle();
-          }
-        }}
+      <span
+        className="foot-item"
+        onClick={(e) => openPop('open-agents', e.currentTarget)}
+        title={
+          driving
+            ? 'Driver pass in progress — agents are working'
+            : 'active: çalışıyor · idle: sırada · blocked: onay bekliyor'
+        }
       >
-        <Contrast style={{ width: 14, height: 14 }} />
-      </div>
-
-      <div className="agct">
-        <span className="dot" style={{ width: 6, height: 6, background: 'var(--green)' }} />
-        daemon{' '}
-        <span className="mono" style={{ color: 'var(--fg-faint)' }}>
-          :3200
+        <Bot className="ic" />
+        {driving && (
+          <span
+            className="foot-dot dot-pulse"
+            style={{ background: 'var(--green)' }}
+            aria-label="driving"
+          />
+        )}
+        <span className="mono">
+          <span style={{ color: 'var(--green)' }}>{running} active</span>{' '}
+          <span className="faint">·</span> <span style={{ color: 'var(--amber)' }}>{queued} idle</span>{' '}
+          <span className="faint">·</span>{' '}
+          <span style={{ color: 'var(--red)' }}>{awaiting} blocked</span>
         </span>
-      </div>
+        <ChevronUp className="ic" />
+      </span>
 
-      <div style={{ flex: 1 }} />
+      <span className="foot-item" onClick={(e) => openPop('open-worktrees', e.currentTarget)}>
+        <GitBranch className="ic" />
+        <span className="mono">{worktrees} worktrees</span>
+        <ChevronUp className="ic" />
+      </span>
 
-      <div className="f-item" onClick={() => emit('open-agents')} style={{ cursor: 'pointer' }}>
-        <span className="agct">
-          <span className="dot" style={{ width: 6, height: 6, background: 'var(--green)' }} />
+      <div className="foot-right">
+        <span
+          className="foot-item"
+          onClick={(e) => openPop('open-review', e.currentTarget)}
+          title="Skip reviews"
+        >
+          <ShieldUser className="ic" />
+          <span style={{ color: 'var(--violet)' }}>review</span>
+          <ChevronUp className="ic" />
         </span>
-        <span style={{ color: 'var(--fg-mid)' }}>Agents</span>
-        <ChevronUp style={{ width: 13, height: 13 }} />
-      </div>
-      <div className="f-sep" />
-      <div className="f-item" onClick={() => emit('open-worktrees')} style={{ cursor: 'pointer' }}>
-        <GitBranch style={{ width: 16, height: 16 }} />
-        Worktrees
-        <ChevronUp style={{ width: 13, height: 13 }} />
-      </div>
-      <div className="f-sep" />
-      <div className="f-item" onClick={() => emit('open-terminal')} style={{ cursor: 'pointer' }}>
-        <Terminal style={{ width: 16, height: 16 }} />
-        Terminal
+        <span className="foot-item" onClick={(e) => openPop('open-terminal', e.currentTarget)}>
+          <Terminal className="ic" />
+          Terminal
+        </span>
       </div>
     </footer>
   );

@@ -5,7 +5,7 @@ import { homedir } from 'node:os';
 export const BASE_PORT = 3200;
 export const MAX_PORT = BASE_PORT + 99;
 
-export type ProjectStatus = 'running' | 'paused' | 'stopped';
+export type ProjectStatus = 'running' | 'paused' | 'stopped' | 'archived';
 
 export type ProjectEntry = {
   slug: string;

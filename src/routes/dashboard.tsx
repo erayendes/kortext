@@ -10,9 +10,8 @@
  * Pure derivations (epic progress, status counts, run→pill, activity merge) are
  * exported so `tests/dashboard.web.test.tsx` can pin them without rendering.
  */
-import { useEffect, useMemo, useState } from 'react';
-import { RefreshCw, SlidersHorizontal, Play, Lock } from 'lucide-react';
-import { useNavigate } from '@tanstack/react-router';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { RefreshCw, Play, LockKeyhole, LockKeyholeOpen, X, Check, ListChecks, LayoutList, SquareArrowOutUpRight } from 'lucide-react';
 import { usePolling, apiGet, apiPost } from '../lib/api.ts';
 import type {
   ActivityEntry,
@@ -20,14 +19,16 @@ import type {
   BacklogItem,
   DecisionIndex,
   Handover,
-  PendingQuestion,
   Run,
-  RunStep,
 } from '../lib/api-types.ts';
 import { personaPalette } from '../lib/persona-colors.ts';
-import { assigneeOf, statusBadge } from '../lib/board-drawer.ts';
-import { resolveActiveRun } from '../lib/active-run.ts';
-import { primaryPersonaFor } from '../lib/workflow-primary-persona.ts';
+import {
+  acChecklist,
+  assigneeOf,
+  descriptionFromBody,
+  itemGates,
+  statusBadge,
+} from '../lib/board-drawer.ts';
 
 // ───────────────────────── pure derivations (tested) ─────────────────────────
 
@@ -279,36 +280,12 @@ export function formatAge(fromMs: number, nowMs: number = Date.now()): string {
 
 const short = (h: string | null | undefined): string => (h ?? '?').replace(/^\+/, '');
 
-function rgba(hex: string, a: number): string {
-  const n = parseInt(hex.slice(1), 16);
-  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
-}
-
-/** Coloured persona circle with its Lucide glyph — the wireframe's `pAvatar`. */
-function Avatar({ handle, size = 18 }: { handle: string | null; size?: number }) {
-  const { color, icon: Icon } = personaPalette(handle);
-  const bw = size <= 16 ? 1 : 1.5;
-  return (
-    <span
-      className="avatar"
-      title={handle ?? undefined}
-      style={{
-        width: size,
-        height: size,
-        background: rgba(color, 0.1),
-        border: `${bw}px solid ${rgba(color, 0.65)}`,
-        color,
-      }}
-    >
-      <Icon size={Math.round(size * 0.54)} strokeWidth={size <= 16 ? 1.8 : 2} />
-    </span>
-  );
-}
-
 // ────────────────────────── autonomous drive control ─────────────────────────
 
 type DriveStatus = {
   armed: boolean;
+  /** Whether the env var alone would arm it (informational). */
+  armedByEnv?: boolean;
   inFlight: boolean;
   scheduler: { running: boolean; intervalSec: number | null };
   lastPass: { at: number; ok: boolean; error?: string } | null;
@@ -352,57 +329,76 @@ function DriveControl() {
     }
   }
 
-  if (!armed) {
-    return (
-      <span
-        className="pill"
-        style={{ cursor: 'default' }}
-        title="The autonomous driver is locked. Set KORTEXT_DRIVE_ENABLED=1 to arm it."
-      >
-        <Lock style={{ width: 12, height: 12 }} /> Driver locked
-      </span>
-    );
-  }
-
-  const statusLabel = inFlight ? 'Driving…' : autoOn ? 'Auto on' : 'Idle';
-  const dotCls = inFlight ? 'dot-success live' : autoOn ? 'dot-success' : 'dot-muted';
+  // The master switch is armable from here (POST /api/drive/arm). Status badge +
+  // lock toggle + Run once are ALWAYS shown; only their state changes. The lock
+  // icon is the toggle: closed = locked, open = armed.
+  const locked = !armed;
+  const arm = (next: boolean) => act(() => apiPost('/api/drive/arm', { armed: next }));
+  const lockNote = 'The autonomous driver is locked — agents pick up no work until you arm it.';
+  const statusLabel = locked
+    ? 'Driver locked'
+    : err
+      ? 'Error'
+      : inFlight
+        ? 'Driving…'
+        : autoOn
+          ? 'Auto on'
+          : 'Idle';
+  const flavour = locked ? 's-neutral' : err ? 's-red' : inFlight || autoOn ? 's-green' : 's-neutral';
+  const lastPassNote = data?.lastPass
+    ? `Last pass ${formatAge(data.lastPass.at)} ago — ${data.lastPass.ok ? 'ok' : data.lastPass.error ?? 'failed'}`
+    : undefined;
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-      <span
-        className="sec-c"
-        style={{ display: 'flex', alignItems: 'center', gap: 6 }}
-        title={
-          err
-            ? err
-            : data?.lastPass
-              ? `Last pass ${formatAge(data.lastPass.at)} ago — ${data.lastPass.ok ? 'ok' : data.lastPass.error ?? 'failed'}`
-              : undefined
-        }
-      >
-        <span className={`dot ${dotCls}`} style={{ color: err ? 'var(--red)' : undefined }} />
-        {err ? 'Error' : statusLabel}
+    <>
+      <span className={`badge ${flavour}`} title={locked ? lockNote : (err ?? lastPassNote)}>
+        <span className={`dot${inFlight ? ' dot-live' : ''}`} />
+        {statusLabel}
       </span>
       <button
         type="button"
-        className="btn btn-line btn-sm"
-        disabled={busy || inFlight}
+        className="btn btn-sm btn-ghost"
+        disabled={busy}
+        onClick={() => arm(locked)}
+        title={locked ? 'Arm the driver so agents can pick up work' : 'Lock the driver — stops auto-drive and blocks new passes'}
+      >
+        {locked ? (
+          <LockKeyhole style={{ width: 13, height: 13 }} />
+        ) : (
+          <LockKeyholeOpen style={{ width: 13, height: 13 }} />
+        )}
+      </button>
+      <button
+        type="button"
+        className="btn btn-sm btn-secondary"
+        disabled={locked || busy || inFlight}
         onClick={() => act(() => apiPost('/api/drive', {}))}
       >
         <Play style={{ width: 13, height: 13 }} /> Run once
       </button>
-      <span
-        className="agct"
-        title={`Auto-drive every ${data?.scheduler.intervalSec ?? 60}s`}
-        style={{ cursor: busy ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 7 }}
-        onClick={() =>
-          act(() => apiPost('/api/drive/scheduler', { enabled: !autoOn, intervalSec: 60 }))
-        }
+      <label
+        title={locked ? lockNote : `Auto-drive every ${data?.scheduler.intervalSec ?? 60}s`}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 7,
+          fontSize: 12,
+          color: 'var(--fg-secondary)',
+          cursor: locked || busy ? 'default' : 'pointer',
+          opacity: locked ? 0.55 : 1,
+        }}
       >
-        <span className={`switch ${autoOn ? 'on' : ''}`} />
-        <span className="sec-c">Auto</span>
-      </span>
-    </div>
+        <span
+          className={`switch ${autoOn ? 'on' : ''}`}
+          style={locked ? { pointerEvents: 'none' } : undefined}
+          onClick={() => {
+            if (locked) return;
+            act(() => apiPost('/api/drive/scheduler', { enabled: !autoOn, intervalSec: 60 }));
+          }}
+        />
+        Auto
+      </label>
+    </>
   );
 }
 
@@ -415,424 +411,466 @@ export function DashboardRoute() {
   return <DashboardView key={nonce} onRefresh={() => setNonce((n) => n + 1)} />;
 }
 
-function DashboardView({ onRefresh }: { onRefresh: () => void }) {
-  const runsPoll = usePolling<{ runs: Run[] }>('/api/runs', 3000);
-  // Aggregate: replaces the old ?limit=2000 full-fetch for whole-set consumers
-  // (epic progress, status bars). No row payload — server-side GROUP BY.
-  const aggPoll = usePolling<BacklogAggregate>('/api/backlog/aggregate', 10000);
-
-  // Paginated card list for ActiveWork / ReviewQueue item lookups.
-  // A single page is enough: active runs reference recent items which are
-  // in the first 100 by created_at DESC.
-  const [cards, setCards] = useState<BacklogItem[]>([]);
-  useEffect(() => {
-    void apiGet<{ items: BacklogItem[] }>('/api/backlog?limit=100')
-      .then((r) => setCards(r.items))
-      .catch(() => {});
-  }, []);
-
-  const runs = runsPoll.data?.runs ?? [];
-  const agg = aggPoll.data;
-  const active = runs.filter((r) => ACTIVE_RUN_STATUSES.includes(r.status));
-
-  return (
-    <div className="dash">
-      <div className="dash-main">
-        <div
-          className="sec-h"
-          style={{ marginBottom: 18, alignItems: 'center', justifyContent: 'space-between' }}
-        >
-          <div className="page-title" style={{ fontSize: 18 }}>
-            Dashboard
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <DriveControl />
-            <button type="button" className="btn btn-line btn-sm" onClick={onRefresh}>
-              <RefreshCw style={{ width: 13, height: 13 }} /> Refresh
-            </button>
-          </div>
-        </div>
-
-        <StatsCards agg={agg} loading={aggPoll.loading} error={aggPoll.error} />
-
-        <div className="sec-h">
-          <span className="sec-t">Active work</span>
-          <span className="sec-c">
-            {active.length} agent{active.length === 1 ? '' : 's'} running
-          </span>
-        </div>
-        <ActiveWork
-          active={active}
-          items={cards}
-          loading={runsPoll.loading && !runsPoll.data}
-          error={runsPoll.error}
-        />
-
-        <ReviewQueue runs={runs} items={cards} />
-      </div>
-
-      <ActivityTimeline />
-    </div>
-  );
+/** "HH:MM" clock stamp for an activity row (local time) — handoff `e.t`. */
+function formatClock(ms: number): string {
+  const d = new Date(ms);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
-// ──────────────────────────────── stats ──────────────────────────────────────
-
-function StatsCards({
-  agg,
-  loading,
-  error,
-}: {
-  agg: BacklogAggregate | null | undefined;
-  loading: boolean;
-  error: string | null;
-}) {
-  // Derive epic progress rows from aggregate data
-  const epics = useMemo<EpicRow[]>(() => {
-    if (!agg) return [];
-    return agg.epics.map((epic) => {
-      const prog = agg.epicProgress[epic.id];
-      let pct: number;
-      if (prog && prog.total > 0) {
-        pct = Math.round((prog.done / prog.total) * 100);
-      } else {
-        pct = epic.status === 'done' ? 100 : 0;
-      }
-      return { id: epic.id, title: epic.title, pct };
-    });
-  }, [agg]);
-
-  // Derive status bars from aggregate statusCounts
-  const { bars, total } = useMemo(() => {
-    if (!agg) return { bars: [], total: 0 };
-    const raw = STATUS_SEGMENTS.map((s) => ({
-      ...s,
-      n: agg.statusCounts[s.status] ?? 0,
-    }));
-    const totalN = raw.reduce((a, s) => a + s.n, 0);
-    const maxN = Math.max(1, ...raw.map((s) => s.n));
-    const bars = raw.map((s) => ({
-      label: s.label,
-      color: s.color,
-      n: s.n,
-      pct: totalN === 0 ? 0 : Math.round((s.n / totalN) * 100),
-      barPct: Math.round((s.n / maxN) * 100),
-    }));
-    return { bars, total: agg.total };
-  }, [agg]);
-
-  if (loading && !agg) {
-    return <div className="stats">{statCardSkeleton('Epic progress')}{statCardSkeleton('Item status')}</div>;
-  }
-
-  return (
-    <div className="stats">
-      <div className="stat-card rise" style={{ animationDelay: '0ms' }}>
-        <div className="stat-lbl">Epic progress · {epics.length} epic{epics.length === 1 ? '' : 's'}</div>
-        {epics.length === 0 ? (
-          <div className="metric-sub" style={{ marginTop: 4 }}>
-            {error ? `Couldn't load backlog — ${error}` : 'No epics yet.'}
-          </div>
-        ) : (
-          <div className="epic-sum-rows" style={{ marginTop: 4 }}>
-            {epics.map((e) => (
-              <div className="epic-sum-row" key={e.id}>
-                <span className="epic-sum-id">{e.id}</span>
-                <span className="epic-sum-name" title={e.title}>
-                  {e.title}
-                </span>
-                <div className="epic-sum-bar">
-                  <div className="epic-sum-fill" style={{ width: `${e.pct}%` }} />
-                </div>
-                <span className="epic-sum-pct">{e.pct}%</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="stat-card rise" style={{ animationDelay: '35ms' }}>
-        <div className="stat-lbl">Item status · {total} total</div>
-        {bars.map((b) => (
-          <div className="sbar-row" key={b.label}>
-            <span className="sbar-name">{b.label}</span>
-            <div className="sbar-track">
-              <div className="sbar-fill" style={{ width: `${b.barPct}%`, background: b.color }} />
-            </div>
-            <span className="sbar-n">{b.n}</span>
-            <span className="sbar-pct">{b.pct}%</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function statCardSkeleton(label: string) {
-  return (
-    <div className="stat-card" key={label}>
-      <div className="stat-lbl">{label}</div>
-      <div className="metric-sub" style={{ marginTop: 6 }}>
-        Loading…
-      </div>
-    </div>
-  );
-}
-
-// ──────────────────────────── active work ────────────────────────────────────
-
-function ActiveWork({
-  active,
-  items,
-  loading,
-  error,
-}: {
-  active: Run[];
-  items: BacklogItem[];
-  loading: boolean;
-  error: string | null;
-}) {
-  if (loading) {
-    return <div className="work"><EmptyWorkRow text="Loading runs…" /></div>;
-  }
-  if (error) {
-    return <div className="work"><EmptyWorkRow text={`Error: ${error}`} /></div>;
-  }
-  if (active.length === 0) {
+/** Monospace agent token — coloured identity dot + handle (handoff `agentInline`). */
+function AgentToken({ handle }: { handle: string | null }) {
+  const h = short(handle);
+  if (!handle || h === 'system') {
     return (
-      <div className="work">
-        <EmptyWorkRow text="No agents running — start a workflow to see live work here." />
-      </div>
+      <span className="badge badge-square s-neutral" style={{ fontWeight: 500 }}>
+        system
+      </span>
     );
   }
+  if (h === 'prime' || h === 'you') {
+    return (
+      <span className="mono" style={{ color: 'var(--fg)', fontWeight: 500 }}>
+        +{h}
+      </span>
+    );
+  }
+  const { color } = personaPalette(handle);
   return (
-    <div className="work">
-      {active.map((run, i) => (
-        <WorkRow key={run.id} run={run} items={items} index={i} />
-      ))}
-    </div>
+    <span className="agent" title={`+${h}`}>
+      <span className="adot" style={{ background: color, color }} />
+      <span className="truncate">+{h}</span>
+    </span>
   );
 }
 
-function WorkRow({ run, items, index }: { run: Run; items: BacklogItem[]; index: number }) {
-  // The list row carries no step detail; enrich it with the run's ordered steps
-  // so the avatar + progress reflect the persona actually working right now.
-  const { data: detail } = usePolling<{ run: Run; steps: RunStep[] }>(`/api/runs/${run.id}`, 3000);
-  const view = resolveActiveRun(run, detail?.steps ?? [], items);
-  const persona = view.persona ?? primaryPersonaFor(run.workflow_id);
-  const pill = runPill(run.status);
-  const desc = view.taskTitle ?? run.workflow_id;
-
-  return (
-    <div className="work-row rise" style={{ animationDelay: `${index * 30}ms` }}>
-      <div className="w-left">
-        <span className={`tag ${pill.cls}`}>{pill.label}</span>
-        {run.item_id ? <span className="w-id mono">{run.item_id}</span> : null}
-        <span className="w-desc">{desc}</span>
-        {view.step ? (
-          <span className="w-step">
-            {view.step.current}/{view.step.total}
-          </span>
-        ) : null}
-      </div>
-      <div className="w-right">
-        <Avatar handle={persona} size={18} />
-        <span className="w-name">{short(persona)}</span>
-      </div>
-    </div>
-  );
-}
-
-function EmptyWorkRow({ text }: { text: string }) {
+/** One activity-stream row: time · who · text · age (handoff `renderActivity`).
+ *  Rows that carry a board item are clickable → open the item in the right drawer. */
+function ActivityRow({ event, onOpenItem }: { event: ActivityEvent; onOpenItem: (id: string) => void }) {
+  const clickable = !!event.item;
   return (
     <div
-      className="work-row"
-      style={{ cursor: 'default', color: 'var(--fg-faint)', fontSize: 12.5 }}
+      className={`act-row${clickable ? ' act-link' : ''}`}
+      onClick={clickable ? () => onOpenItem(event.item!) : undefined}
     >
-      {text}
+      <span className="mono act-t">{formatClock(event.at)}</span>
+      <div className="act-who">
+        <AgentToken handle={event.who} />
+      </div>
+      <div className="act-main">
+        <div className="act-text">
+          <EventText event={event} />
+          {event.item ? (
+            <span className="mono" style={{ color: 'var(--fg-faint)' }}>
+              {' '}
+              {event.item}
+            </span>
+          ) : null}
+        </div>
+      </div>
+      <div className="act-meta">
+        <span className="mono act-dur">{formatAge(event.at)}</span>
+      </div>
     </div>
   );
 }
 
-// ──────────────────────────── review queue ───────────────────────────────────
+type VersionRow = { id: string; items: number; pct: number };
 
-const TYPE_PILL: Record<BacklogItem['type'], { label: string; color: string }> = {
-  task: { label: 'Task', color: '#5E84D2' },
-  bug: { label: 'Bug', color: '#CC6B6B' },
-  debt: { label: 'Debt', color: '#D2A24C' },
-  epic: { label: 'Epic', color: '#9B82CE' },
-  spike: { label: 'Spike', color: '#67E8F9' },
-  hotfix: { label: 'Hotfix', color: '#F87171' },
+/** Per-version rollup from the loaded card page (handoff Version-status card). */
+function versionRows(items: BacklogItem[], order: string[]): VersionRow[] {
+  const byVer = new Map<string, { total: number; done: number }>();
+  for (const it of items) {
+    if (it.type === 'epic' || !it.version) continue;
+    const v = byVer.get(it.version) ?? { total: 0, done: 0 };
+    v.total += 1;
+    if (it.status === 'done') v.done += 1;
+    byVer.set(it.version, v);
+  }
+  const keys = order.length ? order : [...byVer.keys()].sort();
+  return keys
+    .filter((k) => byVer.has(k))
+    .map((id) => {
+      const v = byVer.get(id)!;
+      return { id, items: v.total, pct: v.total === 0 ? 0 : Math.round((v.done / v.total) * 100) };
+    });
+}
+
+/** Item-status flavour → handoff status colour class (dot + label). */
+const ITEM_FLAVOUR: Record<BacklogItem['status'], string> = {
+  to_do: 'neutral',
+  in_progress: 'amber',
+  test: 'blue',
+  review: 'violet',
+  done: 'green',
+  cancelled: 'neutral',
 };
 
-function ReviewQueue({ runs, items }: { runs: Run[]; items: BacklogItem[] }) {
-  const { data, error, loading, refresh } = usePolling<{ questions: PendingQuestion[] }>(
-    '/api/questions',
-    4000,
+/** Rail status card — title panel-head + body (handoff `card()`). */
+function StatusCard({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="card">
+      <div className="panel-head">
+        <div className="panel-title">{title}</div>
+      </div>
+      <div className="card-body">{children}</div>
+    </section>
   );
-  const questions = data?.questions ?? [];
+}
 
+const TYPE_PILL_FLAVOUR: Record<BacklogItem['type'], string> = {
+  epic: 'violet', task: 'blue', bug: 'red', debt: 'amber', spike: 'blue', hotfix: 'red',
+};
+const TYPE_PILL_LABEL: Record<BacklogItem['type'], string> = {
+  epic: 'Epic', task: 'Task', bug: 'Bug', debt: 'Debt', spike: 'Spike', hotfix: 'Hotfix',
+};
+const STATUS_FLAVOUR: Record<BacklogItem['status'], string> = {
+  to_do: 'neutral', in_progress: 'amber', test: 'blue', review: 'violet', done: 'green', cancelled: 'neutral',
+};
+
+/**
+ * Item detail drawer (handoff `.detail`) — slides in from the right when an
+ * activity row carrying a board item is clicked. Read-only summary: type · id ·
+ * title · status · assignee · version · acceptance criteria · gates.
+ */
+function DetailDrawer({ item, onClose }: { item: BacklogItem | null; onClose: () => void }) {
+  const open = !!item;
+  const ac = item ? acChecklist(item.frontmatter) : [];
+  const gates = item ? itemGates(item) : [];
+  const desc = item ? descriptionFromBody(item.body_md) : '';
+  const assignee = item ? assigneeOf(item) : null;
   return (
     <>
-      <div className="sec-h" style={{ marginTop: 22 }}>
-        <span className="sec-t">For review</span>
-        <span className="sec-c" style={{ color: 'var(--accent)' }}>
-          +prime · {questions.length} item{questions.length === 1 ? '' : 's'}
-        </span>
-      </div>
-      <div className="prime-q">
-        {loading && !data ? (
-          <EmptyPrimeRow text="Loading review queue…" />
-        ) : error ? (
-          <EmptyPrimeRow text={`Error: ${error}`} />
-        ) : questions.length === 0 ? (
-          <EmptyPrimeRow text="Nothing waiting on +prime — the queue is clear." />
-        ) : (
-          questions.map((q, i) => (
-            <PrimeRow key={q.id} q={q} runs={runs} items={items} index={i} onDone={refresh} />
-          ))
+      <div className={`scrim${open ? ' show' : ''}`} onClick={onClose} />
+      <aside className={`detail${open ? ' show' : ''}`} aria-hidden={!open}>
+        {item && (
+          <>
+            <div className="detail-head">
+              <span className={`kc-type s-${TYPE_PILL_FLAVOUR[item.type]}`}>
+                {TYPE_PILL_LABEL[item.type]}
+              </span>
+              <span
+                className="mono"
+                style={{ fontSize: 12, color: 'var(--fg-muted)', marginRight: 'auto' }}
+              >
+                {item.id}
+              </span>
+              <button className="detail-x" onClick={onClose} aria-label="Close">
+                <X style={{ width: 16, height: 16 }} />
+              </button>
+            </div>
+            <div className="detail-body kx-scroll">
+              <div className="dt-hero">
+                <h2 className="dt-title">{item.title}</h2>
+              </div>
+              {desc && (
+                <p className="dt-desc" style={{ marginBottom: 4 }}>
+                  {desc}
+                </p>
+              )}
+              <div className="dt-meta">
+                <div className="dt-row">
+                  <span className="dt-k">Status</span>
+                  <span className="dt-v">
+                    <span className={`badge s-${STATUS_FLAVOUR[item.status]}`}>
+                      <span className="dot" />
+                      {statusBadge(item.status).label}
+                    </span>
+                  </span>
+                </div>
+                <div className="dt-row">
+                  <span className="dt-k">Assignee</span>
+                  <span className="dt-v">
+                    {assignee ? <AgentToken handle={assignee} /> : '—'}
+                  </span>
+                </div>
+                {item.version && (
+                  <div className="dt-row">
+                    <span className="dt-k">Version</span>
+                    <span className="dt-v">
+                      <span className="badge badge-square mono" style={{ fontSize: 11 }}>
+                        {item.version}
+                      </span>
+                    </span>
+                  </div>
+                )}
+                {item.parent_id && (
+                  <div className="dt-row">
+                    <span className="dt-k">Epic</span>
+                    <span className="dt-v mono">{item.parent_id}</span>
+                  </div>
+                )}
+              </div>
+
+              {item.preview_url && (
+                <div className="dt-sec">
+                  <div className="dt-sec-h">
+                    <SquareArrowOutUpRight className="ic" />
+                    Preview
+                  </div>
+                  <a
+                    className="dt-mlink"
+                    href={item.preview_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <SquareArrowOutUpRight className="ic" />
+                    {item.preview_url}
+                  </a>
+                </div>
+              )}
+
+              {ac.length > 0 && (
+                <div className="dt-sec">
+                  <div className="dt-sec-h">
+                    <ListChecks className="ic" />
+                    Acceptance criteria
+                  </div>
+                  <ul className="dt-ac">
+                    {ac.map((c, i) => (
+                      <li key={i} className={c.done ? 'done' : ''}>
+                        <span className="dt-check">{c.done && <Check className="ic" />}</span>
+                        {c.text}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {gates.length > 0 && (
+                <div className="dt-sec">
+                  <div className="dt-sec-h">
+                    <LayoutList className="ic" />
+                    Gates
+                  </div>
+                  <div className="dt-gates">
+                    {gates.map((g) => (
+                      <div className="dt-gate" key={g.gate}>
+                        <span className="dt-gate-l">{g.label}</span>
+                        <span className={`dt-gate-s ${g.state === 'passed' ? 'pass' : ''}`}>
+                          {g.state === 'passed' ? '✓ passed' : '○ pending'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
         )}
-      </div>
+      </aside>
     </>
   );
 }
 
-function PrimeRow({
-  q,
-  runs,
-  items,
-  index,
-  onDone,
-}: {
-  q: PendingQuestion;
-  runs: Run[];
-  items: BacklogItem[];
-  index: number;
-  onDone: () => void;
-}) {
-  const [busy, setBusy] = useState(false);
-  const [directive, setDirective] = useState('');
-  // UAT #10: a gate-escalation question (a gate that failed 3×) is decided by
-  // +prime with three choices — Approve (override-pass) / Revise (one directed
-  // retry) / Drop (cancel) — instead of the binary approve/request-changes.
-  const isEscalation = q.phase === 'gate-escalation';
-  const itemIdFromMeta =
-    isEscalation && q.metadata && typeof (q.metadata as { itemId?: unknown }).itemId === 'string'
-      ? ((q.metadata as { itemId: string }).itemId)
-      : null;
-  const run = q.run_id != null ? runs.find((r) => r.id === q.run_id) ?? null : null;
-  const item =
-    (itemIdFromMeta ? items.find((i) => i.id === itemIdFromMeta) ?? null : null) ??
-    (run?.item_id ? items.find((i) => i.id === run.item_id) ?? null : null);
-  const type = item ? TYPE_PILL[item.type] : { label: 'Review', color: '#9B82CE' };
-  const idLabel = item?.id ?? (q.run_id != null ? `run #${q.run_id}` : `Q-${q.id}`);
-  const persona = item ? assigneeOf(item) : null;
+/**
+ * Dashboard (design_handoff_kortext `V.dashboard()`): header + a two-column
+ * `.dash` grid — the Activity stream (left) and a rail of Version / Epic / Item
+ * status cards (right). Every value is bound to a live endpoint; the prototype's
+ * baked `KX.*` arrays become `/api/activity` + `/api/backlog/aggregate`.
+ *
+ * Parked (no slot in the handoff dashboard — see MIGRATION-GAPS): the autonomous
+ * Driver control, the Active-work list, and the +prime Review queue. Their
+ * components remain below, unused, pending a placement decision.
+ */
+function DashboardView({ onRefresh }: { onRefresh: () => void }) {
+  const aggPoll = usePolling<BacklogAggregate>('/api/backlog/aggregate', 10000);
+  const [cards, setCards] = useState<BacklogItem[]>([]);
+  const [drawerId, setDrawerId] = useState<string | null>(null);
+  // Activity feed paginates 50 at a time (never an unbounded list).
+  const [actLimit, setActLimit] = useState(50);
+  useEffect(() => {
+    void apiGet<{ items: BacklogItem[] }>('/api/backlog?limit=500')
+      .then((r) => setCards(r.items))
+      .catch(() => {});
+  }, []);
+  const itemsById = useMemo(() => new Map(cards.map((c) => [c.id, c])), [cards]);
 
-  async function post(answerStr: string) {
-    if (busy) return;
-    setBusy(true);
-    try {
-      await apiPost(`/api/questions/${q.id}/answer`, {
-        answer: answerStr,
-        answered_by: '+you',
-      });
-      onDone();
-    } catch {
-      // Surface failure by re-enabling the actions; the poll will reconcile.
-      setBusy(false);
-    }
-  }
+  const { data: aData, loading: aLoading } = usePolling<{ activity: ActivityEntry[] }>(
+    `/api/activity?limit=${actLimit}`,
+    5000,
+  );
+  const { data: hData } = usePolling<{ handovers: Handover[] }>(
+    `/api/handovers?limit=${actLimit}`,
+    8000,
+  );
+  const { data: dData } = usePolling<{ decisions: DecisionIndex[] }>(
+    `/api/decisions?limit=${actLimit}`,
+    8000,
+  );
+  const events = useMemo(
+    () => buildActivityFeed(aData?.activity ?? [], hData?.handovers ?? [], dData?.decisions ?? [], actLimit),
+    [aData, hData, dData, actLimit],
+  );
+  // a full page implies there may be more to fetch
+  const canLoadMore = events.length >= actLimit;
 
-  async function answer(kind: 'approve' | 'reject') {
-    await post(pickChoice(q.choices, kind));
-  }
+  const agg = aggPoll.data;
+
+  // header subtitle counts — real agent runtime from /api/runs (same lens as the
+  // footer + Terminal), NOT backlog item statuses.
+  const runsPoll = usePolling<{ runs: Run[] }>('/api/runs', 5000);
+  const runList = runsPoll.data?.runs ?? [];
+  const running = runList.filter((r) => r.status === 'running').length;
+  const queued = runList.filter((r) => r.status === 'queued').length;
+  const awaiting = runList.filter((r) => r.status === 'awaiting_approval').length;
+
+  const versions = versionRows(cards, agg?.versions ?? []);
+  const epics = useMemo<{ id: string; items: number; pct: number }[]>(() => {
+    if (!agg) return [];
+    return agg.epics.map((epic) => {
+      const prog = agg.epicProgress[epic.id];
+      const total = prog?.total ?? 0;
+      const pct =
+        prog && prog.total > 0
+          ? Math.round((prog.done / prog.total) * 100)
+          : epic.status === 'done'
+            ? 100
+            : 0;
+      return { id: epic.id, items: total, pct };
+    });
+  }, [agg]);
+  const itemTotal = agg
+    ? STATUS_SEGMENTS.reduce((a, s) => a + (agg.statusCounts[s.status] ?? 0), 0)
+    : 0;
+  const itemBars = agg
+    ? STATUS_SEGMENTS.map((s) => {
+        const n = agg.statusCounts[s.status] ?? 0;
+        return {
+          status: s.status,
+          label: s.label,
+          n,
+          pct: itemTotal === 0 ? 0 : Math.round((n / itemTotal) * 100),
+        };
+      })
+    : [];
 
   return (
-    <div className="prime-row rise" style={{ animationDelay: `${index * 25}ms` }}>
-      <span
-        className="ty-pill"
-        style={{ color: type.color, background: rgba(type.color, 0.1), flexShrink: 0 }}
-      >
-        <span className="d" style={{ background: type.color }} />
-        {type.label}
-      </span>
-      <span className="mono" style={{ fontSize: 11, color: 'var(--fg-faint)', flexShrink: 0 }}>
-        {idLabel}
-      </span>
-      <span className="prime-title" title={q.question}>
-        {q.question}
-      </span>
-      {persona ? <Avatar handle={persona} size={18} /> : null}
-      {persona ? <span className="w-name">{short(persona)}</span> : null}
-      <span className="prime-age">{formatAge(q.created_at)}</span>
-      {isEscalation ? (
-        <div className="prime-acts" style={{ gap: 6 }}>
-          <input
-            value={directive}
-            placeholder="Revise instruction (optional)…"
-            disabled={busy}
-            onChange={(e) => setDirective(e.target.value)}
-            style={{
-              flex: 1,
-              minWidth: 140,
-              background: 'var(--panel)',
-              border: '1px solid var(--border-strong)',
-              borderRadius: 7,
-              color: 'var(--fg)',
-              font: 'inherit',
-              fontSize: 12,
-              padding: '6px 9px',
-              outline: 'none',
-            }}
-          />
-          <button
-            type="button"
-            className="btn btn-sm btn-approve"
-            disabled={busy}
-            title="Override the gate and ship this item"
-            onClick={() => post(buildEscalationAnswer('approve'))}
-          >
-            Approve
-          </button>
-          <button
-            type="button"
-            className="btn btn-sm btn-pri"
-            disabled={busy}
-            title="Send back for one directed retry with your instruction"
-            onClick={() => post(buildEscalationAnswer('revise', directive))}
-          >
-            Revise
-          </button>
-          <button
-            type="button"
-            className="btn btn-line btn-sm"
-            disabled={busy}
-            title="Cancel this item so it does not block its epic"
-            onClick={() => post(buildEscalationAnswer('drop'))}
-          >
-            Drop
-          </button>
+    <div className="dash-page">
+      <header className="pg-head">
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <h1 className="pg-title">Dashboard</h1>
+            <button className="icon-btn" onClick={onRefresh} title="Refresh">
+              <RefreshCw className="ic" />
+            </button>
+          </div>
+          <p className="pg-sub">
+            Live across the house · {running} running · {queued} queued · {awaiting} awaiting
+          </p>
         </div>
-      ) : (
-        <div className="prime-acts">
-          <button
-            type="button"
-            className="btn btn-sm btn-approve"
-            disabled={busy}
-            onClick={() => answer('approve')}
-          >
-            Approve
-          </button>
-          <button
-            type="button"
-            className="btn btn-line btn-sm"
-            disabled={busy}
-            onClick={() => answer('reject')}
-          >
-            Request changes
-          </button>
+      </header>
+
+      <div className="dash" data-dash>
+          <section className="card dash-activity">
+            <div className="panel-head">
+              <div className="panel-title">Activity</div>
+              <div className="flex items-center gap">
+                <DriveControl />
+              </div>
+            </div>
+            <div className="act-list kx-scroll">
+              {events.length === 0 ? (
+                <div
+                  className="act-row"
+                  style={{ display: 'block', color: 'var(--fg-faint)', fontSize: 13 }}
+                >
+                  {aLoading ? 'Loading activity…' : 'No activity yet.'}
+                </div>
+              ) : (
+                <>
+                  {events.map((e) => (
+                    <ActivityRow key={e.id} event={e} onOpenItem={(id) => setDrawerId(id)} />
+                  ))}
+                  {canLoadMore && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ width: '100%', justifyContent: 'center', marginTop: 6 }}
+                      onClick={() => setActLimit((l) => l + 50)}
+                    >
+                      Load more
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          </section>
+
+          <aside className="dash-rail">
+            <StatusCard title="Version status">
+              {versions.length === 0 ? (
+                <div className="srow" style={{ color: 'var(--fg-faint)', fontSize: 12 }}>
+                  No versions yet.
+                </div>
+              ) : (
+                versions.map((v) => (
+                  <div className="srow" key={v.id}>
+                    <span className="mono srow-k">{v.id}</span>
+                    <span className="badge-count">{v.items}</span>
+                    <div className="progress grow">
+                      <span style={{ width: `${v.pct}%` }} />
+                    </div>
+                    <span className="mono srow-v">{v.pct}%</span>
+                  </div>
+                ))
+              )}
+            </StatusCard>
+
+            <StatusCard title="Epic status">
+              {epics.length === 0 ? (
+                <div className="srow" style={{ color: 'var(--fg-faint)', fontSize: 12 }}>
+                  No epics yet.
+                </div>
+              ) : (
+                epics.map((e) => (
+                  <div className="srow" key={e.id} title={e.id}>
+                    <span className="mono srow-k">{e.id}</span>
+                    <span className="badge-count">{e.items}</span>
+                    <div className="progress grow">
+                      <span style={{ width: `${e.pct}%` }} />
+                    </div>
+                    <span className="mono srow-v">{e.pct}%</span>
+                  </div>
+                ))
+              )}
+            </StatusCard>
+
+            <StatusCard title="Item status">
+              {itemBars.length === 0 ? (
+                <div className="srow" style={{ color: 'var(--fg-faint)', fontSize: 12 }}>
+                  No items yet.
+                </div>
+              ) : (
+                itemBars.map((b) => (
+                  <div className="srow" key={b.status}>
+                    <span
+                      className={`badge s-${ITEM_FLAVOUR[b.status]}`}
+                      style={{
+                        border: 0,
+                        background: 'transparent',
+                        padding: 0,
+                        gap: 7,
+                        fontWeight: 500,
+                        width: 104,
+                        justifyContent: 'flex-start',
+                      }}
+                    >
+                      <span className="dot" />
+                      {b.label}
+                    </span>
+                    <span className="badge-count">{b.n}</span>
+                    <div className="progress grow">
+                      <span style={{ width: `${b.pct}%` }} />
+                    </div>
+                    <span className="mono srow-v">{b.pct}%</span>
+                  </div>
+                ))
+              )}
+            </StatusCard>
+          </aside>
         </div>
-      )}
+
+      <DetailDrawer item={drawerId ? itemsById.get(drawerId) ?? null : null} onClose={() => setDrawerId(null)} />
     </div>
   );
 }
@@ -842,6 +880,10 @@ function PrimeRow({
  * consumer (gate-escalation.ts) treats `approve`/`drop` as exact and anything
  * else as a `revise` whose text (after an optional `revise:` prefix) is the
  * directive handed to the next directed dev turn.
+ *
+ * The +prime Review queue that consumed this was parked out of the handoff
+ * dashboard, but the helper stays exported — it is pinned by tests and reused
+ * when the escalation decision finds its new home.
  */
 export function buildEscalationAnswer(
   kind: 'approve' | 'revise' | 'drop',
@@ -853,79 +895,7 @@ export function buildEscalationAnswer(
   return trimmed ? `revise: ${trimmed}` : 'revise';
 }
 
-/** Pick the choice that best matches the intent; fall back to a sane default. */
-function pickChoice(choices: string[], kind: 'approve' | 'reject'): string {
-  const re = kind === 'approve' ? /approv|yes|accept|ship|merge|ok/i : /reject|no|chang|block|deny/i;
-  const hit = choices.find((c) => re.test(c));
-  if (hit) return hit;
-  const fallback = kind === 'approve' ? choices[0] : choices[choices.length - 1];
-  if (fallback) return fallback;
-  return kind === 'approve' ? 'approve' : 'request_changes';
-}
-
-function EmptyPrimeRow({ text }: { text: string }) {
-  return (
-    <div className="prime-row" style={{ color: 'var(--fg-faint)', fontSize: 12.5 }}>
-      {text}
-    </div>
-  );
-}
-
-// ─────────────────────────── activity timeline ───────────────────────────────
-
-function ActivityTimeline() {
-  const navigate = useNavigate();
-  const { data: aData, loading: aLoading } = usePolling<{ activity: ActivityEntry[] }>(
-    '/api/activity?limit=40',
-    5000,
-  );
-  const { data: hData } = usePolling<{ handovers: Handover[] }>('/api/handovers?limit=30', 8000);
-  const { data: dData } = usePolling<{ decisions: DecisionIndex[] }>('/api/decisions?limit=30', 8000);
-
-  const events = useMemo(
-    () => buildActivityFeed(aData?.activity ?? [], hData?.handovers ?? [], dData?.decisions ?? []),
-    [aData, hData, dData],
-  );
-  const hLoading = aLoading;
-
-  return (
-    <aside className="tl">
-      <div className="tl-h">
-        <span className="tl-t">Activity</span>
-        <span className="pill btn-sm" style={{ height: 23 }}>
-          <SlidersHorizontal style={{ width: 12, height: 12 }} /> All
-        </span>
-      </div>
-      <div className="tl-list">
-        {hLoading && events.length === 0 ? (
-          <div className="tl-ev" style={{ cursor: 'default', color: 'var(--fg-faint)' }}>
-            <div className="tl-tx">Loading activity…</div>
-          </div>
-        ) : events.length === 0 ? (
-          <div className="tl-ev" style={{ cursor: 'default', color: 'var(--fg-faint)' }}>
-            <div className="tl-tx">No activity yet.</div>
-          </div>
-        ) : (
-          events.map((e) => (
-            <div
-              key={e.id}
-              className="tl-ev"
-              onClick={e.item ? () => navigate({ to: '/board' }) : undefined}
-              style={e.item ? undefined : { cursor: 'default' }}
-            >
-              <Avatar handle={e.who} size={20} />
-              <div className="tl-tx">
-                <span className="ac mono">{short(e.who)}</span> <EventText event={e} />
-                {e.item ? <span className="mono tl-item"> {e.item}</span> : null}
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    </aside>
-  );
-}
-
+/** Render one activity event's phrase (handover/decision/audit) — used by ActivityRow. */
 function EventText({ event }: { event: ActivityEvent }) {
   if (event.kind === 'handover') {
     return (

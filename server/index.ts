@@ -27,9 +27,11 @@ import { blueprintRouter } from './routes/blueprint.ts';
 import { projectsRouter } from './routes/projects.ts';
 import { driveRouter } from './routes/drive.ts';
 import { projectMetaRouter } from './routes/project-meta.ts';
+import { projectDangerRouter } from './routes/project-danger.ts';
 import { hooksRouter } from './routes/hooks.ts';
 import { integrationsRouter } from './routes/integrations.ts';
 import { envVarsRouter } from './routes/env-vars.ts';
+import { llmModelsRouter } from './routes/llm-models.ts';
 import { startCommand } from './cli/commands.ts';
 import {
   executorChain,
@@ -332,9 +334,12 @@ app.use('/api', workflowsRouter({ workflows: workflowRegistry, repos }));
 app.use('/api', doctorRouter({ repos, workflows: workflowRegistry, personas: personaRegistry }));
 // Settings panes — project-scoped config (Faz A "vitrin" wiring).
 app.use('/api', projectMetaRouter({ workspaceRoot: process.cwd() }));
+app.use('/api', projectDangerRouter({ projectRoot: process.cwd() }));
 app.use('/api', hooksRouter({ projectRoot: process.cwd() }));
 app.use('/api', integrationsRouter({ projectRoot: process.cwd() }));
 app.use('/api', envVarsRouter({ projectRoot: process.cwd() }));
+// LLM models are Kortext-level (global) config, not per-project → default dir (~/.kortext).
+app.use('/api', llmModelsRouter());
 // GUI-first project picker (UAT #10): the wizard lists registered projects and
 // can start a chosen one, handing the browser off to its daemon. After a
 // handoff the bootstrap wizard schedules its own shutdown (same as blueprint).

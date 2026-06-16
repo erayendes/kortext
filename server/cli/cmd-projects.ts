@@ -4,7 +4,7 @@ import {
   readRegistry, writeRegistry, listProjects, getProject, removeProject,
   defaultRegistryDir, type Registry,
 } from '../registry/projects.ts';
-import { isPidAlive } from '../registry/daemon.ts';
+import { isPidAlive, killDaemon, killByPort } from '../registry/daemon.ts';
 
 export function formatList(reg: Registry, alive: (pid: number | null) => boolean = isPidAlive): string {
   const rows = listProjects(reg);
@@ -16,13 +16,31 @@ export function formatList(reg: Registry, alive: (pid: number | null) => boolean
   return ['  SLUG             PORT   STATUS   PATH', ...lines].join('\n');
 }
 
-type Deps = { registryDir?: string };
+type Deps = {
+  registryDir?: string;
+  /** Kill a recorded daemon pid (injectable for tests). */
+  kill?: (pid: number | null) => boolean;
+  /** Kill any listener still holding the project's port (injectable). */
+  killPort?: (port: number) => number[];
+};
+
+/**
+ * TODO #10: stop the live daemon ATOMICALLY with the registry drop. Killing the
+ * recorded pid AND sweeping the port closes the orphan gap — a project that was
+ * removed/purged but whose detached process kept holding the port. Both kills
+ * are best-effort; either may be a no-op (already dead) without failing.
+ */
+function stopDaemonFor(p: { pid: number | null; port: number }, deps: Deps): void {
+  (deps.kill ?? killDaemon)(p.pid);
+  (deps.killPort ?? ((port: number) => killByPort(port)))(p.port);
+}
 
 export function removeFromRegistry(slug: string, deps: Deps = {}): { ok: boolean; keptPath?: string; message?: string } {
   const dir = deps.registryDir ?? defaultRegistryDir();
   const reg = readRegistry(dir);
   const p = getProject(reg, slug);
   if (!p) return { ok: false, message: `No project '${slug}'.` };
+  stopDaemonFor(p, deps);
   writeRegistry(dir, removeProject(reg, slug));
   return { ok: true, keptPath: join(p.path, '.kortext') };
 }
@@ -36,6 +54,7 @@ export function purgeProject(
   const reg = readRegistry(dir);
   const p = getProject(reg, slug);
   if (!p) return { ok: false, message: `No project '${slug}'.` };
+  stopDaemonFor(p, deps);
   rm(join(p.path, '.kortext'));
   writeRegistry(dir, removeProject(reg, slug));
   return { ok: true };

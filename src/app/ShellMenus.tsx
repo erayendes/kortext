@@ -12,15 +12,13 @@
  * also dismiss them. Real data only — personas/runs/project from the API.
  */
 import { useEffect, useRef, useState } from 'react';
-import { Box, Check, Plus } from 'lucide-react';
+import { Box, Check, GitBranch, Plus } from 'lucide-react';
 import { apiGet, apiPost } from '../lib/api.ts';
 import type {
   BacklogItem, Run, ProjectMeta,
 } from '../lib/api-types.ts';
-import { deriveActiveAgents, type AgentTone } from '../lib/agents-panel.ts';
-import { useShellEvent } from './shell-events.ts';
-
-const short = (h: string) => h.replace(/^\+/, '');
+import { assigneeOf } from '../lib/board-drawer.ts';
+import { emitShell, useShellEvent } from './shell-events.ts';
 
 type MenuState = { which: 'proj' | 'ver'; left: number; top: number } | null;
 
@@ -118,95 +116,187 @@ function TopbarMenus() {
 
 /* ---------------------------- footer up-panels ----------------------------- */
 
-function runDot(status: Run['status']): string {
-  if (status === 'running' || status === 'succeeded') return 'var(--green)';
-  if (status === 'failed' || status === 'cancelled') return 'var(--red)';
-  return 'var(--amber)';
-}
-
-const AGENT_TONE_COLOR: Record<AgentTone, string> = {
-  working: 'var(--green)',
-  blocked: 'var(--red)',
+// Real agent runtime — the live run records, not backlog item statuses.
+const RUN_RUNTIME_COLOR: Partial<Record<Run['status'], string>> = {
+  running: 'var(--green)',
   queued: 'var(--amber)',
+  awaiting_approval: 'var(--red)',
+};
+const RUN_RUNTIME_LABEL: Partial<Record<Run['status'], string>> = {
+  running: 'running',
+  queued: 'queued',
+  awaiting_approval: 'awaiting approval',
 };
 
 function UpPanels() {
-  const [which, setWhich] = useState<'agents' | 'worktrees' | null>(null);
+  const [which, setWhich] = useState<'agents' | 'worktrees' | 'review' | null>(null);
+  const [left, setLeft] = useState(74);
   const [items, setItems] = useState<BacklogItem[]>([]);
   const [runs, setRuns] = useState<Run[]>([]);
 
-  function toggle(target: 'agents' | 'worktrees') {
+  function open(target: 'agents' | 'worktrees' | 'review', rect?: DOMRect) {
     setWhich((cur) => (cur === target ? null : target));
+    if (rect) {
+      // anchor the panel under the clicked foot-item, clamped to the viewport
+      const W = window.innerWidth;
+      setLeft(Math.min(Math.max(Math.round(rect.left), 8), W - 272 - 8));
+    }
+    if (target === 'worktrees' || target === 'agents') {
+      apiGet<{ runs: Run[] }>('/api/runs').then((r) => setRuns(r.runs)).catch(() => undefined);
+    }
     if (target === 'agents') {
+      // items only to put a name (the owning agent) on each active run
       apiGet<{ items: BacklogItem[] }>('/api/backlog?limit=500')
         .then((r) => setItems(r.items))
         .catch(() => undefined);
-    } else {
-      apiGet<{ runs: Run[] }>('/api/runs').then((r) => setRuns(r.runs)).catch(() => undefined);
     }
   }
 
-  useShellEvent('open-agents', () => toggle('agents'));
-  useShellEvent('open-worktrees', () => toggle('worktrees'));
+  useShellEvent('open-agents', (e) => open('agents', e.detail?.rect));
+  useShellEvent('open-worktrees', (e) => open('worktrees', e.detail?.rect));
+  useShellEvent('open-review', (e) => open('review', e.detail?.rect));
 
-  const agents = deriveActiveAgents(items);
-  const worktrees = runs.filter((r) => r.worktree_path);
+  // Active runs = the agents actually doing something right now.
+  const itemsById = new Map(items.map((i) => [i.id, i]));
+  const activeRuns = runs.filter(
+    (r) => r.status === 'running' || r.status === 'queued' || r.status === 'awaiting_approval',
+  );
+  // Only *active* worktrees (a finished run's checkout is gone) — matches the
+  // footer count so the popover never disagrees with the badge.
+  const worktrees = runs.filter(
+    (r) => (r.status === 'running' || r.status === 'awaiting_approval') && r.worktree_path,
+  );
+
+  // "Skip reviews" toggles — when on, +prime work in that scope auto-approves.
+  // Persisted locally; backend enforcement of auto-approve is a follow-up.
+  const [skip, setSkip] = useState<{ refs?: boolean; items?: boolean }>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('kx-skip-reviews') || '{}');
+    } catch {
+      return {};
+    }
+  });
+  const toggleSkip = (k: 'refs' | 'items') =>
+    setSkip((s) => {
+      const next = { ...s, [k]: !s[k] };
+      try {
+        localStorage.setItem('kx-skip-reviews', JSON.stringify(next));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
 
   return (
     <>
       {which && (
-        <div
-          style={{ position: 'fixed', inset: 0, zIndex: 44 }}
-          onClick={() => setWhich(null)}
-        />
+        <div style={{ position: 'fixed', inset: 0, zIndex: 44 }} onClick={() => setWhich(null)} />
       )}
       <div
-        className={`uppanel${which === 'agents' ? ' open' : ''}`}
-        style={{ right: 170 }}
+        className={`uppanel${which ? ' open' : ''}`}
+        style={{ left, right: 'auto', bottom: 34 }}
       >
-        <div className="up-list">
-          {agents.length === 0 ? (
-            <div className="up-row up-task">no agents on a task</div>
-          ) : (
-            agents.map((a) => (
-              <div className="up-row" key={a.handle}>
-                <span className="up-dot" style={{ background: AGENT_TONE_COLOR[a.tone] }} />
-                <span className="up-name">{short(a.handle)}</span>
+        {which === 'review' ? (
+          <>
+            <div className="pop-head">
+              <span className="pop-title">Skip reviews</span>
+            </div>
+            <div className="pop-note">
+              Turn one on to let the house auto-approve that scope without +prime.
+            </div>
+            <div className="pop-body">
+              <div className="pop-toggle">
+                <span className="pop-tg-t">References review</span>
                 <span
-                  className="up-task"
-                  style={a.tone === 'blocked' ? { color: 'var(--red)' } : undefined}
-                >
-                  <span className="mono">{a.leadItemId}</span> · {a.statusLabel}
-                  {a.openCount > 1 ? ` · +${a.openCount - 1}` : ''}
-                </span>
+                  className={`switch${skip.refs ? ' on' : ''}`}
+                  role="switch"
+                  aria-checked={!!skip.refs}
+                  onClick={() => toggleSkip('refs')}
+                />
               </div>
-            ))
-          )}
-        </div>
-      </div>
-      <div
-        className={`uppanel${which === 'worktrees' ? ' open' : ''}`}
-        style={{ right: 74 }}
-      >
-        <div className="up-list">
-          {worktrees.length === 0 ? (
-            <div className="up-row up-task">no active worktrees</div>
-          ) : (
-            worktrees.map((w) => (
-              <div className="up-row" key={w.id}>
-                <span className="up-dot" style={{ background: runDot(w.status) }} />
-                <span className="up-name">run-{w.id}</span>
+              <div className="pop-toggle">
+                <span className="pop-tg-t">Item review</span>
                 <span
-                  className="up-task"
-                  style={w.status !== 'running' ? { color: runDot(w.status) } : undefined}
-                >
-                  {w.item_id ? `${w.item_id} · ` : ''}
-                  {w.status}
-                </span>
+                  className={`switch${skip.items ? ' on' : ''}`}
+                  role="switch"
+                  aria-checked={!!skip.items}
+                  onClick={() => toggleSkip('items')}
+                />
               </div>
-            ))
-          )}
-        </div>
+            </div>
+          </>
+        ) : which === 'agents' ? (
+          <>
+            <div className="pop-head">
+              <span className="pop-title">Agents on task</span>
+              <span className="badge-count">{activeRuns.length}</span>
+            </div>
+            <div className="up-list">
+              {activeRuns.length === 0 ? (
+                <div className="up-empty">No agents running right now.</div>
+              ) : (
+                activeRuns.map((r) => {
+                  const item = r.item_id ? itemsById.get(r.item_id) : undefined;
+                  const owner = item ? assigneeOf(item) : null;
+                  const color = RUN_RUNTIME_COLOR[r.status] ?? 'var(--amber)';
+                  const desc = item
+                    ? `${r.item_id} · ${item.title}`
+                    : `${RUN_RUNTIME_LABEL[r.status] ?? r.status}`;
+                  return (
+                    <div
+                      className="up-row"
+                      key={r.id}
+                      style={r.item_id ? { cursor: 'pointer' } : undefined}
+                      onClick={
+                        r.item_id
+                          ? () => {
+                              emitShell('open-item', { id: r.item_id! });
+                              setWhich(null);
+                            }
+                          : undefined
+                      }
+                    >
+                      <span
+                        className={`up-dot${r.status === 'running' ? ' beat' : ''}`}
+                        style={{ background: color, color }}
+                      />
+                      <div className="up-rowb">
+                        <div className="up-name">{owner ?? `run-${r.id}`}</div>
+                        <div
+                          className="up-task"
+                          style={r.status === 'awaiting_approval' ? { color: 'var(--red)' } : undefined}
+                        >
+                          {desc}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="pop-head">
+              <span className="pop-title">Open worktrees</span>
+              <span className="badge-count">{worktrees.length}</span>
+            </div>
+            <div className="up-list">
+              {worktrees.length === 0 ? (
+                <div className="up-empty">No active worktrees.</div>
+              ) : (
+                worktrees.map((w) => (
+                  <div className="up-row" key={w.id}>
+                    <GitBranch className="ic" />
+                    <span className="up-name">
+                      {w.worktree_path?.split('/').filter(Boolean).pop() ?? `run-${w.id}`}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </>
+        )}
       </div>
     </>
   );
@@ -339,10 +429,10 @@ function NewItemModal() {
               )}
 
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 18 }}>
-                <button className="btn btn-line btn-sm" onClick={() => setOpen(false)}>
+                <button className="btn btn-secondary btn-sm" onClick={() => setOpen(false)}>
                   Cancel
                 </button>
-                <button className="btn btn-pri btn-sm" onClick={create} disabled={busy || !title.trim()}>
+                <button className="btn btn-primary btn-sm" onClick={create} disabled={busy || !title.trim()}>
                   <Plus style={{ width: 13, height: 13 }} />
                   {busy ? 'Creating…' : 'Create'}
                 </button>

@@ -1,16 +1,9 @@
 /**
- * Memory — the engine's own scratch memory (handover / decisions / learned).
+ * Foundation — the project's foundational docs (PRD / vision / business basis).
  *
- * Read-only content the engine writes; humans can only *clarify*. Uses the
- * shared {@link FileBrowser} in `clarify` mode: selecting lines and submitting
- * raises questions for the agents — it never edits the document. Submission is
- * surfaced as a toast ("sent to Activity · memory unchanged"); the body stays
- * exactly as the engine wrote it.
- *
- * Data is real (`GET /api/docs/memory` + `/:file`).
- *
- * TODO(v6): route the clarification into the real Activity feed once a
- * questions/clarify endpoint exists — today it is a local acknowledgement.
+ * Same shape as References: the shared {@link FileBrowser} in `clarify` mode
+ * over `GET /api/docs/foundation` + `/:file`. These are agent-written,
+ * +prime-gated documents — read-here, explain-on-demand.
  */
 import { useCallback, useMemo, type ReactNode } from 'react';
 import { apiGet, apiPost, apiPut, usePolling } from '../lib/api.ts';
@@ -19,8 +12,8 @@ import { FileBrowser, type FBItem } from '../components/v6/FileBrowser.tsx';
 type DocsList = { scope: string; files: { name: string; size: number; mtime: number }[] };
 type DocBody = { scope: string; file: string; body: string };
 
-export function MemoryRoute() {
-  const { data, loading, error } = usePolling<DocsList>('/api/docs/memory', 15000);
+export function FoundationRoute() {
+  const { data, loading, error } = usePolling<DocsList>('/api/docs/foundation', 15000);
 
   const items: FBItem[] = useMemo(
     () =>
@@ -33,19 +26,17 @@ export function MemoryRoute() {
   );
 
   const loadBody = useCallback(
-    (id: string) => apiGet<DocBody>(`/api/docs/memory/${id}`).then((r) => r.body),
+    (id: string) => apiGet<DocBody>(`/api/docs/foundation/${id}`).then((r) => r.body),
     [],
   );
 
-  // Explain chat: ask the owning agent about the picked lines and get a real
-  // answer inline. The thread history is sent each turn (the server is
-  // stateless), so follow-ups continue the same conversation on that line.
+  // Explain chat + propose→preview→apply, same as Memory but scoped to foundation.
   const onAsk = useCallback(
     async (
       id: string,
       q: { lines: number[]; quote: string; question: string; history: { role: 'prime' | 'agent'; text: string }[] },
     ) => {
-      const r = await apiPost<{ answer: string }>(`/api/docs/memory/${id}/explain`, {
+      const r = await apiPost<{ answer: string }>(`/api/docs/foundation/${id}/explain`, {
         question: q.question,
         quote: q.quote,
         history: q.history,
@@ -55,14 +46,12 @@ export function MemoryRoute() {
     [],
   );
 
-  // Propose: the agent returns a full revised doc from the conversation (no
-  // write). Apply: +prime confirmed, so persist it.
   const onPropose = useCallback(
     async (
       id: string,
       q: { line: number; quote: string; instruction: string; history: { role: 'prime' | 'agent'; text: string }[] },
     ) => {
-      const r = await apiPost<{ proposal: string }>(`/api/docs/memory/${id}/propose`, {
+      const r = await apiPost<{ proposal: string }>(`/api/docs/foundation/${id}/propose`, {
         instruction: q.instruction,
         quote: q.quote,
         history: q.history,
@@ -73,16 +62,16 @@ export function MemoryRoute() {
   );
 
   const onApply = useCallback(async (id: string, body: string) => {
-    await apiPut(`/api/docs/memory/${id}`, { body });
+    await apiPut(`/api/docs/foundation/${id}`, { body });
   }, []);
 
-  if (loading && !data) return <FbMessage>Loading memory…</FbMessage>;
-  if (error && !data) return <FbMessage>Couldn't load memory — {error}</FbMessage>;
+  if (loading && !data) return <FbMessage>Loading foundation…</FbMessage>;
+  if (error && !data) return <FbMessage>Couldn't load foundation — {error}</FbMessage>;
 
   return (
     <FileBrowser
-      title="Memory"
-      sub="What the house decided and learned"
+      title="Foundation"
+      sub={`${items.length} files · product & business basis, +prime-gated`}
       items={items}
       loadBody={loadBody}
       mode="clarify"
@@ -106,7 +95,7 @@ function relDate(mtime: number): string {
 
 function FbMessage({ children }: { children: ReactNode }) {
   return (
-    <div className="fbrowser">
+    <div className="full">
       <div style={{ padding: '40px 28px', color: 'var(--fg-faint)', fontSize: 13 }}>{children}</div>
     </div>
   );

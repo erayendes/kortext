@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { spawn, execFileSync } from 'node:child_process';
 import { mkdirSync, openSync, closeSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildServeCommands } from '../cli/serve.ts';
@@ -94,4 +94,50 @@ export function killDaemon(pid: number | null): boolean {
   } catch {
     return false;
   }
+}
+
+/** Injectable shell-out so tests never touch the real `lsof`. */
+export type PortScanner = (loPort: number, hiPort: number) => number[];
+
+/**
+ * Listening PIDs on a TCP port range (macOS/Linux via `lsof`). Best-effort —
+ * returns [] on any error (lsof missing, no listeners, permission). Used to
+ * reach daemons whose registry PID is stale but still hold a kortext port
+ * (the orphan case · TODO #10).
+ */
+export function pidsOnPorts(
+  loPort: number,
+  hiPort: number,
+  run: (cmd: string, args: string[]) => string = lsofRun,
+): number[] {
+  try {
+    const spec = loPort === hiPort ? `tcp:${loPort}` : `tcp:${loPort}-${hiPort}`;
+    const out = run('lsof', ['-ti', spec, '-sTCP:LISTEN']);
+    return [
+      ...new Set(
+        out
+          .split(/\s+/)
+          .map((s) => Number(s))
+          .filter((n) => Number.isInteger(n) && n > 0),
+      ),
+    ];
+  } catch {
+    return [];
+  }
+}
+
+function lsofRun(cmd: string, args: string[]): string {
+  return execFileSync(cmd, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+}
+
+/** SIGTERM every listener on a single port. Returns the pids signalled. */
+export function killByPort(
+  port: number,
+  deps: { scan?: PortScanner; kill?: (pid: number) => boolean } = {},
+): number[] {
+  const scan = deps.scan ?? pidsOnPorts;
+  const kill = deps.kill ?? ((pid: number) => killDaemon(pid));
+  const killed: number[] = [];
+  for (const pid of scan(port, port)) if (kill(pid)) killed.push(pid);
+  return killed;
 }

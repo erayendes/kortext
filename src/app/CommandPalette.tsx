@@ -12,8 +12,8 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import {
-  Search, SquareCheck, Bug, Recycle, Layers, User,
-  GitCommitVertical, LayoutDashboard, SquareKanban, BookMarked, Brain, BookCheck,
+  Search, SquareCheck, Bug, Coins, Bookmark, User,
+  GitCommitVertical, LayoutDashboard, SquareKanban, FolderBookmark, Brain, FolderCheck,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { apiGet } from '../lib/api.ts';
@@ -35,13 +35,13 @@ type Entry = {
 const GO_ROUTES: { to: string; label: string; icon: LucideIcon }[] = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/board', label: 'Board', icon: SquareKanban },
-  { to: '/references', label: 'References', icon: BookMarked },
+  { to: '/references', label: 'References', icon: FolderBookmark },
   { to: '/memory', label: 'Memory', icon: Brain },
-  { to: '/reports', label: 'Reports', icon: BookCheck },
+  { to: '/reports', label: 'Reports', icon: FolderCheck },
 ];
 
 const TYPE_ICON: Record<string, LucideIcon> = {
-  task: SquareCheck, bug: Bug, debt: Recycle, spike: SquareCheck, hotfix: Bug,
+  task: SquareCheck, bug: Bug, debt: Coins, spike: SquareCheck, hotfix: Bug,
 };
 
 export function CommandPalette() {
@@ -117,7 +117,7 @@ export function CommandPalette() {
       out.push({
         key: `epic:${ep.id}`,
         section: 'Epics',
-        icon: Layers,
+        icon: Bookmark,
         id: ep.id,
         title: ep.title,
         haystack: `${ep.id} ${ep.title}`.toLowerCase(),

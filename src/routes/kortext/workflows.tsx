@@ -73,5 +73,14 @@ export function WorkflowsRoute() {
     return toMarkdown(r.workflow);
   }, []);
 
-  return <FileBrowser title="Workflows" items={items} loadBody={loadBody} mode="ro" />;
+  return (
+    <FileBrowser
+      title="Workflows"
+      sub="The step-by-step workflows the engine runs"
+      items={items}
+      loadBody={loadBody}
+      mode="ro"
+      hideListMeta
+    />
+  );
 }
