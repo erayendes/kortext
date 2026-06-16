@@ -1,19 +1,19 @@
 /**
- * FileBrowser — the 2-pane document browser shared by References / Memory /
- * Reports and the engine-scope Agents / Rules / Workflows screens.
+ * FileBrowser — the 2-pane document reader shared by References / Memory /
+ * Foundation / Reports and the engine-scope Agents / Rules / Workflows screens.
  *
- * Left: a (optionally grouped) file list with status dots + author.
- * Right: the selected file's markdown via {@link AnnotatableDoc}, with a
- *        mode-driven header action (Revise / Clarify / read-only badge).
+ * Structure mirrors design_handoff_kortext `V.docReader`: a `.reader` card with
+ * a left `.reader-list` (file rows: kind icon + name + lifecycle `.st-pill`) and
+ * a right `.reader-doc` (panel-head with the filename + action, then the
+ * markdown body via {@link AnnotatableDoc}).
  *
- * Data is injected by the owning route (`items` + `loadBody`) — this component
- * is pure chrome + interaction. Mirrors the `.fbrowser` / `.fb-*` markup of
- * wireframe-v6-hifi.html.
+ * Data is injected by the owning route (`items` + `loadBody`); this component is
+ * pure chrome + interaction.
  */
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Lock, PenLine, MessageCircleQuestion, X } from 'lucide-react';
-import { personaColor, personaIcon } from '../../lib/persona-colors.ts';
-import { AnnotatableDoc, type AnnotateMode } from './AnnotatableDoc.tsx';
+import { Check, FileText, BotMessageSquare, X } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { AnnotatableDoc, type AnnotateMode, type AskFn } from './AnnotatableDoc.tsx';
 
 export type FBStatus = 'approved' | 'review' | 'draft' | 'ro';
 
@@ -28,58 +28,60 @@ export type FBItem = {
 
 export type FileBrowserProps = {
   title: string;
+  /** Sub-title under the page title (e.g. "12 files · agent-owned"). */
+  sub?: string;
+  /** Icon shown beside each list row (kind glyph). Defaults to a file glyph. */
+  listIcon?: LucideIcon;
   items: FBItem[];
   /** Resolve the markdown body for a selected file id. */
   loadBody: (id: string) => Promise<string>;
   mode: AnnotateMode;
-  /** Extra buttons for the right-pane header (e.g. References "Approve"). */
+  /** Extra buttons for the right-pane panel-head (e.g. References "Approve"). */
   headerActions?: ReactNode;
-  /** Fired when the reviewer submits annotations for the current file. */
-  onAnnotate?: (id: string, lines: number[], note: string) => void | Promise<void>;
+  /** Per-file control for the right-pane panel-head, bound to the active file
+   *  (e.g. Agents → the persona's model picker). Gets the active file id. */
+  detailExtra?: (activeId: string) => ReactNode;
+  /** Hide the list row's status pill / meta (e.g. Agents — name only). */
+  hideListMeta?: boolean;
+  /** Custom list-row glyph per item (e.g. Agents — coloured persona initials). */
+  renderIcon?: (item: FBItem) => ReactNode;
+  /** Chat handler (clarify mode) — turns each annotation thread into a chat with
+   *  real agent answers. Receives the active file id plus the question payload. */
+  onAsk?: (id: string, q: { lines: number[]; quote: string; question: string; history: { role: 'prime' | 'agent'; text: string }[] }) => Promise<string>;
+  /** Propose a full revised document from a conversation (preview, no write). */
+  onPropose?: (id: string, q: { line: number; quote: string; instruction: string; history: { role: 'prime' | 'agent'; text: string }[] }) => Promise<string>;
+  /** Persist a confirmed revision for the given file. */
+  onApply?: (id: string, body: string) => Promise<void>;
 };
 
-const STATUS_META: Record<FBStatus, { label: string; color: string; cls: string }> = {
-  approved: { label: 'Approved', color: 'var(--green)', cls: 'approved' },
-  review: { label: 'In review', color: 'var(--amber)', cls: 'review' },
-  draft: { label: 'Draft', color: 'var(--fg-muted)', cls: 'draft' },
-  ro: { label: 'Read-only', color: 'var(--fg-muted)', cls: 'ro' },
+/** FBStatus → handoff lifecycle `.st-pill` (label + status-flavour class). */
+const STATUS_PILL: Record<FBStatus, { label: string; cls: string }> = {
+  approved: { label: 'approved', cls: 's-green' },
+  review: { label: 'pending', cls: 's-blue' },
+  draft: { label: 'drafting', cls: 's-amber' },
+  ro: { label: 'read-only', cls: 's-neutral' },
 };
-
-function Avatar({ handle, size }: { handle: string; size: number }) {
-  const color = personaColor(handle);
-  const Icon = personaIcon(handle);
-  return (
-    <span
-      className="avatar"
-      style={{
-        width: size,
-        height: size,
-        background: `${color}22`,
-        border: `1px solid ${color}55`,
-        color,
-      }}
-    >
-      <Icon style={{ width: size * 0.52, height: size * 0.52 }} />
-    </span>
-  );
-}
-
-function short(handle: string): string {
-  return handle.startsWith('+') ? handle.slice(1) : handle;
-}
 
 export function FileBrowser({
   title,
+  sub,
+  listIcon,
   items,
   loadBody,
   mode,
   headerActions,
-  onAnnotate,
+  detailExtra,
+  hideListMeta,
+  renderIcon,
+  onAsk,
+  onPropose,
+  onApply,
 }: FileBrowserProps) {
   const [activeId, setActiveId] = useState<string | null>(items[0]?.id ?? null);
   const [body, setBody] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [annotating, setAnnotating] = useState(false);
+  const ListIcon = listIcon ?? FileText;
 
   // Keep selection valid as items load/refresh.
   useEffect(() => {
@@ -132,105 +134,95 @@ export function FileBrowser({
     return [...map.entries()].map(([group, gi]) => ({ group, items: gi }));
   }, [items]);
 
-  const toggle = mode === 'revise' ? 'Revise' : mode === 'clarify' ? 'Clarify' : null;
-  const ToggleIcon = mode === 'revise' ? PenLine : MessageCircleQuestion;
+  const toggle = mode === 'clarify' ? 'Ask AI' : null;
+  const ToggleIcon = BotMessageSquare;
 
   return (
-    <div className="fbrowser">
-      <div className="fb-body">
+    <div className="full">
+      <header className="pg-head">
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h1 className="pg-title">{title}</h1>
+          {sub && <p className="pg-sub">{sub}</p>}
+        </div>
+      </header>
+
+      <div className="reader card">
         {/* ---- left: file list ---- */}
-        <div className="fb-list">
-          <div className="fb-lhead">
-            <span className="page-title">{title}</span>
-            <span className="fb-grp" style={{ padding: 0 }}>
-              {items.length} file{items.length === 1 ? '' : 's'}
-            </span>
-          </div>
-          <div className="fb-items">
-            {grouped.map(({ group, items: gi }) => (
-              <div key={group ?? '_'}>
-                {group && <div className="fb-grp">{group}</div>}
-                {gi.map((it) => {
-                  const st = it.status ? STATUS_META[it.status] : null;
-                  return (
-                    <div
-                      key={it.id}
-                      className={`fb-item${it.id === activeId ? ' active' : ''}`}
-                      onClick={() => setActiveId(it.id)}
-                    >
-                      <div className="fb-nm">
-                        <span className="nm">{it.name}</span>
-                        {st && (
-                          <span className={`stbadge sm ${st.cls}`}>
-                            <span className="d" style={{ background: st.color }} />
-                            {st.label}
-                          </span>
-                        )}
-                      </div>
-                      {it.author && (
-                        <div className="fb-au">
-                          <Avatar handle={it.author} size={16} />
-                          <span>{short(it.author)}</span>
-                        </div>
-                      )}
-                      {it.meta && !it.author && (
-                        <div className="fb-au">
-                          <span style={{ color: 'var(--fg-faint)' }}>{it.meta}</span>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+        <div className="reader-list kx-scroll">
+          {grouped.map(({ group, items: gi }) => (
+            <div className="reader-grp" key={group ?? '_'}>
+              <div className="reader-list-head eyebrow">
+                {group ?? `${items.length} file${items.length === 1 ? '' : 's'}`}
               </div>
-            ))}
-            {!items.length && (
-              <div style={{ padding: '14px 12px', color: 'var(--fg-faint)', fontSize: 12.5 }}>
-                No files
-              </div>
-            )}
-          </div>
+              {gi.map((it) => {
+                const st = it.status ? STATUS_PILL[it.status] : null;
+                return (
+                  <div
+                    key={it.id}
+                    className={`doc-item ref-item${it.id === activeId ? ' active' : ''}`}
+                    onClick={() => setActiveId(it.id)}
+                  >
+                    <span className="doc-st st-mono">
+                      {renderIcon ? renderIcon(it) : <ListIcon className="ic" />}
+                    </span>
+                    <span className="doc-item-name mono truncate">{it.name}</span>
+                    {hideListMeta ? null : st ? (
+                      <span className={`st-pill ${st.cls}`}>{st.label}</span>
+                    ) : it.meta ? (
+                      <span className="mono faint" style={{ marginLeft: 'auto', fontSize: 11 }}>
+                        {it.meta}
+                      </span>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+          {!items.length && (
+            <div style={{ padding: '14px 12px', color: 'var(--fg-faint)', fontSize: 12.5 }}>
+              No files
+            </div>
+          )}
         </div>
 
         {/* ---- right: viewer ---- */}
-        <div className="fb-view">
-          <div className="fb-vhead">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span className="fb-vname">{active?.name ?? '—'}</span>
-              {mode === 'revise' && active?.status ? (
-                <span className={`stbadge ${STATUS_META[active.status].cls}`}>
-                  <span
-                    className="d"
-                    style={{ background: STATUS_META[active.status].color }}
-                  />
-                  {STATUS_META[active.status].label}
-                </span>
-              ) : mode !== 'revise' ? (
-                <span className="stbadge ro">
-                  <Lock style={{ width: 11, height: 11 }} />
-                  Read-only · engine writes
-                </span>
-              ) : null}
+        <div className="reader-doc">
+          <div className="panel-head">
+            <div className="flex items-center gap" style={{ minWidth: 0 }}>
+              <span className="mono" style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
+                {active?.name ?? '—'}
+              </span>
+              {active?.meta && <span className="upd mono faint">{active.meta}</span>}
             </div>
-            <div style={{ display: 'flex', gap: 7 }}>
-              {toggle && active && (
-                <button
-                  className={`btn btn-line btn-sm${annotating ? ' is-active' : ''}`}
-                  onClick={() => setAnnotating((v) => !v)}
-                >
-                  {annotating ? (
-                    <X style={{ width: 13, height: 13 }} />
-                  ) : (
+            <div className="flex items-center gap">
+              {active && detailExtra ? detailExtra(active.id) : null}
+              {toggle &&
+                active &&
+                (annotating ? (
+                  // Both exit Explain — there is no separate global save (each
+                  // thread applies its own change). Cancel = abort, Done = finish.
+                  <>
+                    <button className="btn btn-sm btn-secondary" onClick={() => setAnnotating(false)}>
+                      <X style={{ width: 13, height: 13 }} />
+                      Cancel
+                    </button>
+                    <button className="btn btn-sm btn-primary" onClick={() => setAnnotating(false)}>
+                      <Check style={{ width: 13, height: 13 }} />
+                      Done
+                    </button>
+                  </>
+                ) : (
+                  <button className="btn btn-sm btn-secondary" onClick={() => setAnnotating(true)}>
                     <ToggleIcon style={{ width: 13, height: 13 }} />
-                  )}
-                  {annotating ? 'Cancel' : toggle}
-                </button>
-              )}
+                    {toggle}
+                  </button>
+                ))}
               {headerActions}
             </div>
           </div>
 
           {loading ? (
-            <div className="fb-md" style={{ color: 'var(--fg-faint)' }}>
+            <div className="doc-body" style={{ color: 'var(--fg-faint)' }}>
               Loading…
             </div>
           ) : (
@@ -238,10 +230,24 @@ export function FileBrowser({
               markdown={body}
               mode={mode}
               annotating={annotating}
-              onSubmit={(lines, note) =>
-                activeId ? onAnnotate?.(activeId, lines, note) : undefined
+              onAsk={
+                onAsk && activeId
+                  ? ((q) => onAsk(activeId, q)) as AskFn
+                  : undefined
               }
-              onDone={() => setAnnotating(false)}
+              onPropose={
+                onPropose && activeId ? (q) => onPropose(activeId, q) : undefined
+              }
+              onApply={
+                onApply && activeId
+                  ? async (newBody) => {
+                      await onApply(activeId, newBody);
+                      // Reflect the write immediately, then drop out of Explain.
+                      setBody(newBody);
+                      setAnnotating(false);
+                    }
+                  : undefined
+              }
             />
           )}
         </div>

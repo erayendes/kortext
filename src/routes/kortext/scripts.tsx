@@ -28,14 +28,22 @@ export function ScriptsRoute() {
   return (
     <SettingsPane
       title="Scripts"
-      subtitle="Ready-made helpers — run manually / on request (Hooks ≠ event-triggered)"
+      full
+      subtitle={
+        <>
+          Ready-made helpers — run manually / on request{' '}
+          <span className="st-pill s-amber" style={{ marginLeft: 6 }}>
+            preview · no runner yet
+          </span>
+        </>
+      }
     >
       {/* TODO: no script-registry/runner endpoint yet — Run + toggles are local. */}
       <SetCard>
         {scripts.map((s) => (
           <SetRow key={s.id} label={<span className="mono">{s.id}</span>} desc={s.desc}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <button className="btn btn-line btn-sm">
+              <button className="btn btn-secondary btn-sm">
                 <Play style={{ width: 12, height: 12 }} />
                 Run
               </button>

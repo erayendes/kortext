@@ -35,5 +35,14 @@ export function RulesRoute() {
     return r.body;
   }, []);
 
-  return <FileBrowser title="Rules" items={items} loadBody={loadBody} mode="ro" />;
+  return (
+    <FileBrowser
+      title="Rules"
+      sub="The behaviour rules every agent follows"
+      items={items}
+      loadBody={loadBody}
+      mode="ro"
+      hideListMeta
+    />
+  );
 }

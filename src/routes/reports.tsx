@@ -1,15 +1,15 @@
 /**
  * Reports — per-file agent reports (status / test / security / release …).
  *
- * Pure read-only: the engine writes these, humans only read. Uses the shared
- * {@link FileBrowser} in `ro` mode (no annotation affordance, just the
- * read-only badge). Markdown tables render via the `.md-table` support already
- * built into AnnotatableDoc / markdown.ts.
+ * The engine writes these; humans read and can "Ask AI" about any line
+ * (clarify chat). They are generated records, so there is no revise/apply —
+ * `onAsk` only, no `onPropose`/`onApply`. Uses the shared {@link FileBrowser}.
+ * Markdown tables render via the `.md-table` support in AnnotatableDoc.
  *
- * Data is real (`GET /api/docs/reports` + `/:file`).
+ * Data is real (`GET /api/docs/reports` + `/:file`); chat via `…/:file/explain`.
  */
 import { useCallback, useMemo, type ReactNode } from 'react';
-import { apiGet, usePolling } from '../lib/api.ts';
+import { apiGet, apiPost, usePolling } from '../lib/api.ts';
 import { FileBrowser, type FBItem } from '../components/v6/FileBrowser.tsx';
 
 type DocsList = { scope: string; files: { name: string; size: number; mtime: number }[] };
@@ -33,10 +33,35 @@ export function ReportsRoute() {
     [],
   );
 
+  // Ask AI about a report line — chat only (no revise: reports are records).
+  const onAsk = useCallback(
+    async (
+      id: string,
+      q: { lines: number[]; quote: string; question: string; history: { role: 'prime' | 'agent'; text: string }[] },
+    ) => {
+      const r = await apiPost<{ answer: string }>(`/api/docs/reports/${id}/explain`, {
+        question: q.question,
+        quote: q.quote,
+        history: q.history,
+      });
+      return r.answer;
+    },
+    [],
+  );
+
   if (loading && !data) return <FbMessage>Loading reports…</FbMessage>;
   if (error && !data) return <FbMessage>Couldn't load reports — {error}</FbMessage>;
 
-  return <FileBrowser title="Reports" items={items} loadBody={loadBody} mode="ro" />;
+  return (
+    <FileBrowser
+      title="Reports"
+      sub={`${items.length} file${items.length === 1 ? '' : 's'} · test, status & release reports`}
+      items={items}
+      loadBody={loadBody}
+      mode="clarify"
+      onAsk={onAsk}
+    />
+  );
 }
 
 /** Compact "last modified" label for the file list (mtime is Unix-ms). */

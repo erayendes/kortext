@@ -1,21 +1,29 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import express from 'express';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { envVarsRouter } from '../server/routes/env-vars.ts';
-import { projectLayout } from '../server/paths.ts';
-import { setSecret } from '../server/services/secret-store.ts';
 
 let tmpRoot: string;
 let server: Server;
 let baseUrl: string;
 
+type Var = { key: string; isPublic: boolean; valueMasked: string; value: string | null };
+
 async function listen(app: express.Express): Promise<Server> {
   return await new Promise((resolve) => {
     const s = app.listen(0, () => resolve(s));
+  });
+}
+
+async function put(env: string, key: string, value: unknown) {
+  return await fetch(`${baseUrl}/api/env/${env}/${key}`, {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ value }),
   });
 }
 
@@ -34,129 +42,134 @@ afterEach(async () => {
   rmSync(tmpRoot, { recursive: true, force: true });
 });
 
-describe('GET /api/env', () => {
+describe('GET /api/env/:env', () => {
   it('returns an empty list when nothing is stored', async () => {
-    const res = await fetch(`${baseUrl}/api/env`);
+    const res = await fetch(`${baseUrl}/api/env/dev`);
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { vars: unknown[] };
+    const body = (await res.json()) as { env: string; vars: unknown[] };
+    expect(body.env).toBe('dev');
     expect(body.vars).toEqual([]);
   });
 
-  it('excludes INTEGRATION_* keys', async () => {
-    const secretsFile = projectLayout(tmpRoot).secretsFile;
-    setSecret(secretsFile, 'INTEGRATION_GITHUB_TOKEN', 'ghp_supersecret');
-    setSecret(secretsFile, 'API_BASE_URL', 'https://api.example.com');
-
-    const res = await fetch(`${baseUrl}/api/env`);
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as {
-      vars: { key: string; valueMasked: string }[];
-    };
-    expect(body.vars.map((v) => v.key)).toEqual(['API_BASE_URL']);
+  it('rejects an unknown environment with 422', async () => {
+    const res = await fetch(`${baseUrl}/api/env/qa`);
+    expect(res.status).toBe(422);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe('validation_failed');
   });
 
   it('returns vars sorted by key ascending', async () => {
-    const secretsFile = projectLayout(tmpRoot).secretsFile;
-    setSecret(secretsFile, 'ZEBRA', 'z-value');
-    setSecret(secretsFile, 'ALPHA', 'a-value');
+    await put('dev', 'ZEBRA', 'z-value');
+    await put('dev', 'ALPHA', 'a-value');
 
-    const res = await fetch(`${baseUrl}/api/env`);
-    const body = (await res.json()) as { vars: { key: string }[] };
+    const res = await fetch(`${baseUrl}/api/env/dev`);
+    const body = (await res.json()) as { vars: Var[] };
     expect(body.vars.map((v) => v.key)).toEqual(['ALPHA', 'ZEBRA']);
+  });
+
+  it('isolates environments: a var in dev is not visible in staging', async () => {
+    await put('dev', 'API_URL', 'https://dev.example.com');
+    const dev = (await (await fetch(`${baseUrl}/api/env/dev`)).json()) as { vars: Var[] };
+    const staging = (await (await fetch(`${baseUrl}/api/env/staging`)).json()) as { vars: Var[] };
+    expect(dev.vars.map((v) => v.key)).toEqual(['API_URL']);
+    expect(staging.vars).toEqual([]);
   });
 });
 
-describe('PUT /api/env/:key', () => {
-  it('adds a var and GET shows it masked, never raw', async () => {
-    const putRes = await fetch(`${baseUrl}/api/env/MY_SECRET`, {
-      method: 'PUT',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ value: 'abcd1234' }),
+describe('public vs secret', () => {
+  it('masks a secret key — raw value never crosses the wire', async () => {
+    await put('dev', 'DATABASE_PASSWORD', 'abcd1234');
+    const res = await fetch(`${baseUrl}/api/env/dev`);
+    const raw = await res.text();
+    expect(raw).not.toContain('abcd1234');
+    const body = JSON.parse(raw) as { vars: Var[] };
+    expect(body.vars[0]).toEqual({
+      key: 'DATABASE_PASSWORD',
+      isPublic: false,
+      valueMasked: '••••1234',
+      value: null,
     });
-    expect(putRes.status).toBe(200);
-    const putBody = (await putRes.json()) as {
-      var: { key: string; valueMasked: string };
-    };
-    expect(putBody.var.key).toBe('MY_SECRET');
-    expect(putBody.var.valueMasked).toBe('••••1234');
-    expect(putBody.var.valueMasked).not.toContain('abcd');
+  });
 
-    const getRes = await fetch(`${baseUrl}/api/env`);
-    const getRaw = await getRes.text();
-    expect(getRaw).not.toContain('abcd1234');
-    const getBody = JSON.parse(getRaw) as {
-      vars: { key: string; valueMasked: string }[];
-    };
-    expect(getBody.vars).toEqual([
-      { key: 'MY_SECRET', valueMasked: '••••1234' },
-    ]);
+  it('returns the raw value for a public key (NEXT_PUBLIC_*)', async () => {
+    await put('production', 'NEXT_PUBLIC_SITE_URL', 'https://notlarim.app');
+    const body = (await (await fetch(`${baseUrl}/api/env/production`)).json()) as { vars: Var[] };
+    expect(body.vars[0]).toEqual({
+      key: 'NEXT_PUBLIC_SITE_URL',
+      isPublic: true,
+      valueMasked: maskOf('https://notlarim.app'),
+      value: 'https://notlarim.app',
+    });
+  });
+
+  it('treats VITE_* and *PUBLIC* keys as public too', async () => {
+    await put('dev', 'VITE_APP_ID', 'app_123');
+    await put('dev', 'STRIPE_PUBLIC_KEY', 'pk_live_xyz');
+    const body = (await (await fetch(`${baseUrl}/api/env/dev`)).json()) as { vars: Var[] };
+    expect(body.vars.every((v) => v.isPublic)).toBe(true);
+    expect(body.vars.find((v) => v.key === 'VITE_APP_ID')!.value).toBe('app_123');
+  });
+});
+
+describe('PUT /api/env/:env/:key', () => {
+  it('adds a var, echoes it back, and persists to the per-env file', async () => {
+    const res = await put('dev', 'MY_SECRET', 'abcd1234');
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { var: Var };
+    expect(body.var.key).toBe('MY_SECRET');
+    expect(body.var.valueMasked).toBe('••••1234');
+
+    const file = readFileSync(join(tmpRoot, '.kortext', 'env', 'dev.env'), 'utf8');
+    expect(file).toContain('MY_SECRET=abcd1234');
   });
 
   it('rejects a reserved INTEGRATION_ key with 422', async () => {
-    const res = await fetch(`${baseUrl}/api/env/INTEGRATION_FOO`, {
-      method: 'PUT',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ value: 'nope' }),
-    });
+    const res = await put('dev', 'INTEGRATION_FOO', 'nope');
     expect(res.status).toBe(422);
-    const body = (await res.json()) as { error: string; details: unknown };
+    const body = (await res.json()) as { error: string };
     expect(body.error).toBe('validation_failed');
-    expect(body.details).toBeTruthy();
   });
 
   it('rejects an invalid key with 422', async () => {
-    const res = await fetch(`${baseUrl}/api/env/1BAD`, {
-      method: 'PUT',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ value: 'x' }),
-    });
+    const res = await put('dev', '1BAD', 'x');
     expect(res.status).toBe(422);
-    const body = (await res.json()) as { error: string };
-    expect(body.error).toBe('validation_failed');
   });
 
   it('rejects a non-string value with 422', async () => {
-    const res = await fetch(`${baseUrl}/api/env/GOOD_KEY`, {
-      method: 'PUT',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ value: 42 }),
-    });
+    const res = await put('dev', 'GOOD_KEY', 42);
     expect(res.status).toBe(422);
-    const body = (await res.json()) as { error: string };
-    expect(body.error).toBe('validation_failed');
+  });
+
+  it('rejects an unknown environment with 422', async () => {
+    const res = await put('qa', 'GOOD_KEY', 'x');
+    expect(res.status).toBe(422);
   });
 });
 
-describe('DELETE /api/env/:key', () => {
+describe('DELETE /api/env/:env/:key', () => {
   it('deletes an existing var with 200', async () => {
-    const secretsFile = projectLayout(tmpRoot).secretsFile;
-    setSecret(secretsFile, 'TO_DELETE', 'value');
-
-    const res = await fetch(`${baseUrl}/api/env/TO_DELETE`, {
-      method: 'DELETE',
-    });
+    await put('dev', 'TO_DELETE', 'value');
+    const res = await fetch(`${baseUrl}/api/env/dev/TO_DELETE`, { method: 'DELETE' });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { deleted: boolean };
-    expect(body.deleted).toBe(true);
+    expect((await res.json()) as { deleted: boolean }).toEqual({ deleted: true });
 
-    const getRes = await fetch(`${baseUrl}/api/env`);
-    const getBody = (await getRes.json()) as { vars: unknown[] };
-    expect(getBody.vars).toEqual([]);
+    const get = (await (await fetch(`${baseUrl}/api/env/dev`)).json()) as { vars: unknown[] };
+    expect(get.vars).toEqual([]);
   });
 
   it('returns 404 when the var is missing', async () => {
-    const res = await fetch(`${baseUrl}/api/env/NOPE`, { method: 'DELETE' });
+    const res = await fetch(`${baseUrl}/api/env/dev/NOPE`, { method: 'DELETE' });
     expect(res.status).toBe(404);
-    const body = (await res.json()) as { error: string };
-    expect(body.error).toBe('not_found');
+    expect(((await res.json()) as { error: string }).error).toBe('not_found');
   });
 
   it('rejects a reserved INTEGRATION_ key with 422', async () => {
-    const res = await fetch(`${baseUrl}/api/env/INTEGRATION_GITHUB_TOKEN`, {
-      method: 'DELETE',
-    });
+    const res = await fetch(`${baseUrl}/api/env/dev/INTEGRATION_GITHUB_TOKEN`, { method: 'DELETE' });
     expect(res.status).toBe(422);
-    const body = (await res.json()) as { error: string };
-    expect(body.error).toBe('validation_failed');
   });
 });
+
+/** Mirror of secret-store.maskSecret for assertion convenience. */
+function maskOf(value: string): string {
+  return value.length <= 4 ? '••••' : '••••' + value.slice(-4);
+}

@@ -43,7 +43,18 @@ export function HooksRoute() {
   }
 
   return (
-    <SettingsPane title="Hooks" subtitle="Event-triggered automation">
+    <SettingsPane
+      title="Hooks"
+      full
+      subtitle={
+        <>
+          Event-triggered automation{' '}
+          <span className="st-pill s-amber" style={{ marginLeft: 6 }}>
+            saved · not wired to the engine yet
+          </span>
+        </>
+      }
+    >
       <SetCard>
         {hooks.map((h) => (
           <SetRow

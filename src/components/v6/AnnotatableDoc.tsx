@@ -1,61 +1,68 @@
 /**
- * AnnotatableDoc — renders markdown line-by-line and lets the reviewer select
- * lines and attach notes. Two annotation modes share one engine:
+ * AnnotatableDoc — renders markdown as the reader doc body and drives the
+ * handoff "Explain" interaction (`.exp-*`). In annotate mode every line is a
+ * clickable `.doc-line`; click ONE line and an inline thread opens right under
+ * it with its own composer — ask about that line, read the answer, and keep the
+ * conversation going. Each line is its own independent thread.
  *
- *  - `revise`  (References): notes = change requests → "Request changes".
- *  - `clarify` (Memory / Reports): notes = questions → "Ask agents".
+ *  - `clarify` (Memory / Foundation / References): with an `onAsk` handler the
+ *    thread is a real chat — the question gets an agent answer inline, follow-ups
+ *    continue on that line, and `onPropose`/`onApply` let the agent revise the
+ *    document (preview → confirm).
  *  - `ro`      (engine-owned docs): read-only, no annotation affordance.
- *
- * Ported from the inline-annotation engine (`ANNO_CFG` / `annoEnter` /
- * `annoAdd` / `annoSubmit`) in wireframe-v6-hifi.html. The parent (FileBrowser)
- * owns the on/off toggle (the header button) and passes `annotating`; this
- * component owns selection + committed groups + the floating revise-bar.
  */
-import { Fragment, useEffect, useState } from 'react';
-import { Plus, GitPullRequest, Send } from 'lucide-react';
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Check, FilePenLine, Loader2, Quote, Send, Sparkles, X } from 'lucide-react';
 import { parseInline, parseMarkdown, type MdToken } from './markdown.ts';
 
-export type AnnotateMode = 'revise' | 'clarify' | 'ro';
+export type AnnotateMode = 'clarify' | 'ro';
+
+export type ChatMsg = { role: 'prime' | 'agent'; text: string };
+
+/** Ask the owning agent about the selected line; resolves to the answer text. */
+export type AskFn = (q: {
+  lines: number[];
+  quote: string;
+  question: string;
+  history: ChatMsg[];
+}) => Promise<string>;
+
+/** Ask the agent for a COMPLETE revised document based on the conversation. */
+export type ProposeFn = (q: {
+  line: number;
+  quote: string;
+  instruction: string;
+  history: ChatMsg[];
+}) => Promise<string>;
 
 export type AnnotatableDocProps = {
   markdown: string;
   mode: AnnotateMode;
   /** Annotation on/off — controlled by FileBrowser's header toggle. */
   annotating?: boolean;
-  /** Fired on submit with every annotated line index + the combined note text. */
-  onSubmit?: (lines: number[], note: string) => void | Promise<void>;
-  /** Fired after a successful submit so the parent can flip `annotating` off. */
-  onDone?: () => void;
+  /** Chat handler (clarify mode): returns a real answer; enables follow-ups. */
+  onAsk?: AskFn;
+  /** Propose a full revised document from the conversation (preview, no write). */
+  onPropose?: ProposeFn;
+  /** Apply a confirmed revision (writes the doc); parent reloads on success. */
+  onApply?: (body: string) => Promise<void>;
 };
 
-type Group = { n: number; note: string; lines: number[] };
-
-/** Per-mode copy for the revise-bar. */
-const MODE_COPY: Record<
-  Exclude<AnnotateMode, 'ro'>,
-  {
-    noun: string;
-    emptyPh: string;
-    selPh: (n: number) => string;
-    submitLabel: string;
-    SubmitIcon: typeof Plus;
-  }
-> = {
-  revise: {
-    noun: 'note',
-    emptyPh: 'Select lines to annotate…',
-    selPh: (n) => `Describe the change for ${n} line(s)…`,
-    submitLabel: 'Request changes',
-    SubmitIcon: GitPullRequest,
-  },
-  clarify: {
-    noun: 'question',
-    emptyPh: 'Select lines to clarify…',
-    selPh: (n) => `Ask the author about ${n} line(s)…`,
-    submitLabel: 'Ask agents',
-    SubmitIcon: Send,
-  },
+type Thread = {
+  id: number;
+  line: number;
+  quote: string;
+  messages: ChatMsg[];
+  busy: boolean;
+  error?: string;
+  /** Proposed full-document revision awaiting +prime's confirm. */
+  proposal?: string | null;
+  proposing?: boolean;
+  applying?: boolean;
+  proposeError?: string;
 };
+
+const HINT = "Click a line you don't understand, then ask the owning agent about it.";
 
 function Inline({ text }: { text: string }) {
   return (
@@ -73,82 +80,118 @@ export function AnnotatableDoc({
   markdown,
   mode,
   annotating = false,
-  onSubmit,
-  onDone,
+  onAsk,
+  onPropose,
+  onApply,
 }: AnnotatableDocProps) {
   const tokens = parseMarkdown(markdown);
-  const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [noteInput, setNoteInput] = useState('');
+  const [threads, setThreads] = useState<Thread[]>([]);
+  const nextId = useRef(1);
 
-  // Reset annotation state whenever the document changes or annotation is
-  // turned off — matches the wireframe's `annoExit` on file switch.
+  // Reset threads when the document changes or Explain is toggled off.
   useEffect(() => {
-    setSelected(new Set());
-    setGroups([]);
-    setNoteInput('');
+    setThreads([]);
+    nextId.current = 1;
   }, [markdown, annotating]);
 
   const canAnnotate = mode !== 'ro' && annotating;
-  const copy = mode === 'ro' ? null : MODE_COPY[mode];
 
-  // line index → committed group number (for the rgrp badge + title)
-  const groupOf = new Map<number, Group>();
-  for (const g of groups) for (const ln of g.lines) groupOf.set(ln, g);
+  // line index → text (for the thread quote) + which lines carry a thread
+  const lineText = new Map<number, string>();
+  for (const t of tokens) if (t.selectable) lineText.set(t.index, t.text || '');
+  const threadAtLine = new Map<number, Thread>();
+  for (const th of threads) threadAtLine.set(th.line, th);
 
-  function toggleLine(idx: number) {
-    if (!canAnnotate || groupOf.has(idx)) return;
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(idx)) next.delete(idx);
-      else next.add(idx);
-      return next;
-    });
-  }
-
-  function addGroup() {
-    if (!selected.size) return;
-    const note = noteInput.trim() || '(no description)';
-    setGroups((prev) => [
+  function openLine(idx: number) {
+    if (!canAnnotate || threadAtLine.has(idx)) return;
+    setThreads((prev) => [
       ...prev,
-      { n: prev.length + 1, note, lines: [...selected].sort((a, b) => a - b) },
+      { id: nextId.current++, line: idx, quote: lineText.get(idx) || '', messages: [], busy: false },
     ]);
-    setSelected(new Set());
-    setNoteInput('');
   }
 
-  async function submit() {
-    if (!groups.length) return;
-    const lines = groups.flatMap((g) => g.lines).sort((a, b) => a - b);
-    const note = groups.map((g) => `${g.n}. ${g.note}`).join('\n');
-    await onSubmit?.(lines, note);
-    setSelected(new Set());
-    setGroups([]);
-    setNoteInput('');
-    onDone?.();
+  function closeThread(id: number) {
+    setThreads((prev) => prev.filter((t) => t.id !== id));
   }
 
-  function tokenClass(t: MdToken): string {
+  /** One turn on a thread: append the question, then await + append the answer. */
+  async function ask(thread: Thread, question: string) {
+    if (thread.busy || !onAsk) return;
+    const history = thread.messages;
+    setThreads((prev) =>
+      prev.map((t) =>
+        t.id === thread.id
+          ? { ...t, messages: [...t.messages, { role: 'prime', text: question }], busy: true, error: undefined }
+          : t,
+      ),
+    );
+    try {
+      const answer = await onAsk!({ lines: [thread.line], quote: thread.quote, question, history });
+      setThreads((prev) =>
+        prev.map((t) =>
+          t.id === thread.id ? { ...t, messages: [...t.messages, { role: 'agent', text: answer }], busy: false } : t,
+        ),
+      );
+    } catch {
+      setThreads((prev) =>
+        prev.map((t) => (t.id === thread.id ? { ...t, busy: false, error: 'Cevap alınamadı, tekrar dene.' } : t)),
+      );
+    }
+  }
+
+  /** Ask the agent for a full revised document from this thread's conversation. */
+  async function propose(thread: Thread) {
+    if (!onPropose || thread.proposing) return;
+    setThreads((prev) => prev.map((t) => (t.id === thread.id ? { ...t, proposing: true, proposeError: undefined } : t)));
+    try {
+      const proposal = await onPropose({
+        line: thread.line,
+        quote: thread.quote,
+        instruction: 'Bu satırla ilgili yukarıdaki sohbete göre dokümanı güncelle.',
+        history: thread.messages,
+      });
+      setThreads((prev) => prev.map((t) => (t.id === thread.id ? { ...t, proposing: false, proposal } : t)));
+    } catch {
+      setThreads((prev) =>
+        prev.map((t) => (t.id === thread.id ? { ...t, proposing: false, proposeError: 'Öneri alınamadı.' } : t)),
+      );
+    }
+  }
+
+  /** Write the confirmed proposal; the parent reload resets threads on success. */
+  async function applyProposal(thread: Thread) {
+    if (!onApply || !thread.proposal || thread.applying) return;
+    setThreads((prev) => prev.map((t) => (t.id === thread.id ? { ...t, applying: true, proposeError: undefined } : t)));
+    try {
+      await onApply(thread.proposal);
+    } catch {
+      setThreads((prev) =>
+        prev.map((t) => (t.id === thread.id ? { ...t, applying: false, proposeError: 'Uygulanamadı.' } : t)),
+      );
+    }
+  }
+
+  function discardProposal(thread: Thread) {
+    setThreads((prev) => prev.map((t) => (t.id === thread.id ? { ...t, proposal: null, proposeError: undefined } : t)));
+  }
+
+  function lineClass(t: MdToken): string {
     const base = TOKEN_CLASS[t.kind];
     if (!t.selectable) return base;
-    const parts = [base];
-    if (selected.has(t.index)) parts.push('rsel');
-    if (groupOf.has(t.index)) parts.push('rgrp');
+    const parts = [base, 'doc-line'];
+    if (threadAtLine.has(t.index)) parts.push('exp-noted');
     return parts.join(' ');
   }
 
-  function renderToken(t: MdToken) {
-    if (t.kind === 'blank') {
-      return <div key={t.index} style={{ height: 9 }} />;
-    }
-    const grp = groupOf.get(t.index);
-    const title = grp ? `${copy ? capitalize(copy.noun) : 'Note'} ${grp.n}: ${grp.note}` : undefined;
-    const onClick = () => toggleLine(t.index);
-    const badge = grp ? <span className="rgrp-tag">{grp.n}</span> : null;
+  function renderLine(t: MdToken) {
+    if (t.kind === 'blank') return <div key={t.index} style={{ height: 10 }} />;
+    const onClick = () => openLine(t.index);
+    const cls = lineClass(t);
 
+    let el: ReactNode;
     if (t.kind === 'table' && t.table) {
-      return (
-        <div key={t.index} className={tokenClass(t)} onClick={onClick} title={title}>
+      el = (
+        <div className={cls} onClick={onClick}>
           <table className="md-table">
             <thead>
               <tr>
@@ -171,113 +214,205 @@ export function AnnotatableDoc({
               ))}
             </tbody>
           </table>
-          {badge}
         </div>
       );
-    }
-    if (t.kind === 'h1')
-      return (
-        <h1 key={t.index} className={tokenClass(t)} onClick={onClick} title={title}>
+    } else if (t.kind === 'h1') {
+      el = (
+        <h1 className={cls} onClick={onClick}>
           <Inline text={t.text} />
-          {badge}
         </h1>
       );
-    if (t.kind === 'h2')
-      return (
-        <h2 key={t.index} className={tokenClass(t)} onClick={onClick} title={title}>
+    } else if (t.kind === 'h2' || t.kind === 'h3') {
+      el = (
+        <div className={cls} onClick={onClick}>
           <Inline text={t.text} />
-          {badge}
-        </h2>
+        </div>
       );
-    if (t.kind === 'h3')
-      return (
-        <h3 key={t.index} className={tokenClass(t)} onClick={onClick} title={title}>
+    } else if (t.kind === 'quote') {
+      el = (
+        <blockquote className={cls} onClick={onClick}>
           <Inline text={t.text} />
-          {badge}
-        </h3>
-      );
-    if (t.kind === 'quote')
-      return (
-        <blockquote key={t.index} className={tokenClass(t)} onClick={onClick} title={title}>
-          <Inline text={t.text} />
-          {badge}
         </blockquote>
       );
-    if (t.kind === 'bullet')
-      return (
-        <div key={t.index} className={tokenClass(t)} onClick={onClick} title={title}>
+    } else if (t.kind === 'bullet') {
+      el = (
+        <div className={cls} onClick={onClick}>
           <span className="bull">•</span>
           <span>
             <Inline text={t.text} />
           </span>
-          {badge}
         </div>
       );
+    } else {
+      el = (
+        <p className={cls} onClick={onClick}>
+          <Inline text={t.text} />
+        </p>
+      );
+    }
+
+    const thread = threadAtLine.get(t.index);
     return (
-      <div key={t.index} className={tokenClass(t)} onClick={onClick} title={title}>
-        <Inline text={t.text} />
-        {badge}
-      </div>
+      <Fragment key={t.index}>
+        {el}
+        {thread && (
+          <ThreadView
+            thread={thread}
+            canPropose={!!onPropose && !!onApply}
+            onSend={(q) => void ask(thread, q)}
+            onClose={() => closeThread(thread.id)}
+            onPropose={() => void propose(thread)}
+            onApply={() => void applyProposal(thread)}
+            onDiscard={() => discardProposal(thread)}
+          />
+        )}
+      </Fragment>
     );
   }
 
-  const selCount = selected.size;
-  const groupCount = groups.length;
-
   return (
-    <>
-      <div className={`fb-md${canAnnotate ? ' revising' : ''}`}>{tokens.map(renderToken)}</div>
-
-      {copy && (
-        <div className={`revise-bar${annotating ? ' show' : ''}`}>
-          <span className="rb-notes">
-            {groupCount} {copy.noun}
-            {groupCount === 1 ? '' : 's'}
+    <div className={`doc-body kx-scroll${canAnnotate ? ' explain-on' : ''}`}>
+      {canAnnotate && (
+        <div className="exp-hint">
+          <Sparkles className="ic" />
+          <span>
+            <b>Ask AI</b> · {HINT}
           </span>
-          <input
-            className="rb-input"
-            value={noteInput}
-            disabled={selCount === 0}
-            placeholder={selCount > 0 ? copy.selPh(selCount) : copy.emptyPh}
-            onChange={(e) => setNoteInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') addGroup();
-            }}
-          />
-          <button
-            className="btn btn-line btn-sm"
-            disabled={selCount === 0}
-            onClick={addGroup}
-          >
-            <Plus style={{ width: 13, height: 13 }} />
-            Add
-          </button>
-          <span className="rb-div" />
-          <button
-            className="btn btn-pri btn-sm"
-            disabled={groupCount === 0}
-            onClick={submit}
-          >
-            <copy.SubmitIcon style={{ width: 13, height: 13 }} />
-            {copy.submitLabel}
-          </button>
         </div>
       )}
-    </>
+
+      {tokens.map(renderLine)}
+    </div>
+  );
+}
+
+/** One inline chat thread under its line — ask, follow up, and propose edits. */
+function ThreadView({
+  thread,
+  canPropose,
+  onSend,
+  onClose,
+  onPropose,
+  onApply,
+  onDiscard,
+}: {
+  thread: Thread;
+  canPropose: boolean;
+  onSend: (question: string) => void;
+  onClose: () => void;
+  onPropose: () => void;
+  onApply: () => void;
+  onDiscard: () => void;
+}) {
+  const [draft, setDraft] = useState('');
+  // Only offer "propose update" once the conversation has at least one answer.
+  const hasAnswer = thread.messages.some((m) => m.role === 'agent');
+
+  function send() {
+    const q = draft.trim();
+    if (!q || thread.busy) return;
+    setDraft('');
+    onSend(q);
+  }
+
+  const placeholder = thread.messages.length ? 'Devam et — başka bir şey sor…' : 'Bu satırı sor…';
+
+  return (
+    <div className="exp-thread">
+      <button className="exp-close" onClick={onClose} aria-label="Kapat">
+        <X style={{ width: 13, height: 13 }} />
+      </button>
+
+      <div className="exp-quote">
+        <Quote className="ic" />
+        <span>{thread.quote.slice(0, 140)}</span>
+      </div>
+
+      {thread.messages.map((m, i) => (
+        <div key={i} className={`exp-msg ${m.role === 'prime' ? 'q' : 'a'}`}>
+          <span className="exp-who">{m.role === 'prime' ? 'YOU ASKED' : 'AGENT'}</span>
+          <span className="exp-tx">{m.text}</span>
+        </div>
+      ))}
+
+      {thread.busy && (
+        <div className="exp-msg a">
+          <span className="exp-who">AGENT</span>
+          <span className="exp-tx exp-thinking">thinking…</span>
+        </div>
+      )}
+      {thread.error && (
+        <div className="exp-msg a">
+          <span className="exp-tx" style={{ color: 'var(--red)' }}>
+            {thread.error}
+          </span>
+        </div>
+      )}
+
+      {/* Update flow: propose → preview → confirm. Nothing is written until Apply. */}
+      {canPropose && hasAnswer && thread.proposal == null && (
+        <button className="exp-propose" disabled={thread.proposing} onClick={onPropose}>
+          {thread.proposing ? <Loader2 className="ic spin" /> : <FilePenLine className="ic" />}
+          {thread.proposing ? 'Öneri hazırlanıyor…' : 'Bu sohbete göre güncelleme öner'}
+        </button>
+      )}
+      {thread.proposal != null && (
+        <div className="exp-proposal">
+          <div className="exp-proposal-h">
+            <FilePenLine className="ic" />
+            Önerilen güncelleme — uygulamadan önce gözden geçir
+          </div>
+          <pre className="exp-proposal-body kx-scroll">{thread.proposal}</pre>
+          <div className="exp-proposal-actions">
+            <button className="btn btn-sm btn-secondary" disabled={thread.applying} onClick={onDiscard}>
+              Vazgeç
+            </button>
+            <button className="btn btn-sm btn-primary" disabled={thread.applying} onClick={onApply}>
+              {thread.applying ? <Loader2 className="ic spin" /> : <Check style={{ width: 13, height: 13 }} />}
+              {thread.applying ? 'Uygulanıyor…' : 'Uygula'}
+            </button>
+          </div>
+        </div>
+      )}
+      {thread.proposeError && (
+        <div className="exp-msg a">
+          <span className="exp-tx" style={{ color: 'var(--red)' }}>
+            {thread.proposeError}
+          </span>
+        </div>
+      )}
+
+      <div className="exp-followup">
+        <input
+          value={draft}
+          disabled={thread.busy}
+          placeholder={placeholder}
+          autoFocus
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') send();
+          }}
+        />
+        <button
+          className="btn btn-icon btn-sm btn-primary"
+          disabled={thread.busy || !draft.trim()}
+          onClick={send}
+          aria-label="Send"
+        >
+          <Send style={{ width: 13, height: 13 }} />
+        </button>
+      </div>
+    </div>
   );
 }
 
 const TOKEN_CLASS: Record<MdToken['kind'], string> = {
-  h1: 'rline',
-  h2: 'rline',
-  h3: 'rline',
-  quote: 'rline',
-  bullet: 'l bullet rline',
-  para: 'l rline',
-  table: 'rline',
+  h1: 'doc-h1',
+  h2: 'doc-h',
+  h3: 'doc-h',
+  quote: 'doc-quote',
+  bullet: 'doc-bullet',
+  para: 'doc-p',
+  table: '',
   blank: '',
 };
-
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}

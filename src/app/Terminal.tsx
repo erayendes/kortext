@@ -52,17 +52,21 @@ export function Terminal() {
   }
 
   useShellEvent('open-terminal', () => {
-    setOpen(true);
-    loadData();
-    if (!seeded.current) {
-      seeded.current = true;
-      // Seed the scrollback with an initial `status` read, like the wireframe.
-      setTimeout(() => {
-        push(prompt('kortext status'));
-        push(respond('status'));
-      }, 60);
-    }
-    setTimeout(() => inputRef.current?.focus(), 0);
+    // Toggle: clicking the same footer item (daemon / Terminal) again closes it.
+    setOpen((wasOpen) => {
+      if (wasOpen) return false;
+      loadData();
+      if (!seeded.current) {
+        seeded.current = true;
+        // Seed the scrollback with an initial `status` read, like the wireframe.
+        setTimeout(() => {
+          push(prompt('kortext status'));
+          push(respond('status'));
+        }, 60);
+      }
+      setTimeout(() => inputRef.current?.focus(), 0);
+      return true;
+    });
   });
 
   // Keep the view pinned to the newest output.

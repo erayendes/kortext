@@ -44,6 +44,7 @@ function RootGate() {
     apiGet<BlueprintStatusResponse>('/api/blueprint/status')
       .then((res) => {
         if (!alive) return;
+        // Approved blueprint → run the app; anything else → onboarding wizard.
         setGate(res.status === 'approved' ? 'app' : 'onboarding');
       })
       .catch(() => {

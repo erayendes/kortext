@@ -9,8 +9,9 @@ import { DriveScheduler } from '../orchestrator/drive-scheduler.ts';
  * timer (the dashboard "Auto" toggle). Everything sits behind a master safety
  * switch that is OFF by default (Eray's "locked, opened with a key" choice):
  *
- *   GET  /api/drive            → status { armed, inFlight, scheduler, lastPass }
+ *   GET  /api/drive            → status { armed, armedByEnv, inFlight, scheduler, lastPass }
  *   POST /api/drive            → run one pass now (403 locked / 409 in-flight / 202)
+ *   POST /api/drive/arm        → { armed } arm/disarm the master switch from the UI
  *   POST /api/drive/scheduler  → { enabled, intervalSec? } start/stop auto-drive
  *
  * Layered safety: the master env lock gates ALL passes; the scheduler is a
@@ -41,9 +42,17 @@ export function driveRouter(deps: DriveRouterDeps): Router {
   let inFlight = false;
   let lastPass: PassRecord | null = null;
 
+  // Runtime arm override (dashboard "Driver" switch). `null` = follow the env
+  // default; `true`/`false` = the user explicitly armed/locked it from the UI.
+  // In-memory only: a restart drops back to the env default (safe — locked
+  // unless KORTEXT_DRIVE_ENABLED is set), so the UI can never *permanently*
+  // weaken the fail-safe.
+  let armedOverride: boolean | null = null;
+  const isArmed = () => armedOverride ?? deps.enabled();
+
   // Guarded single-pass runner — shared by the button + the scheduler tick.
   function runPass(): 'started' | 'disabled' | 'in_progress' {
-    if (!deps.enabled()) return 'disabled';
+    if (!isArmed()) return 'disabled';
     if (inFlight) return 'in_progress';
     inFlight = true;
     void deps
@@ -74,11 +83,26 @@ export function driveRouter(deps: DriveRouterDeps): Router {
 
   r.get('/drive', (_req, res) => {
     res.json({
-      armed: deps.enabled(),
+      armed: isArmed(),
+      armedByEnv: deps.enabled(),
       inFlight,
       scheduler: schedulerView(),
       lastPass,
     });
+  });
+
+  // Arm / disarm the master switch from the dashboard. Disarming also stops the
+  // auto-scheduler so a locked driver can never keep ticking.
+  r.post('/drive/arm', (req, res) => {
+    const body = req.body as { armed?: unknown };
+    if (typeof body.armed !== 'boolean') {
+      res.status(422).json({ error: 'validation_failed', details: ['armed must be a boolean'] });
+      return;
+    }
+    armedOverride = body.armed;
+    if (!body.armed) scheduler.stop();
+    log(`drive ${body.armed ? 'armed' : 'locked'} from dashboard`);
+    res.json({ armed: isArmed(), scheduler: schedulerView() });
   });
 
   r.post('/drive', (_req, res) => {
@@ -103,12 +127,12 @@ export function driveRouter(deps: DriveRouterDeps): Router {
 
   r.post('/drive/scheduler', (req, res) => {
     // Auto-drive sits on top of the master lock — refuse to arm the timer if the
-    // key isn't turned. Keeps "armed?" a single source of truth (the env switch).
-    if (!deps.enabled()) {
+    // driver isn't armed. Keeps "armed?" a single source of truth (env default
+    // or the dashboard override).
+    if (!isArmed()) {
       res.status(403).json({
         error: 'drive_disabled',
-        message:
-          'Arm the driver first (KORTEXT_DRIVE_ENABLED=1) before turning on auto-drive.',
+        message: 'Arm the driver first before turning on auto-drive.',
       });
       return;
     }

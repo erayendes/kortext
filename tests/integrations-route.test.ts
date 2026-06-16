@@ -18,7 +18,7 @@ type Integration = {
   tokenMasked: string | null;
 };
 
-const KNOWN_IDS = ['github', 'vercel', 'stripe', 'auth0', 'slack', 'telegram'];
+const KNOWN_IDS = ['github', 'stripe', 'vercel', 'firebase', 'supabase', 'sentry'];
 
 async function listen(app: express.Express): Promise<Server> {
   return await new Promise((resolve) => {
@@ -126,6 +126,36 @@ describe('PUT /api/integrations/:id', () => {
     const body = (await res.json()) as { error: string; details: string[] };
     expect(body.error).toBe('validation_failed');
     expect(body.details.length).toBeGreaterThan(0);
+  });
+
+  it('GitHub: persists config (repo/branch/auto-commit/PR-approval) and merges partials', async () => {
+    type WithConfig = Integration & { config: { repo: string; branch: string; autoCommit: boolean; prApproval: boolean } };
+    // full config in one PUT
+    let res = await fetch(`${baseUrl}/api/integrations/github`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ config: { repo: 'acme/app', branch: 'dev', autoCommit: false, prApproval: true } }),
+    });
+    expect(res.status).toBe(200);
+    let cfg = ((await res.json()) as { integration: WithConfig }).integration.config;
+    expect(cfg).toEqual({ repo: 'acme/app', branch: 'dev', autoCommit: false, prApproval: true });
+    // partial PUT merges (only repo changes; the rest stay)
+    res = await fetch(`${baseUrl}/api/integrations/github`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ config: { repo: 'acme/renamed' } }),
+    });
+    cfg = ((await res.json()) as { integration: WithConfig }).integration.config;
+    expect(cfg).toEqual({ repo: 'acme/renamed', branch: 'dev', autoCommit: false, prApproval: true });
+  });
+
+  it('rejects config on a non-github integration with 422', async () => {
+    const res = await fetch(`${baseUrl}/api/integrations/stripe`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ config: { repo: 'x/y' } }),
+    });
+    expect(res.status).toBe(422);
   });
 });
 

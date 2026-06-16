@@ -85,7 +85,7 @@ export type ExistingProject = {
   name: string;
   path: string;
   port: number;
-  status: 'running' | 'paused' | 'stopped';
+  status: 'running' | 'paused' | 'stopped' | 'archived';
   url: string;
 };
 

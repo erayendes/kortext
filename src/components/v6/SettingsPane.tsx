@@ -13,13 +13,15 @@ export type SettingsPaneProps = {
   subtitle?: ReactNode;
   /** Wider max-width (1040px) for matrix-style screens like Environments. */
   wide?: boolean;
+  /** Full page width (no max-width cap) — like Integrations / Environments. */
+  full?: boolean;
   children: ReactNode;
 };
 
-export function SettingsPane({ title, subtitle, wide, children }: SettingsPaneProps) {
+export function SettingsPane({ title, subtitle, wide, full, children }: SettingsPaneProps) {
   return (
     <div className="set-wrap">
-      <div className={`set-inner${wide ? ' wide' : ''}`}>
+      <div className={`set-inner${full ? ' full' : wide ? ' wide' : ''}`}>
         <div className="set-title">{title}</div>
         {subtitle !== undefined && <div className="set-sub">{subtitle}</div>}
         {children}

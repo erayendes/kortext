@@ -49,6 +49,7 @@ import { startProject } from '../server/cli/cmd-start.ts';
 import { launchBootstrapWizard } from '../server/cli/cmd-bootstrap.ts';
 import { stopAll, pauseProject } from '../server/cli/cmd-lifecycle.ts';
 import { formatList, removeFromRegistry, purgeProject } from '../server/cli/cmd-projects.ts';
+import { sweepOrphans } from '../server/cli/cmd-orphans.ts';
 import { updateCommandPlan } from '../server/cli/cmd-update.ts';
 import { readRegistry } from '../server/registry/projects.ts';
 
@@ -190,7 +191,7 @@ const HELP_TEXT = [
   '',
   '  start [project|path]   start the daemon for a project + open it;',
   '                         no arg = this folder, or pick from the list',
-  '  stop                   stop all running project daemons',
+  '  stop [--orphans]       stop all running daemons (+ reap orphan port holders)',
   '  pause <project>        pause one project (others keep running)',
   '  list                   show registered projects + ports + status',
   '  remove <project>       drop from the registry (keeps .kortext/ on disk)',
@@ -311,6 +312,16 @@ async function main(): Promise<number> {
   if (cmd === 'stop') {
     const { stopped } = stopAll();
     console.log(stopped.length ? `stopped: ${stopped.join(', ')}` : 'nothing was running');
+    // TODO #10: also reap orphan daemons (listeners on kortext ports with no
+    // live registry entry) when asked. `kortext stop --orphans`.
+    if (hasFlag('orphans')) {
+      const { killed, listeners } = sweepOrphans();
+      console.log(
+        killed.length
+          ? `swept ${killed.length} orphan daemon(s): pid ${killed.join(', ')}`
+          : `no orphan daemons (scanned ${listeners} listener(s) on kortext ports)`,
+      );
+    }
     return 0;
   }
 
@@ -333,7 +344,7 @@ async function main(): Promise<number> {
     if (!slug) { console.error('usage: kortext remove <project>'); return 2; }
     const res = removeFromRegistry(slug);
     if (!res.ok) { console.error(res.message); return 1; }
-    console.log(`removed ${slug} from the registry (kept ${res.keptPath})`);
+    console.log(`removed ${slug}: daemon stopped, dropped from registry (kept ${res.keptPath})`);
     return 0;
   }
 
@@ -344,7 +355,7 @@ async function main(): Promise<number> {
     if (!ok) { console.log('aborted'); return 0; }
     const res = purgeProject(slug);
     if (!res.ok) { console.error(res.message); return 1; }
-    console.log(`purged ${slug} (registry + .kortext/ deleted)`);
+    console.log(`purged ${slug}: daemon stopped, registry + .kortext/ deleted`);
     return 0;
   }
 

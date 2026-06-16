@@ -1,23 +1,21 @@
 /**
  * References — the team's living, ALL-CAPS reference docs (STACK / API / TEST …).
  *
- * Uses the shared {@link FileBrowser} in `revise` mode: the reviewer selects
- * lines and attaches change requests ("Request changes"), or stamps the whole
- * file "Approve". Both drive a small Approved → Waiting → Approved status
- * machine.
+ * Uses the shared {@link FileBrowser} in `clarify` mode: "Ask AI" opens an
+ * inline chat per line, and the agent can propose a full revision the reviewer
+ * applies (a real write). Applying drops the file to "pending"; the separate
+ * "Approve" stamp returns it to "approved".
  *
- * Data is real (`GET /api/docs/references` + `/:file`). Status, however, is a
- * route-local overlay — the docs endpoint only reports name/size/mtime, and
- * there is no write endpoint yet, so the revise/approve flow is shown in the
- * UI and persisted only in memory.
+ * Content writes are real (`PUT /api/docs/references/:file`). The approval
+ * STATUS, however, is still a route-local overlay — the docs endpoint reports
+ * only name/size/mtime and there is no status endpoint yet.
  *
- * TODO(v6): when a references write/status endpoint exists, replace the local
- * `statuses` overlay with real POSTs (request-changes → 'review',
- * approve → 'approved').
+ * TODO(v6): persist the approval status once a references status endpoint exists
+ * (apply → 'review', approve → 'approved').
  */
 import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Check } from 'lucide-react';
-import { apiGet, usePolling } from '../lib/api.ts';
+import { apiGet, apiPost, apiPut, usePolling } from '../lib/api.ts';
 import { FileBrowser, type FBItem, type FBStatus } from '../components/v6/FileBrowser.tsx';
 
 type DocsList = { scope: string; files: { name: string; size: number; mtime: number }[] };
@@ -51,11 +49,44 @@ export function ReferencesRoute() {
     return apiGet<DocBody>(`/api/docs/references/${id}`).then((r) => r.body);
   }, []);
 
-  const onAnnotate = useCallback(
-    (id: string, lines: number[]) => {
+  // Ask AI about a line (real chat). References scope.
+  const onAsk = useCallback(
+    async (
+      id: string,
+      q: { lines: number[]; quote: string; question: string; history: { role: 'prime' | 'agent'; text: string }[] },
+    ) => {
+      const r = await apiPost<{ answer: string }>(`/api/docs/references/${id}/explain`, {
+        question: q.question,
+        quote: q.quote,
+        history: q.history,
+      });
+      return r.answer;
+    },
+    [],
+  );
+
+  const onPropose = useCallback(
+    async (
+      id: string,
+      q: { line: number; quote: string; instruction: string; history: { role: 'prime' | 'agent'; text: string }[] },
+    ) => {
+      const r = await apiPost<{ proposal: string }>(`/api/docs/references/${id}/propose`, {
+        instruction: q.instruction,
+        quote: q.quote,
+        history: q.history,
+      });
+      return r.proposal;
+    },
+    [],
+  );
+
+  // Applying an AI revision changes the content, so the reference drops back to
+  // "pending" until +prime re-approves it (the gate below).
+  const onApply = useCallback(
+    async (id: string, body: string) => {
+      await apiPut(`/api/docs/references/${id}`, { body });
       setStatuses((s) => ({ ...s, [id]: 'review' }));
-      toast.fire(`Change requested · ${lines.length} line(s) recorded locally`);
-      // TODO(v6): POST the change request once a references write endpoint lands.
+      toast.fire(`Updated · ${id} · onay bekliyor`);
     },
     [toast],
   );
@@ -75,13 +106,16 @@ export function ReferencesRoute() {
     <>
       <FileBrowser
         title="References"
+        sub={`${items.length} files · agent-owned, +prime-gated`}
         items={items}
         loadBody={loadBody}
-        mode="revise"
-        onAnnotate={onAnnotate}
+        mode="clarify"
+        onAsk={onAsk}
+        onPropose={onPropose}
+        onApply={onApply}
         headerActions={
           items.length > 0 ? (
-            <button className="btn btn-sm btn-approve" onClick={approve}>
+            <button className="btn btn-sm btn-success" onClick={approve}>
               <Check style={{ width: 13, height: 13 }} />
               Approve
             </button>

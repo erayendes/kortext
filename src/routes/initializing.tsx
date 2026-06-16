@@ -214,7 +214,7 @@ function InitializingView({ onRefresh }: { onRefresh: () => void }) {
             </span>
             <button
               type="button"
-              className="btn btn-line btn-sm"
+              className="btn btn-secondary btn-sm"
               onClick={() => {
                 refresh();
                 onRefresh();
@@ -309,7 +309,7 @@ function TimelineRow({
           <span className="prime-acts">
             <button
               type="button"
-              className="btn btn-sm btn-approve"
+              className="btn btn-sm btn-success"
               disabled={approving}
               onClick={(e) => {
                 e.stopPropagation();
@@ -325,7 +325,7 @@ function TimelineRow({
             </button>
             <button
               type="button"
-              className="btn btn-line btn-sm"
+              className="btn btn-secondary btn-sm"
               disabled={approving}
               onClick={(e) => {
                 e.stopPropagation();
@@ -469,7 +469,7 @@ function ArtifactDrawer({
             </span>
             <button
               type="button"
-              className="btn btn-line btn-sm"
+              className="btn btn-secondary btn-sm"
               onClick={onClose}
               style={{ marginLeft: 6 }}
             >
@@ -544,7 +544,7 @@ function ArtifactDrawer({
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                   <button
                     type="button"
-                    className="btn btn-line btn-sm"
+                    className="btn btn-secondary btn-sm"
                     disabled={busy}
                     onClick={() => {
                       setReviseMode(false);
@@ -555,7 +555,7 @@ function ArtifactDrawer({
                   </button>
                   <button
                     type="button"
-                    className="btn btn-pri btn-sm"
+                    className="btn btn-primary btn-sm"
                     disabled={busy || !reason.trim()}
                     onClick={() => void submitRevise()}
                   >
@@ -567,7 +567,7 @@ function ArtifactDrawer({
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                 <button
                   type="button"
-                  className="btn btn-line btn-sm"
+                  className="btn btn-secondary btn-sm"
                   disabled={busy}
                   onClick={() => setReviseMode(true)}
                 >
@@ -575,7 +575,7 @@ function ArtifactDrawer({
                 </button>
                 <button
                   type="button"
-                  className="btn btn-sm btn-approve"
+                  className="btn btn-sm btn-success"
                   disabled={busy}
                   onClick={() => void approve()}
                 >

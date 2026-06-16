@@ -23,16 +23,27 @@ import { readJsonStore, writeJsonStore } from '../services/json-store.ts';
 /** The fixed catalogue of third-party services the Integrations pane lists. */
 const KNOWN_INTEGRATIONS = [
   { id: 'github', label: 'GitHub' },
-  { id: 'vercel', label: 'Vercel' },
   { id: 'stripe', label: 'Stripe' },
-  { id: 'auth0', label: 'Auth0' },
-  { id: 'slack', label: 'Slack' },
-  { id: 'telegram', label: 'Telegram' },
+  { id: 'vercel', label: 'Vercel' },
+  { id: 'firebase', label: 'Firebase' },
+  { id: 'supabase', label: 'Supabase' },
+  { id: 'sentry', label: 'Sentry' },
 ] as const;
 
 type IntegrationId = (typeof KNOWN_INTEGRATIONS)[number]['id'];
 
-type IntegrationStatus = Record<string, { connected: boolean }>;
+/** GitHub carries extra (non-secret) config beyond its token. */
+export type GithubConfig = {
+  repo: string;
+  branch: string;
+  autoCommit: boolean;
+  prApproval: boolean;
+};
+
+const GITHUB_DEFAULTS: GithubConfig = { repo: '', branch: 'main', autoCommit: true, prApproval: false };
+
+/** Per-integration stored state. `config` is only used by GitHub today. */
+type IntegrationStatus = Record<string, { connected: boolean; config?: Partial<GithubConfig> }>;
 
 function findKnown(id: string): { id: IntegrationId; label: string } | null {
   return KNOWN_INTEGRATIONS.find((i) => i.id === id) ?? null;
@@ -53,12 +64,18 @@ export function integrationsRouter(deps: { projectRoot: string }): Router {
     const secrets = readSecrets(secretsFile);
     const token = secrets[tokenKey(known.id)];
     const connected = typeof token === 'string' && token.length > 0;
-    return {
+    const base = {
       id: known.id,
       label: known.label,
       connected,
       tokenMasked: connected ? maskSecret(token) : null,
     };
+    if (known.id === 'github') {
+      const status = readJsonStore<IntegrationStatus>(statusFile, {});
+      const cfg = status.github?.config ?? {};
+      return { ...base, config: { ...GITHUB_DEFAULTS, ...cfg } };
+    }
+    return base;
   }
 
   r.get('/integrations', (_req, res) => {
@@ -73,21 +90,45 @@ export function integrationsRouter(deps: { projectRoot: string }): Router {
       return;
     }
 
-    const body = req.body as { token?: unknown };
+    const body = req.body as { token?: unknown; config?: unknown };
+    const hasToken = body.token !== undefined;
+    const hasConfig = body.config !== undefined;
     const details: string[] = [];
-    if (typeof body.token !== 'string' || body.token.trim().length === 0) {
-      details.push('token is required and must be a non-empty string');
+    if (!hasToken && !hasConfig) {
+      details.push('token or config is required');
+    }
+    if (hasToken && (typeof body.token !== 'string' || body.token.trim().length === 0)) {
+      details.push('token must be a non-empty string');
+    }
+    if (hasConfig && known.id !== 'github') {
+      details.push(`${known.id} does not accept config`);
     }
     if (details.length > 0) {
       res.status(422).json({ error: 'validation_failed', details });
       return;
     }
 
-    const token = (body.token as string).trim();
-    setSecret(secretsFile, tokenKey(known.id), token);
-
     const status = readJsonStore<IntegrationStatus>(statusFile, {});
-    status[known.id] = { connected: true };
+    const prev = status[known.id] ?? { connected: false };
+
+    if (hasToken) {
+      setSecret(secretsFile, tokenKey(known.id), (body.token as string).trim());
+    }
+    // Merge GitHub config (repo / branch / auto-commit / PR-approval).
+    let nextConfig = prev.config;
+    if (hasConfig && known.id === 'github') {
+      const c = body.config as Partial<GithubConfig>;
+      nextConfig = {
+        ...prev.config,
+        ...(typeof c.repo === 'string' ? { repo: c.repo.trim() } : {}),
+        ...(typeof c.branch === 'string' ? { branch: c.branch.trim() } : {}),
+        ...(typeof c.autoCommit === 'boolean' ? { autoCommit: c.autoCommit } : {}),
+        ...(typeof c.prApproval === 'boolean' ? { prApproval: c.prApproval } : {}),
+      };
+    }
+    // `connected` is derived from the token at read time; persist config + a hint.
+    const tokenNow = readSecrets(secretsFile)[tokenKey(known.id)];
+    status[known.id] = { connected: typeof tokenNow === 'string' && tokenNow.length > 0, config: nextConfig };
     writeJsonStore(statusFile, status);
 
     res.json({ integration: view(known) });
