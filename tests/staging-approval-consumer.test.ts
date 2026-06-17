@@ -6,7 +6,7 @@
  * phase → bug created + response still returns question.
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Deployer, DeployContext, PreprodDeployContext, ProdDeployContext, DeployOutcome } from '../server/engine/deployer.ts';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';

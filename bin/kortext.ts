@@ -223,7 +223,6 @@ async function main(): Promise<number> {
   // `kortext mcp` owns stdout for JSON-RPC frames — handle BEFORE any
   // other code path runs console.log on it. Runs the server until SIGINT.
   if (cmd === 'mcp') {
-    // eslint-disable-next-line no-console
     console.log = console.error;
     await runStdioServer({ cwd: process.cwd() });
     await new Promise<void>(() => undefined); // park until shutdown

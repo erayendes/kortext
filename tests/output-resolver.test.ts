@@ -10,7 +10,7 @@ import {
   resolveDeclaredOutput,
   sweepSignalMarkers,
 } from '../server/engine/output-resolver.ts';
-import { existsSync, readFileSync as fsReadFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 
 // UAT #7 (codex): workflow steps declare two kinds of output — real FILES
 // (`.kortext/foundation/backlog.yaml`) and logical SIGNALS / markers

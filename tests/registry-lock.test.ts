@@ -6,7 +6,7 @@ import { withRegistryLock } from '../server/registry/lock.ts';
 
 let dir: string;
 beforeEach(() => { dir = mkdtempSync(join(tmpdir(), 'kortext-lock-')); });
-afterEach(() => { try { rmSync(dir, { recursive: true, force: true }); } catch {} });
+afterEach(() => { try { rmSync(dir, { recursive: true, force: true }); } catch { /* dir may already be gone */ } });
 
 describe('withRegistryLock', () => {
   it('runs fn and returns its value', () => {
