@@ -14,6 +14,8 @@ export default [
       '.kortext/**',
       '.claude/**',
       'templates/**',
+      // Vendored design references (third-party browser JS, not project source).
+      'development/design_handoff_kortext/**',
     ],
   },
   js.configs.recommended,
@@ -47,7 +49,10 @@ export default [
       ...reactHooks.configs.recommended.rules,
       'react/jsx-uses-react': 'off',
       'react/react-in-jsx-scope': 'off',
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
     },
     settings: { react: { version: '19' } },
   },

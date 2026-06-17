@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import {
   ArrowRight,
   Clipboard,
@@ -733,7 +733,7 @@ function Field({
   error?: string | null;
   actions?: ReactNode;
   grow?: boolean;
-  style?: React.CSSProperties;
+  style?: CSSProperties;
   children: ReactNode;
 }) {
   return (

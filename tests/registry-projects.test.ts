@@ -81,4 +81,4 @@ describe('registerProject port selection', () => {
   });
 });
 
-afterEach(() => { try { rmSync(dir, { recursive: true, force: true }); } catch {} });
+afterEach(() => { try { rmSync(dir, { recursive: true, force: true }); } catch { /* dir may already be gone */ } });
