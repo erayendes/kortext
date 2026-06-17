@@ -98,7 +98,7 @@ node_modules/
 `;
 
 const DEFAULT_ENV_EXAMPLE = `# Kortext environment variables. Copy to .env and fill in real values.
-# See development/ARCHITECTURE.md for details.
+# See docs/pending-update/ARCHITECTURE.md for details.
 
 # Where the engine will spawn the dashboard + REST API.
 KORTEXT_PORT=3200

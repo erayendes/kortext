@@ -11,19 +11,21 @@ Eray is a non-coder, communicates in Turkish, code / commits / comments in Engli
 ## Dosya haritası — Claude için: hangi durumda nereye yaz
 
 ```
-"decisions güncelle" / "bu kararı kaydet"          → development/DECISIONS.md
-"mimari değişti" / "yeni bileşen"                  → development/ARCHITECTURE.md
-"tasarım güncelle" / "yeni UI / renk"              → development/DESIGN.md
-"handover yaz" / oturum sonu / "devam notu"        → development/HANDOVER.md
-"todo'ya ekle" / "sonraki iş"                      → development/TODO.md
-"UAT senaryosu" / "kullanıcı testi"                → development/UAT-GUIDE.md
-"wireframe / mockup / concept" (HTML)              → development/concepts/
+"decisions güncelle" / "bu kararı kaydet"          → docs/DECISIONS.md
+"mimari değişti" / "yeni bileşen"                  → docs/pending-update/ARCHITECTURE.md
+"tasarım güncelle" / "yeni UI / renk"              → docs/DESIGN.md
+"handover yaz" / oturum sonu / "devam notu"        → docs/HANDOVER.md
+"todo'ya ekle" / "sonraki iş"                      → docs/TODO.md
+"UAT senaryosu" / "kullanıcı testi"                → docs/UAT.md
+"wireframe / mockup / concept" (HTML)              → docs/concepts/
 "Claude için kural / mapping / behavior"           → CLAUDE.md (bu dosya)
 Kod (feature / bug fix / refactor)                 → src/  server/  bin/  mcp/  tests/
 Persona / workflow / rule / template düzenleme     → agents/  workflows/  rules/  templates/
 ```
 
-Detaylı mimari için [development/ARCHITECTURE.md](development/ARCHITECTURE.md), karar geçmişi için [development/DECISIONS.md](development/DECISIONS.md), aktif faz durumu için [development/HANDOVER.md](development/HANDOVER.md).
+> **Doküman yeri (2026-06-17):** tüm geliştirici dokümanları `development/`'dan **`docs/`'a** taşındı. Canlı: `docs/{DECISIONS,DESIGN,HANDOVER,TODO,UAT}.md`. Güncellenmeyi bekleyenler: `docs/pending-update/` (ARCHITECTURE, SETUP, USER-GUIDE, PRODUCT). Arşiv: `docs/{concepts,specs,superpowers}/`.
+
+Detaylı mimari için [docs/pending-update/ARCHITECTURE.md](docs/pending-update/ARCHITECTURE.md), karar geçmişi için [docs/DECISIONS.md](docs/DECISIONS.md), aktif faz durumu için [docs/HANDOVER.md](docs/HANDOVER.md).
 
 ## Working style — for Claude on code side
 

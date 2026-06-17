@@ -7,7 +7,7 @@
  * source-line indexes it covers — `AnnotatableDoc` renders one element per
  * token and tracks selection by token index.
  *
- * Ported from `mdToHtml` / `mdLine` in development/concepts/wireframe-v6-hifi.html.
+ * Ported from `mdToHtml` / `mdLine` in docs/concepts/wireframe-v6-hifi.html.
  */
 
 export type MdTokenKind =
