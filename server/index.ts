@@ -21,6 +21,7 @@ import { reportsRouter } from './routes/reports.ts';
 import { doctorRouter } from './routes/doctor.ts';
 import { personasRouter } from './routes/personas.ts';
 import { workflowsRouter } from './routes/workflows.ts';
+import { setupRouter } from './routes/setup.ts';
 import { backlogRouter } from './routes/backlog.ts';
 import { docsRouter } from './routes/docs.ts';
 import { blueprintRouter } from './routes/blueprint.ts';
@@ -331,6 +332,14 @@ app.use('/api', reportsRouter({ repos, projectRoot: layout.root }));
 app.use('/api', backlogRouter({ repos, templatesDir: runtime.templatesDir, personas: personaRegistry }));
 app.use('/api', personasRouter({ personas: personaRegistry, agentsDir, repos }));
 app.use('/api', workflowsRouter({ workflows: workflowRegistry, repos }));
+app.use(
+  '/api',
+  setupRouter({
+    repos,
+    workflows: workflowRegistry,
+    projectJsonPath: resolveBlueprintPaths(process.cwd()).projectJsonPath,
+  }),
+);
 app.use('/api', doctorRouter({ repos, workflows: workflowRegistry, personas: personaRegistry }));
 // Settings panes — project-scoped config (Faz A "vitrin" wiring).
 app.use('/api', projectMetaRouter({ workspaceRoot: process.cwd() }));

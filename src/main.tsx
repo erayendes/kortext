@@ -4,8 +4,9 @@ import { RouterProvider } from '@tanstack/react-router';
 import { router } from './router.tsx';
 import { initTheme } from './app/theme.ts';
 import { OnboardingScreen } from './components/OnboardingScreen.tsx';
+import { SetupScreen } from './components/SetupScreen.tsx';
 import { apiGet } from './lib/api.ts';
-import type { BlueprintStatusResponse } from './lib/api-types.ts';
+import type { BlueprintStatusResponse, SetupView } from './lib/api-types.ts';
 import './index.css';
 
 // Apply the persisted theme before first paint to avoid a light/dark flash.
@@ -25,13 +26,21 @@ initTheme();
   }
 }
 
-type GateState = 'loading' | 'onboarding' | 'app';
+type GateState = 'loading' | 'onboarding' | 'setup' | 'app';
 
 /**
- * RootGate — blueprint guard at the app root. Until the project's blueprint is
- * `approved`, the full-screen onboarding wizard is shown instead of the shell;
- * once approved (or on a status error, where the dashboard surfaces health) the
- * normal router/AppShell renders.
+ * RootGate — lifecycle guard at the app root, mirroring the three-stage product
+ * flow: onboarding → setup → dashboard.
+ *
+ *   - blueprint not approved            → onboarding wizard
+ *   - approved, still initializing      → live SetupScreen (analysis/planning/
+ *                                          environment pipelines, +prime gates)
+ *   - approved, setup complete          → router/AppShell (dashboard)
+ *
+ * "Initializing" is derived from `GET /api/setup`: while its `phase` is anything
+ * other than 'development', the three init pipelines haven't all finished, so we
+ * stay on the Setup screen. On a status/setup error we fall through to the app
+ * (the dashboard surfaces server health).
  *
  * The gate lives here (not in router.tsx) so screen sessions own the router
  * exclusively — per the v6 implementation contract.
@@ -41,17 +50,29 @@ function RootGate() {
 
   const check = useCallback(() => {
     let alive = true;
-    apiGet<BlueprintStatusResponse>('/api/blueprint/status')
-      .then((res) => {
+    void (async () => {
+      try {
+        const res = await apiGet<BlueprintStatusResponse>('/api/blueprint/status');
         if (!alive) return;
-        // Approved blueprint → run the app; anything else → onboarding wizard.
-        setGate(res.status === 'approved' ? 'app' : 'onboarding');
-      })
-      .catch(() => {
+        if (res.status !== 'approved') {
+          setGate('onboarding');
+          return;
+        }
+        // Approved → Setup screen while initializing, dashboard once done.
+        try {
+          const setup = await apiGet<SetupView>('/api/setup');
+          if (!alive) return;
+          setGate(setup.phase === 'development' ? 'app' : 'setup');
+        } catch {
+          // No setup endpoint / error → fall through to the app.
+          if (alive) setGate('app');
+        }
+      } catch {
         // Status endpoint unreachable (older server / network) — fall through
         // to the app; the dashboard surfaces server health.
         if (alive) setGate('app');
-      });
+      }
+    })();
     return () => {
       alive = false;
     };
@@ -68,6 +89,9 @@ function RootGate() {
   }
   if (gate === 'onboarding') {
     return <OnboardingScreen onDone={() => check()} />;
+  }
+  if (gate === 'setup') {
+    return <SetupScreen onOpenDashboard={() => setGate('app')} />;
   }
   return <RouterProvider router={router} />;
 }

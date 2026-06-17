@@ -370,3 +370,33 @@ export type BlueprintSubmitResponse = {
   handoffUrl?: string; // bootstrap-wizard handoff target (real daemon URL)
   gitWarning?: string; // soft git-bootstrap warning, if any
 };
+
+// ── Setup view (GET /api/setup) — the three init pipelines, live ──────────────
+// Mirrors server/orchestrator/setup-view.ts.
+export type SetupStepStatus = 'queued' | 'running' | 'review' | 'done' | 'failed';
+export type SetupPipelineStatus = 'queued' | 'running' | 'done' | 'failed';
+export type SetupPhase = 'analysis' | 'planning' | 'environment' | 'development';
+export type SetupPipelineKey = 'analysis' | 'planning' | 'environment';
+
+export type SetupStep = {
+  key: string;
+  phase: string;
+  label: string;
+  persona: string | null;
+  status: SetupStepStatus;
+  artifactPath: string | null;
+  questionId: number | null;
+};
+
+export type SetupPipeline = {
+  key: SetupPipelineKey;
+  workflowId: string;
+  title: string;
+  status: SetupPipelineStatus;
+  steps: SetupStep[];
+};
+
+export type SetupView = {
+  phase: SetupPhase;
+  pipelines: SetupPipeline[];
+};
