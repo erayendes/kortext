@@ -14,6 +14,13 @@ export type GatePauseContext = {
   runId: number;
   workflowId: string;
   /**
+   * The run_step id of the step this gate guards. Lets the controller stamp the
+   * approval question with an exact step_id so consumers (e.g. the Setup view)
+   * match the gate to ONE step — not every step that happens to share the same
+   * output artifact (planning's steps all patch `backlog.patch.yaml`).
+   */
+  runStepId?: number | null;
+  /**
    * Aborts when the run is cancelled (e.g. a sibling gate was rejected). A
    * controller that waits on a human (DB poll) should forward this so a
    * pending approval stops waiting instead of hanging the run.
@@ -439,6 +446,7 @@ export async function runWorkflow(
           gate,
           runId: run.id,
           workflowId: graph.workflowId,
+          runStepId: stepRowByKey.get(gateKey) ?? null,
           signal: aborter.signal,
         })
         .then((decision) => {

@@ -65,6 +65,7 @@ export class RunsRepository {
   private readonly selectStepStmt;
   private readonly listStepsStmt;
   private readonly listStepsForItemStmt;
+  private readonly countRunningStepsStmt;
   private readonly transitionStepStmt;
 
   constructor(private readonly db: Database.Database) {
@@ -112,6 +113,9 @@ export class RunsRepository {
       WHERE r.item_id = ?
       ORDER BY rs.id
     `);
+    this.countRunningStepsStmt = db.prepare(
+      `SELECT COUNT(*) AS n FROM run_steps WHERE status = 'running'`,
+    );
     this.transitionStepStmt = db.prepare(`
       UPDATE run_steps SET
         status = @status,
@@ -210,6 +214,17 @@ export class RunsRepository {
   listStepsForItem(itemId: string): RunStep[] {
     const rows = this.listStepsForItemStmt.all(itemId) as StepRow[];
     return rows.map((r) => RunStepSchema.parse(r));
+  }
+
+  /**
+   * How many run_steps are executing right now across ALL runs — i.e. how many
+   * agents are actually working. The footer uses this instead of the running-RUN
+   * count: a single setup run drafts several artifacts concurrently, so the run
+   * count under-reports the real agent activity.
+   */
+  countRunningSteps(): number {
+    const row = this.countRunningStepsStmt.get() as { n: number };
+    return row.n;
   }
 
   transitionStep(

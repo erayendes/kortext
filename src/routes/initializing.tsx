@@ -125,7 +125,9 @@ export function docsPathFor(artifactPath: string | null | undefined): string | n
   if (rel.length < 2) return null;
   const scope = rel[0]!;
   const file = rel[rel.length - 1]!;
-  if (!/\.md$/.test(file)) return null;
+  // `.md` is the common case; `.yaml`/`.yml` lets the Setup drawer open
+  // backlog.patch.yaml and other foundation artifacts.
+  if (!/\.(md|ya?ml)$/i.test(file)) return null;
   return `/api/docs/${encodeURIComponent(scope)}/${encodeURIComponent(file)}`;
 }
 

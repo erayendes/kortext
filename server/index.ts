@@ -234,9 +234,13 @@ const triggerAnalysis = (workflowId: string) => {
     // (via the approval queue) before continuing. Same queue the REST
     // routes use, so a dashboard answer resumes the run.
     gateController: queueGateController,
-    // Onboarding runs analysis → planning (which derives the backlog), then
-    // stops. Building backlog items stays the gated driver's job.
-    chainThroughWorkflowId: 'planning-pipeline',
+    // Onboarding runs the whole SETUP phase — analysis → planning (derives the
+    // backlog) → environment-setup (skeleton, secrets, DB, deps, smoke test) —
+    // then STOPS before development-cycle. Building backlog *items* stays the
+    // gated driver's job; setting up the environment is part of onboarding so
+    // the Setup screen (analysis · planning · environment) can complete before
+    // the dashboard takes over.
+    chainThroughWorkflowId: 'environment-setup',
   }).then((result) => {
     if (!result.ok) {
       console.warn(`[kortext] blueprint trigger failed: ${result.errorMessage}`);
@@ -245,14 +249,21 @@ const triggerAnalysis = (workflowId: string) => {
     console.log(
       `[kortext] blueprint trigger ok: workflow=${workflowId} run=${result.runId} status=${result.status}`,
     );
-    // UAT #10j — engine-side structural floor. The chain has just finished
-    // planning (chainThroughWorkflowId='planning-pipeline'); guarantee a
-    // buildable backlog regardless of which executor ran: ≥1 epic with every
-    // task parented, a dependency chain when the agent produced none, and a
-    // sane version split. Each guarantee is idempotent + conservative, so a
-    // well-formed plan is left untouched. Then re-serialize the canonical file
-    // so the board + the next consumer see the normalized structure.
-    if (result.status === 'succeeded') {
+    // UAT #10j — engine-side structural floor. Guarantee a buildable backlog
+    // regardless of which executor ran: ≥1 epic with every task parented, a
+    // dependency chain when the agent produced none, and a sane version split.
+    // Each guarantee is idempotent + conservative, so a well-formed plan is left
+    // untouched. Then re-serialize the canonical file so the board + the next
+    // consumer see the normalized structure.
+    //
+    // Keyed on PLANNING's own success — not the final chain status. The chain now
+    // runs through environment-setup (chainThroughWorkflowId='environment-setup'),
+    // so `result.status` reflects environment, which produces no backlog. We must
+    // normalize whenever planning produced one, even if a later setup hop fails.
+    const planningSucceeded =
+      repos.runs.listRuns({ workflow_id: 'planning-pipeline', limit: 1 })[0]?.status ===
+      'succeeded';
+    if (planningSucceeded) {
       try {
         const code = projectMeta?.code ? projectMeta.code : undefined;
         const struct = ensureBacklogStructure(repos, {

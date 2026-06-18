@@ -15,11 +15,13 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowRight, Check, PenLine, X, Sparkles, Sun, Moon, Eclipse, Bell, Search, SlidersHorizontal, FileText } from 'lucide-react';
-import { apiGet, apiPost, usePolling, useProjectMeta } from '../lib/api.ts';
+import { apiGet, apiPost, apiPut, usePolling, useProjectMeta } from '../lib/api.ts';
 import type { SetupView, SetupStep, SetupStepStatus, SetupPipeline } from '../lib/api-types.ts';
 import { personaPalette } from '../lib/persona-colors.ts';
 import { useTheme } from '../app/theme.ts';
 import { Footer } from '../app/Footer.tsx';
+import { ShellMenus } from '../app/ShellMenus.tsx';
+import { Terminal } from '../app/Terminal.tsx';
 import { Drawer } from './v6/Drawer.tsx';
 import { AnnotatableDoc } from './v6/AnnotatableDoc.tsx';
 import { docsPathFor, artifactFilename } from '../routes/initializing.tsx';
@@ -64,6 +66,16 @@ function clock(ms: number | null): string {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
+/** Render YAML/non-markdown artifacts as a fenced code block so the markdown
+ *  renderer shows them verbatim (a `<pre class=md-code>`) instead of mangling
+ *  `- key:` lines into list items. `.md` passes through untouched. */
+function asMarkdown(artifactPath: string | null, body: string): string {
+  if (artifactPath && /\.ya?ml$/i.test(artifactPath)) {
+    return `\`\`\`yaml\n${body.replace(/\n+$/, '')}\n\`\`\``;
+  }
+  return body;
+}
+
 export function SetupScreen({ onOpenDashboard }: { onOpenDashboard: () => void }) {
   const { data, refresh } = usePolling<SetupView>('/api/setup', 2000);
   const { mode, cycle } = useTheme();
@@ -96,7 +108,7 @@ export function SetupScreen({ onOpenDashboard }: { onOpenDashboard: () => void }
           <span className="ver-pill side-logo-ver">v3</span>
         </div>
         <div className="side-scroll kx-scroll setup-rail">
-          <PhaseRail pipelines={pipelines} />
+          <PhaseRail pipelines={pipelines} onReview={(s) => setOpenKey(s.key)} />
           <div className="side-sec">
             <div className="setup-rail-note">
               When all stages finish and tasks are created, kortext moves to the Dashboard.
@@ -141,6 +153,12 @@ export function SetupScreen({ onOpenDashboard }: { onOpenDashboard: () => void }
           setOpenKey(null);
         }}
       />
+
+      {/* Footer popovers (Agents / Worktrees / Review up-panels) + Terminal —
+          event-driven chrome, mounted so the footer is functional during setup
+          too (AppShell mounts the same set for the dashboard). */}
+      <ShellMenus />
+      <Terminal />
     </div>
   );
 }
@@ -176,7 +194,13 @@ function SetupTopbar() {
 }
 
 // ── Left rail — one section per pipeline, one row per step ────────────────────
-function PhaseRail({ pipelines }: { pipelines: SetupPipeline[] }) {
+function PhaseRail({
+  pipelines,
+  onReview,
+}: {
+  pipelines: SetupPipeline[];
+  onReview: (s: SetupStep) => void;
+}) {
   if (pipelines.length === 0) {
     return (
       <div className="side-sec">
@@ -196,8 +220,28 @@ function PhaseRail({ pipelines }: { pipelines: SetupPipeline[] }) {
           <div className="eyebrow">{p.title}</div>
           {p.steps.map((s) => {
             const pill = PILL[s.status];
+            // Openable when the step has an artifact to read (a review gate, or
+            // an already-approved/done file) — same rule as the activity rows.
+            const openable = s.artifactPath != null || s.questionId != null;
             return (
-              <div className={`nav-item${isMd(s.label) ? ' setup-file' : ''}`} key={s.key} title={s.label}>
+              <div
+                className={`nav-item${isMd(s.label) ? ' setup-file' : ''}${openable ? ' setup-file-open' : ''}`}
+                key={s.key}
+                title={s.label}
+                role={openable ? 'button' : undefined}
+                tabIndex={openable ? 0 : undefined}
+                onClick={openable ? () => onReview(s) : undefined}
+                onKeyDown={
+                  openable
+                    ? (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          onReview(s);
+                        }
+                      }
+                    : undefined
+                }
+              >
                 {isMd(s.label) && <FileText className="ic" />}
                 <span className="grow truncate">{s.label}</span>
                 <span className={`st-pill ${pill.cls}`}>{pill.label}</span>
@@ -368,11 +412,15 @@ function ReviewDrawer({
   onClose: () => void;
   onAnswered: () => void;
 }) {
-  const open = !!step && step.questionId != null;
+  // Open for an active gate (approve/revise) OR just to READ an already
+  // approved/done artifact (no actions, read-only) — sidebar files open both.
+  const isGate = step?.questionId != null;
+  const open = !!step && (step.questionId != null || step.artifactPath != null);
   const docsPath = step ? docsPathFor(step.artifactPath) : null;
 
   const [body, setBody] = useState('');
   const [bodyState, setBodyState] = useState<'idle' | 'loading' | 'error' | 'ready'>('idle');
+  const [reloadNonce, setReloadNonce] = useState(0);
   const loadKey = step?.artifactPath ?? null;
   useEffect(() => {
     if (!open || !docsPath) {
@@ -399,19 +447,58 @@ function ReviewDrawer({
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadKey, open]);
+  }, [loadKey, open, reloadNonce]);
 
   const [busy, setBusy] = useState(false);
   const [reviseMode, setReviseMode] = useState(false);
   const [reason, setReason] = useState('');
   const [err, setErr] = useState<string | null>(null);
+  // "Ask AI" line-annotation (references clarify system): select a line, ask the
+  // owning agent, propose a full revision, apply it back to the doc.
+  const [annotating, setAnnotating] = useState(false);
 
   useEffect(() => {
     setReviseMode(false);
     setReason('');
     setErr(null);
     setBusy(false);
+    setAnnotating(false);
   }, [step?.key]);
+
+  // Clarify handlers — same endpoints the References reader uses, scoped to this
+  // artifact's path (e.g. /api/docs/references/LEGAL.md/explain).
+  const onAsk = useCallback(
+    async (q: { lines: number[]; quote: string; question: string; history: { role: 'prime' | 'agent'; text: string }[] }) => {
+      const r = await apiPost<{ answer: string }>(`${docsPath}/explain`, {
+        question: q.question,
+        quote: q.quote,
+        history: q.history,
+      });
+      return r.answer;
+    },
+    [docsPath],
+  );
+  const onPropose = useCallback(
+    async (q: { line: number; quote: string; instruction: string; history: { role: 'prime' | 'agent'; text: string }[] }) => {
+      const r = await apiPost<{ proposal: string }>(`${docsPath}/propose`, {
+        instruction: q.instruction,
+        quote: q.quote,
+        history: q.history,
+      });
+      return r.proposal;
+    },
+    [docsPath],
+  );
+  const onApply = useCallback(
+    async (newBody: string) => {
+      if (!docsPath) return;
+      await apiPut(docsPath, { body: newBody });
+      setBody(newBody);
+      setAnnotating(false);
+      setReloadNonce((n) => n + 1); // re-read so the canonical file content shows
+    },
+    [docsPath],
+  );
 
   const answer = useCallback(
     async (value: string) => {
@@ -452,10 +539,23 @@ function ReviewDrawer({
                 {step.phase ? ` · ${step.phase}` : ''}
               </span>
             </div>
-            <span className="st-pill s-blue" style={{ marginLeft: 'auto' }}>
-              pending
+            <span className={`st-pill ${PILL[step.status].cls}`} style={{ marginLeft: 'auto' }}>
+              {PILL[step.status].label}
             </span>
-            {!reviseMode && (
+            {/* Ask AI — line-level clarify/revise (references system). Toggles the
+                annotation affordance on the doc below. */}
+            {bodyState === 'ready' && docsPath && !reviseMode && (
+              annotating ? (
+                <button type="button" className="btn btn-sm btn-primary" onClick={() => setAnnotating(false)}>
+                  <Check style={{ width: 13, height: 13 }} /> Bitti
+                </button>
+              ) : (
+                <button type="button" className="btn btn-sm btn-secondary" onClick={() => setAnnotating(true)}>
+                  <Sparkles style={{ width: 13, height: 13 }} /> Ask AI
+                </button>
+              )
+            )}
+            {isGate && !reviseMode && !annotating && (
               <>
                 <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => setReviseMode(true)}>
                   <PenLine style={{ width: 13, height: 13 }} /> Revize
@@ -517,7 +617,16 @@ function ReviewDrawer({
                 Döküman henüz okunamıyor{step.artifactPath ? ` (${step.artifactPath})` : ''}.
               </div>
             ) : (
-              <AnnotatableDoc markdown={body} mode="ro" />
+              // Reading: yaml wrapped as a clean code block. Annotating: raw body
+              // so each line is individually selectable for Ask AI / revise.
+              <AnnotatableDoc
+                markdown={annotating ? body : asMarkdown(step.artifactPath, body)}
+                mode="clarify"
+                annotating={annotating}
+                onAsk={onAsk}
+                onPropose={onPropose}
+                onApply={onApply}
+              />
             )}
           </div>
         </>

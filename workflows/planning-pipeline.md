@@ -33,6 +33,8 @@
 
    > **Motor şema toleransı (bilgi):** Kanonik alanlar `blocked_by`/`blocks` (yukarıdaki gibi yaz). Ama motor şu yaygın varyasyonları da kabul edip normalize eder, takılma: bağımlılık için `depends_on` (→ `blocked_by`), tip için `feature`/`chore`/`test` (→ `task`, orijinali saklanır), durum için `todo` (→ `to_do`), epic için düz `epic: <etiket>` (→ `type: epic` `<CODE>-E0N` türetilir). Yine de kanonik sözcüğü tercih et — netlik için.
 
+   **🧑 +prime ön-gereksinim item'ları — ZORUNLU.** `STACK.md` (harici servisler), `SECURITY.md` (secret/key ihtiyaçları), `LEGAL.md` (uyum/yasal) ve `API.md` (3. parti API) referanslarını tara: **yalnızca bir insanın yapabileceği** ön-gereksinimleri çıkar — hesap açma (Stripe/Supabase/Vercel/GitHub…), API key/secret temini, domain/hosting satın alma, fiziksel cihaz, bütçe/yasal onay, ödeme bilgisi. Bunların **her biri ayrı bir backlog item'ı** olur: `assignee: +prime`, `type: task`, açık `title` (örn. "Stripe hesabı aç ve API key'i sağla"), `description`'da nereden/neden gerekli. Bu item'ları, onlara bağımlı teknik item'ların `blocked_by`'ına ekle (ör. ödeme entegrasyonu item'ı `blocked_by: [<prime-item-id>]`) — böylece insan adımı tamamlanmadan ajan o işe başlamaz. **Doküman içinde gömülü kalan ön-gereksinim = eksik plan.** Hiç insan-aksiyonu gerektirmeyen proje nadirdir; emin değilsen STACK/SECURITY'deki her harici servis için en az bir +prime item'ı düşün.
+
    Her item şu alanlara sahip olmalı:
    - `id`: `<CODE>-NNN` (task/bug/debt) veya `<CODE>-E0X` (epic) — yukarıdaki konvansiyon. Slug DEĞİL.
    - `type`: `task` | `bug` | `debt` | `epic` | `spike` (ürün özellikleri → task, açık hatalar → bug, teknik borçlar → debt, üst seviye gruplama → **epic, en az bir tane zorunlu**)
@@ -81,7 +83,7 @@
        blocks: []
        blocked_by: [TF-001]
    ```
-   - inputs: `.kortext/project.json`, `.kortext/foundation/PRD.md`, `.kortext/foundation/TRD.md`
+   - inputs: `.kortext/project.json`, `.kortext/foundation/PRD.md`, `.kortext/foundation/TRD.md`, `.kortext/references/STACK.md`, `.kortext/references/SECURITY.md`, `.kortext/references/LEGAL.md`, `.kortext/references/API.md`
    - outputs: `.kortext/foundation/backlog.yaml`, `backlog-drafted`
 
 2. **+qa-engineer:** Mevcut `backlog.yaml`'i oku. Her item için davranış odaklı, test edilebilir `acceptance_criteria` belirle; QA gerektiren item'lara `quality_control` gate'i ekle. Çıktıyı **patch olarak** yaz: `backlog.patch.yaml`'e yalnız dokunduğun item'ları, her satırda `id` + `acceptance_criteria` (ve gerekirse `review_gates: [quality_control]`) ile. Tüm dosyayı yeniden yazma.

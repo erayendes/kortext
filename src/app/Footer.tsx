@@ -27,12 +27,15 @@ function openPop(
 type DriveLite = { armed: boolean; inFlight: boolean };
 
 export function Footer() {
-  const runs = usePolling<{ runs: Run[] }>('/api/runs', 5000);
+  const runs = usePolling<{ runs: Run[]; runningSteps?: number }>('/api/runs', 5000);
   const drive = usePolling<DriveLite>('/api/drive', 4000);
 
   const runList = runs.data?.runs ?? [];
-  // Real agent runtime, straight from the run records (matches the Terminal).
-  const running = runList.filter((r) => r.status === 'running').length;
+  // "active" = agents executing right now = concurrent running STEPS, not runs:
+  // a single setup run drafts several artifacts in parallel, so the run count
+  // under-reports. Fall back to the running-run count on older backends.
+  const runningRuns = runList.filter((r) => r.status === 'running').length;
+  const running = runs.data?.runningSteps ?? runningRuns;
   const queued = runList.filter((r) => r.status === 'queued').length;
   const awaiting = runList.filter((r) => r.status === 'awaiting_approval').length;
   // A drive pass spans several agent sub-steps; individual runs flip

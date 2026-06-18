@@ -105,18 +105,46 @@ function fromRunStep(status: RunStep['status']): SetupStepStatus {
   }
 }
 
-/** Does this open question guard the given step (by step_id or artifact match)? */
+/**
+ * Does this open question guard the given step?
+ *
+ * Primary join is `step_id` (exact). The `artifact_path` fallback exists only
+ * for step_id-LESS questions (legacy init gates) AND only when that artifact is
+ * produced by EXACTLY ONE definition step — otherwise a shared artifact (every
+ * planning step patches `backlog.patch.yaml`) would make one Konsolidasyon gate
+ * light up all 8 steps, and a single approval would clear them all. `uniqueArtifacts`
+ * holds the artifacts produced by exactly one step, so the fallback stays safe.
+ */
 function gateForStep(
   step: WorkflowStep,
   runStep: RunStep | undefined,
   openQuestions: PendingQuestion[],
+  uniqueArtifacts: Set<string>,
 ): PendingQuestion | null {
   for (const q of openQuestions) {
     if (q.status !== 'open') continue;
     if (runStep && q.step_id === runStep.id) return q;
-    if (q.artifact_path && step.outputs.some((o) => o === q.artifact_path)) return q;
+    if (
+      q.step_id == null &&
+      q.artifact_path &&
+      uniqueArtifacts.has(q.artifact_path) &&
+      step.outputs.some((o) => o === q.artifact_path)
+    ) {
+      return q;
+    }
   }
   return null;
+}
+
+/** Artifacts produced by EXACTLY ONE definition step (safe for the artifact fallback). */
+function uniqueArtifactSet(def: WorkflowDefinition): Set<string> {
+  const counts = new Map<string, number>();
+  for (const step of def.steps) {
+    for (const out of step.outputs) counts.set(out, (counts.get(out) ?? 0) + 1);
+  }
+  const unique = new Set<string>();
+  for (const [artifact, n] of counts) if (n === 1) unique.add(artifact);
+  return unique;
 }
 
 function pipelineStatus(run: PipelineInput['run'], steps: SetupStep[]): SetupPipelineStatus {
@@ -138,13 +166,14 @@ function buildSteps(p: PipelineInput, openQuestions: PendingQuestion[]): SetupSt
   // Prefer the definition (full ordered plan incl. queued steps). Fall back to
   // run_steps when the workflow isn't in the registry, so we still show *something*.
   if (p.definition) {
+    const uniqueArtifacts = uniqueArtifactSet(p.definition);
     return p.definition.steps.map((step) => {
       // Match the run_step by ORDER (step_index), not name: the engine names
       // run_steps by their long description ("Product Analysis — +x: …"), which
       // never equals the workflow step `key` (`phase-slug.index`). Index is the
       // stable join — run_steps are inserted in definition order.
       const runStep = p.steps.find((s) => s.step_index === step.index);
-      const gate = gateForStep(step, runStep, openQuestions);
+      const gate = gateForStep(step, runStep, openQuestions, uniqueArtifacts);
       let status: SetupStepStatus;
       if (gate) status = 'review';
       else if (runStep) status = fromRunStep(runStep.status);

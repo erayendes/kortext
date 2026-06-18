@@ -144,6 +144,48 @@ describe('buildSetupView — step statuses', () => {
     expect(growth.artifactPath).toBe('.kortext/references/GROWTH.md');
   });
 
+  it('lights ONLY the gated step when several steps share an output artifact (step_id join)', () => {
+    // Two planning-like steps both patch backlog.patch.yaml; the gate carries
+    // the run_step id of the SECOND step. Only that step must show review — the
+    // old artifact_path fallback lit every step sharing the artifact.
+    const planning = def('planning-pipeline', [
+      wfStep({ key: 'backlog.1', index: 0, persona: '+engineering-manager', outputs: ['.kortext/foundation/backlog.patch.yaml'] }),
+      wfStep({ key: 'consolidation.1', index: 1, persona: '+operation-manager', outputs: ['.kortext/foundation/backlog.patch.yaml'] }),
+    ]);
+    const view = buildSetupView(
+      [
+        pipe({
+          key: 'planning',
+          title: 'Planning',
+          workflowId: 'planning-pipeline',
+          definition: planning,
+          run: { id: 1, status: 'awaiting_approval' },
+          steps: [
+            runStep({ id: 20, step_index: 0, step_name: 'backlog', status: 'succeeded' }),
+            runStep({ id: 21, step_index: 1, step_name: 'consolidation', status: 'succeeded' }),
+          ],
+        }),
+      ],
+      [question({ id: 9, step_id: 21, artifact_path: '.kortext/foundation/backlog.patch.yaml', status: 'open' })],
+    );
+    const steps = view.pipelines[0]!.steps;
+    expect(steps[0]!.status).toBe('done'); // shared artifact, NOT the gated step
+    expect(steps[1]!.status).toBe('review');
+    expect(steps[1]!.questionId).toBe(9);
+  });
+
+  it('does NOT light any step for a step_id-less gate on a shared (non-unique) artifact', () => {
+    const planning = def('planning-pipeline', [
+      wfStep({ key: 'backlog.1', index: 0, outputs: ['.kortext/foundation/backlog.patch.yaml'] }),
+      wfStep({ key: 'consolidation.1', index: 1, outputs: ['.kortext/foundation/backlog.patch.yaml'] }),
+    ]);
+    const view = buildSetupView(
+      [pipe({ key: 'planning', title: 'Planning', workflowId: 'planning-pipeline', definition: planning, run: { id: 1, status: 'awaiting_approval' }, steps: [] })],
+      [question({ id: 9, step_id: null, artifact_path: '.kortext/foundation/backlog.patch.yaml', status: 'open' })],
+    );
+    expect(view.pipelines[0]!.steps.some((s) => s.status === 'review')).toBe(false);
+  });
+
   it('matches a gate by artifact path when step_id is absent', () => {
     const view = buildSetupView(
       [pipe({ run: { id: 1, status: 'awaiting_approval' }, steps: [] })],

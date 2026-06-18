@@ -103,6 +103,36 @@ describe('resumeOrphanedRuns', () => {
     const summary = resumeOrphanedRuns(repos);
     expect(summary.recovered).toEqual([]);
   });
+
+  it('cancels the orphaned run\'s open gate questions (no stale "pending" on re-trigger)', () => {
+    const orphan = seedRun('running');
+    const survivor = seedRun('running'); // gets recovered too, but seed its own question
+    const qOrphan = repos.pendingQuestions.create({
+      run_id: orphan,
+      step_id: null,
+      question: 'Onaylıyor musun?',
+      choices: ['approve', 'revise'],
+      artifact_path: '.kortext/references/LEGAL.md',
+    });
+    // A question NOT tied to any orphaned run must stay open.
+    const qFree = repos.pendingQuestions.create({
+      run_id: null,
+      step_id: null,
+      question: 'Standalone?',
+      choices: ['approve'],
+    });
+
+    resumeOrphanedRuns(repos);
+
+    expect(repos.pendingQuestions.get(qOrphan.id)!.status).toBe('cancelled');
+    expect(repos.pendingQuestions.get(qFree.id)!.status).toBe('open');
+    // The recovered run's audit entry reports how many questions it closed.
+    const rec = repos.auditLog
+      .list({ resource_id: String(orphan) })
+      .find((e) => e.action === 'run.orphaned-recovered');
+    expect(rec?.payload).toMatchObject({ cancelled_questions: 1 });
+    void survivor;
+  });
 });
 
 describe('Orchestrator.retryRun — orphaned recovery', () => {

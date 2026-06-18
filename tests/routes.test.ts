@@ -83,7 +83,7 @@ describe('GET /api/runs', () => {
   it('returns an empty list when no runs exist', async () => {
     const res = await fetch(`${baseUrl}/api/runs`);
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ runs: [] });
+    expect(await res.json()).toEqual({ runs: [], runningSteps: 0 });
   });
 
   it('lists runs and supports a single-run detail with steps', async () => {

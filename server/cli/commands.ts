@@ -59,11 +59,12 @@ export type StartCommandInput = {
    * just completed the workflow whose id equals this value — then stops.
    *
    * This bounds the auto-chain to the *setup* phase. Onboarding passes
-   * `'planning-pipeline'` so a new project runs analysis → planning (which
-   * derives the backlog via `add_backlog_item`) and then STOPS — it must not
-   * roll on into environment-setup → development-cycle (building the product is
-   * the gated driver's job, not a side effect of onboarding). Left undefined,
-   * `start` runs exactly one workflow (the original CLI behavior).
+   * `'environment-setup'` so a new project runs analysis → planning (derives the
+   * backlog via `add_backlog_item`) → environment-setup (skeleton, secrets, DB,
+   * deps, smoke test) and then STOPS — it must not roll on into development-cycle
+   * (building backlog *items* is the gated driver's job, not a side effect of
+   * onboarding). Left undefined, `start` runs exactly one workflow (the original
+   * CLI behavior).
    */
   chainThroughWorkflowId?: string;
 };

@@ -3,6 +3,7 @@ import type { Repositories } from '../db/repositories/index.ts';
 
 /**
  * GET  /api/runs              — list runs (filter: ?status=...&workflow_id=...&limit=...)
+ *                               + `runningSteps`: agents actually executing now
  * GET  /api/runs/:id          — run detail + ordered steps
  */
 export function runsRouter(deps: { repos: Repositories }): Router {
@@ -17,7 +18,9 @@ export function runsRouter(deps: { repos: Repositories }): Router {
       workflow_id: workflowId,
       limit,
     });
-    res.json({ runs });
+    // Concurrent running STEPS across all runs — the footer's honest "N active
+    // agents" (one run drafts several artifacts at once, so run count under-reports).
+    res.json({ runs, runningSteps: deps.repos.runs.countRunningSteps() });
   });
 
   r.get('/runs/:id', (req, res) => {

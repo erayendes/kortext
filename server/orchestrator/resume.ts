@@ -24,8 +24,21 @@ export type ResumeSummary = {
 export function resumeOrphanedRuns(repos: Repositories): ResumeSummary {
   const running = repos.runs.listRuns({ status: 'running', limit: 1000 });
   const recovered: number[] = [];
+  // Group open gate questions by their run, so we can close the ones belonging
+  // to runs we're about to orphan. Without this, a cancelled run leaves its
+  // +prime questions 'open' — and when analysis re-triggers, the NEW run shows
+  // the OLD run's gates as still pending (stale "review" on every step).
+  const openByRun = new Map<number, number[]>();
+  for (const q of repos.pendingQuestions.listOpen()) {
+    if (q.run_id == null) continue;
+    const list = openByRun.get(q.run_id) ?? [];
+    list.push(q.id);
+    openByRun.set(q.run_id, list);
+  }
   for (const run of running) {
     repos.runs.transitionRun(run.id, 'cancelled', { error_message: ORPHANED_MESSAGE });
+    const staleQuestions = openByRun.get(run.id) ?? [];
+    for (const qid of staleQuestions) repos.pendingQuestions.transition(qid, 'cancelled');
     repos.auditLog.append({
       actor: 'system',
       action: 'run.orphaned-recovered',
@@ -35,6 +48,7 @@ export function resumeOrphanedRuns(repos: Repositories): ResumeSummary {
         previous_status: 'running',
         workflow_id: run.workflow_id,
         worktree_path: run.worktree_path,
+        cancelled_questions: staleQuestions.length,
       },
     });
     recovered.push(run.id);

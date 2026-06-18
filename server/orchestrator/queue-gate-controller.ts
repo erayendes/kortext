@@ -30,6 +30,9 @@ export class QueueGateController implements GateController {
 
     const created = this.queue.enqueue({
       runId,
+      // Stamp the exact step this gate guards so consumers match it to ONE step
+      // (not every step sharing the artifact, e.g. planning's backlog.patch.yaml).
+      stepId: ctx.runStepId ?? null,
       question: `${persona}, ${filename} dosyasını üretti. Onaylıyor musun?`,
       choices: ['approve', 'revise'],
       artifactPath: gate.artifactPath,

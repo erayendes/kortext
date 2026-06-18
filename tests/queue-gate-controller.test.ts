@@ -74,6 +74,32 @@ describe('QueueGateController', () => {
     expect(answered?.choices).toEqual(['approve', 'revise']);
   });
 
+  it('stamps the question with the gate step runStepId (so consumers match one step)', async () => {
+    const queue = new ApprovalQueue({ repos, pollIntervalMs: 10 });
+    const controller = new QueueGateController(queue);
+    const runId = makeRun();
+
+    // The question's step_id is a real FK into run_steps, so create one.
+    const step = repos.runs.addStep({
+      run_id: runId,
+      step_index: 0,
+      step_name: 'compliance step',
+      persona: '+compliance-expert',
+      status: 'running',
+    });
+
+    let stampedStepId: number | null | undefined;
+    const promise = controller.pauseAtGate({ gate, runId, workflowId: 'wf', runStepId: step.id });
+    setTimeout(() => {
+      const open = queue.findOpenForRun(runId);
+      stampedStepId = open?.step_id; // capture the stamped step_id before answering
+      if (open) queue.answer(open.id, 'approve', 'tester');
+    }, 25);
+    await promise;
+
+    expect(stampedStepId).toBe(step.id);
+  });
+
   it('maps a non-approve answer to a reject decision carrying the answer as reason', async () => {
     const queue = new ApprovalQueue({ repos, pollIntervalMs: 10 });
     const controller = new QueueGateController(queue);

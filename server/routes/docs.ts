@@ -15,7 +15,9 @@ import { spawnCli, tailLines } from '../engine/executors/cli-spawn.ts';
  * escape).
  */
 
-const FILE_RE = /^[\w][\w.-]*\.md$/;
+// Markdown is the common case; `.yaml`/`.yml` is allowed so the Setup review
+// drawer can open backlog.patch.yaml and other foundation artifacts.
+const FILE_RE = /^[\w][\w.-]*\.(md|ya?ml)$/i;
 
 export type DocsRouterDeps = {
   /** Map scope name → absolute directory path. Only these scopes are reachable. */
