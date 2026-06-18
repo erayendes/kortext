@@ -14,11 +14,12 @@
  * queue.answer path the initializing timeline uses).
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Check, PenLine, X, Sparkles, Sun, Moon, Eclipse } from 'lucide-react';
-import { apiGet, apiPost, usePolling } from '../lib/api.ts';
+import { ArrowRight, Check, PenLine, X, Sparkles, Sun, Moon, Eclipse, Bell, Search, SlidersHorizontal } from 'lucide-react';
+import { apiGet, apiPost, usePolling, useProjectMeta } from '../lib/api.ts';
 import type { SetupView, SetupStep, SetupStepStatus, SetupPipeline } from '../lib/api-types.ts';
 import { personaPalette } from '../lib/persona-colors.ts';
 import { useTheme } from '../app/theme.ts';
+import { Footer } from '../app/Footer.tsx';
 import { Drawer } from './v6/Drawer.tsx';
 import { AnnotatableDoc } from './v6/AnnotatableDoc.tsx';
 import { docsPathFor, artifactFilename } from '../routes/initializing.tsx';
@@ -26,7 +27,7 @@ import { docsPathFor, artifactFilename } from '../routes/initializing.tsx';
 const PILL: Record<SetupStepStatus, { label: string; cls: string }> = {
   done: { label: 'done', cls: 's-green' },
   review: { label: 'review', cls: 's-blue' },
-  running: { label: 'running', cls: 's-amber' },
+  running: { label: 'drafting', cls: 's-amber' },
   queued: { label: 'queued', cls: 's-neutral' },
   failed: { label: 'failed', cls: 's-red' },
 };
@@ -95,10 +96,13 @@ export function SetupScreen({ onOpenDashboard }: { onOpenDashboard: () => void }
       </aside>
 
       <div className="main-col">
+        <SetupTopbar />
         <div className="content kx-scroll" id="content" style={{ padding: 0 }}>
           <SetupStream pipelines={pipelines} onReview={(s) => setOpenKey(s.key)} />
         </div>
       </div>
+
+      <Footer />
 
       <ReviewDrawer
         step={openStep}
@@ -109,6 +113,36 @@ export function SetupScreen({ onOpenDashboard }: { onOpenDashboard: () => void }
         }}
       />
     </div>
+  );
+}
+
+// ── Header — mirrors the app topbar (no router Links: this renders outside the
+// RouterProvider, so the project name is a plain label, not a dashboard Link) ──
+function SetupTopbar() {
+  const project = useProjectMeta();
+  return (
+    <header className="topbar">
+      <span className="ws-switcher" title="Project">
+        <span className="ws-name">{project?.name ?? 'Project'}</span>
+      </span>
+      <div className="tb-search">
+        <div className="input-group">
+          <Search className="ic-lead" />
+          <input className="input" placeholder="Search items, epics, or go to…" readOnly />
+          <span className="kbd" style={{ position: 'absolute', right: 8 }}>
+            ⌘K
+          </span>
+        </div>
+      </div>
+      <div className="tb-right">
+        <button className="icon-btn" title="Tweaks" disabled>
+          <SlidersHorizontal className="ic" />
+        </button>
+        <button className="icon-btn" title="Notifications" disabled>
+          <Bell className="ic" />
+        </button>
+      </div>
+    </header>
   );
 }
 
@@ -155,10 +189,20 @@ function SetupStream({
   onReview: (s: SetupStep) => void;
 }) {
   // Activity = steps that have started or need attention, in pipeline order.
+  const allSteps = pipelines.flatMap((p) => p.steps);
   const activity = pipelines.flatMap((p) =>
     p.steps.filter((s) => s.status !== 'queued').map((s) => ({ pipeline: p.title, step: s })),
   );
-  const running = pipelines.flatMap((p) => p.steps).filter((s) => s.status === 'running').length;
+  const drafting = allSteps.filter((s) => s.status === 'running').length;
+  const reviewing = allSteps.filter((s) => s.status === 'review').length;
+  // Surface whatever needs attention: reviews first (the human's turn), else
+  // what's being drafted, else idle. "0 stages running" hid pending reviews.
+  const badge =
+    reviewing > 0
+      ? { cls: 's-blue', live: false, text: `${reviewing} awaiting review` }
+      : drafting > 0
+        ? { cls: 's-amber', live: true, text: `${drafting} drafting` }
+        : { cls: 's-neutral', live: false, text: 'idle' };
 
   return (
     <div className="ob-wrap ob-setup">
@@ -174,9 +218,9 @@ function SetupStream({
       <section className="card setup-activity">
         <div className="panel-head">
           <div className="panel-title">Activity</div>
-          <span className="badge s-amber">
-            <span className="dot dot-live" />
-            {running} stages running
+          <span className={`badge ${badge.cls}`}>
+            {badge.live && <span className="dot dot-live" />}
+            {badge.text}
           </span>
         </div>
         <div className="act-list">
