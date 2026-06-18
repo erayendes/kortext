@@ -11,21 +11,21 @@ Eray is a non-coder, communicates in Turkish, code / commits / comments in Engli
 ## Dosya haritası — Claude için: hangi durumda nereye yaz
 
 ```
-"decisions güncelle" / "bu kararı kaydet"          → docs/DECISIONS.md
-"mimari değişti" / "yeni bileşen"                  → docs/pending-update/ARCHITECTURE.md
-"tasarım güncelle" / "yeni UI / renk"              → docs/DESIGN.md
-"handover yaz" / oturum sonu / "devam notu"        → docs/HANDOVER.md
-"todo'ya ekle" / "sonraki iş"                      → docs/TODO.md
-"UAT senaryosu" / "kullanıcı testi"                → docs/UAT.md
-"wireframe / mockup / concept" (HTML)              → docs/concepts/
+"decisions güncelle" / "bu kararı kaydet"          → dev/DECISIONS.md
+"mimari değişti" / "yeni bileşen"                  → dev/pending-update/ARCHITECTURE.md
+"tasarım güncelle" / "yeni UI / renk"              → dev/DESIGN.md
+"handover yaz" / oturum sonu / "devam notu"        → dev/HANDOVER.md
+"todo'ya ekle" / "sonraki iş"                      → dev/TODO.md
+"UAT senaryosu" / "kullanıcı testi"                → dev/UAT.md
+"wireframe / mockup / concept" (HTML)              → dev/concepts/
 "Claude için kural / mapping / behavior"           → CLAUDE.md (bu dosya)
 Kod (feature / bug fix / refactor)                 → src/  server/  bin/  mcp/  tests/
 Persona / workflow / rule / template düzenleme     → agents/  workflows/  rules/  templates/
 ```
 
-> **Doküman yeri (2026-06-17):** tüm geliştirici dokümanları `development/`'dan **`docs/`'a** taşındı. Canlı: `docs/{DECISIONS,DESIGN,HANDOVER,TODO,UAT}.md`. Güncellenmeyi bekleyenler: `docs/pending-update/` (ARCHITECTURE, SETUP, USER-GUIDE, PRODUCT). Arşiv: `docs/{concepts,specs,superpowers}/`.
+> **Doküman yeri (2026-06-17):** tüm geliştirici dokümanları `dev/`'da. Canlı: `dev/{DECISIONS,DESIGN,HANDOVER,TODO,UAT}.md`. Güncellenmeyi bekleyenler: `dev/pending-update/` (ARCHITECTURE, SETUP, USER-GUIDE, PRODUCT). Arşiv: `dev/{concepts,specs,superpowers}/`. `docs/` → Docusaurus public site için ayrıldı.
 
-Detaylı mimari için [docs/pending-update/ARCHITECTURE.md](docs/pending-update/ARCHITECTURE.md), karar geçmişi için [docs/DECISIONS.md](docs/DECISIONS.md), aktif faz durumu için [docs/HANDOVER.md](docs/HANDOVER.md).
+Detaylı mimari için [dev/pending-update/ARCHITECTURE.md](dev/pending-update/ARCHITECTURE.md), karar geçmişi için [dev/DECISIONS.md](dev/DECISIONS.md), aktif faz durumu için [dev/HANDOVER.md](dev/HANDOVER.md).
 
 ## Working style — for Claude on code side
 
