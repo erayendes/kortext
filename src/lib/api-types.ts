@@ -386,6 +386,7 @@ export type SetupStep = {
   status: SetupStepStatus;
   artifactPath: string | null;
   questionId: number | null;
+  startedAt: number | null;
 };
 
 export type SetupPipeline = {

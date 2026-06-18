@@ -14,7 +14,7 @@
  * queue.answer path the initializing timeline uses).
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Check, PenLine, X, Sparkles, Sun, Moon, Eclipse, Bell, Search, SlidersHorizontal } from 'lucide-react';
+import { ArrowRight, Check, PenLine, X, Sparkles, Sun, Moon, Eclipse, Bell, Search, SlidersHorizontal, FileText } from 'lucide-react';
 import { apiGet, apiPost, usePolling, useProjectMeta } from '../lib/api.ts';
 import type { SetupView, SetupStep, SetupStepStatus, SetupPipeline } from '../lib/api-types.ts';
 import { personaPalette } from '../lib/persona-colors.ts';
@@ -24,9 +24,12 @@ import { Drawer } from './v6/Drawer.tsx';
 import { AnnotatableDoc } from './v6/AnnotatableDoc.tsx';
 import { docsPathFor, artifactFilename } from '../routes/initializing.tsx';
 
+// Canonical status vocabulary (Eray): queued=not started · drafting=being
+// written · pending=awaiting approval · approved=done. Mirrors FileBrowser's
+// STATUS_PILL so every screen reads the same.
 const PILL: Record<SetupStepStatus, { label: string; cls: string }> = {
-  done: { label: 'done', cls: 's-green' },
-  review: { label: 'review', cls: 's-blue' },
+  done: { label: 'approved', cls: 's-green' },
+  review: { label: 'pending', cls: 's-blue' },
   running: { label: 'drafting', cls: 's-amber' },
   queued: { label: 'queued', cls: 's-neutral' },
   failed: { label: 'failed', cls: 's-red' },
@@ -34,6 +37,13 @@ const PILL: Record<SetupStepStatus, { label: string; cls: string }> = {
 
 const short = (h: string | null | undefined): string => (h ?? '?').replace(/^\+/, '');
 const isMd = (label: string): boolean => /\.md$/i.test(label);
+
+/** HH:MM from a Unix-ms timestamp; em-dash while the step hasn't started. */
+function clock(ms: number | null): string {
+  if (ms == null) return '—';
+  const d = new Date(ms);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
 
 export function SetupScreen({ onOpenDashboard }: { onOpenDashboard: () => void }) {
   const { data, refresh } = usePolling<SetupView>('/api/setup', 2000);
@@ -169,6 +179,7 @@ function PhaseRail({ pipelines }: { pipelines: SetupPipeline[] }) {
             const pill = PILL[s.status];
             return (
               <div className={`nav-item${isMd(s.label) ? ' setup-file' : ''}`} key={s.key} title={s.label}>
+                {isMd(s.label) && <FileText className="ic" />}
                 <span className="grow truncate">{s.label}</span>
                 <span className={`st-pill ${pill.cls}`}>{pill.label}</span>
               </div>
@@ -225,18 +236,32 @@ function SetupStream({
         </div>
         <div className="act-list">
           {activity.length === 0 ? (
-            <div className="act-row">
-              <div className="act-main">
-                <div className="act-text" style={{ color: 'var(--fg-faint)' }}>
-                  Waiting for the first stage to start…
-                </div>
-              </div>
-            </div>
+            <div className="act-empty">Waiting for the first stage to start…</div>
           ) : (
             activity.map(({ step }) => {
               const pill = PILL[step.status];
+              // The whole row is selectable when there's an artifact to open
+              // (review or approved) — mirrors the dashboard's clickable rows.
+              const openable = step.artifactPath != null || step.questionId != null;
               return (
-                <div className={`act-row${step.status === 'running' ? ' live' : ''}`} key={step.key}>
+                <div
+                  className={`act-row${step.status === 'running' ? ' live' : ''}${openable ? ' act-link' : ''}`}
+                  key={step.key}
+                  role={openable ? 'button' : undefined}
+                  tabIndex={openable ? 0 : undefined}
+                  onClick={openable ? () => onReview(step) : undefined}
+                  onKeyDown={
+                    openable
+                      ? (e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            onReview(step);
+                          }
+                        }
+                      : undefined
+                  }
+                >
+                  <span className="mono act-t">{clock(step.startedAt)}</span>
                   <div className="act-who">
                     <SetupAgentToken who={step.persona} />
                   </div>
@@ -245,7 +270,14 @@ function SetupStream({
                   </div>
                   <div className="act-meta">
                     {step.status === 'review' ? (
-                      <button type="button" className="btn btn-primary btn-sm" onClick={() => onReview(step)}>
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onReview(step);
+                        }}
+                      >
                         Review
                         <ArrowRight className="ic" />
                       </button>
@@ -276,6 +308,33 @@ function SetupAgentToken({ who }: { who: string | null }) {
     <span className="agent" title={who}>
       <span className="adot" style={{ background: color, color }} />
       <span className="truncate">{short(who)}</span>
+    </span>
+  );
+}
+
+function rgba(hex: string, a: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+}
+
+/** Icon-only persona circle (no name) — used in the drawer header so the persona
+ * isn't duplicated next to the file title. Mirrors the initializing Avatar. */
+function Avatar({ handle, size = 24 }: { handle: string | null; size?: number }) {
+  const { color, icon: Icon } = personaPalette(handle);
+  return (
+    <span
+      className="avatar"
+      title={handle ?? undefined}
+      style={{
+        width: size,
+        height: size,
+        background: rgba(color, 0.1),
+        border: `1.5px solid ${rgba(color, 0.65)}`,
+        color,
+        flexShrink: 0,
+      }}
+    >
+      <Icon size={Math.round(size * 0.54)} strokeWidth={2} />
     </span>
   );
 }
@@ -354,30 +413,82 @@ function ReviewDrawer({
     [step, busy, onAnswered],
   );
 
+  const title =
+    artifactFilename(step?.artifactPath) === '—' ? (step?.label ?? '') : artifactFilename(step?.artifactPath);
+
   return (
-    <Drawer open={open} onClose={onClose} width={620}>
+    <Drawer open={open} onClose={onClose} width={920}>
       {step && (
         <>
+          {/* Header — icon-only Avatar (persona name lives in the subtitle, not
+              duplicated) + action buttons at the TOP, like the references reader. */}
           <div className="dr-head">
-            <SetupAgentToken who={step.persona} />
+            <Avatar handle={step.persona} size={24} />
             <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
               <span className="page-title mono" style={{ fontSize: 14 }}>
-                {artifactFilename(step.artifactPath) === '—' ? step.label : artifactFilename(step.artifactPath)}
+                {title}
               </span>
               <span className="metric-sub">
                 {short(step.persona)}
                 {step.phase ? ` · ${step.phase}` : ''}
               </span>
             </div>
-            <span className="tag tag-warn" style={{ marginLeft: 'auto' }}>
-              review
+            <span className="st-pill s-blue" style={{ marginLeft: 'auto' }}>
+              pending
             </span>
+            {!reviseMode && (
+              <>
+                <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => setReviseMode(true)}>
+                  <PenLine style={{ width: 13, height: 13 }} /> Revize
+                </button>
+                <button type="button" className="btn btn-sm btn-success" disabled={busy} onClick={() => void answer('approve')}>
+                  <Check style={{ width: 13, height: 13 }} /> Onayla
+                </button>
+              </>
+            )}
             <button type="button" className="btn btn-secondary btn-sm" onClick={onClose} style={{ marginLeft: 6 }}>
               <X style={{ width: 13, height: 13 }} />
             </button>
           </div>
 
-          <div className="dr-body" style={{ padding: 0 }}>
+          {/* Inline revise — appears just under the header (references pattern). */}
+          {reviseMode && (
+            <div className="dr-revise">
+              <input
+                className="rb-input"
+                autoFocus
+                value={reason}
+                placeholder="Revizyon nedenini yaz…"
+                onChange={(e) => setReason(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && reason.trim()) void answer(reason.trim());
+                }}
+                style={{ flex: 1 }}
+              />
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                disabled={busy}
+                onClick={() => {
+                  setReviseMode(false);
+                  setReason('');
+                }}
+              >
+                Vazgeç
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                disabled={busy || !reason.trim()}
+                onClick={() => void answer(reason.trim())}
+              >
+                <PenLine style={{ width: 13, height: 13 }} /> Gönder
+              </button>
+            </div>
+          )}
+          {err ? <div className="dr-err">{err}</div> : null}
+
+          <div className="dr-body setup-doc-mono" style={{ padding: 0 }}>
             {bodyState === 'loading' ? (
               <div className="fb-md" style={{ color: 'var(--fg-faint)' }}>
                 Yükleniyor…
@@ -388,65 +499,6 @@ function ReviewDrawer({
               </div>
             ) : (
               <AnnotatableDoc markdown={body} mode="ro" />
-            )}
-          </div>
-
-          <div
-            style={{
-              flexShrink: 0,
-              borderTop: '1px solid var(--border)',
-              padding: '12px 18px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 10,
-              background: 'var(--bg-elev)',
-            }}
-          >
-            {err ? <span style={{ color: 'var(--red)', fontSize: 12 }}>{err}</span> : null}
-            {reviseMode ? (
-              <>
-                <input
-                  className="rb-input"
-                  autoFocus
-                  value={reason}
-                  placeholder="Revizyon nedenini yaz…"
-                  onChange={(e) => setReason(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && reason.trim()) void answer(reason.trim());
-                  }}
-                  style={{ width: '100%' }}
-                />
-                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                  <button
-                    type="button"
-                    className="btn btn-secondary btn-sm"
-                    disabled={busy}
-                    onClick={() => {
-                      setReviseMode(false);
-                      setReason('');
-                    }}
-                  >
-                    Vazgeç
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-primary btn-sm"
-                    disabled={busy || !reason.trim()}
-                    onClick={() => void answer(reason.trim())}
-                  >
-                    <PenLine style={{ width: 13, height: 13 }} /> Revize gönder
-                  </button>
-                </div>
-              </>
-            ) : (
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => setReviseMode(true)}>
-                  <PenLine style={{ width: 13, height: 13 }} /> Revize
-                </button>
-                <button type="button" className="btn btn-sm btn-success" disabled={busy} onClick={() => void answer('approve')}>
-                  <Check style={{ width: 13, height: 13 }} /> Onayla
-                </button>
-              </div>
             )}
           </div>
         </>

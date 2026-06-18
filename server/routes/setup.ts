@@ -30,7 +30,7 @@ export function setupRouter(deps: {
     const specs: { key: SetupPipelineKey; title: string; workflowId: string }[] = [
       { key: 'analysis', title: 'Analysis', workflowId: analysisWorkflowId },
       { key: 'planning', title: 'Planning', workflowId: 'planning-pipeline' },
-      { key: 'environment', title: 'Environment', workflowId: 'environment-setup' },
+      { key: 'environment', title: 'Environment Setup', workflowId: 'environment-setup' },
     ];
 
     const openQuestions = deps.repos.pendingQuestions.listOpen();

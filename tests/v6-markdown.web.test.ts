@@ -25,6 +25,21 @@ describe('parseMarkdown', () => {
     expect(tokens[0]!.selectable).toBe(true);
   });
 
+  it('collapses a fenced code block (``` … ```) into one code token', () => {
+    const tokens = parseMarkdown(
+      ['intro', '```json', '{', '  "a": 1', '}', '```', 'after'].join('\n'),
+    );
+    expect(tokens.map((t) => t.kind)).toEqual(['para', 'code', 'para']);
+    // Fence lines stripped; the raw body is preserved verbatim.
+    expect(tokens[1]!.text).toBe('{\n  "a": 1\n}');
+  });
+
+  it('handles an unterminated fence without hanging (runs to EOF)', () => {
+    const tokens = parseMarkdown(['```', 'x', 'y'].join('\n'));
+    expect(tokens.map((t) => t.kind)).toEqual(['code']);
+    expect(tokens[0]!.text).toBe('x\ny');
+  });
+
   it('assigns stable incrementing indexes', () => {
     const tokens = parseMarkdown('# A\n- one\n- two');
     expect(tokens.map((t) => t.index)).toEqual([0, 1, 2]);

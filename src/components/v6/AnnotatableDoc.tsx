@@ -243,6 +243,12 @@ export function AnnotatableDoc({
           </span>
         </div>
       );
+    } else if (t.kind === 'code') {
+      el = (
+        <pre className={`${cls} md-code`} onClick={onClick}>
+          <code>{t.text}</code>
+        </pre>
+      );
     } else {
       el = (
         <p className={cls} onClick={onClick}>
@@ -414,5 +420,6 @@ const TOKEN_CLASS: Record<MdToken['kind'], string> = {
   bullet: 'doc-bullet',
   para: 'doc-p',
   table: '',
+  code: '',
   blank: '',
 };

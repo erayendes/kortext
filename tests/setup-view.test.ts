@@ -112,8 +112,8 @@ describe('buildSetupView — step statuses', () => {
         pipe({
           run: { id: 1, status: 'running' },
           steps: [
-            runStep({ id: 10, step_name: 'product-analysis.1', status: 'succeeded' }),
-            runStep({ id: 11, step_name: 'product-analysis.2', status: 'running' }),
+            runStep({ id: 10, step_index: 0, step_name: 'whatever', status: 'succeeded' }),
+            runStep({ id: 11, step_index: 1, step_name: 'long description, not the key', status: 'running' }),
           ],
         }),
       ],
@@ -131,7 +131,7 @@ describe('buildSetupView — step statuses', () => {
       [
         pipe({
           run: { id: 1, status: 'awaiting_approval' },
-          steps: [runStep({ id: 11, step_name: 'product-analysis.2', status: 'succeeded' })],
+          steps: [runStep({ id: 11, step_index: 1, step_name: 'long desc', status: 'succeeded' })],
         }),
       ],
       [question({ id: 5, step_id: 11, artifact_path: '.kortext/references/GROWTH.md', status: 'open' })],

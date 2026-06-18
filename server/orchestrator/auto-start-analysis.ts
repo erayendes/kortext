@@ -32,13 +32,14 @@ export function autoStartPendingAnalysis(deps: AutoStartDeps): AutoStartResult {
   if (!meta) return { started: false, reason: 'no-meta' };
 
   const workflowId = triggerWorkflowIdFor(meta.type);
-  // Idempotency: ask SQL for ANY run of this workflow (filtered + limited) rather
-  // than scanning a capped page of all runs — a capped scan could miss the
-  // historical run on a long-lived daemon and re-trigger analysis on restart.
-  const existing = deps.repos.runs.listRuns({ workflow_id: workflowId, limit: 1 });
-  if (existing.length > 0) {
+  // Idempotency: look at the LATEST run of this workflow (listRuns is created_at
+  // DESC). Skip re-trigger when it's succeeded or still in flight. BUT if the
+  // only run died — cancelled/failed, e.g. a daemon crash mid-analysis — re-fire
+  // so the project recovers on restart instead of staying permanently stuck.
+  const latest = deps.repos.runs.listRuns({ workflow_id: workflowId, limit: 1 })[0];
+  if (latest && latest.status !== 'cancelled' && latest.status !== 'failed') {
     return { started: false, reason: 'already-ran', workflowId };
   }
   deps.trigger(workflowId);
-  return { started: true, workflowId };
+  return { started: true, workflowId, reason: latest ? 'retried-after-failure' : undefined };
 }

@@ -18,6 +18,7 @@ export type MdTokenKind =
   | 'bullet'
   | 'para'
   | 'table'
+  | 'code'
   | 'blank';
 
 export type MdToken = {
@@ -67,6 +68,21 @@ export function parseMarkdown(md: string): MdToken[] {
 
   while (i < lines.length) {
     const line = lines[i] ?? '';
+
+    // Fenced code block: ``` … ``` → one `code` token holding the raw body.
+    // Without this the fence + body lines fall through to `para` and render as
+    // literal backticks (the bug seen in foundation docs with JSON snippets).
+    if (line.trim().startsWith('```')) {
+      i++; // skip opening fence
+      const code: string[] = [];
+      while (i < lines.length && !(lines[i] ?? '').trim().startsWith('```')) {
+        code.push(lines[i] ?? '');
+        i++;
+      }
+      if (i < lines.length) i++; // skip closing fence
+      out.push({ kind: 'code', text: code.join('\n'), index: index++, selectable: true });
+      continue;
+    }
 
     if (line.trim().startsWith('|')) {
       const block: string[] = [];

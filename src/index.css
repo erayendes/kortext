@@ -1253,6 +1253,15 @@ body {
 .doc-body .md-table td { padding: 7px 11px; border-bottom: 1px solid var(--border); color: var(--fg-secondary); }
 .doc-body code { font-family: var(--font-mono); font-size: 0.9em; background: var(--bg-muted); padding: 1px 5px; border-radius: var(--r-sm); color: var(--fg-secondary); }
 .doc-body b { color: var(--fg); font-weight: 600; }
+/* Fenced code block (``` … ```) — monospace, scrollable, full-width inset. */
+.md-code { font-family: var(--font-mono); font-size: 12px; line-height: 1.55; background: var(--bg-muted); border: 1px solid var(--border); border-radius: var(--r-md); padding: 12px 14px; margin: 4px 0 12px; overflow-x: auto; white-space: pre; color: var(--fg-secondary); }
+.md-code code { background: none; padding: 0; font-size: inherit; }
+
+/* Setup review drawer — inline revise row, error line, empty activity, mono body. */
+.dr-revise { display: flex; align-items: center; gap: 8px; padding: 10px 18px; border-bottom: 1px solid var(--border); background: var(--bg-elev); flex: none; }
+.dr-err { padding: 8px 18px; color: var(--red); font-size: 12px; border-bottom: 1px solid var(--border); flex: none; }
+.act-empty { padding: 14px 12px; color: var(--fg-faint); font-size: 12.5px; }
+.setup-doc-mono .doc-body * { font-family: var(--font-mono); }
 
 /* ----- Explain mode (handoff .exp-*) ----- */
 .exp-hint { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; gap: 9px; margin: -26px -32px 22px; padding: 11px 32px; background: var(--accent-tint); border-bottom: 1px solid var(--accent-tint-border); font-size: 12.5px; color: var(--fg-secondary); }

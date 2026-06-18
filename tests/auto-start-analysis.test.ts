@@ -6,7 +6,7 @@ const META: ProjectMeta = {
   name: 'Acme', code: 'ACME', type: 'new', platforms: ['web'],
   githubRepo: null, executor: 'claude', executorBinary: null, createdAt: 1,
 };
-function repos(runs: Array<{ workflow_id: string }>) {
+function repos(runs: Array<{ workflow_id: string; status?: string }>) {
   const listRuns = vi.fn(() => runs);
   return { repos: { runs: { listRuns } } as any, listRuns };
 }
@@ -37,9 +37,9 @@ describe('autoStartPendingAnalysis', () => {
     expect(trigger).not.toHaveBeenCalled();
   });
 
-  it('does NOT trigger when an analysis run already exists (idempotent)', () => {
+  it('does NOT trigger when an active analysis run already exists (idempotent)', () => {
     const trigger = vi.fn();
-    const r = repos([{ workflow_id: 'new-project-analysis' }]);
+    const r = repos([{ workflow_id: 'new-project-analysis', status: 'running' }]);
     const res = autoStartPendingAnalysis({
       repos: r.repos,
       blueprintPath: '/bp', projectJsonPath: '/pj', trigger,
@@ -48,6 +48,30 @@ describe('autoStartPendingAnalysis', () => {
     expect(res.started).toBe(false);
     expect(res.reason).toMatch(/already/i);
     expect(trigger).not.toHaveBeenCalled();
+  });
+
+  it('does NOT trigger when the analysis run already succeeded', () => {
+    const trigger = vi.fn();
+    const r = repos([{ workflow_id: 'new-project-analysis', status: 'succeeded' }]);
+    const res = autoStartPendingAnalysis({
+      repos: r.repos, blueprintPath: '/bp', projectJsonPath: '/pj', trigger,
+      readStatus: () => 'approved', readMeta: () => META,
+    });
+    expect(res.started).toBe(false);
+    expect(trigger).not.toHaveBeenCalled();
+  });
+
+  it('RE-triggers when the only analysis run died (cancelled/failed) — recovery', () => {
+    for (const status of ['cancelled', 'failed']) {
+      const trigger = vi.fn();
+      const r = repos([{ workflow_id: 'new-project-analysis', status }]);
+      const res = autoStartPendingAnalysis({
+        repos: r.repos, blueprintPath: '/bp', projectJsonPath: '/pj', trigger,
+        readStatus: () => 'approved', readMeta: () => META,
+      });
+      expect(res.started).toBe(true);
+      expect(trigger).toHaveBeenCalledWith('new-project-analysis');
+    }
   });
 
   it('does NOT trigger when meta is missing', () => {

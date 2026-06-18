@@ -133,7 +133,7 @@ const isBootstrapDaemon = process.env.KORTEXT_BOOTSTRAP === '1';
 const resumed = resumeOrphanedRuns(repos);
 if (resumed.recovered.length > 0) {
   console.log(
-    `[kortext] orphan recovery: ${resumed.recovered.length} run(s) moved to cancelled — retry with 'kortext retry <id>'`,
+    `[kortext] orphan recovery: ${resumed.recovered.length} run(s) moved to cancelled — analysis auto-restarts on this boot; build runs resume from the Board.`,
   );
 }
 

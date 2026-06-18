@@ -32,6 +32,8 @@ export type SetupStep = {
   artifactPath: string | null;
   /** Open gate question id when this step needs +prime — else null. */
   questionId: number | null;
+  /** When the step started (run_step.started_at, Unix ms) — null while queued. */
+  startedAt: number | null;
 };
 
 export type SetupPipeline = {
@@ -135,7 +137,11 @@ function buildSteps(p: PipelineInput, openQuestions: PendingQuestion[]): SetupSt
   // run_steps when the workflow isn't in the registry, so we still show *something*.
   if (p.definition) {
     return p.definition.steps.map((step) => {
-      const runStep = p.steps.find((s) => s.step_name === step.key);
+      // Match the run_step by ORDER (step_index), not name: the engine names
+      // run_steps by their long description ("Product Analysis — +x: …"), which
+      // never equals the workflow step `key` (`phase-slug.index`). Index is the
+      // stable join — run_steps are inserted in definition order.
+      const runStep = p.steps.find((s) => s.step_index === step.index);
       const gate = gateForStep(step, runStep, openQuestions);
       let status: SetupStepStatus;
       if (gate) status = 'review';
@@ -150,6 +156,7 @@ function buildSteps(p: PipelineInput, openQuestions: PendingQuestion[]): SetupSt
         status,
         artifactPath: gate?.artifact_path ?? md,
         questionId: gate?.id ?? null,
+        startedAt: runStep?.started_at ?? null,
       };
     });
   }
@@ -164,6 +171,7 @@ function buildSteps(p: PipelineInput, openQuestions: PendingQuestion[]): SetupSt
       status: gate ? 'review' : fromRunStep(rs.status),
       artifactPath: gate?.artifact_path ?? null,
       questionId: gate?.id ?? null,
+      startedAt: rs.started_at ?? null,
     };
   });
 }
