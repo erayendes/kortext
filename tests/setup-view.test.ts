@@ -16,6 +16,8 @@ function wfStep(p: Partial<WorkflowStep> & Pick<WorkflowStep, 'key' | 'index'>):
     outputs: [],
     approver: null,
     reviewer: null,
+    label: null,
+    activity: null,
     ...p,
   };
 }

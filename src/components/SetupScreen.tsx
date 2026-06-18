@@ -38,6 +38,25 @@ const PILL: Record<SetupStepStatus, { label: string; cls: string }> = {
 const short = (h: string | null | undefined): string => (h ?? '?').replace(/^\+/, '');
 const isMd = (label: string): boolean => /\.md$/i.test(label);
 
+/**
+ * Activity-feed text, conjugated from the step's status (approach (i)):
+ *   drafting → "<label> hazırlanıyor…" · pending → "<label> hazır — onayını
+ *   bekliyor" · approved → the workflow's result sentence (`activity`).
+ */
+function activityText(step: SetupStep): string {
+  switch (step.status) {
+    case 'running':
+      return `${step.label} hazırlanıyor…`;
+    case 'review':
+      return `${step.label} hazır — onayını bekliyor`;
+    case 'failed':
+      return `${step.label} başarısız oldu`;
+    case 'done':
+    default:
+      return step.activity ?? step.label;
+  }
+}
+
 /** HH:MM from a Unix-ms timestamp; em-dash while the step hasn't started. */
 function clock(ms: number | null): string {
   if (ms == null) return '—';
@@ -266,7 +285,7 @@ function SetupStream({
                     <SetupAgentToken who={step.persona} />
                   </div>
                   <div className="act-main">
-                    <div className="act-text">{step.label}</div>
+                    <div className="act-text">{activityText(step)}</div>
                   </div>
                   <div className="act-meta">
                     {step.status === 'review' ? (

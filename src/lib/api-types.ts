@@ -382,6 +382,7 @@ export type SetupStep = {
   key: string;
   phase: string;
   label: string;
+  activity: string | null;
   persona: string | null;
   status: SetupStepStatus;
   artifactPath: string | null;

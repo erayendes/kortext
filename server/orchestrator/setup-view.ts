@@ -24,8 +24,10 @@ export type SetupStep = {
   key: string;
   /** Phase heading the step lives under, e.g. 'Product Analysis'. */
   phase: string;
-  /** Short display label (artifact filename when there is one, else step text). */
+  /** Short sidebar label (workflow `- label:`, else artifact filename / step text). */
   label: string;
+  /** Activity-stream result sentence (workflow `- activity:`) — UI conjugates by status. */
+  activity: string | null;
   persona: string | null;
   status: SetupStepStatus;
   /** Artifact awaiting review, e.g. '.kortext/references/LEGAL.md' (review steps). */
@@ -151,7 +153,8 @@ function buildSteps(p: PipelineInput, openQuestions: PendingQuestion[]): SetupSt
       return {
         key: step.key,
         phase: step.phase,
-        label: setupStepLabel(step),
+        label: step.label ?? setupStepLabel(step),
+        activity: step.activity ?? null,
         persona: step.persona,
         status,
         artifactPath: gate?.artifact_path ?? md,
@@ -167,6 +170,7 @@ function buildSteps(p: PipelineInput, openQuestions: PendingQuestion[]): SetupSt
       key: rs.step_name,
       phase: rs.step_name.split('.')[0] ?? '',
       label: rs.step_name,
+      activity: null,
       persona: rs.persona,
       status: gate ? 'review' : fromRunStep(rs.status),
       artifactPath: gate?.artifact_path ?? null,

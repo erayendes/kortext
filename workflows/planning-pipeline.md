@@ -20,6 +20,8 @@
 ## Backlog Tanımı
 
 1. **+engineering-manager:** Backlog'u tek bir YAML dosyası olarak üret: `.kortext/foundation/backlog.yaml`. Dosya **sadece geçerli YAML** olmalı (markdown/prose/code-fence YOK), en üstte `items:` listesi. PRD + TRD'deki kapsam sınırlarına **uyarak** item'ları çıkar; her item ayrı satırda. Disiplin: atomik (tek başına anlaşılabilir, bağımsız geliştirilebilir, ayrı doğrulanabilir).
+   - label: Backlog
+   - activity: Backlog atomik item'lara bölündü.
 
    **🎯 Kapsam ve granularite — ZORUNLU.** PRD/BRD'de bir **item sayısı sınırı** ya da kapsam notu varsa (örn. "toplam item 8'i geçmesin", "MVP", "küçük proje") bu bir **tavandır, aşma**. Sınır verilmişse o sayıyı geçme; verilmemişse projeyi makul, kaba-taneli item'lara böl. **Bir özellik = bir task** (varsayılan); aynı özelliğin frontend/backend/test parçalarını **ayrı item'lara BÖLME** (review_gates ve persona zaten o işi paralel yürütür). Şüphedeysen **daha az, daha büyük** item'ı tercih et — fazla bölmek backlog'u şişirir ve kapsam notunu ihlal eder. Epic container'lar bu sayıma dahil değildir.
 
@@ -83,40 +85,56 @@
    - outputs: `.kortext/foundation/backlog.yaml`, `backlog-drafted`
 
 2. **+qa-engineer:** Mevcut `backlog.yaml`'i oku. Her item için davranış odaklı, test edilebilir `acceptance_criteria` belirle; QA gerektiren item'lara `quality_control` gate'i ekle. Çıktıyı **patch olarak** yaz: `backlog.patch.yaml`'e yalnız dokunduğun item'ları, her satırda `id` + `acceptance_criteria` (ve gerekirse `review_gates: [quality_control]`) ile. Tüm dosyayı yeniden yazma.
+   - label: Kabul kriterleri
+   - activity: Kabul kriterleri yazıldı. QA kapıları eklendi.
    - inputs: `.kortext/foundation/PRD.md`, `.kortext/references/TEST.md`, `backlog-drafted`
    - outputs: `.kortext/foundation/backlog.patch.yaml`, `backlog-acceptance-set`
 
 3. **+security-engineer:** Mevcut `backlog.yaml`'i oku. Auth, secret, veri işleme, erişim kontrolü, compliance riski taşıyan item'lara `security_control` gate'i ekle. Çıktıyı **patch olarak** yaz: `backlog.patch.yaml`'e yalnız bu item'ları `id` + `review_gates: [security_control]` ile. (Motor gate'i eklemeli birleştirir, mevcut gate'leri silmez.)
+   - label: Güvenlik gate'leri
+   - activity: Riskli item'lara güvenlik kapısı eklendi.
    - inputs: `.kortext/foundation/TRD.md`, `.kortext/references/SECURITY.md`, `backlog-acceptance-set`
    - outputs: `.kortext/foundation/backlog.patch.yaml`, `backlog-security-marked`
 
 4. **+designer:** Mevcut `backlog.yaml`'i oku. UI, UX, responsive davranış, erişilebilirlik gerektiren item'lara `design_review` gate'i ekle. Çıktıyı **patch olarak** yaz: `backlog.patch.yaml`'e yalnız bu item'ları `id` + `review_gates: [design_review]` ile.
+   - label: Tasarım gate'leri
+   - activity: UI/UX item'larına tasarım kapısı eklendi.
    - inputs: `.kortext/references/DESIGN.md`, `backlog-security-marked`
    - outputs: `.kortext/foundation/backlog.patch.yaml`, `backlog-design-marked`
 
 ## Epic ve Versiyon
 
 1. **+engineering-manager:** Mevcut `backlog.yaml`'i oku. Epic yapısını gözden geçir: her child task/bug/debt item'ında doğru `parent_epic: <EPIC-ID>` olduğundan emin ol (etiket değil, gerçek epic id'si — epic container'lar step 1'de üretildi). Eksik/yanlış bağları düzelt. Çıktıyı **patch olarak** yaz: `backlog.patch.yaml`'e yalnız bağını değiştirdiğin item'ları `id` + `parent_epic` (ve gerekirse `owner`) ile. (Yeni epic container gerekiyorsa nadir; gerekiyorsa `backlog.yaml`'e değil, ayrı bir tam item olarak patch'te `id` + `type: epic` + `title` ile verilemez — bunun yerine step 1'de oluşturulmalıydı; eksikse `description`'a not düş.)
+   - label: Epic bağları
+   - activity: Item'lar epic'lere bağlandı.
    - inputs: `.kortext/foundation/PRD.md`, `.kortext/foundation/TRD.md`, `backlog-design-marked`
    - outputs: `.kortext/foundation/backlog.patch.yaml`, `backlog-epics-linked`
 
 2. **+engineering-manager:** Mevcut `backlog.yaml`'i oku. Epic'leri (ve item'larını) versiyonlara dağıt. Karmaşıklığa göre v0.x aşamalarından başla, v1.0'a mantıksal sırayla ilerle. Çıktıyı **patch olarak** yaz: `backlog.patch.yaml`'e her item'ı `id` + `version: <vX.Y>` ile (örn. `version: v0.1`).
+   - label: Versiyonlama
+   - activity: Epic'ler versiyonlara dağıtıldı.
    - inputs: `.kortext/foundation/PRD.md`, `backlog-epics-linked`
    - outputs: `.kortext/foundation/backlog.patch.yaml`, `backlog-versions-set`
 
 ## Atama
 
 1. **+engineering-manager:** Mevcut `backlog.yaml`'i oku. Her item'a persona handle ata. Teknik item'lar uzmanlık alanına göre; insan müdahalesi gereken item'lar (domain satın alma, hesap açma, API key, fiziksel cihaz, bütçe onayı) `+prime`'a. Çıktıyı **patch olarak** yaz: `backlog.patch.yaml`'e her item'ı `id` + `assignee` ile.
+   - label: Görev atama
+   - activity: Item'lara persona atandı.
    - inputs: `.kortext/references/STACK.md`, `backlog-versions-set`
    - outputs: `.kortext/foundation/backlog.patch.yaml`, `backlog-assignees-set`
 
 2. **+operation-manager:** Mevcut `backlog.yaml`'i oku. Her item için LLM model tercihini `rules/models.md` mapping'ine göre belirle: önce item'ın assignee persona'sının görev kategorisini bul (`deep-research` → `high-reasoning`, `routine` → `fast-reasoning`), sonra model profilini ata. Çıktıyı **patch olarak** yaz: `backlog.patch.yaml`'e her item'ı `id` + `model: <profil>` ile (örn. `model: high-reasoning`).
+   - label: Model ataması
+   - activity: Item'lara LLM modeli atandı.
    - inputs: `backlog-assignees-set`, `rules/models.md`
    - outputs: `.kortext/foundation/backlog.patch.yaml`, `backlog-models-set`
 
 ## Konsolidasyon
 
 1. **+operation-manager:** Nihai `backlog.yaml`'i baştan sona tara: drift, eksik alan (epic/versiyon/model boş kalan item), dangling `blocks`/`blocked_by` referansı, eksik Epic veya versiyon ilişkisi. **ID denetimi:** her id `<CODE>-NNN`/`<CODE>-E0X` desenine uymalı; slug/kebab-case id (`init-nextjs-project`) bulursan **hata olarak düzelt** (patch'te eski→yeni id veremezsin; bunun yerine raporun "açık riskler" bölümüne not düş, çünkü id yeniden yazımı step-1'de yapılmalıydı). **Bağımlılık denetimi:** her item'da `blocks` ve `blocked_by` alanları doldurulmuş mu (en az `[]`) — toptan boş kalmış çok-adımlı bir epic, step-1'in bağımlılıkları atladığına işarettir, yeniden incele. `blocked_by`/`blocks` referansları gerçek id'lere işaret etmeli; dangling olanı temizle. Bulduğun eksikleri **patch olarak** `backlog.patch.yaml`'e yaz (yalnız düzelttiğin item'lar, yalnız eksik alanlar) — tüm dosyayı yeniden yazma. **Tepe anahtar `items:` olmalı** (`dependency_patches:` gibi bir ad DEĞİL — motor okuyamaz). Bağımlılık patch örneği:
+   - label: Konsolidasyon
+   - activity: Backlog baştan sona denetlendi. Status raporu yazıldı.
    ```yaml
    items:
      - id: NOT-005

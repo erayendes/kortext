@@ -43,6 +43,11 @@ export type WorkflowStep = {
   approver: string | null;
   /** Persona under `- Reviewer:` */
   reviewer: string | null;
+  /** Short sidebar label under `- Label:` (Setup screen left rail). Optional so
+   *  existing step literals (tests) needn't set it; the parser always emits it. */
+  label?: string | null;
+  /** Activity-stream result sentence under `- Activity:` (Setup screen feed). */
+  activity?: string | null;
 };
 
 export type ApprovalGate = {
@@ -232,6 +237,8 @@ export function parseWorkflowMarkdown(source: string, fileId: string): WorkflowD
         outputs: [],
         approver: null,
         reviewer: null,
+        label: null,
+        activity: null,
       };
       stepCounter += 1;
       continue;
@@ -246,6 +253,8 @@ export function parseWorkflowMarkdown(source: string, fileId: string): WorkflowD
         else if (label === 'outputs') activeStep.outputs = splitList(value);
         else if (label === 'approver') activeStep.approver = value.trim().replace(/[`*]/g, '');
         else if (label === 'reviewer') activeStep.reviewer = value.trim().replace(/[`*]/g, '');
+        else if (label === 'label') activeStep.label = value.trim().replace(/[`*]/g, '');
+        else if (label === 'activity') activeStep.activity = value.trim().replace(/[`*]/g, '');
         continue;
       }
       // Blank line or unrelated content ends step body.
