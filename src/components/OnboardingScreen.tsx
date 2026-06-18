@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import {
-  ArrowRight,
   Clipboard,
   Eclipse,
   FileCheck,
@@ -17,7 +16,6 @@ import {
 } from 'lucide-react';
 
 import { apiGet, apiPost, type ApiPostError } from '../lib/api.ts';
-import { personaPalette } from '../lib/persona-colors.ts';
 import { useTheme } from '../app/theme.ts';
 import { Footer } from '../app/Footer.tsx';
 import type {
@@ -100,69 +98,9 @@ const INITIAL_STATE: FormState = {
 };
 
 const PROJECT_CODE_PATTERN = /^[A-Z0-9]{2,6}$/;
-type Tab = 'initialize' | 'setup';
-
-// ── Setup tab — "Project initializing…" live view ──────────────────────────────
-// Mirrors the design-handoff `setup()` two-panel shell: a phase rail (left) and an
-// activity stream (right). The data below is illustrative — TODO: wire to the real
-// blueprint-phase + activity endpoints once a project's daemon is streaming.
-type SetupStatus = 'done' | 'review' | 'running' | 'todo';
-
-const SETUP_PILL: Record<SetupStatus, { label: string; cls: string }> = {
-  done: { label: 'approved', cls: 's-green' },
-  review: { label: 'pending', cls: 's-blue' },
-  running: { label: 'drafting', cls: 's-amber' },
-  todo: { label: 'queued', cls: 's-neutral' },
-};
-
-const SETUP_PHASES: { group: string; items: { label: string; status: SetupStatus }[] }[] = [
-  {
-    group: 'Analysis',
-    items: [
-      { label: 'GROWTH.md', status: 'done' },
-      { label: 'LEGAL.md', status: 'review' },
-      { label: 'PRD.md', status: 'review' },
-      { label: 'API.md', status: 'done' },
-      { label: 'SECURITY.md', status: 'running' },
-    ],
-  },
-  {
-    group: 'Planning',
-    items: [
-      { label: 'Creating items', status: 'done' },
-      { label: 'Item relations', status: 'running' },
-      { label: 'Acceptance criteria', status: 'todo' },
-      { label: 'Estimates', status: 'todo' },
-    ],
-  },
-  {
-    group: 'Environment',
-    items: [
-      { label: 'CI provider', status: 'done' },
-      { label: 'Cloud target', status: 'running' },
-      { label: 'Worktrees', status: 'todo' },
-    ],
-  },
-];
-
-type SetupMeta =
-  | { kind: 'dur'; v: string }
-  | { kind: 'live' }
-  | { kind: 'review'; file: string }
-  | { kind: 'approved' };
-
-const SETUP_ACTIVITY: { t: string; who: string; system?: boolean; text: string; meta: SetupMeta }[] = [
-  { t: '09:32', who: 'system', system: true, text: 'Operation-manager dispatched — analysis stage started.', meta: { kind: 'dur', v: '1m' } },
-  { t: '09:33', who: 'growth-analyst', text: 'GROWTH.md drafted — market sizing + GTM.', meta: { kind: 'approved' } },
-  { t: '09:34', who: 'legal-analyst', text: 'LEGAL.md ready for your review.', meta: { kind: 'review', file: 'LEGAL.md' } },
-  { t: '09:35', who: 'product-manager', text: 'PRD.md ready for your review.', meta: { kind: 'review', file: 'PRD.md' } },
-  { t: '09:36', who: 'api-architect', text: 'API.md drafted — 14 endpoints mapped.', meta: { kind: 'dur', v: '48s' } },
-  { t: '09:37', who: 'security-analyst', text: 'SECURITY.md — threat modelling in progress…', meta: { kind: 'live' } },
-];
 
 export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
   const [state, setState] = useState<FormState>(INITIAL_STATE);
-  const [tab, setTab] = useState<Tab>('initialize');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -411,36 +349,30 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
           <span className="side-logo-name">kortext</span>
           <span className="ver-pill side-logo-ver">v3</span>
         </div>
-        <div className={`side-scroll kx-scroll${tab === 'setup' ? ' setup-rail' : ''}`}>
-          {tab === 'setup' ? (
-            <PhaseRail />
-          ) : (
-            <div className="side-sec">
-              <div className="eyebrow">Recent projects</div>
-              {active.map((p) => projectRow(p, false))}
-              {active.length === 0 && archived.length === 0 && (
-                <div style={{ fontSize: 12, color: 'var(--fg-faint)', padding: '6px 2px' }}>No projects yet</div>
-              )}
-              {archived.length > 0 && (
-                <>
-                  <div className="eyebrow" style={{ marginTop: 12 }}>
-                    Archived
-                  </div>
-                  {archived.map((p) => projectRow(p, true))}
-                </>
-              )}
-              {startError && <div style={{ fontSize: 12, color: 'var(--red)', padding: '4px 2px' }}>{startError}</div>}
-            </div>
-          )}
-        </div>
-        {tab === 'initialize' && (
-          <div className="ob-newbtn">
-            <button type="button" className="btn btn-secondary" onClick={() => setState(INITIAL_STATE)}>
-              <Plus className="ic" />
-              New project
-            </button>
+        <div className="side-scroll kx-scroll">
+          <div className="side-sec">
+            <div className="eyebrow">Recent projects</div>
+            {active.map((p) => projectRow(p, false))}
+            {active.length === 0 && archived.length === 0 && (
+              <div style={{ fontSize: 12, color: 'var(--fg-faint)', padding: '6px 2px' }}>No projects yet</div>
+            )}
+            {archived.length > 0 && (
+              <>
+                <div className="eyebrow" style={{ marginTop: 12 }}>
+                  Archived
+                </div>
+                {archived.map((p) => projectRow(p, true))}
+              </>
+            )}
+            {startError && <div style={{ fontSize: 12, color: 'var(--red)', padding: '4px 2px' }}>{startError}</div>}
           </div>
-        )}
+        </div>
+        <div className="ob-newbtn">
+          <button type="button" className="btn btn-secondary" onClick={() => setState(INITIAL_STATE)}>
+            <Plus className="ic" />
+            New project
+          </button>
+        </div>
         <div className="side-foot">
           <span className="kx-settings">
             <Sparkles className="ic" />
@@ -452,21 +384,15 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
         </div>
       </aside>
 
-      {/* ── Main: tabs + form ────────────────────────────────────────────── */}
+      {/* ── Main: initialize form ────────────────────────────────────────── */}
       <div className="main-col">
         <div className="ob-tabbar">
-          <button className={`ob-tab${tab === 'initialize' ? ' on' : ''}`} onClick={() => setTab('initialize')}>
+          <button type="button" className="ob-tab on">
             Initialize
-          </button>
-          <button className={`ob-tab${tab === 'setup' ? ' on' : ''}`} onClick={() => setTab('setup')}>
-            Setup
           </button>
         </div>
         <div className="content kx-scroll" id="content" style={{ padding: 0 }}>
-          {tab === 'setup' ? (
-            <SetupStream />
-          ) : (
-            <>
+          <>
               <div className="ob-wrap">
                 <div className="ob-head">
                   <h1>Initialize your project</h1>
@@ -711,7 +637,6 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
                 </button>
               </div>
             </>
-          )}
         </div>
       </div>
       <Footer />
@@ -803,118 +728,3 @@ function RadioCard({
   );
 }
 
-// ── Setup tab — left phase rail (mirrors the workspace nav: side-sec + eyebrow) ─
-function PhaseRail() {
-  return (
-    <>
-      {SETUP_PHASES.map((p) => (
-        <div className="side-sec" key={p.group}>
-          <div className="eyebrow">{p.group}</div>
-          {p.items.map((it) => {
-            const pill = SETUP_PILL[it.status];
-            const isFile = /\.md$/.test(it.label);
-            return (
-              <div className={`nav-item${isFile ? ' setup-file' : ''}`} key={it.label}>
-                <span className="grow truncate">{it.label}</span>
-                <span className={`st-pill ${pill.cls}`}>{pill.label}</span>
-              </div>
-            );
-          })}
-        </div>
-      ))}
-      <div className="side-sec">
-        <div className="setup-rail-note">
-          When all stages finish and tasks are created, kortext moves to the Dashboard.
-        </div>
-        <button
-          type="button"
-          className="btn btn-secondary"
-          style={{ width: '100%', justifyContent: 'center', marginTop: 10 }}
-        >
-          <ArrowRight className="ic" />
-          Open dashboard
-        </button>
-      </div>
-    </>
-  );
-}
-
-// ── Setup tab — right activity stream ("Project initializing…") ───────────────
-function SetupStream() {
-  const running = SETUP_PHASES.flatMap((p) => p.items).filter((i) => i.status === 'running').length;
-  return (
-    <div className="ob-wrap ob-setup">
-      <div className="pg-head">
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h1 className="pg-title">Project initializing…</h1>
-          <p className="pg-sub">
-            Every stage streams here. Review a file from the stream or pick it on the left when it needs you.
-          </p>
-        </div>
-        <span className="st-pill s-amber" title="Illustrative — live wiring pending" style={{ flex: 'none' }}>
-          preview
-        </span>
-      </div>
-
-      <section className="card setup-activity">
-        <div className="panel-head">
-          <div className="panel-title">Activity</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span className="badge s-amber">
-              <span className="dot dot-live" />
-              {running} stages running
-            </span>
-            <span className="mono faint" style={{ fontSize: 11 }}>
-              antigravity engine
-            </span>
-          </div>
-        </div>
-        <div className="act-list">
-          {SETUP_ACTIVITY.map((e, i) => (
-            <div className={`act-row${e.meta.kind === 'live' ? ' live' : ''}`} key={i}>
-              <span className="mono act-t">{e.t}</span>
-              <div className="act-who">
-                <SetupAgentToken who={e.who} system={e.system} />
-              </div>
-              <div className="act-main">
-                <div className="act-text">{e.text}</div>
-              </div>
-              <div className="act-meta">
-                {e.meta.kind === 'dur' && <span className="mono act-dur">{e.meta.v}</span>}
-                {e.meta.kind === 'live' && <span className="st-pill s-amber">drafting</span>}
-                {e.meta.kind === 'approved' && <span className="st-pill s-green">approved</span>}
-                {e.meta.kind === 'review' && (
-                  <>
-                    <span className="st-pill s-blue">pending</span>
-                    <button type="button" className="btn btn-primary btn-sm">
-                      Review
-                      <ArrowRight className="ic" />
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-    </div>
-  );
-}
-
-/** Activity-stream agent chip — colored dot + handle (matches the dashboard token). */
-function SetupAgentToken({ who, system }: { who: string; system?: boolean }) {
-  if (system) {
-    return (
-      <span className="badge badge-square s-neutral" style={{ fontWeight: 500 }}>
-        system
-      </span>
-    );
-  }
-  const { color } = personaPalette(who);
-  return (
-    <span className="agent" title={`+${who}`}>
-      <span className="adot" style={{ background: color, color }} />
-      <span className="truncate">+{who}</span>
-    </span>
-  );
-}
