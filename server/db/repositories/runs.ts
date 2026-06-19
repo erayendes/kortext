@@ -66,6 +66,7 @@ export class RunsRepository {
   private readonly listStepsStmt;
   private readonly listStepsForItemStmt;
   private readonly countRunningStepsStmt;
+  private readonly listRunningStepsStmt;
   private readonly transitionStepStmt;
 
   constructor(private readonly db: Database.Database) {
@@ -115,6 +116,9 @@ export class RunsRepository {
     `);
     this.countRunningStepsStmt = db.prepare(
       `SELECT COUNT(*) AS n FROM run_steps WHERE status = 'running'`,
+    );
+    this.listRunningStepsStmt = db.prepare(
+      `SELECT * FROM run_steps WHERE status = 'running' ORDER BY started_at`,
     );
     this.transitionStepStmt = db.prepare(`
       UPDATE run_steps SET
@@ -225,6 +229,13 @@ export class RunsRepository {
   countRunningSteps(): number {
     const row = this.countRunningStepsStmt.get() as { n: number };
     return row.n;
+  }
+
+  /** Currently-running run_steps with their start time + owning workflow — the
+   *  footer's "open work" durations (now − started_at, ticked client-side). */
+  listRunningSteps(): RunStep[] {
+    const rows = this.listRunningStepsStmt.all() as StepRow[];
+    return rows.map((r) => RunStepSchema.parse(r));
   }
 
   transitionStep(

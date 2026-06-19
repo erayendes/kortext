@@ -19,6 +19,7 @@ export type ShellEvent =
   | 'open-agents'
   | 'open-worktrees'
   | 'open-review'
+  | 'open-durations'
   | 'open-item'
   | 'open-proj-menu'
   | 'open-ver-menu'

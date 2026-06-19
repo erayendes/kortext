@@ -11,14 +11,51 @@
  * worktrees come from the same runs. The daemon entry is a static health light
  * (not a popover). Each clickable foot-item opens its popover via a window event.
  */
-import { Bot, GitBranch, ShieldUser, Terminal, ChevronUp } from 'lucide-react';
-import { usePolling } from '../lib/api.ts';
+import { useEffect, useState } from 'react';
+import { Bot, GitBranch, ShieldUser, Terminal, ChevronUp, Clock, Pause, Play } from 'lucide-react';
+import { apiPost, usePolling } from '../lib/api.ts';
 import { emitShell } from './shell-events.ts';
 import type { Run } from '../lib/api-types.ts';
 
+export type RuntimeRunningStep = {
+  id: number;
+  label: string;
+  persona: string | null;
+  startedAt: number | null;
+};
+
+export type RuntimeInfo = {
+  now: number;
+  projectStartedAt: number | null;
+  sessionStartedAt: number;
+  running: RuntimeRunningStep[];
+};
+
+/** A clock that re-renders every `ms` so elapsed counters tick live. */
+function useNow(ms: number): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), ms);
+    return () => clearInterval(t);
+  }, [ms]);
+  return now;
+}
+
+/** Compact elapsed label: "12s" · "2m 03s" · "1h 04m" · "2d 03h". */
+export function elapsed(fromMs: number | null | undefined, nowMs: number): string {
+  if (fromMs == null) return '—';
+  const sec = Math.max(0, Math.round((nowMs - fromMs) / 1000));
+  if (sec < 60) return `${sec}s`;
+  const m = Math.floor(sec / 60);
+  if (m < 60) return `${m}m ${String(sec % 60).padStart(2, '0')}s`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ${String(m % 60).padStart(2, '0')}m`;
+  return `${Math.floor(h / 24)}d ${String(h % 24).padStart(2, '0')}h`;
+}
+
 /** Open a footer popover anchored under the foot-item that was clicked. */
 function openPop(
-  name: 'open-agents' | 'open-worktrees' | 'open-review' | 'open-terminal',
+  name: 'open-agents' | 'open-worktrees' | 'open-review' | 'open-terminal' | 'open-durations',
   el: HTMLElement,
 ): void {
   emitShell(name, { rect: el.getBoundingClientRect() });
@@ -29,6 +66,12 @@ type DriveLite = { armed: boolean; inFlight: boolean };
 export function Footer() {
   const runs = usePolling<{ runs: Run[]; runningSteps?: number }>('/api/runs', 5000);
   const drive = usePolling<DriveLite>('/api/drive', 4000);
+  const runtime = usePolling<RuntimeInfo>('/api/runtime', 5000);
+  const now = useNow(1000); // ticks the session counter live
+  const pause = usePolling<{ paused: boolean }>('/api/pause', 4000);
+  const paused = pause.data?.paused ?? false;
+  const togglePause = () =>
+    void apiPost('/api/pause', { paused: !paused }).then(() => pause.refresh());
 
   const runList = runs.data?.runs ?? [];
   // "active" = agents executing right now = concurrent running STEPS, not runs:
@@ -95,7 +138,37 @@ export function Footer() {
         <ChevronUp className="ic" />
       </span>
 
+      {/* Live session counter — opens a popover with project / session / open-work
+          durations (like the agents menu). */}
+      <span
+        className="foot-item"
+        onClick={(e) => openPop('open-durations', e.currentTarget)}
+        title="Süreler — proje · oturum · açık işler"
+      >
+        <Clock className="ic" />
+        <span className="mono">{elapsed(runtime.data?.sessionStartedAt, now)}</span>
+        <ChevronUp className="ic" />
+      </span>
+
       <div className="foot-right">
+        {/* Soft pause — holds new step launches; running agents finish. */}
+        <span
+          className="foot-item"
+          onClick={togglePause}
+          title={paused ? 'Devam et — yeni adımlar başlasın' : 'Duraklat — yeni adım başlatma'}
+        >
+          {paused ? (
+            <>
+              <Play className="ic" style={{ color: 'var(--green)' }} />
+              <span style={{ color: 'var(--green)' }}>resume</span>
+            </>
+          ) : (
+            <>
+              <Pause className="ic" />
+              <span>pause</span>
+            </>
+          )}
+        </span>
         <span
           className="foot-item"
           onClick={(e) => openPop('open-review', e.currentTarget)}

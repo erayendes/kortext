@@ -39,6 +39,8 @@ export type ChainNextOptions = {
    * lead workflow did. Left undefined, chained hops run ungated.
    */
   gateController?: RunWorkflowOptions['gateController'];
+  /** Soft pause forwarded to each chained hop's runWorkflow. */
+  pauseController?: RunWorkflowOptions['pauseController'];
 };
 
 export type ChainResult =
@@ -124,6 +126,7 @@ export async function chainNextWorkflow(
       triggeredBy: `chain:${previousDefinition.id}`,
       itemId: previousRun.item_id,
       worktreePath,
+      pauseController: opts.pauseController,
       // Arm the chained workflow's own gates only when a controller is wired.
       ...(opts.gateController
         ? { gates: nextDef.gates, gateController: opts.gateController }

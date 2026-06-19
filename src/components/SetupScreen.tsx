@@ -30,7 +30,8 @@ import { docsPathFor, artifactFilename } from '../routes/initializing.tsx';
 // written · pending=awaiting approval · approved=done. Mirrors FileBrowser's
 // STATUS_PILL so every screen reads the same.
 const PILL: Record<SetupStepStatus, { label: string; cls: string }> = {
-  done: { label: 'approved', cls: 's-green' },
+  approved: { label: 'approved', cls: 's-green' }, // human passed a +prime gate
+  done: { label: 'done', cls: 's-neutral' }, // gate-less completion
   review: { label: 'pending', cls: 's-blue' },
   running: { label: 'drafting', cls: 's-amber' },
   queued: { label: 'queued', cls: 's-neutral' },
@@ -64,6 +65,18 @@ function clock(ms: number | null): string {
   if (ms == null) return '—';
   const d = new Date(ms);
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+/** Compact elapsed label: "12s" · "2m 03s" · "1h 04m". null inputs → null. */
+export function formatDuration(fromMs: number | null, toMs: number | null): string | null {
+  if (fromMs == null || toMs == null) return null;
+  const sec = Math.max(0, Math.round((toMs - fromMs) / 1000));
+  if (sec < 60) return `${sec}s`;
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  if (m < 60) return `${m}m ${String(s).padStart(2, '0')}s`;
+  const h = Math.floor(m / 60);
+  return `${h}h ${String(m % 60).padStart(2, '0')}m`;
 }
 
 /** Render YAML/non-markdown artifacts as a fenced code block so the markdown
@@ -332,6 +345,11 @@ function SetupStream({
                     <div className="act-text">{activityText(step)}</div>
                   </div>
                   <div className="act-meta">
+                    {/* How long the step took — shown once it has finished. */}
+                    {(step.status === 'done' || step.status === 'approved') &&
+                      formatDuration(step.startedAt, step.endedAt) && (
+                        <span className="mono act-dur">{formatDuration(step.startedAt, step.endedAt)}</span>
+                      )}
                     {step.status === 'review' ? (
                       <button
                         type="button"

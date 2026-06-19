@@ -196,6 +196,30 @@ describe('buildSetupView — step statuses', () => {
     expect(legal.questionId).toBe(7);
   });
 
+  it('labels a finished +prime-gated step "approved" but a gate-less step "done" (+ endedAt)', () => {
+    const def2 = def('new-project-analysis', [
+      wfStep({ key: 'a.1', index: 0, persona: '+compliance-expert', approver: '+prime', outputs: ['.kortext/references/LEGAL.md'] }),
+      wfStep({ key: 'a.2', index: 1, persona: '+growth-expert', approver: null, outputs: ['.kortext/references/GROWTH.md'] }),
+    ]);
+    const view = buildSetupView(
+      [
+        pipe({
+          definition: def2,
+          run: { id: 1, status: 'running' },
+          steps: [
+            runStep({ id: 10, step_index: 0, step_name: 'legal', status: 'succeeded', started_at: 1000, ended_at: 4000 }),
+            runStep({ id: 11, step_index: 1, step_name: 'growth', status: 'succeeded', started_at: 5000, ended_at: 5500 }),
+          ],
+        }),
+      ],
+      [],
+    );
+    const [legal, growth] = view.pipelines[0]!.steps;
+    expect(legal!.status).toBe('approved'); // had a +prime gate
+    expect(legal!.endedAt).toBe(4000);
+    expect(growth!.status).toBe('done'); // gate-less
+  });
+
   it('treats every step of a succeeded run as done even without run_step rows', () => {
     const view = buildSetupView([pipe({ run: { id: 1, status: 'succeeded' }, steps: [] })], []);
     expect(view.pipelines[0]!.steps.every((s) => s.status === 'done')).toBe(true);

@@ -373,7 +373,7 @@ export type BlueprintSubmitResponse = {
 
 // ── Setup view (GET /api/setup) — the three init pipelines, live ──────────────
 // Mirrors server/orchestrator/setup-view.ts.
-export type SetupStepStatus = 'queued' | 'running' | 'review' | 'done' | 'failed';
+export type SetupStepStatus = 'queued' | 'running' | 'review' | 'done' | 'approved' | 'failed';
 export type SetupPipelineStatus = 'queued' | 'running' | 'done' | 'failed';
 export type SetupPhase = 'analysis' | 'planning' | 'environment' | 'development';
 export type SetupPipelineKey = 'analysis' | 'planning' | 'environment';
@@ -388,6 +388,7 @@ export type SetupStep = {
   artifactPath: string | null;
   questionId: number | null;
   startedAt: number | null;
+  endedAt: number | null;
 };
 
 export type SetupPipeline = {

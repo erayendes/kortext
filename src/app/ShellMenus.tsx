@@ -19,6 +19,7 @@ import type {
 } from '../lib/api-types.ts';
 import { assigneeOf } from '../lib/board-drawer.ts';
 import { emitShell, useShellEvent } from './shell-events.ts';
+import { elapsed, type RuntimeInfo } from './Footer.tsx';
 
 type MenuState = { which: 'proj' | 'ver'; left: number; top: number } | null;
 
@@ -129,12 +130,13 @@ const RUN_RUNTIME_LABEL: Partial<Record<Run['status'], string>> = {
 };
 
 function UpPanels() {
-  const [which, setWhich] = useState<'agents' | 'worktrees' | 'review' | null>(null);
+  const [which, setWhich] = useState<'agents' | 'worktrees' | 'review' | 'durations' | null>(null);
   const [left, setLeft] = useState(74);
   const [items, setItems] = useState<BacklogItem[]>([]);
   const [runs, setRuns] = useState<Run[]>([]);
+  const [runtime, setRuntime] = useState<RuntimeInfo | null>(null);
 
-  function open(target: 'agents' | 'worktrees' | 'review', rect?: DOMRect) {
+  function open(target: 'agents' | 'worktrees' | 'review' | 'durations', rect?: DOMRect) {
     setWhich((cur) => (cur === target ? null : target));
     if (rect) {
       // anchor the panel under the clicked foot-item, clamped to the viewport
@@ -150,11 +152,23 @@ function UpPanels() {
         .then((r) => setItems(r.items))
         .catch(() => undefined);
     }
+    if (target === 'durations') {
+      apiGet<RuntimeInfo>('/api/runtime').then(setRuntime).catch(() => undefined);
+    }
   }
 
   useShellEvent('open-agents', (e) => open('agents', e.detail?.rect));
   useShellEvent('open-worktrees', (e) => open('worktrees', e.detail?.rect));
   useShellEvent('open-review', (e) => open('review', e.detail?.rect));
+  useShellEvent('open-durations', (e) => open('durations', e.detail?.rect));
+
+  // Tick a local clock while the durations panel is open so its counters move.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (which !== 'durations') return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [which]);
 
   // Active runs = the agents actually doing something right now.
   const itemsById = new Map(items.map((i) => [i.id, i]));
@@ -275,7 +289,7 @@ function UpPanels() {
               )}
             </div>
           </>
-        ) : (
+        ) : which === 'worktrees' ? (
           <>
             <div className="pop-head">
               <span className="pop-title">Open worktrees</span>
@@ -291,6 +305,35 @@ function UpPanels() {
                     <span className="up-name">
                       {w.worktree_path?.split('/').filter(Boolean).pop() ?? `run-${w.id}`}
                     </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="pop-head">
+              <span className="pop-title">Süreler</span>
+            </div>
+            <div className="up-list">
+              <div className="up-row" style={{ justifyContent: 'space-between' }}>
+                <span className="up-name">Proje toplam</span>
+                <span className="mono faint">{elapsed(runtime?.projectStartedAt ?? null, now)}</span>
+              </div>
+              <div className="up-row" style={{ justifyContent: 'space-between' }}>
+                <span className="up-name">Oturum</span>
+                <span className="mono faint">{elapsed(runtime?.sessionStartedAt ?? null, now)}</span>
+              </div>
+              <div className="pop-note" style={{ padding: '6px 10px 2px' }}>
+                Açık işler {runtime?.running.length ? `(${runtime.running.length})` : ''}
+              </div>
+              {!runtime?.running.length ? (
+                <div className="up-empty">Şu an açık iş yok.</div>
+              ) : (
+                runtime.running.map((s) => (
+                  <div className="up-row" key={s.id} style={{ justifyContent: 'space-between' }}>
+                    <span className="up-name">{s.label}</span>
+                    <span className="mono faint">{elapsed(s.startedAt, now)}</span>
                   </div>
                 ))
               )}

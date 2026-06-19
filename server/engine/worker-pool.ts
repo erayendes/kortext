@@ -37,6 +37,18 @@ export type GateController = {
 };
 
 /**
+ * Soft pause (Setup/dashboard pause button). The scheduler consults this before
+ * launching new steps: while `paused()` it holds new launches but lets in-flight
+ * steps + gate resolutions finish. `waitWhilePaused` lets the loop block (instead
+ * of finishing) when paused-and-idle, so the run resumes where it stopped.
+ */
+export type PauseController = {
+  paused: () => boolean;
+  /** Resolves immediately when not paused; otherwise on resume. Rejects on abort. */
+  waitWhilePaused: (signal?: AbortSignal) => Promise<void>;
+};
+
+/**
  * Worker pool that drives a single workflow run against the DB.
  *
  * Scheduling:
@@ -97,6 +109,12 @@ export type RunWorkflowOptions = {
   gates?: ApprovalGate[];
   /** Required when gates are non-empty — invoked to decide approve/reject. */
   gateController?: GateController;
+  /**
+   * Soft pause. When `paused()` is true the scheduler holds NEW step launches;
+   * in-flight steps + gate resolutions run to completion. While paused and
+   * otherwise idle, the loop awaits `waitWhilePaused` instead of finishing.
+   */
+  pauseController?: PauseController;
   /**
    * Step keys whose work was already done in a previous run (retry-from-rejected).
    * These are pre-marked as 'skipped' with summary 'resumed-from-previous-run'
@@ -494,9 +512,13 @@ export async function runWorkflow(
       gateResolving.set(gateKey, resolution);
     }
 
+    // Soft pause: hold NEW launches while paused. In-flight steps + gate
+    // resolutions below still settle; we only stop starting more work.
+    const paused = options.pauseController?.paused() ?? false;
+
     // Schedule ready steps: every dependency must be done AND, when that
     // dependency carries a gate, approved.
-    if (!failedStepKey) {
+    if (!failedStepKey && !paused) {
       const ready = graph.readyKeys(done).filter((k) => {
         if (running.has(k)) return false;
         const node = graph.nodes.get(k);
@@ -511,7 +533,13 @@ export async function runWorkflow(
     }
 
     // Done when nothing is running, no gate is resolving, and none are queued.
+    // BUT while paused, an idle loop must NOT finish — block until resumed so
+    // the held steps launch on resume instead of the run completing early.
     if (running.size === 0 && gateResolving.size === 0 && gatesToFire.length === 0) {
+      if (paused) {
+        await options.pauseController!.waitWhilePaused(aborter.signal);
+        continue;
+      }
       break;
     }
 

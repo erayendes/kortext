@@ -14,7 +14,10 @@
 import type { WorkflowDefinition, WorkflowStep } from '../engine/workflow-parser.ts';
 import type { RunStep, RunStatus, PendingQuestion } from '../db/schemas.ts';
 
-export type SetupStepStatus = 'queued' | 'running' | 'review' | 'done' | 'failed';
+// 'done' = step finished with no +prime gate (most planning steps); 'approved'
+// = step that carried a +prime gate and the human approved it. Distinct vocab so
+// the rail/stream don't label every success "approved".
+export type SetupStepStatus = 'queued' | 'running' | 'review' | 'done' | 'approved' | 'failed';
 export type SetupPipelineStatus = 'queued' | 'running' | 'done' | 'failed';
 export type SetupPhase = 'analysis' | 'planning' | 'environment' | 'development';
 export type SetupPipelineKey = 'analysis' | 'planning' | 'environment';
@@ -36,6 +39,8 @@ export type SetupStep = {
   questionId: number | null;
   /** When the step started (run_step.started_at, Unix ms) — null while queued. */
   startedAt: number | null;
+  /** When the step finished (run_step.ended_at, Unix ms) — null until done. */
+  endedAt: number | null;
 };
 
 export type SetupPipeline = {
@@ -152,7 +157,7 @@ function pipelineStatus(run: PipelineInput['run'], steps: SetupStep[]): SetupPip
     if (run.status === 'succeeded') return 'done';
     if (run.status === 'failed' || run.status === 'cancelled') return 'failed';
   }
-  if (steps.length > 0 && steps.every((s) => s.status === 'done')) return 'done';
+  if (steps.length > 0 && steps.every((s) => s.status === 'done' || s.status === 'approved')) return 'done';
   if (steps.some((s) => s.status === 'running' || s.status === 'review' || s.status === 'failed')) {
     return 'running';
   }
@@ -178,6 +183,9 @@ function buildSteps(p: PipelineInput, openQuestions: PendingQuestion[]): SetupSt
       if (gate) status = 'review';
       else if (runStep) status = fromRunStep(runStep.status);
       else status = runSucceeded ? 'done' : 'queued';
+      // A finished step that carried a +prime gate is "approved" (human passed
+      // it); a finished gate-less step is just "done".
+      if (status === 'done' && step.approver === '+prime') status = 'approved';
       const md = step.outputs.find((o) => /\.md$/i.test(o)) ?? null;
       return {
         key: step.key,
@@ -189,6 +197,7 @@ function buildSteps(p: PipelineInput, openQuestions: PendingQuestion[]): SetupSt
         artifactPath: gate?.artifact_path ?? md,
         questionId: gate?.id ?? null,
         startedAt: runStep?.started_at ?? null,
+        endedAt: runStep?.ended_at ?? null,
       };
     });
   }
@@ -205,6 +214,7 @@ function buildSteps(p: PipelineInput, openQuestions: PendingQuestion[]): SetupSt
       artifactPath: gate?.artifact_path ?? null,
       questionId: gate?.id ?? null,
       startedAt: rs.started_at ?? null,
+      endedAt: rs.ended_at ?? null,
     };
   });
 }

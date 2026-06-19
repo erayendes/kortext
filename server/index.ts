@@ -14,6 +14,8 @@ import { healthRouter } from './routes/health.ts';
 import { dbInfoRouter } from './routes/db-info.ts';
 import { approvalRouter } from './routes/approvals.ts';
 import { runsRouter } from './routes/runs.ts';
+import { runtimeRouter } from './routes/runtime.ts';
+import { pauseRouter } from './routes/pause.ts';
 import { handoversRouter } from './routes/handovers.ts';
 import { activityRouter } from './routes/activity.ts';
 import { decisionsRouter } from './routes/decisions.ts';
@@ -57,6 +59,7 @@ import { WorkflowDeployer } from './engine/executors/workflow-deployer.ts';
 import { getDb } from './db/client.ts';
 import { ApprovalQueue } from './orchestrator/approval-queue.ts';
 import { QueueGateController } from './orchestrator/queue-gate-controller.ts';
+import { WorkflowPauseController } from './orchestrator/pause-controller.ts';
 import { MarkdownSyncService } from './services/markdown-sync.ts';
 import type { SafetyGuards } from './engine/worker-pool.ts';
 import { mcpSseRouter } from '../mcp/sse.ts';
@@ -129,6 +132,9 @@ if (indexSync.stepsWithoutPersona.length > 0) {
 // (blueprint `bootstrap` branch), and must NOT auto-start analysis for itself.
 const isBootstrapDaemon = process.env.KORTEXT_BOOTSTRAP === '1';
 
+// Process boot time — the footer's "session" duration counts from here.
+const SESSION_STARTED_AT = Date.now();
+
 // Reconcile zombie runs left behind by a previous crash/restart.
 const resumed = resumeOrphanedRuns(repos);
 if (resumed.recovered.length > 0) {
@@ -142,6 +148,10 @@ const approvalQueue = new ApprovalQueue({ repos });
 // are mounted on — so a human's answer lands in the exact DB view the gate
 // controller polls. Onboarding analysis pauses at each +prime gate through it.
 const queueGateController = new QueueGateController(approvalQueue);
+
+// Process-wide soft pause (Setup/dashboard pause button). Shared by the setup
+// chain + every run; toggled via the /api/pause routes.
+const pauseController = new WorkflowPauseController();
 
 // Faz 12.9 follow-up: wire the reports-index back-fill into the worker
 // pool's safety guard so per-file outputs (`<scope>_<slug>_<ts>.md`)
@@ -234,6 +244,7 @@ const triggerAnalysis = (workflowId: string) => {
     // (via the approval queue) before continuing. Same queue the REST
     // routes use, so a dashboard answer resumes the run.
     gateController: queueGateController,
+    pauseController,
     // Onboarding runs the whole SETUP phase — analysis → planning (derives the
     // backlog) → environment-setup (skeleton, secrets, DB, deps, smoke test) —
     // then STOPS before development-cycle. Building backlog *items* stays the
@@ -336,6 +347,16 @@ const approvalDeployer = new WorkflowDeployer({
 });
 app.use('/api', approvalRouter({ repos, queue: approvalQueue, deployer: approvalDeployer }));
 app.use('/api', runsRouter({ repos }));
+app.use(
+  '/api',
+  runtimeRouter({
+    repos,
+    sessionStartedAt: SESSION_STARTED_AT,
+    projectCreatedAt:
+      readProjectMeta(resolveBlueprintPaths(process.cwd()).projectJsonPath)?.createdAt ?? null,
+  }),
+);
+app.use('/api', pauseRouter({ controller: pauseController }));
 app.use('/api', handoversRouter({ repos }));
 app.use('/api', activityRouter({ repos }));
 app.use('/api', decisionsRouter({ repos }));

@@ -8,6 +8,7 @@ import {
   runWorkflow,
   type SafetyGuards,
   type GateController,
+  type PauseController,
 } from '../engine/worker-pool.ts';
 import { createFallbackExecutor, falloverAuditSink, type ExecutorKind } from './executor-factory.ts';
 import type { ApprovalQueue } from '../orchestrator/approval-queue.ts';
@@ -53,6 +54,11 @@ export type StartCommandInput = {
    * through. The bounded auto-chain reuses the same controller for each hop.
    */
   gateController?: GateController;
+  /**
+   * Soft pause shared across this run and every chained hop — the Setup/dashboard
+   * pause button. While paused the scheduler holds new step launches.
+   */
+  pauseController?: PauseController;
   /**
    * When set, after this workflow succeeds the runner follows each workflow's
    * `**Sonraki akış:**` pointer (nextWorkflowId), running the chain until it has
@@ -133,6 +139,7 @@ export async function startCommand(input: StartCommandInput): Promise<StartComma
     concurrency: input.concurrency ?? 3,
     triggeredBy: 'cli',
     safety: input.safety,
+    pauseController: input.pauseController,
     ...(gateController ? { gates: def.gates, gateController } : {}),
   });
 
@@ -156,6 +163,7 @@ export async function startCommand(input: StartCommandInput): Promise<StartComma
         loadWorkflowById: (id) => registry.get(id) ?? null,
         runOptions: { concurrency: input.concurrency ?? 3, safety: input.safety },
         gateController,
+        pauseController: input.pauseController,
       });
       if (!chain.chained) break;
       lastRun = chain.run;
