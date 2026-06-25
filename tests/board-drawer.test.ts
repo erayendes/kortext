@@ -393,10 +393,10 @@ describe('boardColumns', () => {
   });
 });
 
-describe('itemGates / gateProgress (item-based gate strip → AC/QC/SE/DS/CR)', () => {
-  it('renders only the selected gates, in canonical AC→QC→SE→DS→CR order', () => {
+describe('itemGates / gateProgress (item-based gate strip → U/Q/S/D/C)', () => {
+  it('renders only the selected gates, in canonical U→Q→S→D→C order', () => {
     const it1 = item({ id: 'T1', review_gates: ['code_review', 'uat', 'quality_control'] });
-    expect(itemGates(it1).map((g) => g.abbr)).toEqual(['AC', 'QC', 'CR']);
+    expect(itemGates(it1).map((g) => g.abbr)).toEqual(['U', 'Q', 'C']);
   });
 
   it('is empty when no gates are selected (sparse real data → no strip)', () => {
@@ -420,8 +420,8 @@ describe('itemGates / gateProgress (item-based gate strip → AC/QC/SE/DS/CR)', 
       frontmatter: fm,
     });
     const gates = itemGates(ip);
-    expect(gates.find((g) => g.abbr === 'AC')!.state).toBe('passed');
-    expect(gates.find((g) => g.abbr === 'CR')!.state).toBe('pending');
+    expect(gates.find((g) => g.abbr === 'U')!.state).toBe('passed');
+    expect(gates.find((g) => g.abbr === 'C')!.state).toBe('pending');
     expect(gateProgress(ip)).toEqual({ done: 1, total: 2 });
   });
 

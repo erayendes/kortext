@@ -21,15 +21,17 @@ import type { ExecutorResult } from './executor.ts';
 const SLUG_PATTERN = '[A-Za-z0-9][A-Za-z0-9-]*';
 // Canonical timestamp is YYYY-MM-DD_HH-MM-SS (markdown-sync.formatReportTimestamp),
 // but headless agents write report files via the raw Write tool and invent the
-// filename — they routinely emit looser, still date-shaped forms (compact
-// `20260605`, date-only `2026-06-05`, `20260605-1959`, and the underscore form
-// `20260608_174649` / `2026-06-08_17-46-49` that crashed the UAT #5 planning
-// run). Match a date with optional separators and an optional time, allowing
-// `-`, `_`, `:`, `T`, or space between/within the parts, so a file that
-// genuinely exists on disk is never dropped as "not produced" over a
-// timestamp-format nicety — while still rejecting non-date junk (e.g. `draft`).
+// filename — they routinely emit looser forms. Two shapes are accepted:
+//   1. date-shaped: compact `20260605`, date-only `2026-06-05`, `20260605-1959`,
+//      underscore `20260608_174649` / `2026-06-08_17-46-49` (UAT #5).
+//   2. Unix epoch: `1718800694` (seconds) / `1718800694123` (ms) — agents that
+//      reach for `Date.now()` emit a bare epoch (UAT 2026-06-19 planning run:
+//      `status-reports_planning-pipeline_1718800694.md` was dropped as "not
+//      produced", failing planning and stalling the chain).
+// Lenient on purpose: a file that genuinely exists must never be dropped over a
+// timestamp-format nicety, while still rejecting non-date junk (e.g. `draft`).
 const TIMESTAMP_PATTERN =
-  '\\d{4}[-_]?\\d{2}[-_]?\\d{2}(?:[-_T ]?\\d{2}[-_:]?\\d{2}(?:[-_:]?\\d{2})?)?';
+  '(?:\\d{4}[-_]?\\d{2}[-_]?\\d{2}(?:[-_T ]?\\d{2}[-_:]?\\d{2}(?:[-_:]?\\d{2})?)?|\\d{10,13})';
 
 export type ResolvedOutput =
   | { kind: 'static'; absolutePath: string }

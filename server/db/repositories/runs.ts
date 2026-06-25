@@ -114,11 +114,20 @@ export class RunsRepository {
       WHERE r.item_id = ?
       ORDER BY rs.id
     `);
+    // Only count/list running steps whose RUN is still live. A run that was
+    // cancelled or failed mid-flight can leave 'running' step rows behind
+    // (zombies); those must not inflate the footer's "N active" or the duration
+    // popover's open-work list — join through runs and keep only live runs.
     this.countRunningStepsStmt = db.prepare(
-      `SELECT COUNT(*) AS n FROM run_steps WHERE status = 'running'`,
+      `SELECT COUNT(*) AS n FROM run_steps rs
+       JOIN runs r ON r.id = rs.run_id
+       WHERE rs.status = 'running' AND r.status IN ('running', 'awaiting_approval')`,
     );
     this.listRunningStepsStmt = db.prepare(
-      `SELECT * FROM run_steps WHERE status = 'running' ORDER BY started_at`,
+      `SELECT rs.* FROM run_steps rs
+       JOIN runs r ON r.id = rs.run_id
+       WHERE rs.status = 'running' AND r.status IN ('running', 'awaiting_approval')
+       ORDER BY rs.started_at`,
     );
     this.transitionStepStmt = db.prepare(`
       UPDATE run_steps SET

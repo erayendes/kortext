@@ -69,9 +69,11 @@ const EXECUTOR_META: Record<ExecutorChoice, { label: string; handle: string; des
   antigravity: { label: 'Antigravity', handle: 'agy', desc: 'Google Antigravity' },
   claude: { label: 'Claude', handle: 'claude', desc: 'Anthropic agents' },
   codex: { label: 'Codex', handle: 'codex', desc: 'OpenAI agents' },
-  mock: { label: 'Mock', handle: 'mock', desc: 'Demo only — no real work' },
+  mock: { label: 'Mock', handle: 'mock', desc: 'Fixture data — instant, no AI (testing)' },
 };
-const DEFAULT_ORDER: ExecutorChoice[] = ['antigravity', 'claude', 'codex'];
+// mock is last (a harmless fallback for real projects); drag it to #1 for an
+// instant, free test run.
+const DEFAULT_ORDER: ExecutorChoice[] = ['antigravity', 'claude', 'codex', 'mock'];
 
 type BrdMode = 'upload' | 'paste';
 

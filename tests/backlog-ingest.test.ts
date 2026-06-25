@@ -144,6 +144,31 @@ describe('parseBacklogYaml', () => {
     expect(result.errors[0]).toMatch(/yaml parse failed/i);
   });
 
+  it('collects entries from ALL top-level patch sections, not just one (regression)', () => {
+    // Live UAT 2026-06-19: an enrichment patch split fields into per-section keys
+    // (version_patches / assignee_patches / model_patches). The old findItemArray
+    // returned only the first id-bearing array → assignee/model silently dropped
+    // (every item ended up with owner=null). All sections must contribute.
+    const patch = [
+      'version_patches:',
+      '  - id: T1',
+      '    version: v0.1',
+      'assignee_patches:',
+      '  - id: T1',
+      '    assignee: +frontend-developer',
+      'model_patches:',
+      '  - id: T1',
+      '    model: high-reasoning',
+    ].join('\n');
+    const result = parseBacklogYaml(patch, { mode: 'patch' });
+    expect(result.errors).toHaveLength(0);
+    const blocks = result.items.filter((i) => i.id === 'T1');
+    // Each section contributes its own block; together they carry every field.
+    expect(blocks.some((b) => b.version === 'v0.1')).toBe(true);
+    expect(blocks.some((b) => b.owner === '+frontend-developer')).toBe(true);
+    expect(blocks.some((b) => b.model === 'high-reasoning')).toBe(true);
+  });
+
   it('skips entries missing id, title, or type and records errors', () => {
     const bad = `items:
   - title: No id
@@ -947,12 +972,17 @@ describe('Critical-#1 A: generic top-level array key (LLM uses a non-`items` key
     expect(items.find((i) => i.id === 'NOT-001')!.blocked_by).toEqual(['NOT-002']);
   });
 
-  it('still prefers a canonical `items:` array when another array key is also present', () => {
+  it('merges ALL id-bearing patch sections (items + sibling *_patches), items first', () => {
+    // UAT 2026-06-19: a real enrichment patch carried `items:` AND sibling
+    // `*_patches` sections (version/assignee/model). The parser must collect them
+    // ALL — taking only `items:` silently dropped assignee/model. `items` leads.
     const { items } = parseBacklogYaml(
-      'items:\n  - id: REAL-1\n    review_gates: [code_review]\nextra_patches:\n  - id: DECOY-1\n',
+      'items:\n  - id: REAL-1\n    review_gates: [code_review]\nassignee_patches:\n  - id: REAL-1\n    assignee: +frontend-developer\n',
       { mode: 'patch' },
     );
-    expect(items.map((i) => i.id)).toEqual(['REAL-1']);
+    expect(items.map((i) => i.id)).toEqual(['REAL-1', 'REAL-1']);
+    expect(items.some((i) => i.review_gates?.includes('code_review'))).toBe(true);
+    expect(items.some((i) => i.owner === '+frontend-developer')).toBe(true);
   });
 
   it('does NOT grab a non-item array (plain strings, no id field)', () => {

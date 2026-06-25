@@ -188,7 +188,11 @@ function buildSteps(p: PipelineInput, openQuestions: PendingQuestion[]): SetupSt
       if (status === 'done' && step.approver === '+prime') status = 'approved';
       const md = step.outputs.find((o) => /\.md$/i.test(o)) ?? null;
       return {
-        key: step.key,
+        // Prefix with the pipeline key: analysis + planning both have a
+        // "Konsolidasyon" step → identical `step.key`, so the drawer's
+        // openKey→step lookup matched the FIRST (analysis, approved) and the
+        // planning gate could never be opened. Pipeline-scoping makes it unique.
+        key: `${p.key}/${step.key}`,
         phase: step.phase,
         label: step.label ?? setupStepLabel(step),
         activity: step.activity ?? null,
@@ -205,7 +209,7 @@ function buildSteps(p: PipelineInput, openQuestions: PendingQuestion[]): SetupSt
   return p.steps.map((rs) => {
     const gate = openQuestions.find((q) => q.status === 'open' && q.step_id === rs.id) ?? null;
     return {
-      key: rs.step_name,
+      key: `${p.key}/${rs.step_name}`,
       phase: rs.step_name.split('.')[0] ?? '',
       label: rs.step_name,
       activity: null,

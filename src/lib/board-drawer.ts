@@ -444,12 +444,14 @@ export function boardColumns(items: BacklogItem[]): BoardColumn[] {
 export type GateState = 'passed' | 'pending';
 
 /** Gate enum → its board pill abbreviation + full label. */
+// Single-letter abbreviations (Eray): S · D · C · U · Q — one glyph per gate
+// pill. The full `label` is the readable name (tooltip / drawer).
 export const GATE_META: Record<Gate, { abbr: string; label: string }> = {
-  uat: { abbr: 'AC', label: 'User acceptance' },
-  quality_control: { abbr: 'QC', label: 'Quality control' },
-  security_control: { abbr: 'SE', label: 'Security review' },
-  design_review: { abbr: 'DS', label: 'Design review' },
-  code_review: { abbr: 'CR', label: 'Code review' },
+  uat: { abbr: 'U', label: 'User acceptance' },
+  quality_control: { abbr: 'Q', label: 'Quality control' },
+  security_control: { abbr: 'S', label: 'Security review' },
+  design_review: { abbr: 'D', label: 'Design review' },
+  code_review: { abbr: 'C', label: 'Code review' },
 };
 
 /** Canonical left→right gate order on the card strip and drawer. */

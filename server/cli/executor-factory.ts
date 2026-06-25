@@ -46,7 +46,8 @@ export function createExecutor(
 ): Executor {
   switch (kind) {
     case 'mock':
-      return new MockExecutor();
+      // Product mock writes fixture artifacts so a `mock` UAT yields a real Board.
+      return new MockExecutor(undefined, true);
     case 'claude':
       return new ClaudeCliExecutor({
         binary: opts.binary,

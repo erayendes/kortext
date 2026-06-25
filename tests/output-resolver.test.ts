@@ -187,6 +187,24 @@ describe('resolveDeclaredOutput', () => {
     expect(r.filenameRegex.test('status-reports_NOT_draft.md')).toBe(false);
   });
 
+  // UAT (2026-06-19): the planning agent reached for Date.now() and wrote
+  // `status-reports_planning-pipeline_1718800694.md` (bare Unix epoch). The
+  // date-shaped pattern didn't match → "declared outputs not produced" → planning
+  // failed → the setup chain stalled before environment. The <ts> slot must also
+  // accept a bare epoch (seconds + milliseconds).
+  it('matches a bare Unix epoch timestamp (regression)', () => {
+    const r = resolveDeclaredOutput('.kortext/reports/status-reports_<slug>_<ts>.md', worktree);
+    if (r.kind !== 'pattern') throw new Error('expected pattern');
+    // The exact crash form: hyphenated slug + 10-digit epoch (seconds).
+    expect(r.filenameRegex.test('status-reports_planning-pipeline_1718800694.md')).toBe(true);
+    // 13-digit epoch (milliseconds) also accepted.
+    expect(r.filenameRegex.test('status-reports_NOT_1718800694123.md')).toBe(true);
+    // Date-shaped forms still match (no regression).
+    expect(r.filenameRegex.test('status-reports_NOT_2026-06-08_17-46-49.md')).toBe(true);
+    // A short non-date number is still NOT a timestamp.
+    expect(r.filenameRegex.test('status-reports_NOT_42.md')).toBe(false);
+  });
+
   it('accepts an UPPERCASE project-id as the <slug> (project.json.code)', () => {
     const r = resolveDeclaredOutput('.kortext/reports/status-reports_<slug>_<ts>.md', worktree);
     if (r.kind !== 'pattern') throw new Error('expected pattern');

@@ -196,6 +196,23 @@ describe('buildSetupView — step statuses', () => {
     expect(legal.questionId).toBe(7);
   });
 
+  it('scopes step keys by pipeline so same-named steps across pipelines stay unique', () => {
+    // analysis + planning both have a "Konsolidasyon" step → identical step.key.
+    // The view must make them unique (pipeline-prefixed) or the drawer opens the
+    // wrong one (UAT 2026-06-20: planning gate un-openable, analysis doc shown).
+    const konsoStep = (id: string) => def(id, [wfStep({ key: 'konsolidasyon.1', index: 0, persona: '+operation-manager' })]);
+    const view = buildSetupView(
+      [
+        pipe({ key: 'analysis', title: 'Analysis', workflowId: 'a', definition: konsoStep('a'), run: { id: 1, status: 'succeeded' } }),
+        pipe({ key: 'planning', title: 'Planning', workflowId: 'p', definition: konsoStep('p'), run: { id: 2, status: 'running' } }),
+      ],
+      [],
+    );
+    const aKey = view.pipelines[0]!.steps[0]!.key;
+    const pKey = view.pipelines[1]!.steps[0]!.key;
+    expect(aKey).not.toBe(pKey);
+  });
+
   it('labels a finished +prime-gated step "approved" but a gate-less step "done" (+ endedAt)', () => {
     const def2 = def('new-project-analysis', [
       wfStep({ key: 'a.1', index: 0, persona: '+compliance-expert', approver: '+prime', outputs: ['.kortext/references/LEGAL.md'] }),

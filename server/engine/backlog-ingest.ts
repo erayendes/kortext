@@ -111,22 +111,38 @@ export function coerceItemType(raw: string): { type: string; original?: string }
  * require at least one object carrying a string `id`, so unrelated lists are
  * never mistaken for the backlog.
  */
+function isIdBearingArray(value: unknown): value is unknown[] {
+  return (
+    Array.isArray(value) &&
+    value.some(
+      (el) =>
+        el !== null &&
+        typeof el === 'object' &&
+        typeof (el as Record<string, unknown>)['id'] === 'string',
+    )
+  );
+}
+
+/**
+ * Collect the patch/item entries from a parsed YAML doc.
+ *
+ * `items` is the canonical key, but enrichment agents routinely split a patch
+ * into PER-FIELD top-level sections — `version_patches`, `assignee_patches`,
+ * `model_patches`, `dependency_patches`, … (live UAT 2026-06-19). The old code
+ * returned only the FIRST id-bearing array, so every section but one was silently
+ * dropped — owner/model never reached the DB. We now CONCATENATE every id-bearing
+ * top-level array (`items` first), so each id's per-field blocks all flow to the
+ * patcher, which applies each block's fields cumulatively (version from one
+ * block, assignee from another, …).
+ */
 function findItemArray(obj: Record<string, unknown>): unknown[] | null {
-  if (Array.isArray(obj['items'])) return obj['items'] as unknown[];
-  for (const value of Object.values(obj)) {
-    if (
-      Array.isArray(value) &&
-      value.some(
-        (el) =>
-          el !== null &&
-          typeof el === 'object' &&
-          typeof (el as Record<string, unknown>)['id'] === 'string',
-      )
-    ) {
-      return value;
-    }
+  const collected: unknown[] = [];
+  if (isIdBearingArray(obj['items'])) collected.push(...(obj['items'] as unknown[]));
+  for (const [key, value] of Object.entries(obj)) {
+    if (key === 'items') continue;
+    if (isIdBearingArray(value)) collected.push(...(value as unknown[]));
   }
-  return null;
+  return collected.length > 0 ? collected : null;
 }
 
 /**
