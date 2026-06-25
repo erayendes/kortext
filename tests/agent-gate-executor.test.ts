@@ -103,6 +103,17 @@ describe('AgentGateExecutor — gate judged by a real persona agent (capstone C5
     expect(out.usage).toEqual(usage);
   });
 
+  it('the product (fixture) mock auto-passes without a report — hands-free mock UAT', async () => {
+    seedItem('X', 'Login works', [{ text: 'User can log in', done: false }]);
+    const gx = new AgentGateExecutor({
+      executor: new MockExecutor(() => ({ durationMs: 1 }), true), // writeFixtures=true
+      resolveRunContext: ctxFor,
+      repos,
+    });
+    const out = await gx.runGate({ itemId: 'X', gate: 'quality_control', persona: '+qa-engineer', attempt: 1 });
+    expect(out.pass).toBe(true);
+  });
+
   it('agent ran clean but produced NO report file → STRICT fail', async () => {
     seedItem('X', 'Login works', [{ text: 'User can log in', done: false }]);
     const gx = new AgentGateExecutor({

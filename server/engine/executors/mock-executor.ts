@@ -101,8 +101,10 @@ export class MockExecutor implements Executor {
   constructor(
     private readonly behavior: (step: WorkflowStep) => MockStepBehavior = () => ({}),
     /** When true, write each step's declared file outputs with fixture content so
-     *  a `mock` UAT produces a real Board + readable docs. Off for engine tests. */
-    private readonly writeFixtures = false,
+     *  a `mock` UAT produces a real Board + readable docs, AND gates auto-pass
+     *  (see AgentGateExecutor). Off for engine tests (which use MockExecutor to
+     *  exercise real verdict/no-op logic). Public so the gate executor can read it. */
+    readonly writeFixtures = false,
   ) {}
 
   async execute(step: WorkflowStep, ctx: ExecutorContext): Promise<ExecutorResult> {
@@ -144,6 +146,7 @@ export class MockExecutor implements Executor {
 
   /** Write fixture content for each declared FILE output (skip bare signals). */
   private writeStepFixtures(step: WorkflowStep, worktreePath: string): void {
+    let wrote = false;
     for (const out of step.outputs) {
       if (!out.includes('/') && !out.includes('.')) continue; // signal, not a file
       const abs = isAbsolute(out) ? out : join(worktreePath, out);
@@ -153,10 +156,23 @@ export class MockExecutor implements Executor {
         if (name === 'backlog.yaml') writeFileSync(abs, FIXTURE_BACKLOG);
         else if (name.endsWith('.md')) {
           writeFileSync(abs, `# ${name}\n\n_Mock fixture — ${step.persona ?? 'agent'} · ${step.phase}._\n`);
+        } else {
+          writeFileSync(abs, `// mock fixture — ${step.persona ?? 'agent'} · ${step.phase}\n`);
         }
-        // else (.yaml patches, .env.example, …): skip — backlog.yaml is already complete
+        wrote = true;
       } catch {
         // ponytail: best-effort; a write failure just means an empty doc, not a crash
+      }
+    }
+    // Fallback: a step with no file output (e.g. the dev-cycle implementation step,
+    // whose only output is the `item-in-test` signal) still must leave a change in
+    // the worktree, or the no-op guard bounces the item forever. Drop a stub.
+    if (!wrote) {
+      try {
+        const safe = step.key.replace(/[^\w.-]/g, '_');
+        writeFileSync(join(worktreePath, `mock-${safe}.ts`), `// mock build — ${step.persona ?? 'agent'} · ${step.key}\nexport {};\n`);
+      } catch {
+        // best-effort
       }
     }
   }

@@ -160,6 +160,30 @@ describe('POST /api/drive/scheduler — auto-drive toggle (on top of the master 
     expect(((await res.json()) as { error: string }).error).toBe('drive_disabled');
   });
 
+  it('auto-arms a locked-but-env-allowed driver when Auto is turned on', async () => {
+    enabled = true; // env allows it
+    // Explicitly lock from the dashboard (armed=false override).
+    await fetch(`${baseUrl}/api/drive/arm`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ armed: false }),
+    });
+    // Turning Auto on should arm + start (not 403).
+    const res = await fetch(`${baseUrl}/api/drive/scheduler`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ enabled: true, intervalSec: 60 }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { armed: boolean; scheduler: { running: boolean } };
+    expect(body.armed).toBe(true);
+    expect(body.scheduler.running).toBe(true);
+    // cleanup: stop the scheduler so its timer doesn't outlive the test
+    await fetch(`${baseUrl}/api/drive/scheduler`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ enabled: false }),
+    });
+  });
+
   it('422 when enabled is not a boolean', async () => {
     enabled = true;
     const res = await fetch(`${baseUrl}/api/drive/scheduler`, {

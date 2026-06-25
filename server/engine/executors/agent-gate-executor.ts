@@ -43,6 +43,14 @@ export class AgentGateExecutor implements GateExecutor {
   constructor(private readonly deps: AgentGateExecutorDeps) {}
 
   async runGate(ctx: GateContext): Promise<GateOutcome> {
+    // The PRODUCT mock (fixture mode) can't write a real verdict report — auto-pass
+    // so a `mock` UAT runs the dev cycle hands-free (flow/UI validation, not real
+    // judgment). Gated on `writeFixtures` so engine tests' plain MockExecutor still
+    // exercises the strict verdict/no-report path.
+    if ((this.deps.executor as { writeFixtures?: boolean }).writeFixtures) {
+      return { pass: true, findings: 'mock: auto-pass', usage: undefined };
+    }
+
     const rc = this.deps.resolveRunContext(ctx);
 
     const item = this.deps.repos.backlog.get(ctx.itemId);

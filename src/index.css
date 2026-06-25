@@ -783,7 +783,10 @@ body {
 .ob-seg button.on { background: var(--card); color: var(--fg); border-color: var(--border); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06); }
 .ob-hint { font-size: 12px; color: var(--fg-faint); margin-top: 8px; }
 /* centered, narrower form area below the header */
-.ob-wrap { width: 100%; max-width: 1340px; margin: 0 auto; padding: 24px 36px 56px; }
+/* Own the scroll: `.content` is overflow:hidden, so a tall onboarding form (e.g.
+   4 executors) would push the Initialize button under the fixed footer. The
+   `.ob-setup` setup-stream variant overrides overflow:hidden (defined later). */
+.ob-wrap { width: 100%; max-width: 1340px; margin: 0 auto; padding: 24px 36px 56px; flex: 1; min-height: 0; overflow-y: auto; }
 /* ── Setup tab — left phase rail (sidebar) + right activity stream ───────────── */
 .side-scroll.setup-rail { display: flex; flex-direction: column; }
 .side-scroll.setup-rail > .side-sec:last-child { margin-top: auto; }

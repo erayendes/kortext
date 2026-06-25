@@ -126,22 +126,23 @@ export function driveRouter(deps: DriveRouterDeps): Router {
   });
 
   r.post('/drive/scheduler', (req, res) => {
-    // Auto-drive sits on top of the master lock — refuse to arm the timer if the
-    // driver isn't armed. Keeps "armed?" a single source of truth (env default
-    // or the dashboard override).
-    if (!isArmed()) {
-      res.status(403).json({
-        error: 'drive_disabled',
-        message: 'Arm the driver first before turning on auto-drive.',
-      });
-      return;
-    }
     const body = req.body as { enabled?: unknown; intervalSec?: unknown };
     if (typeof body.enabled !== 'boolean') {
       res.status(422).json({ error: 'validation_failed', details: ['enabled must be a boolean'] });
       return;
     }
     if (body.enabled) {
+      // Turning ON auto-drive is an explicit "go" — arm the driver if the env
+      // allows it but it wasn't armed yet (avoids the silent 403 where the toggle
+      // flips on but nothing runs). A hard env lock still blocks.
+      if (!isArmed()) {
+        if (!deps.enabled()) {
+          res.status(403).json({ error: 'drive_disabled', message: 'Driver is locked by the environment.' });
+          return;
+        }
+        armedOverride = true;
+        log('drive auto-armed via auto-drive toggle');
+      }
       // Clamp to a sane floor (a real agent pass is minutes; sub-5s polling is
       // pointless and noisy). Default 60s (Eray's choice).
       const sec =
@@ -155,7 +156,7 @@ export function driveRouter(deps: DriveRouterDeps): Router {
     } else {
       scheduler.stop();
     }
-    res.json({ scheduler: schedulerView() });
+    res.json({ armed: isArmed(), scheduler: schedulerView() });
   });
 
   return r;

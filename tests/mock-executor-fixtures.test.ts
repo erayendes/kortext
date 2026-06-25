@@ -33,6 +33,14 @@ describe('MockExecutor fixtures (product mock)', () => {
     expect(items.some((i) => i.owner === '+prime')).toBe(true); // a human prereq item exists
   });
 
+  it('writes a fallback stub when a step has only a signal output (dev-cycle no-op guard)', async () => {
+    dir = mkdtempSync(join(tmpdir(), 'mockfix-'));
+    const ex = new MockExecutor(() => ({ durationMs: 1 }), true);
+    // dev-cycle implementation step: only a bare signal output, no file.
+    await ex.execute(step({ key: 'implementation.1', outputs: ['item-in-test'] }), ctx(dir));
+    expect(existsSync(join(dir, 'mock-implementation.1.ts'))).toBe(true);
+  });
+
   it('default (no flag) writes nothing — engine tests stay file-free', async () => {
     dir = mkdtempSync(join(tmpdir(), 'mockfix-'));
     await new MockExecutor().execute(step({ outputs: ['.kortext/references/LEGAL.md'] }), ctx(dir));
