@@ -280,128 +280,6 @@ export function formatAge(fromMs: number, nowMs: number = Date.now()): string {
 
 const short = (h: string | null | undefined): string => (h ?? '?').replace(/^\+/, '');
 
-// ────────────────────────── autonomous drive control ─────────────────────────
-
-type DriveStatus = {
-  armed: boolean;
-  /** Whether the env var alone would arm it (informational). */
-  armedByEnv?: boolean;
-  inFlight: boolean;
-  scheduler: { running: boolean; intervalSec: number | null };
-  lastPass: { at: number; ok: boolean; error?: string } | null;
-};
-
-/** Format an apiPost rejection (ApiPostError-shaped) for a terse inline note. */
-function driveErr(e: unknown): string {
-  if (e && typeof e === 'object') {
-    const o = e as { message?: unknown; error?: unknown };
-    if (typeof o.message === 'string' && o.message) return o.message;
-    if (typeof o.error === 'string') return o.error;
-  }
-  return e instanceof Error ? e.message : String(e);
-}
-
-/**
- * The autonomous-driver control surfaced in the dashboard header (§5.16 +
- * autonomy). Off by default behind the master env lock: when unarmed it shows a
- * "locked" hint; when armed it offers "Run once" (one pass) + an "Auto" toggle
- * (60s scheduler). Status polls GET /api/drive.
- */
-function DriveControl() {
-  const { data, refresh } = usePolling<DriveStatus>('/api/drive', 4000);
-  const armed = data?.armed ?? false;
-  const inFlight = data?.inFlight ?? false;
-  const autoOn = data?.scheduler?.running ?? false;
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  async function act(fn: () => Promise<unknown>) {
-    if (busy) return;
-    setBusy(true);
-    setErr(null);
-    try {
-      await fn();
-      refresh();
-    } catch (e) {
-      setErr(driveErr(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  // The master switch is armable from here (POST /api/drive/arm). Status badge +
-  // lock toggle + Run once are ALWAYS shown; only their state changes. The lock
-  // icon is the toggle: closed = locked, open = armed.
-  const locked = !armed;
-  const arm = (next: boolean) => act(() => apiPost('/api/drive/arm', { armed: next }));
-  const lockNote = 'The autonomous driver is locked — agents pick up no work until you arm it.';
-  const statusLabel = locked
-    ? 'Driver locked'
-    : err
-      ? 'Error'
-      : inFlight
-        ? 'Driving…'
-        : autoOn
-          ? 'Auto on'
-          : 'Idle';
-  const flavour = locked ? 's-neutral' : err ? 's-red' : inFlight || autoOn ? 's-green' : 's-neutral';
-  const lastPassNote = data?.lastPass
-    ? `Last pass ${formatAge(data.lastPass.at)} ago — ${data.lastPass.ok ? 'ok' : data.lastPass.error ?? 'failed'}`
-    : undefined;
-
-  return (
-    <>
-      <span className={`badge ${flavour}`} title={locked ? lockNote : (err ?? lastPassNote)}>
-        <span className={`dot${inFlight ? ' dot-live' : ''}`} />
-        {statusLabel}
-      </span>
-      <button
-        type="button"
-        className="btn btn-sm btn-ghost"
-        disabled={busy}
-        onClick={() => arm(locked)}
-        title={locked ? 'Arm the driver so agents can pick up work' : 'Lock the driver — stops auto-drive and blocks new passes'}
-      >
-        {locked ? (
-          <LockKeyhole style={{ width: 13, height: 13 }} />
-        ) : (
-          <LockKeyholeOpen style={{ width: 13, height: 13 }} />
-        )}
-      </button>
-      <button
-        type="button"
-        className="btn btn-sm btn-secondary"
-        disabled={locked || busy || inFlight}
-        onClick={() => act(() => apiPost('/api/drive', {}))}
-      >
-        <Play style={{ width: 13, height: 13 }} /> Run once
-      </button>
-      <label
-        title={locked ? lockNote : `Auto-drive every ${data?.scheduler.intervalSec ?? 60}s`}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 7,
-          fontSize: 12,
-          color: 'var(--fg-secondary)',
-          cursor: locked || busy ? 'default' : 'pointer',
-          opacity: locked ? 0.55 : 1,
-        }}
-      >
-        <span
-          className={`switch ${autoOn ? 'on' : ''}`}
-          style={locked ? { pointerEvents: 'none' } : undefined}
-          onClick={() => {
-            if (locked) return;
-            act(() => apiPost('/api/drive/scheduler', { enabled: !autoOn, intervalSec: 60 }));
-          }}
-        />
-        Auto
-      </label>
-    </>
-  );
-}
-
 // ──────────────────────────────── route ──────────────────────────────────────
 
 export function DashboardRoute() {
@@ -672,37 +550,105 @@ function DetailDrawer({ item, onClose }: { item: BacklogItem | null; onClose: ()
  * Driver control, the Active-work list, and the +prime Review queue. Their
  * components remain below, unused, pending a placement decision.
  */
+/** Parse the engine-generated TODO.md into flat rows (depth by indentation). */
+export function parseTodo(md: string): { depth: number; done: boolean; text: string }[] {
+  const rows: { depth: number; done: boolean; text: string }[] = [];
+  for (const raw of (md ?? '').split('\n')) {
+    const m = raw.match(/^(\s*)- \[([ xX])\]\s+(.*)$/);
+    if (!m) continue;
+    rows.push({
+      depth: Math.floor((m[1] ?? '').length / 4),
+      done: (m[2] ?? '').toLowerCase() === 'x',
+      text: (m[3] ?? '').trim(),
+    });
+  }
+  return rows;
+}
+
+/**
+ * v1.0 dashboard centrepiece: the consolidated TODO.md as a read-only nested
+ * checklist. The external LLM ticks boxes in the file as it works; we just poll
+ * + render. No interactivity here — the file is the source of truth.
+ */
+function TodoTree() {
+  const { data, loading } = usePolling<{ body: string }>('/api/docs/memory/TODO.md', 5000);
+  const rows = useMemo(() => parseTodo(data?.body ?? ''), [data]);
+  const tasks = rows.filter((r) => r.depth >= 2);
+  const doneTasks = tasks.filter((r) => r.done).length;
+  return (
+    <section className="card dash-activity">
+      <div className="panel-head">
+        <div className="panel-title">Görevler — TODO.md</div>
+        {tasks.length > 0 && (
+          <span className="badge-count">
+            {doneTasks}/{tasks.length}
+          </span>
+        )}
+      </div>
+      <div className="act-list kx-scroll">
+        {rows.length === 0 ? (
+          <div className="act-row" style={{ display: 'block', color: 'var(--fg-faint)', fontSize: 13 }}>
+            {loading ? 'Yükleniyor…' : 'Henüz TODO.md yok — planlama tamamlanınca burada görünür.'}
+          </div>
+        ) : (
+          rows.map((r, i) => (
+            <div
+              key={i}
+              style={{
+                display: 'flex',
+                gap: 8,
+                alignItems: 'flex-start',
+                padding: '4px 8px',
+                paddingLeft: 8 + r.depth * 18,
+              }}
+            >
+              <span
+                aria-hidden
+                style={{
+                  flex: '0 0 auto',
+                  width: 15,
+                  height: 15,
+                  marginTop: 2,
+                  borderRadius: 4,
+                  border: '1.5px solid var(--border)',
+                  background: r.done ? 'var(--ok, #16a34a)' : 'transparent',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#fff',
+                }}
+              >
+                {r.done && <Check size={11} />}
+              </span>
+              <span
+                style={{
+                  color: r.done ? 'var(--fg-faint)' : 'var(--fg)',
+                  textDecoration: r.done ? 'line-through' : 'none',
+                  fontSize: r.depth === 0 ? 14 : 13,
+                  fontWeight: r.depth === 0 ? 600 : 400,
+                  lineHeight: 1.5,
+                }}
+              >
+                {r.text}
+              </span>
+            </div>
+          ))
+        )}
+      </div>
+    </section>
+  );
+}
+
 function DashboardView({ onRefresh }: { onRefresh: () => void }) {
   const aggPoll = usePolling<BacklogAggregate>('/api/backlog/aggregate', 10000);
   const [cards, setCards] = useState<BacklogItem[]>([]);
   const [drawerId, setDrawerId] = useState<string | null>(null);
-  // Activity feed paginates 50 at a time (never an unbounded list).
-  const [actLimit, setActLimit] = useState(50);
   useEffect(() => {
     void apiGet<{ items: BacklogItem[] }>('/api/backlog?limit=500')
       .then((r) => setCards(r.items))
       .catch(() => {});
   }, []);
   const itemsById = useMemo(() => new Map(cards.map((c) => [c.id, c])), [cards]);
-
-  const { data: aData, loading: aLoading } = usePolling<{ activity: ActivityEntry[] }>(
-    `/api/activity?limit=${actLimit}`,
-    5000,
-  );
-  const { data: hData } = usePolling<{ handovers: Handover[] }>(
-    `/api/handovers?limit=${actLimit}`,
-    8000,
-  );
-  const { data: dData } = usePolling<{ decisions: DecisionIndex[] }>(
-    `/api/decisions?limit=${actLimit}`,
-    8000,
-  );
-  const events = useMemo(
-    () => buildActivityFeed(aData?.activity ?? [], hData?.handovers ?? [], dData?.decisions ?? [], actLimit),
-    [aData, hData, dData, actLimit],
-  );
-  // a full page implies there may be more to fetch
-  const canLoadMore = events.length >= actLimit;
 
   const agg = aggPoll.data;
 
@@ -761,40 +707,7 @@ function DashboardView({ onRefresh }: { onRefresh: () => void }) {
       </header>
 
       <div className="dash" data-dash>
-          <section className="card dash-activity">
-            <div className="panel-head">
-              <div className="panel-title">Activity</div>
-              <div className="flex items-center gap">
-                <DriveControl />
-              </div>
-            </div>
-            <div className="act-list kx-scroll">
-              {events.length === 0 ? (
-                <div
-                  className="act-row"
-                  style={{ display: 'block', color: 'var(--fg-faint)', fontSize: 13 }}
-                >
-                  {aLoading ? 'Loading activity…' : 'No activity yet.'}
-                </div>
-              ) : (
-                <>
-                  {events.map((e) => (
-                    <ActivityRow key={e.id} event={e} onOpenItem={(id) => setDrawerId(id)} />
-                  ))}
-                  {canLoadMore && (
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      style={{ width: '100%', justifyContent: 'center', marginTop: 6 }}
-                      onClick={() => setActLimit((l) => l + 50)}
-                    >
-                      Load more
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-          </section>
+          <TodoTree />
 
           <aside className="dash-rail">
             <StatusCard title="Version status">

@@ -61,11 +61,8 @@ function openPop(
   emitShell(name, { rect: el.getBoundingClientRect() });
 }
 
-type DriveLite = { armed: boolean; inFlight: boolean };
-
 export function Footer() {
   const runs = usePolling<{ runs: Run[]; runningSteps?: number }>('/api/runs', 5000);
-  const drive = usePolling<DriveLite>('/api/drive', 4000);
   const runtime = usePolling<RuntimeInfo>('/api/runtime', 5000);
   const now = useNow(1000); // ticks the session counter live
   const pause = usePolling<{ paused: boolean }>('/api/pause', 4000);
@@ -81,10 +78,6 @@ export function Footer() {
   const running = runs.data?.runningSteps ?? runningRuns;
   const queued = runList.filter((r) => r.status === 'queued').length;
   const awaiting = runList.filter((r) => r.status === 'awaiting_approval').length;
-  // A drive pass spans several agent sub-steps; individual runs flip
-  // running→succeeded fast, so the count alone can read 0 mid-pass. `driving`
-  // (inFlight) is the honest "the house is working right now" signal.
-  const driving = drive.data?.inFlight ?? false;
 
   const worktrees = new Set(
     runList
@@ -109,20 +102,9 @@ export function Footer() {
       <span
         className="foot-item"
         onClick={(e) => openPop('open-agents', e.currentTarget)}
-        title={
-          driving
-            ? 'Driver pass in progress — agents are working'
-            : 'active: çalışıyor · idle: sırada · blocked: onay bekliyor'
-        }
+        title="active: çalışıyor · idle: sırada · blocked: onay bekliyor"
       >
         <Bot className="ic" />
-        {driving && (
-          <span
-            className="foot-dot dot-pulse"
-            style={{ background: 'var(--green)' }}
-            aria-label="driving"
-          />
-        )}
         <span className="mono">
           <span style={{ color: 'var(--green)' }}>{running} active</span>{' '}
           <span className="faint">·</span> <span style={{ color: 'var(--amber)' }}>{queued} idle</span>{' '}

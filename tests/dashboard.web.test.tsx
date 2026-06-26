@@ -9,6 +9,7 @@ import {
   formatAge,
   STATUS_SEGMENTS,
   buildEscalationAnswer,
+  parseTodo,
 } from '../src/routes/dashboard.tsx';
 import type {
   ActivityEntry,
@@ -274,5 +275,29 @@ describe('buildEscalationAnswer (gate-escalation Inbox answer — UAT #10)', () 
   it('revise with no directive → bare "revise"', () => {
     expect(buildEscalationAnswer('revise', '')).toBe('revise');
     expect(buildEscalationAnswer('revise')).toBe('revise');
+  });
+});
+
+describe('parseTodo (v1.0 dashboard TODO.md renderer)', () => {
+  const md = [
+    '# TODO',
+    '',
+    '- [ ] v0.1',
+    '    - [ ] PROJ-E01 - Auth: login flows',
+    '        - [x] PROJ-001 - OAuth: done bit',
+    '        - [ ] PROJ-002 - Logout',
+  ].join('\n');
+
+  it('extracts depth from indentation and done from the checkbox', () => {
+    const rows = parseTodo(md);
+    expect(rows).toHaveLength(4); // skips '# TODO' + blank
+    expect(rows[0]).toMatchObject({ depth: 0, done: false, text: 'v0.1' });
+    expect(rows[1]).toMatchObject({ depth: 1, done: false });
+    expect(rows[2]).toMatchObject({ depth: 2, done: true, text: 'PROJ-001 - OAuth: done bit' });
+  });
+
+  it('returns [] for empty/missing input', () => {
+    expect(parseTodo('')).toEqual([]);
+    expect(parseTodo(undefined as unknown as string)).toEqual([]);
   });
 });
