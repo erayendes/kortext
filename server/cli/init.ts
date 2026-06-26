@@ -62,33 +62,31 @@ const KORTEXT_SCAFFOLD_DIRS = ['foundation', 'references', 'reports', 'memory'] 
 /** Root-level files copied verbatim from `<paket-kökü>/templates/`. */
 const ROOT_TEMPLATE_FILES = ['AGENTS.md', '.gitignore', '.env.example'] as const;
 
-const DEFAULT_AGENTS_MD = `# AGENTS.md
+const DEFAULT_AGENTS_MD = `# AGENTS.md — Kortext devir sözleşmesi (v1.0)
 
-> Kortext v3 — autonomous AI agent runtime. Run \`kortext serve\` to launch
-> the dashboard + backend, or \`kortext mcp\` to expose tools over MCP.
+> Bu dosyayı ilk sen okursun. Kortext bu projenin analiz + planlamasını bitirdi
+> ve kaynak gerçeği \`.kortext/\` içine yazdı. Geliştirmeyi Kortext yürütmez —
+> onu SEN yaparsın. Kortext yalnızca TODO.md'yi gösterir + durumu takip eder.
 
-## Quick start
+## Nereden başlarsın
 
-\`\`\`bash
-kortext serve     # backend + dashboard (default port 3200)
-kortext status    # recent runs + open approval questions
-kortext logs      # tail of the audit log
-kortext doctor    # workflow / persona / lock consistency scan
-\`\`\`
+1. \`.kortext/memory/handover.md\` — önceki oturum nerede kaldı (varsa önce bunu oku).
+2. \`.kortext/memory/TODO.md\` — tek canlı görev listesi; işaretsiz (\`- [ ]\`) ilk uygun görev sıradaki işin.
+3. Görev bağlamı için ilgili foundation + references dosyalarını oku.
 
-## Where things live
+## Kaynaklar (her zaman uy)
 
-- \`.kortext/foundation/BRD.md\` — business requirements (product blueprint);
-  approving it triggers the analysis → planning → development pipeline chain
-- \`.kortext/foundation/\` — BRD/PRD/TRD/PFD (frozen after analysis)
-- \`.kortext/references/\` — team-shared living references (ACCESS, API,
-  STACK, SECURITY, …) in ALL-CAPS for canonical-source discoverability
-- \`.kortext/reports/\` — per-file engine + persona reports
-- \`.kortext/memory/\` — handover.md, decisions.md, learned.md
-- \`.kortext/data/\` — SQLite + worktrees + raw logs (git-ignored)
+- \`.kortext/foundation/\` — *ne*: BRD/PRD/TRD/PFD (analizden sonra dondu, oku/değiştirme).
+- \`.kortext/references/\` — *nasıl*: ALL-CAPS canlı kurallar (STACK, DESIGN, SECURITY, API, …). \`status: uninitialized\` olanı atla.
 
-Persona, workflow, and rule definitions live inside the kortext npm
-package itself and are loaded directly from there — no per-project copy.
+## Çalışma döngüsü
+
+1. TODO.md'den sıradaki işaretsiz görevi al (sıraya uy — liste bağımlılık sırasındadır).
+2. İşi references'a uyarak yap.
+3. Bitince TODO.md'de \`- [ ]\` → \`- [x]\` işaretle.
+4. Kaydet (üret + KAYDET): \`memory/decisions.md\` (karar+gerekçe), \`memory/learned.md\` (ders), \`memory/handover.md\` (şu an neredeyim / sıradaki ne).
+
+\`approver: +prime\` taşıyan dosyayı sen onaylamazsın — onay insana (+prime) düşer.
 `;
 
 const DEFAULT_GITIGNORE = `.kortext/data/

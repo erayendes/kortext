@@ -133,8 +133,8 @@ describe('initCommand', () => {
     const result = initCommand({ targetDir, templatesDir });
     expect(result.ok).toBe(true);
     const written = readFileSync(join(targetDir, 'AGENTS.md'), 'utf8');
-    expect(written).toMatch(/Kortext v3/);
-    expect(written).toMatch(/kortext serve/);
+    expect(written).toMatch(/devir sözleşmesi/);
+    expect(written).toMatch(/TODO\.md/);
   });
 
   it('with --force re-copies even when target dirs already exist', () => {
