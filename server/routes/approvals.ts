@@ -1,14 +1,11 @@
 import { Router, type Request, type Response } from 'express';
 import type { Repositories } from '../db/repositories/index.ts';
 import type { ApprovalQueue } from '../orchestrator/approval-queue.ts';
-import type { Deployer } from '../engine/deployer.ts';
-import { consumeStagingApproval } from '../orchestrator/staging-approval-consumer.ts';
-import { consumePreprodApproval } from '../orchestrator/preprod-approval-consumer.ts';
-import { consumeGateEscalation } from '../orchestrator/gate-escalation.ts';
-import { ESCALATION_PHASE } from '../orchestrator/gate-escalation.ts';
 
 /**
- * REST surface for the human-in-the-loop approval flow.
+ * REST surface for the human-in-the-loop approval flow. v1.0: this is the
+ * +prime artifact-approval surface (analysis/planning/PFD/TODO gates). The
+ * old staging/preprod/escalation deploy consumers are gone with the driver.
  *
  *   GET  /api/questions                 → list open questions
  *   POST /api/questions/:id/answer      → answer a specific question
@@ -18,8 +15,6 @@ import { ESCALATION_PHASE } from '../orchestrator/gate-escalation.ts';
 export type ApprovalRouterDeps = {
   repos: Repositories;
   queue: ApprovalQueue;
-  /** Deployer threaded in for staging-approval (deployPreprod) and preprod-approval (deployProd). */
-  deployer?: Deployer;
 };
 
 export function approvalRouter(deps: ApprovalRouterDeps): Router {
@@ -48,50 +43,6 @@ export function approvalRouter(deps: ApprovalRouterDeps): Router {
     }
     try {
       const answered = deps.queue.answer(id, body.answer, body.answered_by);
-
-      // Run the staging-approval consumer to completion BEFORE responding, so
-      // its side-effects (bug on reject, reports approved + preprod question on
-      // approve) are durable by the time the caller sees 200. A consumer error
-      // is logged but does NOT fail the answer (the question is already answered).
-      if (answered.phase === 'staging-approval') {
-        try {
-          await consumeStagingApproval(answered, {
-            repos: deps.repos,
-            queue: deps.queue,
-            deployer: deps.deployer,
-          });
-        } catch (err: unknown) {
-          console.error('[approvals] consumeStagingApproval error:', err);
-        }
-      }
-
-      // Run the gate-escalation consumer (UAT #10): +prime's decision on a
-      // gate that failed 3× — approve (override-pass → review), revise (directed
-      // bounce + counter reset), or drop (cancel). Best-effort; a consumer error
-      // is logged but does NOT fail the answer (the question is already answered).
-      if (answered.phase === ESCALATION_PHASE) {
-        try {
-          consumeGateEscalation(answered, { repos: deps.repos });
-        } catch (err: unknown) {
-          console.error('[approvals] consumeGateEscalation error:', err);
-        }
-      }
-
-      // Run the preprod-approval consumer (chain ends at preprod per §5.11:
-      // approve → deployProd; reject → bug). Best-effort; a consumer error
-      // is logged but does NOT fail the answer.
-      if (answered.phase === 'preprod-approval' && deps.deployer) {
-        try {
-          await consumePreprodApproval(answered, {
-            repos: deps.repos,
-            queue: deps.queue,
-            deployer: deps.deployer,
-          });
-        } catch (err: unknown) {
-          console.error('[approvals] consumePreprodApproval error:', err);
-        }
-      }
-
       res.json({ question: answered });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

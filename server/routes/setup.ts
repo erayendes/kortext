@@ -5,8 +5,8 @@ import { readProjectMeta, triggerWorkflowIdFor, type ProjectMeta } from '../blue
 import { buildSetupView, type PipelineInput, type SetupPipelineKey } from '../orchestrator/setup-view.ts';
 
 /**
- * GET /api/setup — live state of the three initialization pipelines
- * (analysis → planning → environment) for the onboarding Setup screen.
+ * GET /api/setup — live state of the initialization pipelines
+ * (analysis → planning) for the onboarding Setup screen.
  *
  * Fuses the workflow definitions (full step plan, incl. queued), the latest
  * run + run_steps per pipeline (live status), and open pending_questions
@@ -27,10 +27,11 @@ export function setupRouter(deps: {
     // The analysis workflow id depends on project kind (greenfield vs existing).
     const analysisWorkflowId = meta ? triggerWorkflowIdFor(meta.type) : 'new-project-analysis';
 
+    // v1.0: the setup chain stops at planning. Environment setup is the external
+    // LLM's job now, so the Setup screen shows only analysis → planning.
     const specs: { key: SetupPipelineKey; title: string; workflowId: string }[] = [
       { key: 'analysis', title: 'Analysis', workflowId: analysisWorkflowId },
       { key: 'planning', title: 'Planning', workflowId: 'planning-pipeline' },
-      { key: 'environment', title: 'Environment Setup', workflowId: 'environment-setup' },
     ];
 
     const openQuestions = deps.repos.pendingQuestions.listOpen();

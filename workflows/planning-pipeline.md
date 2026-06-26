@@ -153,4 +153,5 @@
    - outputs: `.kortext/foundation/backlog.patch.yaml`, `.kortext/reports/status-reports_<slug>_<ts>.md`, `.kortext/memory/decisions.md`
    - approver: +prime
 
-**Sonraki akış:** `environment-setup`
+<!-- v1.0: planning son setup adımıdır. Environment + geliştirme artık dış LLM'in işi (bkz. AGENTS.md). Zincir burada durur. -->
+

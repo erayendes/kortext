@@ -28,7 +28,6 @@ import { backlogRouter } from './routes/backlog.ts';
 import { docsRouter } from './routes/docs.ts';
 import { blueprintRouter } from './routes/blueprint.ts';
 import { projectsRouter } from './routes/projects.ts';
-import { driveRouter } from './routes/drive.ts';
 import { projectMetaRouter } from './routes/project-meta.ts';
 import { projectDangerRouter } from './routes/project-danger.ts';
 import { hooksRouter } from './routes/hooks.ts';
@@ -55,7 +54,6 @@ import { isKortextPackageDir } from './registry/self-guard.ts';
 import { initCommand } from './cli/init.ts';
 import { createFallbackExecutor, falloverAuditSink, type ExecutorKind } from './cli/executor-factory.ts';
 import { resolveExecutorBinary } from './cli/binary-resolver.ts';
-import { WorkflowDeployer } from './engine/executors/workflow-deployer.ts';
 import { getDb } from './db/client.ts';
 import { ApprovalQueue } from './orchestrator/approval-queue.ts';
 import { QueueGateController } from './orchestrator/queue-gate-controller.ts';
@@ -64,7 +62,6 @@ import { MarkdownSyncService } from './services/markdown-sync.ts';
 import type { SafetyGuards } from './engine/worker-pool.ts';
 import { mcpSseRouter } from '../mcp/sse.ts';
 import { resumeOrphanedRuns } from './orchestrator/resume.ts';
-import { makeServerDrive } from './orchestrator/server-drive.ts';
 import { loadWorkflowsFromDir } from './engine/workflow-loader.ts';
 import { loadPersonasFromDir } from './engine/persona-registry.ts';
 import { findUnknownPersonas, SYNTHETIC_PERSONA_HANDLES } from './engine/consistency.ts';
@@ -245,13 +242,12 @@ const triggerAnalysis = (workflowId: string) => {
     // routes use, so a dashboard answer resumes the run.
     gateController: queueGateController,
     pauseController,
-    // Onboarding runs the whole SETUP phase — analysis → planning (derives the
-    // backlog) → environment-setup (skeleton, secrets, DB, deps, smoke test) —
-    // then STOPS before development-cycle. Building backlog *items* stays the
-    // gated driver's job; setting up the environment is part of onboarding so
-    // the Setup screen (analysis · planning · environment) can complete before
-    // the dashboard takes over.
-    chainThroughWorkflowId: 'environment-setup',
+    // v1.0: onboarding runs analysis → planning (derives the backlog + the
+    // consolidated TODO.md) then STOPS. Environment setup + development are the
+    // external LLM's job now (it reads .kortext/ via AGENTS.md). The Setup
+    // screen (analysis · planning) completes at TODO.md approval, then the
+    // dashboard takes over.
+    chainThroughWorkflowId: 'planning-pipeline',
   }).then((result) => {
     if (!result.ok) {
       console.warn(`[kortext] blueprint trigger failed: ${result.errorMessage}`);
@@ -267,10 +263,9 @@ const triggerAnalysis = (workflowId: string) => {
     // untouched. Then re-serialize the canonical file so the board + the next
     // consumer see the normalized structure.
     //
-    // Keyed on PLANNING's own success — not the final chain status. The chain now
-    // runs through environment-setup (chainThroughWorkflowId='environment-setup'),
-    // so `result.status` reflects environment, which produces no backlog. We must
-    // normalize whenever planning produced one, even if a later setup hop fails.
+    // Keyed on PLANNING's own success. v1.0 stops the chain at planning, so
+    // `result.status` already reflects planning — but we keep the explicit
+    // lookup so the structural floor still runs if a later hop is ever added.
     const planningSucceeded =
       repos.runs.listRuns({ workflow_id: 'planning-pipeline', limit: 1 })[0]?.status ===
       'succeeded';
@@ -320,32 +315,9 @@ const app = express();
 app.use(express.json());
 app.use('/api', healthRouter);
 app.use('/api', dbInfoRouter);
-// Build an approval deployer so the staging-approval and preprod-approval
-// consumers can fire deployPreprod / deployProd without a full composition
-// (which is built lazily by the driver). Executor is resolved from project.json
-// like the blueprint trigger; mock falls back safely when project.json is absent.
-const approvalDeployer = new WorkflowDeployer({
-  repos,
-  executor: (() => {
-    const meta = readProjectMeta(resolveBlueprintPaths(process.cwd()).projectJsonPath);
-    // UAT #10: deployment steps also use the ordered fallback chain.
-    const chain: ExecutorKind[] = meta ? executorChain(meta) : ['mock'];
-    const binary = meta?.executorBinary ?? defaultBinaryFor(chain[0]!);
-    return createFallbackExecutor(chain, {
-      binary: binary ?? '',
-      agentsDir,
-      rulesDir: runtime.rulesDir,
-      logsDir: resolve(dirname(fileURLToPath(import.meta.url)), '..', '.kortext', 'data', 'logs'),
-      // Quota/429 fallover lands in the audit feed (GUI) — UAT #10 follow-up.
-      onFallover: falloverAuditSink(repos.auditLog),
-    });
-  })(),
-  loadDeploymentWorkflow: () => workflowRegistry.get('deployment-cycle'),
-  // Real development→main merge + annotated version tag (§5.11).
-  // Prod push is a follow-up — CI/prod-push not wired here yet.
-  repoRoot: process.cwd(),
-});
-app.use('/api', approvalRouter({ repos, queue: approvalQueue, deployer: approvalDeployer }));
+// v1.0: the +prime approval surface (analysis/planning/PFD/TODO gates). No
+// deployer — staging/preprod deploy approvals went out with the driver.
+app.use('/api', approvalRouter({ repos, queue: approvalQueue }));
 app.use('/api', runsRouter({ repos }));
 app.use(
   '/api',
@@ -438,32 +410,8 @@ app.use(
     onBootstrapHandoff: () => scheduleBootstrapSelfExit({ isBootstrap: isBootstrapDaemon }),
   }),
 );
-// §5.16 — the manual "start button": POST /api/drive runs one autonomous driver
-// pass (to_do → done for ready items, real git). Locked behind
-// KORTEXT_DRIVE_ENABLED (OFF by default), so mounting it keeps production
-// blast-radius at zero — the runtime is built lazily on the first ARMED drive,
-// nothing happens at boot. Executor is resolved from project.json exactly like
-// the blueprint trigger (mock fallback).
-const serverDrive = makeServerDrive({
-  repos,
-  personas: personaRegistry,
-  workflows: workflowRegistry,
-  queue: approvalQueue,
-  repoRoot: process.cwd(),
-  agentsDir,
-  rulesDir: runtime.rulesDir,
-  enabled: () => env.KORTEXT_DRIVE_ENABLED,
-  resolveExecutor: () => {
-    const meta = readProjectMeta(resolveBlueprintPaths(process.cwd()).projectJsonPath);
-    // UAT #10: the ORDERED fallback chain. When project.json has no chain the
-    // helper yields `[executor]` (or ['mock'] when meta is absent), so the
-    // single-executor behaviour is unchanged.
-    const chain: ExecutorKind[] = meta ? executorChain(meta) : ['mock'];
-    const primary = chain[0]!;
-    return { chain, binary: meta?.executorBinary ?? defaultBinaryFor(primary) };
-  },
-});
-app.use('/api', driveRouter({ enabled: serverDrive.enabled, drive: serverDrive.drive }));
+// v1.0: the autonomous driver (POST /api/drive, to_do → done) is removed.
+// Development is the external LLM's job now — Kortext stops at planning + TODO.
 
 app.use(
   '/api',

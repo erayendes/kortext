@@ -246,26 +246,23 @@ describe('buildSetupView — step statuses', () => {
 
 describe('buildSetupView — phase across pipelines', () => {
   const planning = pipe({ key: 'planning', title: 'Planning', workflowId: 'planning-pipeline', definition: def('planning-pipeline', [wfStep({ key: 'backlog.1', index: 0 })]) });
-  const environment = pipe({ key: 'environment', title: 'Environment', workflowId: 'environment-setup', definition: def('environment-setup', [wfStep({ key: 'env.1', index: 0 })]) });
 
   it('phase = the first not-done pipeline', () => {
     const view = buildSetupView(
       [
         pipe({ run: { id: 1, status: 'succeeded' } }), // analysis done
         { ...planning, run: { id: 2, status: 'running' }, steps: [] }, // planning running
-        { ...environment, run: null, steps: [] }, // environment queued
       ],
       [],
     );
     expect(view.phase).toBe('planning');
   });
 
-  it('phase = development once all three pipelines are done', () => {
+  it('phase = development once all pipelines are done (v1.0: analysis + planning)', () => {
     const view = buildSetupView(
       [
         pipe({ run: { id: 1, status: 'succeeded' } }),
         { ...planning, run: { id: 2, status: 'succeeded' }, steps: [] },
-        { ...environment, run: { id: 3, status: 'succeeded' }, steps: [] },
       ],
       [],
     );

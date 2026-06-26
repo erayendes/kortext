@@ -1,6 +1,6 @@
 /**
- * Setup view — the live data behind the onboarding "Setup" screen's three
- * pipelines (analysis → planning → environment). It fuses three sources into
+ * Setup view — the live data behind the onboarding "Setup" screen's
+ * pipelines (analysis → planning). It fuses three sources into
  * one shape the frontend rail/stream render directly:
  *
  *   - the workflow DEFINITION (parsed at boot) → the full ordered step list,
@@ -19,8 +19,8 @@ import type { RunStep, RunStatus, PendingQuestion } from '../db/schemas.ts';
 // the rail/stream don't label every success "approved".
 export type SetupStepStatus = 'queued' | 'running' | 'review' | 'done' | 'approved' | 'failed';
 export type SetupPipelineStatus = 'queued' | 'running' | 'done' | 'failed';
-export type SetupPhase = 'analysis' | 'planning' | 'environment' | 'development';
-export type SetupPipelineKey = 'analysis' | 'planning' | 'environment';
+export type SetupPhase = 'analysis' | 'planning' | 'development';
+export type SetupPipelineKey = 'analysis' | 'planning';
 
 export type SetupStep = {
   /** Workflow step key, e.g. 'product-analysis.2' — stable React key. */
@@ -224,9 +224,9 @@ function buildSteps(p: PipelineInput, openQuestions: PendingQuestion[]): SetupSt
 }
 
 /**
- * Build the three-pipeline setup view. `phase` is the first pipeline that
- * isn't done (the one in flight); once all three are done it's 'development'
- * (the project is ready for the dashboard / development cycle).
+ * Build the setup view. `phase` is the first pipeline that isn't done (the one
+ * in flight); once all pipelines are done it's 'development' (the project is
+ * ready for the dashboard).
  */
 export function buildSetupView(
   pipelines: PipelineInput[],

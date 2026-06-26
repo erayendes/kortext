@@ -371,12 +371,12 @@ export type BlueprintSubmitResponse = {
   gitWarning?: string; // soft git-bootstrap warning, if any
 };
 
-// ── Setup view (GET /api/setup) — the three init pipelines, live ──────────────
-// Mirrors server/orchestrator/setup-view.ts.
+// ── Setup view (GET /api/setup) — the init pipelines, live ────────────────────
+// Mirrors server/orchestrator/setup-view.ts. v1.0: analysis → planning (env removed).
 export type SetupStepStatus = 'queued' | 'running' | 'review' | 'done' | 'approved' | 'failed';
 export type SetupPipelineStatus = 'queued' | 'running' | 'done' | 'failed';
-export type SetupPhase = 'analysis' | 'planning' | 'environment' | 'development';
-export type SetupPipelineKey = 'analysis' | 'planning' | 'environment';
+export type SetupPhase = 'analysis' | 'planning' | 'development';
+export type SetupPipelineKey = 'analysis' | 'planning';
 
 export type SetupStep = {
   key: string;
