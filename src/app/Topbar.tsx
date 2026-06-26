@@ -29,24 +29,7 @@ export function Topbar() {
         <span className="ws-name">{project?.name ?? 'Project'}</span>
       </Link>
 
-      <div className="tb-search">
-        <div className="input-group" onClick={() => emit('open-cmdk')}>
-          <Search className="ic-lead" />
-          <input
-            className="input"
-            placeholder="Search items, epics, or go to…"
-            readOnly
-          />
-          <span className="kbd" style={{ position: 'absolute', right: 8 }}>
-            ⌘K
-          </span>
-        </div>
-      </div>
-
-      <div className="tb-right">
-        <button className="icon-btn" onClick={() => emit('open-tweaks')} title="Tweaks">
-          <SlidersHorizontal className="ic" />
-        </button>
+      <div className="tb-right" style={{ marginLeft: 'auto' }}>
         <button className="icon-btn" onClick={() => emit('open-notifs')} title="Notifications">
           <Bell className="ic" />
           {pending > 0 && <span className="ndot" />}

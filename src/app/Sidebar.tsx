@@ -38,28 +38,14 @@ import { useTheme } from './theme.ts';
 
 type NavItem = { to: string; label: string; icon: LucideIcon };
 
+// v1.0: Board (kanban execution view), Project settings nav, and the Kortext·Engine
+// menu are gone — Kortext doesn't execute, so the dashboard is just the doc views.
 const WORKSPACE: NavItem[] = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/board', label: 'Board', icon: SquareKanban },
   { to: '/memory', label: 'Memory', icon: Brain },
   { to: '/foundation', label: 'Foundation', icon: FolderRoot },
   { to: '/references', label: 'References', icon: FolderBookmark },
   { to: '/reports', label: 'Reports', icon: FolderCheck },
-];
-
-const PROJECT: NavItem[] = [
-  { to: '/settings/project', label: 'Project info', icon: FolderOpen },
-  { to: '/settings/integrations', label: 'Integrations', icon: Blocks },
-  { to: '/settings/environments', label: 'Environments', icon: Layers },
-];
-
-const ENGINE: NavItem[] = [
-  { to: '/kortext/llm-models', label: 'LLM models', icon: Cpu },
-  { to: '/kortext/agents', label: 'Agents', icon: Bot },
-  { to: '/kortext/rules', label: 'Rules', icon: Scale },
-  { to: '/kortext/workflows', label: 'Workflows', icon: Workflow },
-  { to: '/kortext/hooks', label: 'Hooks', icon: Webhook },
-  { to: '/kortext/scripts', label: 'Scripts', icon: FileCode },
 ];
 
 function NavLink({ item, active }: { item: NavItem; active: boolean }) {
@@ -90,7 +76,6 @@ export function Sidebar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
         </button>
       </div>
 
-      {/* Workspace + Project (hidden under .engine-mode) */}
       <div className="side-scroll kx-scroll">
         <div className="side-sec">
           <div className="eyebrow">Workspace</div>
@@ -98,36 +83,11 @@ export function Sidebar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
             <NavLink key={item.to} item={item} active={isActive(item.to)} />
           ))}
         </div>
-        <div className="side-sec">
-          <div className="eyebrow">Project</div>
-          {PROJECT.map((item) => (
-            <NavLink key={item.to} item={item} active={isActive(item.to)} />
-          ))}
-        </div>
-      </div>
-
-      {/* Kortext · Engine (shown under .engine-mode) */}
-      <div className="side-engine kx-scroll">
-        <div className="side-sec">
-          <div className="eyebrow">Kortext · Engine</div>
-          {ENGINE.map((item) => (
-            <NavLink key={item.to} item={item} active={isActive(item.to)} />
-          ))}
-        </div>
-        <div className="side-sec">
-          <Link
-            to="/"
-            className="btn btn-secondary"
-            style={{ width: '100%', marginTop: 10, justifyContent: 'center' }}
-          >
-            <ArrowRight className="ic" />
-            Open dashboard
-          </Link>
-        </div>
       </div>
 
       <div className="side-foot">
-        <Link to="/kortext/llm-models" className="kx-settings">
+        {/* Project lifecycle + danger zone (archive / delete) */}
+        <Link to="/settings/project" className="kx-settings">
           <Cog className="ic" />
           <span className="kx-set-t">kortext</span>
         </Link>

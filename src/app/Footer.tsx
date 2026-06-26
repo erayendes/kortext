@@ -11,7 +11,7 @@
  * worktrees come from the same runs. The daemon entry is a static health light
  * (not a popover). Each clickable foot-item opens its popover via a window event.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Bot, GitBranch, ShieldUser, Terminal, ChevronUp, Clock, Pause, Play } from 'lucide-react';
 import { apiPost, usePolling } from '../lib/api.ts';
 import { emitShell } from './shell-events.ts';
@@ -70,6 +70,20 @@ export function Footer() {
   const togglePause = () =>
     void apiPost('/api/pause', { paused: !paused }).then(() => pause.refresh());
 
+  // Active-session timer: stops advancing while paused; resume continues seamlessly
+  // (paused spans are subtracted, so the clock reflects ACTIVE time only).
+  const pausedMsRef = useRef(0);
+  const pauseStartRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (paused) {
+      if (pauseStartRef.current == null) pauseStartRef.current = Date.now();
+    } else if (pauseStartRef.current != null) {
+      pausedMsRef.current += Date.now() - pauseStartRef.current;
+      pauseStartRef.current = null;
+    }
+  }, [paused]);
+  const effectiveNow = (paused ? (pauseStartRef.current ?? now) : now) - pausedMsRef.current;
+
   const runList = runs.data?.runs ?? [];
   // "active" = agents executing right now = concurrent running STEPS, not runs:
   // a single setup run drafts several artifacts in parallel, so the run count
@@ -91,49 +105,27 @@ export function Footer() {
 
   return (
     <footer className="footer">
+      {/* LEFT — daemon health + running port */}
       <span className="foot-item" style={{ cursor: 'default' }} title="Kortext daemon">
         <span
           className="foot-dot"
           style={{ background: connected ? 'var(--green)' : 'var(--red)' }}
         />
-        <span className="mono">daemon :3200</span>
+        <span className="mono">daemon: {window.location.port || '3200'}</span>
       </span>
 
-      <span
-        className="foot-item"
-        onClick={(e) => openPop('open-agents', e.currentTarget)}
-        title="active: çalışıyor · idle: sırada · blocked: onay bekliyor"
-      >
-        <Bot className="ic" />
-        <span className="mono">
-          <span style={{ color: 'var(--green)' }}>{running} active</span>{' '}
-          <span className="faint">·</span> <span style={{ color: 'var(--amber)' }}>{queued} idle</span>{' '}
-          <span className="faint">·</span>{' '}
-          <span style={{ color: 'var(--red)' }}>{awaiting} blocked</span>
+      {/* RIGHT — session timer + run-state/pause */}
+      <div className="foot-right" style={{ marginLeft: 'auto' }}>
+        <span
+          className="foot-item"
+          onClick={(e) => openPop('open-durations', e.currentTarget)}
+          title="Süreler — toplam oturum · aktif işler"
+        >
+          <span className="mono">{elapsed(runtime.data?.sessionStartedAt, effectiveNow)}</span>
+          <ChevronUp className="ic" />
         </span>
-        <ChevronUp className="ic" />
-      </span>
 
-      <span className="foot-item" onClick={(e) => openPop('open-worktrees', e.currentTarget)}>
-        <GitBranch className="ic" />
-        <span className="mono">{worktrees} worktrees</span>
-        <ChevronUp className="ic" />
-      </span>
-
-      {/* Live session counter — opens a popover with project / session / open-work
-          durations (like the agents menu). */}
-      <span
-        className="foot-item"
-        onClick={(e) => openPop('open-durations', e.currentTarget)}
-        title="Süreler — proje · oturum · açık işler"
-      >
-        <Clock className="ic" />
-        <span className="mono">{elapsed(runtime.data?.sessionStartedAt, now)}</span>
-        <ChevronUp className="ic" />
-      </span>
-
-      <div className="foot-right">
-        {/* Soft pause — holds new step launches; running agents finish. */}
+        {/* Run state + soft pause: 'play' (+ pulse) while agents work; pause to hold. */}
         <span
           className="foot-item"
           onClick={togglePause}
@@ -141,28 +133,18 @@ export function Footer() {
         >
           {paused ? (
             <>
-              <Play className="ic" style={{ color: 'var(--green)' }} />
-              <span style={{ color: 'var(--green)' }}>resume</span>
+              <Pause className="ic" />
+              <span>paused</span>
             </>
           ) : (
             <>
-              <Pause className="ic" />
-              <span>pause</span>
+              <Play className="ic" style={running > 0 ? { color: 'var(--green)' } : undefined} />
+              {running > 0 && (
+                <span className="foot-dot dot-pulse" style={{ background: 'var(--green)' }} />
+              )}
+              <span style={running > 0 ? { color: 'var(--green)' } : undefined}>play</span>
             </>
           )}
-        </span>
-        <span
-          className="foot-item"
-          onClick={(e) => openPop('open-review', e.currentTarget)}
-          title="Skip reviews"
-        >
-          <ShieldUser className="ic" />
-          <span style={{ color: 'var(--violet)' }}>review</span>
-          <ChevronUp className="ic" />
-        </span>
-        <span className="foot-item" onClick={(e) => openPop('open-terminal', e.currentTarget)}>
-          <Terminal className="ic" />
-          Terminal
         </span>
       </div>
     </footer>

@@ -137,42 +137,6 @@ export function ProjectInfoRoute() {
         >
           <span className="set-val mono">{loading ? '…' : meta?.code ?? '—'}</span>
         </SetRow>
-        <SetRow label="Target platforms" desc="Toggle the platforms this project ships to">
-          <div className="chips" style={{ justifyContent: 'flex-end' }}>
-            {PLATFORMS.map(({ id, label, icon: Icon }) => (
-              <Chip key={id} on={platforms.has(id)} onClick={() => togglePlatform(id)}>
-                <Icon />
-                {label}
-              </Chip>
-            ))}
-          </div>
-        </SetRow>
-        <SetRow label="Engine" desc="Executor fallback chain — primary first, set at init">
-          {loading ? (
-            <span className="set-val">…</span>
-          ) : executorChain.length ? (
-            <span className="chips" style={{ justifyContent: 'flex-end' }}>
-              {executorChain.map((ex, i) => (
-                <span key={ex} className="flex items-center" style={{ gap: 6 }}>
-                  {i > 0 && <span style={{ color: 'var(--fg-faint)' }}>→</span>}
-                  <span className={`set-val mono${i === 0 ? '' : ' faint'}`}>{ex}</span>
-                </span>
-              ))}
-            </span>
-          ) : (
-            <span className="set-val">—</span>
-          )}
-        </SetRow>
-      </SetCard>
-
-      <SetSection>Notifications</SetSection>
-      <SetCard>
-        <SetRow
-          label="Notifications"
-          desc="Alerts surface as in-app toasts and native browser notifications. Turn them all on or off for this project."
-        >
-          <Switch on={notifOn} onToggle={toggleNotif} />
-        </SetRow>
       </SetCard>
 
       <SetSection>Lifecycle</SetSection>

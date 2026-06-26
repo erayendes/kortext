@@ -317,11 +317,7 @@ function UpPanels() {
             </div>
             <div className="up-list">
               <div className="up-row" style={{ justifyContent: 'space-between' }}>
-                <span className="up-name">Proje toplam</span>
-                <span className="mono faint">{elapsed(runtime?.projectStartedAt ?? null, now)}</span>
-              </div>
-              <div className="up-row" style={{ justifyContent: 'space-between' }}>
-                <span className="up-name">Oturum</span>
+                <span className="up-name">Toplam oturum süresi</span>
                 <span className="mono faint">{elapsed(runtime?.sessionStartedAt ?? null, now)}</span>
               </div>
               <div className="pop-note" style={{ padding: '6px 10px 2px' }}>

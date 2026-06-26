@@ -18,6 +18,7 @@ import {
 import { apiGet, apiPost, type ApiPostError } from '../lib/api.ts';
 import { useTheme } from '../app/theme.ts';
 import { Footer } from '../app/Footer.tsx';
+import { ShellMenus } from '../app/ShellMenus.tsx';
 import type {
   BlueprintStatusResponse,
   BlueprintSubmitInput,
@@ -187,7 +188,6 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
     state.projectName.trim().length >= 2 &&
     state.projectName.trim().length <= 60 &&
     PROJECT_CODE_PATTERN.test(state.projectCode) &&
-    state.platforms.length > 0 &&
     state.blueprintBody.trim().length >= 10 &&
     !submitting;
 
@@ -208,7 +208,8 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
       return;
     }
     const text = await file.text();
-    setState((s) => ({ ...s, blueprintFile: file, blueprintBody: text }));
+    // Upload lands the file's content into the Write editor so +prime can see/edit it.
+    setState((s) => ({ ...s, blueprintBody: text, blueprintFile: null, brdMode: 'paste' }));
     setSubmitError(null);
   };
 
@@ -369,12 +370,6 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
             {startError && <div style={{ fontSize: 12, color: 'var(--red)', padding: '4px 2px' }}>{startError}</div>}
           </div>
         </div>
-        <div className="ob-newbtn">
-          <button type="button" className="btn btn-secondary" onClick={() => setState(INITIAL_STATE)}>
-            <Plus className="ic" />
-            New project
-          </button>
-        </div>
         <div className="side-foot">
           <span className="kx-settings">
             <Sparkles className="ic" />
@@ -468,22 +463,6 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
                     </div>
 
                     <div className="ob-sec">
-                      <Field label="Target Platform" hint="Pick one or more. Stack defaults follow.">
-                        <div className="chips">
-                          {PLATFORM_OPTIONS.map((p) => (
-                            <span
-                              key={p}
-                              className={`chip${state.platforms.includes(p) ? ' on' : ''}`}
-                              onClick={() => togglePlatform(p)}
-                            >
-                              {p}
-                            </span>
-                          ))}
-                        </div>
-                      </Field>
-                    </div>
-
-                    <div className="ob-sec">
                       <Field
                         label="AI Executor"
                         hint="Runs top-down — if one is unavailable, kortext falls back to the next."
@@ -533,7 +512,7 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
                         </button>
                         <div className="ob-seg">
                           <button className={state.brdMode === 'paste' ? 'on' : ''} onClick={() => setState((s) => ({ ...s, brdMode: 'paste' }))}>
-                            Paste
+                            Write
                           </button>
                           <button className={state.brdMode === 'upload' ? 'on' : ''} onClick={() => setState((s) => ({ ...s, brdMode: 'upload' }))}>
                             Upload
@@ -548,7 +527,7 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
                               className="ob-brd-ta"
                               value={state.blueprintBody}
                               spellCheck={false}
-                              placeholder="Paste your BRD markdown here…"
+                              placeholder="Write or paste your BRD markdown here…"
                               onChange={(e) => setState((s) => ({ ...s, blueprintBody: e.target.value, blueprintFile: null }))}
                             />
                             <button type="button" className="btn btn-secondary btn-sm ob-paste-btn" onClick={pasteFromClipboard} title="Paste from clipboard">
@@ -642,6 +621,7 @@ export function OnboardingScreen({ onDone }: { onDone?: () => void }) {
         </div>
       </div>
       <Footer />
+      <ShellMenus />
     </div>
   );
 }

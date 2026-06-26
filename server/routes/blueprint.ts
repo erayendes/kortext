@@ -105,12 +105,10 @@ export function blueprintRouter(deps: BlueprintRouterDeps): Router {
     if (projectType === null) {
       errors.push('projectType must be "new" or "existing"');
     }
+    // v1.0: platform is optional — the Target Platform selector was removed from onboarding.
     const platforms = Array.isArray(body.platforms)
       ? body.platforms.filter((p): p is string => typeof p === 'string' && p.length > 0)
       : [];
-    if (platforms.length === 0) {
-      errors.push('at least one platform required');
-    }
     const blueprintBody = typeof body.blueprintBody === 'string' ? body.blueprintBody : '';
     if (blueprintBody.trim().length < 10) {
       errors.push('blueprintBody is empty or too short');
