@@ -8,6 +8,7 @@ import {
   writeBacklogYamlFromDb,
   ensureBacklogStructure,
 } from './engine/backlog-ingest.ts';
+import { writeTodoFromDb } from './engine/todo-generator.ts';
 import express from 'express';
 import { env } from './config/env.ts';
 import { healthRouter } from './routes/health.ts';
@@ -190,6 +191,11 @@ const safetyGuards: SafetyGuards = {
       // fully-enriched state instead of the stale step-1 skeleton.
       writeBacklogYamlFromDb(repos, join(dirname(absolutePath), 'backlog.yaml'));
     }
+    // v1.0: after any backlog ingest, refresh the consolidated TODO.md — the
+    // single living checklist the dashboard renders + the external LLM ticks.
+    if (base === 'backlog.yaml' || base === 'backlog.patch.yaml') {
+      writeTodoFromDb(repos, join(layout.memory, 'TODO.md'));
+    }
   },
 };
 
@@ -286,6 +292,15 @@ const triggerAnalysis = (workflowId: string) => {
         }
       } catch (err) {
         console.warn('[kortext] structural floor failed (non-fatal):', err);
+      }
+      // v1.0: authoritative TODO.md write once planning settled (the ingester
+      // also refreshes it live, but this guarantees a final consolidated copy
+      // even if the last write wasn't a backlog file).
+      try {
+        writeTodoFromDb(repos, join(layout.memory, 'TODO.md'));
+        console.log(`[kortext] TODO.md written: ${join(layout.memory, 'TODO.md')}`);
+      } catch (err) {
+        console.warn('[kortext] TODO.md generation failed (non-fatal):', err);
       }
     }
   });

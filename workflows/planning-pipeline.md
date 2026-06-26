@@ -149,8 +149,10 @@
    Sonra planning özet raporu yaz: versiyon planı, Epic dağılımı, açık riskler, +prime kararına bırakılan kalemler. **Rapor türü `status-reports`** (ayrı bir `planning-reports` türü YOKTUR). Dosya adı **tek kanonik desen** `report-type_project-id_<ts>.md` olmalı: `status-reports_<PROJECT-ID>_<YYYY-MM-DD_HH-MM-SS>.md` — `<PROJECT-ID>` = `.kortext/project.json`'daki `code` (örn. `NOT`), `<ts>` = `YYYY-MM-DD_HH-MM-SS` (örn. `status-reports_NOT_2026-06-08_17-46-49.md`).
 
    **Memory (kalıcı karar günlüğü):** Planlama sırasında alınan kalıcı kararları `.kortext/memory/decisions.md`'e yaz. Varsa önce oku ve **üstüne ekle** (silme). Her karar tek satır/madde: ne karar verildi + kısa gerekçe (örn. "Versiyonlama v0.1→v1.0 aşamalı — MVP'yi erken çıkarmak için", "Auth epic'i ilk sürüme alındı — tüm akışların ön koşulu"). Yoksa yeni dosya oluştur, en üste `# Decisions` başlığı koy.
+
+   **TODO.md (v1.0 — MOTOR ÜRETİR, SEN YAZMA):** Konsolide görev listesi `.kortext/memory/TODO.md`'yi Kortext motoru backlog'tan otomatik üretir (version → epic → task, checkbox'lı). Bu dosyayı **yazma/değiştirme**; çıktı listesinde yalnızca +prime'ın setup ekranındaki **son incelemesi** için gösterilecek artefakt olarak ilk sıraya konmuştur. +prime onaylayınca proje dashboard'a geçer.
    - inputs: `.kortext/foundation/PRD.md`, `.kortext/foundation/TRD.md`, `backlog-models-set`
-   - outputs: `.kortext/foundation/backlog.patch.yaml`, `.kortext/reports/status-reports_<slug>_<ts>.md`, `.kortext/memory/decisions.md`
+   - outputs: `.kortext/memory/TODO.md`, `.kortext/foundation/backlog.patch.yaml`, `.kortext/reports/status-reports_<slug>_<ts>.md`, `.kortext/memory/decisions.md`
    - approver: +prime
 
 <!-- v1.0: planning son setup adımıdır. Environment + geliştirme artık dış LLM'in işi (bkz. AGENTS.md). Zincir burada durur. -->
