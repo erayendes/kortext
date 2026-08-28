@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { openDb } from '../server/db.js';
 import { createProject, listProjects, removeProject, BRIEF_REL } from '../server/projects.js';
 
-const templatesDir = join(process.cwd(), 'templates');
+const pkgRoot = process.cwd();
 
 function tempDir(): string {
   return mkdtempSync(join(tmpdir(), 'kortext-test-'));
@@ -16,7 +16,7 @@ test('create new project scaffolds .kortext workspace with draft BRD', () => {
   const work = tempDir();
   const db = openDb(join(work, 'db.sqlite'));
   const repo = join(work, 'acme');
-  const p = createProject(db, { name: 'Acme', repoPath: repo, mode: 'new' }, templatesDir);
+  const p = createProject(db, { name: 'Acme', repoPath: repo, mode: 'new' }, pkgRoot);
   assert.equal(p.name, 'Acme');
   const brief = join(repo, BRIEF_REL);
   assert.ok(existsSync(brief));
@@ -30,10 +30,10 @@ test('existing mode requires the path to exist; registry list/remove works', () 
   const work = tempDir();
   const db = openDb(join(work, 'db.sqlite'));
   assert.throws(() =>
-    createProject(db, { name: 'Ghost', repoPath: join(work, 'nope'), mode: 'existing' }, templatesDir),
+    createProject(db, { name: 'Ghost', repoPath: join(work, 'nope'), mode: 'existing' }, pkgRoot),
   );
-  const a = createProject(db, { name: 'A', repoPath: join(work, 'a'), mode: 'new' }, templatesDir);
-  createProject(db, { name: 'B', repoPath: join(work, 'b'), mode: 'new' }, templatesDir);
+  const a = createProject(db, { name: 'A', repoPath: join(work, 'a'), mode: 'new' }, pkgRoot);
+  createProject(db, { name: 'B', repoPath: join(work, 'b'), mode: 'new' }, pkgRoot);
   assert.equal(listProjects(db).length, 2);
   assert.equal(removeProject(db, a.id), true);
   assert.equal(listProjects(db).length, 1);
@@ -46,7 +46,7 @@ test('duplicate repo_path is rejected by the registry', () => {
   const work = tempDir();
   const db = openDb(join(work, 'db.sqlite'));
   const repo = join(work, 'dup');
-  createProject(db, { name: 'One', repoPath: repo, mode: 'new' }, templatesDir);
-  assert.throws(() => createProject(db, { name: 'Two', repoPath: repo, mode: 'existing' }, templatesDir));
+  createProject(db, { name: 'One', repoPath: repo, mode: 'new' }, pkgRoot);
+  assert.throws(() => createProject(db, { name: 'Two', repoPath: repo, mode: 'existing' }, pkgRoot));
   rmSync(work, { recursive: true, force: true });
 });

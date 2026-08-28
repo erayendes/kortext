@@ -1350,3 +1350,17 @@ body {
 .kx-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); }
 .kx-tab { padding: 8px 12px; font-size: 13px; color: var(--fg-mid); background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; font-family: inherit; }
 .kx-tab.active { color: var(--fg); border-bottom-color: var(--accent); font-weight: 550; }
+
+/* E2 — connect tab + request queue */
+.kx-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 16px; height: 16px; padding: 0 4px; margin-left: 6px; border-radius: 8px; background: var(--accent); color: var(--accent-fg); font-size: 10px; font-weight: 600; font-family: var(--font-mono); }
+.kx-connect { display: flex; flex-direction: column; gap: 12px; }
+.kx-cmd-card { display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--card); }
+.kx-cmd-head { display: flex; align-items: center; justify-content: space-between; }
+.kx-cmd-title { font-size: 13px; font-weight: 550; }
+.kx-cmd { display: block; padding: 10px 12px; border-radius: var(--r-md); background: var(--bg-inset); border: 1px solid var(--border); font-size: 12px; color: var(--fg); overflow-x: auto; white-space: pre; }
+.kx-cmd-hint { font-size: 11.5px; color: var(--fg-faint); }
+.kx-requests h2 { font-size: 14px; font-weight: 600; margin-bottom: 10px; }
+.kx-request-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--r-md); margin-bottom: 6px; background: var(--card); }
+.kx-req-type { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; padding: 2px 7px; border-radius: 5px; background: var(--bg-muted); color: var(--fg-mid); flex-shrink: 0; }
+.kx-req-payload { flex: 1; font-size: 11.5px; color: var(--fg-mid); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kx-req-when { font-size: 10.5px; color: var(--fg-faint); font-family: var(--font-mono); flex-shrink: 0; }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api, type Project } from './api';
+import { api, type KortextRequest, type Project } from './api';
 
 type Tab = 'documents' | 'reports' | 'connect';
 
@@ -120,6 +120,18 @@ function AddProject({ onDone, onCancel }: { onDone: () => void; onCancel: () => 
 
 function ProjectScreen({ project, onBack }: { project: Project; onBack: () => void }) {
   const [tab, setTab] = useState<Tab>('documents');
+  const [pending, setPending] = useState<KortextRequest[]>([]);
+
+  const refreshRequests = () =>
+    api.listRequests(project.id, 'pending').then((r) => setPending(r.requests));
+
+  useEffect(() => {
+    refreshRequests();
+    const timer = setInterval(refreshRequests, 5000);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project.id]);
+
   return (
     <main className="kx-main">
       <div className="kx-main-head">
@@ -133,6 +145,7 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
         {(['documents', 'reports', 'connect'] as Tab[]).map((t) => (
           <button key={t} className={`kx-tab ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
             {t === 'documents' ? 'Documents' : t === 'reports' ? 'Reports' : 'Connect'}
+            {t === 'connect' && pending.length > 0 && <span className="kx-badge">{pending.length}</span>}
           </button>
         ))}
       </nav>
@@ -143,10 +156,86 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
       )}
       {tab === 'reports' && <div className="kx-empty">Reports land here in E4.</div>}
       {tab === 'connect' && (
-        <div className="kx-empty">
-          Agent connection commands (CLI one-liner, MCP add) land here in E2.
-        </div>
+        <ConnectTab project={project} pending={pending} onChanged={refreshRequests} />
       )}
     </main>
+  );
+}
+
+function ConnectTab({
+  project,
+  pending,
+  onChanged,
+}: {
+  project: Project;
+  pending: KortextRequest[];
+  onChanged: () => void;
+}) {
+  const port = window.location.port || '4200';
+  const cli = `cd ${project.repo_path} && claude "Read AGENTS.md and start the analysis."`;
+  const prompt = 'Read AGENTS.md and start the analysis.';
+  const mcp = `claude mcp add --transport http kortext http://localhost:${port}/mcp`;
+
+  return (
+    <div className="kx-connect">
+      <CommandCard
+        title="Terminal (Claude Code / Codex CLI)"
+        hint="Paste in your terminal — the agent finds the repo and the contract."
+        command={cli}
+      />
+      <CommandCard
+        title="Desktop app"
+        hint="Open the project folder in your agent's app, then paste this prompt."
+        command={prompt}
+      />
+      <CommandCard
+        title="MCP connection (once per machine)"
+        hint="Lets the agent see panel requests (revise notes, report asks)."
+        command={mcp}
+      />
+      <section className="kx-requests">
+        <h2>Pending requests {pending.length > 0 && <span className="kx-badge">{pending.length}</span>}</h2>
+        {pending.length === 0 && (
+          <div className="kx-empty">No pending requests. Notes and report asks queue up here for your agent.</div>
+        )}
+        {pending.map((r) => (
+          <div key={r.id} className="kx-request-row">
+            <span className={`kx-req-type kx-req-${r.type}`}>{r.type}</span>
+            <span className="kx-req-payload mono">{r.payload}</span>
+            <span className="kx-req-when">{r.created_at}</span>
+            <button
+              className="btn btn-sm"
+              onClick={() => api.cancelRequest(r.id).then(onChanged)}
+            >
+              Cancel
+            </button>
+          </div>
+        ))}
+      </section>
+    </div>
+  );
+}
+
+function CommandCard({ title, hint, command }: { title: string; hint: string; command: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="kx-cmd-card">
+      <div className="kx-cmd-head">
+        <span className="kx-cmd-title">{title}</span>
+        <button
+          className="btn btn-sm"
+          onClick={() => {
+            navigator.clipboard.writeText(command).then(() => {
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1500);
+            });
+          }}
+        >
+          {copied ? 'Copied' : 'Copy'}
+        </button>
+      </div>
+      <code className="kx-cmd mono">{command}</code>
+      <span className="kx-cmd-hint">{hint}</span>
+    </div>
   );
 }

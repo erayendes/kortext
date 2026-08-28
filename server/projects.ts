@@ -1,24 +1,51 @@
 import type Database from 'better-sqlite3';
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Project } from './db.js';
 
 // Live workspace layout inside a registered repo. The brief IS the BRD
 // (v1 convention: .kortext/foundation/BRD.md with a status frontmatter).
-export const WORKSPACE_DIRS = ['foundation', 'references', 'reports'] as const;
+export const WORKSPACE_DIRS = ['foundation', 'references', 'reports', 'memory', 'workflows', 'agents'] as const;
 export const BRIEF_REL = join('.kortext', 'foundation', 'BRD.md');
 
-export function scaffoldProject(repoPath: string, templatesDir: string): void {
-  for (const dir of WORKSPACE_DIRS) mkdirSync(join(repoPath, '.kortext', dir), { recursive: true });
+// Copies the self-contained working set into the repo so the external agent
+// needs nothing but the repo itself: contract at the root, process definitions
+// and personas under .kortext/, doc skeletons with status: uninitialized.
+// Idempotent — existing files are never overwritten.
+export function scaffoldProject(repoPath: string, pkgRoot: string): void {
+  const kx = join(repoPath, '.kortext');
+  for (const dir of WORKSPACE_DIRS) mkdirSync(join(kx, dir), { recursive: true });
+
+  const templates = join(pkgRoot, 'templates');
+  copyIfMissing(join(templates, 'AGENTS.md'), join(repoPath, 'AGENTS.md'));
+  copyDirIfMissing(join(pkgRoot, 'workflows'), join(kx, 'workflows'));
+  copyDirIfMissing(join(pkgRoot, 'agents'), join(kx, 'agents'));
+  copyDirIfMissing(join(templates, 'references'), join(kx, 'references'));
+  copyDirIfMissing(join(templates, 'memory'), join(kx, 'memory'));
+  for (const doc of ['PRD.md', 'TRD.md', 'PFD.md']) {
+    copyIfMissing(join(templates, 'foundation', doc), join(kx, 'foundation', doc));
+  }
+
   const brief = join(repoPath, BRIEF_REL);
   if (!existsSync(brief)) {
-    const template = join(templatesDir, 'foundation', 'BRD.md');
+    const template = join(templates, 'foundation', 'BRD.md');
     if (existsSync(template)) {
       copyFileSync(template, brief);
       forceStatus(brief, 'draft');
     } else {
       writeFileSync(brief, '---\nstatus: draft\n---\n\n# BRD\n', 'utf8');
     }
+  }
+}
+
+function copyIfMissing(from: string, to: string): void {
+  if (existsSync(from) && !existsSync(to)) copyFileSync(from, to);
+}
+
+function copyDirIfMissing(fromDir: string, toDir: string): void {
+  if (!existsSync(fromDir)) return;
+  for (const entry of readdirSync(fromDir, { withFileTypes: true })) {
+    if (entry.isFile()) copyIfMissing(join(fromDir, entry.name), join(toDir, entry.name));
   }
 }
 
@@ -41,7 +68,7 @@ export function listProjects(db: Database.Database): Project[] {
 export function createProject(
   db: Database.Database,
   input: { name: string; repoPath: string; mode: 'new' | 'existing' },
-  templatesDir: string,
+  pkgRoot: string,
 ): Project {
   const name = input.name.trim();
   const repoPath = input.repoPath.trim();
@@ -51,7 +78,7 @@ export function createProject(
     throw new Error(`repoPath does not exist: ${repoPath}`);
   }
   if (input.mode === 'new') mkdirSync(repoPath, { recursive: true });
-  scaffoldProject(repoPath, templatesDir);
+  scaffoldProject(repoPath, pkgRoot);
   const row = db
     .prepare('INSERT INTO projects (name, repo_path) VALUES (?, ?) RETURNING *')
     .get(name, repoPath) as Project;

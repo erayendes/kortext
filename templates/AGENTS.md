@@ -1,41 +1,91 @@
-# AGENTS.md — Kortext devir sözleşmesi (v1.0)
+# AGENTS.md — Kortext çalışma sözleşmesi (v1.0)
 
-> **Bu dosyayı ilk sen okursun.** Kortext bu projenin **analiz + planlamasını** bitirdi
-> ve tüm kaynak gerçeği (`source of truth`) `.kortext/` içine yazdı. Kortext **geliştirmeyi
-> kendisi yürütmez** — onu **sen** (hangi model olursan ol) yaparsın. Kortext yalnızca
-> görev durumunu gösterir ve takip eder.
+> **Bu dosyayı ilk sen okursun.** Bu proje **Kortext** ile yönetiliyor: Kortext projenin
+> pasif beynidir — süreci tanımlar, belgeleri ve onay durumlarını izler, istekleri kuyruğa
+> alır. **İşi sen yaparsın** (hangi model/araç olursan ol). Kortext sana iş dağıtmaz,
+> seni çalıştırmaz; sen bu sözleşmeye uyarsın, +prime (insan) panelden onaylar.
 
-## Nereden başlarsın
+## 0. Bağlantı (her oturumda bir kez)
 
-1. **`.kortext/memory/handover.md`** — önceki oturum nerede kaldı, ne yarım kaldı, sıradaki dikkat noktası. Önce bunu oku (varsa).
-2. **`.kortext/memory/TODO.md`** — tek canlı görev listesi (version → epic → task, checkbox'lı). İşaretsiz (`- [ ]`) ilk uygun görev senin sıradaki işin.
-3. Görevin bağlamı için ilgili **foundation + references** dosyalarını oku (aşağıda).
+- Kortext MCP bağlıysa (`kortext` server) → **her fazın ve her adımın başında**
+  `get_pending_requests(repo_path: <bu reponun mutlak yolu>)` çağır. Bekleyen istek varsa
+  ÖNCE onları işle (aşağıda §4), sonra kaldığın yere dön.
+- MCP bağlı değilse +prime'a tek satır kurulum komutunu hatırlat:
+  `claude mcp add --transport http kortext http://localhost:4200/mcp`
+  (panel varsayılan portu 4200; +prime farklı port kullanıyorsa ona göre).
 
-## Her zaman uyacağın kaynaklar
+## 1. Kaynak gerçeği (source of truth)
 
-- **`.kortext/foundation/`** — *ne yapılacak*: `BRD, PRD, TRD, PFD`. Analizden sonra **dondu**; değiştirme, yalnız oku. `PFD.md` north-star.
-- **`.kortext/references/`** — *nasıl davranılacak* (ALL-CAPS canlı kurallar): `ACCESS, API, CONTENT, DATABASE, DESIGN, ENVIRONMENT, GLOSSARY, GROWTH, LEGAL, SECURITY, STACK, STRUCTURE, TEST`. Bunlar projenin değişmez davranış kuralları — kod yazarken bunlara uy (örn. `STACK.md` teknoloji seçimini, `DESIGN.md` tasarım kurallarını, `SECURITY.md` güvenlik şartlarını belirler). `status: uninitialized` olan bir dosya o proje için geçerli değildir, atla.
+- `.kortext/foundation/` — *ne yapılacak*: `BRD` (brief), `PRD`, `TRD`, `PFD`.
+- `.kortext/references/` — *nasıl yapılacak*: `STACK, SECURITY, API, DATABASE, DESIGN, …`
+  Kod ve içerik üretirken bunlara uy. `status: uninitialized` dosya henüz yok sayılır.
+- `.kortext/workflows/` — süreç tanımları. Adımlar `inputs:` / `outputs:` / `approver:` taşır.
+- `.kortext/agents/` — persona perspektifleri. Bir belgeyi hangi persona yazıyorsa
+  (`author: +…`) o dosyadaki bakış açısıyla yaz.
+- `.kortext/memory/` — `handover.md`, `decisions.md`, `learned.md` (aşağıda §6).
+- Bilgi eksikse **varsayım yapma**: belgeye açık soru olarak yaz ve +prime onayında sorulmasını sağla.
 
-## Çalışma döngüsü (sözleşme)
+## 2. Faz A — Analiz
 
-Her görev için:
+1. **Brief kapısı:** `.kortext/foundation/BRD.md` frontmatter'ında `status: approved` değilse
+   DUR ve +prime'a söyle: brief paneldeki onaydan geçmeli.
+2. Workflow seç: yeni ürün → `new-project-analysis.md`; mevcut kod tabanı → `existing-project-analysis.md`.
+3. Adımları sırayla uygula. **Bağımlılık kuralı (çekirdek):**
+   - Bir adımın `inputs:` listesindeki TÜM dosyalar `status: approved` olmadan o adımın
+     çıktısını YAZMA.
+   - Girdileri hazır olan adımları bekletme, hemen üret; birbirinden bağımsız adımlar
+     art arda tek oturumda yazılabilir.
+4. Her çıktıyı ilgili şablonun üstüne değil **şablonu doldurarak** üret; frontmatter:
+   `status: draft`, `author: +persona`. Onay HER ZAMAN +prime'ındır — hiçbir belgeyi
+   kendin `approved` yapma.
+5. Yazabileceğin adım kalmadığında: +prime'a hangi belgelerin onay beklediğini listele ve dur.
+   (Onaylar panelden düşer; yeni oturumda/devamda durumları dosyadan yeniden oku.)
 
-1. **Seç** — TODO.md'den sıradaki işaretsiz görevi al. **Sıraya uy**: bir görev kendinden önce gelenler bitmeden başlamamalı (liste bağımlılık sırasındadır).
-2. **Yap** — işi references'a uyarak tamamla.
-3. **İşaretle** — bitince TODO.md'de o satırı `- [ ]` → `- [x]` yap. (Dashboard bunu otomatik gösterir.)
-4. **Kaydet** — *üret + KAYDET*, yoksa boşlukta kaybolur:
-   - `.kortext/memory/decisions.md` — önemli bir karar verdiysen tek satır + kısa gerekçe (üstüne ekle, silme).
-   - `.kortext/memory/learned.md` — bir ders çıktıysa ekle.
-   - `.kortext/memory/handover.md` — **şu an neredeyim / ne yaptım / hangi dosyalara dokundum / sıradaki ne** — bir sonraki oturum buradan devam eder.
+## 3. Faz B — Planlama (YALNIZ istekle)
 
-## Boşluk sonrası devam (resume)
+Analiz bitti diye planlamaya GEÇME. Planlama yalnız iki tetikle koşar:
+kuyruğa `planning` isteği düşmesi (paneldeki "Kopeng'e aktar") ya da +prime'ın açık talimatı.
+O zaman `.kortext/workflows/planning-pipeline.md`'yi uygula → `backlog.yaml` + `TODO.md`
+üret (`status: draft`) → +prime onayına bırak.
 
-Yeni bir oturuma başladığında **önce handover.md + TODO.md oku**. Görev ortasında bırakıldıysa, handover.md'deki serbest-metin "nerede kaldım" notu yarım işi kaldığın yerden sürdürmeni sağlar. Kaldığın yeri yazmamak en sık dağılma sebebidir.
+## 4. İstek kuyruğu — türler ve işleme
 
-## Frontmatter disiplini
+`get_pending_requests` dönen her istek için; bitince `complete_request(request_id)`:
 
-`references/`, `reports/`, `memory/` dosyaları YAML frontmatter taşır (tek doğru kaynak): `status, author, approver/updated_at`. `approver: +prime` taşıyan bir dosyayı **sen onaylamazsın** — onay insana (+prime) düşer.
+- **`revise`** — payload: `{doc, notes[]}`. Belgeyi notlara göre yeniden yaz; frontmatter'ı
+  `status: draft`'a çek (onay yeniden +prime'a düşer). O belgeye bağımlı `approved` belgeler
+  etkileniyorsa +prime'a söyle.
+- **`report`** — payload: `{report_type}`. `.kortext/`deki ilgili şablon/başlıklarla raporu
+  `.kortext/reports/` altına tarihli dosya olarak yaz.
+- **`planning`** — §3'ü koş.
+- **`question`** — +prime'ın serbest sorusu; cevabını istekte belirtilen belgeye/`reports/`a yaz.
 
-## Kortext'in rolü (v1.0)
+## 5. Faz C — Geliştirme (planlama onaylandıysa)
 
-Kortext = projelendirme + takip. Sana iş **dağıtmaz**, seni **sürmez**. `.kortext/` kaynak gerçeğini hazırlar, TODO.md'yi gösterir, sen durumu dosyalara yazdıkça takip eder. Geliştirme/deploy süreçlerini sen ve +prime kendi arayüzünüzde konuşursunuz.
+1. **Seç:** `TODO.md`'den sıradaki işaretsiz (`- [ ]`) görevi al; liste bağımlılık sırasındadır,
+   sırayı bozma. `blocked_by`'ı bitmemiş görevi atla.
+2. **Yap:** işi `references/`'a uyarak tamamla.
+3. **İşaretle:** bitince satırı `- [x]` yap.
+4. **Kaydet:** §6 hafıza disiplini.
++prime'a düşen görevler (`assignee: +prime` / `@prime`) senin değil — atla, gerekiyorsa hatırlat.
+
+## 6. Hafıza disiplini (her fazda)
+
+- Önemli karar → `.kortext/memory/decisions.md` (en üste ekle, silme; tek satır + gerekçe).
+- Ders/tekrar-önleme → `.kortext/memory/learned.md`.
+- Oturum sonu / uzun aranın öncesi → `.kortext/memory/handover.md` en üstüne:
+  ne yaptım · hangi dosyalara dokundum · sıradaki ne. Yeni oturum ÖNCE handover + durumları okur.
+- **Read-before-Write:** paylaşılan bir dosyaya yazmadan önce güncel halini oku.
+
+## 7. Davranış anayasası (öz)
+
+- **Dil:** +prime ile iletişim +prime'ın dilinde; kod, commit, değişken, yorum İngilizce;
+  ürün-içi metin hedef proje dilinde.
+- **Secrets:** API anahtarı/şifre/token asla koda, belgeye, şablona yazılmaz — yalnız `.env`
+  (repo dışı) + anahtar isimleri `.env.example`'da. Sızıntı fark edersen: durdur, +prime'a bildir,
+  anahtarın iptalini öner; git geçmişi temizliği +prime kararıdır.
+- **Tıkanma (3-deneme kuralı):** aynı engelde 3 farklı yöntem başarısızsa DUR; denemeleri ve
+  önerini `handover.md`'ye yaz, +prime'a sor. Sessiz workaround'la ilerleme.
+- **Onay çizgisi:** `approver: +prime` olan hiçbir şeyi kendin onaylama; `approved` bir
+  foundation/references belgesini istek olmadan değiştirme.
+- **Çelişki:** belgeler arası çelişki görürsen üretimi durdurup +prime'a sor; sessizce birini seçme.
