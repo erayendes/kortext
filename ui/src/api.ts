@@ -37,8 +37,18 @@ export interface DocInfo {
   upstreamChanged: boolean;
 }
 
+export interface ReportInfo {
+  rel: string;
+  name: string;
+  type: string | null;
+  created_at: string;
+}
+
 export const api = {
   listProjects: () => req<{ projects: Project[] }>('/api/projects'),
+  listReports: (projectId: number) => req<{ reports: ReportInfo[] }>(`/api/projects/${projectId}/reports`),
+  generateChangeReport: (projectId: number) =>
+    req<{ report: ReportInfo }>(`/api/projects/${projectId}/reports/change`, { method: 'POST' }),
   listDocs: (projectId: number) => req<{ docs: DocInfo[] }>(`/api/projects/${projectId}/docs`),
   docContent: (projectId: number, rel: string) =>
     req<{ content: string }>(`/api/projects/${projectId}/docs/content?rel=${encodeURIComponent(rel)}`),

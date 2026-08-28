@@ -1407,3 +1407,13 @@ body {
 .kx-note-x { margin-left: auto; border: none; background: none; color: var(--fg-faint); cursor: pointer; font-size: 14px; }
 .kx-note-input { display: flex; gap: 6px; }
 .kx-note-input .kx-input { flex: 1; }
+
+/* E4 — reports */
+.kx-reports { display: flex; flex-direction: column; gap: 18px; }
+.kx-report-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.kx-report-card { display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--card); }
+.kx-report-card.disabled { opacity: .55; }
+.kx-report-card .btn { align-self: flex-start; }
+.kx-report-title { font-size: 13.5px; font-weight: 600; }
+.kx-report-desc { font-size: 11.5px; color: var(--fg-mid); min-height: 30px; }
+.kx-info { padding: 8px 12px; border-radius: var(--r-md); background: rgba(52,146,90,.1); color: var(--green, #2f7d4f); font-size: 12.5px; cursor: pointer; }

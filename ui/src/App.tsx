@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api, type DocInfo, type KortextRequest, type Project } from './api';
+import { api, type DocInfo, type KortextRequest, type Project, type ReportInfo } from './api';
 import { DocDrawer, StatusBadge } from './DocDrawer';
 
 type Tab = 'documents' | 'reports' | 'connect';
@@ -151,7 +151,7 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
         ))}
       </nav>
       {tab === 'documents' && <DocumentsTab project={project} />}
-      {tab === 'reports' && <div className="kx-empty">Reports land here in E4.</div>}
+      {tab === 'reports' && <ReportsTab project={project} onRequested={refreshRequests} />}
       {tab === 'connect' && (
         <ConnectTab project={project} pending={pending} onChanged={refreshRequests} />
       )}
@@ -207,6 +207,115 @@ function DocumentsTab({ project }: { project: Project }) {
       <DocDrawer
         project={project}
         doc={open}
+        onClose={() => setOpen(null)}
+        onChanged={refresh}
+      />
+    </div>
+  );
+}
+
+function ReportsTab({ project, onRequested }: { project: Project; onRequested: () => void }) {
+  const [reports, setReports] = useState<ReportInfo[]>([]);
+  const [open, setOpen] = useState<ReportInfo | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const refresh = () => api.listReports(project.id).then((r) => setReports(r.reports));
+
+  useEffect(() => {
+    refresh();
+    const timer = setInterval(refresh, 5000);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project.id]);
+
+  const requestFromAgent = (reportType: string, label: string) =>
+    api.createRequest(project.id, 'report', { report_type: reportType }).then(() => {
+      setMsg(`${label} isteği kuyruğa eklendi — ajanın bir sonraki adımında yazılır.`);
+      onRequested();
+    });
+
+  const cards = [
+    {
+      key: 'change',
+      title: 'Change',
+      desc: 'Doc statuses + recent git history. Generated instantly by kortext.',
+      action: 'Generate now',
+      run: () => api.generateChangeReport(project.id).then(refresh),
+      disabled: false,
+    },
+    {
+      key: 'risk',
+      title: 'Risk & Recommendations',
+      desc: 'Written by your agent from the project state.',
+      action: 'Request from agent',
+      run: () => requestFromAgent('risk', 'Risk & Recommendations'),
+      disabled: false,
+    },
+    {
+      key: 'decisions',
+      title: 'Decision Summary',
+      desc: 'Written by your agent from decisions.md and the docs.',
+      action: 'Request from agent',
+      run: () => requestFromAgent('decisions', 'Decision Summary'),
+      disabled: false,
+    },
+    {
+      key: 'progress',
+      title: 'Progress',
+      desc: 'Task progress — available once the project is transferred to Kopeng.',
+      action: 'Kopeng not connected',
+      run: () => {},
+      disabled: true,
+    },
+  ];
+
+  return (
+    <div className="kx-reports">
+      {msg && (
+        <div className="kx-info" onClick={() => setMsg(null)}>
+          {msg}
+        </div>
+      )}
+      <div className="kx-report-cards">
+        {cards.map((c) => (
+          <div key={c.key} className={`kx-report-card${c.disabled ? ' disabled' : ''}`}>
+            <span className="kx-report-title">{c.title}</span>
+            <span className="kx-report-desc">{c.desc}</span>
+            <button className="btn btn-sm" disabled={c.disabled} onClick={c.run}>
+              {c.action}
+            </button>
+          </div>
+        ))}
+      </div>
+      <section>
+        <h2 className="kx-doc-group">History</h2>
+        {reports.length === 0 && <div className="kx-empty">No reports yet.</div>}
+        {reports.map((r) => (
+          <button key={r.rel} className="kx-doc-row" onClick={() => setOpen(r)}>
+            <span className="kx-doc-name">{r.name}</span>
+            {r.type && <span className="kx-req-type">{r.type}</span>}
+            <span className="kx-doc-spacer" />
+            <span className="kx-req-when">{r.created_at.slice(0, 16).replace('T', ' ')}</span>
+          </button>
+        ))}
+      </section>
+      <DocDrawer
+        project={project}
+        doc={
+          open
+            ? {
+                rel: open.rel,
+                group: 'references',
+                name: open.name,
+                status: 'report',
+                author: null,
+                inputs: [],
+                blocked: false,
+                revisionPending: false,
+                upstreamChanged: false,
+              }
+            : null
+        }
         onClose={() => setOpen(null)}
         onChanged={refresh}
       />

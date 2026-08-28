@@ -22,6 +22,8 @@ export function scaffoldProject(repoPath: string, pkgRoot: string): void {
   copyDirIfMissing(join(pkgRoot, 'agents'), join(kx, 'agents'));
   copyDirIfMissing(join(templates, 'references'), join(kx, 'references'));
   copyDirIfMissing(join(templates, 'memory'), join(kx, 'memory'));
+  mkdirSync(join(kx, 'templates', 'reports'), { recursive: true });
+  copyDirIfMissing(join(templates, 'reports'), join(kx, 'templates', 'reports'));
   for (const doc of ['PRD.md', 'TRD.md', 'PFD.md']) {
     copyIfMissing(join(templates, 'foundation', doc), join(kx, 'foundation', doc));
   }

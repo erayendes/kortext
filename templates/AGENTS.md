@@ -55,8 +55,9 @@ O zaman `.kortext/workflows/planning-pipeline.md`'yi uygula → `backlog.yaml` +
 - **`revise`** — payload: `{doc, notes[]}`. Belgeyi notlara göre yeniden yaz; frontmatter'ı
   `status: draft`'a çek (onay yeniden +prime'a düşer). O belgeye bağımlı `approved` belgeler
   etkileniyorsa +prime'a söyle.
-- **`report`** — payload: `{report_type}`. `.kortext/`deki ilgili şablon/başlıklarla raporu
-  `.kortext/reports/` altına tarihli dosya olarak yaz.
+- **`report`** — payload: `{report_type}`. Şablonu `.kortext/templates/reports/`ten al
+  (`risk` → `risk-report.md`, `decisions` → `decision-summary.md`), doldur ve
+  `.kortext/reports/<tür>-<YYYY-MM-DD>.md` olarak yaz (frontmatter: `status: report`, `type: <tür>`).
 - **`planning`** — §3'ü koş.
 - **`question`** — +prime'ın serbest sorusu; cevabını istekte belirtilen belgeye/`reports/`a yaz.
 
