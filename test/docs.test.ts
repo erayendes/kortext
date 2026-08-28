@@ -59,3 +59,11 @@ test('docPath rejects traversal', () => {
   assert.throws(() => docPath(p, 'foundation/../secret.md'));
   rmSync(work, { recursive: true, force: true });
 });
+
+test('plan gate rel (memory/TODO.md) passes docPath guard', () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Acme', repoPath: join(work, 'acme'), mode: 'new' }, pkgRoot);
+  assert.ok(docPath(p, 'memory/TODO.md').endsWith('/.kortext/memory/TODO.md'));
+  rmSync(work, { recursive: true, force: true });
+});

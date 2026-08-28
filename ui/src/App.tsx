@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { api, type DocInfo, type KortextRequest, type Project, type ReportInfo } from './api';
+import { api, type DocInfo, type KortextRequest, type PlanState, type Project, type ReportInfo } from './api';
 import { DocDrawer, StatusBadge } from './DocDrawer';
 
-type Tab = 'documents' | 'reports' | 'connect';
+type Tab = 'documents' | 'plan' | 'reports' | 'connect';
 
 export function App() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -143,14 +143,15 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
         <span className="kx-card-path mono">{project.repo_path}</span>
       </div>
       <nav className="kx-tabs">
-        {(['documents', 'reports', 'connect'] as Tab[]).map((t) => (
+        {(['documents', 'plan', 'reports', 'connect'] as Tab[]).map((t) => (
           <button key={t} className={`kx-tab ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
-            {t === 'documents' ? 'Documents' : t === 'reports' ? 'Reports' : 'Connect'}
+            {t === 'documents' ? 'Documents' : t === 'plan' ? 'Plan' : t === 'reports' ? 'Reports' : 'Connect'}
             {t === 'connect' && pending.length > 0 && <span className="kx-badge">{pending.length}</span>}
           </button>
         ))}
       </nav>
       {tab === 'documents' && <DocumentsTab project={project} />}
+      {tab === 'plan' && <PlanTab project={project} onRequested={refreshRequests} />}
       {tab === 'reports' && <ReportsTab project={project} onRequested={refreshRequests} />}
       {tab === 'connect' && (
         <ConnectTab project={project} pending={pending} onChanged={refreshRequests} />
@@ -208,6 +209,111 @@ function DocumentsTab({ project }: { project: Project }) {
         project={project}
         doc={open}
         onClose={() => setOpen(null)}
+        onChanged={refresh}
+      />
+    </div>
+  );
+}
+
+function PlanTab({ project, onRequested }: { project: Project; onRequested: () => void }) {
+  const [plan, setPlan] = useState<PlanState | null>(null);
+  const [todoOpen, setTodoOpen] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const refresh = () => api.planState(project.id).then(setPlan);
+
+  useEffect(() => {
+    refresh();
+    const timer = setInterval(refresh, 4000);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project.id]);
+
+  if (!plan) return <div className="kx-empty">Loading…</div>;
+
+  const transfer = () =>
+    api.createRequest(project.id, 'planning', {}).then(() => {
+      setMsg('Planlama isteği kuyruğa eklendi — ajan, analiz onayları tamamlandığında backlog + TODO üretir.');
+      onRequested();
+      refresh();
+    });
+
+  return (
+    <div className="kx-plan">
+      {msg && (
+        <div className="kx-info" onClick={() => setMsg(null)}>
+          {msg}
+        </div>
+      )}
+      {!plan.todoExists && !plan.planningPending && (
+        <div className="kx-plan-cta">
+          <p>
+            No plan yet — and that's the default. Kortext creates tasks only when you ask for the
+            transfer; until then the project stays analysis-only.
+          </p>
+          <button className="btn btn-primary" onClick={transfer}>
+            Kopeng'e aktar
+          </button>
+          <span className="kx-cmd-hint">
+            Queues a planning request. Your agent produces backlog.yaml + TODO.md; live Kopeng board
+            push arrives when Kopeng is ready — the export file format is already frozen.
+          </span>
+        </div>
+      )}
+      {plan.planningPending && (
+        <div className="kx-empty">
+          Planning request queued — run your agent; it will produce the backlog once analysis
+          approvals are complete.
+        </div>
+      )}
+      {plan.todoExists && (
+        <div className="kx-plan-ready">
+          <div className="kx-plan-row">
+            <span className="kx-doc-name">TODO.md</span>
+            <StatusBadge
+              doc={{
+                rel: 'memory/TODO.md',
+                group: 'foundation',
+                name: 'TODO',
+                status: plan.todoStatus ?? 'draft',
+                author: '+operation-manager',
+                inputs: [],
+                blocked: false,
+                revisionPending: false,
+                upstreamChanged: false,
+              }}
+            />
+            <span className="kx-doc-spacer" />
+            <button className="btn btn-sm" onClick={() => setTodoOpen(true)}>
+              Open
+            </button>
+          </div>
+          {plan.backlogExists && (
+            <span className="kx-cmd-hint">
+              backlog.yaml is in .kortext/foundation/ — the frozen export contract Kopeng will
+              consume.
+            </span>
+          )}
+        </div>
+      )}
+      <DocDrawer
+        project={project}
+        doc={
+          todoOpen
+            ? {
+                rel: 'memory/TODO.md',
+                group: 'foundation',
+                name: 'TODO',
+                status: plan.todoStatus ?? 'draft',
+                author: '+operation-manager',
+                inputs: [],
+                blocked: false,
+                revisionPending: false,
+                upstreamChanged: false,
+              }
+            : null
+        }
+        onClose={() => setTodoOpen(false)}
         onChanged={refresh}
       />
     </div>

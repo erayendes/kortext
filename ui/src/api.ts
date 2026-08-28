@@ -44,8 +44,16 @@ export interface ReportInfo {
   created_at: string;
 }
 
+export interface PlanState {
+  backlogExists: boolean;
+  todoExists: boolean;
+  todoStatus: string | null;
+  planningPending: boolean;
+}
+
 export const api = {
   listProjects: () => req<{ projects: Project[] }>('/api/projects'),
+  planState: (projectId: number) => req<PlanState>(`/api/projects/${projectId}/plan`),
   listReports: (projectId: number) => req<{ reports: ReportInfo[] }>(`/api/projects/${projectId}/reports`),
   generateChangeReport: (projectId: number) =>
     req<{ report: ReportInfo }>(`/api/projects/${projectId}/reports/change`, { method: 'POST' }),

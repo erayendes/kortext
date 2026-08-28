@@ -110,6 +110,27 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     }
   });
 
+  // Plan state: whether planning was requested, and whether the outputs exist.
+  app.get('/api/projects/:id/plan', (req, res) => {
+    const project = projectOr404(req.params.id, res);
+    if (!project) return;
+    const kx = (rel: string) => join(project.repo_path, '.kortext', rel);
+    const todoPath = kx('memory/TODO.md');
+    const todoExists = existsSync(todoPath);
+    const planningPending = listRequests(db, project.id, 'pending').some((r) => r.type === 'planning');
+    let todoStatus: string | null = null;
+    if (todoExists) {
+      todoStatus =
+        (readFileSync(todoPath, 'utf8').match(/^status:\s*(.+)$/m)?.[1] ?? 'draft').trim();
+    }
+    res.json({
+      backlogExists: existsSync(kx('foundation/backlog.yaml')),
+      todoExists,
+      todoStatus,
+      planningPending,
+    });
+  });
+
   app.get('/api/projects/:id/reports', (req, res) => {
     const project = projectOr404(req.params.id, res);
     if (!project) return;

@@ -164,6 +164,6 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
 }
 
 export function docPath(project: Project, rel: string): string {
-  if (!/^(foundation|references|reports)\/[\w.-]+\.md$/.test(rel)) throw new Error(`bad doc path: ${rel}`);
+  if (!/^(foundation|references|reports|memory)\/[\w.-]+\.md$/.test(rel)) throw new Error(`bad doc path: ${rel}`);
   return join(project.repo_path, '.kortext', rel);
 }

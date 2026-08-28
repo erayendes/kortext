@@ -45,8 +45,9 @@
 
 Analiz bitti diye planlamaya GEÇME. Planlama yalnız iki tetikle koşar:
 kuyruğa `planning` isteği düşmesi (paneldeki "Kopeng'e aktar") ya da +prime'ın açık talimatı.
-O zaman `.kortext/workflows/planning-pipeline.md`'yi uygula → `backlog.yaml` + `TODO.md`
-üret (`status: draft`) → +prime onayına bırak.
+O zaman `.kortext/workflows/planning-pipeline.md`'yi uygula → `.kortext/foundation/backlog.yaml`
+(dondurulmuş şema — workflow'un içinde) + `.kortext/memory/TODO.md` (`status: draft`) üret →
++prime onayına bırak. TODO.md onaylanınca plan yürürlüktedir.
 
 ## 4. İstek kuyruğu — türler ve işleme
 

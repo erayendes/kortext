@@ -23,15 +23,9 @@ CREATE TABLE IF NOT EXISTS requests (
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   completed_at TEXT
 );
-CREATE TABLE IF NOT EXISTS transfers (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  target TEXT NOT NULL,           -- 'file' now; 'kopeng' later
-  status TEXT NOT NULL,
-  detail TEXT,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
 `;
+// NOTE: a `transfers` table returns when live Kopeng push lands — until then
+// "transferred" simply means backlog.yaml + TODO.md exist and are approved.
 
 export function openDb(path = defaultDbPath()): Database.Database {
   mkdirSync(dirname(path), { recursive: true });
