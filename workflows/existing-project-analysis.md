@@ -12,18 +12,22 @@
 2. **+db-admin:** `DATABASE.md` üret. Kapsam: mevcut migration + schema + ORM modelleri + bağlantı biçimi + tablolar + ilişkiler + indeksler + veri tipleri + bütünlük kuralları.
    - inputs: `.kortext/references/STACK.md`, `.kortext/references/STRUCTURE.md`
    - outputs: `.kortext/references/DATABASE.md`
+   - approver: +prime
 
 3. **+security-engineer:** `SECURITY.md` üret. Kapsam: mevcut auth + yetkilendirme + middleware + env handling + CORS + rate limiting + secret yönetimi + loglama + hassas veri kullanımı. Açıkları ve eksik katmanları işaretle.
    - inputs: `.kortext/references/STACK.md`, `.kortext/references/STRUCTURE.md`
    - outputs: `.kortext/references/SECURITY.md`
+   - approver: +prime
 
 4. **+devops-engineer:** `ACCESS.md` + `ENVIRONMENT.md` üret. Kapsam: CI/CD pipeline'ları, deployment süreçleri, ortam yapılandırmaları, branch stratejisi, erişim sahipliği, secret yönetimi.
    - inputs: `.kortext/references/STACK.md`, `.kortext/references/STRUCTURE.md`
    - outputs: `.kortext/references/ACCESS.md`, `.kortext/references/ENVIRONMENT.md`
+   - approver: +prime
 
 5. **+engineering-manager:** `API.md` üret. Kapsam: endpoint listesi + request/response modelleri + auth mekanizmaları + servis sınırları + entegrasyon noktaları.
    - inputs: `.kortext/references/STACK.md`, `.kortext/references/STRUCTURE.md`, `.kortext/references/DATABASE.md`
    - outputs: `.kortext/references/API.md`
+   - approver: +prime
 
 ## Ürün Keşfi
 
@@ -35,6 +39,7 @@
 2. **+qa-engineer:** `TEST.md` üret. Kapsam: test kapsamı + test tipleri + CI test raporları + eksik test alanları. Kritik kullanıcı akışları için kalite güvencesinin yeterliliğini belgele.
    - inputs: `.kortext/foundation/PRD.md`, `.kortext/references/STRUCTURE.md`
    - outputs: `.kortext/references/TEST.md`
+   - approver: +prime
 
 ## Teknik Borç ve TRD
 

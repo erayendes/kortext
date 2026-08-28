@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { api, type KortextRequest, type Project } from './api';
+import { api, type DocInfo, type KortextRequest, type Project } from './api';
+import { DocDrawer, StatusBadge } from './DocDrawer';
 
 type Tab = 'documents' | 'reports' | 'connect';
 
@@ -149,16 +150,67 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
           </button>
         ))}
       </nav>
-      {tab === 'documents' && (
-        <div className="kx-empty">
-          Analysis documents will appear here as your agent produces them (E3).
-        </div>
-      )}
+      {tab === 'documents' && <DocumentsTab project={project} />}
       {tab === 'reports' && <div className="kx-empty">Reports land here in E4.</div>}
       {tab === 'connect' && (
         <ConnectTab project={project} pending={pending} onChanged={refreshRequests} />
       )}
     </main>
+  );
+}
+
+function DocumentsTab({ project }: { project: Project }) {
+  const [docs, setDocs] = useState<DocInfo[]>([]);
+  const [open, setOpen] = useState<DocInfo | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  const refresh = () =>
+    api
+      .listDocs(project.id)
+      .then((r) => {
+        setDocs(r.docs);
+        setErr(null);
+      })
+      .catch((e) => setErr(e.message));
+
+  useEffect(() => {
+    refresh();
+    const timer = setInterval(refresh, 4000);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project.id]);
+
+  const groups: { key: 'foundation' | 'references'; title: string }[] = [
+    { key: 'foundation', title: 'Foundation' },
+    { key: 'references', title: 'References' },
+  ];
+
+  return (
+    <div className="kx-docs">
+      {err && <div className="kx-error">{err}</div>}
+      {groups.map((g) => (
+        <section key={g.key}>
+          <h2 className="kx-doc-group">{g.title}</h2>
+          {docs
+            .filter((d) => d.group === g.key)
+            .map((d) => (
+              <button key={d.rel} className="kx-doc-row" onClick={() => setOpen(d)}>
+                <span className="kx-doc-name">{d.name}</span>
+                {d.author && <span className="kx-doc-author mono">{d.author}</span>}
+                <span className="kx-doc-spacer" />
+                {d.upstreamChanged && <span className="kx-doc-warn">upstream changed</span>}
+                <StatusBadge doc={d} />
+              </button>
+            ))}
+        </section>
+      ))}
+      <DocDrawer
+        project={project}
+        doc={open}
+        onClose={() => setOpen(null)}
+        onChanged={refresh}
+      />
+    </div>
   );
 }
 

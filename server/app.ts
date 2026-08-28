@@ -5,6 +5,9 @@ import { join } from 'node:path';
 import { createProject, listProjects, removeProject } from './projects.js';
 import { cancelRequest, createRequest, listRequests } from './requests.js';
 import { handleMcpRequest } from './mcp.js';
+import { docPath, listDocs, setFrontmatterStatus } from './docs.js';
+import { readFileSync, writeFileSync } from 'node:fs';
+import type { Project } from './db.js';
 
 export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string): express.Express {
   const app = express();
@@ -53,6 +56,57 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
 
   app.post('/api/requests/:id/cancel', (req, res) => {
     res.json({ cancelled: cancelRequest(db, Number(req.params.id)) });
+  });
+
+  const projectOr404 = (id: string, res: express.Response): Project | undefined => {
+    const p = db.prepare('SELECT * FROM projects WHERE id = ?').get(Number(id)) as
+      | Project
+      | undefined;
+    if (!p) res.status(404).json({ error: 'project not found' });
+    return p;
+  };
+
+  app.get('/api/projects/:id/docs', (req, res) => {
+    const project = projectOr404(req.params.id, res);
+    if (!project) return;
+    res.json({ docs: listDocs(db, project, pkgRoot) });
+  });
+
+  app.get('/api/projects/:id/docs/content', (req, res) => {
+    const project = projectOr404(req.params.id, res);
+    if (!project) return;
+    try {
+      const rel = String(req.query.rel ?? '');
+      res.json({ rel, content: readFileSync(docPath(project, rel), 'utf8') });
+    } catch (err) {
+      res.status(400).json({ error: (err as Error).message });
+    }
+  });
+
+  // Direct edit from the drawer — writes the file as-is.
+  app.put('/api/projects/:id/docs/content', (req, res) => {
+    const project = projectOr404(req.params.id, res);
+    if (!project) return;
+    const { rel, content } = req.body ?? {};
+    try {
+      writeFileSync(docPath(project, String(rel)), String(content ?? ''), 'utf8');
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(400).json({ error: (err as Error).message });
+    }
+  });
+
+  // Prime approval: draft → approved (frontmatter is the source of truth).
+  app.post('/api/projects/:id/docs/approve', (req, res) => {
+    const project = projectOr404(req.params.id, res);
+    if (!project) return;
+    const { rel } = req.body ?? {};
+    try {
+      setFrontmatterStatus(docPath(project, String(rel)), 'approved');
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(400).json({ error: (err as Error).message });
+    }
   });
 
   // MCP over streamable HTTP (stateless): agents connect with

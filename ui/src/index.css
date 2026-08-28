@@ -1364,3 +1364,46 @@ body {
 .kx-req-type { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; padding: 2px 7px; border-radius: 5px; background: var(--bg-muted); color: var(--fg-mid); flex-shrink: 0; }
 .kx-req-payload { flex: 1; font-size: 11.5px; color: var(--fg-mid); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .kx-req-when { font-size: 10.5px; color: var(--fg-faint); font-family: var(--font-mono); flex-shrink: 0; }
+
+/* E3 — documents tab + doc drawer */
+.kx-docs { display: flex; flex-direction: column; gap: 18px; }
+.kx-doc-group { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--fg-faint); margin-bottom: 8px; }
+.kx-doc-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--card); cursor: pointer; text-align: left; margin-bottom: 5px; font-family: inherit; transition: border-color var(--speed) var(--ease); }
+.kx-doc-row:hover { border-color: var(--border-strong); background: var(--bg-hover); }
+.kx-doc-name { font-size: 13px; font-weight: 550; color: var(--fg); }
+.kx-doc-author { font-size: 10.5px; color: var(--fg-faint); }
+.kx-doc-spacer { flex: 1; }
+.kx-doc-warn { font-size: 10px; color: var(--amber, #b45309); background: rgba(217,119,6,.1); padding: 2px 7px; border-radius: 5px; }
+.kx-status { font-size: 10.5px; font-weight: 600; padding: 2px 8px; border-radius: 6px; background: var(--bg-muted); color: var(--fg-mid); }
+.kx-status-approved { background: rgba(52,146,90,.12); color: var(--green, #34925a); }
+.kx-status-draft { background: rgba(59,113,202,.1); color: var(--accent); }
+.kx-status-revision { background: rgba(204,107,107,.12); color: var(--red); }
+.kx-status-waiting { color: var(--fg-faint); }
+.kx-status-next { background: rgba(59,113,202,.08); color: var(--fg-mid); }
+.dr-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+.dr-title { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.dr-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.dr-body { flex: 1; overflow-y: auto; padding: 18px; }
+.dr-foot { border-top: 1px solid var(--border); padding: 12px 18px; display: flex; flex-direction: column; gap: 8px; background: var(--bg-subtle); }
+.kx-doc { display: flex; flex-direction: column; gap: 2px; font-size: 13.5px; line-height: 1.55; }
+.kx-block { padding: 2px 8px; border-radius: 5px; cursor: pointer; border-left: 2px solid transparent; }
+.kx-block:hover { background: var(--bg-hover); }
+.kx-block.selected { background: var(--accent-soft, rgba(59,113,202,.08)); border-left-color: var(--accent); }
+.kx-block.noted { border-left-color: var(--amber, #d97706); }
+.kx-h1 { font-size: 19px; font-weight: 650; margin: 10px 0 4px; }
+.kx-h2 { font-size: 16px; font-weight: 600; margin: 8px 0 3px; }
+.kx-h3 { font-size: 14px; font-weight: 600; margin: 6px 0 2px; }
+.kx-quote { color: var(--fg-mid); border-left: 3px solid var(--border-strong); padding-left: 10px; font-style: italic; }
+.kx-bullet::before { content: '•  '; color: var(--fg-faint); }
+.kx-code { font-family: var(--font-mono); font-size: 12px; background: var(--bg-inset); border: 1px solid var(--border); padding: 10px 12px; border-radius: var(--r-md); overflow-x: auto; white-space: pre; }
+.kx-table table { border-collapse: collapse; font-size: 12.5px; width: 100%; }
+.kx-table th, .kx-table td { border: 1px solid var(--border); padding: 5px 9px; text-align: left; }
+.kx-table th { background: var(--bg-muted); font-weight: 600; }
+.kx-blank { height: 8px; }
+.kx-editor { width: 100%; min-height: 60vh; font-size: 12.5px; line-height: 1.6; padding: 12px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--bg); color: var(--fg); resize: vertical; }
+.kx-notes { display: flex; flex-direction: column; gap: 5px; }
+.kx-note { display: flex; align-items: baseline; gap: 8px; font-size: 12px; padding: 6px 9px; background: var(--card); border: 1px solid var(--border); border-radius: var(--r-md); }
+.kx-note-exc { font-size: 10.5px; color: var(--fg-faint); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 0; }
+.kx-note-x { margin-left: auto; border: none; background: none; color: var(--fg-faint); cursor: pointer; font-size: 14px; }
+.kx-note-input { display: flex; gap: 6px; }
+.kx-note-input .kx-input { flex: 1; }

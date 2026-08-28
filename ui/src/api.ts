@@ -25,8 +25,33 @@ export interface KortextRequest {
   completed_at: string | null;
 }
 
+export interface DocInfo {
+  rel: string;
+  group: 'foundation' | 'references';
+  name: string;
+  status: string;
+  author: string | null;
+  inputs: string[];
+  blocked: boolean;
+  revisionPending: boolean;
+  upstreamChanged: boolean;
+}
+
 export const api = {
   listProjects: () => req<{ projects: Project[] }>('/api/projects'),
+  listDocs: (projectId: number) => req<{ docs: DocInfo[] }>(`/api/projects/${projectId}/docs`),
+  docContent: (projectId: number, rel: string) =>
+    req<{ content: string }>(`/api/projects/${projectId}/docs/content?rel=${encodeURIComponent(rel)}`),
+  saveDoc: (projectId: number, rel: string, content: string) =>
+    req<{ ok: boolean }>(`/api/projects/${projectId}/docs/content`, {
+      method: 'PUT',
+      body: JSON.stringify({ rel, content }),
+    }),
+  approveDoc: (projectId: number, rel: string) =>
+    req<{ ok: boolean }>(`/api/projects/${projectId}/docs/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ rel }),
+    }),
   createProject: (input: { name: string; repoPath: string; mode: 'new' | 'existing' }) =>
     req<{ project: Project }>('/api/projects', { method: 'POST', body: JSON.stringify(input) }),
   removeProject: (id: number) => req<{ removed: boolean }>(`/api/projects/${id}`, { method: 'DELETE' }),

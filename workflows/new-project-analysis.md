@@ -46,6 +46,7 @@
    - activity: Auth ve secret yönetimi kuruldu. Güvenli geliştirme kuralları belirlendi.
    - inputs: `.kortext/references/STACK.md`
    - outputs: `.kortext/references/SECURITY.md`
+   - approver: +prime
 
 3. **+designer:** `DESIGN.md` üret. PRD + CONTENT + STACK'ten: renk paleti, tipografi, bileşen ilkeleri, responsive davranış, erişilebilirlik, temel UI kuralları.
    - label: DESIGN.md
@@ -59,24 +60,28 @@
    - activity: Veritabanı şeması oluşturuldu. Tablolar ve ilişkiler belirlendi.
    - inputs: `.kortext/foundation/PRD.md`, `.kortext/references/SECURITY.md`, `.kortext/references/GLOSSARY.md`, `.kortext/references/STRUCTURE.md`, `.kortext/references/STACK.md`
    - outputs: `.kortext/references/DATABASE.md`
+   - approver: +prime
 
 5. **+engineering-manager:** `API.md` üret. Endpoint listesi, request/response modelleri, hata formatları, yetkilendirme gereksinimleri, veri akışı.
    - label: API.md
    - activity: Endpoint'ler tanımlandı. Request/response modelleri çıkarıldı.
    - inputs: `.kortext/foundation/PRD.md`, `.kortext/references/SECURITY.md`, `.kortext/references/GLOSSARY.md`, `.kortext/references/STRUCTURE.md`, `.kortext/references/STACK.md`, `.kortext/references/DATABASE.md`
    - outputs: `.kortext/references/API.md`
+   - approver: +prime
 
 6. **+engineering-manager:** `TRD.md` konsolide et. STACK + STRUCTURE + GLOSSARY + SECURITY + DATABASE + API + DESIGN çıktıları + mühendislik kararları tek raporda birleştir.
    - label: TRD.md
    - activity: Teknik kararlar tek raporda birleştirildi.
    - inputs: `.kortext/foundation/PRD.md`, `.kortext/references/SECURITY.md`, `.kortext/references/GLOSSARY.md`, `.kortext/references/STRUCTURE.md`, `.kortext/references/STACK.md`, `.kortext/references/DATABASE.md`, `.kortext/references/API.md`, `.kortext/references/DESIGN.md`
    - outputs: `.kortext/foundation/TRD.md`
+   - approver: +prime
 
 7. **+qa-engineer:** `TEST.md` üret. PRD + TRD'den: test türleri, kritik kullanıcı akışları, otomasyon kapsamı, manuel QA, kabul kriterleri, release kalite kapıları.
    - label: TEST.md
    - activity: Test türleri ve kalite kapıları belirlendi.
    - inputs: `.kortext/foundation/PRD.md`, `.kortext/foundation/TRD.md`
    - outputs: `.kortext/references/TEST.md`
+   - approver: +prime
 
 ## Konsolidasyon
 
