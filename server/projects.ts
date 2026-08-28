@@ -69,7 +69,7 @@ export function listProjects(db: Database.Database): Project[] {
 
 export function createProject(
   db: Database.Database,
-  input: { name: string; repoPath: string; mode: 'new' | 'existing' },
+  input: { name: string; repoPath: string; mode: 'new' | 'existing'; brief?: string },
   pkgRoot: string,
 ): Project {
   const name = input.name.trim();
@@ -81,6 +81,16 @@ export function createProject(
   }
   if (input.mode === 'new') mkdirSync(repoPath, { recursive: true });
   scaffoldProject(repoPath, pkgRoot);
+  const brief = input.brief?.trim();
+  if (brief) {
+    // The prime wrote (or uploaded) the brief in the add form — it replaces the
+    // BRD template body and goes straight to draft, ready for approval.
+    writeFileSync(
+      join(repoPath, BRIEF_REL),
+      `---\nstatus: draft\nauthor: +prime\napprover: +prime\n---\n\n${brief}\n`,
+      'utf8',
+    );
+  }
   const row = db
     .prepare('INSERT INTO projects (name, repo_path) VALUES (?, ?) RETURNING *')
     .get(name, repoPath) as Project;

@@ -67,3 +67,10 @@ test('plan gate rel (memory/TODO.md) passes docPath guard', () => {
   assert.ok(docPath(p, 'memory/TODO.md').endsWith('/.kortext/memory/TODO.md'));
   rmSync(work, { recursive: true, force: true });
 });
+
+test('parsePickedPath: trims, strips trailing slash, null on cancel/empty', async () => {
+  const { parsePickedPath } = await import('../server/pick-directory.js');
+  assert.equal(parsePickedPath('/Users/x/proj/\n', 0), '/Users/x/proj');
+  assert.equal(parsePickedPath('', 0), null);
+  assert.equal(parsePickedPath('/Users/x\n', 1), null);
+});

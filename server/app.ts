@@ -7,6 +7,7 @@ import { cancelRequest, createRequest, listRequests } from './requests.js';
 import { handleMcpRequest } from './mcp.js';
 import { docPath, listDocs, setFrontmatterStatus } from './docs.js';
 import { generateChangeReport, listReports } from './reports.js';
+import { pickDirectoryNative } from './pick-directory.js';
 import { readFileSync, writeFileSync } from 'node:fs';
 import type { Project } from './db.js';
 
@@ -23,17 +24,23 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   });
 
   app.post('/api/projects', (req, res) => {
-    const { name, repoPath, mode } = req.body ?? {};
+    const { name, repoPath, mode, brief } = req.body ?? {};
     try {
       const project = createProject(
         db,
-        { name, repoPath, mode: mode === 'new' ? 'new' : 'existing' },
+        { name, repoPath, mode: mode === 'new' ? 'new' : 'existing', brief },
         pkgRoot,
       );
       res.status(201).json({ project });
     } catch (err) {
       res.status(400).json({ error: (err as Error).message });
     }
+  });
+
+  // Native folder chooser (macOS osascript; other platforms return null and
+  // the UI falls back to a typed path).
+  app.post('/api/pick-directory', (_req, res) => {
+    void pickDirectoryNative().then((path) => res.json({ path }));
   });
 
   app.delete('/api/projects/:id', (req, res) => {

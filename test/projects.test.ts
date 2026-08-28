@@ -50,3 +50,15 @@ test('duplicate repo_path is rejected by the registry', () => {
   assert.throws(() => createProject(db, { name: 'Two', repoPath: repo, mode: 'existing' }, pkgRoot));
   rmSync(work, { recursive: true, force: true });
 });
+
+test('brief from the add form replaces BRD body as prime-authored draft', () => {
+  const work = tempDir();
+  const db = openDb(join(work, 'db.sqlite'));
+  const repo = join(work, 'brf');
+  createProject(db, { name: 'Brf', repoPath: repo, mode: 'new', brief: '# Acme\n\nKüçük CRM.' }, pkgRoot);
+  const body = readFileSync(join(repo, BRIEF_REL), 'utf8');
+  assert.match(body, /status: draft/);
+  assert.match(body, /author: \+prime/);
+  assert.match(body, /Küçük CRM/);
+  rmSync(work, { recursive: true, force: true });
+});

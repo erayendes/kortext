@@ -1425,3 +1425,12 @@ body {
 .kx-plan-cta .btn { align-self: flex-start; }
 .kx-plan-ready { display: flex; flex-direction: column; gap: 8px; }
 .kx-plan-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--card); }
+
+/* Add-project: browse + brief */
+.kx-form { max-width: 640px; }
+.kx-path { flex: 1; }
+.kx-brief { display: flex; flex-direction: column; gap: 6px; }
+.kx-brief-head { display: flex; align-items: center; justify-content: space-between; }
+.kx-brief-text { min-height: 180px; font-size: 12.5px; }
+.kx-upload { position: relative; overflow: hidden; cursor: pointer; display: inline-flex; align-items: center; }
+.kx-upload input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }

@@ -66,15 +66,51 @@ export function App() {
   );
 }
 
+const BRIEF_EXAMPLE = `# Acme CRM
+
+## Ne yapıyoruz
+Küçük ekipler için basit bir CRM: müşteri kartları, görüşme notları, hatırlatmalar.
+
+## Kimin için
+5-20 kişilik satış ekipleri; teknik olmayan kullanıcılar.
+
+## Kapsam
+- Müşteri listesi + detay kartı
+- Görüşme notu ekleme
+- Hatırlatma (e-posta)
+MVP: en fazla 8 item.
+
+## Kapsam dışı
+Faturalama, telefon entegrasyonu.`;
+
 function AddProject({ onDone, onCancel }: { onDone: () => void; onCancel: () => void }) {
   const [mode, setMode] = useState<'new' | 'existing'>('existing');
   const [name, setName] = useState('');
   const [repoPath, setRepoPath] = useState('');
+  const [brief, setBrief] = useState('');
   const [err, setErr] = useState<string | null>(null);
+
+  const slug = (s: string) =>
+    s
+      .toLowerCase()
+      .replace(/[çğıöşü]/g, (c) => ('cgiosu'['çğıöşü'.indexOf(c)] ?? c))
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'project';
+
+  const browse = async () => {
+    const { path } = await api.pickDirectory();
+    if (!path) return; // cancelled or unsupported platform — keep typing
+    setRepoPath(mode === 'new' ? `${path}/${slug(name)}` : path);
+  };
+
+  const uploadBrief = (file: File | undefined) => {
+    if (!file) return;
+    file.text().then(setBrief);
+  };
 
   const submit = async () => {
     try {
-      await api.createProject({ name, repoPath, mode });
+      await api.createProject({ name, repoPath, mode, brief: brief || undefined });
       onDone();
     } catch (e) {
       setErr((e as Error).message);
@@ -100,12 +136,45 @@ function AddProject({ onDone, onCancel }: { onDone: () => void; onCancel: () => 
         value={name}
         onChange={(e) => setName(e.target.value)}
       />
-      <input
-        className="kx-input mono"
-        placeholder={mode === 'new' ? 'Folder to create (absolute path)' : 'Repo path (absolute)'}
-        value={repoPath}
-        onChange={(e) => setRepoPath(e.target.value)}
-      />
+      <div className="kx-form-row">
+        <input
+          className="kx-input mono kx-path"
+          placeholder={mode === 'new' ? 'Folder to create (pick parent with Browse)' : 'Repo path (absolute)'}
+          value={repoPath}
+          onChange={(e) => setRepoPath(e.target.value)}
+        />
+        <button className="btn" onClick={browse}>
+          Browse…
+        </button>
+      </div>
+      <div className="kx-brief">
+        <div className="kx-brief-head">
+          <span className="kx-cmd-title">Brief (BRD)</span>
+          <div className="kx-form-row">
+            <button className="btn btn-sm" onClick={() => setBrief(BRIEF_EXAMPLE)}>
+              Insert example
+            </button>
+            <label className="btn btn-sm kx-upload">
+              Upload .md
+              <input
+                type="file"
+                accept=".md,.txt,text/markdown,text/plain"
+                onChange={(e) => uploadBrief(e.target.files?.[0])}
+              />
+            </label>
+          </div>
+        </div>
+        <textarea
+          className="kx-editor kx-brief-text"
+          placeholder="Projenin brief'ini buraya yaz: ne yapıyoruz, kimin için, kapsam, kapsam dışı… (Boş bırakırsan sonra Documents'tan doldurursun.)"
+          value={brief}
+          onChange={(e) => setBrief(e.target.value)}
+        />
+        <span className="kx-cmd-hint">
+          Saved as .kortext/foundation/BRD.md (draft) — you approve it from Documents, then connect
+          your agent.
+        </span>
+      </div>
       {err && <div className="kx-error">{err}</div>}
       <div className="kx-form-row">
         <button className="btn btn-primary" onClick={submit}>
