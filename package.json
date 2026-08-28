@@ -4,6 +4,18 @@
   "description": "Project brain for AI-driven development — brief to analysis docs, approvals, and reports. Passive: your own coding agent does the work.",
   "type": "module",
   "private": false,
+  "bin": {
+    "kortext": "./bin/kortext.js"
+  },
+  "files": [
+    "bin/",
+    "dist/",
+    "ui/dist/",
+    "templates/",
+    "workflows/",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/erayendes/kortext.git"
@@ -13,10 +25,12 @@
     "url": "https://github.com/erayendes/kortext/issues"
   },
   "scripts": {
-    "dev": "echo 'v1.0 rebuild in progress — server skeleton lands in E1 (see dev/TODO.md)'",
-    "build": "echo 'v1.0 rebuild in progress — build lands in E1 (see dev/TODO.md)'",
-    "typecheck": "echo 'v1.0 rebuild in progress — no source yet (E1)'",
-    "test": "echo 'v1.0 rebuild in progress — no tests yet (E1)'"
+    "dev": "tsx watch --clear-screen=false server/index.ts --no-open",
+    "dev:web": "npm --prefix ui run dev",
+    "build": "tsc -p tsconfig.json && npm --prefix ui run build",
+    "typecheck": "tsc -p tsconfig.json --noEmit && npm --prefix ui run typecheck",
+    "test": "tsx --test test/*.test.ts",
+    "prepack": "npm run build"
   },
   "keywords": [
     "ai",
@@ -33,5 +47,16 @@
   "license": "MIT",
   "engines": {
     "node": ">=22.0.0"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.10.0",
+    "express": "^5.0.1"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
   }
 }
