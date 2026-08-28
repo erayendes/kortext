@@ -1,25 +1,9 @@
 {
   "name": "kortext",
   "version": "3.1.0",
-  "description": "Autonomous AI agent runtime — TypeScript + SQLite + React",
+  "description": "Project brain for AI-driven development — brief to analysis docs, approvals, and reports. Passive: your own coding agent does the work.",
   "type": "module",
   "private": false,
-  "bin": {
-    "kortext": "./bin/kortext.js"
-  },
-  "files": [
-    "bin/",
-    "dist/",
-    "agents/",
-    "workflows/",
-    "rules/",
-    "workspace/",
-    "scripts/",
-    "AGENTS.md",
-    "CHANGELOG.md",
-    "USER-GUIDE.md",
-    "LICENSE"
-  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/erayendes/kortext.git"
@@ -29,75 +13,25 @@
     "url": "https://github.com/erayendes/kortext/issues"
   },
   "scripts": {
-    "dev": "concurrently -n server,web -c blue,magenta \"npm:dev:server\" \"npm:dev:web\"",
-    "dev:server": "tsx watch --clear-screen=false server/index.ts",
-    "dev:web": "vite",
-    "build": "npm run build:server && npm run build:web",
-    "build:server": "tsc -p tsconfig.build.json && node scripts/copy-migrations.mjs",
-    "build:web": "vite build",
-    "preview": "vite preview",
-    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.server.json --noEmit",
-    "lint": "eslint .",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "postinstall": "node scripts/postinstall.mjs"
+    "dev": "echo 'v1.0 rebuild in progress — server skeleton lands in E1 (see dev/TODO.md)'",
+    "build": "echo 'v1.0 rebuild in progress — build lands in E1 (see dev/TODO.md)'",
+    "typecheck": "echo 'v1.0 rebuild in progress — no source yet (E1)'",
+    "test": "echo 'v1.0 rebuild in progress — no tests yet (E1)'"
   },
   "keywords": [
     "ai",
     "agent",
-    "framework",
-    "automation",
+    "project-planning",
+    "analysis",
+    "documentation",
     "claude",
     "codex",
-    "gemini",
     "mcp",
-    "orchestration"
+    "local-first"
   ],
   "author": "Eray Endes",
   "license": "MIT",
   "engines": {
     "node": ">=22.0.0"
-  },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.4",
-    "@tanstack/react-router": "^1.170.7",
-    "better-sqlite3": "^12.10.0",
-    "dompurify": "^3.4.5",
-    "express": "^5.0.1",
-    "js-yaml": "^4.1.0",
-    "lucide-react": "^1.16.0",
-    "marked": "^18.0.4",
-    "zod": "^3.24.1"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9.18.0",
-    "@tailwindcss/vite": "^4.0.0",
-    "@tanstack/router-devtools": "^1.167.0",
-    "@types/better-sqlite3": "^7.6.12",
-    "@types/express": "^5.0.0",
-    "@types/js-yaml": "^4.0.9",
-    "@types/marked": "^5.0.2",
-    "@types/node": "^22.10.5",
-    "@types/react": "^19.0.2",
-    "@types/react-dom": "^19.0.2",
-    "@typescript-eslint/eslint-plugin": "^8.20.0",
-    "@typescript-eslint/parser": "^8.20.0",
-    "@vitejs/plugin-react": "^4.3.4",
-    "concurrently": "^9.1.2",
-    "eslint": "^9.18.0",
-    "eslint-config-prettier": "^10.0.1",
-    "eslint-plugin-react": "^7.37.4",
-    "eslint-plugin-react-hooks": "^5.1.0",
-    "globals": "^15.14.0",
-    "prettier": "^3.4.2",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "tailwindcss": "^4.0.0",
-    "tsx": "^4.19.2",
-    "typescript": "^5.7.2",
-    "vite": "^7.0.0",
-    "vitest": "^3.0.0"
   }
 }
