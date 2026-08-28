@@ -1,6 +1,6 @@
-# Kortext v1.0 — Architecture (hedef)
+# Kortext v1.0 — Architecture
 
-Bu dosya v1.0 yeniden inşasının **hedef** mimarisi (E0–E6 planı sürerken burada yaşar; E6'da `dev/ARCHITECTURE.md` olur). Eski v3.1 mimarisi: git geçmişi + [DECISIONS.md](../DECISIONS.md) Bölüm 18 gerekçesi. Eski kod referansı: `docs/codes/`.
+Bu dosya v1.0'ın kanonik mimari referansı (E0–E5'te inşa edildi, 2026-08-28). Eski v3.1 mimarisi: git geçmişi + [DECISIONS.md](./DECISIONS.md) Bölüm 18 gerekçesi. Eski kod referansı: `docs/codes/`.
 
 ---
 
@@ -37,7 +37,7 @@ Belgeler **projenin kendi reposunda** yaşar (`.kortext/foundation/`, `.kortext/
 
 - `workflows/` (3): new-project-analysis · existing-project-analysis · planning-pipeline — adımlar `inputs/outputs/approver` taşır; motor-dönemi adımları (model/persona ataması) E3/E5'te tıraşlanır, her adıma `approver: +prime` eklenir.
 - `templates/`: AGENTS.md tabanı · foundation (BRD/PRD/TRD/PFD) · references (STACK, SECURITY, API, …13) · reports (E4'te 4'e damıtılır) · backlogs · memory.
-- `agents/` (E2'de geri gelir): analiz-perspektifi çekirdek personalar (~11, Eray onaylı liste). `rules/` yok — özü AGENTS.md içinde.
+- `agents/` (11, Eray onaylı): compliance-expert, growth-expert, product-manager, copywriter, engineering-manager, security-engineer, designer, db-admin, qa-engineer, operation-manager, devops-engineer. `rules/` yok — özü AGENTS.md içinde.
 
 ## 5. Sınırlar (bilinçli YOK'lar)
 

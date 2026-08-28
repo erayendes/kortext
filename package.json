@@ -13,6 +13,7 @@
     "ui/dist/",
     "templates/",
     "workflows/",
+    "agents/",
     "LICENSE",
     "CHANGELOG.md"
   ],

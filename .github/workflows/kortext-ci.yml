@@ -28,23 +28,17 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci && npm --prefix ui ci
 
-      - name: Lint
-        run: npm run lint
-
-      - name: Typecheck (frontend + server)
+      - name: Typecheck (server + panel)
         run: npm run typecheck
 
-      - name: Test (vitest run)
+      - name: Test (node:test)
         run: npm test
 
-      - name: Build (server + web)
+      - name: Build (server + panel)
         run: npm run build
 
-      # Sanity smoke: the compiled CLI must run on a clean machine.
-      # build-verification.test.ts covers the same path inside vitest;
-      # the explicit step protects against the "build succeeded but
-      # binary broken" failure mode if the test ever gets reorganised.
-      - name: Smoke (compiled CLI version)
-        run: node dist/bin/kortext.js --version
+      # Sanity smoke: the compiled entry must load on a clean machine.
+      - name: Smoke (compiled CLI help)
+        run: node dist/index.js --help

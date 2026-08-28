@@ -1,187 +1,99 @@
 # Kortext
 
-**Autonomous AI agent runtime — TypeScript + SQLite + React + MCP**
+**The project brain for AI-driven development.** Kortext turns a brief into an
+approved analysis foundation — then your own coding agent (Claude Code, Codex,
+Gemini CLI…) does the work. Kortext never launches agents, never calls an LLM,
+never holds an API key. It defines the process, watches the documents, queues
+your requests, and shows you reports.
 
-[![CI](https://github.com/erayendes/kortext/actions/workflows/kortext-ci.yml/badge.svg)](https://github.com/erayendes/kortext/actions/workflows/kortext-ci.yml)
 [![npm](https://img.shields.io/npm/v/kortext.svg)](https://www.npmjs.com/package/kortext)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
-Kortext lets AI agent teams (Claude Code, Codex, Gemini CLI) run software
-projects autonomously. You write a blueprint and approve the gates that
-matter; the agents pick up tasks, write code, run tests, hand off between
-each other, and ship — with a real-time dashboard showing what they're
-doing.
+## How it works
 
----
-
-## What v3 gives you
-
-- **A TypeScript runtime**. Single `kortext` binary. Express 5 backend, React
-  19 + Tailwind v4 dashboard, `better-sqlite3` state store.
-- **A worker pool with per-task git worktrees**. Every task runs in its own
-  `.kortext/worktrees/run-<id>` branch. Failures get quarantined for
-  postmortem; successes can be merged.
-- **A blueprint-driven pipeline**. Flip `status: draft` → `status: approved`
-  in `workspace/references/blueprint.md` and the analysis → planning →
-  development → testing chain starts on its own.
-- **First-class approvals**. Critical gates queue into `pending_questions`;
-  the dashboard rings a bell, a toast pops, Slack / Telegram fires. Answer
-  from the UI, the CLI, or an MCP client.
-- **An MCP server**. 15 tools over stdio (for Claude Code / Cursor) and SSE
-  (for the dashboard or remote clients).
-- **263 tests**, GitHub Actions CI on every push and PR.
-
----
+1. **Brief.** Add a project in the panel — Kortext scaffolds `.kortext/` into
+   the repo with a BRD (the brief), document skeletons, workflows, personas,
+   and an `AGENTS.md` contract at the root. You fill the brief and approve it.
+2. **Analysis.** Copy the one-liner from the Connect tab into your agent.
+   The agent follows the contract: it writes each analysis document
+   (PRD, STACK, SECURITY, API, DESIGN, …) in dependency order — a document
+   whose inputs you haven't approved is never written. Every document lands
+   as `draft`; you approve, annotate, or request revisions from the panel.
+3. **Plan — only if you ask.** By default there are no tasks. Hit
+   "Kopeng'e aktar" and the agent produces `backlog.yaml` (a frozen,
+   machine-readable export contract) and a consolidated `TODO.md` you approve.
+4. **Track.** Your agent develops from `TODO.md` (or from
+   [kopeng](https://github.com/erayendes/kopeng), the kanban companion that
+   consumes the same backlog format). Kortext stays the brain: documents and
+   reports. Reports are user-triggered — a deterministic change report, plus
+   risk and decision summaries written by your agent on request.
 
 ## Quick start
 
-Requires **Node ≥ 22** and **Git ≥ 2.30**.
+Requires **Node ≥ 22**.
 
-```bash
-# Install
+```sh
 npm install -g kortext
-
-# Scaffold a v3 project (idempotent — safe to re-run)
-mkdir my-product && cd my-product
-kortext init
-
-# Edit the blueprint
-$EDITOR workspace/references/blueprint.md
-# (set `status: approved` in the YAML frontmatter when ready)
-
-# Start the runtime (backend + dashboard)
-kortext serve
-# → backend: http://localhost:3200
-# → dashboard: http://localhost:5173
+kortext
 ```
 
-When the blueprint flips to `approved`, the orchestrator triggers the
-analysis workflow automatically. Watch the dashboard, answer any approval
-prompts that surface in the bell menu, and the rest runs on its own.
+The server starts on port **4200** (`--port` to change) and opens the panel. Data lives in one global SQLite database at
+`~/.kortext/kortext.db` (`--db` to override) — one database, multiple projects.
 
----
+Connect your agent (once per machine):
 
-## CLI surface
-
-```
-kortext init [--force]                  scaffold .kortext/, agents/, workflows/, rules/, workspace/
-kortext serve [--mode=auto|dev|prod]    backend + dashboard
-kortext start <workflow-id> [--executor=mock|claude|codex|gemini]
-kortext approve <run-id> [answer]       respond to a pending question
-kortext status                          recent runs + open questions
-kortext logs [--limit=N] [--actor=…] [--action=…]
-kortext cleanup [--quarantine-older-than=Nd] [--branches] [--dry-run]
-kortext doctor                          workflow / persona / lock consistency
-kortext mcp                             stdio MCP server (for Claude Code / Cursor)
-kortext --help | --version
+```sh
+claude mcp add --transport http kortext http://localhost:4200/mcp
 ```
 
----
+Then, per project, paste the command the Connect tab gives you:
 
-## Architecture
-
-```
-┌──────────────────────────────────────────────────────────────────────┐
-│  React Dashboard (Vite + TanStack Router + Tailwind v4)              │
-│  Dashboard · Board · Memory · Reports · References · Settings        │
-└────────────────────┬─────────────────────────────────────────────────┘
-                     │  HTTP / WebSocket
-┌────────────────────▼─────────────────────────────────────────────────┐
-│  Express 5 backend                                                    │
-│  /api/runs · /api/handovers · /api/backlog · /api/personas (GET/PUT)  │
-│  /api/workflows · /api/doctor · /api/docs/:scope · /api/questions     │
-│  /mcp/sse · /mcp/messages         ┌──────────────────────────┐        │
-└─────────────────┬─────────────────┤  MCP server (15 tools)   │        │
-                  │                 │  stdio · SSE             │        │
-                  │                 └──────────────────────────┘        │
-┌─────────────────▼─────────────────────────────────────────────────────┐
-│  Orchestrator                                                          │
-│  Blueprint watcher · Pipeline chainer · Approval queue · Dispatcher    │
-└─────────────────┬──────────────────────────────────────────────────────┘
-                  │
-┌─────────────────▼─────────────────────────────────────────────────────┐
-│  Pipeline engine                                                       │
-│  Workflow parser · DAG builder · Worker pool · Gate enforcer · Safety  │
-└──────┬─────────────────────────────────────────────────────┬───────────┘
-       │                                                     │
-┌──────▼──────────────────────┐               ┌──────────────▼──────────┐
-│  Per-run git worktrees      │               │  SQLite state           │
-│  .kortext/worktrees/run-<id>│               │  .kortext/kortext.db    │
-│  branch kortext/run-<id>    │               │  13 tables · WAL mode   │
-└──────┬──────────────────────┘               └─────────────────────────┘
-       │
-┌──────▼─────────────────────────────────────────────────────────────────┐
-│  CLI executors                                                          │
-│  Claude Code · Codex · Gemini CLI (shell-free spawn, stdin prompts)     │
-└─────────────────────────────────────────────────────────────────────────┘
+```sh
+cd /path/to/project && claude "Read AGENTS.md and start the analysis."
 ```
 
-See [docs/architecture.md](https://github.com/erayendes/kortext/blob/main/docs/pending-update/ARCHITECTURE.md) for the long form (SQLite
-schema, DAG semantics, worker-pool concurrency rules).
+## Concepts
 
----
+- **Passive by design.** Kortext is a mirror and a queue, not an orchestrator.
+  The agent reads state from files, you approve from the panel, and the two
+  meet in the repo.
+- **Files are the source of truth.** Documents live in the project repo under
+  `.kortext/` with a `status` frontmatter (`uninitialized → draft → approved`).
+  The panel and the agent read the same files; delete the Kortext registry and
+  your project loses nothing.
+- **Dependency-gated analysis.** Workflow steps declare `inputs`/`outputs`/
+  `approver`; a document is written only after everything it builds on is
+  approved by you.
+- **Requests queue.** Revision notes, report asks, and the planning trigger
+  wait in a queue the agent drains over MCP (`get_pending_requests` /
+  `complete_request`) at the start of every step.
+- **Tasks are opt-in.** Planning runs only when you ask for the Kopeng
+  transfer. The `backlog.yaml` schema (versions → epics → tasks,
+  `assignee: ai | prime`, `blocked_by`) is frozen so external tools — kopeng
+  first — can consume it.
 
-## Project layout
+## Panel
 
+- **Documents** — the analysis map with live statuses; open a document to
+  read, annotate a line, request a revision, edit directly, or approve.
+- **Plan** — the opt-in transfer: queue planning, then review and approve
+  `TODO.md`.
+- **Reports** — Change (instant, deterministic), Risk & Recommendations and
+  Decision Summary (written by your agent on request), Progress (arrives with
+  the live Kopeng integration).
+- **Connect** — copy-paste commands for your agent and the pending-request
+  queue.
+
+## Development
+
+```sh
+npm install && npm --prefix ui install
+npm run dev        # server on :4200 (tsx watch)
+npm run dev:web    # vite panel on :5300, proxies /api
+npm test           # node:test suite
+npm run typecheck
+npm run build
 ```
-your-project/
-├── AGENTS.md                       # AI runtime pointer (generated)
-├── .kortext/
-│   ├── kortext.db                  # SQLite state
-│   └── worktrees/                  # per-run git worktrees
-├── workspace/
-│   └── references/
-│       └── blueprint.md            # ← you fill this in
-├── agents/                         # 14 persona markdowns
-├── workflows/                      # 12 workflow markdowns
-└── rules/                          # behavior, branching, commands, emergency, models
-```
-
-Personas, workflows, and rules are **markdown** — edit them in any editor or
-in the dashboard. SQLite holds the runtime state (runs, backlog, audit log,
-approvals).
-
----
-
-## Integrations
-
-### Claude Code
-
-```bash
-claude mcp add kortext -- npx kortext mcp
-```
-
-Once added, Claude Code can call `start_pipeline`, `list_pending_questions`,
-`approve_blueprint`, and 12 other tools directly.
-
-### Slack / Telegram
-
-Set `SLACK_WEBHOOK_URL` and / or `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` in
-your environment. The dispatcher dedupes notifications and posts on:
-
-- Blueprint approval
-- Pipeline start / completion
-- Step failure
-- Pending question waiting for `+prime`
-
----
-
-## Documentation
-
-- [User Guide](./USER-GUIDE.md) — full walkthrough of the autonomous flow
-- [Architecture](https://github.com/erayendes/kortext/blob/main/docs/pending-update/ARCHITECTURE.md) — schema, engine, MCP, dashboard
-- [Changelog](./CHANGELOG.md) — release notes
-
----
-
-## Requirements
-
-- Node ≥ 22.0.0
-- Git ≥ 2.30 (worktree subcommands)
-- One of: Claude Code, Codex, or Gemini CLI installed and on `$PATH`
-  (or use `--executor=mock` for dry runs)
-
----
 
 ## License
 

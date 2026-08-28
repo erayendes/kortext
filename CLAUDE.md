@@ -1,8 +1,8 @@
-# Kortext v3 — Developer Brief (code side)
+# Kortext v1.0 — Developer Brief (code side)
 
 ## What this folder is
 
-Kortext'in npm paketi (`erayendes/kortext`) + GitHub repo'su. TypeScript runtime + React dashboard + SQLite + worker pool. **Tek kaynak** — eskiden `_docbase/kortext/` ile sync edilen markdown içerikleri (personas, workflows, rules, templates) artık doğrudan burada düzenlenir.
+Kortext'in npm paketi (`erayendes/kortext`) + GitHub repo'su. **Pasif proje beyni:** brief → analiz belgeleri → onay → rapor; işi kullanıcının kendi coding ajanı yapar (AGENTS.md kontratı), görevler opsiyonel Kopeng aktarımıyla. Express + SQLite (global `~/.kortext/`) + React panel + MCP. Orkestrasyon YOK — eski v3 motoru `docs/codes/` arşivinde (karar: dev/DECISIONS.md Bölüm 18).
 
 ## User profile
 
@@ -19,8 +19,9 @@ Eray is a non-coder, communicates in Turkish, code / commits / comments in Engli
 "UAT senaryosu" / "kullanıcı testi"                → dev/UAT.md
 "wireframe / mockup / concept" (HTML)              → dev/concepts/
 "Claude için kural / mapping / behavior"           → CLAUDE.md (bu dosya)
-Kod (feature / bug fix / refactor)                 → src/  server/  bin/  mcp/  tests/
-Persona / workflow / rule / template düzenleme     → agents/  workflows/  rules/  templates/
+Kod (feature / bug fix / refactor)                 → server/  ui/  bin/  test/
+Persona / workflow / template düzenleme            → agents/  workflows/  templates/
+Eski v3 kodu (salt referans, düzenleme YOK)        → docs/codes/
 ```
 
 > **Doküman yeri (2026-06-17):** tüm geliştirici dokümanları `dev/`'da. Canlı: `dev/{DECISIONS,DESIGN,HANDOVER,TODO,UAT}.md`. Güncellenmeyi bekleyenler: `dev/pending-update/` (ARCHITECTURE, SETUP, USER-GUIDE, PRODUCT). Arşiv: `dev/{concepts,specs,superpowers}/`. `docs/` → Docusaurus public site için ayrıldı.
@@ -37,10 +38,11 @@ Detaylı mimari için [dev/pending-update/ARCHITECTURE.md](dev/pending-update/AR
 ## Build / dev / test commands
 
 ```bash
-npm install                   # install deps
-npm run dev                   # vite frontend + express backend (concurrent)
-npm test                      # vitest
-npm run build                 # production build
-npm run typecheck             # tsc --noEmit
-npm pack                      # build .tgz
+npm install && npm --prefix ui install   # install deps (root + panel)
+npm run dev                   # server :4200 (tsx watch, --no-open)
+npm run dev:web               # vite panel :5300 (proxy /api → 4200)
+npm test                      # node:test suite
+npm run build                 # tsc → dist/ + vite → ui/dist/
+npm run typecheck             # server + panel
+npm pack                      # build .tgz (prepack builds)
 ```

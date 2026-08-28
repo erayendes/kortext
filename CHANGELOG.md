@@ -6,6 +6,40 @@ All notable changes to Kortext are documented here. The format is based on
 
 ## [Unreleased]
 
+**v1.0 rebuild — the passive project brain.** Orchestration is gone by design:
+Kortext no longer launches agents, calls LLMs, or holds API keys. Your own
+coding agent (Claude Code, Codex, Gemini CLI) does the work; Kortext defines
+the process and watches the files. The v3 engine is archived under
+`docs/codes/` (git history keeps everything).
+
+### Added
+
+- **Global single server** (kopeng model): one SQLite DB at
+  `~/.kortext/kortext.db`, many projects; `kortext` opens the panel on :4200.
+- **AGENTS.md contract** scaffolded into every project: dependency-gated
+  analysis (a document is written only after its inputs are approved),
+  request-queue checks at every step, planning only on request, memory
+  discipline, distilled behavior constitution.
+- **MCP server** at `/mcp` (streamable HTTP, stateless):
+  `get_pending_requests`, `complete_request`, `get_project_context`.
+- **Documents panel**: dependency map from workflow `inputs/outputs`,
+  status badges, drawer with line-anchored notes, revision requests,
+  direct edit, prime approval.
+- **Plan tab**: tasks are opt-in — "Kopeng'e aktar" queues planning; the
+  agent produces `backlog.yaml` (frozen export schema: versions → epics →
+  tasks, `assignee: ai|prime`, `blocked_by`) + `TODO.md` as the approved
+  plan gate.
+- **Reports**: deterministic Change report (doc statuses + git log), agent
+  written Risk & Recommendations and Decision Summary on request; Progress
+  arrives with the live Kopeng integration.
+
+### Removed
+
+- The entire execution layer: orchestrator, worker pool, executors, gates,
+  worktrees, deploy/test cycles, Slack/Telegram notifications, model
+  assignment, 7 engine workflows, engine-era rules/ and report templates.
+  Personas trimmed to the 11 analysis authors.
+
 ## [3.1.0] - 2026-06-06
 
 **Onboarding overhaul + CLI redesign.** Single large release that bundles Phases
