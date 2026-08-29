@@ -3,9 +3,9 @@ import type Database from 'better-sqlite3';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { createProject, listProjects, removeProject, scaffoldProject } from './projects.js';
-import { cancelRequest, createRequest, listRequests } from './requests.js';
-import { handleMcpRequest } from './mcp.js';
-import { docPath, listDocs, setFrontmatterStatus } from './docs.js';
+import { cancelRequest, completeRequest, createRequest, listRequests } from './requests.js';
+import { PERSONAS, WORKFLOWS, handleMcpRequest } from './mcp.js';
+import { docPath, listDocs, setFrontmatterStatus, workflowNameFor } from './docs.js';
 import { generateChangeReport, listReports } from './reports.js';
 import { pickDirectoryNative } from './pick-directory.js';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -68,6 +68,48 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
 
   app.post('/api/requests/:id/cancel', (req, res) => {
     res.json({ cancelled: cancelRequest(db, Number(req.params.id)) });
+  });
+
+  app.post('/api/requests/:id/complete', (req, res) => {
+    res.json({ completed: completeRequest(db, Number(req.params.id)) });
+  });
+
+  // ---- Agent-facing REST fallback ------------------------------------------
+  // Mirrors the MCP tools over plain HTTP so an agent whose MCP connection
+  // isn't live yet (mcp add takes effect next session) can continue with curl.
+  app.get('/api/agent/context', (req, res) => {
+    const repoPath = String(req.query.repo_path ?? '');
+    const project = db.prepare('SELECT * FROM projects WHERE repo_path = ?').get(repoPath) as
+      | Project
+      | undefined;
+    if (!project) return res.status(404).json({ error: `no kortext project registered at ${repoPath}` });
+    res.json({
+      project,
+      docs: listDocs(db, project, pkgRoot).map((d) => ({
+        rel: d.rel,
+        status: d.status,
+        blocked: d.blocked,
+        revisionPending: d.revisionPending,
+      })),
+      pending_requests: listRequests(db, project.id, 'pending').map((r) => ({
+        id: r.id,
+        type: r.type,
+        payload: JSON.parse(r.payload),
+      })),
+      workflow: workflowNameFor(project.kind ?? 'new'),
+    });
+  });
+
+  app.get('/api/agent/workflow/:name', (req, res) => {
+    const name = req.params.name as (typeof WORKFLOWS)[number];
+    if (!WORKFLOWS.includes(name)) return res.status(404).json({ error: 'unknown workflow' });
+    res.type('text/markdown').send(readFileSync(join(pkgRoot, 'workflows', `${name}.md`), 'utf8'));
+  });
+
+  app.get('/api/agent/persona/:handle', (req, res) => {
+    const handle = req.params.handle as (typeof PERSONAS)[number];
+    if (!PERSONAS.includes(handle)) return res.status(404).json({ error: 'unknown persona' });
+    res.type('text/markdown').send(readFileSync(join(pkgRoot, 'agents', `${handle}.md`), 'utf8'));
   });
 
   const projectOr404 = (id: string, res: express.Response): Project | undefined => {

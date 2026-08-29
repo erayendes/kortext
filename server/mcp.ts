@@ -9,8 +9,8 @@ import type { Project } from './db.js';
 import { completeRequest, listRequests } from './requests.js';
 import { listDocs, workflowNameFor } from './docs.js';
 
-const WORKFLOWS = ['new-project-analysis', 'existing-project-analysis', 'planning-pipeline'] as const;
-const PERSONAS = [
+export const WORKFLOWS = ['new-project-analysis', 'existing-project-analysis', 'planning-pipeline'] as const;
+export const PERSONAS = [
   'compliance-expert',
   'growth-expert',
   'product-manager',

@@ -95,3 +95,32 @@ test('MCP over HTTP: agent pulls pending requests and completes one', async () =
   server.close();
   rmSync(work, { recursive: true, force: true });
 });
+
+test('REST fallback mirrors MCP: context, workflow, persona, complete', async () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const repo = join(work, 'acme');
+  const p = createProject(db, { name: 'Acme', repoPath: repo, kind: 'existing' }, pkgRoot);
+  const req = createRequest(db, p.id, 'report', { report_type: 'risk' });
+
+  const app = buildApp(db, pkgRoot, join(work, 'db.sqlite'));
+  const server = app.listen(0);
+  const port = (server.address() as AddressInfo).port;
+  const base = `http://localhost:${port}`;
+
+  const ctx = await (await fetch(`${base}/api/agent/context?repo_path=${encodeURIComponent(repo)}`)).json();
+  assert.equal(ctx.workflow, 'existing-project-analysis');
+  assert.equal(ctx.pending_requests.length, 1);
+
+  const wf = await (await fetch(`${base}/api/agent/workflow/existing-project-analysis`)).text();
+  assert.match(wf, /ARCHITECTURE\.md/);
+  const persona = await (await fetch(`${base}/api/agent/persona/security-engineer`)).text();
+  assert.ok(persona.length > 100);
+  assert.equal((await fetch(`${base}/api/agent/workflow/evil`)).status, 404);
+
+  const done = await (await fetch(`${base}/api/requests/${req.id}/complete`, { method: 'POST' })).json();
+  assert.equal(done.completed, true);
+
+  server.close();
+  rmSync(work, { recursive: true, force: true });
+});

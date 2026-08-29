@@ -5,16 +5,24 @@
 > alır. **İşi sen yaparsın** (hangi model/araç olursan ol). Kortext sana iş dağıtmaz,
 > seni çalıştırmaz; sen bu sözleşmeye uyarsın, +prime (insan) panelden onaylar.
 
-## 0. Bağlantı (her oturumda bir kez)
+## 0. Bağlantı (her oturumda bir kez) — +prime'a SORMADAN kendin kur
 
-- Kortext MCP bağlıysa (`kortext` server) → **her fazın ve her adımın başında**
-  `get_pending_requests(repo_path: <bu reponun mutlak yolu>)` çağır. Bekleyen istek varsa
-  ÖNCE onları işle (§4), sonra kaldığın yere dön.
-- Süreç tanımları projede DEĞİL, Kortext'tedir: adımları `get_workflow(name)` ile,
-  yazar perspektifini `get_persona(handle)` ile çek. Genel durum: `get_project_context`.
-- MCP bağlı değilse +prime'a tek satır kurulum komutunu hatırlat:
-  `claude mcp add --transport http kortext http://localhost:4200/mcp`
-  (varsayılan port 4200; +prime farklıysa ona göre) — bağlantı olmadan süreç yürümez.
+Süreç tanımları projede DEĞİL, Kortext'tedir (varsayılan adres `http://localhost:4200`).
+İki erişim yolun var; **her fazın ve her adımın başında** bekleyen istekleri kontrol et:
+
+1. **MCP bağlıysa** (`kortext` server görünüyorsa): `get_pending_requests(repo_path)` ·
+   `get_project_context(repo_path)` · `get_workflow(name)` · `get_persona(handle)` ·
+   `complete_request(request_id)`.
+2. **MCP bağlı değilse — durma, +prime'a sorma:**
+   a. Sonraki oturumlar için hattı KENDİN kur (tek shell komutu):
+      `claude mcp add --transport http kortext http://localhost:4200/mcp`
+   b. Bu oturumda REST ile devam et (aynı bilgiler, curl yeter):
+      - durum + kuyruk + workflow adı: `GET /api/agent/context?repo_path=<mutlak yol>`
+      - süreç adımları: `GET /api/agent/workflow/<name>`
+      - persona perspektifi: `GET /api/agent/persona/<handle>`
+      - istek kapatma: `POST /api/requests/<id>/complete`
+   c. Kortext'e hiç ulaşamıyorsan (bağlantı hatası) ANCAK O ZAMAN dur ve +prime'a söyle:
+      panel açık olmayabilir (`kortext` komutu) ya da port farklı olabilir.
 
 ## 1. Kaynak gerçeği (source of truth) — `.kortext/`
 
@@ -54,7 +62,7 @@ TODO.md onaylanınca plan yürürlüktedir.
 
 ## 4. İstek kuyruğu — türler ve işleme
 
-Her istek için; bitince `complete_request(request_id)`:
+Her istek için; bitince kapat (`complete_request` ya da REST `POST /api/requests/<id>/complete`):
 
 - **`revise`** — `{doc, notes[]}`: belgeyi notlara göre yeniden yaz; `status: draft`'a çek
   (onay yeniden +prime'a düşer). Bağımlı `approved` belgeler etkileniyorsa +prime'a söyle.
