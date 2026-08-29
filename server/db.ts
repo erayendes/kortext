@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS projects (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
   repo_path TEXT NOT NULL UNIQUE,
+  kind TEXT NOT NULL DEFAULT 'new',   -- new | existing → which analysis workflow applies
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE TABLE IF NOT EXISTS requests (
@@ -33,6 +34,10 @@ export function openDb(path = defaultDbPath()): Database.Database {
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
   db.exec(SCHEMA);
+  const cols = (db.pragma('table_info(projects)') as { name: string }[]).map((c) => c.name);
+  if (!cols.includes('kind')) {
+    db.exec("ALTER TABLE projects ADD COLUMN kind TEXT NOT NULL DEFAULT 'new'");
+  }
   return db;
 }
 
@@ -40,5 +45,6 @@ export interface Project {
   id: number;
   name: string;
   repo_path: string;
+  kind: 'new' | 'existing';
   created_at: string;
 }

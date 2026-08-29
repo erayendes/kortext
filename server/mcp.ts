@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { z } from 'zod';
 import type { Project } from './db.js';
 import { completeRequest, listRequests } from './requests.js';
-import { listDocs } from './docs.js';
+import { listDocs, workflowNameFor } from './docs.js';
 
 const WORKFLOWS = ['new-project-analysis', 'existing-project-analysis', 'planning-pipeline'] as const;
 const PERSONAS = [
@@ -113,8 +113,8 @@ export function buildMcpServer(db: Database.Database, pkgRoot: string): McpServe
           revisionPending: d.revisionPending,
         })),
         pending_requests: listRequests(db, project.id, 'pending').length,
-        workflows: WORKFLOWS,
-        contract: 'Read AGENTS.md at the repo root and follow it. Fetch process with get_workflow.',
+        workflow: workflowNameFor(project.kind ?? 'new'),
+        contract: 'Read AGENTS.md at the repo root and follow it. Fetch the workflow above with get_workflow.',
       });
     },
   );

@@ -105,13 +105,16 @@ export function listProjects(db: Database.Database): Project[] {
 // The user picks the project folder themselves (Browse or typed path) —
 // kortext scaffolds INTO it, never invents a subfolder. mkdir is a no-op on
 // an existing folder and forgives a not-yet-created typed path.
+// kind decides which analysis workflow the project follows:
+// 'new' → new-project-analysis, 'existing' → existing-project-analysis.
 export function createProject(
   db: Database.Database,
-  input: { name: string; repoPath: string; brief?: string },
+  input: { name: string; repoPath: string; kind?: 'new' | 'existing'; brief?: string },
   pkgRoot: string,
 ): Project {
   const name = input.name.trim();
   const repoPath = input.repoPath.trim();
+  const kind = input.kind === 'existing' ? 'existing' : 'new';
   if (!name) throw new Error('name is required');
   if (!repoPath) throw new Error('repoPath is required');
   mkdirSync(repoPath, { recursive: true });
@@ -127,8 +130,8 @@ export function createProject(
     );
   }
   const row = db
-    .prepare('INSERT INTO projects (name, repo_path) VALUES (?, ?) RETURNING *')
-    .get(name, repoPath) as Project;
+    .prepare('INSERT INTO projects (name, repo_path, kind) VALUES (?, ?, ?) RETURNING *')
+    .get(name, repoPath, kind) as Project;
   return row;
 }
 

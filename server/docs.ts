@@ -61,12 +61,16 @@ export function parseWorkflowSteps(md: string): DocStep[] {
   return steps;
 }
 
-// The panel's canonical dependency map comes from new-project-analysis
-// (existing-project-analysis produces the same document set; per-project
-// workflow choice can refine this later).
-export function loadDocMap(pkgRoot: string): Map<string, DocStep> {
+// The dependency map follows the project's kind: a 'new' project reads
+// new-project-analysis, an 'existing' one existing-project-analysis
+// (planning steps apply to both).
+export function workflowNameFor(kind: 'new' | 'existing'): string {
+  return kind === 'existing' ? 'existing-project-analysis' : 'new-project-analysis';
+}
+
+export function loadDocMap(pkgRoot: string, kind: 'new' | 'existing' = 'new'): Map<string, DocStep> {
   const map = new Map<string, DocStep>();
-  for (const wf of ['new-project-analysis.md', 'planning-pipeline.md']) {
+  for (const wf of [`${workflowNameFor(kind)}.md`, 'planning-pipeline.md']) {
     const p = join(pkgRoot, 'workflows', wf);
     if (!existsSync(p)) continue;
     for (const step of parseWorkflowSteps(readFileSync(p, 'utf8'))) {
@@ -100,7 +104,7 @@ export function setFrontmatterStatus(path: string, status: string): void {
 }
 
 export function listDocs(db: Database.Database, project: Project, pkgRoot: string): DocInfo[] {
-  const map = loadDocMap(pkgRoot);
+  const map = loadDocMap(pkgRoot, project.kind ?? 'new');
   const pendingRevise = new Set(
     listRequests(db, project.id, 'pending')
       .filter((r) => r.type === 'revise')

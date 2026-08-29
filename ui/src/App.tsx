@@ -105,6 +105,7 @@ function AddProject({
   onDone: (project: Project, hadBrief: boolean) => void;
   onCancel: () => void;
 }) {
+  const [kind, setKind] = useState<'new' | 'existing'>('new');
   const [name, setName] = useState('');
   const [repoPath, setRepoPath] = useState('');
   const [brief, setBrief] = useState('');
@@ -127,7 +128,7 @@ function AddProject({
 
   const submit = async () => {
     try {
-      const { project } = await api.createProject({ name, repoPath, brief: brief || undefined });
+      const { project } = await api.createProject({ name, repoPath, kind, brief: brief || undefined });
       onDone(project, brief.trim().length > 0);
     } catch (e) {
       setErr((e as Error).message);
@@ -136,6 +137,25 @@ function AddProject({
 
   return (
     <div className="kx-form">
+      <div className="kx-form-row">
+        <button
+          className={`btn ${kind === 'new' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setKind('new')}
+        >
+          New project
+        </button>
+        <button
+          className={`btn ${kind === 'existing' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setKind('existing')}
+        >
+          Existing project
+        </button>
+      </div>
+      <span className="kx-cmd-hint">
+        {kind === 'new'
+          ? 'Sıfırdan ürün: ajan new-project-analysis akışını koşar.'
+          : 'Var olan kod tabanı: ajan existing-project-analysis ile mevcut durumu belgeler.'}
+      </span>
       <input
         className="kx-input"
         placeholder="Project name"

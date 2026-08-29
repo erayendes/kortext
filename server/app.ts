@@ -24,9 +24,9 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   });
 
   app.post('/api/projects', (req, res) => {
-    const { name, repoPath, brief } = req.body ?? {};
+    const { name, repoPath, kind, brief } = req.body ?? {};
     try {
-      const project = createProject(db, { name, repoPath, brief }, pkgRoot);
+      const project = createProject(db, { name, repoPath, kind, brief }, pkgRoot);
       res.status(201).json({ project });
     } catch (err) {
       res.status(400).json({ error: (err as Error).message });

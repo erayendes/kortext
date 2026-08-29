@@ -31,8 +31,9 @@
 ## 2. Faz A — Analiz
 
 1. **Brief kapısı:** `foundation/BRD.md` `status: approved` değilse DUR, +prime'a söyle.
-2. Workflow'u çek: yeni ürün → `get_workflow("new-project-analysis")`;
-   mevcut kod tabanı → `get_workflow("existing-project-analysis")`.
+2. Workflow'u çek: hangisinin geçerli olduğunu `get_project_context` söyler
+   (`workflow` alanı — proje panelde "new" ya da "existing" olarak eklendi);
+   `get_workflow(<o isim>)` ile adımları al.
 3. Adımları sırayla uygula. **Bağımlılık kuralı (çekirdek):**
    - Bir adımın `inputs:` listesindeki TÜM dosyalar `status: approved` olmadan o adımın
      çıktısını YAZMA.
