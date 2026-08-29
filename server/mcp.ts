@@ -2,9 +2,27 @@ import type Database from 'better-sqlite3';
 import type { Request, Response } from 'express';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { z } from 'zod';
 import type { Project } from './db.js';
 import { completeRequest, listRequests } from './requests.js';
+import { listDocs } from './docs.js';
+
+const WORKFLOWS = ['new-project-analysis', 'existing-project-analysis', 'planning-pipeline'] as const;
+const PERSONAS = [
+  'compliance-expert',
+  'growth-expert',
+  'product-manager',
+  'copywriter',
+  'engineering-manager',
+  'security-engineer',
+  'designer',
+  'db-admin',
+  'qa-engineer',
+  'operation-manager',
+  'devops-engineer',
+] as const;
 
 function projectByRepoPath(db: Database.Database, repoPath: string): Project | undefined {
   return db.prepare('SELECT * FROM projects WHERE repo_path = ?').get(repoPath) as
@@ -16,8 +34,36 @@ function json(data: unknown) {
   return { content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] };
 }
 
-export function buildMcpServer(db: Database.Database): McpServer {
+export function buildMcpServer(db: Database.Database, pkgRoot: string): McpServer {
   const server = new McpServer({ name: 'kortext', version: '1.0.0' });
+
+  server.registerTool(
+    'get_workflow',
+    {
+      description:
+        'Process definition (markdown) for a kortext workflow. Steps carry inputs/outputs/approver — follow the dependency rule in AGENTS.md. Workflows live in the kortext package, not in the project.',
+      inputSchema: { name: z.enum(WORKFLOWS) },
+    },
+    async ({ name }) => ({
+      content: [
+        { type: 'text' as const, text: readFileSync(join(pkgRoot, 'workflows', `${name}.md`), 'utf8') },
+      ],
+    }),
+  );
+
+  server.registerTool(
+    'get_persona',
+    {
+      description:
+        "Perspective brief for an analysis persona (e.g. 'security-engineer'). Write a document through the lens of its author persona.",
+      inputSchema: { handle: z.enum(PERSONAS) },
+    },
+    async ({ handle }) => ({
+      content: [
+        { type: 'text' as const, text: readFileSync(join(pkgRoot, 'agents', `${handle}.md`), 'utf8') },
+      ],
+    }),
+  );
 
   server.registerTool(
     'get_pending_requests',
@@ -52,7 +98,7 @@ export function buildMcpServer(db: Database.Database): McpServer {
     'get_project_context',
     {
       description:
-        'Registered kortext project info for repo_path, plus pending request count. Use to confirm you are in a kortext-managed repo.',
+        'Registered kortext project info for repo_path: document statuses (the dependency state), pending request count, available workflows. Use to confirm you are in a kortext-managed repo and to see where the analysis stands.',
       inputSchema: { repo_path: z.string() },
     },
     async ({ repo_path }) => {
@@ -60,8 +106,15 @@ export function buildMcpServer(db: Database.Database): McpServer {
       if (!project) return json({ error: `no kortext project registered at ${repo_path}` });
       return json({
         project,
+        docs: listDocs(db, project, pkgRoot).map((d) => ({
+          rel: d.rel,
+          status: d.status,
+          blocked: d.blocked,
+          revisionPending: d.revisionPending,
+        })),
         pending_requests: listRequests(db, project.id, 'pending').length,
-        contract: 'Read AGENTS.md at the repo root and follow it.',
+        workflows: WORKFLOWS,
+        contract: 'Read AGENTS.md at the repo root and follow it. Fetch process with get_workflow.',
       });
     },
   );
@@ -72,10 +125,11 @@ export function buildMcpServer(db: Database.Database): McpServer {
 // Stateless streamable-HTTP: one server+transport pair per POST.
 export async function handleMcpRequest(
   db: Database.Database,
+  pkgRoot: string,
   req: Request,
   res: Response,
 ): Promise<void> {
-  const server = buildMcpServer(db);
+  const server = buildMcpServer(db, pkgRoot);
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
   res.on('close', () => {
     void transport.close();

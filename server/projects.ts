@@ -1,29 +1,35 @@
 import type Database from 'better-sqlite3';
-import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { join } from 'node:path';
 import type { Project } from './db.js';
 
-// Live workspace layout inside a registered repo. The brief IS the BRD
-// (v1 convention: .kortext/foundation/BRD.md with a status frontmatter).
-export const WORKSPACE_DIRS = ['foundation', 'references', 'reports', 'memory', 'workflows', 'agents'] as const;
+// Live workspace inside a registered repo — sealed layout (DECISIONS §19):
+//   AGENTS.md            (repo root — the agent's entry contract)
+//   .kortext/*.md        (the living core: STACK, SECURITY, …, DECISIONS, TODO)
+//   .kortext/foundation/ (frozen starting docs: BRD, PRD, TRD, PFD, backlog.yaml)
+//   .kortext/reports/    (human-facing outputs)
+// Workflows, personas and report templates are NOT copied — the agent gets
+// them from the kortext package over MCP.
 export const BRIEF_REL = join('.kortext', 'foundation', 'BRD.md');
 
-// Copies the self-contained working set into the repo so the external agent
-// needs nothing but the repo itself: contract at the root, process definitions
-// and personas under .kortext/, doc skeletons with status: uninitialized.
-// Idempotent — existing files are never overwritten.
 export function scaffoldProject(repoPath: string, pkgRoot: string): void {
   const kx = join(repoPath, '.kortext');
-  for (const dir of WORKSPACE_DIRS) mkdirSync(join(kx, dir), { recursive: true });
+  migrateLegacyLayout(kx);
+  mkdirSync(join(kx, 'foundation'), { recursive: true });
+  mkdirSync(join(kx, 'reports'), { recursive: true });
 
   const templates = join(pkgRoot, 'templates');
   copyIfMissing(join(templates, 'AGENTS.md'), join(repoPath, 'AGENTS.md'));
-  copyDirIfMissing(join(pkgRoot, 'workflows'), join(kx, 'workflows'));
-  copyDirIfMissing(join(pkgRoot, 'agents'), join(kx, 'agents'));
-  copyDirIfMissing(join(templates, 'references'), join(kx, 'references'));
-  copyDirIfMissing(join(templates, 'memory'), join(kx, 'memory'));
-  mkdirSync(join(kx, 'templates', 'reports'), { recursive: true });
-  copyDirIfMissing(join(templates, 'reports'), join(kx, 'templates', 'reports'));
+  copyDirIfMissing(join(templates, 'core'), kx);
   for (const doc of ['PRD.md', 'TRD.md', 'PFD.md']) {
     copyIfMissing(join(templates, 'foundation', doc), join(kx, 'foundation', doc));
   }
@@ -37,6 +43,35 @@ export function scaffoldProject(repoPath: string, pkgRoot: string): void {
     } else {
       writeFileSync(brief, '---\nstatus: draft\n---\n\n# BRD\n', 'utf8');
     }
+  }
+}
+
+// One-time sweep for projects scaffolded before the flat layout: reference
+// docs move up to the root, memory/TODO + decisions survive, package-content
+// copies (workflows, agents, templates) disappear.
+function migrateLegacyLayout(kx: string): void {
+  const refs = join(kx, 'references');
+  if (existsSync(refs)) {
+    for (const f of readdirSync(refs).filter((f) => f.endsWith('.md'))) {
+      if (!existsSync(join(kx, f))) renameSync(join(refs, f), join(kx, f));
+    }
+    rmSync(refs, { recursive: true, force: true });
+  }
+  const memory = join(kx, 'memory');
+  if (existsSync(memory)) {
+    const moves: Array<[string, string]> = [
+      ['TODO.md', 'TODO.md'],
+      ['decisions.md', 'DECISIONS.md'],
+    ];
+    for (const [from, to] of moves) {
+      if (existsSync(join(memory, from)) && !existsSync(join(kx, to))) {
+        renameSync(join(memory, from), join(kx, to));
+      }
+    }
+    rmSync(memory, { recursive: true, force: true });
+  }
+  for (const dir of ['workflows', 'agents', 'templates']) {
+    rmSync(join(kx, dir), { recursive: true, force: true });
   }
 }
 

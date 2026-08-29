@@ -15,14 +15,15 @@ kortext (npm, global)                     ~/.kortext/kortext.db (SQLite, tek DB 
 └─ bin: kortext → serve + tarayıcı aç     tablolar: projects · requests · reports · transfers
    ├─ Express sunucu (tek port, vars. 4200)
    │   ├─ REST /api/*          → panel
-   │   ├─ MCP  /mcp (HTTP)     → dış ajan: get_pending_requests · complete_request · get_project_context
-   │   └─ fs-watch             → proje reposundaki .kortext/ belgelerini izler
+   │   ├─ MCP  /mcp (HTTP)     → dış ajan: get_pending_requests · complete_request ·
+   │   │                          get_project_context · get_workflow · get_persona
+   │   └─ poll                 → panel 4-5 sn'de bir durumları çeker (fs-watch yok)
    └─ React panel (statik servis)
        ├─ Proje listesi + Proje ekle (yeni: blueprint şablonu kopyalanır / mevcut: repo yolu)
        └─ Proje ekranı: Belgeler · Raporlar · Bağlantı
 ```
 
-Belgeler **projenin kendi reposunda** yaşar (`.kortext/foundation/`, `.kortext/references/`, `.kortext/reports/`); Kortext DB'si yalnız kayıt/kuyruk/dizin tutar. Kaynak-of-truth = dosya + frontmatter `status`.
+Belgeler **projenin kendi reposunda** yaşar — mühürlü yerleşim (DECISIONS §19): `.kortext/` kökü = canlı çekirdek (ARCHITECTURE, STACK, …, DECISIONS.md, TODO.md) · `foundation/` = donmuş başlangıç (BRD, PRD, TRD, PFD, backlog.yaml) · `reports/` = insan-için çıktılar. Kortext DB'si yalnız kayıt/kuyruk tutar. Kaynak-of-truth = dosya + frontmatter `status`. **Süreç (workflows/personas/şablonlar) projeye kopyalanmaz** — paketten MCP ile servis edilir.
 
 ## 3. Akış
 

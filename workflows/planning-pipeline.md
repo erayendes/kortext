@@ -45,7 +45,7 @@
      `blocked_by`'ına ekle.
    - **Bağımlılıklar:** gerçek sıralama zorunluluklarını `blocked_by` ile kur;
      dangling id bırakma.
-   - inputs: `.kortext/foundation/PRD.md`, `.kortext/foundation/TRD.md`, `.kortext/references/TEST.md`, `.kortext/references/STACK.md`, `.kortext/references/SECURITY.md`, `.kortext/references/LEGAL.md`, `.kortext/references/API.md`
+   - inputs: `.kortext/foundation/PRD.md`, `.kortext/foundation/TRD.md`, `.kortext/TEST.md`, `.kortext/STACK.md`, `.kortext/SECURITY.md`, `.kortext/LEGAL.md`, `.kortext/API.md`
    - outputs: `.kortext/foundation/backlog.yaml`
 
 2. **+operation-manager:** `backlog.yaml`'i baştan sona denetle ve DÜZELTİLMİŞ tam dosyayı
@@ -59,12 +59,12 @@
 
 ## TODO
 
-3. **+operation-manager:** Konsolide iş listesini üret: `.kortext/memory/TODO.md`.
+3. **+operation-manager:** Konsolide iş listesini üret: `.kortext/TODO.md`.
    Frontmatter: `status: draft`, `author: +operation-manager`, `approver: +prime`.
    İçerik: versiyon → epic → task hiyerarşisinde checkbox listesi (`- [ ] ACME-T001 — başlık`),
    bağımlılık sırasına dizilmiş; `assignee: prime` task'ları **"+prime'a düşenler"** başlığı
    altında ayrıca listele; en sonda **"Açık riskler"** bölümü (denetimden kalanlar; yoksa "yok").
    Bu dosya plan gate'idir: +prime panelden onaylayınca (`status: approved`) plan yürürlüğe girer.
    - inputs: `.kortext/foundation/backlog.yaml`
-   - outputs: `.kortext/memory/TODO.md`
+   - outputs: `.kortext/TODO.md`
    - approver: +prime

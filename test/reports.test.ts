@@ -36,7 +36,7 @@ test('agent-written report files appear in the listing, newest first', () => {
   const listed = listReports(p);
   assert.equal(listed.length, 1);
   assert.equal(listed[0].type, 'risk');
-  // scaffold shipped the distilled templates for the agent
-  assert.ok(existsSync(join(work, 'acme', '.kortext', 'templates', 'reports', 'risk-report.md')));
+  // report templates are no longer copied — they travel inside the request payload
+  assert.equal(existsSync(join(work, 'acme', '.kortext', 'templates')), false);
   rmSync(work, { recursive: true, force: true });
 });

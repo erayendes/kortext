@@ -56,7 +56,15 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   app.post('/api/projects/:id/requests', (req, res) => {
     const { type, payload } = req.body ?? {};
     try {
-      res.status(201).json({ request: createRequest(db, Number(req.params.id), type, payload) });
+      // A report request carries its template along — the agent needs nothing
+      // from the project folder to know the expected structure.
+      let enriched = payload;
+      if (type === 'report' && payload?.report_type) {
+        const file = payload.report_type === 'risk' ? 'risk-report.md' : 'decision-summary.md';
+        const tpl = join(pkgRoot, 'templates', 'reports', file);
+        if (existsSync(tpl)) enriched = { ...payload, template: readFileSync(tpl, 'utf8') };
+      }
+      res.status(201).json({ request: createRequest(db, Number(req.params.id), type, enriched) });
     } catch (err) {
       res.status(400).json({ error: (err as Error).message });
     }
@@ -129,7 +137,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     const project = projectOr404(req.params.id, res);
     if (!project) return;
     const kx = (rel: string) => join(project.repo_path, '.kortext', rel);
-    const todoPath = kx('memory/TODO.md');
+    const todoPath = kx('TODO.md');
     const todoExists = existsSync(todoPath);
     const planningPending = listRequests(db, project.id, 'pending').some((r) => r.type === 'planning');
     let todoStatus: string | null = null;
@@ -165,7 +173,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   // MCP over streamable HTTP (stateless): agents connect with
   //   claude mcp add --transport http kortext http://localhost:<port>/mcp
   app.post('/mcp', (req, res) => {
-    void handleMcpRequest(db, req, res);
+    void handleMcpRequest(db, pkgRoot, req, res);
   });
   app.get('/mcp', (_req, res) => res.status(405).json({ error: 'stateless server: POST only' }));
 

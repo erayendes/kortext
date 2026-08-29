@@ -28,17 +28,21 @@ test('request queue lifecycle: create → pending → done / cancelled', () => {
   rmSync(work, { recursive: true, force: true });
 });
 
-test('scaffold copies contract, workflows, personas, doc skeletons', () => {
+test('scaffold: contract + flat core skeletons, no package-content copies', () => {
   const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
   const db = openDb(join(work, 'db.sqlite'));
   const repo = join(work, 'acme');
   createProject(db, { name: 'Acme', repoPath: repo, mode: 'new' }, pkgRoot);
   assert.ok(existsSync(join(repo, 'AGENTS.md')));
-  assert.ok(existsSync(join(repo, '.kortext', 'workflows', 'new-project-analysis.md')));
-  assert.ok(existsSync(join(repo, '.kortext', 'agents', 'product-manager.md')));
-  assert.ok(existsSync(join(repo, '.kortext', 'references', 'STACK.md')));
+  assert.ok(existsSync(join(repo, '.kortext', 'STACK.md')));
+  assert.ok(existsSync(join(repo, '.kortext', 'ARCHITECTURE.md')));
+  assert.ok(existsSync(join(repo, '.kortext', 'DECISIONS.md')));
   assert.ok(existsSync(join(repo, '.kortext', 'foundation', 'PRD.md')));
-  assert.ok(existsSync(join(repo, '.kortext', 'memory', 'handover.md')));
+  assert.ok(existsSync(join(repo, '.kortext', 'reports')));
+  // package content is served over MCP, never copied into the project
+  assert.equal(existsSync(join(repo, '.kortext', 'workflows')), false);
+  assert.equal(existsSync(join(repo, '.kortext', 'agents')), false);
+  assert.equal(existsSync(join(repo, '.kortext', 'memory')), false);
   rmSync(work, { recursive: true, force: true });
 });
 
@@ -58,7 +62,19 @@ test('MCP over HTTP: agent pulls pending requests and completes one', async () =
 
   const tools = await client.listTools();
   const names = tools.tools.map((t) => t.name).sort();
-  assert.deepEqual(names, ['complete_request', 'get_pending_requests', 'get_project_context']);
+  assert.deepEqual(names, [
+    'complete_request',
+    'get_pending_requests',
+    'get_persona',
+    'get_project_context',
+    'get_workflow',
+  ]);
+
+  const wf = await client.callTool({
+    name: 'get_workflow',
+    arguments: { name: 'new-project-analysis' },
+  });
+  assert.match((wf.content as { text: string }[])[0].text, /ARCHITECTURE\.md/);
 
   const pending = await client.callTool({
     name: 'get_pending_requests',

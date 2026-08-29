@@ -13,7 +13,7 @@ export interface DocStep {
 
 export interface DocInfo {
   rel: string;
-  group: 'foundation' | 'references';
+  group: 'core' | 'foundation';
   name: string;
   status: string; // uninitialized | draft | approved | …
   author: string | null;
@@ -99,8 +99,6 @@ export function setFrontmatterStatus(path: string, status: string): void {
   }
 }
 
-const DOC_GROUPS = ['foundation', 'references'] as const;
-
 export function listDocs(db: Database.Database, project: Project, pkgRoot: string): DocInfo[] {
   const map = loadDocMap(pkgRoot);
   const pendingRevise = new Set(
@@ -117,11 +115,10 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
 
   const statuses = new Map<string, string>();
   const docs: DocInfo[] = [];
-  for (const group of DOC_GROUPS) {
-    const dir = join(project.repo_path, '.kortext', group);
-    if (!existsSync(dir)) continue;
-    for (const file of readdirSync(dir).filter((f) => f.endsWith('.md')).sort()) {
-      const rel = `${group}/${file}`;
+  const collect = (dir: string, group: 'core' | 'foundation', relPrefix: string, skip: Set<string>) => {
+    if (!existsSync(dir)) return;
+    for (const file of readdirSync(dir).filter((f) => f.endsWith('.md') && !skip.has(f)).sort()) {
+      const rel = `${relPrefix}${file}`;
       const fm = readFrontmatter(readFileSync(join(dir, file), 'utf8'));
       const status = fm.status ?? 'uninitialized';
       statuses.set(rel, status);
@@ -137,7 +134,10 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
         upstreamChanged: false,
       });
     }
-  }
+  };
+  // Root = the living core. TODO.md belongs to the Plan tab, not Documents.
+  collect(join(project.repo_path, '.kortext'), 'core', '', new Set(['TODO.md']));
+  collect(join(project.repo_path, '.kortext', 'foundation'), 'foundation', 'foundation/', new Set());
 
   const byRel = new Map(docs.map((d) => [d.rel, d]));
   for (const doc of docs) {
@@ -163,7 +163,12 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
   return docs;
 }
 
+// rel is relative to .kortext/: a root doc ("STACK.md"), or one under
+// foundation/ or reports/. The pattern forbids traversal ("." never starts
+// a segment) and anything outside those three places.
 export function docPath(project: Project, rel: string): string {
-  if (!/^(foundation|references|reports|memory)\/[\w.-]+\.md$/.test(rel)) throw new Error(`bad doc path: ${rel}`);
+  if (!/^(?:(?:foundation|reports)\/)?[A-Za-z][\w.-]*\.md$/.test(rel)) {
+    throw new Error(`bad doc path: ${rel}`);
+  }
   return join(project.repo_path, '.kortext', rel);
 }

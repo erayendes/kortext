@@ -27,7 +27,7 @@ export interface KortextRequest {
 
 export interface DocInfo {
   rel: string;
-  group: 'foundation' | 'references';
+  group: 'core' | 'foundation';
   name: string;
   status: string;
   author: string | null;

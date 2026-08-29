@@ -309,9 +309,9 @@ function DocumentsTab({ project }: { project: Project }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project.id]);
 
-  const groups: { key: 'foundation' | 'references'; title: string }[] = [
+  const groups: { key: 'core' | 'foundation'; title: string }[] = [
     { key: 'foundation', title: 'Foundation' },
-    { key: 'references', title: 'References' },
+    { key: 'core', title: 'Core' },
   ];
 
   return (
@@ -400,8 +400,8 @@ function PlanTab({ project, onRequested }: { project: Project; onRequested: () =
             <span className="kx-doc-name">TODO.md</span>
             <StatusBadge
               doc={{
-                rel: 'memory/TODO.md',
-                group: 'foundation',
+                rel: 'TODO.md',
+                group: 'core',
                 name: 'TODO',
                 status: plan.todoStatus ?? 'draft',
                 author: '+operation-manager',
@@ -429,8 +429,8 @@ function PlanTab({ project, onRequested }: { project: Project; onRequested: () =
         doc={
           todoOpen
             ? {
-                rel: 'memory/TODO.md',
-                group: 'foundation',
+                rel: 'TODO.md',
+                group: 'core',
                 name: 'TODO',
                 status: plan.todoStatus ?? 'draft',
                 author: '+operation-manager',
@@ -539,7 +539,7 @@ function ReportsTab({ project, onRequested }: { project: Project; onRequested: (
           open
             ? {
                 rel: open.rel,
-                group: 'references',
+                group: 'core',
                 name: open.name,
                 status: 'report',
                 author: null,

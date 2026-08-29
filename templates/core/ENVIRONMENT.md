@@ -46,3 +46,38 @@ approver: +prime
 
 - **Issue:** [Yaygın hata mesajı] → **Çözüm:** [Adım]
 - **Issue:** [Port çakışması] → **Çözüm:** [.env'de port değiştir]
+
+# Access & Service Configuration
+
+## Lokal Geliştirme Araçları
+
+- [Araç adı] — [kurulum notu]
+- [MCP Sunucu adı] — [kurulum notu]
+
+## Versiyon Kontrolü
+
+- GitHub Repo: [+prime dolduracak]
+- Organization: [+prime dolduracak]
+
+## Hosting & Deployment
+
+- Production URL: [+prime dolduracak]
+- Staging URL: [+prime dolduracak]
+- Platform: [Firebase Hosting / Vercel / AWS]
+
+## Sunucu Erişimi
+
+- SSH Root: [+prime dolduracak]
+- Domain: [+prime dolduracak]
+
+## Veritabanı
+
+- Provider: [Firebase / Supabase / PostgreSQL]
+- Production Instance: [+prime dolduracak]
+- Staging Instance: [+prime dolduracak]
+
+## Diğer Servisler
+
+- Analytics: [Google Analytics / Mixpanel]
+- CDN: [Cloudflare]
+- Mail: [SendGrid / Resend]
