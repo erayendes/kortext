@@ -26,7 +26,7 @@ Data lives in a global SQLite database — one database, multiple projects.`);
   process.exit(0);
 }
 
-const PORT = Number(values.port ?? 4200);
+const PORT = Number(values.port ?? process.env.PORT ?? 4200);
 const DB_PATH = values.db ?? defaultDbPath();
 
 const here = dirname(fileURLToPath(import.meta.url));

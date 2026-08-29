@@ -2,7 +2,7 @@ import express from 'express';
 import type Database from 'better-sqlite3';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { createProject, listProjects, removeProject } from './projects.js';
+import { createProject, listProjects, removeProject, scaffoldProject } from './projects.js';
 import { cancelRequest, createRequest, listRequests } from './requests.js';
 import { handleMcpRequest } from './mcp.js';
 import { docPath, listDocs, setFrontmatterStatus } from './docs.js';
@@ -77,6 +77,13 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   app.get('/api/projects/:id/docs', (req, res) => {
     const project = projectOr404(req.params.id, res);
     if (!project) return;
+    // Self-heal: idempotent re-scaffold fills anything missing (AGENTS.md,
+    // workflows, skeletons) whenever the panel looks at a project.
+    try {
+      scaffoldProject(project.repo_path, pkgRoot);
+    } catch {
+      /* repo may be gone; listing still answers */
+    }
     res.json({ docs: listDocs(db, project, pkgRoot) });
   });
 

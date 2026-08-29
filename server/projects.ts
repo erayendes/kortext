@@ -83,11 +83,11 @@ export function createProject(
   scaffoldProject(repoPath, pkgRoot);
   const brief = input.brief?.trim();
   if (brief) {
-    // The prime wrote (or uploaded) the brief in the add form — it replaces the
-    // BRD template body and goes straight to draft, ready for approval.
+    // The prime wrote (or uploaded) the brief in the add form — their own
+    // content needs no separate approval round, it lands approved.
     writeFileSync(
       join(repoPath, BRIEF_REL),
-      `---\nstatus: draft\nauthor: +prime\napprover: +prime\n---\n\n${brief}\n`,
+      `---\nstatus: approved\nauthor: +prime\napprover: +prime\n---\n\n${brief}\n`,
       'utf8',
     );
   }

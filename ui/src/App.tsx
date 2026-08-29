@@ -20,6 +20,8 @@ export function App() {
     refresh();
   }, []);
 
+  const [initialTab, setInitialTab] = useState<Tab>('documents');
+
   return (
     <div className="kx-shell">
       <header className="kx-header">
@@ -28,7 +30,15 @@ export function App() {
       </header>
       {error && <div className="kx-error">{error}</div>}
       {selected ? (
-        <ProjectScreen project={selected} onBack={() => setSelected(null)} />
+        <ProjectScreen
+          key={selected.id}
+          project={selected}
+          initialTab={initialTab}
+          onBack={() => {
+            setSelected(null);
+            setInitialTab('documents');
+          }}
+        />
       ) : (
         <main className="kx-main">
           <div className="kx-main-head">
@@ -53,9 +63,14 @@ export function App() {
           </div>
           {adding && (
             <AddProject
-              onDone={() => {
+              onDone={(project, hadBrief) => {
                 setAdding(false);
                 refresh();
+                // A written/uploaded brief is already approved — go straight to
+                // Connect so the agent can be started; otherwise the BRD still
+                // needs filling in Documents.
+                setInitialTab(hadBrief ? 'connect' : 'documents');
+                setSelected(project);
               }}
               onCancel={() => setAdding(false)}
             />
@@ -83,11 +98,19 @@ MVP: en fazla 8 item.
 ## Kapsam dışı
 Faturalama, telefon entegrasyonu.`;
 
-function AddProject({ onDone, onCancel }: { onDone: () => void; onCancel: () => void }) {
+function AddProject({
+  onDone,
+  onCancel,
+}: {
+  onDone: (project: Project, hadBrief: boolean) => void;
+  onCancel: () => void;
+}) {
   const [mode, setMode] = useState<'new' | 'existing'>('existing');
   const [name, setName] = useState('');
   const [repoPath, setRepoPath] = useState('');
   const [brief, setBrief] = useState('');
+  const [briefMode, setBriefMode] = useState<'write' | 'upload'>('write');
+  const [uploadName, setUploadName] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
   const slug = (s: string) =>
@@ -105,13 +128,16 @@ function AddProject({ onDone, onCancel }: { onDone: () => void; onCancel: () => 
 
   const uploadBrief = (file: File | undefined) => {
     if (!file) return;
-    file.text().then(setBrief);
+    file.text().then((text) => {
+      setBrief(text);
+      setUploadName(file.name);
+    });
   };
 
   const submit = async () => {
     try {
-      await api.createProject({ name, repoPath, mode, brief: brief || undefined });
-      onDone();
+      const { project } = await api.createProject({ name, repoPath, mode, brief: brief || undefined });
+      onDone(project, brief.trim().length > 0);
     } catch (e) {
       setErr((e as Error).message);
     }
@@ -143,36 +169,61 @@ function AddProject({ onDone, onCancel }: { onDone: () => void; onCancel: () => 
           value={repoPath}
           onChange={(e) => setRepoPath(e.target.value)}
         />
-        <button className="btn" onClick={browse}>
+        <button className="btn btn-secondary" onClick={browse}>
           Browse…
         </button>
       </div>
       <div className="kx-brief">
         <div className="kx-brief-head">
           <span className="kx-cmd-title">Brief (BRD)</span>
-          <div className="kx-form-row">
-            <button className="btn btn-sm" onClick={() => setBrief(BRIEF_EXAMPLE)}>
+          <nav className="kx-tabs kx-tabs-sm">
+            <button
+              className={`kx-tab ${briefMode === 'write' ? 'active' : ''}`}
+              onClick={() => setBriefMode('write')}
+            >
+              Write
+            </button>
+            <button
+              className={`kx-tab ${briefMode === 'upload' ? 'active' : ''}`}
+              onClick={() => setBriefMode('upload')}
+            >
+              Upload
+            </button>
+          </nav>
+        </div>
+        {briefMode === 'write' && (
+          <>
+            <textarea
+              className="kx-editor kx-brief-text"
+              placeholder="Projenin brief'ini buraya yaz: ne yapıyoruz, kimin için, kapsam, kapsam dışı… (Boş bırakırsan sonra Documents'tan doldurursun.)"
+              value={brief}
+              onChange={(e) => setBrief(e.target.value)}
+            />
+            <button className="btn btn-secondary btn-sm kx-self-start" onClick={() => setBrief(BRIEF_EXAMPLE)}>
               Insert example
             </button>
-            <label className="btn btn-sm kx-upload">
-              Upload .md
-              <input
-                type="file"
-                accept=".md,.txt,text/markdown,text/plain"
-                onChange={(e) => uploadBrief(e.target.files?.[0])}
-              />
-            </label>
-          </div>
-        </div>
-        <textarea
-          className="kx-editor kx-brief-text"
-          placeholder="Projenin brief'ini buraya yaz: ne yapıyoruz, kimin için, kapsam, kapsam dışı… (Boş bırakırsan sonra Documents'tan doldurursun.)"
-          value={brief}
-          onChange={(e) => setBrief(e.target.value)}
-        />
+          </>
+        )}
+        {briefMode === 'upload' && (
+          <label className="kx-drop">
+            <input
+              type="file"
+              accept=".md,.txt,text/markdown,text/plain"
+              onChange={(e) => uploadBrief(e.target.files?.[0])}
+            />
+            {uploadName ? (
+              <span>
+                <strong>{uploadName}</strong> yüklendi ({brief.length} karakter) — değiştirmek için
+                tekrar tıkla, düzenlemek için Write sekmesi.
+              </span>
+            ) : (
+              <span>.md / .txt brief dosyanı seçmek için tıkla</span>
+            )}
+          </label>
+        )}
         <span className="kx-cmd-hint">
-          Saved as .kortext/foundation/BRD.md (draft) — you approve it from Documents, then connect
-          your agent.
+          Brief'ini yazar ya da yüklersen onaylı BRD olarak kaydedilir ve seni doğrudan Connect
+          ekranına götürür; boş bırakırsan Documents'tan doldurup onaylarsın.
         </span>
       </div>
       {err && <div className="kx-error">{err}</div>}
@@ -188,8 +239,16 @@ function AddProject({ onDone, onCancel }: { onDone: () => void; onCancel: () => 
   );
 }
 
-function ProjectScreen({ project, onBack }: { project: Project; onBack: () => void }) {
-  const [tab, setTab] = useState<Tab>('documents');
+function ProjectScreen({
+  project,
+  onBack,
+  initialTab = 'documents',
+}: {
+  project: Project;
+  onBack: () => void;
+  initialTab?: Tab;
+}) {
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [pending, setPending] = useState<KortextRequest[]>([]);
 
   const refreshRequests = () =>

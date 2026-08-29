@@ -1434,3 +1434,11 @@ body {
 .kx-brief-text { min-height: 180px; font-size: 12.5px; }
 .kx-upload { position: relative; overflow: hidden; cursor: pointer; display: inline-flex; align-items: center; }
 .kx-upload input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+/* UAT round 2 — brief tabs, upload drop, secondary buttons */
+.kx-tabs-sm { border-bottom: none; gap: 0; }
+.kx-tabs-sm .kx-tab { padding: 4px 10px; font-size: 12px; }
+.kx-self-start { align-self: flex-start; }
+.kx-drop { display: flex; align-items: center; justify-content: center; min-height: 120px; padding: 16px; border: 1.5px dashed var(--border-strong); border-radius: var(--r-lg); background: var(--bg-subtle); font-size: 12.5px; color: var(--fg-mid); cursor: pointer; text-align: center; position: relative; }
+.kx-drop:hover { background: var(--bg-hover); border-color: var(--gray-400); }
+.kx-drop input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
