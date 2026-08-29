@@ -105,7 +105,6 @@ function AddProject({
   onDone: (project: Project, hadBrief: boolean) => void;
   onCancel: () => void;
 }) {
-  const [mode, setMode] = useState<'new' | 'existing'>('existing');
   const [name, setName] = useState('');
   const [repoPath, setRepoPath] = useState('');
   const [brief, setBrief] = useState('');
@@ -113,17 +112,9 @@ function AddProject({
   const [uploadName, setUploadName] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
-  const slug = (s: string) =>
-    s
-      .toLowerCase()
-      .replace(/[çğıöşü]/g, (c) => ('cgiosu'['çğıöşü'.indexOf(c)] ?? c))
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '') || 'project';
-
   const browse = async () => {
     const { path } = await api.pickDirectory();
-    if (!path) return; // cancelled or unsupported platform — keep typing
-    setRepoPath(mode === 'new' ? `${path}/${slug(name)}` : path);
+    if (path) setRepoPath(path); // picked folder IS the project root
   };
 
   const uploadBrief = (file: File | undefined) => {
@@ -136,7 +127,7 @@ function AddProject({
 
   const submit = async () => {
     try {
-      const { project } = await api.createProject({ name, repoPath, mode, brief: brief || undefined });
+      const { project } = await api.createProject({ name, repoPath, brief: brief || undefined });
       onDone(project, brief.trim().length > 0);
     } catch (e) {
       setErr((e as Error).message);
@@ -145,17 +136,6 @@ function AddProject({
 
   return (
     <div className="kx-form">
-      <div className="kx-form-row">
-        <button
-          className={`btn ${mode === 'existing' ? 'btn-primary' : ''}`}
-          onClick={() => setMode('existing')}
-        >
-          Existing repo
-        </button>
-        <button className={`btn ${mode === 'new' ? 'btn-primary' : ''}`} onClick={() => setMode('new')}>
-          New project
-        </button>
-      </div>
       <input
         className="kx-input"
         placeholder="Project name"
@@ -165,7 +145,7 @@ function AddProject({
       <div className="kx-form-row">
         <input
           className="kx-input mono kx-path"
-          placeholder={mode === 'new' ? 'Folder to create (pick parent with Browse)' : 'Repo path (absolute)'}
+          placeholder="Project folder (pick with Browse)"
           value={repoPath}
           onChange={(e) => setRepoPath(e.target.value)}
         />

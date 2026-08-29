@@ -16,7 +16,7 @@ const pkgRoot = process.cwd();
 test('request queue lifecycle: create → pending → done / cancelled', () => {
   const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
   const db = openDb(join(work, 'db.sqlite'));
-  const p = createProject(db, { name: 'Q', repoPath: join(work, 'q'), mode: 'new' }, pkgRoot);
+  const p = createProject(db, { name: 'Q', repoPath: join(work, 'q') }, pkgRoot);
   const r1 = createRequest(db, p.id, 'revise', { doc: 'references/STACK.md', notes: ['use pg'] });
   const r2 = createRequest(db, p.id, 'report', { report_type: 'risk' });
   assert.throws(() => createRequest(db, p.id, 'nonsense', {}));
@@ -32,7 +32,7 @@ test('scaffold: contract + flat core skeletons, no package-content copies', () =
   const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
   const db = openDb(join(work, 'db.sqlite'));
   const repo = join(work, 'acme');
-  createProject(db, { name: 'Acme', repoPath: repo, mode: 'new' }, pkgRoot);
+  createProject(db, { name: 'Acme', repoPath: repo }, pkgRoot);
   assert.ok(existsSync(join(repo, 'AGENTS.md')));
   assert.ok(existsSync(join(repo, '.kortext', 'STACK.md')));
   assert.ok(existsSync(join(repo, '.kortext', 'ARCHITECTURE.md')));
@@ -50,7 +50,7 @@ test('MCP over HTTP: agent pulls pending requests and completes one', async () =
   const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
   const db = openDb(join(work, 'db.sqlite'));
   const repo = join(work, 'acme');
-  const p = createProject(db, { name: 'Acme', repoPath: repo, mode: 'new' }, pkgRoot);
+  const p = createProject(db, { name: 'Acme', repoPath: repo }, pkgRoot);
   const req = createRequest(db, p.id, 'revise', { doc: 'references/STACK.md', notes: ['x'] });
 
   const app = buildApp(db, pkgRoot, join(work, 'db.sqlite'));

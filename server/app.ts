@@ -24,13 +24,9 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   });
 
   app.post('/api/projects', (req, res) => {
-    const { name, repoPath, mode, brief } = req.body ?? {};
+    const { name, repoPath, brief } = req.body ?? {};
     try {
-      const project = createProject(
-        db,
-        { name, repoPath, mode: mode === 'new' ? 'new' : 'existing', brief },
-        pkgRoot,
-      );
+      const project = createProject(db, { name, repoPath, brief }, pkgRoot);
       res.status(201).json({ project });
     } catch (err) {
       res.status(400).json({ error: (err as Error).message });

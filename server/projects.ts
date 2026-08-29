@@ -102,19 +102,19 @@ export function listProjects(db: Database.Database): Project[] {
   return db.prepare('SELECT * FROM projects ORDER BY created_at DESC').all() as Project[];
 }
 
+// The user picks the project folder themselves (Browse or typed path) —
+// kortext scaffolds INTO it, never invents a subfolder. mkdir is a no-op on
+// an existing folder and forgives a not-yet-created typed path.
 export function createProject(
   db: Database.Database,
-  input: { name: string; repoPath: string; mode: 'new' | 'existing'; brief?: string },
+  input: { name: string; repoPath: string; brief?: string },
   pkgRoot: string,
 ): Project {
   const name = input.name.trim();
   const repoPath = input.repoPath.trim();
   if (!name) throw new Error('name is required');
   if (!repoPath) throw new Error('repoPath is required');
-  if (input.mode === 'existing' && !existsSync(repoPath)) {
-    throw new Error(`repoPath does not exist: ${repoPath}`);
-  }
-  if (input.mode === 'new') mkdirSync(repoPath, { recursive: true });
+  mkdirSync(repoPath, { recursive: true });
   scaffoldProject(repoPath, pkgRoot);
   const brief = input.brief?.trim();
   if (brief) {

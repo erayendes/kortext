@@ -24,7 +24,7 @@ test('parseWorkflowSteps extracts inputs/outputs/author/approver per output', ()
 test('listDocs: dependency blocking follows approvals; revise request flags doc', () => {
   const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
   const db = openDb(join(work, 'db.sqlite'));
-  const p = createProject(db, { name: 'Acme', repoPath: join(work, 'acme'), mode: 'new' }, pkgRoot);
+  const p = createProject(db, { name: 'Acme', repoPath: join(work, 'acme') }, pkgRoot);
 
   let docs = listDocs(db, p, pkgRoot);
   const byRel = (rel: string) => docs.find((d) => d.rel === rel)!;
@@ -54,7 +54,7 @@ test('listDocs: dependency blocking follows approvals; revise request flags doc'
 test('docPath rejects traversal', () => {
   const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
   const db = openDb(join(work, 'db.sqlite'));
-  const p = createProject(db, { name: 'Acme', repoPath: join(work, 'acme'), mode: 'new' }, pkgRoot);
+  const p = createProject(db, { name: 'Acme', repoPath: join(work, 'acme') }, pkgRoot);
   assert.throws(() => docPath(p, '../../etc/passwd'));
   assert.throws(() => docPath(p, 'foundation/../secret.md'));
   rmSync(work, { recursive: true, force: true });
@@ -63,7 +63,7 @@ test('docPath rejects traversal', () => {
 test('plan gate rel (TODO.md at root) passes docPath guard', () => {
   const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
   const db = openDb(join(work, 'db.sqlite'));
-  const p = createProject(db, { name: 'Acme', repoPath: join(work, 'acme'), mode: 'new' }, pkgRoot);
+  const p = createProject(db, { name: 'Acme', repoPath: join(work, 'acme') }, pkgRoot);
   assert.ok(docPath(p, 'TODO.md').endsWith('/.kortext/TODO.md'));
   rmSync(work, { recursive: true, force: true });
 });

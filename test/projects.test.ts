@@ -16,7 +16,7 @@ test('create new project scaffolds .kortext workspace with draft BRD', () => {
   const work = tempDir();
   const db = openDb(join(work, 'db.sqlite'));
   const repo = join(work, 'acme');
-  const p = createProject(db, { name: 'Acme', repoPath: repo, mode: 'new' }, pkgRoot);
+  const p = createProject(db, { name: 'Acme', repoPath: repo }, pkgRoot);
   assert.equal(p.name, 'Acme');
   const brief = join(repo, BRIEF_REL);
   assert.ok(existsSync(brief));
@@ -26,14 +26,11 @@ test('create new project scaffolds .kortext workspace with draft BRD', () => {
   rmSync(work, { recursive: true, force: true });
 });
 
-test('existing mode requires the path to exist; registry list/remove works', () => {
+test('registry list/remove works; a missing folder is simply created', () => {
   const work = tempDir();
   const db = openDb(join(work, 'db.sqlite'));
-  assert.throws(() =>
-    createProject(db, { name: 'Ghost', repoPath: join(work, 'nope'), mode: 'existing' }, pkgRoot),
-  );
-  const a = createProject(db, { name: 'A', repoPath: join(work, 'a'), mode: 'new' }, pkgRoot);
-  createProject(db, { name: 'B', repoPath: join(work, 'b'), mode: 'new' }, pkgRoot);
+  const a = createProject(db, { name: 'A', repoPath: join(work, 'a') }, pkgRoot);
+  createProject(db, { name: 'B', repoPath: join(work, 'b') }, pkgRoot);
   assert.equal(listProjects(db).length, 2);
   assert.equal(removeProject(db, a.id), true);
   assert.equal(listProjects(db).length, 1);
@@ -46,8 +43,8 @@ test('duplicate repo_path is rejected by the registry', () => {
   const work = tempDir();
   const db = openDb(join(work, 'db.sqlite'));
   const repo = join(work, 'dup');
-  createProject(db, { name: 'One', repoPath: repo, mode: 'new' }, pkgRoot);
-  assert.throws(() => createProject(db, { name: 'Two', repoPath: repo, mode: 'existing' }, pkgRoot));
+  createProject(db, { name: 'One', repoPath: repo }, pkgRoot);
+  assert.throws(() => createProject(db, { name: 'Two', repoPath: repo }, pkgRoot));
   rmSync(work, { recursive: true, force: true });
 });
 
@@ -55,7 +52,7 @@ test('brief from the add form lands as prime-authored APPROVED BRD', () => {
   const work = tempDir();
   const db = openDb(join(work, 'db.sqlite'));
   const repo = join(work, 'brf');
-  createProject(db, { name: 'Brf', repoPath: repo, mode: 'new', brief: '# Acme\n\nKüçük CRM.' }, pkgRoot);
+  createProject(db, { name: 'Brf', repoPath: repo, brief: '# Acme\n\nKüçük CRM.' }, pkgRoot);
   const body = readFileSync(join(repo, BRIEF_REL), 'utf8');
   assert.match(body, /status: approved/);
   assert.match(body, /author: \+prime/);
@@ -77,7 +74,7 @@ test('legacy layout migrates: references flatten, memory TODO/decisions survive'
   writeFileSync(join(kx, 'memory', 'decisions.md'), '# eski karar\n');
   writeFileSync(join(kx, 'workflows', 'old.md'), 'x');
 
-  createProject(db, { name: 'Legacy', repoPath: repo, mode: 'existing' }, pkgRoot);
+  createProject(db, { name: 'Legacy', repoPath: repo }, pkgRoot);
 
   assert.match(readFileSync(join(kx, 'STACK.md'), 'utf8'), /eski içerik/); // moved, not overwritten
   assert.match(readFileSync(join(kx, 'TODO.md'), 'utf8'), /- \[ \] X/);

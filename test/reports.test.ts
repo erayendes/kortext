@@ -12,7 +12,7 @@ const pkgRoot = process.cwd();
 test('change report: doc snapshot written to .kortext/reports and listed', () => {
   const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
   const db = openDb(join(work, 'db.sqlite'));
-  const p = createProject(db, { name: 'Acme', repoPath: join(work, 'acme'), mode: 'new' }, pkgRoot);
+  const p = createProject(db, { name: 'Acme', repoPath: join(work, 'acme') }, pkgRoot);
 
   const report = generateChangeReport(db, p, pkgRoot, new Date('2026-08-28T10:00:00Z'));
   assert.match(report.rel, /^reports\/change-2026-08-28/);
@@ -29,7 +29,7 @@ test('change report: doc snapshot written to .kortext/reports and listed', () =>
 test('agent-written report files appear in the listing, newest first', () => {
   const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
   const db = openDb(join(work, 'db.sqlite'));
-  const p = createProject(db, { name: 'Acme', repoPath: join(work, 'acme'), mode: 'new' }, pkgRoot);
+  const p = createProject(db, { name: 'Acme', repoPath: join(work, 'acme') }, pkgRoot);
   const dir = join(work, 'acme', '.kortext', 'reports');
   mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, 'risk-2026-08-28.md'), '---\nstatus: report\ntype: risk\n---\n\n# Risk\n');
