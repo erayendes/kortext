@@ -1336,11 +1336,13 @@ body {
 .kx-main { max-width: 860px; width: 100%; margin: 0 auto; padding: 26px 22px; display: flex; flex-direction: column; gap: 18px; }
 .kx-main-head { display: flex; align-items: center; gap: 14px; }
 .kx-main-head h1 { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; margin-right: auto; }
+.kx-main-title { display: flex; flex-direction: column; gap: 3px; margin-right: auto; min-width: 0; }
+.kx-main-title h1 { margin: 0; line-height: 1.2; }
 .kx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
 .kx-card { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--card); cursor: pointer; text-align: left; transition: border-color var(--speed) var(--ease), background var(--speed) var(--ease); }
 .kx-card:hover { border-color: var(--border-strong); background: var(--bg-hover); }
 .kx-card-name { font-size: 14px; font-weight: 550; }
-.kx-card-path { font-size: 11px; color: var(--fg-faint); overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.kx-card-path { font-size: 11px; color: var(--fg-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .kx-empty { padding: 34px 22px; border: 1px dashed var(--border); border-radius: var(--r-lg); color: var(--fg-mid); font-size: 13px; text-align: center; }
 .kx-error { margin: 10px 22px 0; padding: 8px 12px; border-radius: var(--r-md); background: rgba(204,107,107,.1); color: var(--red); font-size: 12.5px; }
 .kx-form { display: flex; flex-direction: column; gap: 10px; padding: 16px; border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--card); max-width: 480px; }
@@ -1354,10 +1356,15 @@ body {
 /* E2 — connect tab + request queue */
 .kx-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 16px; height: 16px; padding: 0 4px; margin-left: 6px; border-radius: 8px; background: var(--accent); color: var(--accent-fg); font-size: 10px; font-weight: 600; font-family: var(--font-mono); }
 .kx-connect { display: flex; flex-direction: column; gap: 12px; }
-.kx-cmd-card { display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--card); }
-.kx-cmd-head { display: flex; align-items: center; justify-content: space-between; }
+.kx-cmd-card { display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--card); width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer; transition: border-color var(--speed) var(--ease), background var(--speed) var(--ease); }
+.kx-cmd-card:hover { border-color: var(--border-strong); background: var(--bg-hover); }
+.kx-cmd-card.copied { border-color: var(--green-border); background: var(--green-bg); }
+.kx-cmd-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .kx-cmd-title { font-size: 13px; font-weight: 550; }
-.kx-cmd { display: block; padding: 10px 12px; border-radius: var(--r-md); background: var(--bg-inset); border: 1px solid var(--border); font-size: 12px; color: var(--fg); overflow-x: auto; white-space: pre; }
+.kx-cmd-copy { font-size: 11.5px; color: var(--fg-faint); white-space: nowrap; }
+.kx-cmd-card:hover .kx-cmd-copy { color: var(--fg-secondary); }
+.kx-cmd-card.copied .kx-cmd-copy { color: var(--green); }
+.kx-cmd { display: block; padding: 10px 12px; border-radius: var(--r-md); background: var(--bg-inset); border: 1px solid var(--border); font-size: 12px; color: var(--fg); white-space: pre-wrap; word-break: break-word; }
 .kx-cmd-hint { font-size: 11.5px; color: var(--fg-faint); }
 .kx-requests h2 { font-size: 14px; font-weight: 600; margin-bottom: 10px; }
 .kx-request-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--r-md); margin-bottom: 6px; background: var(--card); }
@@ -1368,6 +1375,11 @@ body {
 /* E3 — documents tab + doc drawer */
 .kx-docs { display: flex; flex-direction: column; gap: 18px; }
 .kx-doc-group { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--fg-faint); margin-bottom: 8px; }
+.kx-doc-details > summary.kx-doc-group { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; list-style: none; padding: 6px 0; margin-bottom: 4px; }
+.kx-doc-details > summary.kx-doc-group::-webkit-details-marker { display: none; }
+.kx-doc-details > summary.kx-doc-group::before { content: '▸'; display: inline-block; font-size: 10px; color: var(--fg-faint); transition: transform var(--speed) var(--ease); }
+.kx-doc-details[open] > summary.kx-doc-group::before { transform: rotate(90deg); }
+.kx-doc-count { margin-left: auto; font-size: 11px; font-weight: 500; text-transform: none; letter-spacing: 0; }
 .kx-doc-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--card); cursor: pointer; text-align: left; margin-bottom: 5px; font-family: inherit; transition: border-color var(--speed) var(--ease); }
 .kx-doc-row:hover { border-color: var(--border-strong); background: var(--bg-hover); }
 .kx-doc-name { font-size: 13px; font-weight: 550; color: var(--fg); }
@@ -1472,7 +1484,11 @@ body {
 .kx-handshake-head { display: flex; flex-direction: column; gap: 4px; }
 .kx-handshake-title { font-size: 14.5px; font-weight: 650; color: var(--green, #2f7d4f); }
 .kx-handshake-kopeng { display: flex; align-items: center; gap: 12px; }
-.kx-handshake-promo { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border: 1px dashed var(--border-strong); border-radius: var(--r-md); background: var(--bg); }
-.kx-handshake-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.kx-kopeng-promo { display: flex; flex-direction: column; gap: 8px; padding: 16px 18px; border: 1px solid var(--violet-border); border-radius: var(--r-md); background: linear-gradient(135deg, var(--violet-bg), var(--bg) 70%); }
+.kx-kopeng-badge { align-self: flex-start; padding: 2px 9px; border-radius: var(--r-pill); background: var(--violet); color: #fff; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+.kx-kopeng-title { font-size: 14px; font-weight: 650; }
+.kx-kopeng-install { display: flex; align-items: center; gap: 8px; }
+.kx-kopeng-install .kx-cmd { flex: 1; }
+.kx-handshake-cards { display: flex; flex-direction: column; gap: 8px; }
 
 .kx-handshake-plan { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--bg); }

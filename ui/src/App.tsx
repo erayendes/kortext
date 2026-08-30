@@ -2,6 +2,12 @@ import { useEffect, useState } from 'react';
 import { api, type DocInfo, type EngineInfo, type HandshakeState, type Job, type KopengPlan, type Project } from './api';
 import { DocDrawer, StatusBadge } from './DocDrawer';
 
+// ponytail: last two segments read fine in a card; the full path lives in the tooltip
+function shortPath(p: string) {
+  const parts = p.split('/').filter(Boolean);
+  return parts.length > 2 ? '…/' + parts.slice(-2).join('/') : p;
+}
+
 export function App() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selected, setSelected] = useState<Project | null>(null);
@@ -47,7 +53,9 @@ export function App() {
             {projects.map((p) => (
               <button key={p.id} className="kx-card" onClick={() => setSelected(p)}>
                 <span className="kx-card-name">{p.name}</span>
-                <span className="kx-card-path mono">{p.repo_path}</span>
+                <span className="kx-card-path mono" title={p.repo_path}>
+                  {shortPath(p.repo_path)}
+                </span>
               </button>
             ))}
           </div>
@@ -386,8 +394,12 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
         <button className="btn" onClick={onBack}>
           ← Projects
         </button>
-        <h1>{project.name}</h1>
-        <span className="kx-card-path mono">{project.repo_path}</span>
+        <div className="kx-main-title">
+          <h1>{project.name}</h1>
+          <span className="kx-card-path mono" title={project.repo_path}>
+            {shortPath(project.repo_path)}
+          </span>
+        </div>
       </div>
       <DocumentsTab project={project} />
     </main>
@@ -433,18 +445,27 @@ function HandshakeCard({ project }: { project: Project }) {
       {state.kopengInstalled ? (
         <TransferPanel project={project} />
       ) : (
-        <div className="kx-handshake-promo">
-          <span className="kx-cmd-title">Görevleri board'da izlemek ister misin?</span>
-          <span className="kx-cmd-hint">
-            Kopeng, ajanının işlerini kanban'da izlediğin tamamlayıcı üründür — ajan görev çeker,
-            sen izlersin. Kur ve "Kopeng'e aktar" butonu burada belirsin:
+        <div className="kx-kopeng-promo">
+          <span className="kx-kopeng-badge">Kopeng</span>
+          <span className="kx-kopeng-title">
+            İş bundan sonra görev görev ilerleyecek — board'da izle.
           </span>
-          <code className="kx-cmd mono">npm install -g kopeng</code>
+          <span className="kx-cmd-hint">
+            "Kopeng'e aktar" tek tıkla işi Version → Epic → Task olarak böler; ajanın görev
+            çeker, sen kanban'da izlersin. Kur — buton bu ekranda belirir:
+          </span>
+          <div className="kx-kopeng-install">
+            <code className="kx-cmd mono">npm install -g kopeng</code>
+            <CopyBtn text="npm install -g kopeng" />
+          </div>
         </div>
       )}
       <div className="kx-handshake-cards">
+        <span className="kx-cmd-hint">
+          Karta tıkla — komut panoya kopyalanır; istemcine (CLI ya da uygulama) yapıştır.
+        </span>
         {instructions.map((c) => (
-          <CommandCard key={c.title} title={c.title} hint="İstemcine (CLI ya da uygulama) yapıştır." command={c.command} />
+          <CommandCard key={c.title} title={c.title} command={c.command} />
         ))}
       </div>
     </div>
@@ -510,12 +531,22 @@ function DocumentsTab({ project }: { project: Project }) {
           </button>
         )}
       </div>
-      {groups.map((g) => (
-        <section key={g.key}>
-          <h2 className="kx-doc-group">{g.title}</h2>
-          {ordered
-            .filter((d) => d.group === g.key)
-            .map((d) => {
+      {groups.map((g) => {
+        const items = ordered.filter((d) => d.group === g.key);
+        const settled = items.filter(
+          (d) => d.status === 'approved' || d.status === 'not-applicable' || d.status === 'log',
+        ).length;
+        // Open while there is still work in the group; auto-collapses once all
+        // docs settle (the handshake takes over the screen at that point).
+        return (
+          <details key={g.key} className="kx-doc-details" open={settled < items.length}>
+            <summary className="kx-doc-group">
+              {g.title}
+              <span className="kx-doc-count mono">
+                {settled}/{items.length}
+              </span>
+            </summary>
+            {items.map((d) => {
               const job = jobFor(d.rel);
               const isRunning = job?.status === 'running';
               const failed = job?.status === 'failed' && d.status === 'uninitialized';
@@ -546,8 +577,9 @@ function DocumentsTab({ project }: { project: Project }) {
                 </button>
               );
             })}
-        </section>
-      ))}
+          </details>
+        );
+      })}
       <DocDrawer
         project={project}
         doc={open}
@@ -558,26 +590,55 @@ function DocumentsTab({ project }: { project: Project }) {
   );
 }
 
-function CommandCard({ title, hint, command }: { title: string; hint: string; command: string }) {
+// Clipboard API can be denied in embedded webviews; fall back to the
+// select-and-copy trick so the button never fails silently.
+function copyText(text: string) {
+  return navigator.clipboard.writeText(text).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+  });
+}
+
+// The whole card is the copy button — no truncated code peeking out of a
+// too-small box; the command wraps in full and one click grabs it.
+function CommandCard({ title, command }: { title: string; command: string }) {
   const [copied, setCopied] = useState(false);
   return (
-    <div className="kx-cmd-card">
+    <button
+      className={`kx-cmd-card${copied ? ' copied' : ''}`}
+      onClick={() => {
+        copyText(command).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        });
+      }}
+    >
       <div className="kx-cmd-head">
         <span className="kx-cmd-title">{title}</span>
-        <button
-          className="btn btn-sm"
-          onClick={() => {
-            navigator.clipboard.writeText(command).then(() => {
-              setCopied(true);
-              setTimeout(() => setCopied(false), 1500);
-            });
-          }}
-        >
-          {copied ? 'Copied' : 'Copy'}
-        </button>
+        <span className="kx-cmd-copy">{copied ? '✓ Kopyalandı' : 'Kopyala'}</span>
       </div>
       <code className="kx-cmd mono">{command}</code>
-      <span className="kx-cmd-hint">{hint}</span>
-    </div>
+    </button>
+  );
+}
+
+function CopyBtn({ text }: { text: string }) {
+  const [ok, setOk] = useState(false);
+  return (
+    <button
+      className="btn btn-sm"
+      onClick={() => {
+        copyText(text).then(() => {
+          setOk(true);
+          setTimeout(() => setOk(false), 1500);
+        });
+      }}
+    >
+      {ok ? '✓' : 'Copy'}
+    </button>
   );
 }
