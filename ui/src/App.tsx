@@ -347,7 +347,6 @@ function ProjectScreen({
 function DocumentsTab({ project }: { project: Project }) {
   const [docs, setDocs] = useState<DocInfo[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [running, setRunning] = useState<Job | null>(null);
   const [open, setOpen] = useState<DocInfo | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
@@ -356,7 +355,6 @@ function DocumentsTab({ project }: { project: Project }) {
       .then(([d, j]) => {
         setDocs(d.docs);
         setJobs(j.jobs);
-        setRunning(j.running);
         setErr(null);
       })
       .catch((e) => setErr(e.message));
@@ -382,8 +380,10 @@ function DocumentsTab({ project }: { project: Project }) {
     <div className="kx-docs">
       {err && <div className="kx-error">{err}</div>}
       <div className="kx-docs-toolbar">
-        {running ? (
-          <span className="kx-running">⟳ {running.doc_rel} yazılıyor…</span>
+        {jobs.some((j) => j.status === 'running') ? (
+          <span className="kx-running">
+            ⟳ {jobs.filter((j) => j.status === 'running').map((j) => j.doc_rel).join(' · ')} yazılıyor…
+          </span>
         ) : (
           <button className="btn btn-secondary btn-sm" onClick={runNext}>
             Run next step

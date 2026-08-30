@@ -132,3 +132,27 @@ test('existing project: no BRD scaffolded, chain starts from code-truth steps', 
   assert.deepEqual(done, ['STACK.md', 'STRUCTURE.md']); // ARCHITECTURE waits for approvals
   rmSync(work, { recursive: true, force: true });
 });
+
+test('advance runs independent steps in parallel (capped)', async () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Par', repoPath: join(work, 'par') }, pkgRoot);
+  setFrontmatterStatus(docPath(p, 'foundation/BRD.md'), 'approved');
+  // slow mock: each step sleeps 400ms — two sequential ≈ 800ms, parallel ≈ 400ms
+  const script = join(work, 'slow.sh');
+  writeFileSync(script, `#!/bin/sh
+prompt=$(cat)
+rel=$(printf '%s' "$prompt" | grep 'Produce EXACTLY' | sed 's/.*: \\.kortext\\///')
+sleep 0.4
+printf -- '---\\nstatus: draft\\nauthor: +mock\\n---\\n\\n# Mock\\n' > ".kortext/$rel"
+`);
+  chmodSync(script, 0o755);
+  const { advance } = await import('../server/runner.js');
+  const t0 = Date.now();
+  await advance(db, p, { id: 'slow', binary: script, args: [], installHint: '' }, pkgRoot);
+  const elapsed = Date.now() - t0;
+  const done = listJobs(db, p.id).filter((j) => j.status === 'done').map((j) => j.doc_rel).sort();
+  assert.deepEqual(done, ['GROWTH.md', 'LEGAL.md']);
+  assert.ok(elapsed < 750, `expected parallel (<750ms), took ${elapsed}ms`);
+  rmSync(work, { recursive: true, force: true });
+});

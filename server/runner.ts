@@ -32,18 +32,28 @@ export function runningJob(db: Database.Database, projectId: number): Job | unde
     .get(projectId) as Job | undefined;
 }
 
-// Next producible doc: unwritten, inputs all approved, nothing running.
-// listDocs is dependency-depth sorted, so the first hit is the right one.
-export function nextStep(db: Database.Database, project: Project, pkgRoot: string): DocStep | null {
-  if (runningJob(db, project.id)) return null;
+// All currently producible docs: unwritten, inputs settled, not already
+// being written. Dependency-depth order (listDocs is sorted).
+export function producibleSteps(db: Database.Database, project: Project, pkgRoot: string): DocStep[] {
+  const running = new Set(
+    (db
+      .prepare("SELECT doc_rel FROM jobs WHERE project_id = ? AND status = 'running'")
+      .all(project.id) as { doc_rel: string }[]).map((r) => r.doc_rel),
+  );
   const docs = listDocs(db, project, pkgRoot);
   const map = loadDocMap(pkgRoot, project.kind ?? 'new');
+  const steps: DocStep[] = [];
   for (const doc of docs) {
-    if (doc.status !== 'uninitialized' || doc.blocked) continue;
+    if (doc.status !== 'uninitialized' || doc.blocked || running.has(doc.rel)) continue;
     const step = map.get(doc.rel);
-    if (step) return step;
+    if (step) steps.push(step);
   }
-  return null;
+  return steps;
+}
+
+export function nextStep(db: Database.Database, project: Project, pkgRoot: string): DocStep | null {
+  if (runningJob(db, project.id)) return null;
+  return producibleSteps(db, project, pkgRoot)[0] ?? null;
 }
 
 // Builds the headless step prompt. The CLI runs inside the project folder, so
@@ -111,10 +121,12 @@ export interface RunOutcome {
   error?: string;
 }
 
-// The chain: run every currently-unblocked step in sequence until nothing is
-// producible (waiting on approvals) or a step fails. Approval routes call this
-// again, so the flow self-advances gate by gate. One loop per project at a time.
+// The chain: keep every currently-unblocked step running IN PARALLEL (capped)
+// until nothing is producible (waiting on approvals) or everything in flight
+// settles. Approval routes call this again, so the flow self-advances gate by
+// gate. One loop per project at a time; failed steps stay visible for Retry.
 const advancing = new Set<number>();
+const MAX_PARALLEL = 3;
 
 export async function advance(
   db: Database.Database,
@@ -125,11 +137,17 @@ export async function advance(
   if (advancing.has(project.id)) return;
   advancing.add(project.id);
   try {
+    const inFlight = new Set<Promise<unknown>>();
     for (;;) {
-      const step = nextStep(db, project, pkgRoot);
-      if (!step) return;
-      const out = await runStep(db, project, step, engine, pkgRoot);
-      if (!out.ok) return; // failed job stays visible; Retry resumes
+      const room = MAX_PARALLEL - inFlight.size;
+      if (room > 0) {
+        for (const step of producibleSteps(db, project, pkgRoot).slice(0, room)) {
+          const p = runStep(db, project, step, engine, pkgRoot).finally(() => inFlight.delete(p));
+          inFlight.add(p);
+        }
+      }
+      if (inFlight.size === 0) return; // nothing running, nothing producible
+      await Promise.race(inFlight); // a completion may unlock siblings (e.g. not-applicable)
     }
   } finally {
     advancing.delete(project.id);
