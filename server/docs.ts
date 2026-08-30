@@ -170,6 +170,21 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
   return docs;
 }
 
+// The handshake is done when every document the workflow produces is settled
+// (approved or not-applicable). Docs without a producing step (DECISIONS log,
+// unmapped skeletons) don't gate completion.
+export function analysisComplete(db: Database.Database, project: Project, pkgRoot: string): boolean {
+  const map = loadDocMap(pkgRoot, project.kind ?? 'new');
+  const docs = listDocs(db, project, pkgRoot);
+  const byRel = new Map(docs.map((d) => [d.rel, d.status]));
+  const targets = [...map.keys()].filter((rel) => !rel.endsWith('backlog.yaml') && rel !== 'TODO.md');
+  if (targets.length === 0) return false;
+  const settled = (s: string | undefined) => s === 'approved' || s === 'not-applicable';
+  // BRD gates the new-project flow even though no step produces it
+  if ((project.kind ?? 'new') === 'new' && !settled(byRel.get('foundation/BRD.md'))) return false;
+  return targets.every((rel) => settled(byRel.get(rel)));
+}
+
 // rel is relative to .kortext/: a root doc ("STACK.md"), or one under
 // foundation/ or reports/. The pattern forbids traversal ("." never starts
 // a segment) and anything outside those three places.

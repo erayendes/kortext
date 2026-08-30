@@ -51,6 +51,12 @@ export interface PlanState {
   planningPending: boolean;
 }
 
+export interface HandshakeState {
+  analysisComplete: boolean;
+  kopengInstalled: boolean;
+  transferred: boolean;
+}
+
 export interface EngineInfo {
   id: string;
   available: boolean;
@@ -73,7 +79,7 @@ export const api = {
   jobs: (projectId: number) => req<{ jobs: Job[]; running: Job | null }>(`/api/projects/${projectId}/jobs`),
   runNext: (projectId: number) =>
     req<{ started: string }>(`/api/projects/${projectId}/run-next`, { method: 'POST' }),
-  planState: (projectId: number) => req<PlanState>(`/api/projects/${projectId}/plan`),
+  handshake: (projectId: number) => req<HandshakeState>(`/api/projects/${projectId}/handshake`),
   listReports: (projectId: number) => req<{ reports: ReportInfo[] }>(`/api/projects/${projectId}/reports`),
   generateChangeReport: (projectId: number) =>
     req<{ report: ReportInfo }>(`/api/projects/${projectId}/reports/change`, { method: 'POST' }),

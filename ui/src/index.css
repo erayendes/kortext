@@ -1466,3 +1466,11 @@ body {
 .kx-thread { margin: 2px 0 10px 16px; display: flex; flex-direction: column; gap: 6px; }
 .kx-thread-input { display: flex; gap: 6px; }
 .kx-thread-input .kx-input { flex: 1; height: 30px; font-size: 12.5px; }
+
+/* R4 — handshake completion card */
+.kx-handshake { display: flex; flex-direction: column; gap: 14px; padding: 18px; border: 1px solid rgba(52,146,90,.35); border-radius: var(--r-lg); background: rgba(52,146,90,.06); }
+.kx-handshake-head { display: flex; flex-direction: column; gap: 4px; }
+.kx-handshake-title { font-size: 14.5px; font-weight: 650; color: var(--green, #2f7d4f); }
+.kx-handshake-kopeng { display: flex; align-items: center; gap: 12px; }
+.kx-handshake-promo { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border: 1px dashed var(--border-strong); border-radius: var(--r-md); background: var(--bg); }
+.kx-handshake-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }

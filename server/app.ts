@@ -5,9 +5,11 @@ import { join } from 'node:path';
 import { createProject, listProjects, removeProject, scaffoldProject } from './projects.js';
 import { cancelRequest, completeRequest, createRequest, listRequests } from './requests.js';
 import { PERSONAS, WORKFLOWS, handleMcpRequest } from './mcp.js';
-import { docPath, listDocs, setFrontmatterStatus, workflowNameFor } from './docs.js';
+import { analysisComplete, docPath, listDocs, setFrontmatterStatus, workflowNameFor } from './docs.js';
 import { generateChangeReport, listReports } from './reports.js';
 import { pickDirectoryNative } from './pick-directory.js';
+import { spawnSync } from 'node:child_process';
+import { readdirSync } from 'node:fs';
 import { detectEngines, selectedEngine, setSetting, ENGINES } from './engines.js';
 import { advance, explainDoc, failStaleJobs, listJobs, nextStep, reviseDoc, runningJob } from './runner.js';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -251,6 +253,24 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     explainDoc(project, String(rel ?? ''), String(excerpt ?? ''), question, history, engine, pkgRoot)
       .then((r) => res.json(r))
       .catch((err) => res.status(500).json({ error: (err as Error).message }));
+  });
+
+  // Handshake state: analysis done? kopeng around? tasks already exported?
+  app.get('/api/projects/:id/handshake', (req, res) => {
+    const project = projectOr404(req.params.id, res);
+    if (!project) return;
+    const kopengDir = join(project.repo_path, '.kopeng');
+    let transferred = false;
+    try {
+      transferred = readdirSync(kopengDir).length > 0;
+    } catch {
+      /* no .kopeng dir */
+    }
+    res.json({
+      analysisComplete: analysisComplete(db, project, pkgRoot),
+      kopengInstalled: spawnSync('which', ['kopeng'], { stdio: 'ignore' }).status === 0,
+      transferred,
+    });
   });
 
   // Plan state: whether planning was requested, and whether the outputs exist.

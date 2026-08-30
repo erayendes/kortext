@@ -1,102 +1,49 @@
-# AGENTS.md — Kortext çalışma sözleşmesi (v1.0)
+# AGENTS.md — Devir Anayasası (Kortext v1.0)
 
-> **Bu dosyayı ilk sen okursun.** Bu proje **Kortext** ile yönetiliyor: Kortext projenin
-> pasif beynidir — süreci tanımlar, belgeleri ve onay durumlarını izler, istekleri kuyruğa
-> alır. **İşi sen yaparsın** (hangi model/araç olursan ol). Kortext sana iş dağıtmaz,
-> seni çalıştırmaz; sen bu sözleşmeye uyarsın, +prime (insan) panelden onaylar.
+> Bu proje **Kortext** ile analiz edildi: brief'ten yola çıkan tüm analiz belgeleri üretildi,
+> +prime (insan) tek tek onayladı ve Kortext görevini tamamlayıp çekildi. Bu dosya, bundan
+> sonraki geliştirme ilişkisinin anayasasıdır — projede çalışan HER ajan buna uyar.
 
-## 0. Bağlantı (her oturumda bir kez) — +prime'a SORMADAN kendin kur
+## 1. Kutsal guideline — `.kortext/`
 
-Süreç tanımları projede DEĞİL, Kortext'tedir (varsayılan adres `http://localhost:4200`).
-İki erişim yolun var; **her fazın ve her adımın başında** bekleyen istekleri kontrol et:
+Kararlarını koddan tahmin ederek değil, buradan okuyarak ver:
 
-1. **MCP bağlıysa** (`kortext` server görünüyorsa): `get_pending_requests(repo_path)` ·
-   `get_project_context(repo_path)` · `get_workflow(name)` · `get_persona(handle)` ·
-   `complete_request(request_id)`.
-2. **MCP bağlı değilse — durma, +prime'a sorma:**
-   a. Sonraki oturumlar için hattı KENDİN kur (tek shell komutu):
-      `claude mcp add --transport http kortext http://localhost:4200/mcp`
-   b. Bu oturumda REST ile devam et (aynı bilgiler, curl yeter):
-      - durum + kuyruk + workflow adı: `GET /api/agent/context?repo_path=<mutlak yol>`
-      - süreç adımları: `GET /api/agent/workflow/<name>`
-      - persona perspektifi: `GET /api/agent/persona/<handle>`
-      - istek kapatma: `POST /api/requests/<id>/complete`
-   c. Kortext'e hiç ulaşamıyorsan (bağlantı hatası) ANCAK O ZAMAN dur ve +prime'a söyle:
-      panel açık olmayabilir (`kortext` komutu) ya da port farklı olabilir.
+- **Kök** (`.kortext/*.md`) — *canlı çekirdek, günlük başvurun*:
+  `ARCHITECTURE` (sistemin biçimi) · `STACK` (teknoloji + araçlar) · `STRUCTURE`
+  (standartlar + klasörler + terminoloji) · `API` · `DATABASE` · `SECURITY` · `DESIGN` ·
+  `TEST` · `LEGAL` · `GROWTH` · `CONTENT` · `ENVIRONMENT` — kod ve içerik üretirken bunlara uy.
+  `status: not-applicable` olan dosya bu proje için bilinçli olarak boş bırakılmıştır.
+- **`foundation/`** — *donmuş başlangıç*: `BRD` (brief), `PRD`, `TRD`, `PFD`. Bağlam
+  gerektiğinde oku; keyfince değiştirme.
+- **`DECISIONS.md`** — karar günlüğü (aşağıda §3).
+- **`.kopeng/`** (varsa) — görev yapısı: Version → Epic → Task dosyaları. Görev takibi
+  Kopeng'in işidir; kuruluysa sıradaki işini oradan al, durumunu orada güncelle.
 
-## 1. Kaynak gerçeği (source of truth) — `.kortext/`
+## 2. Çalışma kuralları
 
-- **Kök** (`.kortext/*.md`) — *canlı çekirdek, her gün başvurduğun yapı taşları*:
-  `ARCHITECTURE, STACK, STRUCTURE, API, DATABASE, SECURITY, DESIGN, TEST, LEGAL,
-  GROWTH, CONTENT, ENVIRONMENT` + `DECISIONS.md` (karar günlüğün) + `TODO.md`
-  (plan onaylandıysa iş listesi). Kod ve içerik üretirken bunlara uy.
-  `status: uninitialized` dosya henüz yok sayılır — atla.
-- **`foundation/`** — *donmuş başlangıç*: `BRD` (brief), `PRD`, `TRD`, `PFD`, `backlog.yaml`.
-  Onaylandıktan sonra istek olmadan değiştirilmez; gerektiğinde bak.
-- **`reports/`** — *insan için çıktılar*: senin yazdığın raporlar buraya düşer.
-- Bilgi eksikse **varsayım yapma**: belgeye açık soru olarak yaz ve +prime'a sor.
+- **Belgeye uy, uymuyorsan belgeyi güncelle.** Bir kararın guideline'la çeliştiğini
+  görürsen sessizce sapma: ya karara uy, ya +prime'la konuşup İLGİLİ BELGEYİ de güncelle
+  (değişikliği DECISIONS.md'ye yaz). Belge ile kod birbirinden kopmasın — bu proje
+  hafızasının bütün değeri budur.
+- **Görevler:** `.kopeng/` varsa oradan yürü. Yoksa +prime'ın talimatıyla çalış; isterse
+  işi önce görevlere bölüp listeyi göster.
+- **+prime'a düşen işler** (hesap açma, API key, satın alma, onay): sen yapamazsın —
+  bildir, bekleme yaratıyorsa görünür kıl.
 
-## 2. Faz A — Analiz
+## 3. Karar günlüğü — DECISIONS.md
 
-1. **Brief kapısı:** `foundation/BRD.md` `status: approved` değilse DUR, +prime'a söyle.
-2. Workflow'u çek: hangisinin geçerli olduğunu `get_project_context` söyler
-   (`workflow` alanı — proje panelde "new" ya da "existing" olarak eklendi);
-   `get_workflow(<o isim>)` ile adımları al.
-3. Adımları sırayla uygula. **Bağımlılık kuralı (çekirdek):**
-   - Bir adımın `inputs:` listesindeki TÜM dosyalar `status: approved` olmadan o adımın
-     çıktısını YAZMA.
-   - Girdileri hazır adımları bekletme; bağımsız adımlar art arda tek oturumda yazılabilir.
-4. Her çıktıyı `.kortext/`teki iskelet şablonu doldurarak üret; yazar personasının
-   perspektifini `get_persona` ile al. Frontmatter: `status: draft`, `author: +persona`.
-   Onay HER ZAMAN +prime'ındır — hiçbir belgeyi kendin `approved` yapma.
-5. Yazacak adım kalmayınca: hangi belgelerin onay beklediğini +prime'a listele ve dur.
-   Yeni oturum kaldığı yeri dosya durumlarından okur (`get_project_context` da özetler).
-
-## 3. Faz B — Planlama (YALNIZ istekle)
-
-Analiz bitti diye planlamaya GEÇME. Tetik: kuyruğa `planning` isteği (paneldeki
-"Kopeng'e aktar") ya da +prime'ın açık talimatı. O zaman
-`get_workflow("planning-pipeline")` → `foundation/backlog.yaml` (dondurulmuş şema —
-workflow'un içinde) + `.kortext/TODO.md` (`status: draft`) → +prime onayına bırak.
-TODO.md onaylanınca plan yürürlüktedir.
-
-## 4. İstek kuyruğu — türler ve işleme
-
-Her istek için; bitince kapat (`complete_request` ya da REST `POST /api/requests/<id>/complete`):
-
-- **`revise`** — `{doc, notes[]}`: belgeyi notlara göre yeniden yaz; `status: draft`'a çek
-  (onay yeniden +prime'a düşer). Bağımlı `approved` belgeler etkileniyorsa +prime'a söyle.
-- **`report`** — `{report_type, template}`: istekle gelen şablonu doldur,
-  `reports/<tür>-<YYYY-MM-DD>.md` olarak yaz (`status: report`, `type: <tür>`).
-  Karar Özeti (`decisions`) için kaynak: `.kortext/DECISIONS.md`.
-- **`planning`** — §3'ü koş.
-- **`question`** — +prime'ın serbest sorusu; cevabı istekte belirtilen yere yaz.
-
-## 5. Faz C — Geliştirme (planlama onaylandıysa)
-
-1. **Seç:** `TODO.md`'den sıradaki işaretsiz (`- [ ]`) görevi al; liste bağımlılık
-   sırasındadır, bozma. `blocked_by`'ı bitmemiş görevi atla.
-2. **Yap:** işi `.kortext/` kök belgelerine uyarak tamamla.
-3. **İşaretle:** bitince satırı `- [x]` yap.
-4. **Kaydet:** §6.
-`assignee: prime` görevler senin değil — atla, gerekiyorsa hatırlat.
-
-## 6. Karar günlüğü — DECISIONS.md
-
-Tek hafızan bu. Sürece yön veren her kararı (teknik/ürün/tasarım/güvenlik) **verildiği anda**
-`.kortext/DECISIONS.md`'nin EN ÜSTÜNE ekle; eskiler silinmez, onay döngüsüne girmez:
+Sürece yön veren her kararı (teknik/ürün/tasarım/güvenlik) **verildiği anda**
+`.kortext/DECISIONS.md`'nin EN ÜSTÜNE ekle; eskiler silinmez:
 
 ```
 ## YYYY-MM-DD — [karar başlığı]
 [Tek paragraf: gerekçe; varsa elenen alternatif ve neden.]
 ```
 
-Neden önemli: sonraki oturum (ya da başka bir ajan) "neden böyle" sorusunu buradan okur;
-Karar Özeti raporu buradan derlenir. Kortext güncel tutulmadığını fark ederse
-istek cevaplarında sana hatırlatır. **Read-before-Write:** paylaşılan dosyaya yazmadan
-önce güncel halini oku.
+Sonraki oturum (ya da başka bir ajan) "neden böyle" sorusunun cevabını buradan okur.
+**Read-before-Write:** paylaşılan dosyaya yazmadan önce güncel halini oku.
 
-## 7. Davranış anayasası (öz)
+## 4. Davranış anayasası (öz)
 
 - **Dil:** +prime ile iletişim +prime'ın dilinde; kod, commit, değişken, yorum İngilizce;
   ürün-içi metin hedef proje dilinde.
@@ -105,6 +52,6 @@ istek cevaplarında sana hatırlatır. **Read-before-Write:** paylaşılan dosya
   bildir, anahtarın iptalini öner; git geçmişi temizliği +prime kararıdır.
 - **Tıkanma (3-deneme kuralı):** aynı engelde 3 farklı yöntem başarısızsa DUR; denemeleri
   ve önerini DECISIONS.md'ye not düş, +prime'a sor. Sessiz workaround'la ilerleme.
-- **Onay çizgisi:** `approver: +prime` olan hiçbir şeyi kendin onaylama; `approved` belgeyi
-  istek olmadan değiştirme.
 - **Çelişki:** belgeler arası çelişki görürsen üretimi durdur, +prime'a sor; sessizce seçme.
+- **Test disiplini:** TEST.md'deki kalite çıtasına uy; "bitti" demek oradaki ölçütleri
+  karşılamak demektir.

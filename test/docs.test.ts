@@ -87,3 +87,20 @@ test('not-applicable input satisfies dependencies downstream', () => {
   assert.equal(prd.blocked, false); // GROWTH n/a + LEGAL approved unblock PRD
   rmSync(work, { recursive: true, force: true });
 });
+
+test('analysisComplete: only when every workflow-produced doc is settled', async () => {
+  const { analysisComplete } = await import('../server/docs.js');
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'HS', repoPath: join(work, 'hs') }, pkgRoot);
+  assert.equal(analysisComplete(db, p, pkgRoot), false);
+  // settle everything the map produces (+ BRD gate)
+  setFrontmatterStatus(docPath(p, 'foundation/BRD.md'), 'approved');
+  const { loadDocMap } = await import('../server/docs.js');
+  for (const rel of loadDocMap(pkgRoot, 'new').keys()) {
+    if (rel.endsWith('backlog.yaml') || rel === 'TODO.md') continue;
+    setFrontmatterStatus(docPath(p, rel), rel === 'GROWTH.md' ? 'not-applicable' : 'approved');
+  }
+  assert.equal(analysisComplete(db, p, pkgRoot), true);
+  rmSync(work, { recursive: true, force: true });
+});

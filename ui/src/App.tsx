@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
-import { api, type DocInfo, type EngineInfo, type Job, type KortextRequest, type PlanState, type Project, type ReportInfo } from './api';
+import { api, type DocInfo, type EngineInfo, type HandshakeState, type Job, type Project } from './api';
 import { DocDrawer, StatusBadge } from './DocDrawer';
-
-type Tab = 'documents' | 'plan' | 'reports' | 'connect';
 
 export function App() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -20,8 +18,6 @@ export function App() {
     refresh();
   }, []);
 
-  const [initialTab, setInitialTab] = useState<Tab>('documents');
-
   return (
     <div className="kx-shell">
       <header className="kx-header">
@@ -32,15 +28,7 @@ export function App() {
       </header>
       {error && <div className="kx-error">{error}</div>}
       {selected ? (
-        <ProjectScreen
-          key={selected.id}
-          project={selected}
-          initialTab={initialTab}
-          onBack={() => {
-            setSelected(null);
-            setInitialTab('documents');
-          }}
-        />
+        <ProjectScreen key={selected.id} project={selected} onBack={() => setSelected(null)} />
       ) : (
         <main className="kx-main">
           <div className="kx-main-head">
@@ -65,12 +53,9 @@ export function App() {
           </div>
           {adding && (
             <AddProject
-              onDone={(project, hadBrief) => {
+              onDone={(project) => {
                 setAdding(false);
                 refresh();
-                // Analysis runs inside kortext now — Documents is where it flows.
-                void hadBrief;
-                setInitialTab('documents');
                 setSelected(project);
               }}
               onCancel={() => setAdding(false)}
@@ -295,28 +280,10 @@ function AddProject({
   );
 }
 
-function ProjectScreen({
-  project,
-  onBack,
-  initialTab = 'documents',
-}: {
-  project: Project;
-  onBack: () => void;
-  initialTab?: Tab;
-}) {
-  const [tab, setTab] = useState<Tab>(initialTab);
-  const [pending, setPending] = useState<KortextRequest[]>([]);
-
-  const refreshRequests = () =>
-    api.listRequests(project.id, 'pending').then((r) => setPending(r.requests));
-
-  useEffect(() => {
-    refreshRequests();
-    const timer = setInterval(refreshRequests, 5000);
-    return () => clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [project.id]);
-
+// One view: the analysis flow. When the handshake completes, the completion
+// card takes over the top — kortext's job is done, the client takes it from
+// there (vision §20).
+function ProjectScreen({ project, onBack }: { project: Project; onBack: () => void }) {
   return (
     <main className="kx-main">
       <div className="kx-main-head">
@@ -326,21 +293,73 @@ function ProjectScreen({
         <h1>{project.name}</h1>
         <span className="kx-card-path mono">{project.repo_path}</span>
       </div>
-      <nav className="kx-tabs">
-        {(['documents', 'plan', 'reports', 'connect'] as Tab[]).map((t) => (
-          <button key={t} className={`kx-tab ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
-            {t === 'documents' ? 'Documents' : t === 'plan' ? 'Plan' : t === 'reports' ? 'Reports' : 'Connect'}
-            {t === 'connect' && pending.length > 0 && <span className="kx-badge">{pending.length}</span>}
-          </button>
-        ))}
-      </nav>
-      {tab === 'documents' && <DocumentsTab project={project} />}
-      {tab === 'plan' && <PlanTab project={project} onRequested={refreshRequests} />}
-      {tab === 'reports' && <ReportsTab project={project} onRequested={refreshRequests} />}
-      {tab === 'connect' && (
-        <ConnectTab project={project} pending={pending} onChanged={refreshRequests} />
-      )}
+      <DocumentsTab project={project} />
     </main>
+  );
+}
+
+function HandshakeCard({ project }: { project: Project }) {
+  const [state, setState] = useState<HandshakeState | null>(null);
+
+  useEffect(() => {
+    const refresh = () => api.handshake(project.id).then(setState).catch(() => {});
+    refresh();
+    const timer = setInterval(refresh, 5000);
+    return () => clearInterval(timer);
+  }, [project.id]);
+
+  if (!state?.analysisComplete) return null;
+
+  const instructions = [
+    {
+      title: 'Analiz et ve geliştirmeye başla',
+      command: 'Read AGENTS.md and the .kortext/ guideline docs, then start building.',
+    },
+    {
+      title: 'Önce görevlere böl',
+      command: 'Read AGENTS.md, break the work into tasks first and show me the list.',
+    },
+    {
+      title: 'Belirli bir işle başla',
+      command: 'Read AGENTS.md, then start with: <işi buraya yaz>',
+    },
+  ];
+
+  return (
+    <div className="kx-handshake">
+      <div className="kx-handshake-head">
+        <span className="kx-handshake-title">✓ Analysis complete — el sıkışma tamam</span>
+        <span className="kx-cmd-hint">
+          Kortext görevini bitirdi; belgeler artık projenin kutsal guideline'ı. Bundan sonrası
+          senin istemcinle aranızda.
+        </span>
+      </div>
+      {state.kopengInstalled ? (
+        <div className="kx-handshake-kopeng">
+          <button className="btn btn-primary" disabled title="R5 ile geliyor">
+            Kopeng'e aktar
+          </button>
+          <span className="kx-cmd-hint">
+            İşi görevlere böler ve .kopeng/ altına Kopeng board'unun okuyacağı dosyaları koyar.
+            {state.transferred ? ' (Aktarılmış görünüyor.)' : ''}
+          </span>
+        </div>
+      ) : (
+        <div className="kx-handshake-promo">
+          <span className="kx-cmd-title">Görevleri board'da izlemek ister misin?</span>
+          <span className="kx-cmd-hint">
+            Kopeng, ajanının işlerini kanban'da izlediğin tamamlayıcı üründür — ajan görev çeker,
+            sen izlersin. Kur ve "Kopeng'e aktar" butonu burada belirsin:
+          </span>
+          <code className="kx-cmd mono">npm install -g kopeng</code>
+        </div>
+      )}
+      <div className="kx-handshake-cards">
+        {instructions.map((c) => (
+          <CommandCard key={c.title} title={c.title} hint="İstemcine (CLI ya da uygulama) yapıştır." command={c.command} />
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -390,6 +409,7 @@ function DocumentsTab({ project }: { project: Project }) {
 
   return (
     <div className="kx-docs">
+      <HandshakeCard project={project} />
       {err && <div className="kx-error">{err}</div>}
       <div className="kx-docs-toolbar">
         {jobs.some((j) => j.status === 'running') ? (
@@ -446,274 +466,6 @@ function DocumentsTab({ project }: { project: Project }) {
         onClose={() => setOpen(null)}
         onChanged={refresh}
       />
-    </div>
-  );
-}
-
-function PlanTab({ project, onRequested }: { project: Project; onRequested: () => void }) {
-  const [plan, setPlan] = useState<PlanState | null>(null);
-  const [todoOpen, setTodoOpen] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
-
-  const refresh = () => api.planState(project.id).then(setPlan);
-
-  useEffect(() => {
-    refresh();
-    const timer = setInterval(refresh, 4000);
-    return () => clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [project.id]);
-
-  if (!plan) return <div className="kx-empty">Loading…</div>;
-
-  const transfer = () =>
-    api.createRequest(project.id, 'planning', {}).then(() => {
-      setMsg('Planlama isteği kuyruğa eklendi — ajan, analiz onayları tamamlandığında backlog + TODO üretir.');
-      onRequested();
-      refresh();
-    });
-
-  return (
-    <div className="kx-plan">
-      {msg && (
-        <div className="kx-info" onClick={() => setMsg(null)}>
-          {msg}
-        </div>
-      )}
-      {!plan.todoExists && !plan.planningPending && (
-        <div className="kx-plan-cta">
-          <p>
-            No plan yet — and that's the default. Kortext creates tasks only when you ask for the
-            transfer; until then the project stays analysis-only.
-          </p>
-          <button className="btn btn-primary" onClick={transfer}>
-            Kopeng'e aktar
-          </button>
-          <span className="kx-cmd-hint">
-            Queues a planning request. Your agent produces backlog.yaml + TODO.md; live Kopeng board
-            push arrives when Kopeng is ready — the export file format is already frozen.
-          </span>
-        </div>
-      )}
-      {plan.planningPending && (
-        <div className="kx-empty">
-          Planning request queued — run your agent; it will produce the backlog once analysis
-          approvals are complete.
-        </div>
-      )}
-      {plan.todoExists && (
-        <div className="kx-plan-ready">
-          <div className="kx-plan-row">
-            <span className="kx-doc-name">TODO.md</span>
-            <StatusBadge
-              doc={{
-                rel: 'TODO.md',
-                group: 'core',
-                name: 'TODO',
-                status: plan.todoStatus ?? 'draft',
-                author: '+operation-manager',
-                inputs: [],
-                blocked: false,
-                revisionPending: false,
-                upstreamChanged: false,
-              }}
-            />
-            <span className="kx-doc-spacer" />
-            <button className="btn btn-sm" onClick={() => setTodoOpen(true)}>
-              Open
-            </button>
-          </div>
-          {plan.backlogExists && (
-            <span className="kx-cmd-hint">
-              backlog.yaml is in .kortext/foundation/ — the frozen export contract Kopeng will
-              consume.
-            </span>
-          )}
-        </div>
-      )}
-      <DocDrawer
-        project={project}
-        doc={
-          todoOpen
-            ? {
-                rel: 'TODO.md',
-                group: 'core',
-                name: 'TODO',
-                status: plan.todoStatus ?? 'draft',
-                author: '+operation-manager',
-                inputs: [],
-                blocked: false,
-                revisionPending: false,
-                upstreamChanged: false,
-              }
-            : null
-        }
-        onClose={() => setTodoOpen(false)}
-        onChanged={refresh}
-      />
-    </div>
-  );
-}
-
-function ReportsTab({ project, onRequested }: { project: Project; onRequested: () => void }) {
-  const [reports, setReports] = useState<ReportInfo[]>([]);
-  const [open, setOpen] = useState<ReportInfo | null>(null);
-  const [msg, setMsg] = useState<string | null>(null);
-
-  const refresh = () => api.listReports(project.id).then((r) => setReports(r.reports));
-
-  useEffect(() => {
-    refresh();
-    const timer = setInterval(refresh, 5000);
-    return () => clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [project.id]);
-
-  const requestFromAgent = (reportType: string, label: string) =>
-    api.createRequest(project.id, 'report', { report_type: reportType }).then(() => {
-      setMsg(`${label} isteği kuyruğa eklendi — ajanın bir sonraki adımında yazılır.`);
-      onRequested();
-    });
-
-  const cards = [
-    {
-      key: 'change',
-      title: 'Change',
-      desc: 'Doc statuses + recent git history. Generated instantly by kortext.',
-      action: 'Generate now',
-      run: () => api.generateChangeReport(project.id).then(refresh),
-      disabled: false,
-    },
-    {
-      key: 'risk',
-      title: 'Risk & Recommendations',
-      desc: 'Written by your agent from the project state.',
-      action: 'Request from agent',
-      run: () => requestFromAgent('risk', 'Risk & Recommendations'),
-      disabled: false,
-    },
-    {
-      key: 'decisions',
-      title: 'Decision Summary',
-      desc: 'Written by your agent from decisions.md and the docs.',
-      action: 'Request from agent',
-      run: () => requestFromAgent('decisions', 'Decision Summary'),
-      disabled: false,
-    },
-    {
-      key: 'progress',
-      title: 'Progress',
-      desc: 'Task progress — available once the project is transferred to Kopeng.',
-      action: 'Kopeng not connected',
-      run: () => {},
-      disabled: true,
-    },
-  ];
-
-  return (
-    <div className="kx-reports">
-      {msg && (
-        <div className="kx-info" onClick={() => setMsg(null)}>
-          {msg}
-        </div>
-      )}
-      <div className="kx-report-cards">
-        {cards.map((c) => (
-          <div key={c.key} className={`kx-report-card${c.disabled ? ' disabled' : ''}`}>
-            <span className="kx-report-title">{c.title}</span>
-            <span className="kx-report-desc">{c.desc}</span>
-            <button className="btn btn-sm" disabled={c.disabled} onClick={c.run}>
-              {c.action}
-            </button>
-          </div>
-        ))}
-      </div>
-      <section>
-        <h2 className="kx-doc-group">History</h2>
-        {reports.length === 0 && <div className="kx-empty">No reports yet.</div>}
-        {reports.map((r) => (
-          <button key={r.rel} className="kx-doc-row" onClick={() => setOpen(r)}>
-            <span className="kx-doc-name">{r.name}</span>
-            {r.type && <span className="kx-req-type">{r.type}</span>}
-            <span className="kx-doc-spacer" />
-            <span className="kx-req-when">{r.created_at.slice(0, 16).replace('T', ' ')}</span>
-          </button>
-        ))}
-      </section>
-      <DocDrawer
-        project={project}
-        doc={
-          open
-            ? {
-                rel: open.rel,
-                group: 'core',
-                name: open.name,
-                status: 'report',
-                author: null,
-                inputs: [],
-                blocked: false,
-                revisionPending: false,
-                upstreamChanged: false,
-              }
-            : null
-        }
-        onClose={() => setOpen(null)}
-        onChanged={refresh}
-      />
-    </div>
-  );
-}
-
-function ConnectTab({
-  project,
-  pending,
-  onChanged,
-}: {
-  project: Project;
-  pending: KortextRequest[];
-  onChanged: () => void;
-}) {
-  const port = window.location.port || '4200';
-  const cli = `cd ${project.repo_path} && claude "Read AGENTS.md and start the analysis."`;
-  const prompt = 'Read AGENTS.md and start the analysis.';
-  const mcp = `claude mcp add --transport http kortext http://localhost:${port}/mcp`;
-
-  return (
-    <div className="kx-connect">
-      <CommandCard
-        title="Terminal (Claude Code / Codex CLI)"
-        hint="Paste in your terminal — the agent finds the repo and the contract."
-        command={cli}
-      />
-      <CommandCard
-        title="Desktop app"
-        hint="Open the project folder in your agent's app, then paste this prompt."
-        command={prompt}
-      />
-      <CommandCard
-        title="MCP connection (once per machine)"
-        hint="Lets the agent see panel requests (revise notes, report asks)."
-        command={mcp}
-      />
-      <section className="kx-requests">
-        <h2>Pending requests {pending.length > 0 && <span className="kx-badge">{pending.length}</span>}</h2>
-        {pending.length === 0 && (
-          <div className="kx-empty">No pending requests. Notes and report asks queue up here for your agent.</div>
-        )}
-        {pending.map((r) => (
-          <div key={r.id} className="kx-request-row">
-            <span className={`kx-req-type kx-req-${r.type}`}>{r.type}</span>
-            <span className="kx-req-payload mono">{r.payload}</span>
-            <span className="kx-req-when">{r.created_at}</span>
-            <button
-              className="btn btn-sm"
-              onClick={() => api.cancelRequest(r.id).then(onChanged)}
-            >
-              Cancel
-            </button>
-          </div>
-        ))}
-      </section>
     </div>
   );
 }
