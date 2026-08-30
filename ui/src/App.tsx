@@ -400,7 +400,10 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
           ← Projects
         </button>
         <div className="kx-main-title">
-          <h1>{project.name}</h1>
+          <div className="kx-card-head">
+            {project.code && <span className="kx-card-code mono">{project.code}</span>}
+            <h1>{project.name}</h1>
+          </div>
           <span className="kx-card-path mono" title={project.repo_path}>
             {shortPath(project.repo_path)}
           </span>
