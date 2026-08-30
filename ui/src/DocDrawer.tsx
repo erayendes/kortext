@@ -133,7 +133,7 @@ export function DocDrawer({
         <div className="dr-title">
           <span className="kx-doc-name">{doc.name}</span>
           <StatusBadge doc={doc} />
-          {doc.author && <span className="kx-doc-author mono">{doc.author}</span>}
+          {doc.author && <span className="kx-doc-author mono">{doc.author.replace(/^\+/, '')}</span>}
         </div>
         <div className="dr-actions">
           {!editing && doc.status !== 'uninitialized' && (
@@ -264,7 +264,9 @@ function DocBlock({
           <thead>
             <tr>
               {token.table.header.map((h, i) => (
-                <th key={i}>{h}</th>
+                <th key={i}>
+                  <Inline text={h} />
+                </th>
               ))}
             </tr>
           </thead>
@@ -272,7 +274,9 @@ function DocBlock({
             {token.table.rows.map((r, i) => (
               <tr key={i}>
                 {r.map((c, j) => (
-                  <td key={j}>{c}</td>
+                  <td key={j}>
+                    <Inline text={c} />
+                  </td>
                 ))}
               </tr>
             ))}
@@ -290,12 +294,35 @@ function DocBlock({
   }
   return (
     <div className={cls} onClick={onSelect}>
-      {parseInline(token.text).map((s, i) => (
+      <Inline text={token.text} />
+    </div>
+  );
+}
+
+// Backticks inside a bold span aren't caught by parseInline (its regex is
+// flat), so bold values get one more code-splitting pass here.
+function CodeBits({ text }: { text: string }) {
+  const parts = text.split(/`([^`]+)`/);
+  return <>{parts.map((p, i) => (i % 2 ? <code key={i}>{p}</code> : p))}</>;
+}
+
+function Inline({ text }: { text: string }) {
+  return (
+    <>
+      {parseInline(text).map((s, i) => (
         <Fragment key={i}>
-          {s.type === 'bold' ? <strong>{s.value}</strong> : s.type === 'code' ? <code>{s.value}</code> : s.value}
+          {s.type === 'bold' ? (
+            <strong>
+              <CodeBits text={s.value} />
+            </strong>
+          ) : s.type === 'code' ? (
+            <code>{s.value}</code>
+          ) : (
+            s.value
+          )}
         </Fragment>
       ))}
-    </div>
+    </>
   );
 }
 

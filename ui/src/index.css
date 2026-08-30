@@ -1341,6 +1341,8 @@ body {
 .kx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
 .kx-card { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--card); cursor: pointer; text-align: left; transition: border-color var(--speed) var(--ease), background var(--speed) var(--ease); }
 .kx-card:hover { border-color: var(--border-strong); background: var(--bg-hover); }
+.kx-card-head { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.kx-card-code { font-size: 11px; font-weight: 600; color: var(--fg-muted); padding-right: 9px; border-right: 1px solid var(--border-strong); }
 .kx-card-name { font-size: 14px; font-weight: 550; }
 .kx-card-path { font-size: 11px; color: var(--fg-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .kx-empty { padding: 34px 22px; border: 1px dashed var(--border); border-radius: var(--r-lg); color: var(--fg-mid); font-size: 13px; text-align: center; }
@@ -1462,13 +1464,13 @@ body {
 .kx-engine-select { height: 24px; border: 1px solid var(--border); border-radius: var(--r-sm, 6px); background: var(--bg); color: var(--fg); font-size: 11.5px; padding: 0 4px; }
 .kx-engine-warn { font-size: 11.5px; color: var(--red); background: rgba(204,107,107,.08); padding: 4px 10px; border-radius: var(--r-md); }
 .kx-engine-warn code { font-size: 10.5px; }
-.kx-docs-toolbar { display: flex; align-items: center; gap: 10px; }
+.kx-docs-toolbar { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
 .kx-running { font-size: 12px; color: var(--accent); animation: kx-pulse 1.4s ease-in-out infinite; }
 @keyframes kx-pulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
 .kx-doc-row.failed { border-color: rgba(204,107,107,.5); }
 .kx-doc-fail { font-size: 10.5px; color: var(--red); background: rgba(204,107,107,.1); padding: 2px 7px; border-radius: 5px; }
 
-.kx-code { width: 130px; flex: none; }
+.kx-code-input { width: 130px; flex: none; }
 
 /* R3 — explain bubbles + footer */
 .kx-explain { display: flex; flex-direction: column; gap: 4px; margin: 4px 0 8px 16px; padding: 8px 12px; border-left: 3px solid var(--accent); border-radius: var(--r-md); background: var(--bg-subtle); font-size: 12.5px; }

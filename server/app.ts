@@ -2,7 +2,7 @@ import express from 'express';
 import type Database from 'better-sqlite3';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { createProject, listProjects, removeProject, scaffoldProject } from './projects.js';
+import { createProject, deriveCode, listProjects, removeProject, scaffoldProject } from './projects.js';
 import { cancelRequest, completeRequest, createRequest, listRequests } from './requests.js';
 import { PERSONAS, WORKFLOWS, handleMcpRequest } from './mcp.js';
 import { analysisComplete, docPath, listDocs, setFrontmatterStatus, workflowNameFor } from './docs.js';
@@ -17,6 +17,13 @@ import type { Project } from './db.js';
 
 export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string): express.Express {
   failStaleJobs(db);
+  // Projects created before the code column existed get one derived from the name.
+  for (const p of db.prepare("SELECT id, name FROM projects WHERE code = ''").all() as {
+    id: number;
+    name: string;
+  }[]) {
+    db.prepare('UPDATE projects SET code = ? WHERE id = ?').run(deriveCode(p.name), p.id);
+  }
   const app = express();
   app.use(express.json());
 

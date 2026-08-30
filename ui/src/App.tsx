@@ -52,7 +52,10 @@ export function App() {
           <div className="kx-grid">
             {projects.map((p) => (
               <button key={p.id} className="kx-card" onClick={() => setSelected(p)}>
-                <span className="kx-card-name">{p.name}</span>
+                <span className="kx-card-head">
+                  {p.code && <span className="kx-card-code mono">{p.code}</span>}
+                  <span className="kx-card-name">{p.name}</span>
+                </span>
                 <span className="kx-card-path mono" title={p.repo_path}>
                   {shortPath(p.repo_path)}
                 </span>
@@ -294,7 +297,7 @@ function AddProject({
           onChange={(e) => setName(e.target.value)}
         />
         <input
-          className="kx-input mono kx-code"
+          className="kx-input mono kx-code-input"
           placeholder="Code (ACME)"
           value={code}
           onChange={(e) => setCode(e.target.value.toUpperCase())}
@@ -512,8 +515,8 @@ function DocumentsTab({ project }: { project: Project }) {
   const ordered = [...docs].sort((a, b) => rank(a) - rank(b));
 
   const groups: { key: 'core' | 'foundation'; title: string }[] = [
-    { key: 'foundation', title: 'Foundation' },
     { key: 'core', title: 'Core' },
+    { key: 'foundation', title: 'Foundation' },
   ];
 
   return (
@@ -526,7 +529,7 @@ function DocumentsTab({ project }: { project: Project }) {
             ⟳ {jobs.filter((j) => j.status === 'running').map((j) => j.doc_rel).join(' · ')} yazılıyor…
           </span>
         ) : (
-          <button className="btn btn-secondary btn-sm" onClick={runNext}>
+          <button className="btn btn-primary btn-sm" onClick={runNext}>
             Run next step
           </button>
         )}
@@ -553,7 +556,7 @@ function DocumentsTab({ project }: { project: Project }) {
               return (
                 <button key={d.rel} className={`kx-doc-row${failed ? ' failed' : ''}`} onClick={() => setOpen(d)}>
                   <span className="kx-doc-name">{d.name}</span>
-                  {d.author && <span className="kx-doc-author mono">{d.author}</span>}
+                  {d.author && <span className="kx-doc-author mono">{d.author.replace(/^\+/, '')}</span>}
                   <span className="kx-doc-spacer" />
                   {isRunning && <span className="kx-running">⟳ yazılıyor…</span>}
                   {failed && (
