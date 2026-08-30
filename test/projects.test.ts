@@ -22,7 +22,7 @@ test('create new project scaffolds .kortext workspace with draft BRD', () => {
   assert.ok(existsSync(brief));
   assert.match(readFileSync(brief, 'utf8'), /status: draft/);
   assert.ok(existsSync(join(repo, '.kortext', 'STACK.md')));
-  assert.ok(existsSync(join(repo, '.kortext', 'reports')));
+  assert.ok(!existsSync(join(repo, '.kortext', 'reports')));
   rmSync(work, { recursive: true, force: true });
 });
 

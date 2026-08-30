@@ -39,7 +39,6 @@ const app = buildApp(db, pkgRoot, DB_PATH);
 app.listen(PORT, () => {
   const url = `http://localhost:${PORT}`;
   console.log(`kortext panel: ${url}`);
-  console.log(`mcp:           ${url}/mcp`);
   console.log(`db:            ${DB_PATH}`);
   if (!values['no-open']) openBrowser(url);
 });

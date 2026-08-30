@@ -2,7 +2,6 @@ import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type Database from 'better-sqlite3';
 import type { Project } from './db.js';
-import { listRequests } from './requests.js';
 
 export interface DocStep {
   output: string; // rel path like foundation/PRD.md
@@ -19,8 +18,7 @@ export interface DocInfo {
   author: string | null;
   inputs: string[];
   blocked: boolean; // an input is not approved yet
-  revisionPending: boolean; // a pending revise request targets this doc
-  upstreamChanged: boolean; // an approved/draft doc whose input regressed or has pending revision
+  upstreamChanged: boolean; // an approved/draft doc whose input regressed
 }
 
 // Parses workflow step metadata: numbered steps carrying
@@ -105,18 +103,6 @@ export function setFrontmatterStatus(path: string, status: string): void {
 
 export function listDocs(db: Database.Database, project: Project, pkgRoot: string): DocInfo[] {
   const map = loadDocMap(pkgRoot, project.kind ?? 'new');
-  const pendingRevise = new Set(
-    listRequests(db, project.id, 'pending')
-      .filter((r) => r.type === 'revise')
-      .map((r) => {
-        try {
-          return (JSON.parse(r.payload) as { doc?: string }).doc ?? '';
-        } catch {
-          return '';
-        }
-      }),
-  );
-
   const statuses = new Map<string, string>();
   const docs: DocInfo[] = [];
   const collect = (dir: string, group: 'core' | 'foundation', relPrefix: string, skip: Set<string>) => {
@@ -134,7 +120,6 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
         author: fm.author ?? map.get(rel)?.author ?? null,
         inputs: map.get(rel)?.inputs ?? [],
         blocked: false,
-        revisionPending: pendingRevise.has(rel),
         upstreamChanged: false,
       });
     }
@@ -149,13 +134,13 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
   const byRel = new Map(docs.map((d) => [d.rel, d]));
   for (const doc of docs) {
     doc.blocked = doc.inputs.some((i) => !settled(statuses.get(i)));
-    // Already-written doc whose input got a revision request or fell out of
-    // approved — the reader should re-check it against the new upstream.
+    // Already-written doc whose input fell out of approved — the reader
+    // should re-check it against the new upstream.
     doc.upstreamChanged =
       doc.status !== 'uninitialized' &&
       doc.inputs.some((i) => {
         const input = byRel.get(i);
-        return input ? input.revisionPending || !settled(input.status) : false;
+        return input ? !settled(input.status) : false;
       });
   }
 
@@ -177,7 +162,7 @@ export function analysisComplete(db: Database.Database, project: Project, pkgRoo
   const map = loadDocMap(pkgRoot, project.kind ?? 'new');
   const docs = listDocs(db, project, pkgRoot);
   const byRel = new Map(docs.map((d) => [d.rel, d.status]));
-  const targets = [...map.keys()].filter((rel) => !rel.endsWith('backlog.yaml') && rel !== 'TODO.md');
+  const targets = [...map.keys()];
   if (targets.length === 0) return false;
   const settled = (s: string | undefined) => s === 'approved' || s === 'not-applicable';
   // BRD gates the new-project flow even though no step produces it
@@ -186,10 +171,10 @@ export function analysisComplete(db: Database.Database, project: Project, pkgRoo
 }
 
 // rel is relative to .kortext/: a root doc ("STACK.md"), or one under
-// foundation/ or reports/. The pattern forbids traversal ("." never starts
+// foundation/. The pattern forbids traversal ("." never starts
 // a segment) and anything outside those three places.
 export function docPath(project: Project, rel: string): string {
-  if (!/^(?:(?:foundation|reports)\/)?[A-Za-z][\w.-]*\.md$/.test(rel)) {
+  if (!/^(?:foundation\/)?[A-Za-z][\w.-]*\.md$/.test(rel)) {
     throw new Error(`bad doc path: ${rel}`);
   }
   return join(project.repo_path, '.kortext', rel);

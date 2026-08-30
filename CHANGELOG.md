@@ -6,39 +6,54 @@ All notable changes to Kortext are documented here. The format is based on
 
 ## [Unreleased]
 
-**v1.0 rebuild — the passive project brain.** Orchestration is gone by design:
-Kortext no longer launches agents, calls LLMs, or holds API keys. Your own
-coding agent (Claude Code, Codex, Gemini CLI) does the work; Kortext defines
-the process and watches the files. The v3 engine is archived under
-`docs/codes/` (git history keeps everything).
+**v1.0 — the active project brain.** Full vision rewrite (dev/DECISIONS.md
+§20): during analysis Kortext is ACTIVE — it drives your own agent CLI
+(claude / codex / gemini) headlessly itself, so you never leave the panel.
+On handshake completion Kortext retires; from then on it's you and your
+client, governed by the approved docs and the `AGENTS.md` handover
+constitution. The v3 engine stays archived under `docs/codes/`.
 
 ### Added
 
-- **Global single server** (kopeng model): one SQLite DB at
-  `~/.kortext/kortext.db`, many projects; `kortext` opens the panel on :4200.
-- **AGENTS.md contract** scaffolded into every project: dependency-gated
-  analysis (a document is written only after its inputs are approved),
-  request-queue checks at every step, planning only on request, memory
-  discipline, distilled behavior constitution.
-- **MCP server** at `/mcp` (streamable HTTP, stateless):
-  `get_pending_requests`, `complete_request`, `get_project_context`.
-- **Documents panel**: dependency map from workflow `inputs/outputs`,
-  status badges, drawer with line-anchored notes, revision requests,
-  direct edit, prime approval.
-- **Plan tab**: tasks are opt-in — "Kopeng'e aktar" queues planning; the
-  agent produces `backlog.yaml` (frozen export schema: versions → epics →
-  tasks, `assignee: ai|prime`, `blocked_by`) + `TODO.md` as the approved
-  plan gate.
-- **Reports**: deterministic Change report (doc statuses + git log), agent
-  written Risk & Recommendations and Decision Summary on request; Progress
-  arrives with the live Kopeng integration.
+- **Analysis engine (Phase A)**: dependency-gated chain over workflow
+  `inputs/outputs/approver` metadata; spawns the selected agent CLI headless
+  (prompt over stdin, cwd = repo), validates exit/output/frontmatter, lands
+  every document as `draft`. Up to 3 independent steps in parallel; an
+  approval mid-run wakes the chain. Jobs table with stale-fail on boot and
+  Retry.
+- **Engine picker**: auto-detects installed CLIs (`claude`, `codex`,
+  `gemini`), selectable in the header; install hints when none found.
+- **Sealed layout** (§20): `.kortext/` flat root (ARCHITECTURE, STACK,
+  STRUCTURE, API, DATABASE, SECURITY, DESIGN, TEST, LEGAL, GROWTH, CONTENT,
+  ENVIRONMENT, DECISIONS log) + `foundation/` (BRD, PRD, TRD, PFD);
+  `not-applicable` settles a dependency with reasoning.
+- **Document review**: line-token viewer with wrapped-line merging; inline
+  line thread — select a line, converse with the author persona (ephemeral,
+  never saved) or drop notes; batched notes re-run the producing step.
+  Action-first ordering; collapsible Core/Foundation groups.
+- **Handshake screen**: completion card, copyable client starter commands,
+  Kopeng promo when kopeng is absent.
+- **"Kopeng'e aktar"**: one plan job splits the work into `.kopeng/`
+  (project.yaml, versions/, epics/, tasks/ with rich bodies — description,
+  functional requirements, user flow, UI requirements, technical notes,
+  acceptance criteria; `assignee: ai|prime`, `blocked_by`/`blocks`);
+  plan summary + Approve/Revise plan in the panel. The `.kopeng/` layout is
+  the draft contract kopeng will adopt.
+- **Add-project form**: New/Existing mode toggle (= workflow choice), native
+  folder Browse, project code field, brief write/upload tabs — a user-written
+  brief lands approved and the chain starts immediately.
 
 ### Removed
 
-- The entire execution layer: orchestrator, worker pool, executors, gates,
-  worktrees, deploy/test cycles, Slack/Telegram notifications, model
-  assignment, 7 engine workflows, engine-era rules/ and report templates.
-  Personas trimmed to the 11 analysis authors.
+- **Reports** (routes, generation, templates) — no reports feature in v2.
+- **Agent-facing surface**: MCP server (`/mcp`), `/api/agent/*` REST
+  fallback, request queue (`requests` table dropped on migration) — the
+  external agent no longer talks to Kortext during analysis; Kortext drives
+  the engine itself, and after the handshake the repo files are the whole
+  interface.
+- `@modelcontextprotocol/sdk` and `zod` dependencies.
+- Plan/TODO leftovers (`backlog.yaml` + `TODO.md` gate) — replaced by the
+  `.kopeng/` split.
 
 ## [3.1.0] - 2026-06-06
 

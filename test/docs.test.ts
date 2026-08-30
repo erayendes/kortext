@@ -5,7 +5,6 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { openDb } from '../server/db.js';
 import { createProject } from '../server/projects.js';
-import { createRequest } from '../server/requests.js';
 import { docPath, listDocs, parseWorkflowSteps, setFrontmatterStatus } from '../server/docs.js';
 
 const pkgRoot = process.cwd();
@@ -21,7 +20,7 @@ test('parseWorkflowSteps extracts inputs/outputs/author/approver per output', ()
   assert.equal(stack.author, '+engineering-manager');
 });
 
-test('listDocs: dependency blocking follows approvals; revise request flags doc', () => {
+test('listDocs: dependency blocking follows approvals; regressed input warns dependents', () => {
   const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
   const db = openDb(join(work, 'db.sqlite'));
   const p = createProject(db, { name: 'Acme', repoPath: join(work, 'acme') }, pkgRoot);
@@ -41,11 +40,10 @@ test('listDocs: dependency blocking follows approvals; revise request flags doc'
   assert.equal(byRel('foundation/BRD.md').status, 'approved');
   assert.equal(byRel('LEGAL.md').blocked, false);
 
-  // pending revise on BRD → BRD flagged, dependents warn once written
-  createRequest(db, p.id, 'revise', { doc: 'foundation/BRD.md', notes: ['x'] });
+  // BRD falls back to draft after LEGAL was written → LEGAL warns upstreamChanged
   setFrontmatterStatus(docPath(p, 'LEGAL.md'), 'draft'); // pretend agent wrote it
+  setFrontmatterStatus(docPath(p, 'foundation/BRD.md'), 'draft');
   docs = listDocs(db, p, pkgRoot);
-  assert.equal(byRel('foundation/BRD.md').revisionPending, true);
   assert.equal(byRel('LEGAL.md').upstreamChanged, true);
 
   rmSync(work, { recursive: true, force: true });

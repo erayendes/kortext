@@ -1,98 +1,84 @@
 # Kortext
 
-**The project brain for AI-driven development.** Kortext turns a brief into an
-approved analysis foundation — then your own coding agent (Claude Code, Codex,
-Gemini CLI…) does the work. Kortext never launches agents, never calls an LLM,
-never holds an API key. It defines the process, watches the documents, queues
-your requests, and shows you reports.
+**The project brain for AI-driven development.** Kortext turns a brief (or an
+existing codebase) into an approved analysis foundation — and it drives your
+own coding agent (Claude Code, Codex, Gemini CLI…) to write it. You never
+leave the panel during analysis: documents land as drafts, you approve,
+annotate, or request revisions, and the chain advances on your approvals.
+When every document is settled, Kortext retires — the docs become the
+project's guideline and `AGENTS.md` hands your agent the contract.
 
 [![npm](https://img.shields.io/npm/v/kortext.svg)](https://www.npmjs.com/package/kortext)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
+Kortext holds no API key and calls no LLM API of its own — it spawns the
+agent CLI you already have installed and pay for, headlessly, inside your
+repo.
+
 ## How it works
 
-1. **Brief.** Add a project in the panel — Kortext scaffolds `.kortext/` into
-   the repo with a BRD (the brief), document skeletons, workflows, personas,
-   and an `AGENTS.md` contract at the root. You fill the brief and approve it.
-2. **Analysis.** Copy the one-liner from the Connect tab into your agent.
-   The agent follows the contract: it writes each analysis document
-   (PRD, STACK, SECURITY, API, DESIGN, …) in dependency order — a document
-   whose inputs you haven't approved is never written. Every document lands
-   as `draft`; you approve, annotate, or request revisions from the panel.
-3. **Plan — only if you ask.** By default there are no tasks. Hit
-   "Kopeng'e aktar" and the agent produces `backlog.yaml` (a frozen,
-   machine-readable export contract) and a consolidated `TODO.md` you approve.
-4. **Track.** Your agent develops from `TODO.md` (or from
-   [kopeng](https://github.com/erayendes/kopeng), the kanban companion that
-   consumes the same backlog format). Kortext stays the brain: documents and
-   reports. Reports are user-triggered — a deterministic change report, plus
-   risk and decision summaries written by your agent on request.
+1. **Add a project.** Pick the repo folder. *New project* starts from a brief
+   (BRD) you write or upload in the form; *existing project* starts straight
+   from the code. Kortext scaffolds `AGENTS.md` at the repo root and
+   `.kortext/` with document skeletons.
+2. **Analysis.** Kortext runs your agent CLI step by step through a
+   dependency-gated workflow. Each step writes one document
+   (ARCHITECTURE, STACK, SECURITY, DATABASE, DESIGN, LEGAL, …) as a persona
+   (engineering-manager, security-engineer, …) and lands it as `draft`.
+   A document whose inputs you haven't approved is never written. Up to
+   three independent steps run in parallel; your approval wakes the chain.
+3. **Review in the panel.** Open any document: approve it, select a line and
+   ask the author persona about it (ephemeral Q&A — nothing is saved), or
+   drop notes and request a revision (the producing step re-runs with your
+   notes). A document can also settle as `not-applicable` with reasoning.
+4. **Handshake.** When every document is approved or not-applicable, analysis
+   is complete. The docs are now the project's sacred guideline; `AGENTS.md`
+   is the handover constitution. Copy one of the starter commands into your
+   client (CLI or app) and build.
+5. **Kopeng — optional.** With [kopeng](https://github.com/erayendes/kopeng)
+   installed, "Kopeng'e aktar" splits the work into `.kopeng/` —
+   Version → Epic → Task files with rich bodies (requirements, user flow,
+   acceptance criteria) — and you approve the plan as the last act of the
+   handshake. Your agent pulls tasks; you watch the board.
 
 ## Quick start
 
-Requires **Node ≥ 22**.
+Requires **Node ≥ 22** and at least one agent CLI on your PATH
+(`claude`, `codex`, or `gemini`).
 
 ```sh
 npm install -g kortext
 kortext
 ```
 
-The server starts on port **4200** (`--port` to change) and opens the panel. Data lives in one global SQLite database at
-`~/.kortext/kortext.db` (`--db` to override) — one database, multiple projects.
+The server starts on port **4200** (`--port` to change) and opens the panel.
+Data lives in one global SQLite database at `~/.kortext/kortext.db`
+(`--db` to change); the documents live in your repo.
 
-Connect your agent (once per machine):
+## What lands in your repo
 
-```sh
-claude mcp add --transport http kortext http://localhost:4200/mcp
+```
+AGENTS.md                  the agent's entry contract (handover constitution)
+.kortext/
+  ARCHITECTURE.md STACK.md STRUCTURE.md API.md DATABASE.md SECURITY.md
+  DESIGN.md TEST.md LEGAL.md GROWTH.md CONTENT.md ENVIRONMENT.md
+  DECISIONS.md             append-only decision log (status: log)
+  foundation/              frozen starting docs: BRD, PRD, TRD, PFD
+.kopeng/                   only after "Kopeng'e aktar"
+  project.yaml  versions/  epics/  tasks/
 ```
 
-Then, per project, paste the command the Connect tab gives you:
-
-```sh
-cd /path/to/project && claude "Read AGENTS.md and start the analysis."
-```
-
-## Concepts
-
-- **Passive by design.** Kortext is a mirror and a queue, not an orchestrator.
-  The agent reads state from files, you approve from the panel, and the two
-  meet in the repo.
-- **Files are the source of truth.** Documents live in the project repo under
-  `.kortext/` with a `status` frontmatter (`uninitialized → draft → approved`).
-  The panel and the agent read the same files; delete the Kortext registry and
-  your project loses nothing.
-- **Dependency-gated analysis.** Workflow steps declare `inputs`/`outputs`/
-  `approver`; a document is written only after everything it builds on is
-  approved by you.
-- **Requests queue.** Revision notes, report asks, and the planning trigger
-  wait in a queue the agent drains over MCP (`get_pending_requests` /
-  `complete_request`) at the start of every step.
-- **Tasks are opt-in.** Planning runs only when you ask for the Kopeng
-  transfer. The `backlog.yaml` schema (versions → epics → tasks,
-  `assignee: ai | prime`, `blocked_by`) is frozen so external tools — kopeng
-  first — can consume it.
-
-## Panel
-
-- **Documents** — the analysis map with live statuses; open a document to
-  read, annotate a line, request a revision, edit directly, or approve.
-- **Plan** — the opt-in transfer: queue planning, then review and approve
-  `TODO.md`.
-- **Reports** — Change (instant, deterministic), Risk & Recommendations and
-  Decision Summary (written by your agent on request), Progress (arrives with
-  the live Kopeng integration).
-- **Connect** — copy-paste commands for your agent and the pending-request
-  queue.
+Frontmatter `status` is the source of truth:
+`uninitialized → draft → approved` (or `not-applicable`).
 
 ## Development
 
 ```sh
 npm install && npm --prefix ui install
-npm run dev        # server on :4200 (tsx watch)
-npm run dev:web    # vite panel on :5300, proxies /api
+npm run dev        # server :4200 (tsx watch)
+npm run dev:web    # vite panel :5300 (proxy /api → 4200)
 npm test           # node:test suite
-npm run typecheck
-npm run build
+npm run build      # tsc → dist/ + vite → ui/dist/
 ```
 
 ## License

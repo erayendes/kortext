@@ -229,17 +229,11 @@ export function DocDrawer({
 }
 
 export function StatusBadge({ doc }: { doc: DocInfo }) {
-  const label = doc.revisionPending
-    ? 'revision'
-    : doc.status === 'uninitialized'
-      ? doc.blocked
-        ? 'waiting'
-        : 'next'
-      : doc.status;
+  const label = doc.status === 'uninitialized' ? (doc.blocked ? 'waiting' : 'next') : doc.status;
   return (
     <span className={`kx-status kx-status-${label}`}>
       {label}
-      {doc.upstreamChanged && !doc.revisionPending ? ' ⚠' : ''}
+      {doc.upstreamChanged ? ' ⚠' : ''}
     </span>
   );
 }

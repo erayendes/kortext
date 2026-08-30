@@ -15,17 +15,15 @@ import type { Project } from './db.js';
 // Live workspace inside a registered repo — sealed layout (DECISIONS §19):
 //   AGENTS.md            (repo root — the agent's entry contract)
 //   .kortext/*.md        (the living core: STACK, SECURITY, …, DECISIONS, TODO)
-//   .kortext/foundation/ (frozen starting docs: BRD, PRD, TRD, PFD, backlog.yaml)
-//   .kortext/reports/    (human-facing outputs)
-// Workflows, personas and report templates are NOT copied — the agent gets
-// them from the kortext package over MCP.
+//   .kortext/foundation/ (frozen starting docs: BRD, PRD, TRD, PFD)
+// Workflows and personas are NOT copied — kortext itself drives the engine
+// with them during Phase A; after the handshake the docs are the contract.
 export const BRIEF_REL = join('.kortext', 'foundation', 'BRD.md');
 
 export function scaffoldProject(repoPath: string, pkgRoot: string, opts: { skipBrief?: boolean } = {}): void {
   const kx = join(repoPath, '.kortext');
   migrateLegacyLayout(kx);
   mkdirSync(join(kx, 'foundation'), { recursive: true });
-  mkdirSync(join(kx, 'reports'), { recursive: true });
 
   const templates = join(pkgRoot, 'templates');
   copyIfMissing(join(templates, 'AGENTS.md'), join(repoPath, 'AGENTS.md'));

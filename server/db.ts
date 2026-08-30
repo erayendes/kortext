@@ -30,18 +30,7 @@ CREATE TABLE IF NOT EXISTS jobs (
   started_at TEXT NOT NULL DEFAULT (datetime('now')),
   finished_at TEXT
 );
-CREATE TABLE IF NOT EXISTS requests (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  type TEXT NOT NULL,             -- revise | report | planning | question
-  payload TEXT NOT NULL,          -- JSON: doc, notes, report type…
-  status TEXT NOT NULL DEFAULT 'pending',  -- pending | done | cancelled
-  created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  completed_at TEXT
-);
 `;
-// NOTE: a `transfers` table returns when live Kopeng push lands — until then
-// "transferred" simply means backlog.yaml + TODO.md exist and are approved.
 
 export function openDb(path = defaultDbPath()): Database.Database {
   mkdirSync(dirname(path), { recursive: true });
@@ -56,6 +45,9 @@ export function openDb(path = defaultDbPath()): Database.Database {
   if (!cols.includes('code')) {
     db.exec("ALTER TABLE projects ADD COLUMN code TEXT NOT NULL DEFAULT ''");
   }
+  // The request-queue agent surface is gone (vision v2 — kortext drives the
+  // engine itself); drop the leftover table from older installs.
+  db.exec('DROP TABLE IF EXISTS requests');
   return db;
 }
 

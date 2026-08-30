@@ -3,10 +3,7 @@ import type Database from 'better-sqlite3';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { createProject, deriveCode, listProjects, removeProject, scaffoldProject } from './projects.js';
-import { cancelRequest, completeRequest, createRequest, listRequests } from './requests.js';
-import { PERSONAS, WORKFLOWS, handleMcpRequest } from './mcp.js';
-import { analysisComplete, docPath, listDocs, setFrontmatterStatus, workflowNameFor } from './docs.js';
-import { generateChangeReport, listReports } from './reports.js';
+import { analysisComplete, docPath, listDocs, setFrontmatterStatus } from './docs.js';
 import { pickDirectoryNative } from './pick-directory.js';
 import { spawnSync } from 'node:child_process';
 import { readdirSync } from 'node:fs';
@@ -96,74 +93,6 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   app.delete('/api/projects/:id', (req, res) => {
     const removed = removeProject(db, Number(req.params.id));
     res.status(removed ? 200 : 404).json({ removed });
-  });
-
-  app.get('/api/projects/:id/requests', (req, res) => {
-    const status = typeof req.query.status === 'string' ? req.query.status : undefined;
-    res.json({ requests: listRequests(db, Number(req.params.id), status) });
-  });
-
-  app.post('/api/projects/:id/requests', (req, res) => {
-    const { type, payload } = req.body ?? {};
-    try {
-      // A report request carries its template along — the agent needs nothing
-      // from the project folder to know the expected structure.
-      let enriched = payload;
-      if (type === 'report' && payload?.report_type) {
-        const file = payload.report_type === 'risk' ? 'risk-report.md' : 'decision-summary.md';
-        const tpl = join(pkgRoot, 'templates', 'reports', file);
-        if (existsSync(tpl)) enriched = { ...payload, template: readFileSync(tpl, 'utf8') };
-      }
-      res.status(201).json({ request: createRequest(db, Number(req.params.id), type, enriched) });
-    } catch (err) {
-      res.status(400).json({ error: (err as Error).message });
-    }
-  });
-
-  app.post('/api/requests/:id/cancel', (req, res) => {
-    res.json({ cancelled: cancelRequest(db, Number(req.params.id)) });
-  });
-
-  app.post('/api/requests/:id/complete', (req, res) => {
-    res.json({ completed: completeRequest(db, Number(req.params.id)) });
-  });
-
-  // ---- Agent-facing REST fallback ------------------------------------------
-  // Mirrors the MCP tools over plain HTTP so an agent whose MCP connection
-  // isn't live yet (mcp add takes effect next session) can continue with curl.
-  app.get('/api/agent/context', (req, res) => {
-    const repoPath = String(req.query.repo_path ?? '');
-    const project = db.prepare('SELECT * FROM projects WHERE repo_path = ?').get(repoPath) as
-      | Project
-      | undefined;
-    if (!project) return res.status(404).json({ error: `no kortext project registered at ${repoPath}` });
-    res.json({
-      project,
-      docs: listDocs(db, project, pkgRoot).map((d) => ({
-        rel: d.rel,
-        status: d.status,
-        blocked: d.blocked,
-        revisionPending: d.revisionPending,
-      })),
-      pending_requests: listRequests(db, project.id, 'pending').map((r) => ({
-        id: r.id,
-        type: r.type,
-        payload: JSON.parse(r.payload),
-      })),
-      workflow: workflowNameFor(project.kind ?? 'new'),
-    });
-  });
-
-  app.get('/api/agent/workflow/:name', (req, res) => {
-    const name = req.params.name as (typeof WORKFLOWS)[number];
-    if (!WORKFLOWS.includes(name)) return res.status(404).json({ error: 'unknown workflow' });
-    res.type('text/markdown').send(readFileSync(join(pkgRoot, 'workflows', `${name}.md`), 'utf8'));
-  });
-
-  app.get('/api/agent/persona/:handle', (req, res) => {
-    const handle = req.params.handle as (typeof PERSONAS)[number];
-    if (!PERSONAS.includes(handle)) return res.status(404).json({ error: 'unknown persona' });
-    res.type('text/markdown').send(readFileSync(join(pkgRoot, 'agents', `${handle}.md`), 'utf8'));
   });
 
   const projectOr404 = (id: string, res: express.Response): Project | undefined => {
@@ -337,56 +266,11 @@ ${body}`, 'utf8');
     });
   });
 
-  // Plan state: whether planning was requested, and whether the outputs exist.
-  app.get('/api/projects/:id/plan', (req, res) => {
-    const project = projectOr404(req.params.id, res);
-    if (!project) return;
-    const kx = (rel: string) => join(project.repo_path, '.kortext', rel);
-    const todoPath = kx('TODO.md');
-    const todoExists = existsSync(todoPath);
-    const planningPending = listRequests(db, project.id, 'pending').some((r) => r.type === 'planning');
-    let todoStatus: string | null = null;
-    if (todoExists) {
-      todoStatus =
-        (readFileSync(todoPath, 'utf8').match(/^status:\s*(.+)$/m)?.[1] ?? 'draft').trim();
-    }
-    res.json({
-      backlogExists: existsSync(kx('foundation/backlog.yaml')),
-      todoExists,
-      todoStatus,
-      planningPending,
-    });
-  });
-
-  app.get('/api/projects/:id/reports', (req, res) => {
-    const project = projectOr404(req.params.id, res);
-    if (!project) return;
-    res.json({ reports: listReports(project) });
-  });
-
-  // Deterministic: generated by kortext itself, no agent involved.
-  app.post('/api/projects/:id/reports/change', (req, res) => {
-    const project = projectOr404(req.params.id, res);
-    if (!project) return;
-    try {
-      res.status(201).json({ report: generateChangeReport(db, project, pkgRoot) });
-    } catch (err) {
-      res.status(400).json({ error: (err as Error).message });
-    }
-  });
-
-  // MCP over streamable HTTP (stateless): agents connect with
-  //   claude mcp add --transport http kortext http://localhost:<port>/mcp
-  app.post('/mcp', (req, res) => {
-    void handleMcpRequest(db, pkgRoot, req, res);
-  });
-  app.get('/mcp', (_req, res) => res.status(405).json({ error: 'stateless server: POST only' }));
-
   // Built panel (ui/dist) with SPA fallback; in dev the vite server proxies /api here.
   const uiDist = join(pkgRoot, 'ui', 'dist');
   if (existsSync(uiDist)) {
     app.use(express.static(uiDist));
-    app.get(/^\/(?!api\/|mcp).*/, (_req, res) => res.sendFile(join(uiDist, 'index.html')));
+    app.get(/^\/(?!api\/).*/, (_req, res) => res.sendFile(join(uiDist, 'index.html')));
   }
 
   return app;

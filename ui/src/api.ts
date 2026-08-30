@@ -16,16 +16,6 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
-export interface KortextRequest {
-  id: number;
-  project_id: number;
-  type: 'revise' | 'report' | 'planning' | 'question';
-  payload: string;
-  status: 'pending' | 'done' | 'cancelled';
-  created_at: string;
-  completed_at: string | null;
-}
-
 export interface DocInfo {
   rel: string;
   group: 'core' | 'foundation';
@@ -34,22 +24,7 @@ export interface DocInfo {
   author: string | null;
   inputs: string[];
   blocked: boolean;
-  revisionPending: boolean;
   upstreamChanged: boolean;
-}
-
-export interface ReportInfo {
-  rel: string;
-  name: string;
-  type: string | null;
-  created_at: string;
-}
-
-export interface PlanState {
-  backlogExists: boolean;
-  todoExists: boolean;
-  todoStatus: string | null;
-  planningPending: boolean;
 }
 
 export interface KopengPlan {
@@ -97,9 +72,6 @@ export const api = {
   kopengPlan: (projectId: number) => req<KopengPlan>(`/api/projects/${projectId}/kopeng`),
   approvePlan: (projectId: number) =>
     req<{ ok: boolean }>(`/api/projects/${projectId}/kopeng/approve`, { method: 'POST' }),
-  listReports: (projectId: number) => req<{ reports: ReportInfo[] }>(`/api/projects/${projectId}/reports`),
-  generateChangeReport: (projectId: number) =>
-    req<{ report: ReportInfo }>(`/api/projects/${projectId}/reports/change`, { method: 'POST' }),
   listDocs: (projectId: number) => req<{ docs: DocInfo[] }>(`/api/projects/${projectId}/docs`),
   docContent: (projectId: number, rel: string) =>
     req<{ content: string }>(`/api/projects/${projectId}/docs/content?rel=${encodeURIComponent(rel)}`),
@@ -133,14 +105,4 @@ export const api = {
     req<{ project: Project }>('/api/projects', { method: 'POST', body: JSON.stringify(input) }),
   pickDirectory: () => req<{ path: string | null }>('/api/pick-directory', { method: 'POST' }),
   removeProject: (id: number) => req<{ removed: boolean }>(`/api/projects/${id}`, { method: 'DELETE' }),
-  listRequests: (projectId: number, status?: string) =>
-    req<{ requests: KortextRequest[] }>(
-      `/api/projects/${projectId}/requests${status ? `?status=${status}` : ''}`,
-    ),
-  createRequest: (projectId: number, type: string, payload: unknown) =>
-    req<{ request: KortextRequest }>(`/api/projects/${projectId}/requests`, {
-      method: 'POST',
-      body: JSON.stringify({ type, payload }),
-    }),
-  cancelRequest: (id: number) => req<{ cancelled: boolean }>(`/api/requests/${id}/cancel`, { method: 'POST' }),
 };
