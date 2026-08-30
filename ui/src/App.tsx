@@ -371,6 +371,18 @@ function DocumentsTab({ project }: { project: Project }) {
   // Latest job per doc decides the row extras (spinner / red error).
   const jobFor = (rel: string) => jobs.find((j) => j.doc_rel === rel);
 
+  // Action-first ordering: what needs the prime's attention floats to the top.
+  const rank = (d: DocInfo) => {
+    if (d.status === 'draft') return 0;
+    if (jobFor(d.rel)?.status === 'running') return 1;
+    if (d.status === 'uninitialized' && !d.blocked) return 2;
+    if (d.status === 'uninitialized') return 3;
+    if (d.status === 'approved') return 4;
+    if (d.status === 'not-applicable') return 5;
+    return 6; // log & rest
+  };
+  const ordered = [...docs].sort((a, b) => rank(a) - rank(b));
+
   const groups: { key: 'core' | 'foundation'; title: string }[] = [
     { key: 'foundation', title: 'Foundation' },
     { key: 'core', title: 'Core' },
@@ -393,7 +405,7 @@ function DocumentsTab({ project }: { project: Project }) {
       {groups.map((g) => (
         <section key={g.key}>
           <h2 className="kx-doc-group">{g.title}</h2>
-          {docs
+          {ordered
             .filter((d) => d.group === g.key)
             .map((d) => {
               const job = jobFor(d.rel);

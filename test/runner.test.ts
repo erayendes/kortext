@@ -184,7 +184,7 @@ printf -- '---\\nstatus: draft\\nauthor: +mock\\n---\\n\\n# Revised\\n' > ".kort
   writeFileSync(ans, '#!/bin/sh\ncat > /dev/null\nprintf "MOCK CEVAP: satır şunu diyor"\n');
   chmodSync(ans, 0o755);
   const before = readFileSync(docPath(p, 'LEGAL.md'), 'utf8');
-  const r = await explainDoc(p, 'LEGAL.md', 'seçili satır', 'bu ne demek?', { id: 'ans', binary: ans, args: [], installHint: '' }, pkgRoot);
+  const r = await explainDoc(p, 'LEGAL.md', 'seçili satır', 'bu ne demek?', [], { id: 'ans', binary: ans, args: [], installHint: '' }, pkgRoot);
   assert.match(r.answer, /MOCK CEVAP/);
   assert.equal(readFileSync(docPath(p, 'LEGAL.md'), 'utf8'), before);
   rmSync(work, { recursive: true, force: true });

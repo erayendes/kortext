@@ -188,6 +188,7 @@ export async function explainDoc(
   rel: string,
   excerpt: string,
   question: string,
+  history: Array<{ q: string; a: string }>,
   engine: EngineSpec,
   pkgRoot: string,
 ): Promise<{ answer: string }> {
@@ -195,11 +196,14 @@ export async function explainDoc(
   const author = map.get(rel)?.author ?? '+agent';
   const prompt = [
     `You are ${author}, the author of the document .kortext/${rel} in this project.`,
-    'The human reviewer selected a passage and asks a question about it.',
+    'The human reviewer selected a passage and is having an inline conversation about it.',
     'Answer briefly and concretely in the language of the question.',
     'DO NOT modify, create or write any file — reply with the answer text only.',
     '',
     `SELECTED PASSAGE:\n${excerpt || '(whole document)'}`,
+    ...(history.length > 0
+      ? ['', 'CONVERSATION SO FAR:', ...history.flatMap((h) => [`Q: ${h.q}`, `A: ${h.a}`])]
+      : []),
     '',
     `QUESTION:\n${question}`,
   ].join('\n');

@@ -1462,3 +1462,7 @@ body {
 .kx-explain { display: flex; flex-direction: column; gap: 4px; margin: 4px 0 8px 16px; padding: 8px 12px; border-left: 3px solid var(--accent); border-radius: var(--r-md); background: var(--bg-subtle); font-size: 12.5px; }
 .kx-explain-q { font-weight: 600; color: var(--fg); }
 .kx-explain-a { color: var(--fg-mid); white-space: pre-wrap; line-height: 1.5; }
+
+.kx-thread { margin: 2px 0 10px 16px; display: flex; flex-direction: column; gap: 6px; }
+.kx-thread-input { display: flex; gap: 6px; }
+.kx-thread-input .kx-input { flex: 1; height: 30px; font-size: 12.5px; }

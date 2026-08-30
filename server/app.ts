@@ -245,7 +245,10 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     if (!question || typeof question !== 'string') {
       return res.status(400).json({ error: 'question required' });
     }
-    explainDoc(project, String(rel ?? ''), String(excerpt ?? ''), question, engine, pkgRoot)
+    const history = Array.isArray(req.body?.history)
+      ? req.body.history.map((h: { q?: unknown; a?: unknown }) => ({ q: String(h.q ?? ''), a: String(h.a ?? '') }))
+      : [];
+    explainDoc(project, String(rel ?? ''), String(excerpt ?? ''), question, history, engine, pkgRoot)
       .then((r) => res.json(r))
       .catch((err) => res.status(500).json({ error: (err as Error).message }));
   });

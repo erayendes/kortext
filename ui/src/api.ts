@@ -90,10 +90,16 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ rel, notes }),
     }),
-  explainDoc: (projectId: number, rel: string, excerpt: string, question: string) =>
+  explainDoc: (
+    projectId: number,
+    rel: string,
+    excerpt: string,
+    question: string,
+    history: Array<{ q: string; a: string }>,
+  ) =>
     req<{ answer: string }>(`/api/projects/${projectId}/docs/explain`, {
       method: 'POST',
-      body: JSON.stringify({ rel, excerpt, question }),
+      body: JSON.stringify({ rel, excerpt, question, history }),
     }),
   approveDoc: (projectId: number, rel: string) =>
     req<{ ok: boolean }>(`/api/projects/${projectId}/docs/approve`, {

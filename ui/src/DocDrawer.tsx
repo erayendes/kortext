@@ -33,7 +33,6 @@ export function DocDrawer({
   const [selected, setSelected] = useState<number | null>(null);
   const [notes, setNotes] = useState<Note[]>([]);
   const [explains, setExplains] = useState<Explain[]>([]);
-  const [noteText, setNoteText] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -42,7 +41,6 @@ export function DocDrawer({
     setSelected(null);
     setNotes([]);
     setExplains([]);
-    setNoteText('');
     setErr(null);
     if (doc) {
       api
@@ -59,14 +57,6 @@ export function DocDrawer({
   const tokens = useMemo(() => parseMarkdown(stripFrontmatter(content)), [content]);
 
   if (!doc) return <Drawer open={false} onClose={onClose}>{null}</Drawer>;
-
-  const addNote = () => {
-    if (!noteText.trim()) return;
-    const token = tokens.find((t) => t.index === selected);
-    setNotes([...notes, { line: selected, excerpt: token?.text?.slice(0, 80) ?? '', text: noteText.trim() }]);
-    setNoteText('');
-    setSelected(null);
-  };
 
   const act = async (fn: () => Promise<unknown>) => {
     setBusy(true);
@@ -94,24 +84,28 @@ export function DocDrawer({
       onClose();
     });
 
-  const ask = () => {
-    if (!noteText.trim()) return;
-    const token = tokens.find((t) => t.index === selected);
-    const entry: Explain = {
-      line: selected,
-      question: noteText.trim(),
-      answer: null,
-    };
+  // Inline conversation under the selected line — multi-turn, in character,
+  // gone when the drawer closes.
+  const ask = (line: number, question: string) => {
+    const token = tokens.find((t) => t.index === line);
+    const history = explains
+      .filter((x) => x.line === line && x.answer !== null)
+      .map((x) => ({ q: x.question, a: x.answer as string }));
+    const entry: Explain = { line, question, answer: null };
     setExplains((xs) => [...xs, entry]);
-    setNoteText('');
     api
-      .explainDoc(project.id, doc.rel, token?.text ?? '', entry.question)
+      .explainDoc(project.id, doc.rel, token?.text ?? '', question, history)
       .then((r) =>
         setExplains((xs) => xs.map((x) => (x === entry ? { ...x, answer: r.answer } : x))),
       )
       .catch((e) =>
         setExplains((xs) => xs.map((x) => (x === entry ? { ...x, answer: `Hata: ${e.message}` } : x))),
       );
+  };
+
+  const addLineNote = (line: number, text: string) => {
+    const token = tokens.find((t) => t.index === line);
+    setNotes((ns) => [...ns, { line, excerpt: token?.text?.slice(0, 80) ?? '', text }]);
   };
 
   const approve = () =>
@@ -177,24 +171,26 @@ export function DocDrawer({
                     doc.status === 'uninitialized' ? undefined : setSelected(selected === t.index ? null : t.index)
                   }
                 />
-                {explains
-                  .filter((x) => x.line === t.index)
-                  .map((x, i) => (
-                    <ExplainBubble key={i} item={x} />
-                  ))}
+                {(selected === t.index || explains.some((x) => x.line === t.index)) &&
+                  doc.status !== 'uninitialized' && (
+                    <LineThread
+                      thread={explains.filter((x) => x.line === t.index)}
+                      active={selected === t.index}
+                      onAsk={(q) => ask(t.index, q)}
+                      onNote={(text) => {
+                        addLineNote(t.index, text);
+                        setSelected(null);
+                      }}
+                    />
+                  )}
               </div>
             ))}
-            {explains
-              .filter((x) => x.line === null)
-              .map((x, i) => (
-                <ExplainBubble key={`g${i}`} item={x} />
-              ))}
           </div>
         )}
       </div>
       {!editing && doc.status !== 'uninitialized' && (
         <div className="dr-foot">
-          {notes.length > 0 && (
+          {notes.length > 0 ? (
             <div className="kx-notes">
               {notes.map((n, i) => (
                 <div key={i} className="kx-note">
@@ -206,23 +202,12 @@ export function DocDrawer({
                 </div>
               ))}
             </div>
+          ) : (
+            <span className="kx-cmd-hint">
+              Bir satıra tıkla: altında yazarıyla sohbet et (Ask) ya da revize notu bırak (Not).
+            </span>
           )}
           <div className="kx-note-input">
-            <input
-              className="kx-input"
-              placeholder={
-                selected !== null ? 'Note for the selected line…' : 'General note… (click a line to anchor)'
-              }
-              value={noteText}
-              onChange={(e) => setNoteText(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && addNote()}
-            />
-            <button className="btn btn-sm" onClick={addNote}>
-              Add note
-            </button>
-            <button className="btn btn-sm btn-secondary" onClick={ask}>
-              Ask
-            </button>
             <button
               className="btn btn-sm btn-primary"
               disabled={busy || notes.length === 0}
@@ -308,13 +293,56 @@ function DocBlock({
   );
 }
 
-function ExplainBubble({ item }: { item: Explain }) {
+// The v3 AnnotatableDoc experience: an inline thread right under the selected
+// line — converse with the author (Ask, multi-turn) or drop a revision note.
+function LineThread({
+  thread,
+  active,
+  onAsk,
+  onNote,
+}: {
+  thread: Explain[];
+  active: boolean;
+  onAsk: (q: string) => void;
+  onNote: (text: string) => void;
+}) {
+  const [text, setText] = useState('');
+  const waiting = thread.some((x) => x.answer === null);
+  const send = (kind: 'ask' | 'note') => {
+    const t = text.trim();
+    if (!t) return;
+    setText('');
+    if (kind === 'ask') onAsk(t);
+    else onNote(t);
+  };
   return (
-    <div className="kx-explain">
-      <span className="kx-explain-q">{item.question}</span>
-      <span className={`kx-explain-a${item.answer === null ? ' kx-running' : ''}`}>
-        {item.answer === null ? 'cevap yazılıyor…' : item.answer}
-      </span>
+    <div className="kx-thread">
+      {thread.map((x, i) => (
+        <div key={i} className="kx-explain">
+          <span className="kx-explain-q">{x.question}</span>
+          <span className={`kx-explain-a${x.answer === null ? ' kx-running' : ''}`}>
+            {x.answer === null ? 'cevap yazılıyor…' : x.answer}
+          </span>
+        </div>
+      ))}
+      {(active || waiting) && (
+        <div className="kx-thread-input">
+          <input
+            className="kx-input"
+            autoFocus={active}
+            placeholder={thread.length > 0 ? 'Takip sorusu… (Enter = Ask)' : 'Bu satır hakkında soru sor ya da not yaz…'}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && send('ask')}
+          />
+          <button className="btn btn-sm btn-secondary" disabled={waiting && !text.trim()} onClick={() => send('ask')}>
+            Ask
+          </button>
+          <button className="btn btn-sm" onClick={() => send('note')}>
+            Not
+          </button>
+        </div>
+      )}
     </div>
   );
 }
