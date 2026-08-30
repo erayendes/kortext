@@ -95,13 +95,13 @@ function EngineBadge() {
     const hint = engines[0]?.installHint ?? '';
     return (
       <span className="kx-engine-warn">
-        Ajan CLI bulunamadı — belge üretimi için gerekli. Kur: <code className="mono">{hint}</code>
+        No agent CLI found — required to produce documents. Install one: <code className="mono">{hint}</code>
       </span>
     );
   }
   return (
     <span className="kx-engine">
-      Motor:
+      Engine:
       <select
         className="kx-engine-select mono"
         value={selected ?? available[0].id}
@@ -149,7 +149,7 @@ function TransferPanel({ project }: { project: Project }) {
   if (splitting) {
     return (
       <div className="kx-handshake-kopeng">
-        <span className="kx-running">⟳ İş görevlere bölünüyor… (.kopeng/ yazılıyor)</span>
+        <span className="kx-running">⟳ Splitting the work into tasks… (writing .kopeng/)</span>
       </div>
     );
   }
@@ -159,7 +159,7 @@ function TransferPanel({ project }: { project: Project }) {
       <div className="kx-handshake-plan">
         <div className="kx-plan-row">
           <span className="kx-cmd-title">
-            Plan hazır: {plan.versions} version · {plan.epics} epic · {plan.tasks} task
+            Plan ready: {plan.versions} version · {plan.epics} epic · {plan.tasks} task
           </span>
           <span className={`kx-status kx-status-${plan.status === 'approved' ? 'approved' : 'draft'}`}>
             {plan.status ?? 'draft'}
@@ -173,13 +173,13 @@ function TransferPanel({ project }: { project: Project }) {
         </div>
         {plan.status === 'approved' ? (
           <span className="kx-cmd-hint">
-            Görevler .kopeng/ altında — Kopeng board'unu aç, ajanın işleri oradan çeksin.
+            Tasks live under .kopeng/ — open your Kopeng board; your agent pulls work from there.
           </span>
         ) : (
           <div className="kx-note-input">
             <input
               className="kx-input"
-              placeholder="Revize notu… (planı notlarla yeniden böler)"
+              placeholder="Revision note… (re-splits the plan with your notes)"
               value={reviseText}
               onChange={(e) => setReviseText(e.target.value)}
             />
@@ -202,33 +202,35 @@ function TransferPanel({ project }: { project: Project }) {
   return (
     <div className="kx-handshake-kopeng">
       <button className="btn btn-primary" onClick={() => transfer()}>
-        Kopeng'e aktar
+        Transfer to Kopeng
       </button>
       <span className="kx-cmd-hint">
-        İşi görevlere böler (Version → Epic → Task) ve .kopeng/ altına Kopeng'in okuyacağı
-        dosyaları koyar.
+        Splits the work into tasks (Version → Epic → Task) and writes the files Kopeng
+        reads under .kopeng/.
       </span>
       {err && <span className="kx-doc-fail">{err}</span>}
     </div>
   );
 }
 
+// The docs follow the brief's language — the example is English, but a brief
+// written in any language yields documents in that language.
 const BRIEF_EXAMPLE = `# Acme CRM
 
-## Ne yapıyoruz
-Küçük ekipler için basit bir CRM: müşteri kartları, görüşme notları, hatırlatmalar.
+## What we're building
+A simple CRM for small teams: customer cards, meeting notes, reminders.
 
-## Kimin için
-5-20 kişilik satış ekipleri; teknik olmayan kullanıcılar.
+## Who it's for
+Sales teams of 5-20 people; non-technical users.
 
-## Kapsam
-- Müşteri listesi + detay kartı
-- Görüşme notu ekleme
-- Hatırlatma (e-posta)
-MVP: en fazla 8 item.
+## Scope
+- Customer list + detail card
+- Adding meeting notes
+- Reminders (email)
+MVP: 8 items max.
 
-## Kapsam dışı
-Faturalama, telefon entegrasyonu.`;
+## Out of scope
+Billing, phone integration.`;
 
 function AddProject({
   onDone,
@@ -286,8 +288,8 @@ function AddProject({
       </div>
       <span className="kx-cmd-hint">
         {kind === 'new'
-          ? 'Sıfırdan ürün: ajan new-project-analysis akışını koşar.'
-          : 'Var olan kod tabanı: ajan existing-project-analysis ile mevcut durumu belgeler.'}
+          ? 'Greenfield product: the engine runs the new-project-analysis workflow.'
+          : 'Existing codebase: the engine documents the current state via existing-project-analysis.'}
       </span>
       <div className="kx-form-row">
         <input
@@ -316,7 +318,7 @@ function AddProject({
       </div>
       {kind === 'existing' && (
         <span className="kx-cmd-hint">
-          Existing projede brief alınmaz — analiz kod gerçeğinden çıkar; Add deyince başlar.
+          No brief for an existing project — analysis derives from the code itself and starts when you hit Add.
         </span>
       )}
       {kind === 'new' && (
@@ -342,7 +344,7 @@ function AddProject({
           <>
             <textarea
               className="kx-editor kx-brief-text"
-              placeholder="Projenin brief'ini buraya yaz: ne yapıyoruz, kimin için, kapsam, kapsam dışı… (Boş bırakırsan sonra Documents'tan doldurursun.)"
+              placeholder="Write the project brief here: what we're building, who it's for, scope, out of scope… (Leave empty to fill it in later from Documents.)"
               value={brief}
               onChange={(e) => setBrief(e.target.value)}
             />
@@ -360,17 +362,17 @@ function AddProject({
             />
             {uploadName ? (
               <span>
-                <strong>{uploadName}</strong> yüklendi ({brief.length} karakter) — değiştirmek için
-                tekrar tıkla, düzenlemek için Write sekmesi.
+                <strong>{uploadName}</strong> loaded ({brief.length} chars) — click again to replace,
+                or edit in the Write tab.
               </span>
             ) : (
-              <span>.md / .txt brief dosyanı seçmek için tıkla</span>
+              <span>Click to pick your .md / .txt brief file</span>
             )}
           </label>
         )}
         <span className="kx-cmd-hint">
-          Brief'ini yazar ya da yüklersen onaylı BRD olarak kaydedilir ve seni doğrudan Connect
-          ekranına götürür; boş bırakırsan Documents'tan doldurup onaylarsın.
+          Write or upload the brief and it lands as the approved BRD — analysis starts
+          immediately; leave it empty to fill in and approve from Documents.
         </span>
       </div>
       )}
@@ -423,26 +425,26 @@ function HandshakeCard({ project }: { project: Project }) {
 
   const instructions = [
     {
-      title: 'Analiz et ve geliştirmeye başla',
+      title: 'Analyze and start building',
       command: 'Read AGENTS.md and the .kortext/ guideline docs, then start building.',
     },
     {
-      title: 'Önce görevlere böl',
+      title: 'Split into tasks first',
       command: 'Read AGENTS.md, break the work into tasks first and show me the list.',
     },
     {
-      title: 'Belirli bir işle başla',
-      command: 'Read AGENTS.md, then start with: <işi buraya yaz>',
+      title: 'Start with a specific task',
+      command: 'Read AGENTS.md, then start with: <describe the task here>',
     },
   ];
 
   return (
     <div className="kx-handshake">
       <div className="kx-handshake-head">
-        <span className="kx-handshake-title">✓ Analysis complete — el sıkışma tamam</span>
+        <span className="kx-handshake-title">✓ Analysis complete — handshake done</span>
         <span className="kx-cmd-hint">
-          Kortext görevini bitirdi; belgeler artık projenin kutsal guideline'ı. Bundan sonrası
-          senin istemcinle aranızda.
+          Kortext's job is done; the documents are now the project's sacred guideline. From
+          here on it's between you and your client.
         </span>
       </div>
       {state.kopengInstalled ? (
@@ -451,11 +453,12 @@ function HandshakeCard({ project }: { project: Project }) {
         <div className="kx-kopeng-promo">
           <span className="kx-kopeng-badge">Kopeng</span>
           <span className="kx-kopeng-title">
-            İş bundan sonra görev görev ilerleyecek — board'da izle.
+            From here the work moves task by task — watch it on a board.
           </span>
           <span className="kx-cmd-hint">
-            "Kopeng'e aktar" tek tıkla işi Version → Epic → Task olarak böler; ajanın görev
-            çeker, sen kanban'da izlersin. Kur — buton bu ekranda belirir:
+            "Transfer to Kopeng" splits the work into Version → Epic → Task in one click;
+            your agent pulls tasks while you watch the kanban. Install it and the button
+            appears right here:
           </span>
           <div className="kx-kopeng-install">
             <code className="kx-cmd mono">npm install -g kopeng</code>
@@ -465,7 +468,7 @@ function HandshakeCard({ project }: { project: Project }) {
       )}
       <div className="kx-handshake-cards">
         <span className="kx-cmd-hint">
-          Karta tıkla — komut panoya kopyalanır; istemcine (CLI ya da uygulama) yapıştır.
+          Click a card — the command is copied to your clipboard; paste it into your client (CLI or app).
         </span>
         {instructions.map((c) => (
           <CommandCard key={c.title} title={c.title} command={c.command} />
@@ -526,7 +529,7 @@ function DocumentsTab({ project }: { project: Project }) {
       <div className="kx-docs-toolbar">
         {jobs.some((j) => j.status === 'running') ? (
           <span className="kx-running">
-            ⟳ {jobs.filter((j) => j.status === 'running').map((j) => j.doc_rel).join(' · ')} yazılıyor…
+            ⟳ {jobs.filter((j) => j.status === 'running').map((j) => j.doc_rel).join(' · ')} writing…
           </span>
         ) : (
           <button className="btn btn-primary btn-sm" onClick={runNext}>
@@ -558,11 +561,11 @@ function DocumentsTab({ project }: { project: Project }) {
                   <span className="kx-doc-name">{d.name}</span>
                   {d.author && <span className="kx-doc-author mono">{d.author.replace(/^\+/, '')}</span>}
                   <span className="kx-doc-spacer" />
-                  {isRunning && <span className="kx-running">⟳ yazılıyor…</span>}
+                  {isRunning && <span className="kx-running">⟳ writing…</span>}
                   {failed && (
                     <>
                       <span className="kx-doc-fail" title={job?.error ?? ''}>
-                        adım başarısız
+                        step failed
                       </span>
                       <span
                         className="btn btn-sm btn-secondary"
@@ -622,7 +625,7 @@ function CommandCard({ title, command }: { title: string; command: string }) {
     >
       <div className="kx-cmd-head">
         <span className="kx-cmd-title">{title}</span>
-        <span className="kx-cmd-copy">{copied ? '✓ Kopyalandı' : 'Kopyala'}</span>
+        <span className="kx-cmd-copy">{copied ? '✓ Copied' : 'Copy'}</span>
       </div>
       <code className="kx-cmd mono">{command}</code>
     </button>

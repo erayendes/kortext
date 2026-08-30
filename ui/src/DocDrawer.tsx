@@ -105,7 +105,7 @@ export function DocDrawer({
         setExplains((xs) => xs.map((x) => (x === entry ? { ...x, answer: r.answer } : x))),
       )
       .catch((e) =>
-        setExplains((xs) => xs.map((x) => (x === entry ? { ...x, answer: `Hata: ${e.message}` } : x))),
+        setExplains((xs) => xs.map((x) => (x === entry ? { ...x, answer: `Error: ${e.message}` } : x))),
       );
   };
 
@@ -210,7 +210,7 @@ export function DocDrawer({
             </div>
           ) : (
             <span className="kx-cmd-hint">
-              Bir satıra tıkla: altında yazarıyla sohbet et (Ask) ya da revize notu bırak (Not).
+              Click a line: chat with its author right below (Ask) or leave a revision note (Note).
             </span>
           )}
           <div className="kx-note-input">
@@ -348,7 +348,7 @@ function LineThread({
         <div key={i} className="kx-explain">
           <span className="kx-explain-q">{x.question}</span>
           <span className={`kx-explain-a${x.answer === null ? ' kx-running' : ''}`}>
-            {x.answer === null ? 'cevap yazılıyor…' : x.answer}
+            {x.answer === null ? 'writing an answer…' : x.answer}
           </span>
         </div>
       ))}
@@ -357,7 +357,7 @@ function LineThread({
           <input
             className="kx-input"
             autoFocus={active}
-            placeholder={thread.length > 0 ? 'Takip sorusu… (Enter = Ask)' : 'Bu satır hakkında soru sor ya da not yaz…'}
+            placeholder={thread.length > 0 ? 'Follow-up question… (Enter = Ask)' : 'Ask about this line, or write a note…'}
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && send('ask')}
