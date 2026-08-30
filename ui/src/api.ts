@@ -51,6 +51,14 @@ export interface PlanState {
   planningPending: boolean;
 }
 
+export interface KopengPlan {
+  exists: boolean;
+  status: string | null;
+  versions: number;
+  epics: number;
+  tasks: number;
+}
+
 export interface HandshakeState {
   analysisComplete: boolean;
   kopengInstalled: boolean;
@@ -80,6 +88,14 @@ export const api = {
   runNext: (projectId: number) =>
     req<{ started: string }>(`/api/projects/${projectId}/run-next`, { method: 'POST' }),
   handshake: (projectId: number) => req<HandshakeState>(`/api/projects/${projectId}/handshake`),
+  transfer: (projectId: number, notes?: string[]) =>
+    req<{ started: string }>(`/api/projects/${projectId}/transfer`, {
+      method: 'POST',
+      body: JSON.stringify({ notes }),
+    }),
+  kopengPlan: (projectId: number) => req<KopengPlan>(`/api/projects/${projectId}/kopeng`),
+  approvePlan: (projectId: number) =>
+    req<{ ok: boolean }>(`/api/projects/${projectId}/kopeng/approve`, { method: 'POST' }),
   listReports: (projectId: number) => req<{ reports: ReportInfo[] }>(`/api/projects/${projectId}/reports`),
   generateChangeReport: (projectId: number) =>
     req<{ report: ReportInfo }>(`/api/projects/${projectId}/reports/change`, { method: 'POST' }),

@@ -1474,3 +1474,5 @@ body {
 .kx-handshake-kopeng { display: flex; align-items: center; gap: 12px; }
 .kx-handshake-promo { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border: 1px dashed var(--border-strong); border-radius: var(--r-md); background: var(--bg); }
 .kx-handshake-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+
+.kx-handshake-plan { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--bg); }

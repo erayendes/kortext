@@ -1,5 +1,5 @@
 import type Database from 'better-sqlite3';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { Project } from './db.js';
@@ -220,6 +220,80 @@ export async function explainDoc(
     throw new Error(`${engine.id} CLI failed: ${(res.stderrTail || res.stdoutTail).trim().slice(-300)}`);
   }
   return { answer: res.stdoutTail.trim() };
+}
+
+// "Kopeng'e aktar" = split the work into Version → Epic → Task files under
+// .kopeng/ (the draft export contract kopeng will consume). One big engine
+// run, tracked as a 'plan' job; revise notes re-run it.
+export async function runPlanning(
+  db: Database.Database,
+  project: Project,
+  engine: EngineSpec,
+  pkgRoot: string,
+  reviseNotes: string[] = [],
+): Promise<RunOutcome> {
+  const job = db
+    .prepare("INSERT INTO jobs (project_id, doc_rel, kind) VALUES (?, '.kopeng/', 'plan') RETURNING *")
+    .get(project.id) as Job;
+  const workflow = readFileSync(join(pkgRoot, 'workflows', 'planning-pipeline.md'), 'utf8');
+  const lines = [
+    'You are executing the Kortext task-split flow, headless, inside the project folder.',
+    `Project: ${project.name} — project code: ${project.code || 'PROJ'} (use it as the id prefix).`,
+    '',
+    'HARD RULES:',
+    '- Write ONLY files under .kopeng/ (create the directory tree) and append to .kortext/DECISIONS.md.',
+    '- Follow the workflow below EXACTLY — file layout, task body sections, id convention.',
+    '- Read the approved .kortext/ documents listed as inputs before splitting.',
+    '- project.yaml must end with status: draft — the human approves it in the panel.',
+    '',
+    'WORKFLOW:',
+    workflow.trim(),
+  ];
+  if (reviseNotes.length > 0) {
+    lines.push(
+      '',
+      'REVISION REQUEST — the human reviewed the current plan and asks for changes.',
+      'Rewrite the .kopeng/ files addressing EVERY note (keep what was not objected to):',
+      ...reviseNotes.map((n) => `- ${n}`),
+    );
+  }
+  const settle = (status: 'done' | 'failed', error?: string): RunOutcome => {
+    db.prepare(
+      "UPDATE jobs SET status = ?, error = ?, finished_at = datetime('now') WHERE id = ?",
+    ).run(status, error ?? null, job.id);
+    return status === 'done' ? { ok: true } : { ok: false, error };
+  };
+  try {
+    const res = await spawnCli({
+      binary: engine.binary,
+      args: engine.args,
+      cwd: project.repo_path,
+      stdin: lines.join('\n'),
+      logPath: join(homedir(), '.kortext', 'logs', `p${project.id}-plan.log`),
+      signal: new AbortController().signal,
+      timeoutMs: 30 * 60 * 1000,
+    });
+    if (res.exitCode !== 0) {
+      return settle(
+        'failed',
+        `${engine.id} CLI failed (exit ${res.exitCode}): ${(res.stderrTail || res.stdoutTail).trim().slice(-400) || 'no output'}`,
+      );
+    }
+    const kopeng = join(project.repo_path, '.kopeng');
+    if (!existsSync(join(kopeng, 'project.yaml'))) {
+      return settle('failed', 'engine finished without producing .kopeng/project.yaml');
+    }
+    let taskCount = 0;
+    try {
+      taskCount = readdirSync(join(kopeng, 'tasks')).filter((f) => f.endsWith('.md')).length;
+    } catch {
+      /* no tasks dir */
+    }
+    if (taskCount === 0) return settle('failed', '.kopeng/tasks/ is empty — no tasks produced');
+    return settle('done');
+  } catch (err) {
+    return settle('failed', (err as Error).message);
+  }
 }
 
 // A server restart orphans 'running' rows — settle them so Retry works.

@@ -223,3 +223,32 @@ printf -- '---\\nstatus: draft\\nauthor: +mock\\n---\\n\\n# S\\n' > ".kortext/$r
   assert.ok(elapsed < 1100, `expected overlap via wake (<1100ms), took ${elapsed}ms`);
   rmSync(work, { recursive: true, force: true });
 });
+
+test('runPlanning: engine writes .kopeng tree → done with counts; empty tasks → failed', async () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Plan', repoPath: join(work, 'plan'), code: 'PLN' }, pkgRoot);
+  const { runPlanning } = await import('../server/runner.js');
+
+  const good = join(work, 'plan-good.sh');
+  writeFileSync(good, `#!/bin/sh
+cat > /dev/null
+mkdir -p .kopeng/versions .kopeng/epics .kopeng/tasks
+printf 'name: Plan\\ncode: PLN\\nstatus: draft\\n' > .kopeng/project.yaml
+printf 'id: v0.1\\n' > .kopeng/versions/v0.1.yaml
+printf 'id: PLN-E01\\nversion: v0.1\\n' > .kopeng/epics/PLN-E01.yaml
+printf -- '---\\nid: PLN-T001\\nassignee: ai\\nblocked_by: []\\n---\\n\\n## Description\\nX\\n' > .kopeng/tasks/PLN-T001.md
+`);
+  chmodSync(good, 0o755);
+  const ok = await runPlanning(db, p, { id: 'g', binary: good, args: [], installHint: '' }, pkgRoot);
+  assert.equal(ok.ok, true);
+
+  const bad = join(work, 'plan-bad.sh');
+  writeFileSync(bad, '#!/bin/sh\ncat > /dev/null\nmkdir -p .kopeng\nprintf "status: draft\\n" > .kopeng/project.yaml\n');
+  chmodSync(bad, 0o755);
+  const p2 = createProject(db, { name: 'Plan2', repoPath: join(work, 'plan2'), code: 'PL2' }, pkgRoot);
+  const fail = await runPlanning(db, p2, { id: 'b', binary: bad, args: [], installHint: '' }, pkgRoot);
+  assert.equal(fail.ok, false);
+  assert.match(fail.error!, /tasks\/ is empty/);
+  rmSync(work, { recursive: true, force: true });
+});

@@ -11,7 +11,7 @@ import { pickDirectoryNative } from './pick-directory.js';
 import { spawnSync } from 'node:child_process';
 import { readdirSync } from 'node:fs';
 import { detectEngines, selectedEngine, setSetting, ENGINES } from './engines.js';
-import { advance, explainDoc, failStaleJobs, listJobs, nextStep, reviseDoc, runningJob } from './runner.js';
+import { advance, explainDoc, failStaleJobs, listJobs, nextStep, reviseDoc, runPlanning, runningJob } from './runner.js';
 import { readFileSync, writeFileSync } from 'node:fs';
 import type { Project } from './db.js';
 
@@ -253,6 +253,63 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     explainDoc(project, String(rel ?? ''), String(excerpt ?? ''), question, history, engine, pkgRoot)
       .then((r) => res.json(r))
       .catch((err) => res.status(500).json({ error: (err as Error).message }));
+  });
+
+  // "Kopeng'e aktar": split the work into .kopeng/ files (one big plan job).
+  app.post('/api/projects/:id/transfer', (req, res) => {
+    const project = projectOr404(req.params.id, res);
+    if (!project) return;
+    const engine = selectedEngine(db);
+    if (!engine) return res.status(409).json({ error: 'no agent CLI installed' });
+    if (!analysisComplete(db, project, pkgRoot)) {
+      return res.status(409).json({ error: 'analysis is not complete yet' });
+    }
+    if (runningJob(db, project.id)) return res.status(409).json({ error: 'a job is already running' });
+    const notes = Array.isArray(req.body?.notes) ? req.body.notes.map(String) : [];
+    void runPlanning(db, project, engine, pkgRoot, notes);
+    res.status(202).json({ started: '.kopeng/' });
+  });
+
+  // Plan summary: what the split produced + its approval status.
+  app.get('/api/projects/:id/kopeng', (req, res) => {
+    const project = projectOr404(req.params.id, res);
+    if (!project) return;
+    const dir = join(project.repo_path, '.kopeng');
+    const count = (sub: string, ext: string) => {
+      try {
+        return readdirSync(join(dir, sub)).filter((f) => f.endsWith(ext)).length;
+      } catch {
+        return 0;
+      }
+    };
+    let status: string | null = null;
+    try {
+      status = readFileSync(join(dir, 'project.yaml'), 'utf8').match(/^status:\s*(.+)$/m)?.[1]?.trim() ?? null;
+    } catch {
+      /* not produced yet */
+    }
+    res.json({
+      exists: status !== null,
+      status,
+      versions: count('versions', '.yaml'),
+      epics: count('epics', '.yaml'),
+      tasks: count('tasks', '.md'),
+    });
+  });
+
+  // Prime approves the plan — the last act of the handshake.
+  app.post('/api/projects/:id/kopeng/approve', (req, res) => {
+    const project = projectOr404(req.params.id, res);
+    if (!project) return;
+    const p = join(project.repo_path, '.kopeng', 'project.yaml');
+    try {
+      const body = readFileSync(p, 'utf8');
+      writeFileSync(p, /^status:/m.test(body) ? body.replace(/^status:.*$/m, 'status: approved') : `status: approved
+${body}`, 'utf8');
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(400).json({ error: (err as Error).message });
+    }
   });
 
   // Handshake state: analysis done? kopeng around? tasks already exported?

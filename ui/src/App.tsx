@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api, type DocInfo, type EngineInfo, type HandshakeState, type Job, type Project } from './api';
+import { api, type DocInfo, type EngineInfo, type HandshakeState, type Job, type KopengPlan, type Project } from './api';
 import { DocDrawer, StatusBadge } from './DocDrawer';
 
 export function App() {
@@ -103,6 +103,102 @@ function EngineBadge() {
         ))}
       </select>
     </span>
+  );
+}
+
+// Transfer = split into .kopeng/ files; the plan gets a summary + approve /
+// revise round — the last act of the handshake.
+function TransferPanel({ project }: { project: Project }) {
+  const [plan, setPlan] = useState<KopengPlan | null>(null);
+  const [splitting, setSplitting] = useState(false);
+  const [reviseText, setReviseText] = useState('');
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    const refresh = () =>
+      Promise.all([api.kopengPlan(project.id), api.jobs(project.id)])
+        .then(([p, j]) => {
+          setPlan(p);
+          setSplitting(j.jobs.some((jb) => jb.doc_rel === '.kopeng/' && jb.status === 'running'));
+          const failed = j.jobs.find((jb) => jb.doc_rel === '.kopeng/' && jb.status === 'failed');
+          setErr(failed && !p.exists ? failed.error : null);
+        })
+        .catch(() => {});
+    refresh();
+    const timer = setInterval(refresh, 4000);
+    return () => clearInterval(timer);
+  }, [project.id]);
+
+  const transfer = (notes?: string[]) =>
+    api
+      .transfer(project.id, notes)
+      .then(() => setSplitting(true))
+      .catch((e) => setErr(e.message));
+
+  if (splitting) {
+    return (
+      <div className="kx-handshake-kopeng">
+        <span className="kx-running">⟳ İş görevlere bölünüyor… (.kopeng/ yazılıyor)</span>
+      </div>
+    );
+  }
+
+  if (plan?.exists) {
+    return (
+      <div className="kx-handshake-plan">
+        <div className="kx-plan-row">
+          <span className="kx-cmd-title">
+            Plan hazır: {plan.versions} version · {plan.epics} epic · {plan.tasks} task
+          </span>
+          <span className={`kx-status kx-status-${plan.status === 'approved' ? 'approved' : 'draft'}`}>
+            {plan.status ?? 'draft'}
+          </span>
+          <span className="kx-doc-spacer" />
+          {plan.status !== 'approved' && (
+            <button className="btn btn-sm btn-success" onClick={() => api.approvePlan(project.id).then(() => setPlan({ ...plan, status: 'approved' }))}>
+              Approve plan
+            </button>
+          )}
+        </div>
+        {plan.status === 'approved' ? (
+          <span className="kx-cmd-hint">
+            Görevler .kopeng/ altında — Kopeng board'unu aç, ajanın işleri oradan çeksin.
+          </span>
+        ) : (
+          <div className="kx-note-input">
+            <input
+              className="kx-input"
+              placeholder="Revize notu… (planı notlarla yeniden böler)"
+              value={reviseText}
+              onChange={(e) => setReviseText(e.target.value)}
+            />
+            <button
+              className="btn btn-sm btn-secondary"
+              disabled={!reviseText.trim()}
+              onClick={() => {
+                transfer([reviseText.trim()]);
+                setReviseText('');
+              }}
+            >
+              Revise plan
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="kx-handshake-kopeng">
+      <button className="btn btn-primary" onClick={() => transfer()}>
+        Kopeng'e aktar
+      </button>
+      <span className="kx-cmd-hint">
+        İşi görevlere böler (Version → Epic → Task) ve .kopeng/ altına Kopeng'in okuyacağı
+        dosyaları koyar.
+      </span>
+      {err && <span className="kx-doc-fail">{err}</span>}
+    </div>
   );
 }
 
@@ -335,15 +431,7 @@ function HandshakeCard({ project }: { project: Project }) {
         </span>
       </div>
       {state.kopengInstalled ? (
-        <div className="kx-handshake-kopeng">
-          <button className="btn btn-primary" disabled title="R5 ile geliyor">
-            Kopeng'e aktar
-          </button>
-          <span className="kx-cmd-hint">
-            İşi görevlere böler ve .kopeng/ altına Kopeng board'unun okuyacağı dosyaları koyar.
-            {state.transferred ? ' (Aktarılmış görünüyor.)' : ''}
-          </span>
-        </div>
+        <TransferPanel project={project} />
       ) : (
         <div className="kx-handshake-promo">
           <span className="kx-cmd-title">Görevleri board'da izlemek ister misin?</span>
