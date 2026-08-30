@@ -9,21 +9,17 @@ approver: +prime
 
 ## Compliance Scope
 
-- [Projenin kapsamına göre uyum hedefleri (KVKK, GDPR, CCPA vb.)]
+- [Compliance targets based on the project's scope (KVKK, GDPR, CCPA, etc.)]
 
-## Identified Risks (Risk Analizi)
+## Identified Risks
 
-- [Risk durumu - Örn: Kullanıcının konum bilgisinin açık tutulması]
+- [Risk description — e.g., user location data being kept exposed]
 
 ## Required Approvals & Consents
 
-- [Örn: Kayıt olurken Gizlilik Sözleşmesi Onayı (Zorunlu)]
-- [Çerez Yönetimi (Cookie Policy) nasıl kurgulanacak?]
+- [e.g., Privacy Policy consent at sign-up (required)]
+- [How will cookie consent (Cookie Policy) be handled?]
 
 ## Technical Integration Requests
 
-- [Örn: Veritabanındaki `password` ve `tc_no` alanları mutlaka Hash'lenmeli.]
-
-## Epics & Tasks
-
-- Backlog item'lar SQL'de tutulur (`backlog_items`). Legal task/epic'ler Board ekranından eklenir.
+- [e.g., The `password` and `national_id` columns in the database must be hashed.]

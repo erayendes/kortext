@@ -7,24 +7,24 @@ updated_at: 1970-01-01T00:00:00Z
 
 # Product Requirements Document (PRD)
 
-> **Per-file disipline:** Engine her PRD için `product-requirements_<slug>_<YYYY-MM-DD-HHMM>.md` üretir.
+> **Per-file discipline:** The engine generates `product-requirements_<slug>_<YYYY-MM-DD-HHMM>.md` for each PRD.
 
 ## Product Requirements
 
-- [Legal konularda yapılacaklar]
-- [Growth için yapılacaklar]
-- [Content için yapılacaklar]
+- [Legal to-dos]
+- [Growth to-dos]
+- [Content to-dos]
 
 ## User Stories (Tasks) & Acceptance Criteria
 
 ### [task-id]: [task-name]
 
-Bir [Kullanıcı Tipi] olarak, [Bunu Yapmak] istiyorum; böylece [Şu Amaca] ulaşacağım.
+As a [User Type], I want to [Do Something], so that [I reach This Goal].
 
-**Kabul Kriterleri (Acceptance Criteria):**
+**Acceptance Criteria:**
 
 - [ ] Code review
 - [ ] Quality control
 - [ ] Security check
-- [ ] [Kriter 1: Kullanıcı butona basınca şu olmalı]
-- [ ] [Kriter 2: Hata verirse şu mesaj çıkmalı]
+- [ ] [Criterion 1: When the user presses the button, X must happen]
+- [ ] [Criterion 2: On error, this message must be shown]

@@ -7,18 +7,18 @@ approver: +prime
 
 # System Architecture
 
-## Bileşenler
+## Components
 
-- [Sistemin ana parçaları: istemci, sunucu, veritabanı, dış servisler…]
+- [The system's main parts: client, server, database, external services…]
 
-## Veri akışı
+## Data flow
 
-- [Bir isteğin/verinin sistemde izlediği yol; kim kime ne gönderir]
+- [The path a request or piece of data takes through the system; who sends what to whom]
 
-## Sınırlar ve entegrasyonlar
+## Boundaries and integrations
 
-- [Sistemin dışarıyla temas ettiği yüzeyler: API'ler, 3. parti servisler, webhook'lar]
+- [The surfaces where the system touches the outside world: APIs, third-party services, webhooks]
 
-## Neden böyle
+## Why this way
 
-- [Ana mimari tercihlerin tek satırlık gerekçeleri; detaylı kararlar DECISIONS.md'de]
+- [One-line rationales for the main architectural choices; detailed decisions live in DECISIONS.md]

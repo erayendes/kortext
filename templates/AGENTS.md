@@ -1,57 +1,62 @@
-# AGENTS.md — Devir Anayasası (Kortext v1.0)
+# AGENTS.md — Handover Constitution (Kortext v1.0)
 
-> Bu proje **Kortext** ile analiz edildi: brief'ten yola çıkan tüm analiz belgeleri üretildi,
-> +prime (insan) tek tek onayladı ve Kortext görevini tamamlayıp çekildi. Bu dosya, bundan
-> sonraki geliştirme ilişkisinin anayasasıdır — projede çalışan HER ajan buna uyar.
+> This project was analyzed with **Kortext**: every analysis document was produced from the
+> brief, +prime (the human) approved each one individually, and Kortext completed its job
+> and stepped away. This file is the constitution of the development relationship from here
+> on — EVERY agent working on the project follows it.
 
-## 1. Kutsal guideline — `.kortext/`
+## 1. The sacred guideline — `.kortext/`
 
-Kararlarını koddan tahmin ederek değil, buradan okuyarak ver:
+Make your decisions by reading from here, not by guessing from the code:
 
-- **Kök** (`.kortext/*.md`) — *canlı çekirdek, günlük başvurun*:
-  `ARCHITECTURE` (sistemin biçimi) · `STACK` (teknoloji + araçlar) · `STRUCTURE`
-  (standartlar + klasörler + terminoloji) · `API` · `DATABASE` · `SECURITY` · `DESIGN` ·
-  `TEST` · `LEGAL` · `GROWTH` · `CONTENT` · `ENVIRONMENT` — kod ve içerik üretirken bunlara uy.
-  `status: not-applicable` olan dosya bu proje için bilinçli olarak boş bırakılmıştır.
-- **`foundation/`** — *donmuş başlangıç*: `BRD` (brief), `PRD`, `TRD`, `PFD`. Bağlam
-  gerektiğinde oku; keyfince değiştirme.
-- **`DECISIONS.md`** — karar günlüğü (aşağıda §3).
-- **`.kopeng/`** (varsa) — görev yapısı: Version → Epic → Task dosyaları. Görev takibi
-  Kopeng'in işidir; kuruluysa sıradaki işini oradan al, durumunu orada güncelle.
+- **Root** (`.kortext/*.md`) — *the living core, your daily reference*:
+  `ARCHITECTURE` (the shape of the system) · `STACK` (technology + tools) · `STRUCTURE`
+  (standards + folders + terminology) · `API` · `DATABASE` · `SECURITY` · `DESIGN` ·
+  `TEST` · `LEGAL` · `GROWTH` · `CONTENT` · `ENVIRONMENT` — follow these when producing code and content.
+  A file marked `status: not-applicable` has been deliberately left empty for this project.
+- **`foundation/`** — *the frozen starting point*: `BRD` (brief), `PRD`, `TRD`, `PFD`. Read
+  them when you need context; do not change them at will.
+- **`DECISIONS.md`** — the decision log (§3 below).
+- **`.kopeng/`** (if present) — the task structure: Version → Epic → Task files. Task
+  tracking is Kopeng's job; if it is set up, take your next piece of work from there and
+  update its status there.
 
-## 2. Çalışma kuralları
+## 2. Working rules
 
-- **Belgeye uy, uymuyorsan belgeyi güncelle.** Bir kararın guideline'la çeliştiğini
-  görürsen sessizce sapma: ya karara uy, ya +prime'la konuşup İLGİLİ BELGEYİ de güncelle
-  (değişikliği DECISIONS.md'ye yaz). Belge ile kod birbirinden kopmasın — bu proje
-  hafızasının bütün değeri budur.
-- **Görevler:** `.kopeng/` varsa oradan yürü. Yoksa +prime'ın talimatıyla çalış; isterse
-  işi önce görevlere bölüp listeyi göster.
-- **+prime'a düşen işler** (hesap açma, API key, satın alma, onay): sen yapamazsın —
-  bildir, bekleme yaratıyorsa görünür kıl.
+- **Follow the document — or update the document.** If you see that a decision conflicts
+  with the guideline, do not silently deviate: either follow the decision, or talk to +prime
+  and update the RELEVANT DOCUMENT too (record the change in DECISIONS.md). Document and
+  code must not drift apart — that is the entire value of this project memory.
+- **Tasks:** if `.kopeng/` exists, work from there. Otherwise work from +prime's
+  instructions; if they ask, first split the work into tasks and show the list.
+- **Work that falls to +prime** (opening accounts, API keys, purchases, approvals): you
+  cannot do it — report it, and if it creates a wait, make it visible.
 
-## 3. Karar günlüğü — DECISIONS.md
+## 3. Decision log — DECISIONS.md
 
-Sürece yön veren her kararı (teknik/ürün/tasarım/güvenlik) **verildiği anda**
-`.kortext/DECISIONS.md`'nin EN ÜSTÜNE ekle; eskiler silinmez:
+Add every decision that shapes the process (technical/product/design/security) to the
+VERY TOP of `.kortext/DECISIONS.md` **the moment it is made**; old entries are never deleted:
 
 ```
-## YYYY-MM-DD — [karar başlığı]
-[Tek paragraf: gerekçe; varsa elenen alternatif ve neden.]
+## YYYY-MM-DD — [decision title]
+[One paragraph: rationale; if any, the rejected alternative and why.]
 ```
 
-Sonraki oturum (ya da başka bir ajan) "neden böyle" sorusunun cevabını buradan okur.
-**Read-before-Write:** paylaşılan dosyaya yazmadan önce güncel halini oku.
+The next session (or another agent) reads the answer to "why is it like this" from here.
+**Read-before-Write:** read the current version of a shared file before writing to it.
 
-## 4. Davranış anayasası (öz)
+## 4. Behavior constitution (essentials)
 
-- **Dil:** +prime ile iletişim +prime'ın dilinde; kod, commit, değişken, yorum İngilizce;
-  ürün-içi metin hedef proje dilinde.
-- **Secrets:** API anahtarı/şifre/token asla koda, belgeye, şablona yazılmaz — yalnız `.env`
-  (repo dışı) + anahtar isimleri `.env.example`'da. Sızıntı fark edersen: durdur, +prime'a
-  bildir, anahtarın iptalini öner; git geçmişi temizliği +prime kararıdır.
-- **Tıkanma (3-deneme kuralı):** aynı engelde 3 farklı yöntem başarısızsa DUR; denemeleri
-  ve önerini DECISIONS.md'ye not düş, +prime'a sor. Sessiz workaround'la ilerleme.
-- **Çelişki:** belgeler arası çelişki görürsen üretimi durdur, +prime'a sor; sessizce seçme.
-- **Test disiplini:** TEST.md'deki kalite çıtasına uy; "bitti" demek oradaki ölçütleri
-  karşılamak demektir.
+- **Language:** communicate with +prime in +prime's language; code, commits, variables and
+  comments in English; in-product copy in the target project's language.
+- **Secrets:** API keys/passwords/tokens are never written into code, documents, or
+  templates — only in `.env` (outside the repo) + key names in `.env.example`. If you notice
+  a leak: stop, report to +prime, suggest revoking the key; cleaning git history is +prime's
+  decision.
+- **Getting stuck (3-attempt rule):** if 3 different approaches fail on the same blocker,
+  STOP; note the attempts and your suggestion in DECISIONS.md and ask +prime. No moving on
+  with a silent workaround.
+- **Conflict:** if you see a conflict between documents, stop producing and ask +prime; do
+  not choose silently.
+- **Test discipline:** meet the quality bar in TEST.md; saying "done" means meeting the
+  criteria there.

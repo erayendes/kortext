@@ -1,16 +1,16 @@
-# Planning Pipeline — "Kopeng'e aktar" (işi görevlere bölme)
+# Planning Pipeline — "Transfer to Kopeng" (splitting the work into tasks)
 
-> Yalnız +prime paneldeki **"Kopeng'e aktar"** butonuna basınca koşar. Onaylı analiz
-> belgelerinden Version → Epic → Task yapısını üretir ve Kopeng'in okuyacağı dosyaları
-> `.kopeng/` altına koyar. Bu, el sıkışmanın son adımıdır.
+> Runs only when +prime presses the **"Transfer to Kopeng"** button in the panel. Produces
+> the Version → Epic → Task structure from the approved analysis documents and puts the
+> files Kopeng will read under `.kopeng/`. This is the final step of the handshake.
 
-## Girdiler
+## Inputs
 
-Onaylı belgeler: `foundation/PRD.md`, `foundation/TRD.md`, `.kortext/ARCHITECTURE.md`,
+Approved documents: `foundation/PRD.md`, `foundation/TRD.md`, `.kortext/ARCHITECTURE.md`,
 `STACK.md`, `SECURITY.md`, `LEGAL.md`, `API.md`, `DATABASE.md`, `DESIGN.md`, `TEST.md`
-(not-applicable olanları atla).
+(skip the ones marked not-applicable).
 
-## Çıktı — `.kopeng/` dosya düzeni (TASLAK sözleşme; Kopeng bu formata uyar)
+## Output — `.kopeng/` file layout (DRAFT contract; Kopeng conforms to this format)
 
 ```
 .kopeng/
@@ -20,13 +20,13 @@ Onaylı belgeler: `foundation/PRD.md`, `foundation/TRD.md`, `.kortext/ARCHITECTU
 ├── epics/
 │   └── ACME-E01.yaml             # id, name, version, description, tasks: [ACME-T001, …]
 └── tasks/
-    └── ACME-T001.md              # frontmatter + gövde (aşağıda)
+    └── ACME-T001.md              # frontmatter + body (below)
 ```
 
-**Task dosyası** (`tasks/<ID>.md`) — frontmatter:
-`id`, `name`, `epic` (opsiyonel — task epic'siz olabilir), `assignee` (`ai` | `prime`),
-`blocked_by: []` (her zaman yaz, boşsa boş liste), `blocks: []`.
-Gövde başlıkları (hepsi zorunlu; uygulanmıyorsa "—" yaz):
+**Task file** (`tasks/<ID>.md`) — frontmatter:
+`id`, `name`, `epic` (optional — a task may have no epic), `assignee` (`ai` | `prime`),
+`blocked_by: []` (always write it; empty list if none), `blocks: []`.
+Body headings (all required; write "—" where one does not apply):
 
 ```
 ## Description
@@ -37,22 +37,24 @@ Gövde başlıkları (hepsi zorunlu; uygulanmıyorsa "—" yaz):
 ## Acceptance Criteria
 ```
 
-## Kurallar
+## Rules
 
-1. **ID konvansiyonu:** proje kodu önek — `<CODE>-E01` (epic), `<CODE>-T001` (task).
-   Slug/kebab-case id YASAK.
-2. **Kapsam tavanı:** PRD/BRD'de item sınırı ya da "MVP/küçük" notu varsa AŞMA; şüphede
-   daha az, daha büyük task. Bir özellik = bir task; frontend/backend/test diye BÖLME.
-3. **Az versiyon:** MVP için 1–3 versiyon; her epic bir versiyona bağlı; task'lar epic'e
-   bağlı olmak zorunda değil (bağımsız task version köküne yazılmaz, epic'siz kalır).
-4. **+prime ön-gereksinimleri (ZORUNLU):** STACK/SECURITY/LEGAL/API'yi tara; insan aksiyonu
-   gerektiren her ihtiyacı (hesap açma, API key, domain, cihaz, bütçe onayı)
-   `assignee: prime` task'ı olarak üret ve ona bağımlı task'ların `blocked_by`'ına ekle.
-5. **Bağımlılıklar:** gerçek sıralama zorunluluklarını `blocked_by` ile kur; dangling id
-   bırakma; `blocks` alanını ters yönde tutarlı yaz.
-6. **Acceptance Criteria** TEST.md'nin kalite çıtasıyla uyumlu, davranış odaklı ve
-   doğrulanabilir olsun.
-7. **Öz denetim (bitirmeden):** her dosya şemaya uygun mu; her epic'in `version`'ı ve
-   listelenen `tasks`'ı gerçek mi; her task'ın frontmatter alanları eksiksiz mi; id'ler
-   konvansiyonda mı; `project.yaml` `status: draft` mı. Sorun bulursan düzelt.
-8. Kararlarını `.kortext/DECISIONS.md`'ye ekle (neden bu versiyonlama/bölme).
+1. **ID convention:** project code as prefix — `<CODE>-E01` (epic), `<CODE>-T001` (task).
+   Slug/kebab-case ids are FORBIDDEN.
+2. **Scope ceiling:** if the PRD/BRD sets an item limit or an "MVP/small" note, do NOT
+   exceed it; when in doubt, fewer, larger tasks. One feature = one task; do NOT split it
+   into frontend/backend/test.
+3. **Few versions:** 1–3 versions for an MVP; every epic belongs to a version; tasks do not
+   have to belong to an epic (an independent task is not written to the version root — it
+   stays epic-less).
+4. **+prime prerequisites (MANDATORY):** scan STACK/SECURITY/LEGAL/API; produce every need
+   that requires human action (opening an account, API key, domain, device, budget approval)
+   as an `assignee: prime` task and add it to the `blocked_by` of the tasks that depend on it.
+5. **Dependencies:** encode the real ordering constraints with `blocked_by`; leave no
+   dangling ids; keep the `blocks` field consistent in the reverse direction.
+6. **Acceptance Criteria** must align with TEST.md's quality bar and be behavior-focused
+   and verifiable.
+7. **Self-check (before finishing):** does every file conform to the schema; are every
+   epic's `version` and listed `tasks` real; are every task's frontmatter fields complete;
+   are the ids on convention; is `project.yaml` at `status: draft`. Fix any problem you find.
+8. Add your decisions to `.kortext/DECISIONS.md` (why this versioning/split).

@@ -7,42 +7,42 @@ updated_at: 1970-01-01T00:00:00Z
 
 # Technical Requirements Document (TRD)
 
-> **Per-file disipline:** Engine her TRD için `tech-requirements_<slug>_<YYYY-MM-DD-HHMM>.md` üretir.
+> **Per-file discipline:** The engine generates `tech-requirements_<slug>_<YYYY-MM-DD-HHMM>.md` for each TRD.
 
 ## Technical Goals
 
-- **Product Goal:** [Product Requirements Document referansı]
-- **Engineering Goal:** [Sistemin teknik hedefleri, örn: Saniyede 1k istek kaldırabilmeli]
+- **Product Goal:** [Reference to the Product Requirements Document]
+- **Engineering Goal:** [The system's technical targets, e.g., must handle 1k requests per second]
 
 ## System Architecture & Boundaries
 
-- **Client ↔ Server:** [Hangi arayüzler kullanılacak?]
-- **Data Flow:** [Veri hangi rotayı izleyecek?]
-- **Integrations:** [Hangi external service'lerle konuşacak?]
+- **Client ↔ Server:** [Which interfaces will be used?]
+- **Data Flow:** [What route does the data travel?]
+- **Integrations:** [Which external services does it talk to?]
 
 ## Component Details
 
-- **Frontend Requirements:** [örn: SSR zorunlu, bundle size max 500kb]
-- **Backend Requirements:** [örn: Job Queue kullanılmalı, Caching aktif edilmeli]
-- **Data Layer:** [örn: PostgreSQL 16, Redis 7.x]
+- **Frontend Requirements:** [e.g., SSR required, bundle size max 500kb]
+- **Backend Requirements:** [e.g., a job queue must be used, caching must be enabled]
+- **Data Layer:** [e.g., PostgreSQL 16, Redis 7.x]
 
 ## Non-functional Requirements
 
-- **Performance:** [latency budget, throughput hedefi]
+- **Performance:** [latency budget, throughput target]
 - **Reliability:** [uptime, RTO/RPO]
 - **Security:** [auth model, encryption requirements]
 - **Observability:** [logging, metrics, tracing]
 
 ## Technical Constraints & Risks
 
-- **Bottleneck:** [Neresi sistemde yavaşlığa sebep olabilir?]
-- **Risk:** [Hangi risk ne kadar olası, etkisi ne?]
-- **Risk Mitigation:** [Bu riski nasıl yöneteceğiz?]
+- **Bottleneck:** [Where could the system slow down?]
+- **Risk:** [Which risks, how likely, and what impact?]
+- **Risk Mitigation:** [How will we manage this risk?]
 
 ## Implementation Plan
 
-- [Yüksek seviyede atılacak adımlar — detay backlog item'larında]
+- [High-level implementation steps — fine-grained detail is worked out per task]
 
 ## Open Questions
 
-- [Karara bağlanması gereken açık sorular — `+prime` veya ilgili gate'e taşınır]
+- [Open questions awaiting a decision — escalated to `+prime` or the relevant gate]

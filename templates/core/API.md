@@ -9,7 +9,7 @@ approver: +prime
 
 ## Authentication
 
-- **Type:** [Örn: Bearer Token, OAuth2, API Key]
+- **Type:** [e.g., Bearer Token, OAuth2, API Key]
 - **Headers:**
 
 ## Base URLs
@@ -19,13 +19,13 @@ approver: +prime
 
 ## Endpoints
 
-### [Modül Adı / Grup Adı]
+### [Module Name / Group Name]
 
-#### `GET /path/to/resource` (Açıklama)
+#### `GET /path/to/resource` (Description)
 
 - **Parameters / Query:**
-  - `param` (type): [Açıklama]
-- **Request Body:** (Eğer varsa)
+  - `param` (type): [Description]
+- **Request Body:** (If any)
 
 ```json
 {

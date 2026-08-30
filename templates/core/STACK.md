@@ -9,35 +9,35 @@ approver: +prime
 
 ## Core Technologies
 
-- **Frontend:** [Dil, Framework, Sürüm — Örn: TypeScript, React 18, Next.js 14, Kotlin, SwiftUI]
-- **Backend:** [Dil, Framework, Sürüm — Örn: Node.js 20, NestJS]
-- **Database:** [Veritabanı, Sürüm — Örn: PostgreSQL 16, Redis]
+- **Frontend:** [Language, framework, version — e.g., TypeScript, React 18, Next.js 14, Kotlin, SwiftUI]
+- **Backend:** [Language, framework, version — e.g., Node.js 20, NestJS]
+- **Database:** [Database, version — e.g., PostgreSQL 16, Redis]
 
 ## Architecture Pattern
 
-- [Örn: Mikroservis mi, Monolit mi, Serverless mı? Hangi dizayn (MVC vb) kullanılacak?]
+- [e.g., Microservices, monolith, or serverless? Which design pattern (MVC, etc.) will be used?]
 
 ## Tooling & Prerequisites
 
-- **Package Manager:** [Örn: npm, yarn, pnpm]
-- **Environment:** [Örn: Docker Desktop, Node v20+]
-- **Testing:** [Örn: Jest, Cypress, Playwright]
-- **Tools:** [Örn: Postman, Antigravity vb.]
-- **MCP's:** [Örn: Vercel MCP, Firebase MCP]
+- **Package Manager:** [e.g., npm, yarn, pnpm]
+- **Environment:** [e.g., Docker Desktop, Node v20+]
+- **Testing:** [e.g., Jest, Cypress, Playwright]
+- **Tools:** [e.g., Postman, Antigravity, etc.]
+- **MCP's:** [e.g., Vercel MCP, Firebase MCP]
 
 ## Infrastructure & Deployment (CI/CD)
 
-- **Cloud Provider:** [Örn: AWS, Vercel, Google Cloud]
-- **CI/CD Platform:** [Örn: GitHub Actions, GitLab CI]
-- **Containerization:** [Örn: Docker]
+- **Cloud Provider:** [e.g., AWS, Vercel, Google Cloud]
+- **CI/CD Platform:** [e.g., GitHub Actions, GitLab CI]
+- **Containerization:** [e.g., Docker]
 
 ## Third-Party Services & Integrations
 
-- **Auth:** [Örn: Firebase, NextAuth, Auth0]
-- **Payments:** [Örn: Stripe, Iyzico]
-- **Storage/CDN:** [Örn: AWS S3, Cloudflare]
+- **Auth:** [e.g., Firebase, NextAuth, Auth0]
+- **Payments:** [e.g., Stripe, Iyzico]
+- **Storage/CDN:** [e.g., AWS S3, Cloudflare]
 
 ## Security & Policies
 
-- [Hassas verilerin nasıl saklanacağı, özel gitignore kuralları vb.]
-- Güvenlik kuralları için bkz. `.kortext/references/security-rules.md`.
+- [How sensitive data is stored, custom gitignore rules, etc.]
+- For security rules, see `.kortext/SECURITY.md`.

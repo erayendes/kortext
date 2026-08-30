@@ -5,7 +5,7 @@ author: agent
 
 # Decision Log
 
-> Karar günlüğü — onay döngüsüne girmez. Ajan her önemli kararı verildiği anda EN ÜSTE ekler,
-> eskiler silinmez. Karar Özeti raporu buradan derlenir.
+> Decision log — never enters the approval loop. The agent adds each significant decision AT THE TOP
+> the moment it is made; old entries are never deleted. The Decision Summary report is compiled from here.
 >
-> Format: `## YYYY-MM-DD — [karar başlığı]` + tek paragraf gerekçe (+ varsa alternatif ve neden elendiği).
+> Format: `## YYYY-MM-DD — [decision title]` + a one-paragraph rationale (+ the alternative considered and why it was rejected, if any).

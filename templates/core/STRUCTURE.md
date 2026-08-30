@@ -12,28 +12,28 @@ approver: +prime
 ```
 [Project Root]/
 ├── src/
-│   ├── components/    → [Açıklama]
-│   ├── pages/         → [Açıklama]
-│   ├── utils/         → [Açıklama]
-│   └── api/           → [Açıklama]
-├── public/            → [Açıklama]
-└── [Config Files]     → (package.json, tsconfig.json vb.)
+│   ├── components/    → [Description]
+│   ├── pages/         → [Description]
+│   ├── utils/         → [Description]
+│   └── api/           → [Description]
+├── public/            → [Description]
+└── [Config Files]     → (package.json, tsconfig.json, etc.)
 ```
 
 ## Directory Rules
 
-- **`/components/`:** Yalnızca tekrar kullanılabilir UI elemanlarını barındırır.
-- **`/pages/` veya `/app/`:** Sadece sayfa/route yönetimini barındırır.
-- **`/utils/`:** Saf (pure) yardımcı fonksiyonlar bulunur (state içermez).
+- **`/components/`:** Holds reusable UI elements only.
+- **`/pages/` or `/app/`:** Holds page/route management only.
+- **`/utils/`:** Pure helper functions live here (no state).
 
 ## Path Aliases
 
-- [Örn: `@components/*` -> `src/components/*`]
-- [Örn: `@utils/*` -> `src/utils/*`]
+- [e.g., `@components/*` -> `src/components/*`]
+- [e.g., `@utils/*` -> `src/utils/*`]
 
 ## Feature-Based vs Type-Based Structure
 
-- [Projenin yapısı (domain-driven, feature-sliced, vb.) hangisine uyacaksa açıklaması]
+- [Which structure the project follows (domain-driven, feature-sliced, etc.) and a short explanation]
 
 # Coding Dictionary & Standards
 
@@ -47,20 +47,20 @@ approver: +prime
 
 ## Code Quality & Formatting
 
-- **Linter & Formatter:** [Örn: ESLint + Prettier ayarları]
-- **Indent:** [Örn: 2 spaces]
-- **Quote Mark:** [Örn: Single quotes ('')]
+- **Linter & Formatter:** [e.g., ESLint + Prettier settings]
+- **Indent:** [e.g., 2 spaces]
+- **Quote Mark:** [e.g., Single quotes ('')]
 
 ## Project Terminology (Domain Language)
 
-- **[Kullanılan Terim]:** [Açıklama / Bizim uygulamamızdaki anlamı]
-- *Örnek:* **Client:** Uygulamayı kullanan müşteri (User demeyeceğiz).
-- *Örnek:* **Cart:** Alışveriş sepeti (Basket demeyeceğiz).
+- **[Term]:** [Definition / what it means in our app]
+- *Example:* **Client:** The customer using the app (we do not say "User").
+- *Example:* **Cart:** The shopping cart (we do not say "Basket").
 
 ## Commenting & Documentation Rules
 
-- [Örn: JSDoc kullanılacak, kodun "ne" yaptığı değil, "neden" yaptığı yorumlanacak]
+- [e.g., Use JSDoc; comments explain "why" the code does something, not "what" it does]
 
 ## Error Handling Pattern
 
-- [Genel try/catch veya error response fırlatma standartları]
+- [General try/catch or error response conventions]

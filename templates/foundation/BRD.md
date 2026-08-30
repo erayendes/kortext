@@ -9,16 +9,16 @@ approver: +prime
 
 ## Product Vision & Goals
 
-- [Ürünün ana amacı ve vizyonu]
+- [The product's core purpose and vision]
 
 ## Target Audience & Personas
 
-- [Hangi kullanıcı kitlelerine hitap ediliyor?]
+- [Which user segments does it serve?]
 
 ## Key Performance Indicators (KPIs)
 
-- [Başarı kriterleri nelerdir?]
+- [What are the success criteria?]
 
 ## Future Scope & Out of Scope
 
-- [Neler kapsam dışında?]
+- [What is out of scope?]

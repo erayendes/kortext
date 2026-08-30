@@ -9,27 +9,27 @@ approver: +prime
 
 ## Core Tokens (Atomic Values)
 
-> [!WARNING] **FE KURALI:**
-> Kod içerisinde ham değer (HEX, px, rem) kullanımı yasaktır. Sadece aşağıdaki değişken isimleri kullanılacaktır.
+> [!WARNING] **FE RULE:**
+> Raw values (HEX, px, rem) are forbidden in code. Only the variable names below may be used.
 
 ### Color Palette & Functional Mapping
 
 | Token Name | HEX / RGB | Usage Context |
 | :--- | :--- | :--- |
-| `--color-bg-main` | `[VALUE]` | Sayfa ana arka planı |
-| `--color-bg-surface` | `[VALUE]` | Kartlar, modallar, section'lar |
-| `--color-text-base` | `[VALUE]` | Standart metin içeriği |
-| `--color-text-muted` | `[VALUE]` | Placeholder, yardımcı metinler |
-| `--color-primary` | `[VALUE]` | Ana butonlar, aktif linkler |
-| `--color-primary-hover` | `[VALUE]` | Hover durumu (Zorunlu) |
-| `--color-border` | `[VALUE]` | Ayırıcı çizgiler ve input border |
-| `--color-success` | `[VALUE]` | Başarı mesajları ve ikonları |
-| `--color-error` | `[VALUE]` | Hata mesajları ve input hata durumu |
+| `--color-bg-main` | `[VALUE]` | Main page background |
+| `--color-bg-surface` | `[VALUE]` | Cards, modals, sections |
+| `--color-text-base` | `[VALUE]` | Standard text content |
+| `--color-text-muted` | `[VALUE]` | Placeholders, helper text |
+| `--color-primary` | `[VALUE]` | Primary buttons, active links |
+| `--color-primary-hover` | `[VALUE]` | Hover state (required) |
+| `--color-border` | `[VALUE]` | Divider lines and input borders |
+| `--color-success` | `[VALUE]` | Success messages and icons |
+| `--color-error` | `[VALUE]` | Error messages and input error states |
 
 ### Spacing Scale (8px Grid Rule)
 
-> [!WARNING] **FE KURALI:**
-> Margin ve Padding değerleri sadece bu skaladan seçilebilir. Ara değer (13px, 7px vb.) kullanımı yasaktır.
+> [!WARNING] **FE RULE:**
+> Margin and padding values may only be picked from this scale. In-between values (13px, 7px, etc.) are forbidden.
 
 - `--space-unit`: `8px`
 - `--space-xs`: `4px`  (0.5x)
@@ -43,8 +43,8 @@ approver: +prime
 
 ## Typography (The Vertical Rhythm)
 
-> [!WARNING] **FE KURALI:**
-> Font-size tek başına yeterli değildir. Line-height ve Weight değerleri her rol için sabittir.
+> [!WARNING] **FE RULE:**
+> Font-size alone is not enough. Line-height and weight are fixed for each role.
 
 | Role | Font-Family | Size (px) | Line-Height | Weight | Letter-Spacing |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -60,12 +60,12 @@ approver: +prime
 
 | Property | Value | Description |
 | :--- | :--- | :--- |
-| `--container-max` | `1200px` | İçeriğin merkezleneceği maksimum genişlik |
-| `--gutter` | `24px` | Sütunlar arası boşluk |
+| `--container-max` | `1200px` | Maximum width the content is centered within |
+| `--gutter` | `24px` | Gap between columns |
 | `--screen-sm` | `640px` | Mobile breakpoint |
 | `--screen-md` | `768px` | Tablet breakpoint |
 | `--screen-lg` | `1024px` | Desktop breakpoint |
-| `--safe-area` | `16px` | Mobil cihazlar için minimum kenar boşluğu |
+| `--safe-area` | `16px` | Minimum edge margin on mobile devices |
 
 ---
 
@@ -75,7 +75,7 @@ approver: +prime
 
 - **Border-Radius:** `--radius-btn`: `[px]`
 - **Heights:** `Small: 32px`, `Default: 44px`, `Large: 56px`
-- **States (Zorunlu):**
+- **States (required):**
   - *Focus:* `outline: 2px solid --color-primary`, `offset: 2px`
   - *Active:* `transform: scale(0.98)`
   - *Disabled:* `opacity: 0.5`, `cursor: not-allowed`
@@ -96,8 +96,8 @@ approver: +prime
 
 ## Technical Implementation Directives (Red Lines)
 
-1. **No Magic Numbers:** Tasarımda tanımlı olmayan her değer reddedilecektir.
-2. **Icon Mapping:** Sadece `[İkon Seti Adı]` kütüphanesi kullanılacaktır. İkon boyutları `16/24/32px` dışında olamaz.
-3. **Variable Injection:** Designer bu dosyayı onayladığında, +frontend-developer tüm değerleri `CSS Variables` veya `Tailwind Config` dosyasına aktaracaktır.
-4. **Consistency:** Tüm "shadow", "blur" ve "transition" değerleri bu dosyada belirtilen CSS kodları dışında yazılamaz.
-5. **Zero Tolerance for Hardcoding:** CSS dosyalarında HEX kodu tespiti kritik hata (Blocker) sayılacaktır.
+1. **No Magic Numbers:** Any value not defined in the design will be rejected.
+2. **Icon Mapping:** Only the `[Icon Set Name]` library may be used. Icon sizes must be one of `16/24/32px`.
+3. **Variable Injection:** Once the designer approves this file, +frontend-developer transfers all values into the `CSS Variables` or `Tailwind Config` file.
+4. **Consistency:** All "shadow", "blur" and "transition" values must use the CSS defined in this file — no ad-hoc variants.
+5. **Zero Tolerance for Hardcoding:** A HEX code found in CSS files counts as a critical error (Blocker).

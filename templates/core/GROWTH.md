@@ -9,33 +9,29 @@ approver: +prime
 
 ## Analytics Goals & Metrics
 
-- **Kuzey Yıldızı Metriği (North Star):** [Temel başarı ölçütü, örn: Aktif İşlem Yapan Kullanıcı]
-- **Birincil Hedefler:** [Örn: %10 dönüşüm oranı, Günlük 5K MAU]
+- **North Star Metric:** [The core success measure, e.g., Active Transacting Users]
+- **Primary Targets:** [e.g., 10% conversion rate, 5K MAU]
 
 ## Tracking Setup & Tools
 
-- **Analitik Araçları:** [Örn: Google Analytics 4, Mixpanel, Amplitude]
-- **Tag Yönetimi:** [Örn: Google Tag Manager (GTM)]
-- **Hata Takibi:** [Örn: Sentry, Datadog]
+- **Analytics Tools:** [e.g., Google Analytics 4, Mixpanel, Amplitude]
+- **Tag Management:** [e.g., Google Tag Manager (GTM)]
+- **Error Tracking:** [e.g., Sentry, Datadog]
 
 ## Key Events to Track (Event Taxonomy)
 
-Tüm olaylar (events) aşağıdaki örnek gibi isimlendirme kurallarına (Örn: `Object_Action`) uymalıdır.
+All events must follow a naming convention like the examples below (e.g., `Object_Action`).
 
-- `user_signed_up`: Kullanıcı başarılı kayıt olduğunda (**Parameters:** method, tier)
-- `purchase_completed`: Kullanıcı ödeme yaptığında (**Parameters:** amount, currency)
-- `[event_name]`: [Tetiklenme durumu ve parametreleri]
+- `user_signed_up`: When a user successfully registers (**Parameters:** method, tier)
+- `purchase_completed`: When a user completes a payment (**Parameters:** amount, currency)
+- `[event_name]`: [Trigger condition and parameters]
 
 ## SEO & ASO Strategy
 
-- **On-Page SEO:** [H1 etiketleri, meta description kuralları, schema.org yapısı]
-- **URL Structure:** [Örn: /kategori/urun-adi (Kebab-case, SEO friendly)]
-- **Sitemap & Robots.txt:** [Oluşturulma ve endeksleme politikası]
+- **On-Page SEO:** [H1 tags, meta description rules, schema.org structure]
+- **URL Structure:** [e.g., /category/product-name (kebab-case, SEO friendly)]
+- **Sitemap & Robots.txt:** [Generation and indexing policy]
 
 ## User Acquisition & Funnel
 
-- [A/B Test planları, funnel aşamaları (Acquisition, Activation, Retention...)]
-
-## Epics & Tasks
-
-- Backlog item'lar SQL'de tutulur (`backlog_items`). Growth ile ilgili task/epic'ler bu dosyadan değil, Board ekranından "+ New Item" ile eklenir.
+- [A/B test plans, funnel stages (Acquisition, Activation, Retention...)]

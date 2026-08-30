@@ -7,34 +7,34 @@ updated_at: 1970-01-01T00:00:00Z
 
 # Analysis Report
 
-> **Per-file disipline:** Bu dosya bir iskelet (template) yapısıdır. Her yeni analiz turunda engine, `analysis-reports_<slug>_<YYYY-MM-DD-HHMM>.md` adıyla yeni bir dosya açar; bu iskelet üzerine YAZILMAZ.
+> **Per-file discipline:** This file is a skeleton (template). On each new analysis round the engine creates a fresh file named `analysis-reports_<slug>_<YYYY-MM-DD-HHMM>.md`; it does NOT write over this skeleton.
 
 ## Summary
 
-- **Proje Kod Adı:** [Proje Adı]
-- **Faz:** [Örn: Phase 1 - MVP]
-- **Domain:** [proje.com]
-- **Proje Key:** [Örn: S2S]
+- **Project Code Name:** [Project Name]
+- **Phase:** [e.g., Phase 1 - MVP]
+- **Domain:** [project.com]
+- **Project Key:** [e.g., S2S]
 
-## Readiness Check (Hazırlık Kontrolü)
+## Readiness Check
 
-- [ ] **Product Analysis:** `.kortext/reports/product-requirements_*.md`
-- [ ] **Technical Analysis:** `.kortext/reports/tech-requirements_*.md`
-- [ ] **Test Strategy:** `.kortext/references/test-strategy.md`
-- [ ] **References & Blueprints:** `.kortext/references/blueprint.md`
+- [ ] **Product Analysis:** `.kortext/foundation/PRD.md`
+- [ ] **Technical Analysis:** `.kortext/foundation/TRD.md`
+- [ ] **Test Strategy:** `.kortext/TEST.md`
+- [ ] **Brief:** `.kortext/foundation/BRD.md`
 
-## Analiz Sonuçları
+## Analysis Results
 
-- [Analizde öne çıkan konular]
+- [Key topics that surfaced in the analysis]
 
-## Teknik Artifact'ler (Referanslar)
+## Technical Artifacts (References)
 
-- **Veritabanı Şeması:** `.kortext/references/db-schema.md`
-- **API Referansı:** `.kortext/references/api-reference.md`
-- **Tasarım Sistemi:** `.kortext/references/design-system.md`
-- **Klasör Yapısı:** `.kortext/references/file-system.md`
-- **Güvenlik Kuralları:** `.kortext/references/security-rules.md`
+- **Database Schema:** `.kortext/DATABASE.md`
+- **API Reference:** `.kortext/API.md`
+- **Design System:** `.kortext/DESIGN.md`
+- **Folder Structure:** `.kortext/STRUCTURE.md`
+- **Security Rules:** `.kortext/SECURITY.md`
 
 ## Key Decisions for +prime
 
-- [ ] [+prime'ın karar vermesi gereken tüm konular. (Örn: Budget/Cost Risk, API maliyeti uyarıları, legal konular, içerik konuları, teknoloji kararları)]
+- [ ] [Everything +prime needs to decide on (e.g., budget/cost risks, API cost warnings, legal topics, content topics, technology choices)]

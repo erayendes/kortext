@@ -9,22 +9,22 @@ approver: +engineering-manager
 
 ## Database Overview
 
-- **Database Engine:** [Örn: PostgreSQL, MongoDB]
-- **ORM / ODM:** [Örn: Prisma, Mongoose]
-- **Migrations Tool:** [Örn: Prisma Migrate, TypeORM]
+- **Database Engine:** [e.g., PostgreSQL, MongoDB]
+- **ORM / ODM:** [e.g., Prisma, Mongoose]
+- **Migrations Tool:** [e.g., Prisma Migrate, TypeORM]
 
 ## Conventions & Standards
 
-- **Table Naming:** [Örn: snake_case (çoğul)]
-- **Column Naming:** [Örn: snake_case / camelCase]
-- **Primary Keys:** [Örn: UUID / Auto-increment integer]
-- **Timestamps:** `created_at`, `updated_at` (Zorunlu)
+- **Table Naming:** [e.g., snake_case (plural)]
+- **Column Naming:** [e.g., snake_case / camelCase]
+- **Primary Keys:** [e.g., UUID / Auto-increment integer]
+- **Timestamps:** `created_at`, `updated_at` (required)
 
 ## Entity-Relationship (ERD) Structure
 
 ### Table: `[table_name]`
 
-- **Description:** [Tablonun işlevi]
+- **Description:** [What the table does]
 - **Columns:**
   - `id` (PK, UUID)
   - `[column_name]` ([type], [nullable/unique]) - [Description]
@@ -33,14 +33,14 @@ approver: +engineering-manager
 
 ### Table: `[table_name_2]`
 
-- **Description:** [Tablonun işlevi]
+- **Description:** [What the table does]
 - **Columns:**
   - `id` (PK)
 
 ## Indexes & Performance Optimizations
 
-- **[table_name]:** `[column_name]` (Index Type) -> Nedeni
+- **[table_name]:** `[column_name]` (Index Type) -> Reason
 
 ## Security Policies / Row-Level Security
 
-- [Örn: RLS Kuralları, Hassas verilerin şifrelenmesi]
+- [e.g., RLS rules, encryption of sensitive data]

@@ -9,26 +9,26 @@ approver: +prime
 
 ## Brand Voice & Tone
 
-- **Tone:** [Örn: Profesyonel, Samimi, Neşeli, Ciddi]
+- **Tone:** [e.g., Professional, Friendly, Playful, Serious]
 - **Dos & Don'ts:**
-  - **Yap:** [Örn: Kullanıcıyı yönlendirici basit cümleler kur]
-  - **Yapma:** [Örn: Aşırı teknik jargona boğma]
+  - **Do:** [e.g., Use simple sentences that guide the user]
+  - **Don't:** [e.g., Don't drown the user in technical jargon]
 
 ## Microcopy (UI Interface Texts)
 
-- **Primary Buttons:** [Örn: 'Devam Et', 'Kaydet', 'Hemen Başla']
-- **Secondary Buttons:** [Örn: 'İptal', 'Geri Dön']
-- **Empty States:** [Örn: 'Henüz burada kayıt yok, ilk kaydı oluştur!']
-- **Success Messages:** [Örn: 'Başarıyla kaydedildi.']
+- **Primary Buttons:** [e.g., 'Continue', 'Save', 'Get Started']
+- **Secondary Buttons:** [e.g., 'Cancel', 'Go Back']
+- **Empty States:** [e.g., 'Nothing here yet — create the first record!']
+- **Success Messages:** [e.g., 'Saved successfully.']
 
 ## Error Messages
 
-- **Validation Errors:** [Örn: 'Bu alan zorunludur.', 'Geçersiz e-posta formatı.']
-- **Server/System Errors:** [Örn: 'Sunucuya bağlanılamadı, lütfen tekrar deneyin.']
+- **Validation Errors:** [e.g., 'This field is required.', 'Invalid email format.']
+- **Server/System Errors:** [e.g., 'Could not reach the server, please try again.']
 
 ## Email & Notification Templates
 
-### [Bildirim Türü / Senaryo]
+### [Notification Type / Scenario]
 
-- **Subject / Başlık:**
-- **Body / İçerik:**
+- **Subject:**
+- **Body:**
