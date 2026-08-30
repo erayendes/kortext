@@ -54,7 +54,13 @@ export function DocDrawer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doc?.rel, project.id]);
 
-  const tokens = useMemo(() => parseMarkdown(stripFrontmatter(content)), [content]);
+  // Engine-written files hard-wrap prose at ~80 chars; the tokenizer is
+  // line-oriented, so consecutive para/quote lines are merged back into one
+  // flowing block (the thread anchors at paragraph granularity).
+  const tokens = useMemo(
+    () => mergeWrappedLines(parseMarkdown(stripFrontmatter(content))),
+    [content],
+  );
 
   if (!doc) return <Drawer open={false} onClose={onClose}>{null}</Drawer>;
 
@@ -345,6 +351,25 @@ function LineThread({
       )}
     </div>
   );
+}
+
+function mergeWrappedLines(tokens: MdToken[]): MdToken[] {
+  const out: MdToken[] = [];
+  for (const t of tokens) {
+    const prev = out[out.length - 1];
+    if (
+      prev &&
+      (t.kind === 'para' || t.kind === 'quote') &&
+      prev.kind === t.kind &&
+      prev.text !== '' &&
+      t.text !== ''
+    ) {
+      prev.text = `${prev.text} ${t.text}`;
+      continue;
+    }
+    out.push({ ...t });
+  }
+  return out;
 }
 
 function stripFrontmatter(md: string): string {
