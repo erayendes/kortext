@@ -143,16 +143,19 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
   collect(join(project.repo_path, '.kortext'), 'core', '', new Set(['TODO.md']));
   collect(join(project.repo_path, '.kortext', 'foundation'), 'foundation', 'foundation/', new Set());
 
+  // 'not-applicable' satisfies a dependency: the doc was considered and
+  // deliberately skipped — downstream steps must not wait on it.
+  const settled = (s: string | undefined) => s === 'approved' || s === 'not-applicable';
   const byRel = new Map(docs.map((d) => [d.rel, d]));
   for (const doc of docs) {
-    doc.blocked = doc.inputs.some((i) => (statuses.get(i) ?? 'uninitialized') !== 'approved');
+    doc.blocked = doc.inputs.some((i) => !settled(statuses.get(i)));
     // Already-written doc whose input got a revision request or fell out of
     // approved — the reader should re-check it against the new upstream.
     doc.upstreamChanged =
       doc.status !== 'uninitialized' &&
       doc.inputs.some((i) => {
         const input = byRel.get(i);
-        return input ? input.revisionPending || input.status !== 'approved' : false;
+        return input ? input.revisionPending || !settled(input.status) : false;
       });
   }
 

@@ -74,3 +74,16 @@ test('parsePickedPath: trims, strips trailing slash, null on cancel/empty', asyn
   assert.equal(parsePickedPath('', 0), null);
   assert.equal(parsePickedPath('/Users/x\n', 1), null);
 });
+
+test('not-applicable input satisfies dependencies downstream', () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Acme', repoPath: join(work, 'acme') }, pkgRoot);
+  setFrontmatterStatus(docPath(p, 'foundation/BRD.md'), 'approved');
+  setFrontmatterStatus(docPath(p, 'LEGAL.md'), 'approved');
+  setFrontmatterStatus(docPath(p, 'GROWTH.md'), 'not-applicable');
+  const docs = listDocs(db, p, pkgRoot);
+  const prd = docs.find((d) => d.rel === 'foundation/PRD.md')!;
+  assert.equal(prd.blocked, false); // GROWTH n/a + LEGAL approved unblock PRD
+  rmSync(work, { recursive: true, force: true });
+});
