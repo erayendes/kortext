@@ -9,13 +9,19 @@ import { docPath, listDocs, setFrontmatterStatus, workflowNameFor } from './docs
 import { generateChangeReport, listReports } from './reports.js';
 import { pickDirectoryNative } from './pick-directory.js';
 import { detectEngines, selectedEngine, setSetting, ENGINES } from './engines.js';
-import { listJobs, nextStep, runStep, runningJob } from './runner.js';
+import { advance, failStaleJobs, listJobs, nextStep, runningJob } from './runner.js';
 import { readFileSync, writeFileSync } from 'node:fs';
 import type { Project } from './db.js';
 
 export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string): express.Express {
+  failStaleJobs(db);
   const app = express();
   app.use(express.json());
+
+  const kickChain = (project: Project) => {
+    const engine = selectedEngine(db);
+    if (engine) void advance(db, project, engine, pkgRoot);
+  };
 
   app.get('/api/health', (_req, res) => {
     res.json({ ok: true, db: dbPath });
@@ -26,9 +32,12 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   });
 
   app.post('/api/projects', (req, res) => {
-    const { name, repoPath, kind, brief } = req.body ?? {};
+    const { name, repoPath, kind, code, brief } = req.body ?? {};
     try {
-      const project = createProject(db, { name, repoPath, kind, brief }, pkgRoot);
+      const project = createProject(db, { name, repoPath, kind, code, brief }, pkgRoot);
+      // Initialize: an approved brief starts the chain; existing projects
+      // have no brief gate — they start straight from the code.
+      if (brief || project.kind === 'existing') kickChain(project);
       res.status(201).json({ project });
     } catch (err) {
       res.status(400).json({ error: (err as Error).message });
@@ -65,7 +74,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
         .status(409)
         .json({ error: runningJob(db, project.id) ? 'a step is already running' : 'nothing to run' });
     }
-    void runStep(db, project, step, engine, pkgRoot);
+    void advance(db, project, engine, pkgRoot);
     res.status(202).json({ started: step.output });
   });
 
@@ -162,7 +171,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     // Self-heal: idempotent re-scaffold fills anything missing (AGENTS.md,
     // workflows, skeletons) whenever the panel looks at a project.
     try {
-      scaffoldProject(project.repo_path, pkgRoot);
+      scaffoldProject(project.repo_path, pkgRoot, { skipBrief: project.kind === 'existing' });
     } catch {
       /* repo may be gone; listing still answers */
     }
@@ -200,6 +209,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     const { rel } = req.body ?? {};
     try {
       setFrontmatterStatus(docPath(project, String(rel)), 'approved');
+      kickChain(project);
       res.json({ ok: true });
     } catch (err) {
       res.status(400).json({ error: (err as Error).message });

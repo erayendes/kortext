@@ -1455,3 +1455,5 @@ body {
 @keyframes kx-pulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
 .kx-doc-row.failed { border-color: rgba(204,107,107,.5); }
 .kx-doc-fail { font-size: 10.5px; color: var(--red); background: rgba(204,107,107,.1); padding: 2px 7px; border-radius: 5px; }
+
+.kx-code { width: 130px; flex: none; }

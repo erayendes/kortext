@@ -100,3 +100,8 @@
    - approver: +prime
 
 **Sonraki akış:** `planning-pipeline`
+
+9. **+devops-engineer:** `ENVIRONMENT.md` üret. Kapsam: ortamlar (dev/prod), ortam değişkenleri planı, kurulum adımları, CI/CD yaklaşımı, erişim sahipliği ve hesap envanteri (Access & Service bölümü), secret yönetimi.
+   - inputs: `.kortext/STACK.md`, `.kortext/STRUCTURE.md`
+   - outputs: `.kortext/ENVIRONMENT.md`
+   - approver: +prime

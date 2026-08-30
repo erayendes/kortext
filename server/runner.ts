@@ -111,6 +111,38 @@ export interface RunOutcome {
   error?: string;
 }
 
+// The chain: run every currently-unblocked step in sequence until nothing is
+// producible (waiting on approvals) or a step fails. Approval routes call this
+// again, so the flow self-advances gate by gate. One loop per project at a time.
+const advancing = new Set<number>();
+
+export async function advance(
+  db: Database.Database,
+  project: Project,
+  engine: EngineSpec,
+  pkgRoot: string,
+): Promise<void> {
+  if (advancing.has(project.id)) return;
+  advancing.add(project.id);
+  try {
+    for (;;) {
+      const step = nextStep(db, project, pkgRoot);
+      if (!step) return;
+      const out = await runStep(db, project, step, engine, pkgRoot);
+      if (!out.ok) return; // failed job stays visible; Retry resumes
+    }
+  } finally {
+    advancing.delete(project.id);
+  }
+}
+
+// A server restart orphans 'running' rows — settle them so Retry works.
+export function failStaleJobs(db: Database.Database): void {
+  db.prepare(
+    "UPDATE jobs SET status = 'failed', error = 'kortext restarted mid-step — retry', finished_at = datetime('now') WHERE status = 'running'",
+  ).run();
+}
+
 // Runs one step to completion and settles the job row. Sequential by design:
 // callers guard with runningJob() first.
 export async function runStep(

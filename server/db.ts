@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS projects (
   name TEXT NOT NULL,
   repo_path TEXT NOT NULL UNIQUE,
   kind TEXT NOT NULL DEFAULT 'new',   -- new | existing → which analysis workflow applies
+  code TEXT NOT NULL DEFAULT '',      -- task-id prefix, e.g. ACME
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE TABLE IF NOT EXISTS settings (
@@ -52,6 +53,9 @@ export function openDb(path = defaultDbPath()): Database.Database {
   if (!cols.includes('kind')) {
     db.exec("ALTER TABLE projects ADD COLUMN kind TEXT NOT NULL DEFAULT 'new'");
   }
+  if (!cols.includes('code')) {
+    db.exec("ALTER TABLE projects ADD COLUMN code TEXT NOT NULL DEFAULT ''");
+  }
   return db;
 }
 
@@ -60,5 +64,6 @@ export interface Project {
   name: string;
   repo_path: string;
   kind: 'new' | 'existing';
+  code: string; // task-id prefix, e.g. ACME
   created_at: string;
 }

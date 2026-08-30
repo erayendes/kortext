@@ -68,10 +68,9 @@ export function App() {
               onDone={(project, hadBrief) => {
                 setAdding(false);
                 refresh();
-                // A written/uploaded brief is already approved — go straight to
-                // Connect so the agent can be started; otherwise the BRD still
-                // needs filling in Documents.
-                setInitialTab(hadBrief ? 'connect' : 'documents');
+                // Analysis runs inside kortext now — Documents is where it flows.
+                void hadBrief;
+                setInitialTab('documents');
                 setSelected(project);
               }}
               onCancel={() => setAdding(false)}
@@ -148,6 +147,7 @@ function AddProject({
 }) {
   const [kind, setKind] = useState<'new' | 'existing'>('new');
   const [name, setName] = useState('');
+  const [code, setCode] = useState('');
   const [repoPath, setRepoPath] = useState('');
   const [brief, setBrief] = useState('');
   const [briefMode, setBriefMode] = useState<'write' | 'upload'>('write');
@@ -169,7 +169,7 @@ function AddProject({
 
   const submit = async () => {
     try {
-      const { project } = await api.createProject({ name, repoPath, kind, brief: brief || undefined });
+      const { project } = await api.createProject({ name, repoPath, kind, code: code || undefined, brief: brief || undefined });
       onDone(project, brief.trim().length > 0);
     } catch (e) {
       setErr((e as Error).message);
@@ -197,12 +197,20 @@ function AddProject({
           ? 'Sıfırdan ürün: ajan new-project-analysis akışını koşar.'
           : 'Var olan kod tabanı: ajan existing-project-analysis ile mevcut durumu belgeler.'}
       </span>
-      <input
-        className="kx-input"
-        placeholder="Project name"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-      />
+      <div className="kx-form-row">
+        <input
+          className="kx-input kx-path"
+          placeholder="Project name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <input
+          className="kx-input mono kx-code"
+          placeholder="Code (ACME)"
+          value={code}
+          onChange={(e) => setCode(e.target.value.toUpperCase())}
+        />
+      </div>
       <div className="kx-form-row">
         <input
           className="kx-input mono kx-path"
@@ -214,6 +222,12 @@ function AddProject({
           Browse…
         </button>
       </div>
+      {kind === 'existing' && (
+        <span className="kx-cmd-hint">
+          Existing projede brief alınmaz — analiz kod gerçeğinden çıkar; Add deyince başlar.
+        </span>
+      )}
+      {kind === 'new' && (
       <div className="kx-brief">
         <div className="kx-brief-head">
           <span className="kx-cmd-title">Brief (BRD)</span>
@@ -267,6 +281,7 @@ function AddProject({
           ekranına götürür; boş bırakırsan Documents'tan doldurup onaylarsın.
         </span>
       </div>
+      )}
       {err && <div className="kx-error">{err}</div>}
       <div className="kx-form-row">
         <button className="btn btn-primary" onClick={submit}>

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { openDb } from '../server/db.js';
@@ -91,5 +91,44 @@ test('buildStepPrompt carries hard rules, inputs, persona and revision notes', (
   assert.match(prompt, /persona body/);
   assert.match(prompt, /KVKK bölümünü genişlet/);
   assert.match(prompt, /NEVER set status to approved/);
+  rmSync(work, { recursive: true, force: true });
+});
+
+test('advance: chains every unblocked step, pauses at approval gates, resumes after approve', async () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Acme', repoPath: join(work, 'acme') }, pkgRoot);
+  const engine = mockEngine(work, 'ok');
+  const { advance } = await import('../server/runner.js');
+
+  await advance(db, p, engine, pkgRoot); // BRD not approved → nothing runs
+  assert.equal(listJobs(db, p.id).length, 0);
+
+  setFrontmatterStatus(docPath(p, 'foundation/BRD.md'), 'approved');
+  await advance(db, p, engine, pkgRoot);
+  // GROWTH + LEGAL produced as drafts, then the chain pauses (PRD needs approvals)
+  const drafts = listJobs(db, p.id).filter((j) => j.status === 'done').map((j) => j.doc_rel).sort();
+  assert.deepEqual(drafts, ['GROWTH.md', 'LEGAL.md']);
+
+  setFrontmatterStatus(docPath(p, 'GROWTH.md'), 'approved');
+  setFrontmatterStatus(docPath(p, 'LEGAL.md'), 'approved');
+  await advance(db, p, engine, pkgRoot);
+  const after = listJobs(db, p.id).filter((j) => j.status === 'done').map((j) => j.doc_rel);
+  assert.ok(after.includes('foundation/PRD.md'));
+  rmSync(work, { recursive: true, force: true });
+});
+
+test('existing project: no BRD scaffolded, chain starts from code-truth steps', async () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Old App', repoPath: join(work, 'old'), kind: 'existing' }, pkgRoot);
+  assert.equal(existsSync(join(work, 'old', '.kortext', 'foundation', 'BRD.md')), false);
+  const step = nextStep(db, p, pkgRoot);
+  assert.ok(step); // STACK/STRUCTURE have no inputs in the existing workflow
+  assert.ok(['STACK.md', 'STRUCTURE.md'].includes(step.output));
+  const { advance } = await import('../server/runner.js');
+  await advance(db, p, mockEngine(work, 'ok'), pkgRoot);
+  const done = listJobs(db, p.id).filter((j) => j.status === 'done').map((j) => j.doc_rel).sort();
+  assert.deepEqual(done, ['STACK.md', 'STRUCTURE.md']); // ARCHITECTURE waits for approvals
   rmSync(work, { recursive: true, force: true });
 });

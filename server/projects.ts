@@ -21,7 +21,7 @@ import type { Project } from './db.js';
 // them from the kortext package over MCP.
 export const BRIEF_REL = join('.kortext', 'foundation', 'BRD.md');
 
-export function scaffoldProject(repoPath: string, pkgRoot: string): void {
+export function scaffoldProject(repoPath: string, pkgRoot: string, opts: { skipBrief?: boolean } = {}): void {
   const kx = join(repoPath, '.kortext');
   migrateLegacyLayout(kx);
   mkdirSync(join(kx, 'foundation'), { recursive: true });
@@ -34,6 +34,7 @@ export function scaffoldProject(repoPath: string, pkgRoot: string): void {
     copyIfMissing(join(templates, 'foundation', doc), join(kx, 'foundation', doc));
   }
 
+  if (opts.skipBrief) return;
   const brief = join(repoPath, BRIEF_REL);
   if (!existsSync(brief)) {
     const template = join(templates, 'foundation', 'BRD.md');
@@ -107,18 +108,32 @@ export function listProjects(db: Database.Database): Project[] {
 // an existing folder and forgives a not-yet-created typed path.
 // kind decides which analysis workflow the project follows:
 // 'new' → new-project-analysis, 'existing' → existing-project-analysis.
+// Derives ACME-style code from the name when none is given.
+export function deriveCode(name: string): string {
+  const cleaned = name
+    .toUpperCase()
+    .replace(/[ÇĞİIÖŞÜ]/g, (c) => 'CGIIOSU'['ÇĞİIÖŞÜ'.indexOf(c)] ?? c)
+    .replace(/[^A-Z0-9]/g, '');
+  return (cleaned.slice(0, 5) || 'PROJ').padEnd(2, 'X');
+}
+
 export function createProject(
   db: Database.Database,
-  input: { name: string; repoPath: string; kind?: 'new' | 'existing'; brief?: string },
+  input: { name: string; repoPath: string; kind?: 'new' | 'existing'; code?: string; brief?: string },
   pkgRoot: string,
 ): Project {
   const name = input.name.trim();
   const repoPath = input.repoPath.trim();
   const kind = input.kind === 'existing' ? 'existing' : 'new';
+  const code = (input.code ?? '').trim().toUpperCase() || deriveCode(name);
   if (!name) throw new Error('name is required');
   if (!repoPath) throw new Error('repoPath is required');
+  if (!/^[A-Z][A-Z0-9]{1,7}$/.test(code)) {
+    throw new Error(`code must be 2-8 chars, A-Z then A-Z0-9 (got: ${code})`);
+  }
   mkdirSync(repoPath, { recursive: true });
-  scaffoldProject(repoPath, pkgRoot);
+  // existing projects take no brief — the ground truth is the code itself
+  scaffoldProject(repoPath, pkgRoot, { skipBrief: kind === 'existing' });
   const brief = input.brief?.trim();
   if (brief) {
     // The prime wrote (or uploaded) the brief in the add form — their own
@@ -130,8 +145,8 @@ export function createProject(
     );
   }
   const row = db
-    .prepare('INSERT INTO projects (name, repo_path, kind) VALUES (?, ?, ?) RETURNING *')
-    .get(name, repoPath, kind) as Project;
+    .prepare('INSERT INTO projects (name, repo_path, kind, code) VALUES (?, ?, ?, ?) RETURNING *')
+    .get(name, repoPath, kind, code) as Project;
   return row;
 }
 

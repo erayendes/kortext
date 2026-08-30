@@ -4,8 +4,8 @@
 
 ## Teknik Keşif
 
-1. **+engineering-manager:** `STACK.md` + `STRUCTURE.md` üret. Mevcut codebase'i tara, BRD'yle karşılaştırma. Kapsam: STACK (teknoloji yığını, MCP sunucuları, dev araçları, bağımlılıklar, dil/framework versiyonları), STRUCTURE (klasör yapısı, isimlendirme kuralları, kodlama standartları + proje terminolojisi sözlüğü).
-   - inputs: `.kortext/foundation/BRD.md`
+1. **+engineering-manager:** `STACK.md` + `STRUCTURE.md` üret. Mevcut codebase'i tara — zemin KOD GERÇEĞİDİR (bu akışta BRD yoktur). Kapsam: STACK (teknoloji yığını, MCP sunucuları, dev araçları, bağımlılıklar, dil/framework versiyonları), STRUCTURE (klasör yapısı, isimlendirme kuralları, kodlama standartları + proje terminolojisi sözlüğü).
+   - inputs:
    - outputs: `.kortext/STACK.md`, `.kortext/STRUCTURE.md`
    - approver: +prime
 
@@ -36,8 +36,8 @@
 
 ## Ürün Keşfi
 
-1. **+product-manager:** `PRD.md` üret. Kapsam: mevcut özellikler + kullanıcı akışları + roller/izinler + bilinen eksiklikler + var olan roadmap/issue listesi. Şu anki davranış ile BRD beklentisi arasındaki farkları görünür yap.
-   - inputs: `.kortext/foundation/BRD.md`, `.kortext/STRUCTURE.md`
+1. **+product-manager:** `PRD.md` üret. Kapsam: mevcut özellikler + kullanıcı akışları + roller/izinler + bilinen eksiklikler + var olan roadmap/issue listesi — hepsi koddan ve repodaki izlerden.
+   - inputs: `.kortext/STRUCTURE.md`
    - outputs: `.kortext/foundation/PRD.md`
    - approver: +prime
 
