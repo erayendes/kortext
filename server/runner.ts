@@ -125,7 +125,10 @@ export interface RunOutcome {
 // until nothing is producible (waiting on approvals) or everything in flight
 // settles. Approval routes call this again, so the flow self-advances gate by
 // gate. One loop per project at a time; failed steps stay visible for Retry.
-const advancing = new Set<number>();
+// projectId → wake(): an approval that lands while the loop is parked in
+// Promise.race nudges it to re-scan immediately (a mid-run unlock must not
+// wait for a completion when the pool has room).
+const advancing = new Map<number, () => void>();
 const MAX_PARALLEL = 3;
 
 export async function advance(
@@ -134,8 +137,14 @@ export async function advance(
   engine: EngineSpec,
   pkgRoot: string,
 ): Promise<void> {
-  if (advancing.has(project.id)) return;
-  advancing.add(project.id);
+  const active = advancing.get(project.id);
+  if (active) {
+    active(); // already looping — just wake it to re-scan
+    return;
+  }
+  let wake = () => {};
+  const arm = () => new Promise<void>((resolve) => (wake = resolve));
+  advancing.set(project.id, () => wake());
   try {
     const inFlight = new Set<Promise<unknown>>();
     for (;;) {
@@ -147,7 +156,7 @@ export async function advance(
         }
       }
       if (inFlight.size === 0) return; // nothing running, nothing producible
-      await Promise.race(inFlight); // a completion may unlock siblings (e.g. not-applicable)
+      await Promise.race([...inFlight, arm()]); // completion OR an approval nudge
     }
   } finally {
     advancing.delete(project.id);

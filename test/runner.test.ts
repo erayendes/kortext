@@ -189,3 +189,37 @@ printf -- '---\\nstatus: draft\\nauthor: +mock\\n---\\n\\n# Revised\\n' > ".kort
   assert.equal(readFileSync(docPath(p, 'LEGAL.md'), 'utf8'), before);
   rmSync(work, { recursive: true, force: true });
 });
+
+test('a mid-run approval wakes the active chain and fills free pool slots', async () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Wake', repoPath: join(work, 'wake') }, pkgRoot);
+  setFrontmatterStatus(docPath(p, 'foundation/BRD.md'), 'approved');
+  // pre-write GROWTH as draft so only LEGAL is producible at loop start
+  writeFileSync(docPath(p, 'GROWTH.md'), '---\nstatus: draft\nauthor: +mock\n---\n\n# G\n');
+  const slow = join(work, 'slow.sh');
+  writeFileSync(slow, `#!/bin/sh
+prompt=$(cat)
+rel=$(printf '%s' "$prompt" | grep 'Produce EXACTLY' | sed 's/.*: \\.kortext\\///')
+sleep 0.6
+printf -- '---\\nstatus: draft\\nauthor: +mock\\n---\\n\\n# S\\n' > ".kortext/$rel"
+`);
+  chmodSync(slow, 0o755);
+  const engine = { id: 'slow', binary: slow, args: [], installHint: '' };
+  const { advance } = await import('../server/runner.js');
+
+  const t0 = Date.now();
+  const loop = advance(db, p, engine, pkgRoot); // starts LEGAL (0.6s)
+  await new Promise((r) => setTimeout(r, 150));
+  // mid-run: GROWTH + LEGAL approvals unlock PRD; the nudge must start it NOW
+  setFrontmatterStatus(docPath(p, 'GROWTH.md'), 'approved');
+  setFrontmatterStatus(docPath(p, 'LEGAL.md'), 'approved');
+  await advance(db, p, engine, pkgRoot); // = kickChain from the approve route
+  await loop;
+  const elapsed = Date.now() - t0;
+  const done = listJobs(db, p.id).filter((j) => j.status === 'done').map((j) => j.doc_rel);
+  assert.ok(done.includes('foundation/PRD.md'), `PRD should have run (done: ${done})`);
+  // sequential would be ≥1.2s (LEGAL finishes, then PRD); the wake overlaps them
+  assert.ok(elapsed < 1100, `expected overlap via wake (<1100ms), took ${elapsed}ms`);
+  rmSync(work, { recursive: true, force: true });
+});
