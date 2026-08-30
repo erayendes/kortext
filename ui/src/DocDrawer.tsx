@@ -9,6 +9,13 @@ interface Note {
   text: string;
 }
 
+// Ephemeral by design: answers live only in panel state, never in the file.
+interface Explain {
+  line: number | null;
+  question: string;
+  answer: string | null; // null = loading
+}
+
 export function DocDrawer({
   project,
   doc,
@@ -25,6 +32,7 @@ export function DocDrawer({
   const [draft, setDraft] = useState('');
   const [selected, setSelected] = useState<number | null>(null);
   const [notes, setNotes] = useState<Note[]>([]);
+  const [explains, setExplains] = useState<Explain[]>([]);
   const [noteText, setNoteText] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -33,6 +41,7 @@ export function DocDrawer({
     setEditing(false);
     setSelected(null);
     setNotes([]);
+    setExplains([]);
     setNoteText('');
     setErr(null);
     if (doc) {
@@ -72,15 +81,38 @@ export function DocDrawer({
     }
   };
 
+  // Revision = the producing step re-runs with the notes; the doc comes back
+  // as a fresh draft. The chain resumes on its own afterwards.
   const requestRevision = () =>
     act(async () => {
-      await api.createRequest(project.id, 'revise', {
-        doc: doc.rel,
-        notes: notes.map((n) => (n.excerpt ? `[${n.excerpt}] ${n.text}` : n.text)),
-      });
+      await api.reviseDoc(
+        project.id,
+        doc.rel,
+        notes.map((n) => (n.excerpt ? `[${n.excerpt}] ${n.text}` : n.text)),
+      );
       setNotes([]);
       onClose();
     });
+
+  const ask = () => {
+    if (!noteText.trim()) return;
+    const token = tokens.find((t) => t.index === selected);
+    const entry: Explain = {
+      line: selected,
+      question: noteText.trim(),
+      answer: null,
+    };
+    setExplains((xs) => [...xs, entry]);
+    setNoteText('');
+    api
+      .explainDoc(project.id, doc.rel, token?.text ?? '', entry.question)
+      .then((r) =>
+        setExplains((xs) => xs.map((x) => (x === entry ? { ...x, answer: r.answer } : x))),
+      )
+      .catch((e) =>
+        setExplains((xs) => xs.map((x) => (x === entry ? { ...x, answer: `Hata: ${e.message}` } : x))),
+      );
+  };
 
   const approve = () =>
     act(async () => {
@@ -136,16 +168,27 @@ export function DocDrawer({
         ) : (
           <div className="kx-doc">
             {tokens.map((t) => (
-              <DocBlock
-                key={t.index}
-                token={t}
-                selected={selected === t.index}
-                noted={notes.some((n) => n.line === t.index)}
-                onSelect={() =>
-                  doc.status === 'uninitialized' ? undefined : setSelected(selected === t.index ? null : t.index)
-                }
-              />
+              <div key={t.index}>
+                <DocBlock
+                  token={t}
+                  selected={selected === t.index}
+                  noted={notes.some((n) => n.line === t.index)}
+                  onSelect={() =>
+                    doc.status === 'uninitialized' ? undefined : setSelected(selected === t.index ? null : t.index)
+                  }
+                />
+                {explains
+                  .filter((x) => x.line === t.index)
+                  .map((x, i) => (
+                    <ExplainBubble key={i} item={x} />
+                  ))}
+              </div>
             ))}
+            {explains
+              .filter((x) => x.line === null)
+              .map((x, i) => (
+                <ExplainBubble key={`g${i}`} item={x} />
+              ))}
           </div>
         )}
       </div>
@@ -176,6 +219,9 @@ export function DocDrawer({
             />
             <button className="btn btn-sm" onClick={addNote}>
               Add note
+            </button>
+            <button className="btn btn-sm btn-secondary" onClick={ask}>
+              Ask
             </button>
             <button
               className="btn btn-sm btn-primary"
@@ -258,6 +304,17 @@ function DocBlock({
           {s.type === 'bold' ? <strong>{s.value}</strong> : s.type === 'code' ? <code>{s.value}</code> : s.value}
         </Fragment>
       ))}
+    </div>
+  );
+}
+
+function ExplainBubble({ item }: { item: Explain }) {
+  return (
+    <div className="kx-explain">
+      <span className="kx-explain-q">{item.question}</span>
+      <span className={`kx-explain-a${item.answer === null ? ' kx-running' : ''}`}>
+        {item.answer === null ? 'cevap yazılıyor…' : item.answer}
+      </span>
     </div>
   );
 }

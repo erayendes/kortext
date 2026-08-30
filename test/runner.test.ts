@@ -156,3 +156,36 @@ printf -- '---\\nstatus: draft\\nauthor: +mock\\n---\\n\\n# Mock\\n' > ".kortext
   assert.ok(elapsed < 750, `expected parallel (<750ms), took ${elapsed}ms`);
   rmSync(work, { recursive: true, force: true });
 });
+
+test('reviseDoc re-runs the producing step with notes; explainDoc answers without writing', async () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Rev', repoPath: join(work, 'rev') }, pkgRoot);
+  setFrontmatterStatus(docPath(p, 'foundation/BRD.md'), 'approved');
+  const { advance, reviseDoc, explainDoc } = await import('../server/runner.js');
+  await advance(db, p, mockEngine(work, 'ok'), pkgRoot); // LEGAL + GROWTH drafts
+
+  // revise: capture the prompt the engine receives
+  const cap = join(work, 'cap.sh');
+  writeFileSync(cap, `#!/bin/sh
+prompt=$(cat)
+printf '%s' "$prompt" > prompt-capture.txt
+rel=$(printf '%s' "$prompt" | grep 'Produce EXACTLY' | sed 's/.*: \\.kortext\\///')
+printf -- '---\\nstatus: draft\\nauthor: +mock\\n---\\n\\n# Revised\\n' > ".kortext/$rel"
+`);
+  chmodSync(cap, 0o755);
+  const out = await reviseDoc(db, p, 'LEGAL.md', ['KVKK bölümünü genişlet'], { id: 'cap', binary: cap, args: [], installHint: '' }, pkgRoot);
+  assert.equal(out.ok, true);
+  assert.match(readFileSync(join(work, 'rev', 'prompt-capture.txt'), 'utf8'), /REVISION REQUEST[\s\S]*KVKK bölümünü genişlet/);
+  assert.match(readFileSync(docPath(p, 'LEGAL.md'), 'utf8'), /# Revised/);
+
+  // explain: answer comes from stdout, no file touched
+  const ans = join(work, 'ans.sh');
+  writeFileSync(ans, '#!/bin/sh\ncat > /dev/null\nprintf "MOCK CEVAP: satır şunu diyor"\n');
+  chmodSync(ans, 0o755);
+  const before = readFileSync(docPath(p, 'LEGAL.md'), 'utf8');
+  const r = await explainDoc(p, 'LEGAL.md', 'seçili satır', 'bu ne demek?', { id: 'ans', binary: ans, args: [], installHint: '' }, pkgRoot);
+  assert.match(r.answer, /MOCK CEVAP/);
+  assert.equal(readFileSync(docPath(p, 'LEGAL.md'), 'utf8'), before);
+  rmSync(work, { recursive: true, force: true });
+});

@@ -154,6 +154,61 @@ export async function advance(
   }
 }
 
+// Human asked for changes on a written doc: re-run its producing step with
+// the notes attached. The engine rewrites the file back to draft.
+export async function reviseDoc(
+  db: Database.Database,
+  project: Project,
+  rel: string,
+  notes: string[],
+  engine: EngineSpec,
+  pkgRoot: string,
+): Promise<RunOutcome> {
+  const step = loadDocMap(pkgRoot, project.kind ?? 'new').get(rel);
+  if (!step) return { ok: false, error: `no producing step for ${rel}` };
+  if (runningJob(db, project.id)) return { ok: false, error: 'a step is already running' };
+  const out = await runStep(db, project, step, engine, pkgRoot, notes);
+  if (out.ok) await advance(db, project, engine, pkgRoot);
+  return out;
+}
+
+// Line-anchored Q&A: the author persona answers about its own document.
+// Nothing is written anywhere — the answer lives only in the panel.
+export async function explainDoc(
+  project: Project,
+  rel: string,
+  excerpt: string,
+  question: string,
+  engine: EngineSpec,
+  pkgRoot: string,
+): Promise<{ answer: string }> {
+  const map = loadDocMap(pkgRoot, project.kind ?? 'new');
+  const author = map.get(rel)?.author ?? '+agent';
+  const prompt = [
+    `You are ${author}, the author of the document .kortext/${rel} in this project.`,
+    'The human reviewer selected a passage and asks a question about it.',
+    'Answer briefly and concretely in the language of the question.',
+    'DO NOT modify, create or write any file — reply with the answer text only.',
+    '',
+    `SELECTED PASSAGE:\n${excerpt || '(whole document)'}`,
+    '',
+    `QUESTION:\n${question}`,
+  ].join('\n');
+  const res = await spawnCli({
+    binary: engine.binary,
+    args: engine.args,
+    cwd: project.repo_path,
+    stdin: prompt,
+    logPath: join(homedir(), '.kortext', 'logs', `p${project.id}-explain.log`),
+    signal: new AbortController().signal,
+    timeoutMs: 3 * 60 * 1000,
+  });
+  if (res.exitCode !== 0) {
+    throw new Error(`${engine.id} CLI failed: ${(res.stderrTail || res.stdoutTail).trim().slice(-300)}`);
+  }
+  return { answer: res.stdoutTail.trim() };
+}
+
 // A server restart orphans 'running' rows — settle them so Retry works.
 export function failStaleJobs(db: Database.Database): void {
   db.prepare(

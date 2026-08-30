@@ -1457,3 +1457,8 @@ body {
 .kx-doc-fail { font-size: 10.5px; color: var(--red); background: rgba(204,107,107,.1); padding: 2px 7px; border-radius: 5px; }
 
 .kx-code { width: 130px; flex: none; }
+
+/* R3 — explain bubbles + footer */
+.kx-explain { display: flex; flex-direction: column; gap: 4px; margin: 4px 0 8px 16px; padding: 8px 12px; border-left: 3px solid var(--accent); border-radius: var(--r-md); background: var(--bg-subtle); font-size: 12.5px; }
+.kx-explain-q { font-weight: 600; color: var(--fg); }
+.kx-explain-a { color: var(--fg-mid); white-space: pre-wrap; line-height: 1.5; }

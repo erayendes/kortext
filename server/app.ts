@@ -9,7 +9,7 @@ import { docPath, listDocs, setFrontmatterStatus, workflowNameFor } from './docs
 import { generateChangeReport, listReports } from './reports.js';
 import { pickDirectoryNative } from './pick-directory.js';
 import { detectEngines, selectedEngine, setSetting, ENGINES } from './engines.js';
-import { advance, failStaleJobs, listJobs, nextStep, runningJob } from './runner.js';
+import { advance, explainDoc, failStaleJobs, listJobs, nextStep, reviseDoc, runningJob } from './runner.js';
 import { readFileSync, writeFileSync } from 'node:fs';
 import type { Project } from './db.js';
 
@@ -214,6 +214,40 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     } catch (err) {
       res.status(400).json({ error: (err as Error).message });
     }
+  });
+
+  // Human asked for changes: re-run the producing step with the notes.
+  app.post('/api/projects/:id/docs/revise', (req, res) => {
+    const project = projectOr404(req.params.id, res);
+    if (!project) return;
+    const engine = selectedEngine(db);
+    if (!engine) return res.status(409).json({ error: 'no agent CLI installed' });
+    const { rel, notes } = req.body ?? {};
+    if (!Array.isArray(notes) || notes.length === 0) {
+      return res.status(400).json({ error: 'notes required' });
+    }
+    try {
+      docPath(project, String(rel)); // validates rel
+    } catch (err) {
+      return res.status(400).json({ error: (err as Error).message });
+    }
+    void reviseDoc(db, project, String(rel), notes.map(String), engine, pkgRoot);
+    res.status(202).json({ started: rel });
+  });
+
+  // Line-anchored Q&A — synchronous, nothing persisted.
+  app.post('/api/projects/:id/docs/explain', (req, res) => {
+    const project = projectOr404(req.params.id, res);
+    if (!project) return;
+    const engine = selectedEngine(db);
+    if (!engine) return res.status(409).json({ error: 'no agent CLI installed' });
+    const { rel, excerpt, question } = req.body ?? {};
+    if (!question || typeof question !== 'string') {
+      return res.status(400).json({ error: 'question required' });
+    }
+    explainDoc(project, String(rel ?? ''), String(excerpt ?? ''), question, engine, pkgRoot)
+      .then((r) => res.json(r))
+      .catch((err) => res.status(500).json({ error: (err as Error).message }));
   });
 
   // Plan state: whether planning was requested, and whether the outputs exist.

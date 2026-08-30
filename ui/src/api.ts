@@ -85,6 +85,16 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify({ rel, content }),
     }),
+  reviseDoc: (projectId: number, rel: string, notes: string[]) =>
+    req<{ started: string }>(`/api/projects/${projectId}/docs/revise`, {
+      method: 'POST',
+      body: JSON.stringify({ rel, notes }),
+    }),
+  explainDoc: (projectId: number, rel: string, excerpt: string, question: string) =>
+    req<{ answer: string }>(`/api/projects/${projectId}/docs/explain`, {
+      method: 'POST',
+      body: JSON.stringify({ rel, excerpt, question }),
+    }),
   approveDoc: (projectId: number, rel: string) =>
     req<{ ok: boolean }>(`/api/projects/${projectId}/docs/approve`, {
       method: 'POST',
