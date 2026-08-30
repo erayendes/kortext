@@ -1444,3 +1444,14 @@ body {
 .kx-drop input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 
 .kx-status-log { background: var(--bg-muted); color: var(--fg-mid); }
+
+/* R1 — engine badge + step runner states */
+.kx-engine { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--fg-mid); }
+.kx-engine-select { height: 24px; border: 1px solid var(--border); border-radius: var(--r-sm, 6px); background: var(--bg); color: var(--fg); font-size: 11.5px; padding: 0 4px; }
+.kx-engine-warn { font-size: 11.5px; color: var(--red); background: rgba(204,107,107,.08); padding: 4px 10px; border-radius: var(--r-md); }
+.kx-engine-warn code { font-size: 10.5px; }
+.kx-docs-toolbar { display: flex; align-items: center; gap: 10px; }
+.kx-running { font-size: 12px; color: var(--accent); animation: kx-pulse 1.4s ease-in-out infinite; }
+@keyframes kx-pulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+.kx-doc-row.failed { border-color: rgba(204,107,107,.5); }
+.kx-doc-fail { font-size: 10.5px; color: var(--red); background: rgba(204,107,107,.1); padding: 2px 7px; border-radius: 5px; }

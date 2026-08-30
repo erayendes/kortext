@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api, type DocInfo, type KortextRequest, type PlanState, type Project, type ReportInfo } from './api';
+import { api, type DocInfo, type EngineInfo, type Job, type KortextRequest, type PlanState, type Project, type ReportInfo } from './api';
 import { DocDrawer, StatusBadge } from './DocDrawer';
 
 type Tab = 'documents' | 'plan' | 'reports' | 'connect';
@@ -27,6 +27,8 @@ export function App() {
       <header className="kx-header">
         <span className="kx-logo">Kortext</span>
         <span className="kx-tagline">project brain</span>
+        <span className="kx-doc-spacer" />
+        <EngineBadge />
       </header>
       {error && <div className="kx-error">{error}</div>}
       {selected ? (
@@ -78,6 +80,45 @@ export function App() {
         </main>
       )}
     </div>
+  );
+}
+
+function EngineBadge() {
+  const [engines, setEngines] = useState<EngineInfo[]>([]);
+  const [selected, setSelected] = useState<string | null>(null);
+
+  useEffect(() => {
+    api.engines().then((r) => {
+      setEngines(r.engines);
+      setSelected(r.selected);
+    });
+  }, []);
+
+  const available = engines.filter((e) => e.available);
+  if (engines.length === 0) return null;
+  if (available.length === 0) {
+    const hint = engines[0]?.installHint ?? '';
+    return (
+      <span className="kx-engine-warn">
+        Ajan CLI bulunamadı — belge üretimi için gerekli. Kur: <code className="mono">{hint}</code>
+      </span>
+    );
+  }
+  return (
+    <span className="kx-engine">
+      Motor:
+      <select
+        className="kx-engine-select mono"
+        value={selected ?? available[0].id}
+        onChange={(e) => api.selectEngine(e.target.value).then((r) => setSelected(r.selected))}
+      >
+        {available.map((e) => (
+          <option key={e.id} value={e.id}>
+            {e.id}
+          </option>
+        ))}
+      </select>
+    </span>
   );
 }
 
@@ -290,24 +331,32 @@ function ProjectScreen({
 
 function DocumentsTab({ project }: { project: Project }) {
   const [docs, setDocs] = useState<DocInfo[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [running, setRunning] = useState<Job | null>(null);
   const [open, setOpen] = useState<DocInfo | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
   const refresh = () =>
-    api
-      .listDocs(project.id)
-      .then((r) => {
-        setDocs(r.docs);
+    Promise.all([api.listDocs(project.id), api.jobs(project.id)])
+      .then(([d, j]) => {
+        setDocs(d.docs);
+        setJobs(j.jobs);
+        setRunning(j.running);
         setErr(null);
       })
       .catch((e) => setErr(e.message));
 
   useEffect(() => {
     refresh();
-    const timer = setInterval(refresh, 4000);
+    const timer = setInterval(refresh, 3000);
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project.id]);
+
+  const runNext = () => api.runNext(project.id).then(refresh).catch((e) => setErr(e.message));
+
+  // Latest job per doc decides the row extras (spinner / red error).
+  const jobFor = (rel: string) => jobs.find((j) => j.doc_rel === rel);
 
   const groups: { key: 'core' | 'foundation'; title: string }[] = [
     { key: 'foundation', title: 'Foundation' },
@@ -317,20 +366,51 @@ function DocumentsTab({ project }: { project: Project }) {
   return (
     <div className="kx-docs">
       {err && <div className="kx-error">{err}</div>}
+      <div className="kx-docs-toolbar">
+        {running ? (
+          <span className="kx-running">⟳ {running.doc_rel} yazılıyor…</span>
+        ) : (
+          <button className="btn btn-secondary btn-sm" onClick={runNext}>
+            Run next step
+          </button>
+        )}
+      </div>
       {groups.map((g) => (
         <section key={g.key}>
           <h2 className="kx-doc-group">{g.title}</h2>
           {docs
             .filter((d) => d.group === g.key)
-            .map((d) => (
-              <button key={d.rel} className="kx-doc-row" onClick={() => setOpen(d)}>
-                <span className="kx-doc-name">{d.name}</span>
-                {d.author && <span className="kx-doc-author mono">{d.author}</span>}
-                <span className="kx-doc-spacer" />
-                {d.upstreamChanged && <span className="kx-doc-warn">upstream changed</span>}
-                <StatusBadge doc={d} />
-              </button>
-            ))}
+            .map((d) => {
+              const job = jobFor(d.rel);
+              const isRunning = job?.status === 'running';
+              const failed = job?.status === 'failed' && d.status === 'uninitialized';
+              return (
+                <button key={d.rel} className={`kx-doc-row${failed ? ' failed' : ''}`} onClick={() => setOpen(d)}>
+                  <span className="kx-doc-name">{d.name}</span>
+                  {d.author && <span className="kx-doc-author mono">{d.author}</span>}
+                  <span className="kx-doc-spacer" />
+                  {isRunning && <span className="kx-running">⟳ yazılıyor…</span>}
+                  {failed && (
+                    <>
+                      <span className="kx-doc-fail" title={job?.error ?? ''}>
+                        adım başarısız
+                      </span>
+                      <span
+                        className="btn btn-sm btn-secondary"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          runNext();
+                        }}
+                      >
+                        Retry
+                      </span>
+                    </>
+                  )}
+                  {d.upstreamChanged && <span className="kx-doc-warn">upstream changed</span>}
+                  {!isRunning && <StatusBadge doc={d} />}
+                </button>
+              );
+            })}
         </section>
       ))}
       <DocDrawer

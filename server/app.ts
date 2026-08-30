@@ -8,6 +8,8 @@ import { PERSONAS, WORKFLOWS, handleMcpRequest } from './mcp.js';
 import { docPath, listDocs, setFrontmatterStatus, workflowNameFor } from './docs.js';
 import { generateChangeReport, listReports } from './reports.js';
 import { pickDirectoryNative } from './pick-directory.js';
+import { detectEngines, selectedEngine, setSetting, ENGINES } from './engines.js';
+import { listJobs, nextStep, runStep, runningJob } from './runner.js';
 import { readFileSync, writeFileSync } from 'node:fs';
 import type { Project } from './db.js';
 
@@ -31,6 +33,40 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     } catch (err) {
       res.status(400).json({ error: (err as Error).message });
     }
+  });
+
+  app.get('/api/engines', (_req, res) => {
+    res.json({ engines: detectEngines(), selected: selectedEngine(db)?.id ?? null });
+  });
+
+  app.put('/api/engines', (req, res) => {
+    const { id } = req.body ?? {};
+    if (!ENGINES.some((e) => e.id === id)) return res.status(400).json({ error: 'unknown engine' });
+    setSetting(db, 'engine', String(id));
+    res.json({ selected: id });
+  });
+
+  app.get('/api/projects/:id/jobs', (req, res) => {
+    const project = projectOr404(req.params.id, res);
+    if (!project) return;
+    res.json({ jobs: listJobs(db, project.id), running: runningJob(db, project.id) ?? null });
+  });
+
+  // Kick the next producible analysis step (fire-and-forget; the panel polls
+  // jobs + docs to watch it land). R2 turns approval into the trigger.
+  app.post('/api/projects/:id/run-next', (req, res) => {
+    const project = projectOr404(req.params.id, res);
+    if (!project) return;
+    const engine = selectedEngine(db);
+    if (!engine) return res.status(409).json({ error: 'no agent CLI installed' });
+    const step = nextStep(db, project, pkgRoot);
+    if (!step) {
+      return res
+        .status(409)
+        .json({ error: runningJob(db, project.id) ? 'a step is already running' : 'nothing to run' });
+    }
+    void runStep(db, project, step, engine, pkgRoot);
+    res.status(202).json({ started: step.output });
   });
 
   // Native folder chooser (macOS osascript; other platforms return null and

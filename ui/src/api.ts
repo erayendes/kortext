@@ -51,8 +51,28 @@ export interface PlanState {
   planningPending: boolean;
 }
 
+export interface EngineInfo {
+  id: string;
+  available: boolean;
+  installHint: string;
+}
+
+export interface Job {
+  id: number;
+  project_id: number;
+  doc_rel: string;
+  status: 'running' | 'done' | 'failed';
+  error: string | null;
+}
+
 export const api = {
   listProjects: () => req<{ projects: Project[] }>('/api/projects'),
+  engines: () => req<{ engines: EngineInfo[]; selected: string | null }>('/api/engines'),
+  selectEngine: (id: string) =>
+    req<{ selected: string }>('/api/engines', { method: 'PUT', body: JSON.stringify({ id }) }),
+  jobs: (projectId: number) => req<{ jobs: Job[]; running: Job | null }>(`/api/projects/${projectId}/jobs`),
+  runNext: (projectId: number) =>
+    req<{ started: string }>(`/api/projects/${projectId}/run-next`, { method: 'POST' }),
   planState: (projectId: number) => req<PlanState>(`/api/projects/${projectId}/plan`),
   listReports: (projectId: number) => req<{ reports: ReportInfo[] }>(`/api/projects/${projectId}/reports`),
   generateChangeReport: (projectId: number) =>
