@@ -25,6 +25,8 @@ export type MdToken = {
   kind: MdTokenKind;
   /** Raw text content (without the markdown prefix). Blank → ''. */
   text: string;
+  /** For fenced code blocks: the fence's language tag (e.g. 'mermaid'). */
+  lang?: string;
   /** For tables: parsed rows of cells (first row is the header). */
   table?: { header: string[]; rows: string[][] };
   /** Index into the token stream (stable selection key). */
@@ -73,6 +75,7 @@ export function parseMarkdown(md: string): MdToken[] {
     // Without this the fence + body lines fall through to `para` and render as
     // literal backticks (the bug seen in foundation docs with JSON snippets).
     if (line.trim().startsWith('```')) {
+      const lang = line.trim().slice(3).trim().toLowerCase() || undefined;
       i++; // skip opening fence
       const code: string[] = [];
       while (i < lines.length && !(lines[i] ?? '').trim().startsWith('```')) {
@@ -80,7 +83,7 @@ export function parseMarkdown(md: string): MdToken[] {
         i++;
       }
       if (i < lines.length) i++; // skip closing fence
-      out.push({ kind: 'code', text: code.join('\n'), index: index++, selectable: true });
+      out.push({ kind: 'code', text: code.join('\n'), lang, index: index++, selectable: true });
       continue;
     }
 

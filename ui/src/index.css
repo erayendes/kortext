@@ -1410,6 +1410,9 @@ body {
 .kx-quote { color: var(--fg-mid); border-left: 3px solid var(--border-strong); padding-left: 10px; font-style: italic; }
 .kx-bullet::before { content: '•  '; color: var(--fg-faint); }
 .kx-code { font-family: var(--font-mono); font-size: 12px; background: var(--bg-inset); border: 1px solid var(--border); padding: 10px 12px; border-radius: var(--r-md); overflow-x: auto; white-space: pre; }
+.kx-mermaid { padding: 12px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--bg); overflow-x: auto; }
+.kx-mermaid-svg { display: flex; justify-content: center; }
+.kx-mermaid-svg svg { max-width: 100%; height: auto; }
 .kx-table table { border-collapse: collapse; font-size: 12.5px; width: 100%; }
 .kx-table th, .kx-table td { border: 1px solid var(--border); padding: 5px 9px; text-align: left; }
 .kx-table th { background: var(--bg-muted); font-weight: 600; }

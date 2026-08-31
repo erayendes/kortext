@@ -280,6 +280,13 @@ function DocBlock({
     );
   }
   if (token.kind === 'code') {
+    if (token.lang === 'mermaid') {
+      return (
+        <div className={`${cls} kx-mermaid`} onClick={onSelect}>
+          <Mermaid code={token.text} />
+        </div>
+      );
+    }
     return (
       <pre className={cls} onClick={onSelect}>
         {token.text}
@@ -291,6 +298,37 @@ function DocBlock({
       <Inline text={token.text} />
     </div>
   );
+}
+
+// Mermaid fences render as diagrams — the source never shows. The library is
+// lazy-loaded so docs without diagrams pay nothing; a diagram that fails to
+// parse falls back to the raw source block.
+let mermaidId = 0;
+function Mermaid({ code }: { code: string }) {
+  const [svg, setSvg] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    setSvg(null);
+    setFailed(false);
+    import('mermaid')
+      .then(async ({ default: mermaid }) => {
+        mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
+        const { svg } = await mermaid.render(`kx-mmd-${mermaidId++}`, code);
+        if (alive) setSvg(svg);
+      })
+      .catch(() => {
+        if (alive) setFailed(true);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [code]);
+
+  if (failed) return <pre className="kx-code mono">{code}</pre>;
+  if (!svg) return <span className="kx-cmd-hint">rendering diagram…</span>;
+  return <div className="kx-mermaid-svg" dangerouslySetInnerHTML={{ __html: svg }} />;
 }
 
 // Backticks inside a bold span aren't caught by parseInline (its regex is
