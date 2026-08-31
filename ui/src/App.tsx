@@ -696,15 +696,21 @@ function DocumentsTab({
     { key: 'approved', title: 'Approved', closed: true },
     { key: 'reference', title: 'Reference', closed: true },
   ];
-  // Within a bucket keep the dependency order listDocs already produced.
+  // Active buckets keep the dependency order listDocs produced (the order work
+  // actually happens in); finished ones read alphabetically — nothing is
+  // "next" there, so the name is the only useful key.
   const ordered = docs;
+  const sortFor = (key: string, items: DocInfo[]) =>
+    key === 'approved' || key === 'reference'
+      ? [...items].sort((a, b) => a.name.localeCompare(b.name))
+      : items;
 
   return (
     <div className="kx-docs">
       <HandshakeCard project={project} />
       {err && <div className="kx-error">{err}</div>}
       {groups.map((g) => {
-        const items = ordered.filter((d) => bucketOf(d) === g.key);
+        const items = sortFor(g.key, ordered.filter((d) => bucketOf(d) === g.key));
         if (items.length === 0) return null;
         return (
           <details key={g.key} className="kx-doc-details" open={!g.closed}>
