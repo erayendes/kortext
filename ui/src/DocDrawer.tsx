@@ -233,7 +233,7 @@ export function StatusBadge({ doc }: { doc: DocInfo }) {
   return (
     <span className={`kx-status kx-status-${label}`}>
       {label}
-      {doc.upstreamChanged ? ' ⚠' : ''}
+      {doc.upstreamChanged && <span className="kx-status-warn"> ⚠</span>}
     </span>
   );
 }

@@ -1388,12 +1388,16 @@ body {
 .kx-doc-author { font-size: 10.5px; color: var(--fg-faint); }
 .kx-doc-spacer { flex: 1; }
 .kx-doc-warn { font-size: 10px; color: var(--amber, #b45309); background: rgba(217,119,6,.1); padding: 2px 7px; border-radius: 5px; }
+/* Badge heat map: amber = your move, green = settled, blue = the engine's move,
+   gray = passive, red = alarm, violet = out-of-cycle file. */
 .kx-status { font-size: 10.5px; font-weight: 600; padding: 2px 8px; border-radius: 6px; background: var(--bg-muted); color: var(--fg-mid); }
-.kx-status-approved { background: rgba(52,146,90,.12); color: var(--green, #34925a); }
-.kx-status-draft { background: rgba(59,113,202,.1); color: var(--accent); }
-.kx-status-revision { background: rgba(204,107,107,.12); color: var(--red); }
-.kx-status-waiting { color: var(--fg-faint); }
-.kx-status-next { background: rgba(59,113,202,.08); color: var(--fg-mid); }
+.kx-status-draft { background: var(--amber-bg); color: var(--amber); }
+.kx-status-approved { background: var(--green-bg); color: var(--green); }
+.kx-status-not-applicable { background: var(--bg-muted); color: var(--fg-muted); }
+.kx-status-next { background: var(--blue-bg); color: var(--blue); }
+.kx-status-waiting { background: transparent; color: var(--fg-faint); }
+.kx-status-failed { background: var(--red-bg); color: var(--red); }
+.kx-status-warn { color: var(--amber); }
 .dr-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--border); }
 .dr-title { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .dr-actions { display: flex; gap: 6px; flex-shrink: 0; }
@@ -1460,7 +1464,7 @@ body {
 .kx-drop:hover { background: var(--bg-hover); border-color: var(--gray-400); }
 .kx-drop input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 
-.kx-status-log { background: var(--bg-muted); color: var(--fg-mid); }
+.kx-status-log { background: var(--violet-bg); color: var(--violet); }
 
 /* R1 — engine badge + step runner states */
 .kx-engine { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--fg-mid); }
