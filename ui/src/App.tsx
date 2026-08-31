@@ -408,6 +408,7 @@ function AddProject({
 // there (vision §20).
 function ProjectScreen({ project, onBack }: { project: Project; onBack: () => void }) {
   const [paused, setPaused] = useState(!!project.paused);
+  const [status, setStatus] = useState('');
   const [err, setErr] = useState<string | null>(null);
 
   const togglePause = () =>
@@ -442,7 +443,22 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
         <button className="btn btn-sm" onClick={onBack}>
           ← Projects
         </button>
-        <span className="kx-doc-spacer" />
+        {paused ? (
+          <span className="kx-nav-status">⏸ Paused — running steps were stopped; nothing new starts.</span>
+        ) : (
+          status && <span className="kx-nav-status kx-running">{status}</span>
+        )}
+      </div>
+      <div className="kx-main-head">
+        <div className="kx-main-title">
+          <div className="kx-card-head">
+            {project.code && <span className="kx-card-code mono">{project.code}</span>}
+            <h1>{project.name}</h1>
+          </div>
+          <span className="kx-card-path mono" title={project.repo_path}>
+            {shortPath(project.repo_path)}
+          </span>
+        </div>
         <div className="kx-proj-actions">
           <button className="btn btn-sm" onClick={togglePause}>
             {paused ? '▶ Continue' : '⏸ Pause'}
@@ -455,19 +471,8 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
           </button>
         </div>
       </div>
-      <div className="kx-main-head">
-        <div className="kx-main-title">
-          <div className="kx-card-head">
-            {project.code && <span className="kx-card-code mono">{project.code}</span>}
-            <h1>{project.name}</h1>
-          </div>
-          <span className="kx-card-path mono" title={project.repo_path}>
-            {shortPath(project.repo_path)}
-          </span>
-        </div>
-      </div>
       {err && <div className="kx-error">{err}</div>}
-      <DocumentsTab project={project} paused={paused} />
+      <DocumentsTab project={project} paused={paused} onStatus={setStatus} />
     </main>
   );
 }
@@ -539,7 +544,15 @@ function HandshakeCard({ project }: { project: Project }) {
   );
 }
 
-function DocumentsTab({ project, paused }: { project: Project; paused?: boolean }) {
+function DocumentsTab({
+  project,
+  paused,
+  onStatus,
+}: {
+  project: Project;
+  paused?: boolean;
+  onStatus?: (text: string) => void;
+}) {
   const [docs, setDocs] = useState<DocInfo[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [open, setOpen] = useState<DocInfo | null>(null);
@@ -566,6 +579,13 @@ function DocumentsTab({ project, paused }: { project: Project; paused?: boolean 
   // Latest job per doc decides the row extras (spinner / red error).
   const jobFor = (rel: string) => jobs.find((j) => j.doc_rel === rel);
 
+  // The running-status line lives in the nav row next to ← Projects.
+  const running = jobs.filter((j) => j.status === 'running');
+  useEffect(() => {
+    onStatus?.(running.length > 0 ? `${running.map((j) => j.doc_rel).join(' · ')} writing…` : '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [running.map((j) => j.id).join(',')]);
+
   // Action-first ordering: what needs the prime's attention floats to the top.
   const rank = (d: DocInfo) => {
     if (d.status === 'draft') return 0;
@@ -587,19 +607,13 @@ function DocumentsTab({ project, paused }: { project: Project; paused?: boolean 
     <div className="kx-docs">
       <HandshakeCard project={project} />
       {err && <div className="kx-error">{err}</div>}
-      <div className="kx-docs-toolbar">
-        {paused ? (
-          <span className="kx-cmd-hint">⏸ Paused — running steps were stopped; nothing new starts.</span>
-        ) : jobs.some((j) => j.status === 'running') ? (
-          <span className="kx-running">
-            {jobs.filter((j) => j.status === 'running').map((j) => j.doc_rel).join(' · ')} writing…
-          </span>
-        ) : (
+      {!paused && running.length === 0 && (
+        <div className="kx-docs-toolbar">
           <button className="btn btn-primary btn-sm" onClick={runNext}>
             Run next step
           </button>
-        )}
-      </div>
+        </div>
+      )}
       {groups.map((g) => {
         const items = ordered.filter((d) => d.group === g.key);
         const settled = items.filter(
