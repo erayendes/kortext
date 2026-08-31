@@ -2,7 +2,7 @@
 status: uninitialized
 author: +security-engineer
 reviewer:
-approver: +engineering-manager
+approver: +architect
 ---
 
 # Security Rules

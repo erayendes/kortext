@@ -671,41 +671,46 @@ function DocumentsTab({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [running.map((j) => j.id).join(','), jobs.length]);
 
-  // Action-first ordering: what needs the prime's attention floats to the top.
-  const rank = (d: DocInfo) => {
-    if (d.status === 'draft') return 0;
-    if (jobFor(d.rel)?.status === 'running') return 1;
-    if (d.status === 'uninitialized' && !d.blocked) return 2;
-    if (d.status === 'uninitialized') return 3;
-    if (d.status === 'approved') return 4;
-    if (d.status === 'not-applicable') return 5;
-    return 6; // log & rest
+  // The list answers "what should I do now", so it groups by state, not by
+  // folder — Needs you first, Reference (n/a + log) last and collapsed.
+  const bucketOf = (d: DocInfo): 'needs' | 'progress' | 'next' | 'approved' | 'reference' => {
+    const job = jobFor(d.rel);
+    if (d.status === 'draft') return 'needs';
+    if (d.status === 'uninitialized' && job?.status === 'failed' && !paused) return 'needs';
+    if (d.status === 'uninitialized' && (job?.status === 'running' || (paused && job?.status === 'stopped'))) {
+      return 'progress';
+    }
+    if (d.status === 'uninitialized') return 'next';
+    if (d.status === 'approved') return 'approved';
+    return 'reference'; // not-applicable + log
   };
-  const ordered = [...docs].sort((a, b) => rank(a) - rank(b));
 
-  const groups: { key: 'core' | 'foundation'; title: string }[] = [
-    { key: 'core', title: 'Core' },
-    { key: 'foundation', title: 'Foundation' },
+  const groups: {
+    key: 'needs' | 'progress' | 'next' | 'approved' | 'reference';
+    title: string;
+    closed?: boolean;
+  }[] = [
+    { key: 'needs', title: 'Needs you' },
+    { key: 'progress', title: 'In progress' },
+    { key: 'next', title: 'Next' },
+    { key: 'approved', title: 'Approved', closed: true },
+    { key: 'reference', title: 'Reference', closed: true },
   ];
+  // Within a bucket keep the dependency order listDocs already produced.
+  const ordered = docs;
 
   return (
     <div className="kx-docs">
       <HandshakeCard project={project} />
       {err && <div className="kx-error">{err}</div>}
       {groups.map((g) => {
-        const items = ordered.filter((d) => d.group === g.key);
-        const settled = items.filter(
-          (d) => d.status === 'approved' || d.status === 'not-applicable' || d.status === 'log',
-        ).length;
-        // Open while there is still work in the group; auto-collapses once all
-        // docs settle (the handshake takes over the screen at that point).
+        const items = ordered.filter((d) => bucketOf(d) === g.key);
+        if (items.length === 0) return null;
         return (
-          <details key={g.key} className="kx-doc-details" open={settled < items.length}>
+          <details key={g.key} className="kx-doc-details" open={!g.closed}>
             <summary className="kx-doc-group">
               {g.title}
-              <span className="kx-doc-count mono">
-                {settled}/{items.length}
-              </span>
+              <span className="kx-doc-count mono">{items.length}</span>
             </summary>
             {items.map((d) => {
               const job = jobFor(d.rel);
@@ -717,6 +722,7 @@ function DocumentsTab({
               return (
                 <button key={d.rel} className={`kx-doc-row${failed ? ' failed' : ''}`} onClick={() => setOpen(d)}>
                   <span className="kx-doc-name">{d.name}</span>
+                  <span className="kx-doc-scope">({d.group})</span>
                   {d.author && <span className="kx-doc-author mono">{d.author.replace(/^\+/, '')}</span>}
                   <span className="kx-doc-spacer" />
                   {failed && (

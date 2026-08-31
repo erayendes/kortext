@@ -24,7 +24,7 @@ repo.
 2. **Analysis.** Kortext runs your agent CLI step by step through a
    dependency-gated workflow. Each step writes one document
    (ARCHITECTURE, STACK, SECURITY, DATABASE, DESIGN, LEGAL, …) as a persona
-   (engineering-manager, security-engineer, …) and lands it as `draft`.
+   (architect, security-engineer, …) and lands it as `draft`.
    A document whose inputs you haven't approved is never written. Up to
    three independent steps run in parallel; your approval wakes the chain.
 3. **Review in the panel.** Open any document: approve it, select a line and

@@ -2,7 +2,7 @@
 status: uninitialized
 author: +qa-engineer
 reviewer:
-approver: +engineering-manager
+approver: +architect
 ---
 
 # Testing Strategy

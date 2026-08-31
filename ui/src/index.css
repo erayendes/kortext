@@ -1401,6 +1401,7 @@ body {
 .kx-doc-details > summary.kx-doc-group::before { content: '▸'; display: inline-block; font-size: 10px; color: var(--fg-faint); transition: transform var(--speed) var(--ease); }
 .kx-doc-details[open] > summary.kx-doc-group::before { transform: rotate(90deg); }
 .kx-doc-count { margin-left: auto; font-size: 11px; font-weight: 500; text-transform: none; letter-spacing: 0; }
+.kx-doc-scope { font-size: 11px; color: var(--fg-faint); }
 .kx-doc-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--card); cursor: pointer; text-align: left; margin-bottom: 5px; font-family: inherit; transition: border-color var(--speed) var(--ease); }
 .kx-doc-row:hover { border-color: var(--border-strong); background: var(--bg-hover); }
 .kx-doc-name { font-size: 13px; font-weight: 550; color: var(--fg); }

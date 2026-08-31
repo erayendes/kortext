@@ -2,7 +2,7 @@
 status: uninitialized
 author: +db-admin
 reviewer: +backend-developer
-approver: +engineering-manager
+approver: +architect
 ---
 
 # Database Schema

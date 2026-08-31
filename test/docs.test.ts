@@ -17,7 +17,7 @@ test('parseWorkflowSteps extracts inputs/outputs/author/approver per output', ()
   assert.deepEqual(prd.inputs.sort(), ['GROWTH.md', 'LEGAL.md', 'foundation/BRD.md']);
   const stack = steps.find((s) => s.output === 'STACK.md');
   assert.ok(stack);
-  assert.equal(stack.author, '+engineering-manager');
+  assert.equal(stack.author, '+architect');
 });
 
 test('listDocs: dependency blocking follows approvals; regressed input warns dependents', () => {

@@ -1,6 +1,6 @@
 ---
 status: uninitialized
-author: +engineering-manager
+author: +architect
 reviewer:
 approver: +prime
 ---

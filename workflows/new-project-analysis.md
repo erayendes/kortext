@@ -34,14 +34,14 @@
 
 ## Technical Analysis
 
-1. **+engineering-manager:** Produce `STACK.md` + `STRUCTURE.md`. STACK: technology stack, MCP servers, dev tools, prerequisites to request from +prime (device, emulator, API key, external service). STRUCTURE: coding standards + folder structure + project terminology glossary.
+1. **+architect:** Produce `STACK.md` + `STRUCTURE.md`. STACK: technology stack, MCP servers, dev tools, prerequisites to request from +prime (device, emulator, API key, external service). STRUCTURE: coding standards + folder structure + project terminology glossary.
    - label: STACK.md
    - activity: Technology stack chosen. Standards and glossary defined.
    - inputs: `.kortext/foundation/BRD.md`, `.kortext/foundation/PRD.md`
    - outputs: `.kortext/STACK.md`, `.kortext/STRUCTURE.md`
    - approver: +prime
 
-2. **+engineering-manager:** Produce `ARCHITECTURE.md`. From PRD + STACK + STRUCTURE, design the shape of the system: components, data flow, boundaries and integration points, main architectural choices with one-line rationales (detailed decisions go to DECISIONS.md).
+2. **+architect:** Produce `ARCHITECTURE.md`. From PRD + STACK + STRUCTURE, design the shape of the system: components, data flow, boundaries and integration points, main architectural choices with one-line rationales (detailed decisions go to DECISIONS.md).
    - inputs: `.kortext/foundation/PRD.md`, `.kortext/STACK.md`, `.kortext/STRUCTURE.md`
    - outputs: `.kortext/ARCHITECTURE.md`
    - approver: +prime
@@ -67,14 +67,14 @@
    - outputs: `.kortext/DATABASE.md`
    - approver: +prime
 
-6. **+engineering-manager:** Produce `API.md`. Endpoint list, request/response models, error formats, authorization requirements, data flow.
+6. **+architect:** Produce `API.md`. Endpoint list, request/response models, error formats, authorization requirements, data flow.
    - label: API.md
    - activity: Endpoints defined. Request/response models specified.
    - inputs: `.kortext/foundation/PRD.md`, `.kortext/SECURITY.md`, `.kortext/STRUCTURE.md`, `.kortext/STACK.md`, `.kortext/DATABASE.md`
    - outputs: `.kortext/API.md`
    - approver: +prime
 
-7. **+engineering-manager:** Consolidate `TRD.md`. Merge the ARCHITECTURE + STACK + STRUCTURE + SECURITY + DATABASE + API + DESIGN outputs + engineering decisions into a single report.
+7. **+architect:** Consolidate `TRD.md`. Merge the ARCHITECTURE + STACK + STRUCTURE + SECURITY + DATABASE + API + DESIGN outputs + engineering decisions into a single report.
    - label: TRD.md
    - activity: Technical decisions merged into a single report.
    - inputs: `.kortext/foundation/PRD.md`, `.kortext/ARCHITECTURE.md`, `.kortext/SECURITY.md`, `.kortext/STRUCTURE.md`, `.kortext/STACK.md`, `.kortext/DATABASE.md`, `.kortext/API.md`, `.kortext/DESIGN.md`

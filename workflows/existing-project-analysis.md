@@ -4,12 +4,12 @@
 
 ## Technical Discovery
 
-1. **+engineering-manager:** Produce `STACK.md` + `STRUCTURE.md`. Scan the existing codebase — the ground truth is THE CODE ITSELF (there is no BRD in this flow). Scope: STACK (technology stack, MCP servers, dev tools, dependencies, language/framework versions), STRUCTURE (folder structure, naming conventions, coding standards + project terminology glossary).
+1. **+architect:** Produce `STACK.md` + `STRUCTURE.md`. Scan the existing codebase — the ground truth is THE CODE ITSELF (there is no BRD in this flow). Scope: STACK (technology stack, MCP servers, dev tools, dependencies, language/framework versions), STRUCTURE (folder structure, naming conventions, coding standards + project terminology glossary).
    - inputs:
    - outputs: `.kortext/STACK.md`, `.kortext/STRUCTURE.md`
    - approver: +prime
 
-2. **+engineering-manager:** Produce `ARCHITECTURE.md`. Extract the actual shape of the existing system: components, data flow, boundaries and integration points, the rationales behind the main architectural choices. Flag the gaps between code and intent.
+2. **+architect:** Produce `ARCHITECTURE.md`. Extract the actual shape of the existing system: components, data flow, boundaries and integration points, the rationales behind the main architectural choices. Flag the gaps between code and intent.
    - inputs: `.kortext/STACK.md`, `.kortext/STRUCTURE.md`
    - outputs: `.kortext/ARCHITECTURE.md`
    - approver: +prime
@@ -29,7 +29,7 @@
    - outputs: `.kortext/ENVIRONMENT.md`
    - approver: +prime
 
-6. **+engineering-manager:** Produce `API.md`. Scope: endpoint list + request/response models + auth mechanisms + service boundaries + integration points.
+6. **+architect:** Produce `API.md`. Scope: endpoint list + request/response models + auth mechanisms + service boundaries + integration points.
    - inputs: `.kortext/STACK.md`, `.kortext/STRUCTURE.md`, `.kortext/DATABASE.md`
    - outputs: `.kortext/API.md`
    - approver: +prime
@@ -68,7 +68,7 @@
 
 ## Technical Debt and TRD
 
-1. **+engineering-manager:** Consolidate `TRD.md`. Scope: technical debt from the discovery outputs + architectural issues + security risks + test gaps + devops/release risks + improvement areas. For each debt item: impact, risk, dependencies, priority level.
+1. **+architect:** Consolidate `TRD.md`. Scope: technical debt from the discovery outputs + architectural issues + security risks + test gaps + devops/release risks + improvement areas. For each debt item: impact, risk, dependencies, priority level.
    - inputs: `.kortext/foundation/PRD.md`, `.kortext/STACK.md`, `.kortext/STRUCTURE.md`, `.kortext/ARCHITECTURE.md`, `.kortext/DATABASE.md`, `.kortext/SECURITY.md`, `.kortext/API.md`, `.kortext/ENVIRONMENT.md`, `.kortext/TEST.md`
    - outputs: `.kortext/foundation/TRD.md`
    - approver: +prime

@@ -1,4 +1,4 @@
-# engineering-manager
+# architect
 
 - description: The technical lead of the analysis. Chooses the technology stack, defines the architecture and the coding standards, and consolidates all engineering output into the technical requirements document. Has the final word in technical dead ends.
 
