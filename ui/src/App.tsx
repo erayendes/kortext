@@ -493,16 +493,6 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
                 No
               </button>
             </>
-          ) : arming === 'cancel' ? (
-            <>
-              <span className="kx-arm-warn">Delete .kortext/, .kopeng/, AGENTS.md and remove the project?</span>
-              <button className="btn btn-sm btn-danger" disabled={busy} onClick={doCancel}>
-                Yes, remove
-              </button>
-              <button className="btn btn-sm" onClick={() => setArming(null)}>
-                No
-              </button>
-            </>
           ) : (
             <>
               <button className="btn btn-sm btn-primary" disabled={busy} onClick={togglePause}>
@@ -510,9 +500,6 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
               </button>
               <button className="btn btn-sm" disabled={busy} onClick={() => setArming('restart')}>
                 Restart
-              </button>
-              <button className="btn btn-sm btn-danger" disabled={busy} onClick={() => setArming('cancel')}>
-                Cancel
               </button>
             </>
           )}
@@ -525,6 +512,25 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
         onStatus={setStatus}
         onHasJobs={setHasJobs}
       />
+      <div className="kx-danger-zone">
+        {arming === 'cancel' ? (
+          <>
+            <span className="kx-arm-warn">
+              Delete .kortext/, .kopeng/, AGENTS.md and remove the project?
+            </span>
+            <button className="btn btn-sm btn-danger" disabled={busy} onClick={doCancel}>
+              Yes, remove
+            </button>
+            <button className="btn btn-sm" onClick={() => setArming(null)}>
+              No
+            </button>
+          </>
+        ) : (
+          <button className="btn btn-sm btn-danger" disabled={busy} onClick={() => setArming('cancel')}>
+            Remove project
+          </button>
+        )}
+      </div>
     </main>
   );
 }

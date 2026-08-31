@@ -894,8 +894,8 @@ body {
 .btn-secondary:hover { background: var(--bg-muted); border-color: var(--gray-400); }
 .btn-ghost { background: transparent; color: var(--fg-secondary); border-color: transparent; }
 .btn-ghost:hover { background: var(--bg-hover); color: var(--fg); }
-.btn-danger { background: var(--bg); color: var(--red); border-color: var(--red-border); }
-.btn-danger:hover { background: var(--red-bg); }
+.btn-danger { background: var(--red); color: #fff; border-color: transparent; }
+.btn-danger:hover { background: #a92f26; }
 .btn-success { background: var(--green-bg); color: var(--green); border-color: var(--green-border); }
 .btn-sm { height: var(--control-h-sm); padding: 0 calc(8px * var(--d-scale)); font-size: 12px; border-radius: var(--r-sm); }
 .btn-icon { width: var(--control-h); padding: 0; }
@@ -1337,6 +1337,7 @@ body {
 .kx-main-nav { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
 .kx-nav-status { font-size: 12px; color: var(--fg-muted); margin-left: auto; }
 .kx-arm-warn { font-size: 12px; color: var(--red); }
+.kx-danger-zone { margin-top: 32px; padding-top: 14px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
 .kx-proj-actions { display: flex; align-items: center; gap: 8px; }
 .kx-main-head { display: flex; align-items: center; gap: 14px; }
 .kx-main-head h1 { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; margin-right: auto; }
