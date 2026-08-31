@@ -407,12 +407,43 @@ function AddProject({
 // card takes over the top — kortext's job is done, the client takes it from
 // there (vision §20).
 function ProjectScreen({ project, onBack }: { project: Project; onBack: () => void }) {
+  const [paused, setPaused] = useState(!!project.paused);
+  const [err, setErr] = useState<string | null>(null);
+
+  const togglePause = () =>
+    api
+      .pauseProject(project.id, !paused)
+      .then((r) => setPaused(r.paused))
+      .catch((e) => setErr(e.message));
+
+  const restart = () => {
+    if (
+      !confirm(
+        'Restart the analysis?\n\nEverything under .kortext/ and .kopeng/ will be DELETED (a written brief too) and the analysis starts over from fresh skeletons.',
+      )
+    )
+      return;
+    api.restartProject(project.id).catch((e) => setErr(e.message));
+  };
+
+  const cancel = () => {
+    if (
+      !confirm(
+        'Remove kortext from this project?\n\n.kortext/, .kopeng/ and AGENTS.md will be permanently deleted from the repo, and the project disappears from this panel. Your own code is untouched.',
+      )
+    )
+      return;
+    api.cancelProject(project.id).then(onBack).catch((e) => setErr(e.message));
+  };
+
   return (
     <main className="kx-main">
-      <div className="kx-main-head">
-        <button className="btn" onClick={onBack}>
+      <div className="kx-main-nav">
+        <button className="btn btn-sm" onClick={onBack}>
           ← Projects
         </button>
+      </div>
+      <div className="kx-main-head">
         <div className="kx-main-title">
           <div className="kx-card-head">
             {project.code && <span className="kx-card-code mono">{project.code}</span>}
@@ -422,8 +453,20 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
             {shortPath(project.repo_path)}
           </span>
         </div>
+        <div className="kx-proj-actions">
+          <button className="btn btn-sm" onClick={togglePause}>
+            {paused ? '▶ Continue' : '⏸ Pause'}
+          </button>
+          <button className="btn btn-sm" onClick={restart}>
+            Restart
+          </button>
+          <button className="btn btn-sm btn-danger" onClick={cancel}>
+            Cancel
+          </button>
+        </div>
       </div>
-      <DocumentsTab project={project} />
+      {err && <div className="kx-error">{err}</div>}
+      <DocumentsTab project={project} paused={paused} />
     </main>
   );
 }
@@ -495,7 +538,7 @@ function HandshakeCard({ project }: { project: Project }) {
   );
 }
 
-function DocumentsTab({ project }: { project: Project }) {
+function DocumentsTab({ project, paused }: { project: Project; paused?: boolean }) {
   const [docs, setDocs] = useState<DocInfo[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [open, setOpen] = useState<DocInfo | null>(null);
@@ -548,6 +591,8 @@ function DocumentsTab({ project }: { project: Project }) {
           <span className="kx-running">
             ⟳ {jobs.filter((j) => j.status === 'running').map((j) => j.doc_rel).join(' · ')} writing…
           </span>
+        ) : paused ? (
+          <span className="kx-cmd-hint">⏸ Paused — the chain won't start new steps.</span>
         ) : (
           <button className="btn btn-primary btn-sm" onClick={runNext}>
             Run next step

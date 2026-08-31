@@ -3,6 +3,7 @@ export interface Project {
   name: string;
   code: string;
   repo_path: string;
+  paused?: number;
   created_at: string;
   docCounts?: {
     core: { settled: number; total: number };
@@ -109,4 +110,11 @@ export const api = {
     req<{ project: Project }>('/api/projects', { method: 'POST', body: JSON.stringify(input) }),
   pickDirectory: () => req<{ path: string | null }>('/api/pick-directory', { method: 'POST' }),
   removeProject: (id: number) => req<{ removed: boolean }>(`/api/projects/${id}`, { method: 'DELETE' }),
+  pauseProject: (id: number, paused: boolean) =>
+    req<{ paused: boolean }>(`/api/projects/${id}/pause`, {
+      method: 'POST',
+      body: JSON.stringify({ paused }),
+    }),
+  restartProject: (id: number) => req<{ ok: boolean }>(`/api/projects/${id}/restart`, { method: 'POST' }),
+  cancelProject: (id: number) => req<{ ok: boolean }>(`/api/projects/${id}/cancel`, { method: 'POST' }),
 };

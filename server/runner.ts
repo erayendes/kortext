@@ -148,7 +148,11 @@ export async function advance(
   try {
     const inFlight = new Set<Promise<unknown>>();
     for (;;) {
-      const room = MAX_PARALLEL - inFlight.size;
+      // Paused = don't start new steps; running ones finish and the loop exits.
+      const paused = (db.prepare('SELECT paused FROM projects WHERE id = ?').get(project.id) as
+        | { paused: number }
+        | undefined)?.paused;
+      const room = paused ? 0 : MAX_PARALLEL - inFlight.size;
       if (room > 0) {
         for (const step of producibleSteps(db, project, pkgRoot).slice(0, room)) {
           const p = runStep(db, project, step, engine, pkgRoot).finally(() => inFlight.delete(p));
