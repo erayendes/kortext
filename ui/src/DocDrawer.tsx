@@ -173,9 +173,13 @@ export function DocDrawer({
                   token={t}
                   selected={selected === t.index}
                   noted={notes.some((n) => n.line === t.index)}
-                  onSelect={() =>
-                    doc.status === 'uninitialized' ? undefined : setSelected(selected === t.index ? null : t.index)
-                  }
+                  onSelect={() => {
+                    // Let the user select text: a click that ends a selection
+                    // must not toggle the thread.
+                    if ((window.getSelection()?.toString() ?? '').trim()) return;
+                    if (doc.status === 'uninitialized') return;
+                    setSelected(selected === t.index ? null : t.index);
+                  }}
                 />
                 {(selected === t.index || explains.some((x) => x.line === t.index)) &&
                   doc.status !== 'uninitialized' && (

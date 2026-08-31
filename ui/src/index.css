@@ -1340,7 +1340,7 @@ body {
 .kx-nav-status { font-size: 12px; color: var(--fg-muted); margin-left: auto; }
 .kx-arm-warn { font-size: 12px; color: var(--red); }
 .kx-danger-zone { margin-top: 28px; display: flex; justify-content: flex-end; align-items: center; gap: 14px; }
-.kx-link { background: none; border: none; padding: 0; font: inherit; font-size: 11px; color: var(--fg-muted); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.kx-link { background: none; border: none; padding: 0; font-family: var(--font-mono); font-size: 10.5px; color: var(--fg-muted); cursor: pointer; }
 .kx-link:hover { color: var(--fg); }
 .kx-link-danger { color: var(--red); }
 .kx-link-danger:hover { color: #a92f26; }
