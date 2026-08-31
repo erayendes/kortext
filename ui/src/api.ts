@@ -4,6 +4,10 @@ export interface Project {
   code: string;
   repo_path: string;
   created_at: string;
+  docCounts?: {
+    core: { settled: number; total: number };
+    foundation: { settled: number; total: number };
+  };
 }
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {

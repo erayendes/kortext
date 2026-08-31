@@ -34,7 +34,27 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   });
 
   app.get('/api/projects', (_req, res) => {
-    res.json({ projects: listProjects(db) });
+    // Cards show per-group progress (core 5/14 · foundation 1/3) — counted the
+    // same way the group headers count: approved | not-applicable | log = settled.
+    const projects = listProjects(db).map((p) => {
+      const docCounts = {
+        core: { settled: 0, total: 0 },
+        foundation: { settled: 0, total: 0 },
+      };
+      try {
+        for (const d of listDocs(db, p, pkgRoot)) {
+          const g = docCounts[d.group];
+          g.total++;
+          if (d.status === 'approved' || d.status === 'not-applicable' || d.status === 'log') {
+            g.settled++;
+          }
+        }
+      } catch {
+        /* repo may be gone; the card still renders */
+      }
+      return { ...p, docCounts };
+    });
+    res.json({ projects });
   });
 
   app.post('/api/projects', (req, res) => {

@@ -59,6 +59,20 @@ export function App() {
                 <span className="kx-card-path mono" title={p.repo_path}>
                   {shortPath(p.repo_path)}
                 </span>
+                {p.docCounts && (
+                  <span
+                    className={`kx-card-counts mono${
+                      p.docCounts.core.settled === p.docCounts.core.total &&
+                      p.docCounts.foundation.settled === p.docCounts.foundation.total &&
+                      p.docCounts.core.total > 0
+                        ? ' done'
+                        : ''
+                    }`}
+                  >
+                    core {p.docCounts.core.settled}/{p.docCounts.core.total} · foundation{' '}
+                    {p.docCounts.foundation.settled}/{p.docCounts.foundation.total}
+                  </span>
+                )}
               </button>
             ))}
           </div>
