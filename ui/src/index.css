@@ -1513,11 +1513,11 @@ body {
 .kx-handshake-head { display: flex; flex-direction: column; gap: 4px; }
 .kx-handshake-title { font-size: 14.5px; font-weight: 650; color: var(--green, #2f7d4f); }
 .kx-handshake-kopeng { display: flex; align-items: center; gap: 12px; }
-.kx-kopeng-promo { display: flex; flex-direction: column; gap: 8px; padding: 16px 18px; border: 1px solid var(--violet-border); border-radius: var(--r-md); background: linear-gradient(135deg, var(--violet-bg), var(--bg) 70%); }
+/* Same card as the starter commands, wearing the promo's colours. */
+.kx-cmd-card.kx-kopeng-promo { border-color: var(--violet-border); background: linear-gradient(135deg, var(--violet-bg), var(--bg) 70%); }
+.kx-cmd-card.kx-kopeng-promo:hover { border-color: var(--violet); }
 .kx-kopeng-badge { align-self: flex-start; padding: 2px 9px; border-radius: var(--r-pill); background: var(--violet); color: #fff; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
-.kx-kopeng-title { font-size: 14px; font-weight: 650; }
-.kx-kopeng-install { display: flex; align-items: center; gap: 8px; }
-.kx-kopeng-install .kx-cmd { flex: 1; }
+.kx-kopeng-title { font-size: 14px; font-weight: 650; text-align: left; }
 .kx-handshake-cards { display: flex; flex-direction: column; gap: 8px; }
 
 .kx-handshake-plan { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--bg); }

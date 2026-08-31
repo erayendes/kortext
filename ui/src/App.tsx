@@ -597,21 +597,17 @@ function HandshakeCard({ project }: { project: Project }) {
       {state.kopengInstalled ? (
         <TransferPanel project={project} />
       ) : (
-        <div className="kx-kopeng-promo">
-          <span className="kx-kopeng-badge">Kopeng</span>
-          <span className="kx-kopeng-title">
-            From here the work moves task by task — watch it on a board.
-          </span>
-          <span className="kx-cmd-hint">
-            "Transfer to Kopeng" splits the work into Version → Epic → Task in one click;
-            your agent pulls tasks while you watch the kanban. Install it and the button
-            appears right here:
-          </span>
-          <div className="kx-kopeng-install">
-            <code className="kx-cmd mono">npm install -g kopeng</code>
-            <CopyBtn text="npm install -g kopeng" />
-          </div>
-        </div>
+        <CommandCard
+          className="kx-kopeng-promo"
+          badge="Kopeng"
+          title="From here the work moves task by task — watch it on a board."
+          hint={
+            '"Transfer to Kopeng" splits the work into Version → Epic → Task in one click; ' +
+            'your agent pulls tasks while you watch the kanban. Install it and the button ' +
+            'appears right here:'
+          }
+          command="npm install -g kopeng"
+        />
       )}
       <div className="kx-handshake-cards">
         <span className="kx-cmd-hint">
@@ -781,12 +777,25 @@ function copyText(text: string) {
 }
 
 // The whole card is the copy button — no truncated code peeking out of a
-// too-small box; the command wraps in full and one click grabs it.
-function CommandCard({ title, command }: { title: string; command: string }) {
+// too-small box; the command wraps in full and one click grabs it. The Kopeng
+// promo is the same card with a badge and a longer pitch.
+function CommandCard({
+  title,
+  command,
+  badge,
+  hint,
+  className,
+}: {
+  title: string;
+  command: string;
+  badge?: string;
+  hint?: string;
+  className?: string;
+}) {
   const [copied, setCopied] = useState(false);
   return (
     <button
-      className={`kx-cmd-card${copied ? ' copied' : ''}`}
+      className={`kx-cmd-card${className ? ` ${className}` : ''}${copied ? ' copied' : ''}`}
       onClick={() => {
         copyText(command).then(() => {
           setCopied(true);
@@ -794,28 +803,13 @@ function CommandCard({ title, command }: { title: string; command: string }) {
         });
       }}
     >
+      {badge && <span className="kx-kopeng-badge">{badge}</span>}
       <div className="kx-cmd-head">
-        <span className="kx-cmd-title">{title}</span>
+        <span className={badge ? 'kx-kopeng-title' : 'kx-cmd-title'}>{title}</span>
         <span className="kx-cmd-copy">{copied ? '✓ Copied' : 'Copy'}</span>
       </div>
+      {hint && <span className="kx-cmd-hint">{hint}</span>}
       <code className="kx-cmd mono">{command}</code>
-    </button>
-  );
-}
-
-function CopyBtn({ text }: { text: string }) {
-  const [ok, setOk] = useState(false);
-  return (
-    <button
-      className="btn btn-sm"
-      onClick={() => {
-        copyText(text).then(() => {
-          setOk(true);
-          setTimeout(() => setOk(false), 1500);
-        });
-      }}
-    >
-      {ok ? '✓' : 'Copy'}
     </button>
   );
 }
