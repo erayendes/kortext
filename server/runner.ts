@@ -6,6 +6,7 @@ import type { Project } from './db.js';
 import { spawnCli } from './cli-spawn.js';
 import type { EngineSpec } from './engines.js';
 import { listDocs, loadDocMap, readFrontmatter, workflowNameFor, type DocStep } from './docs.js';
+import { ensureReadiness } from './readiness.js';
 
 export interface Job {
   id: number;
@@ -163,6 +164,11 @@ export async function advance(
     active(); // already looping — just wake it to re-scan
     return;
   }
+  // The readiness gate. A new project whose brief says nothing must produce
+  // nothing: no step starts until the brief carries enough to analyse. The
+  // verdict is cached per brief version, so this costs one engine run per
+  // edit of the brief, not one per approval. Existing projects have no brief.
+  if ((project.kind ?? 'new') === 'new' && !(await ensureReadiness(project, engine)).ready) return;
   let wake = () => {};
   const arm = () => new Promise<void>((resolve) => (wake = resolve));
   advancing.set(project.id, () => wake());

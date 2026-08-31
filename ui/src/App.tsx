@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api, type DocInfo, type EngineInfo, type HandshakeState, type Job, type KopengPlan, type Project } from './api';
+import { api, type DocInfo, type EngineInfo, type HandshakeState, type Job, type KopengPlan, type Project, type Readiness } from './api';
 import { DocDrawer, StatusBadge } from './DocDrawer';
 
 // ponytail: last two segments read fine in a card; the full path lives in the tooltip
@@ -636,12 +636,17 @@ function DocumentsTab({
   const [jobs, setJobs] = useState<Job[]>([]);
   const [open, setOpen] = useState<DocInfo | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [gate, setGate] = useState<{ readiness: Readiness | null; checking: boolean }>({
+    readiness: null,
+    checking: false,
+  });
 
   const refresh = () =>
-    Promise.all([api.listDocs(project.id), api.jobs(project.id)])
-      .then(([d, j]) => {
+    Promise.all([api.listDocs(project.id), api.jobs(project.id), api.readiness(project.id)])
+      .then(([d, j, g]) => {
         setDocs(d.docs);
         setJobs(j.jobs);
+        setGate(g);
         setErr(null);
       })
       .catch((e) => setErr(e.message));
@@ -704,6 +709,10 @@ function DocumentsTab({
   return (
     <div className="kx-docs">
       <HandshakeCard project={project} />
+      <ReadinessCard
+        gate={gate}
+        onOpenBrief={() => setOpen(docs.find((d) => d.rel === 'foundation/BRD.md') ?? null)}
+      />
       {err && <div className="kx-error">{err}</div>}
       {groups.map((g) => {
         const items = sortFor(g.key, ordered.filter((d) => bucketOf(d) === g.key));
@@ -759,6 +768,46 @@ function DocumentsTab({
         onClose={() => setOpen(null)}
         onChanged={refresh}
       />
+    </div>
+  );
+}
+
+// The readiness gate, when it is closed. The analysis produces nothing from a
+// brief that says nothing, so the questions the brief must answer take the
+// place of the documents that would otherwise have been invented.
+function ReadinessCard({
+  gate,
+  onOpenBrief,
+}: {
+  gate: { readiness: Readiness | null; checking: boolean };
+  onOpenBrief: () => void;
+}) {
+  if (gate.checking) {
+    return (
+      <div className="kx-gate">
+        <h3>Reading the brief…</h3>
+        <p>Checking whether it says enough to analyse. Nothing is being written yet.</p>
+      </div>
+    );
+  }
+  const r = gate.readiness;
+  if (!r || r.ready || r.questions.length === 0) return null;
+  return (
+    <div className="kx-gate">
+      <h3>{r.stage === 'error' ? 'The check did not finish' : 'Not enough to start'}</h3>
+      <p>
+        {r.stage === 'error'
+          ? 'Nothing was written.'
+          : 'The brief does not say enough to analyse, so no document was written. Answer these in the brief, then press Start.'}
+      </p>
+      <ul className="kx-gate-questions">
+        {r.questions.map((q) => (
+          <li key={q}>{q}</li>
+        ))}
+      </ul>
+      <button className="btn btn-sm btn-primary" onClick={onOpenBrief}>
+        Open the brief
+      </button>
     </div>
   );
 }

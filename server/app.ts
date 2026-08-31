@@ -9,6 +9,7 @@ import { spawnSync } from 'node:child_process';
 import { readdirSync } from 'node:fs';
 import { detectEngines, selectedEngine, setSetting, ENGINES } from './engines.js';
 import { abortRuns, advance, explainDoc, failStaleJobs, listJobs, nextStep, reviseDoc, runPlanning, runningJob } from './runner.js';
+import { isChecking, readReadiness } from './readiness.js';
 import { readFileSync, writeFileSync } from 'node:fs';
 import type { Project } from './db.js';
 
@@ -102,6 +103,17 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     }
     void advance(db, project, engine, pkgRoot);
     res.status(202).json({ started: step.output });
+  });
+
+  // The readiness gate's standing verdict. Null until the brief is approved and
+  // the gate has run once; `checking` covers the minute the judgment is out.
+  app.get('/api/projects/:id/readiness', (req, res) => {
+    const project = projectOr404(req.params.id, res);
+    if (!project) return;
+    res.json({
+      readiness: (project.kind ?? 'new') === 'new' ? readReadiness(project) : null,
+      checking: isChecking(project.id),
+    });
   });
 
   // Native folder chooser (macOS osascript; other platforms return null and

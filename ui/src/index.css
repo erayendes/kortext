@@ -1509,6 +1509,12 @@ body {
 .kx-thread-input .kx-input { flex: 1; height: 30px; font-size: 12.5px; }
 
 /* R4 — handshake completion card */
+/* Readiness gate — the analysis refused to start; amber because it is the
+   human's turn, not a failure. */
+.kx-gate { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; padding: 18px; border: 1px solid var(--amber-border); border-radius: var(--r-lg); background: var(--amber-bg); }
+.kx-gate h3 { margin: 0; font-size: 14.5px; font-weight: 650; color: var(--amber); }
+.kx-gate p { margin: 0; font-size: 12.5px; color: var(--fg-muted, inherit); max-width: 68ch; }
+.kx-gate-questions { margin: 2px 0 2px; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
 .kx-handshake { display: flex; flex-direction: column; gap: 14px; padding: 18px; border: 1px solid rgba(52,146,90,.35); border-radius: var(--r-lg); background: rgba(52,146,90,.06); }
 .kx-handshake-head { display: flex; flex-direction: column; gap: 4px; }
 .kx-handshake-title { font-size: 14.5px; font-weight: 650; color: var(--green, #2f7d4f); }

@@ -20,6 +20,9 @@ function mockEngine(work: string, behavior: 'ok' | 'noop' | 'wrong-status'): Eng
       ? '#!/bin/sh\ncat > /dev/null\nexit 0\n'
       : `#!/bin/sh
 prompt=$(cat)
+case "$prompt" in
+  *readiness.json*) printf '{ "ready": true }\\n' > .kortext/.readiness.json; exit 0;;
+esac
 rel=$(printf '%s' "$prompt" | grep 'Produce EXACTLY' | sed 's/.*: \\.kortext\\///')
 status=${behavior === 'wrong-status' ? 'approved' : 'draft'}
 printf -- '---\\nstatus: %s\\nauthor: +mock\\n---\\n\\n# Mock doc\\n' "$status" > ".kortext/$rel"
@@ -29,13 +32,45 @@ printf -- '---\\nstatus: %s\\nauthor: +mock\\n---\\n\\n# Mock doc\\n' "$status" 
   return { id: 'mock', binary: script, args: [], installHint: '' };
 }
 
+// The readiness gate refuses to start on a brief that says nothing, so chain
+// tests need a brief that says something. Content, not status, is the point.
+function approveBrief(p: { repo_path: string }): void {
+  writeFileSync(
+    docPath(p as never, 'foundation/BRD.md'),
+    `---
+status: approved
+author: +prime
+---
+
+# Product Roadmap & Vision
+
+## Product Vision & Goals
+
+A shared shopping list for households, so two people never buy the same milk twice.
+
+## Target Audience & Personas
+
+Couples and flatmates who share a kitchen and shop separately.
+
+## Key Performance Indicators (KPIs)
+
+Weekly lists completed per household; duplicate purchases self-reported per month.
+
+## Future Scope & Out of Scope
+
+No price tracking, no recipes, no store integrations in v1.
+`,
+    'utf8',
+  );
+}
+
 test('nextStep: first unblocked unwritten doc by dependency depth; BRD gate respected', () => {
   const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
   const db = openDb(join(work, 'db.sqlite'));
   const p = createProject(db, { name: 'Acme', repoPath: join(work, 'acme') }, pkgRoot);
   // BRD is draft (not approved) → LEGAL/GROWTH blocked → nothing to run yet
   assert.equal(nextStep(db, p, pkgRoot), null);
-  setFrontmatterStatus(docPath(p, 'foundation/BRD.md'), 'approved');
+  approveBrief(p);
   const step = nextStep(db, p, pkgRoot);
   assert.ok(step);
   assert.ok(['GROWTH.md', 'LEGAL.md'].includes(step.output));
@@ -46,7 +81,7 @@ test('runStep happy path: engine writes draft, job settles done', async () => {
   const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
   const db = openDb(join(work, 'db.sqlite'));
   const p = createProject(db, { name: 'Acme', repoPath: join(work, 'acme') }, pkgRoot);
-  setFrontmatterStatus(docPath(p, 'foundation/BRD.md'), 'approved');
+  approveBrief(p);
   const step = nextStep(db, p, pkgRoot)!;
   const out = await runStep(db, p, step, mockEngine(work, 'ok'), pkgRoot);
   assert.equal(out.ok, true);
@@ -60,7 +95,7 @@ test('runStep failure paths: no output file / wrong status → job failed with e
   const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
   const db = openDb(join(work, 'db.sqlite'));
   const p = createProject(db, { name: 'Acme', repoPath: join(work, 'acme') }, pkgRoot);
-  setFrontmatterStatus(docPath(p, 'foundation/BRD.md'), 'approved');
+  approveBrief(p);
   const step = nextStep(db, p, pkgRoot)!;
 
   // the skeleton already exists, so a lazy engine leaves status: uninitialized
@@ -104,7 +139,7 @@ test('advance: chains every unblocked step, pauses at approval gates, resumes af
   await advance(db, p, engine, pkgRoot); // BRD not approved → nothing runs
   assert.equal(listJobs(db, p.id).length, 0);
 
-  setFrontmatterStatus(docPath(p, 'foundation/BRD.md'), 'approved');
+  approveBrief(p);
   await advance(db, p, engine, pkgRoot);
   // GROWTH + LEGAL produced as drafts, then the chain pauses (PRD needs approvals)
   const drafts = listJobs(db, p.id).filter((j) => j.status === 'done').map((j) => j.doc_rel).sort();
@@ -137,17 +172,24 @@ test('advance runs independent steps in parallel (capped)', async () => {
   const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
   const db = openDb(join(work, 'db.sqlite'));
   const p = createProject(db, { name: 'Par', repoPath: join(work, 'par') }, pkgRoot);
-  setFrontmatterStatus(docPath(p, 'foundation/BRD.md'), 'approved');
+  approveBrief(p);
   // slow mock: each step sleeps 400ms — two sequential ≈ 800ms, parallel ≈ 400ms
   const script = join(work, 'slow.sh');
   writeFileSync(script, `#!/bin/sh
 prompt=$(cat)
+case "$prompt" in
+  *readiness.json*) printf '{ "ready": true }\\n' > .kortext/.readiness.json; exit 0;;
+esac
 rel=$(printf '%s' "$prompt" | grep 'Produce EXACTLY' | sed 's/.*: \\.kortext\\///')
 sleep 0.4
 printf -- '---\\nstatus: draft\\nauthor: +mock\\n---\\n\\n# Mock\\n' > ".kortext/$rel"
 `);
   chmodSync(script, 0o755);
   const { advance } = await import('../server/runner.js');
+  const { ensureReadiness } = await import('../server/readiness.js');
+  // Settle the readiness gate first — this measures the chain's parallelism,
+  // not the one-off gate spawn that precedes it.
+  await ensureReadiness(p, { id: 'slow', binary: script, args: [], installHint: '' });
   const t0 = Date.now();
   await advance(db, p, { id: 'slow', binary: script, args: [], installHint: '' }, pkgRoot);
   const elapsed = Date.now() - t0;
@@ -161,7 +203,7 @@ test('reviseDoc re-runs the producing step with notes; explainDoc answers withou
   const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
   const db = openDb(join(work, 'db.sqlite'));
   const p = createProject(db, { name: 'Rev', repoPath: join(work, 'rev') }, pkgRoot);
-  setFrontmatterStatus(docPath(p, 'foundation/BRD.md'), 'approved');
+  approveBrief(p);
   const { advance, reviseDoc, explainDoc } = await import('../server/runner.js');
   await advance(db, p, mockEngine(work, 'ok'), pkgRoot); // LEGAL + GROWTH drafts
 
@@ -194,12 +236,15 @@ test('a mid-run approval wakes the active chain and fills free pool slots', asyn
   const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
   const db = openDb(join(work, 'db.sqlite'));
   const p = createProject(db, { name: 'Wake', repoPath: join(work, 'wake') }, pkgRoot);
-  setFrontmatterStatus(docPath(p, 'foundation/BRD.md'), 'approved');
+  approveBrief(p);
   // pre-write GROWTH as draft so only LEGAL is producible at loop start
   writeFileSync(docPath(p, 'GROWTH.md'), '---\nstatus: draft\nauthor: +mock\n---\n\n# G\n');
   const slow = join(work, 'slow.sh');
   writeFileSync(slow, `#!/bin/sh
 prompt=$(cat)
+case "$prompt" in
+  *readiness.json*) printf '{ "ready": true }\\n' > .kortext/.readiness.json; exit 0;;
+esac
 rel=$(printf '%s' "$prompt" | grep 'Produce EXACTLY' | sed 's/.*: \\.kortext\\///')
 sleep 0.6
 printf -- '---\\nstatus: draft\\nauthor: +mock\\n---\\n\\n# S\\n' > ".kortext/$rel"
@@ -257,7 +302,7 @@ test('abortRuns kills a running step: the job settles as stopped, not failed', a
   const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
   const db = openDb(join(work, 'db.sqlite'));
   const p = createProject(db, { name: 'Acme', repoPath: join(work, 'acme') }, pkgRoot);
-  setFrontmatterStatus(docPath(p, 'foundation/BRD.md'), 'approved');
+  approveBrief(p);
   const step = nextStep(db, p, pkgRoot)!;
 
   const slow = join(work, 'slow-engine.sh');

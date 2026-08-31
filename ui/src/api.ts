@@ -60,6 +60,14 @@ export interface Job {
   error: string | null;
 }
 
+export interface Readiness {
+  ready: boolean;
+  stage: 'floor' | 'judgment' | 'error';
+  questions: string[];
+  briefHash: string;
+  checkedAt: string;
+}
+
 export const api = {
   listProjects: () => req<{ projects: Project[] }>('/api/projects'),
   engines: () => req<{ engines: EngineInfo[]; selected: string | null }>('/api/engines'),
@@ -69,6 +77,8 @@ export const api = {
   runNext: (projectId: number) =>
     req<{ started: string }>(`/api/projects/${projectId}/run-next`, { method: 'POST' }),
   handshake: (projectId: number) => req<HandshakeState>(`/api/projects/${projectId}/handshake`),
+  readiness: (projectId: number) =>
+    req<{ readiness: Readiness | null; checking: boolean }>(`/api/projects/${projectId}/readiness`),
   transfer: (projectId: number, notes?: string[]) =>
     req<{ started: string }>(`/api/projects/${projectId}/transfer`, {
       method: 'POST',
