@@ -245,9 +245,9 @@ export function statusOf(
   if (opts.running) return { key: 'writing', label: 'writing…' };
   if (opts.stopped) return { key: 'paused', label: 'paused' };
   if (opts.failed) return { key: 'failed', label: 'failed' };
-  if (doc.status === 'uninitialized') {
-    return doc.blocked ? { key: 'waiting', label: 'waiting' } : { key: 'next', label: 'next' };
-  }
+  // Unwritten docs all read 'waiting' — the group heading already says Next,
+  // so a separate 'next' pill only added noise.
+  if (doc.status === 'uninitialized') return { key: 'waiting', label: 'waiting' };
   return { key: doc.status, label: STATUS_LABEL[doc.status] ?? doc.status };
 }
 
