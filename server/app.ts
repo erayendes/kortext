@@ -138,9 +138,10 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       rmSync(join(project.repo_path, '.kortext'), { recursive: true, force: true });
       rmSync(join(project.repo_path, '.kopeng'), { recursive: true, force: true });
       db.prepare('DELETE FROM jobs WHERE project_id = ?').run(project.id);
-      db.prepare('UPDATE projects SET paused = 0 WHERE id = ?').run(project.id);
       scaffoldProject(project.repo_path, pkgRoot, { skipBrief: project.kind === 'existing' });
-      kickChain({ ...project, paused: 0 });
+      // Restart lands in the same ready state as a fresh Add: nothing runs
+      // until the user presses Start.
+      db.prepare('UPDATE projects SET paused = 1 WHERE id = ?').run(project.id);
       res.json({ ok: true });
     } catch (err) {
       res.status(400).json({ error: (err as Error).message });

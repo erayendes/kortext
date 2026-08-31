@@ -95,6 +95,21 @@ export function App() {
           )}
         </main>
       )}
+      <footer className="kx-footer">
+        <span>
+          Kortext by{' '}
+          <a href="https://milowda.com" target="_blank" rel="noreferrer">
+            Milowda
+          </a>
+        </span>
+        <span className="kx-doc-spacer" />
+        <a href="https://milowda.com/apps" target="_blank" rel="noreferrer">
+          More apps
+        </a>
+        <a href="https://github.com/erayendes/kopeng" target="_blank" rel="noreferrer">
+          Kopeng — task board
+        </a>
+      </footer>
     </div>
   );
 }
@@ -440,6 +455,7 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
     setBusy(true);
     api
       .restartProject(project.id)
+      .then(() => setPaused(true)) // restart lands ready — Start begins it
       .catch((e) => setErr(e.message))
       .finally(() => setBusy(false));
   };
@@ -494,14 +510,9 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
               </button>
             </>
           ) : (
-            <>
-              <button className="btn btn-sm btn-primary" disabled={busy} onClick={togglePause}>
-                {paused ? (hasJobs ? '▶ Continue' : '▶ Start') : '⏸ Pause'}
-              </button>
-              <button className="btn btn-sm" disabled={busy} onClick={() => setArming('restart')}>
-                Restart
-              </button>
-            </>
+            <button className="btn btn-sm btn-primary" disabled={busy} onClick={togglePause}>
+              {paused ? (hasJobs ? '▶ Continue' : '▶ Start') : '⏸ Pause'}
+            </button>
           )}
         </div>
       </div>
@@ -513,22 +524,37 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
         onHasJobs={setHasJobs}
       />
       <div className="kx-danger-zone">
-        {arming === 'cancel' ? (
+        {arming === 'restart' ? (
+          <>
+            <span className="kx-arm-warn">Wipe .kortext/ + .kopeng/ and start over?</span>
+            <button className="kx-link kx-link-danger" disabled={busy} onClick={doRestart}>
+              Yes, restart
+            </button>
+            <button className="kx-link" onClick={() => setArming(null)}>
+              No
+            </button>
+          </>
+        ) : arming === 'cancel' ? (
           <>
             <span className="kx-arm-warn">
               Delete .kortext/, .kopeng/, AGENTS.md and remove the project?
             </span>
-            <button className="btn btn-sm btn-danger" disabled={busy} onClick={doCancel}>
+            <button className="kx-link kx-link-danger" disabled={busy} onClick={doCancel}>
               Yes, remove
             </button>
-            <button className="btn btn-sm" onClick={() => setArming(null)}>
+            <button className="kx-link" onClick={() => setArming(null)}>
               No
             </button>
           </>
         ) : (
-          <button className="btn btn-sm btn-danger" disabled={busy} onClick={() => setArming('cancel')}>
-            Remove project
-          </button>
+          <>
+            <button className="kx-link" disabled={busy} onClick={() => setArming('restart')}>
+              Restart analysis
+            </button>
+            <button className="kx-link kx-link-danger" disabled={busy} onClick={() => setArming('cancel')}>
+              Remove project
+            </button>
+          </>
         )}
       </div>
     </main>
@@ -687,33 +713,35 @@ function DocumentsTab({
             {items.map((d) => {
               const job = jobFor(d.rel);
               const isRunning = job?.status === 'running';
-              // 'stopped' is the user's own pause/restart — not a failure, so no
-              // red row and no Retry; Continue picks the step up again.
+              // 'stopped' is the user's own pause/restart — not a failure: its own
+              // badge, no red row, no Retry; Continue picks the step up again.
+              const stopped = job?.status === 'stopped' && d.status === 'uninitialized';
               const failed = job?.status === 'failed' && d.status === 'uninitialized' && !paused;
               return (
                 <button key={d.rel} className={`kx-doc-row${failed ? ' failed' : ''}`} onClick={() => setOpen(d)}>
                   <span className="kx-doc-name">{d.name}</span>
                   {d.author && <span className="kx-doc-author mono">{d.author.replace(/^\+/, '')}</span>}
                   <span className="kx-doc-spacer" />
-                  {isRunning && <span className="kx-running">writing…</span>}
                   {failed && (
-                    <>
-                      <span className="kx-doc-fail" title={job?.error ?? ''}>
-                        step failed
-                      </span>
-                      <span
-                        className="btn btn-sm btn-secondary"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          runNext();
-                        }}
-                      >
-                        Retry
-                      </span>
-                    </>
+                    <span
+                      className="btn btn-sm btn-secondary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        runNext();
+                      }}
+                    >
+                      Retry
+                    </span>
                   )}
                   {d.upstreamChanged && <span className="kx-doc-warn">upstream changed</span>}
-                  {!isRunning && <StatusBadge doc={d} />}
+                  <span title={failed ? job?.error ?? '' : ''}>
+                    <StatusBadge
+                      doc={d}
+                      running={isRunning}
+                      stopped={stopped}
+                      failed={failed}
+                    />
+                  </span>
                 </button>
               );
             })}

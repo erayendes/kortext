@@ -228,10 +228,43 @@ export function DocDrawer({
   );
 }
 
-export function StatusBadge({ doc }: { doc: DocInfo }) {
-  const label = doc.status === 'uninitialized' ? (doc.blocked ? 'waiting' : 'next') : doc.status;
+// One vocabulary for every doc state (UAT): next · writing… · paused ·
+// pending · approved · failed · n/a · log. `waiting` stays distinct from
+// `next` — it means an input is still unapproved, so nothing can run yet.
+const STATUS_LABEL: Record<string, string> = {
+  draft: 'pending',
+  'not-applicable': 'n/a',
+  approved: 'approved',
+  log: 'log',
+};
+
+export function statusOf(
+  doc: DocInfo,
+  opts: { running?: boolean; stopped?: boolean; failed?: boolean } = {},
+): { key: string; label: string } {
+  if (opts.running) return { key: 'writing', label: 'writing…' };
+  if (opts.stopped) return { key: 'paused', label: 'paused' };
+  if (opts.failed) return { key: 'failed', label: 'failed' };
+  if (doc.status === 'uninitialized') {
+    return doc.blocked ? { key: 'waiting', label: 'waiting' } : { key: 'next', label: 'next' };
+  }
+  return { key: doc.status, label: STATUS_LABEL[doc.status] ?? doc.status };
+}
+
+export function StatusBadge({
+  doc,
+  running,
+  stopped,
+  failed,
+}: {
+  doc: DocInfo;
+  running?: boolean;
+  stopped?: boolean;
+  failed?: boolean;
+}) {
+  const { key, label } = statusOf(doc, { running, stopped, failed });
   return (
-    <span className={`kx-status kx-status-${label}`}>
+    <span className={`kx-status kx-status-${key}`}>
       {label}
       {doc.upstreamChanged && <span className="kx-status-warn"> ⚠</span>}
     </span>
