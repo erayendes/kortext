@@ -253,7 +253,7 @@ printf -- '---\\nid: PLN-T001\\nassignee: ai\\nblocked_by: []\\n---\\n\\n## Desc
   rmSync(work, { recursive: true, force: true });
 });
 
-test('abortRuns kills a running step: job settles failed with the stopped marker', async () => {
+test('abortRuns kills a running step: the job settles as stopped, not failed', async () => {
   const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
   const db = openDb(join(work, 'db.sqlite'));
   const p = createProject(db, { name: 'Acme', repoPath: join(work, 'acme') }, pkgRoot);
@@ -271,6 +271,6 @@ test('abortRuns kills a running step: job settles failed with the stopped marker
   const out = await running;
   assert.equal(out.ok, false);
   assert.match(out.error!, /stopped/);
-  assert.equal(listJobs(db, p.id)[0]!.status, 'failed');
+  assert.equal(listJobs(db, p.id)[0]!.status, 'stopped');
   rmSync(work, { recursive: true, force: true });
 });

@@ -56,7 +56,7 @@ export interface Job {
   id: number;
   project_id: number;
   doc_rel: string;
-  status: 'running' | 'done' | 'failed';
+  status: 'running' | 'done' | 'failed' | 'stopped';
   error: string | null;
 }
 

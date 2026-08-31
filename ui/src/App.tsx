@@ -687,7 +687,9 @@ function DocumentsTab({
             {items.map((d) => {
               const job = jobFor(d.rel);
               const isRunning = job?.status === 'running';
-              const failed = job?.status === 'failed' && d.status === 'uninitialized';
+              // 'stopped' is the user's own pause/restart — not a failure, so no
+              // red row and no Retry; Continue picks the step up again.
+              const failed = job?.status === 'failed' && d.status === 'uninitialized' && !paused;
               return (
                 <button key={d.rel} className={`kx-doc-row${failed ? ' failed' : ''}`} onClick={() => setOpen(d)}>
                   <span className="kx-doc-name">{d.name}</span>

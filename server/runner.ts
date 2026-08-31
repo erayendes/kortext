@@ -12,7 +12,7 @@ export interface Job {
   project_id: number;
   doc_rel: string;
   kind: string;
-  status: 'running' | 'done' | 'failed';
+  status: 'running' | 'done' | 'failed' | 'stopped';
   error: string | null;
   started_at: string;
   finished_at: string | null;
@@ -283,7 +283,7 @@ export async function runPlanning(
       ...reviseNotes.map((n) => `- ${n}`),
     );
   }
-  const settle = (status: 'done' | 'failed', error?: string): RunOutcome => {
+  const settle = (status: 'done' | 'failed' | 'stopped', error?: string): RunOutcome => {
     db.prepare(
       "UPDATE jobs SET status = ?, error = ?, finished_at = datetime('now') WHERE id = ?",
     ).run(status, error ?? null, job.id);
@@ -300,7 +300,7 @@ export async function runPlanning(
       signal: run.ctrl.signal,
       timeoutMs: 30 * 60 * 1000,
     });
-    if (res.aborted) return settle('failed', 'stopped (pause/restart/cancel)');
+    if (res.aborted) return settle('stopped', 'stopped by pause/restart/cancel');
     if (res.exitCode !== 0) {
       return settle(
         'failed',
@@ -356,7 +356,7 @@ export async function runStep(
   );
   const logPath = join(homedir(), '.kortext', 'logs', `p${project.id}-${step.output.replace(/\//g, '_')}.log`);
 
-  const settle = (status: 'done' | 'failed', error?: string): RunOutcome => {
+  const settle = (status: 'done' | 'failed' | 'stopped', error?: string): RunOutcome => {
     db.prepare(
       "UPDATE jobs SET status = ?, error = ?, finished_at = datetime('now') WHERE id = ?",
     ).run(status, error ?? null, job.id);
@@ -374,7 +374,7 @@ export async function runStep(
       signal: run.ctrl.signal,
       timeoutMs: STEP_TIMEOUT_MS,
     });
-    if (res.aborted) return settle('failed', 'stopped (pause/restart/cancel)');
+    if (res.aborted) return settle('stopped', 'stopped by pause/restart/cancel');
     const outPath = join(project.repo_path, '.kortext', step.output);
     if (res.exitCode !== 0) {
       return settle(

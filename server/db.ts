@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS jobs (
   project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   doc_rel TEXT NOT NULL,
   kind TEXT NOT NULL DEFAULT 'doc',   -- doc (analysis step) | plan (kopeng split)
-  status TEXT NOT NULL DEFAULT 'running',  -- running | done | failed
+  status TEXT NOT NULL DEFAULT 'running',  -- running | done | failed | stopped
   error TEXT,
   started_at TEXT NOT NULL DEFAULT (datetime('now')),
   finished_at TEXT
