@@ -46,6 +46,26 @@
    - outputs: `.kortext/TEST.md`
    - approver: +prime
 
+3. **+designer:** Produce `DESIGN.md`. Extract the existing design language from the code: tokens/theme, components, layout patterns, accessibility state. Flag inconsistencies; set the rules future work must follow. If the project has no user interface, mark it not-applicable.
+   - inputs: `.kortext/foundation/PRD.md`, `.kortext/STRUCTURE.md`
+   - outputs: `.kortext/DESIGN.md`
+   - approver: +prime
+
+4. **+copywriter:** Produce `CONTENT.md`. Scope: existing UI copy, tone of voice, error/empty-state messages, localization state; the content rules future work must follow. If the project has no user-facing content, mark it not-applicable.
+   - inputs: `.kortext/foundation/PRD.md`, `.kortext/DESIGN.md`
+   - outputs: `.kortext/CONTENT.md`
+   - approver: +prime
+
+5. **+compliance-expert:** Produce `LEGAL.md`. Scope: personal-data handling found in the code (KVKK/GDPR), license obligations of the dependency tree, terms/privacy needs, compliance gaps. If truly nothing applies, mark it not-applicable with the reasoning.
+   - inputs: `.kortext/foundation/PRD.md`, `.kortext/SECURITY.md`
+   - outputs: `.kortext/LEGAL.md`
+   - approver: +prime
+
+6. **+growth-expert:** Produce `GROWTH.md`. Scope: current analytics/tracking state, SEO/ASO posture, activation and retention signals worth measuring; what to instrument next. If growth genuinely does not apply, mark it not-applicable with the reasoning.
+   - inputs: `.kortext/foundation/PRD.md`
+   - outputs: `.kortext/GROWTH.md`
+   - approver: +prime
+
 ## Technical Debt and TRD
 
 1. **+engineering-manager:** Consolidate `TRD.md`. Scope: technical debt from the discovery outputs + architectural issues + security risks + test gaps + devops/release risks + improvement areas. For each debt item: impact, risk, dependencies, priority level.
@@ -55,8 +75,8 @@
 
 ## Consolidation
 
-1. **+operation-manager:** Consolidate `PFD.md`. From PRD + TRD + TEST: current-state summary + reference files + technical-debt list + open decisions + task headings to hand over to the planning flow.
-   - inputs: `.kortext/foundation/PRD.md`, `.kortext/foundation/TRD.md`, `.kortext/TEST.md`
+1. **+operation-manager:** Consolidate `PFD.md`. From the discovery outputs: current-state summary + reference files + technical-debt list + open decisions + task headings to hand over to the planning flow.
+   - inputs: `.kortext/foundation/PRD.md`, `.kortext/foundation/TRD.md`, `.kortext/TEST.md`, `.kortext/DESIGN.md`, `.kortext/CONTENT.md`, `.kortext/LEGAL.md`, `.kortext/GROWTH.md`
    - outputs: `.kortext/foundation/PFD.md`
    - approver: +prime
 
