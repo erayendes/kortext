@@ -64,7 +64,22 @@ export async function spawnCli(opts: SpawnCliOptions): Promise<SpawnCliResult> {
     stdio: ['pipe', 'pipe', 'pipe'],
     // shell: false is the default for spawn() — being explicit for reviewers
     shell: false,
+    // Own process group so an abort can kill the whole tree — agent CLIs spawn
+    // children that would otherwise keep the pipes (and our 'close') alive.
+    detached: true,
   });
+
+  const killTree = (sig: NodeJS.Signals) => {
+    try {
+      process.kill(-proc.pid!, sig); // negative pid = the process group
+    } catch {
+      try {
+        proc.kill(sig);
+      } catch {
+        /* already gone */
+      }
+    }
+  };
 
   // Ensure the log directory exists. Fresh `kortext init` projects don't
   // have `.kortext/logs/` yet — the first run would crash with ENOENT
@@ -120,18 +135,8 @@ export async function spawnCli(opts: SpawnCliOptions): Promise<SpawnCliResult> {
 
   const onAbort = () => {
     aborted = true;
-    try {
-      proc.kill('SIGTERM');
-    } catch {
-      /* already gone */
-    }
-    killTimer = setTimeout(() => {
-      try {
-        proc.kill('SIGKILL');
-      } catch {
-        /* already gone */
-      }
-    }, sigkillDelayMs);
+    killTree('SIGTERM');
+    killTimer = setTimeout(() => killTree('SIGKILL'), sigkillDelayMs);
   };
   opts.signal.addEventListener('abort', onAbort, { once: true });
 

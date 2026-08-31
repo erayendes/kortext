@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { openDb } from '../server/db.js';
 import { createProject } from '../server/projects.js';
 import { setFrontmatterStatus, docPath } from '../server/docs.js';
-import { buildStepPrompt, nextStep, runStep, runningJob, listJobs } from '../server/runner.js';
+import { abortRuns, buildStepPrompt, nextStep, runStep, runningJob, listJobs } from '../server/runner.js';
 import type { EngineSpec } from '../server/engines.js';
 
 const pkgRoot = process.cwd();
@@ -250,5 +250,27 @@ printf -- '---\\nid: PLN-T001\\nassignee: ai\\nblocked_by: []\\n---\\n\\n## Desc
   const fail = await runPlanning(db, p2, { id: 'b', binary: bad, args: [], installHint: '' }, pkgRoot);
   assert.equal(fail.ok, false);
   assert.match(fail.error!, /tasks\/ is empty/);
+  rmSync(work, { recursive: true, force: true });
+});
+
+test('abortRuns kills a running step: job settles failed with the stopped marker', async () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Acme', repoPath: join(work, 'acme') }, pkgRoot);
+  setFrontmatterStatus(docPath(p, 'foundation/BRD.md'), 'approved');
+  const step = nextStep(db, p, pkgRoot)!;
+
+  const slow = join(work, 'slow-engine.sh');
+  writeFileSync(slow, '#!/bin/sh\ncat > /dev/null\nsleep 30\n');
+  chmodSync(slow, 0o755);
+
+  const running = runStep(db, p, step, { id: 'slow', binary: slow, args: [], installHint: '' }, pkgRoot);
+  await new Promise((r) => setTimeout(r, 300)); // let it spawn
+  assert.ok(runningJob(db, p.id));
+  abortRuns(p.id);
+  const out = await running;
+  assert.equal(out.ok, false);
+  assert.match(out.error!, /stopped/);
+  assert.equal(listJobs(db, p.id)[0]!.status, 'failed');
   rmSync(work, { recursive: true, force: true });
 });

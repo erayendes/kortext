@@ -131,6 +131,27 @@ export interface RunOutcome {
 const advancing = new Map<number, () => void>();
 const MAX_PARALLEL = 3;
 
+// Live spawn registry — pause/restart/cancel abort every running CLI for the
+// project (SIGTERM→SIGKILL via cli-spawn) instead of letting it finish and
+// rewrite files that were just wiped.
+const liveRuns = new Map<number, Set<AbortController>>();
+function trackRun(projectId: number): { ctrl: AbortController; done: () => void } {
+  const ctrl = new AbortController();
+  let set = liveRuns.get(projectId);
+  if (!set) liveRuns.set(projectId, (set = new Set()));
+  set.add(ctrl);
+  return {
+    ctrl,
+    done: () => {
+      set.delete(ctrl);
+      if (set.size === 0) liveRuns.delete(projectId);
+    },
+  };
+}
+export function abortRuns(projectId: number): void {
+  for (const c of liveRuns.get(projectId) ?? []) c.abort();
+}
+
 export async function advance(
   db: Database.Database,
   project: Project,
@@ -268,6 +289,7 @@ export async function runPlanning(
     ).run(status, error ?? null, job.id);
     return status === 'done' ? { ok: true } : { ok: false, error };
   };
+  const run = trackRun(project.id);
   try {
     const res = await spawnCli({
       binary: engine.binary,
@@ -275,9 +297,10 @@ export async function runPlanning(
       cwd: project.repo_path,
       stdin: lines.join('\n'),
       logPath: join(homedir(), '.kortext', 'logs', `p${project.id}-plan.log`),
-      signal: new AbortController().signal,
+      signal: run.ctrl.signal,
       timeoutMs: 30 * 60 * 1000,
     });
+    if (res.aborted) return settle('failed', 'stopped (pause/restart/cancel)');
     if (res.exitCode !== 0) {
       return settle(
         'failed',
@@ -298,6 +321,8 @@ export async function runPlanning(
     return settle('done');
   } catch (err) {
     return settle('failed', (err as Error).message);
+  } finally {
+    run.done();
   }
 }
 
@@ -338,6 +363,7 @@ export async function runStep(
     return status === 'done' ? { ok: true } : { ok: false, error };
   };
 
+  const run = trackRun(project.id);
   try {
     const res = await spawnCli({
       binary: engine.binary,
@@ -345,9 +371,10 @@ export async function runStep(
       cwd: project.repo_path,
       stdin: prompt,
       logPath,
-      signal: new AbortController().signal,
+      signal: run.ctrl.signal,
       timeoutMs: STEP_TIMEOUT_MS,
     });
+    if (res.aborted) return settle('failed', 'stopped (pause/restart/cancel)');
     const outPath = join(project.repo_path, '.kortext', step.output);
     if (res.exitCode !== 0) {
       return settle(
@@ -365,5 +392,7 @@ export async function runStep(
     return settle('done');
   } catch (err) {
     return settle('failed', (err as Error).message);
+  } finally {
+    run.done();
   }
 }

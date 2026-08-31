@@ -8,7 +8,7 @@ import { pickDirectoryNative } from './pick-directory.js';
 import { spawnSync } from 'node:child_process';
 import { readdirSync } from 'node:fs';
 import { detectEngines, selectedEngine, setSetting, ENGINES } from './engines.js';
-import { advance, explainDoc, failStaleJobs, listJobs, nextStep, reviseDoc, runPlanning, runningJob } from './runner.js';
+import { abortRuns, advance, explainDoc, failStaleJobs, listJobs, nextStep, reviseDoc, runPlanning, runningJob } from './runner.js';
 import { readFileSync, writeFileSync } from 'node:fs';
 import type { Project } from './db.js';
 
@@ -122,15 +122,19 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     if (!project) return;
     const paused = req.body?.paused ? 1 : 0;
     db.prepare('UPDATE projects SET paused = ? WHERE id = ?').run(paused, project.id);
-    if (!paused) kickChain({ ...project, paused: 0 });
+    if (paused) abortRuns(project.id);
+    else kickChain({ ...project, paused: 0 });
     res.json({ paused: !!paused });
   });
 
   // Restart: wipe the produced files and re-run the analysis from scratch.
-  app.post('/api/projects/:id/restart', (req, res) => {
+  app.post('/api/projects/:id/restart', async (req, res) => {
     const project = projectOr404(req.params.id, res);
     if (!project) return;
     try {
+      abortRuns(project.id);
+      // Give SIGTERM a moment so a dying CLI can't rewrite the wiped files.
+      await new Promise((r) => setTimeout(r, 1500));
       rmSync(join(project.repo_path, '.kortext'), { recursive: true, force: true });
       rmSync(join(project.repo_path, '.kopeng'), { recursive: true, force: true });
       db.prepare('DELETE FROM jobs WHERE project_id = ?').run(project.id);
@@ -145,10 +149,12 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
 
   // Cancel: the user is done with kortext for this project — remove every
   // trace from the repo (.kortext/, .kopeng/, AGENTS.md) and the registry row.
-  app.post('/api/projects/:id/cancel', (req, res) => {
+  app.post('/api/projects/:id/cancel', async (req, res) => {
     const project = projectOr404(req.params.id, res);
     if (!project) return;
     try {
+      abortRuns(project.id);
+      await new Promise((r) => setTimeout(r, 1500));
       rmSync(join(project.repo_path, '.kortext'), { recursive: true, force: true });
       rmSync(join(project.repo_path, '.kopeng'), { recursive: true, force: true });
       rmSync(join(project.repo_path, 'AGENTS.md'), { force: true });

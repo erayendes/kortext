@@ -163,7 +163,7 @@ function TransferPanel({ project }: { project: Project }) {
   if (splitting) {
     return (
       <div className="kx-handshake-kopeng">
-        <span className="kx-running">⟳ Splitting the work into tasks… (writing .kopeng/)</span>
+        <span className="kx-running">Splitting the work into tasks… (writing .kopeng/)</span>
       </div>
     );
   }
@@ -442,17 +442,7 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
         <button className="btn btn-sm" onClick={onBack}>
           ← Projects
         </button>
-      </div>
-      <div className="kx-main-head">
-        <div className="kx-main-title">
-          <div className="kx-card-head">
-            {project.code && <span className="kx-card-code mono">{project.code}</span>}
-            <h1>{project.name}</h1>
-          </div>
-          <span className="kx-card-path mono" title={project.repo_path}>
-            {shortPath(project.repo_path)}
-          </span>
-        </div>
+        <span className="kx-doc-spacer" />
         <div className="kx-proj-actions">
           <button className="btn btn-sm" onClick={togglePause}>
             {paused ? '▶ Continue' : '⏸ Pause'}
@@ -463,6 +453,17 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
           <button className="btn btn-sm btn-danger" onClick={cancel}>
             Cancel
           </button>
+        </div>
+      </div>
+      <div className="kx-main-head">
+        <div className="kx-main-title">
+          <div className="kx-card-head">
+            {project.code && <span className="kx-card-code mono">{project.code}</span>}
+            <h1>{project.name}</h1>
+          </div>
+          <span className="kx-card-path mono" title={project.repo_path}>
+            {shortPath(project.repo_path)}
+          </span>
         </div>
       </div>
       {err && <div className="kx-error">{err}</div>}
@@ -587,12 +588,12 @@ function DocumentsTab({ project, paused }: { project: Project; paused?: boolean 
       <HandshakeCard project={project} />
       {err && <div className="kx-error">{err}</div>}
       <div className="kx-docs-toolbar">
-        {jobs.some((j) => j.status === 'running') ? (
+        {paused ? (
+          <span className="kx-cmd-hint">⏸ Paused — running steps were stopped; nothing new starts.</span>
+        ) : jobs.some((j) => j.status === 'running') ? (
           <span className="kx-running">
-            ⟳ {jobs.filter((j) => j.status === 'running').map((j) => j.doc_rel).join(' · ')} writing…
+            {jobs.filter((j) => j.status === 'running').map((j) => j.doc_rel).join(' · ')} writing…
           </span>
-        ) : paused ? (
-          <span className="kx-cmd-hint">⏸ Paused — the chain won't start new steps.</span>
         ) : (
           <button className="btn btn-primary btn-sm" onClick={runNext}>
             Run next step
@@ -623,7 +624,7 @@ function DocumentsTab({ project, paused }: { project: Project; paused?: boolean 
                   <span className="kx-doc-name">{d.name}</span>
                   {d.author && <span className="kx-doc-author mono">{d.author.replace(/^\+/, '')}</span>}
                   <span className="kx-doc-spacer" />
-                  {isRunning && <span className="kx-running">⟳ writing…</span>}
+                  {isRunning && <span className="kx-running">writing…</span>}
                   {failed && (
                     <>
                       <span className="kx-doc-fail" title={job?.error ?? ''}>
