@@ -416,6 +416,7 @@ function AddProject({
 function ProjectScreen({ project, onBack }: { project: Project; onBack: () => void }) {
   const [paused, setPaused] = useState(!!project.paused);
   const [status, setStatus] = useState('');
+  const [hasJobs, setHasJobs] = useState(true); // pessimistic until the first poll
   const [err, setErr] = useState<string | null>(null);
   // Two-step in-place confirmation — browsers silently suppress repeated
   // native confirm() dialogs, which made Restart/Cancel look dead.
@@ -462,7 +463,11 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
           ← Projects
         </button>
         {paused ? (
-          <span className="kx-nav-status">⏸ Paused — running steps were stopped; nothing new starts.</span>
+          <span className="kx-nav-status">
+            {hasJobs
+              ? '⏸ Paused — running steps were stopped; nothing new starts.'
+              : 'Ready — press Start to begin the analysis.'}
+          </span>
         ) : (
           status && <span className="kx-nav-status kx-running">{status}</span>
         )}
@@ -500,8 +505,8 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
             </>
           ) : (
             <>
-              <button className="btn btn-sm" disabled={busy} onClick={togglePause}>
-                {paused ? '▶ Continue' : '⏸ Pause'}
+              <button className="btn btn-sm btn-primary" disabled={busy} onClick={togglePause}>
+                {paused ? (hasJobs ? '▶ Continue' : '▶ Start') : '⏸ Pause'}
               </button>
               <button className="btn btn-sm" disabled={busy} onClick={() => setArming('restart')}>
                 Restart
@@ -514,7 +519,12 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
         </div>
       </div>
       {err && <div className="kx-error">{err}</div>}
-      <DocumentsTab project={project} paused={paused} onStatus={setStatus} />
+      <DocumentsTab
+        project={project}
+        paused={paused}
+        onStatus={setStatus}
+        onHasJobs={setHasJobs}
+      />
     </main>
   );
 }
@@ -590,10 +600,12 @@ function DocumentsTab({
   project,
   paused,
   onStatus,
+  onHasJobs,
 }: {
   project: Project;
   paused?: boolean;
   onStatus?: (text: string) => void;
+  onHasJobs?: (has: boolean) => void;
 }) {
   const [docs, setDocs] = useState<DocInfo[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -621,12 +633,14 @@ function DocumentsTab({
   // Latest job per doc decides the row extras (spinner / red error).
   const jobFor = (rel: string) => jobs.find((j) => j.doc_rel === rel);
 
-  // The running-status line lives in the nav row next to ← Projects.
+  // The running-status line lives in the nav row next to ← Projects; the
+  // Start/Continue label needs to know whether anything ever ran.
   const running = jobs.filter((j) => j.status === 'running');
   useEffect(() => {
     onStatus?.(running.length > 0 ? `${running.map((j) => j.doc_rel).join(' · ')} writing…` : '');
+    onHasJobs?.(jobs.length > 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [running.map((j) => j.id).join(',')]);
+  }, [running.map((j) => j.id).join(','), jobs.length]);
 
   // Action-first ordering: what needs the prime's attention floats to the top.
   const rank = (d: DocInfo) => {
@@ -649,13 +663,6 @@ function DocumentsTab({
     <div className="kx-docs">
       <HandshakeCard project={project} />
       {err && <div className="kx-error">{err}</div>}
-      {!paused && running.length === 0 && (
-        <div className="kx-docs-toolbar">
-          <button className="btn btn-primary btn-sm" onClick={runNext}>
-            Run next step
-          </button>
-        </div>
-      )}
       {groups.map((g) => {
         const items = ordered.filter((d) => d.group === g.key);
         const settled = items.filter(

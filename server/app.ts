@@ -61,10 +61,10 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     const { name, repoPath, kind, code, brief } = req.body ?? {};
     try {
       const project = createProject(db, { name, repoPath, kind, code, brief }, pkgRoot);
-      // Initialize: an approved brief starts the chain; existing projects
-      // have no brief gate — they start straight from the code.
-      if (brief || project.kind === 'existing') kickChain(project);
-      res.status(201).json({ project });
+      // Nothing runs on Add — the project lands paused and the user presses
+      // Start on the project screen (Start = the unpause endpoint).
+      db.prepare('UPDATE projects SET paused = 1 WHERE id = ?').run(project.id);
+      res.status(201).json({ project: { ...project, paused: 1 } });
     } catch (err) {
       res.status(400).json({ error: (err as Error).message });
     }
