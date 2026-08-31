@@ -34,7 +34,14 @@ export function App() {
       </header>
       {error && <div className="kx-error">{error}</div>}
       {selected ? (
-        <ProjectScreen key={selected.id} project={selected} onBack={() => setSelected(null)} />
+        <ProjectScreen
+          key={selected.id}
+          project={selected}
+          onBack={() => {
+            setSelected(null);
+            refresh();
+          }}
+        />
       ) : (
         <main className="kx-main">
           <div className="kx-main-head">
@@ -410,6 +417,16 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
   const [paused, setPaused] = useState(!!project.paused);
   const [status, setStatus] = useState('');
   const [err, setErr] = useState<string | null>(null);
+  // Two-step in-place confirmation — browsers silently suppress repeated
+  // native confirm() dialogs, which made Restart/Cancel look dead.
+  const [arming, setArming] = useState<'restart' | 'cancel' | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!arming) return;
+    const t = setTimeout(() => setArming(null), 5000);
+    return () => clearTimeout(t);
+  }, [arming]);
 
   const togglePause = () =>
     api
@@ -417,24 +434,25 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
       .then((r) => setPaused(r.paused))
       .catch((e) => setErr(e.message));
 
-  const restart = () => {
-    if (
-      !confirm(
-        'Restart the analysis?\n\nEverything under .kortext/ and .kopeng/ will be DELETED (a written brief too) and the analysis starts over from fresh skeletons.',
-      )
-    )
-      return;
-    api.restartProject(project.id).catch((e) => setErr(e.message));
+  const doRestart = () => {
+    setArming(null);
+    setBusy(true);
+    api
+      .restartProject(project.id)
+      .catch((e) => setErr(e.message))
+      .finally(() => setBusy(false));
   };
 
-  const cancel = () => {
-    if (
-      !confirm(
-        'Remove kortext from this project?\n\n.kortext/, .kopeng/ and AGENTS.md will be permanently deleted from the repo, and the project disappears from this panel. Your own code is untouched.',
-      )
-    )
-      return;
-    api.cancelProject(project.id).then(onBack).catch((e) => setErr(e.message));
+  const doCancel = () => {
+    setArming(null);
+    setBusy(true);
+    api
+      .cancelProject(project.id)
+      .then(onBack)
+      .catch((e) => {
+        setErr(e.message);
+        setBusy(false);
+      });
   };
 
   return (
@@ -460,15 +478,39 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
           </span>
         </div>
         <div className="kx-proj-actions">
-          <button className="btn btn-sm" onClick={togglePause}>
-            {paused ? '▶ Continue' : '⏸ Pause'}
-          </button>
-          <button className="btn btn-sm" onClick={restart}>
-            Restart
-          </button>
-          <button className="btn btn-sm btn-danger" onClick={cancel}>
-            Cancel
-          </button>
+          {arming === 'restart' ? (
+            <>
+              <span className="kx-arm-warn">Wipe .kortext/ + .kopeng/ and start over?</span>
+              <button className="btn btn-sm btn-danger" disabled={busy} onClick={doRestart}>
+                Yes, restart
+              </button>
+              <button className="btn btn-sm" onClick={() => setArming(null)}>
+                No
+              </button>
+            </>
+          ) : arming === 'cancel' ? (
+            <>
+              <span className="kx-arm-warn">Delete .kortext/, .kopeng/, AGENTS.md and remove the project?</span>
+              <button className="btn btn-sm btn-danger" disabled={busy} onClick={doCancel}>
+                Yes, remove
+              </button>
+              <button className="btn btn-sm" onClick={() => setArming(null)}>
+                No
+              </button>
+            </>
+          ) : (
+            <>
+              <button className="btn btn-sm" disabled={busy} onClick={togglePause}>
+                {paused ? '▶ Continue' : '⏸ Pause'}
+              </button>
+              <button className="btn btn-sm" disabled={busy} onClick={() => setArming('restart')}>
+                Restart
+              </button>
+              <button className="btn btn-sm btn-danger" disabled={busy} onClick={() => setArming('cancel')}>
+                Cancel
+              </button>
+            </>
+          )}
         </div>
       </div>
       {err && <div className="kx-error">{err}</div>}
