@@ -44,6 +44,7 @@
   --blue: #2563c9; --blue-bg: #eaf1fc; --blue-border: #cfe0f6;
   --violet: #5b4bcc; --violet-bg: #efedfb; --violet-border: #dad5f4;
   --pink: #c02a72; --pink-bg: #fdebf3; --pink-border: #f6cede;
+  --teal: #0f7d86; --teal-bg: #e6f5f6; --teal-border: #c8e7ea;
 
   /* agent identity hues (dots/badges only) — equal L/C, varied hue */
   --a-red: oklch(0.64 0.16 25); --a-orange: oklch(0.66 0.15 55); --a-amber: oklch(0.70 0.13 85);
@@ -115,6 +116,7 @@
   --blue: #5e9bf0; --blue-bg: #0f1c30; --blue-border: #1c3252;
   --violet: #8b7df0; --violet-bg: #171530; --violet-border: #272350;
   --pink: #ee7bb0; --pink-bg: #2b1220; --pink-border: #4a2038;
+  --teal: #4fc3cd; --teal-bg: #0d2427; --teal-border: #17403f;
 
   --shadow-xs: 0 1px 1px rgba(0, 0, 0, 0.4);
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
@@ -1339,8 +1341,8 @@ body {
 .kx-main-nav { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
 .kx-nav-status { font-size: 12px; color: var(--fg-muted); margin-left: auto; }
 .kx-arm-warn { font-size: 12px; color: var(--red); }
-.kx-danger-zone { margin-top: 32px; padding-top: 14px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; align-items: center; gap: 16px; }
-.kx-link { background: none; border: none; padding: 0; font: inherit; font-size: 12px; color: var(--fg-muted); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.kx-danger-zone { margin-top: 28px; display: flex; justify-content: flex-end; align-items: center; gap: 14px; }
+.kx-link { background: none; border: none; padding: 0; font: inherit; font-size: 11px; color: var(--fg-muted); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .kx-link:hover { color: var(--fg); }
 .kx-link-danger { color: var(--red); }
 .kx-link-danger:hover { color: #a92f26; }
@@ -1416,8 +1418,8 @@ body {
 .kx-status-failed { background: var(--red-bg); color: var(--red); }
 .kx-status-log { background: var(--pink-bg); color: var(--pink); }
 /* n/a and waiting carry no pill — they are the quiet, no-action states. */
+.kx-status-waiting { background: var(--teal-bg); color: var(--teal); }
 .kx-status-not-applicable { background: transparent; color: var(--fg-muted); padding-left: 0; padding-right: 0; }
-.kx-status-waiting { background: transparent; color: var(--fg-faint); padding-left: 0; padding-right: 0; }
 .kx-status-warn { color: var(--amber); }
 .dr-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--border); }
 .dr-title { display: flex; align-items: center; gap: 10px; min-width: 0; }

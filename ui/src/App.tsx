@@ -103,9 +103,6 @@ export function App() {
           </a>
         </span>
         <span className="kx-doc-spacer" />
-        <a href="https://milowda.com/apps" target="_blank" rel="noreferrer">
-          More apps
-        </a>
         <a href="https://github.com/erayendes/kopeng" target="_blank" rel="noreferrer">
           Kopeng — task board
         </a>

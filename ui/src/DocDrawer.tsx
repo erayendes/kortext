@@ -210,7 +210,7 @@ export function DocDrawer({
             </div>
           ) : (
             <span className="kx-cmd-hint">
-              Click a line: chat with its author right below (Ask) or leave a revision note (Note).
+              Click a line: chat with its author right below (Ask) or collect a revision note (Add note).
             </span>
           )}
           <div className="kx-note-input">
@@ -437,7 +437,7 @@ function LineThread({
             Ask
           </button>
           <button className="btn btn-sm" onClick={() => send('note')}>
-            Not
+            Add note
           </button>
         </div>
       )}
