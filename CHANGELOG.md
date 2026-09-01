@@ -96,6 +96,8 @@ constitution. The v3 engine stays archived under `docs/codes/`.
 - Saving a document re-enters the chain, so editing the brief re-runs the gate.
   Editing the brief is the way out of a closed gate, and only approving one
   triggered a re-scan, so a corrected brief sat behind its old verdict.
+- The footer carries the **running** version, so an upgrade the process never
+  restarted for is visible instead of looking like a missing fix.
 - Adding a folder that is already registered says which project holds it, and
   whether that project is archived, instead of surfacing the SQLite constraint
   name.

@@ -30,8 +30,18 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     if (engine) void advance(db, project, engine, pkgRoot);
   };
 
+  // Read once at boot: this is the version of the code actually running, which
+  // is not the version on disk after an upgrade the process never picked up.
+  const version = (() => {
+    try {
+      return JSON.parse(readFileSync(join(pkgRoot, 'package.json'), 'utf8')).version as string;
+    } catch {
+      return '';
+    }
+  })();
+
   app.get('/api/health', (_req, res) => {
-    res.json({ ok: true, db: dbPath });
+    res.json({ ok: true, db: dbPath, version });
   });
 
   app.get('/api/projects', (_req, res) => {

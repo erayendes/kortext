@@ -1514,6 +1514,7 @@ body {
 .kx-thread-input .kx-input { flex: 1; height: 30px; font-size: 12.5px; }
 
 /* R4 — handshake completion card */
+.kx-version { font-size: 10.5px; color: var(--fg-muted); }
 /* Archived projects fold away — one summary line instead of a wall of cards. */
 .kx-archive { margin: 18px 22px 0; }
 .kx-archive > .kx-doc-group { color: var(--fg-muted, inherit); }

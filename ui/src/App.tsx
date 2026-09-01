@@ -109,7 +109,7 @@ export function App() {
       )}
       <footer className="kx-footer">
         <span>
-          Kortext by{' '}
+          Kortext <Version /> by{' '}
           <a href="https://milowda.com" target="_blank" rel="noreferrer">
             Milowda
           </a>
@@ -121,6 +121,16 @@ export function App() {
       </footer>
     </div>
   );
+}
+
+// The running build, not the installed one — after an upgrade the process did
+// not restart for, those differ and every fix looks missing.
+function Version() {
+  const [version, setVersion] = useState('');
+  useEffect(() => {
+    api.health().then((h) => setVersion(h.version)).catch(() => {});
+  }, []);
+  return version ? <span className="kx-version mono">v{version}</span> : null;
 }
 
 function EngineBadge() {
