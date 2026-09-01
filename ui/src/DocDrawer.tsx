@@ -62,6 +62,20 @@ export function DocDrawer({
     [content],
   );
 
+  // Which blocks sit under the Open Questions heading — they are the ones the
+  // reader has to act on, so they get their own ground rather than blending in.
+  const openQ = useMemo(() => {
+    const marked = new Set<number>();
+    let inSection = false;
+    for (const t of tokens) {
+      if (t.kind === 'h1' || t.kind === 'h2' || t.kind === 'h3') {
+        inSection = /open questions/i.test(t.text);
+      }
+      if (inSection) marked.add(t.index);
+    }
+    return marked;
+  }, [tokens]);
+
   if (!doc) return <Drawer open={false} onClose={onClose}>{null}</Drawer>;
 
   const act = async (fn: () => Promise<unknown>) => {
@@ -171,6 +185,7 @@ export function DocDrawer({
               <div key={t.index}>
                 <DocBlock
                   token={t}
+                  openQuestion={openQ.has(t.index)}
                   selected={selected === t.index}
                   noted={notes.some((n) => n.line === t.index)}
                   onSelect={() => {
@@ -279,15 +294,17 @@ function DocBlock({
   token,
   selected,
   noted,
+  openQuestion,
   onSelect,
 }: {
   token: MdToken;
   selected: boolean;
   noted: boolean;
+  openQuestion?: boolean;
   onSelect: () => void;
 }) {
   if (token.kind === 'blank') return <div className="kx-blank" />;
-  const cls = `kx-block kx-${token.kind}${selected ? ' selected' : ''}${noted ? ' noted' : ''}`;
+  const cls = `kx-block kx-${token.kind}${selected ? ' selected' : ''}${noted ? ' noted' : ''}${openQuestion ? ' open-q' : ''}`;
   if (token.kind === 'table' && token.table) {
     return (
       <div className={cls} onClick={onSelect}>
@@ -458,7 +475,10 @@ function mergeWrappedLines(tokens: MdToken[]): MdToken[] {
       (t.kind === 'para' || t.kind === 'quote') &&
       prev.kind === t.kind &&
       prev.text !== '' &&
-      t.text !== ''
+      t.text !== '' &&
+      // A line that opens with a list marker is a new item, not a wrap of the
+      // one above — merging those is what produced the asterisk walls.
+      !/^\s*([-*+]|\d+[.)]) /.test(t.text)
     ) {
       prev.text = `${prev.text} ${t.text}`;
       continue;

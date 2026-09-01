@@ -34,3 +34,7 @@ All events must follow a naming convention like the examples below (e.g., `Objec
 ## User Acquisition & Funnel
 
 - [A/B test plans, funnel stages (Acquisition, Activation, Retention...)]
+
+## Open Questions for prime
+
+- [Anything prime must answer before this document can be relied on — leave this section empty when there is nothing]

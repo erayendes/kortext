@@ -100,3 +100,7 @@ approver: +prime
 3. **Variable Injection:** Once the designer approves this file, +frontend-developer transfers all values into the `CSS Variables` or `Tailwind Config` file.
 4. **Consistency:** All "shadow", "blur" and "transition" values must use the CSS defined in this file — no ad-hoc variants.
 5. **Zero Tolerance for Hardcoding:** A HEX code found in CSS files counts as a critical error (Blocker).
+
+## Open Questions for prime
+
+- [Anything prime must answer before this document can be relied on — leave this section empty when there is nothing]

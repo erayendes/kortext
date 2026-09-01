@@ -43,3 +43,7 @@ approver: +architect
 ## Security Policies / Row-Level Security
 
 - [e.g., RLS rules, encryption of sensitive data]
+
+## Open Questions for prime
+
+- [Anything prime must answer before this document can be relied on — leave this section empty when there is nothing]

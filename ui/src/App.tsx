@@ -26,12 +26,36 @@ export function App() {
 
   const live = projects.filter((p) => !p.archived);
   const archived = projects.filter((p) => p.archived);
-  const projectCard = (p: Project) => (
+  const unarchive = (p: Project) =>
+    api.archiveProject(p.id, false).then(refresh).catch((e) => setError(e.message));
 
-              <button key={p.id} className="kx-card" onClick={() => setSelected(p)}>
+  // A div, not a button: an archived card carries its own Unarchive control,
+  // and a button inside a button is not a thing.
+  const projectCard = (p: Project) => (
+              <div
+                key={p.id}
+                className="kx-card"
+                role="button"
+                tabIndex={0}
+                onClick={() => setSelected(p)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') setSelected(p);
+                }}
+              >
                 <span className="kx-card-head">
                   {p.code && <span className="kx-card-code mono">{p.code}</span>}
                   <span className="kx-card-name">{p.name}</span>
+                  {p.archived === 1 && (
+                    <button
+                      className="kx-link kx-link-ok kx-card-action"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void unarchive(p);
+                      }}
+                    >
+                      Unarchive
+                    </button>
+                  )}
                 </span>
                 <span className="kx-card-path mono" title={p.repo_path}>
                   {shortPath(p.repo_path)}
@@ -50,7 +74,7 @@ export function App() {
                     {p.docCounts.foundation.settled}/{p.docCounts.foundation.total}
                   </span>
                 )}
-              </button>
+              </div>
   );
 
   return (
@@ -513,6 +537,7 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
   const [status, setStatus] = useState('');
   const [hasJobs, setHasJobs] = useState(true); // pessimistic until the first poll
   const [pending, setPending] = useState(true); // any document still unwritten
+  const [checking, setChecking] = useState(false); // the gate is reading the brief
   const [err, setErr] = useState<string | null>(null);
   // Two-step in-place confirmation — browsers silently suppress repeated
   // native confirm() dialogs, which made Restart/Cancel look dead.
@@ -525,7 +550,8 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
     return () => clearTimeout(t);
   }, [arming]);
 
-  const running = status.length > 0;
+  // Reading the brief is work in flight too — the gate holds the chain open.
+  const running = status.length > 0 || checking;
 
   const start = () => {
     if (paused) return togglePause(); // unpausing kicks the chain
@@ -581,7 +607,7 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
           ← Projects
         </button>
         {running ? (
-          <span className="kx-nav-status kx-running">{status}</span>
+          <span className="kx-nav-status kx-running">{status || 'Reading the brief…'}</span>
         ) : paused && hasJobs ? (
           <span className="kx-nav-status">⏸ Paused — running steps were stopped; nothing new starts.</span>
         ) : pending ? (
@@ -634,6 +660,7 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
         onStatus={setStatus}
         onHasJobs={setHasJobs}
         onPending={setPending}
+        onChecking={setChecking}
       />
       <div className="kx-danger-zone">
         {arming === 'restart' ? (
@@ -761,12 +788,14 @@ function DocumentsTab({
   onStatus,
   onHasJobs,
   onPending,
+  onChecking,
 }: {
   project: Project;
   paused?: boolean;
   onStatus?: (text: string) => void;
   onHasJobs?: (has: boolean) => void;
   onPending?: (pending: boolean) => void;
+  onChecking?: (checking: boolean) => void;
 }) {
   const [docs, setDocs] = useState<DocInfo[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -783,6 +812,7 @@ function DocumentsTab({
         setDocs(d.docs);
         setJobs(j.jobs);
         setGate(g);
+        onChecking?.(g.checking);
         setErr(null);
       })
       .catch((e) => setErr(e.message));
@@ -854,11 +884,11 @@ function DocumentsTab({
           const brd = docs.find((d) => d.rel === 'foundation/BRD.md');
           return brd ? () => setOpen(brd) : null;
         })()}
-        onRecheck={() => {
+        onRecheck={() =>
           // run-next re-enters the chain, which re-runs the gate; a 409 just
           // means there was nothing to start, and the refresh shows the verdict.
-          api.runNext(project.id).catch(() => {}).then(refresh);
-        }}
+          api.runNext(project.id).catch(() => {}).then(refresh)
+        }
       />
       {err && <div className="kx-error">{err}</div>}
       {groups.map((g) => {
@@ -892,6 +922,11 @@ function DocumentsTab({
                       }}
                     >
                       Retry
+                    </span>
+                  )}
+                  {d.openQuestions && (
+                    <span className="kx-doc-ask" title="This document is waiting on an answer from you">
+                      asks you
                     </span>
                   )}
                   {d.upstreamChanged && <span className="kx-doc-warn">upstream changed</span>}
@@ -929,8 +964,13 @@ function ReadinessCard({
 }: {
   gate: { readiness: Readiness | null; checking: boolean };
   onOpenBrief: (() => void) | null;
-  onRecheck: () => void;
+  onRecheck: () => Promise<unknown>;
 }) {
+  const [rechecking, setRechecking] = useState(false);
+  const recheck = () => {
+    setRechecking(true);
+    void onRecheck().finally(() => setTimeout(() => setRechecking(false), 1200));
+  };
   if (gate.checking) {
     return (
       <div className="kx-gate">
@@ -969,9 +1009,10 @@ function ReadinessCard({
       ) : (
         // No brief to open: an existing project is judged on its code, and a
         // missing CLI is fixed outside the panel. Both end in the same move —
-        // change the thing, ask again.
-        <button className="btn btn-sm btn-primary" onClick={onRecheck}>
-          Check again
+        // change the thing, ask again. The button reports that it ran, because
+        // a re-check that finds the same thing looks like a dead button.
+        <button className="btn btn-sm btn-primary" disabled={rechecking} onClick={recheck}>
+          {rechecking ? 'Checking…' : 'Check again'}
         </button>
       )}
     </div>

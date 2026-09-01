@@ -21,3 +21,7 @@ approver: +prime
 ## Why this way
 
 - [One line per main architectural choice: the rationale, and the alternative that lost]
+
+## Open Questions for prime
+
+- [Anything prime must answer before this document can be relied on — leave this section empty when there is nothing]

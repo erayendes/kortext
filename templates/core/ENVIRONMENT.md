@@ -55,28 +55,32 @@ The `.env` file is git-ignored. Copy it from `.env.example`.
 
 ## Version Control
 
-- GitHub Repo: [to be filled by +prime]
-- Organization: [to be filled by +prime]
+- GitHub Repo: [to be filled by prime]
+- Organization: [to be filled by prime]
 
 ## Hosting & Deployment
 
-- Production URL: [to be filled by +prime]
-- Staging URL: [to be filled by +prime]
+- Production URL: [to be filled by prime]
+- Staging URL: [to be filled by prime]
 - Platform: [Firebase Hosting / Vercel / AWS]
 
 ## Server Access
 
-- SSH Root: [to be filled by +prime]
-- Domain: [to be filled by +prime]
+- SSH Root: [to be filled by prime]
+- Domain: [to be filled by prime]
 
 ## Database Instances
 
 - Provider: [Firebase / Supabase / PostgreSQL]
-- Production Instance: [to be filled by +prime]
-- Staging Instance: [to be filled by +prime]
+- Production Instance: [to be filled by prime]
+- Staging Instance: [to be filled by prime]
 
 ## Other Services
 
 - Analytics: [Google Analytics / Mixpanel]
 - CDN: [Cloudflare]
 - Mail: [SendGrid / Resend]
+
+## Open Questions for prime
+
+- [Anything prime must answer before this document can be relied on — leave this section empty when there is nothing]

@@ -1,13 +1,11 @@
 ---
 status: uninitialized
 author: +product-manager
-updated_at: 1970-01-01T00:00:00Z
 approver: +prime
 ---
 
 # Product Requirements Document (PRD)
 
-> **Per-file discipline:** The engine generates `product-requirements_<slug>_<YYYY-MM-DD-HHMM>.md` for each PRD.
 
 ## Product Requirements
 
@@ -28,3 +26,7 @@ As a [User Type], I want to [Do Something], so that [I reach This Goal].
 - [ ] Security check
 - [ ] [Criterion 1: When the user presses the button, X must happen]
 - [ ] [Criterion 2: On error, this message must be shown]
+
+## Open Questions for prime
+
+- [Anything prime must answer before this document can be relied on — leave this section empty when there is nothing]

@@ -138,6 +138,14 @@ export function createProject(
   if (!/^[A-Z][A-Z0-9]{1,7}$/.test(code)) {
     throw new Error(`code must be 2-8 chars, A-Z then A-Z0-9 (got: ${code})`);
   }
+  const codeTaken = db
+    .prepare('SELECT name FROM projects WHERE code = ?')
+    .get(code) as { name: string } | undefined;
+  if (codeTaken) {
+    throw new Error(
+      `The code ${code} already belongs to "${codeTaken.name}" — task ids carry it, so two projects cannot share one. Pick another, or remove that project first.`,
+    );
+  }
   const taken = db
     .prepare('SELECT name, archived FROM projects WHERE repo_path = ?')
     .get(repoPath) as { name: string; archived: number } | undefined;

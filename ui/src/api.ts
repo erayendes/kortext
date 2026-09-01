@@ -31,6 +31,7 @@ export interface DocInfo {
   inputs: string[];
   blocked: boolean;
   upstreamChanged: boolean;
+  openQuestions: boolean;
 }
 
 export interface KopengPlan {

@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { openDb } from '../server/db.js';
 import { createProject } from '../server/projects.js';
-import { docPath, listDocs, parseWorkflowSteps, setFrontmatterStatus } from '../server/docs.js';
+import { docPath, listDocs, parseWorkflowSteps, setFrontmatterStatus, hasOpenQuestions } from '../server/docs.js';
 
 const pkgRoot = process.cwd();
 
@@ -101,4 +101,25 @@ test('analysisComplete: only when every workflow-produced doc is settled', async
   }
   assert.equal(analysisComplete(db, p, pkgRoot), true);
   rmSync(work, { recursive: true, force: true });
+});
+
+test('open questions are the ones a human still has to answer', () => {
+  const empty = `# Doc
+
+## Open Questions for prime
+
+- [Anything prime must answer before this document can be relied on — leave this section empty when there is nothing]
+`;
+  assert.equal(hasOpenQuestions(empty), false); // the template's own prompt is not a question
+
+  const asked = `# Doc
+
+## Open Questions for prime
+
+- Hosting region: Frankfurt or Türkiye?
+`;
+  assert.equal(hasOpenQuestions(asked), true);
+
+  // A question outside the section is not tracked — one place to look is the point.
+  assert.equal(hasOpenQuestions('# Doc\n\n## Scope\n\n- Which region?\n'), false);
 });

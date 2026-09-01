@@ -42,3 +42,7 @@ approver: +architect
 ## Acceptance Criteria (Definition of Done)
 
 - [What test criteria must a task meet before the QA persona can approve it?]
+
+## Open Questions for prime
+
+- [Anything prime must answer before this document can be relied on — leave this section empty when there is nothing]

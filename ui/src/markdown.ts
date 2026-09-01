@@ -16,6 +16,7 @@ export type MdTokenKind =
   | 'h3'
   | 'quote'
   | 'bullet'
+  | 'ordered'
   | 'para'
   | 'table'
   | 'code'
@@ -54,7 +55,14 @@ function classifyLine(line: string): { kind: MdTokenKind; text: string } {
   if (line.startsWith('## ')) return { kind: 'h2', text: line.slice(3) };
   if (line.startsWith('# ')) return { kind: 'h1', text: line.slice(2) };
   if (line.startsWith('> ')) return { kind: 'quote', text: line.slice(2) };
-  if (line.startsWith('- ')) return { kind: 'bullet', text: line.slice(2) };
+  // All three markdown bullet characters, and indented ones: a document that
+  // used `*` was rendering as paragraphs full of literal asterisks, which the
+  // wrapped-line merge then glued into a wall of text.
+  const bullet = line.match(/^\s*[-*+] (.*)$/);
+  if (bullet) return { kind: 'bullet', text: bullet[1] };
+  // The marker stays in the text so the numbering survives; the kind exists so
+  // the item is a block of its own rather than merged into the paragraph above.
+  if (/^\s*\d+[.)] /.test(line)) return { kind: 'ordered', text: line.trim() };
   return { kind: 'para', text: line };
 }
 

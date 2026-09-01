@@ -19,6 +19,27 @@ export interface DocInfo {
   inputs: string[];
   blocked: boolean; // an input is not approved yet
   upstreamChanged: boolean; // an approved/draft doc whose input regressed
+  openQuestions: boolean; // carries unanswered questions for prime
+}
+
+// Every written document keeps its questions under one heading, so "is anyone
+// waiting on the human?" is a scan rather than a judgement. A line that is
+// still the template's own bracket prompt does not count as a question.
+export function hasOpenQuestions(content: string): boolean {
+  const lines = content.split('\n');
+  let inSection = false;
+  for (const line of lines) {
+    const heading = line.match(/^#{1,6}\s+(.*)$/);
+    if (heading) {
+      inSection = /open questions/i.test(heading[1]);
+      continue;
+    }
+    if (!inSection) continue;
+    const t = line.trim();
+    if (t === '' || /^[-*+]?\s*\[[^\]]*\]$/.test(t)) continue;
+    return true;
+  }
+  return false;
 }
 
 // Parses workflow step metadata: numbered steps carrying
@@ -109,7 +130,8 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
     if (!existsSync(dir)) return;
     for (const file of readdirSync(dir).filter((f) => f.endsWith('.md') && !skip.has(f)).sort()) {
       const rel = `${relPrefix}${file}`;
-      const fm = readFrontmatter(readFileSync(join(dir, file), 'utf8'));
+      const body = readFileSync(join(dir, file), 'utf8');
+      const fm = readFrontmatter(body);
       const status = fm.status ?? 'uninitialized';
       statuses.set(rel, status);
       docs.push({
@@ -121,6 +143,7 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
         inputs: map.get(rel)?.inputs ?? [],
         blocked: false,
         upstreamChanged: false,
+        openQuestions: status !== 'uninitialized' && hasOpenQuestions(body),
       });
     }
   };
@@ -167,6 +190,7 @@ export function analysisComplete(db: Database.Database, project: Project, pkgRoo
   const settled = (s: string | undefined) => s === 'approved' || s === 'not-applicable';
   // BRD gates the new-project flow even though no step produces it
   if ((project.kind ?? 'new') === 'new' && !settled(byRel.get('foundation/BRD.md'))) return false;
+  if (targets.some((rel) => docs.find((d) => d.rel === rel)?.openQuestions)) return false;
   return targets.every((rel) => settled(byRel.get(rel)));
 }
 

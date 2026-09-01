@@ -1,13 +1,11 @@
 ---
 status: uninitialized
 author: +operation-manager
-updated_at: 1970-01-01T00:00:00Z
 approver: +prime
 ---
 
 # Analysis Report
 
-> **Per-file discipline:** This file is a skeleton (template). On each new analysis round the engine creates a fresh file named `analysis-reports_<slug>_<YYYY-MM-DD-HHMM>.md`; it does NOT write over this skeleton.
 
 ## Summary
 
@@ -35,6 +33,10 @@ approver: +prime
 - **Folder Structure:** `.kortext/STRUCTURE.md`
 - **Security Rules:** `.kortext/SECURITY.md`
 
-## Key Decisions for +prime
+## Key Decisions for prime
 
-- [ ] [Everything +prime needs to decide on (e.g., budget/cost risks, API cost warnings, legal topics, content topics, technology choices)]
+- [ ] [Everything prime needs to decide on (e.g., budget/cost risks, API cost warnings, legal topics, content topics, technology choices)]
+
+## Open Questions for prime
+
+- [Anything prime must answer before this document can be relied on — leave this section empty when there is nothing]

@@ -96,6 +96,22 @@ constitution. The v3 engine stays archived under `docs/codes/`.
 - Saving a document re-enters the chain, so editing the brief re-runs the gate.
   Editing the brief is the way out of a closed gate, and only approving one
   triggered a re-scan, so a corrected brief sat behind its old verdict.
+- **Markdown renders.** Only `- ` counted as a bullet, so a document written
+  with `*` fell through to paragraphs full of literal asterisks — which the
+  wrapped-line merge then glued into one wall of text. All three bullet
+  characters, indented items and numbered lists are now blocks of their own.
+- **Open Questions for prime** is a section every skeleton carries and every
+  step writes into, so a document that is still waiting on an answer is one
+  scan away: the row carries an `asks you` chip, the section is tinted in the
+  document, and the handshake does not complete while any question is open.
+  `+prime` reads as `prime` in document text; the frontmatter keeps its marker.
+- Archived cards carry their own **Unarchive**, so getting a project back does
+  not mean opening it first.
+- Pause shows while the gate is reading the brief — that is work in flight too.
+- **Check again** reports that it ran instead of looking like a dead button.
+- A project **code** belongs to one project until that project is removed.
+- The PRD, TRD and PFD skeletons drop the v3 "Per-file discipline" note: no
+  engine generates timestamped copies any more, the skeleton is the document.
 - The footer carries the **running** version, so an upgrade the process never
   restarted for is visible instead of looking like a missing fix.
 - Adding a folder that is already registered says which project holds it, and

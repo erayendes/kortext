@@ -1438,7 +1438,9 @@ body {
 .kx-h2 { font-size: 16px; font-weight: 600; margin: 8px 0 3px; }
 .kx-h3 { font-size: 14px; font-weight: 600; margin: 6px 0 2px; }
 .kx-quote { color: var(--fg-mid); border-left: 3px solid var(--border-strong); padding-left: 10px; font-style: italic; }
+.kx-bullet { padding-left: 20px; text-indent: -12px; }
 .kx-bullet::before { content: '•  '; color: var(--fg-faint); }
+.kx-ordered { padding-left: 20px; text-indent: -12px; }
 .kx-code { font-family: var(--font-mono); font-size: 12px; background: var(--bg-inset); border: 1px solid var(--border); padding: 10px 12px; border-radius: var(--r-md); overflow-x: auto; white-space: pre; }
 .kx-mermaid { padding: 12px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--bg); overflow-x: auto; }
 .kx-mermaid-svg { display: flex; justify-content: center; }
@@ -1515,6 +1517,13 @@ body {
 
 /* R4 — handshake completion card */
 .kx-version { font-size: 10.5px; color: var(--fg-muted); }
+/* A document with unanswered questions is not finished — the row says so, and
+   the section itself is tinted so it is not one heading among many. */
+.kx-card-action { margin-left: auto; }
+.kx-doc-ask { font-family: var(--font-mono); font-size: 10px; padding: 2px 6px; border-radius: 999px; background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-border); }
+.kx-block.open-q { background: var(--amber-bg); }
+.kx-block.open-q:first-of-type, .kx-block.kx-h2.open-q { font-weight: 650; }
+.kx-block.open-q + .kx-blank { background: var(--amber-bg); }
 /* Archived projects fold away — one summary line instead of a wall of cards. */
 .kx-archive { margin: 18px 22px 0; }
 .kx-archive > .kx-doc-group { color: var(--fg-muted, inherit); }

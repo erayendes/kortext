@@ -1,13 +1,11 @@
 ---
 status: uninitialized
 author: +architect
-updated_at: 1970-01-01T00:00:00Z
 approver: +prime
 ---
 
 # Technical Requirements Document (TRD)
 
-> **Per-file discipline:** The engine generates `tech-requirements_<slug>_<YYYY-MM-DD-HHMM>.md` for each TRD.
 
 ## Technical Goals
 
@@ -43,6 +41,6 @@ approver: +prime
 
 - [High-level implementation steps — fine-grained detail is worked out per task]
 
-## Open Questions
+## Open Questions for prime
 
-- [Open questions awaiting a decision — escalated to `+prime` or the relevant gate]
+- [Open questions awaiting a decision — escalated to `prime` or the relevant gate]

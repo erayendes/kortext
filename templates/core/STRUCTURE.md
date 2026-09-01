@@ -63,3 +63,7 @@ approver: +prime
 ## Error Handling Pattern
 
 - [General try/catch or error response conventions]
+
+## Open Questions for prime
+
+- [Anything prime must answer before this document can be relied on — leave this section empty when there is nothing]

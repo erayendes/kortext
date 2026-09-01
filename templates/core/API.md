@@ -56,3 +56,7 @@ approver: +prime
 - **403:** Forbidden
 - **404:** Not Found
 - **500:** Internal Server Error
+
+## Open Questions for prime
+
+- [Anything prime must answer before this document can be relied on — leave this section empty when there is nothing]

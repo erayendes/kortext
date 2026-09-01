@@ -22,3 +22,7 @@ approver: +prime
 ## Technical Integration Requests
 
 - [e.g., The `password` and `national_id` columns in the database must be hashed.]
+
+## Open Questions for prime
+
+- [Anything prime must answer before this document can be relied on — leave this section empty when there is nothing]
