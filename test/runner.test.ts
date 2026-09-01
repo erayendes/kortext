@@ -52,6 +52,10 @@ A shared shopping list for households, so two people never buy the same milk twi
 
 Couples and flatmates who share a kitchen and shop separately.
 
+## Interface Language
+
+Turkish only in v1; English is a later decision, not a v1 scope item.
+
 ## Key Performance Indicators (KPIs)
 
 Weekly lists completed per household; duplicate purchases self-reported per month.

@@ -56,6 +56,16 @@ export function App() {
               repo, and your own coding agent takes it from there.
             </div>
           )}
+          {adding && (
+            <AddProject
+              onDone={(project) => {
+                setAdding(false);
+                refresh();
+                setSelected(project);
+              }}
+              onCancel={() => setAdding(false)}
+            />
+          )}
           <div className="kx-grid">
             {projects.map((p) => (
               <button key={p.id} className="kx-card" onClick={() => setSelected(p)}>
@@ -83,16 +93,6 @@ export function App() {
               </button>
             ))}
           </div>
-          {adding && (
-            <AddProject
-              onDone={(project) => {
-                setAdding(false);
-                refresh();
-                setSelected(project);
-              }}
-              onCancel={() => setAdding(false)}
-            />
-          )}
         </main>
       )}
       <footer className="kx-footer">
@@ -250,20 +250,31 @@ function TransferPanel({ project }: { project: Project }) {
 // written in any language yields documents in that language.
 const BRIEF_EXAMPLE = `# Acme CRM
 
-## What we're building
-A simple CRM for small teams: customer cards, meeting notes, reminders.
+## Product Vision & Goals
 
-## Who it's for
-Sales teams of 5-20 people; non-technical users.
+A CRM for small sales teams: a card per customer, the meeting notes attached to it, and a
+reminder for the next step. Today the team keeps customers in a shared spreadsheet and loses
+the context between meetings — this puts the last conversation next to the customer, so
+nobody walks into a call blind.
 
-## Scope
-- Customer list + detail card
-- Adding meeting notes
-- Reminders (email)
-MVP: 8 items max.
+## Target Audience & Personas
 
-## Out of scope
-Billing, phone integration.`;
+Sales teams of 5-20 people, non-technical. The team lead creates the workspace and invites
+the others; everyone else only ever sees their own customers.
+
+## Interface Language
+
+English only in v1. A second language is a later decision, not v1 scope.
+
+## Key Performance Indicators (KPIs)
+
+Meeting notes written per active user per week; the share of customers carrying a note from
+the last 30 days; weekly active users per team.
+
+## Future Scope & Out of Scope
+
+No billing, no phone integration, no mobile app. The MVP customer list caps at 8 items per
+view. Nothing is shared between teams.`;
 
 function AddProject({
   onDone,
@@ -358,6 +369,12 @@ function AddProject({
       <div className="kx-brief">
         <div className="kx-brief-head">
           <span className="kx-cmd-title">Brief (BRD)</span>
+          <span className="kx-doc-spacer" />
+          {briefMode === 'write' && (
+            <button className="btn btn-secondary btn-sm" onClick={() => setBrief(BRIEF_EXAMPLE)}>
+              Insert example
+            </button>
+          )}
           <nav className="kx-tabs kx-tabs-sm">
             <button
               className={`kx-tab ${briefMode === 'write' ? 'active' : ''}`}
@@ -377,13 +394,21 @@ function AddProject({
           <>
             <textarea
               className="kx-editor kx-brief-text"
-              placeholder="Write the project brief here: what we're building, who it's for, scope, out of scope… (Leave empty to fill it in later from Documents.)"
+              placeholder={[
+                'Write the brief in any language — the documents come back in the language you use here.',
+                '',
+                'The analysis cannot start until it answers five things:',
+                '• what you are building, and why it should exist',
+                '• who it is for',
+                '• which language the product speaks to its users, and the default if there is more than one',
+                '• how you will know it worked',
+                '• what is deliberately out of scope',
+                '',
+                'Leave it empty to fill in and approve later from Documents.',
+              ].join('\n')}
               value={brief}
               onChange={(e) => setBrief(e.target.value)}
             />
-            <button className="btn btn-secondary btn-sm kx-self-start" onClick={() => setBrief(BRIEF_EXAMPLE)}>
-              Insert example
-            </button>
           </>
         )}
         {briefMode === 'upload' && (

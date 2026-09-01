@@ -34,11 +34,15 @@ export interface Readiness {
 const CACHE_REL = join('.kortext', '.readiness.json');
 const JUDGMENT_TIMEOUT_MS = 5 * 60 * 1000;
 
-// The skeleton's own four asks, kept in the order the template lists them.
-// A floor failure quotes these rather than inventing new questions.
+// The skeleton's own asks, kept in the order the template lists them. A floor
+// failure quotes these rather than inventing new questions.
 const BRIEF_SECTIONS: Array<{ heading: RegExp; ask: string }> = [
   { heading: /vision|goal/i, ask: 'Product Vision & Goals — what is this product, and why does it exist?' },
   { heading: /audience|persona/i, ask: 'Target Audience & Personas — who is it for?' },
+  {
+    heading: /language|locali[sz]|locale/i,
+    ask: 'Interface Language — which language does the product speak to its users, and is more than one in scope?',
+  },
   { heading: /kpi|performance indicator/i, ask: 'Key Performance Indicators — what does success look like?' },
   { heading: /scope/i, ask: 'Future Scope & Out of Scope — what is deliberately not in it?' },
 ];
@@ -61,30 +65,48 @@ function isSkeletonLine(line: string): boolean {
 }
 
 /**
- * Stage one. Counts what the brief actually says, ignoring the skeleton it
- * was poured into. Pure and un-gameable by an eager persona — a one-word
- * brief never reaches the judgment that would rationalize writing anyway.
+ * Stage one. Counts what the brief actually says, ignoring the skeleton it was
+ * poured into. Pure and un-gameable by an eager persona — a one-word brief
+ * never reaches the judgment that would rationalize writing anyway.
+ *
+ * A brief may be written in any language, so the section names are only used
+ * when the brief is visibly still in the scaffolded English template; a brief
+ * with its own headings is measured on its prose alone and left to the
+ * judgment stage. The floor's job is to catch an empty brief, not to enforce a
+ * shape the product never promised.
  */
 export function assessBrief(content: string): { ok: boolean; questions: string[] } {
   const body = stripFrontmatter(content);
   const lines = body.split('\n');
   const prose = lines.filter((l) => !isSkeletonLine(l)).join(' ').trim();
+  const allAsks = BRIEF_SECTIONS.map((s) => s.ask);
 
-  // Which of the template's sections carry at least one line of real content.
+  // Nothing was written: the whole template is still asking its own questions.
+  if (prose.length < MIN_BODY_CHARS) return { ok: false, questions: allAsks };
+
+  // Which of the template's sections are present, and which carry content.
+  const present = new Set<string>();
   const answered = new Set<string>();
   let current: string | null = null;
   for (const line of lines) {
     const heading = line.match(/^#{1,6}\s+(.*)$/);
     if (heading) {
       current = BRIEF_SECTIONS.find((s) => s.heading.test(heading[1]))?.ask ?? null;
+      if (current) present.add(current);
       continue;
     }
     if (current && !isSkeletonLine(line)) answered.add(current);
   }
 
+  // Template-shaped means nearly every section was recognized by name; only
+  // then can an empty one be named back to the writer. One or two accidental
+  // matches (a Turkish brief whose heading happens to say "Personalar") are
+  // not enough to claim the rest are missing.
+  const templateShaped = present.size >= BRIEF_SECTIONS.length - 1;
+  if (!templateShaped) return { ok: true, questions: [] };
+
   const unanswered = BRIEF_SECTIONS.filter((s) => !answered.has(s.ask)).map((s) => s.ask);
-  if (prose.length >= MIN_BODY_CHARS && unanswered.length === 0) return { ok: true, questions: [] };
-  return { ok: false, questions: unanswered.length > 0 ? unanswered : BRIEF_SECTIONS.map((s) => s.ask) };
+  return unanswered.length === 0 ? { ok: true, questions: [] } : { ok: false, questions: unanswered };
 }
 
 // Directories that are never the project's own work.
@@ -152,8 +174,9 @@ function buildJudgmentPrompt(project: Project): string {
     '',
     'Decide ONE thing: does this brief say enough for an analysis team to write a product',
     'requirements document, a tech stack and a security model WITHOUT inventing the product?',
-    'A brief that names the project but not what it does, who it is for, or what problem it',
-    'solves is NOT enough. Neither is one whose sections restate the template questions.',
+    'A brief that names the project but not what it does, who it is for, what problem it',
+    'solves, or which language it speaks to its users is NOT enough. Neither is one whose',
+    'sections restate the template questions.',
     '',
     'Err towards not-ready. Producing documents from an empty brief is the failure this gate exists to prevent;',
     'asking the human one more question is not a failure.',

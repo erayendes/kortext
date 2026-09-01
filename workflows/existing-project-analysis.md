@@ -61,7 +61,7 @@
    - n/a when: the codebase renders no user interface — no views, no templates, no components, no styling.
    - approver: +prime
 
-4. **+copywriter:** Produce `CONTENT.md`. Scope: existing UI copy, tone of voice, error/empty-state messages, localization state; the content rules future work must follow.
+4. **+copywriter:** Produce `CONTENT.md`. Scope: existing UI copy, tone of voice, error/empty-state messages, localization state; the content rules future work must follow. The interface language is whatever the code already speaks — read the strings, do not assume; if the codebase carries an i18n setup, record the source language, the target languages and the state of each.
    - inputs: `.kortext/foundation/PRD.md`, `.kortext/DESIGN.md`
    - outputs: `.kortext/CONTENT.md`
    - n/a when: no string in the codebase is read by a person: no interface copy, no messages, no emails.

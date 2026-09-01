@@ -33,7 +33,7 @@
    - outputs: `.kortext/foundation/PRD.md`
    - approver: +prime
 
-4. **+copywriter:** Produce `CONTENT.md`. From PRD + LEGAL + GROWTH: brand voice, message hierarchy, page copy, microcopy, SEO content direction.
+4. **+copywriter:** Produce `CONTENT.md`. From PRD + LEGAL + GROWTH: brand voice, message hierarchy, page copy, microcopy, SEO content direction. Every string a user reads is written in the interface language the BRD names — and if the BRD names more than one, add the localization plan: source language, target languages, what is translated and what stays fixed.
    - label: CONTENT.md
    - activity: Brand voice established. Page copy written.
    - inputs: `.kortext/foundation/PRD.md`, `.kortext/LEGAL.md`, `.kortext/GROWTH.md`

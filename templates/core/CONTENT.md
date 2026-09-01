@@ -26,6 +26,10 @@ approver: +prime
 - **Validation Errors:** [e.g., 'This field is required.', 'Invalid email format.']
 - **Server/System Errors:** [e.g., 'Could not reach the server, please try again.']
 
+## Localization
+
+- [Interface language(s) from the BRD; if more than one: source language, target languages, what is translated and what is never translated (product name, code identifiers, legal terms)]
+
 ## Email & Notification Templates
 
 ### [Notification Type / Scenario]

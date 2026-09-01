@@ -34,8 +34,11 @@ Make your decisions by reading from here, not by guessing from the code:
 
 ## 3. Behavior constitution (essentials)
 
-- **Language:** communicate with +prime in +prime's language; code, commits, variables and
-  comments in English; in-product copy in the target project's language.
+- **Language:** communicate with +prime in +prime's language. The `.kortext/` documents are
+  written in the language of the brief — keep them that way when you update one. Code,
+  identifiers, file names, commands, commits and comments are English, always, whatever the
+  document language. In-product copy follows the interface language the brief names
+  (`CONTENT.md` § Localization).
 - **Secrets:** API keys/passwords/tokens are never written into code, documents, or
   templates — only in `.env` (outside the repo) + key names in `.env.example`. If you notice
   a leak: stop, report to +prime, suggest revoking the key; cleaning git history is +prime's
