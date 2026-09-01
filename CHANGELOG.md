@@ -83,6 +83,9 @@ constitution. The v3 engine stays archived under `docs/codes/`.
 - Archive asks before it acts, like Restart and Remove, and the three project
   actions are separated and coloured by what they cost: restart blue, archive
   green, remove red.
+- The document list's last group is **Not applicable** rather than Reference:
+  the group existed to hold the decision log alongside skipped documents, and
+  with the log gone it holds one kind of thing and should say so.
 - The Start/Pause button follows what is actually happening rather than the
   paused flag: Pause only while a step runs, Start or Continue whenever the
   chain is stopped — including a chain the gate refused — and nothing at all

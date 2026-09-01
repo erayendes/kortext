@@ -780,8 +780,9 @@ function DocumentsTab({
   }, [running.map((j) => j.id).join(','), jobs.length, docs.map((d) => d.status).join(',')]);
 
   // The list answers "what should I do now", so it groups by state, not by
-  // folder — Needs you first, Reference (n/a + log) last and collapsed.
-  const bucketOf = (d: DocInfo): 'needs' | 'progress' | 'next' | 'approved' | 'reference' => {
+  // folder — Needs you first, Not applicable last and collapsed: those were
+  // considered and deliberately skipped, so they are the least interesting.
+  const bucketOf = (d: DocInfo): 'needs' | 'progress' | 'next' | 'approved' | 'na' => {
     const job = jobFor(d.rel);
     if (d.status === 'draft') return 'needs';
     if (d.status === 'uninitialized' && job?.status === 'failed' && !paused) return 'needs';
@@ -790,11 +791,11 @@ function DocumentsTab({
     }
     if (d.status === 'uninitialized') return 'next';
     if (d.status === 'approved') return 'approved';
-    return 'reference'; // not-applicable + log
+    return 'na'; // considered and deliberately skipped (plus any stale log file)
   };
 
   const groups: {
-    key: 'needs' | 'progress' | 'next' | 'approved' | 'reference';
+    key: 'needs' | 'progress' | 'next' | 'approved' | 'na';
     title: string;
     closed?: boolean;
   }[] = [
@@ -802,14 +803,14 @@ function DocumentsTab({
     { key: 'progress', title: 'In progress' },
     { key: 'next', title: 'Next' },
     { key: 'approved', title: 'Approved', closed: true },
-    { key: 'reference', title: 'Reference', closed: true },
+    { key: 'na', title: 'Not applicable', closed: true },
   ];
   // Active buckets keep the dependency order listDocs produced (the order work
   // actually happens in); finished ones read alphabetically — nothing is
   // "next" there, so the name is the only useful key.
   const ordered = docs;
   const sortFor = (key: string, items: DocInfo[]) =>
-    key === 'approved' || key === 'reference'
+    key === 'approved' || key === 'na'
       ? [...items].sort((a, b) => a.name.localeCompare(b.name))
       : items;
 
