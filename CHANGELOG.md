@@ -96,10 +96,16 @@ constitution. The v3 engine stays archived under `docs/codes/`.
 - Saving a document re-enters the chain, so editing the brief re-runs the gate.
   Editing the brief is the way out of a closed gate, and only approving one
   triggered a re-scan, so a corrected brief sat behind its old verdict.
-- **GROWTH is written before LEGAL**, and LEGAL takes it as an input. What a
-  product measures decides the consent and disclosure it owes, so compliance
-  was being written against a document that did not exist yet and saying so in
-  its own text. Both workflows follow the new order.
+- **Compliance is written after the design, not before it.** `LEGAL.md` used to
+  run second, with only the brief to go on, and then answer questions that are
+  technical: where the data is hosted, which third parties touch it, which
+  fields are stored, what measures exist. It now runs after STACK, SECURITY,
+  DATABASE and ENVIRONMENT and takes all of them as inputs, so it rules on the
+  system as designed and names the document that must change when the design
+  breaks an obligation. `PRD.md` no longer waits on it. `ENVIRONMENT.md` moves
+  into the technical block (it was stranded after the consolidation step), and
+  `TRD.md` takes `LEGAL.md` as an input so a contradiction is resolved or
+  carried as a named risk. Both workflows follow the order.
 - Emphasis (`*italic*`, `_italic_`) renders instead of showing its markers, and
   an Open Questions section with nothing in it is not shown at all.
 - The line thread: a textarea rather than an input (Enter sends, Shift+Enter

@@ -14,7 +14,12 @@ test('parseWorkflowSteps extracts inputs/outputs/author/approver per output', ()
   const prd = steps.find((s) => s.output === 'foundation/PRD.md');
   assert.ok(prd);
   assert.equal(prd.author, '+product-manager');
-  assert.deepEqual(prd.inputs.sort(), ['GROWTH.md', 'LEGAL.md', 'foundation/BRD.md']);
+  // LEGAL is written after the design, so the PRD is not waiting on it
+  assert.deepEqual(prd.inputs.sort(), ['GROWTH.md', 'foundation/BRD.md']);
+  const legal = steps.find((s) => s.output === 'LEGAL.md');
+  assert.ok(legal);
+  assert.ok(legal.inputs.includes('ENVIRONMENT.md'), 'compliance needs the hosting region');
+  assert.ok(legal.inputs.includes('DATABASE.md'), 'compliance needs the stored fields');
   const stack = steps.find((s) => s.output === 'STACK.md');
   assert.ok(stack);
   assert.equal(stack.author, '+architect');
@@ -34,8 +39,8 @@ test('listDocs: dependency blocking follows approvals; regressed input warns dep
   // BRD sorts before PRD (dependency depth)
   assert.ok(docs.findIndex((d) => d.rel === 'foundation/BRD.md') < docs.findIndex((d) => d.rel === 'foundation/PRD.md'));
 
-  // approve BRD → GROWTH unblocks; LEGAL still waits on GROWTH, because what
-  // the product measures decides what compliance it owes
+  // approve BRD → GROWTH unblocks; LEGAL stays blocked far longer, because it
+  // is written against the design rather than before it
   setFrontmatterStatus(docPath(p, 'foundation/BRD.md'), 'approved');
   docs = listDocs(db, p, pkgRoot);
   assert.equal(byRel('foundation/BRD.md').status, 'approved');
@@ -44,7 +49,8 @@ test('listDocs: dependency blocking follows approvals; regressed input warns dep
 
   setFrontmatterStatus(docPath(p, 'GROWTH.md'), 'approved');
   docs = listDocs(db, p, pkgRoot);
-  assert.equal(byRel('LEGAL.md').blocked, false);
+  assert.equal(byRel('foundation/PRD.md').blocked, false);
+  assert.equal(byRel('LEGAL.md').blocked, true); // still waiting on STACK, DATABASE, ENVIRONMENT
 
   // BRD falls back to draft after GROWTH was written → GROWTH warns upstreamChanged
   setFrontmatterStatus(docPath(p, 'foundation/BRD.md'), 'draft');

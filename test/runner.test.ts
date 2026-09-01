@@ -151,15 +151,10 @@ test('advance: chains every unblocked step, pauses at approval gates, resumes af
 
   setFrontmatterStatus(docPath(p, 'GROWTH.md'), 'approved');
   await advance(db, p, engine, pkgRoot);
-  assert.ok(
-    listJobs(db, p.id).some((j) => j.doc_rel === 'LEGAL.md' && j.status === 'done'),
-    'LEGAL should follow GROWTH',
-  );
-
-  setFrontmatterStatus(docPath(p, 'LEGAL.md'), 'approved');
-  await advance(db, p, engine, pkgRoot);
   const after = listJobs(db, p.id).filter((j) => j.status === 'done').map((j) => j.doc_rel);
-  assert.ok(after.includes('foundation/PRD.md'));
+  assert.ok(after.includes('foundation/PRD.md'), 'PRD follows GROWTH');
+  // LEGAL is written against the design, so it is nowhere near ready yet
+  assert.ok(!after.includes('LEGAL.md'), 'compliance waits for the technical documents');
   rmSync(work, { recursive: true, force: true });
 });
 

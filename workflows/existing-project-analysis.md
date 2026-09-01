@@ -73,8 +73,8 @@
    - n/a when: the codebase serves no measurable surface and reaches no acquisition channel — an internal tool or a library.
    - approver: +prime
 
-6. **+compliance-expert:** Produce `LEGAL.md`. Scope: personal-data handling found in the code (KVKK/GDPR), license obligations of the dependency tree, terms/privacy needs, compliance gaps. Read `GROWTH.md` first: the tracking the codebase already carries is what decides the consent and disclosure obligations.
-   - inputs: `.kortext/foundation/PRD.md`, `.kortext/SECURITY.md`, `.kortext/GROWTH.md`
+6. **+compliance-expert:** Produce `LEGAL.md`. Scope: personal-data handling found in the code (KVKK/GDPR), license obligations of the dependency tree, terms/privacy needs, compliance gaps. Judge the codebase as it is: the hosting region from `ENVIRONMENT.md`, the third parties from `STACK.md` and `GROWTH.md`, the personal-data columns from `DATABASE.md`, the technical measures from `SECURITY.md`.
+   - inputs: `.kortext/foundation/PRD.md`, `.kortext/STACK.md`, `.kortext/SECURITY.md`, `.kortext/DATABASE.md`, `.kortext/ENVIRONMENT.md`, `.kortext/GROWTH.md`
    - outputs: `.kortext/LEGAL.md`
    - n/a when: the codebase touches no personal data, ships no third-party data flow and carries no licence obligation beyond permissive dependencies.
    - approver: +prime
@@ -82,7 +82,7 @@
 ## Technical Debt and TRD
 
 1. **+architect:** Consolidate `TRD.md`. Scope: technical debt from the discovery outputs + architectural issues + security risks + test gaps + devops/release risks + improvement areas. For each debt item: impact, risk, dependencies, priority level.
-   - inputs: `.kortext/foundation/PRD.md`, `.kortext/STACK.md`, `.kortext/STRUCTURE.md`, `.kortext/ARCHITECTURE.md`, `.kortext/DATABASE.md`, `.kortext/SECURITY.md`, `.kortext/API.md`, `.kortext/ENVIRONMENT.md`, `.kortext/TEST.md`
+   - inputs: `.kortext/foundation/PRD.md`, `.kortext/STACK.md`, `.kortext/STRUCTURE.md`, `.kortext/ARCHITECTURE.md`, `.kortext/DATABASE.md`, `.kortext/SECURITY.md`, `.kortext/API.md`, `.kortext/ENVIRONMENT.md`, `.kortext/TEST.md`, `.kortext/LEGAL.md`
    - outputs: `.kortext/foundation/TRD.md`
    - approver: +prime
 
