@@ -4,7 +4,7 @@ All notable changes to Kortext are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and Kortext adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [5.0.0] - 2026-09-01
 
 **v1.0 — the active project brain.** Full vision rewrite (dev/DECISIONS.md
 §20): during analysis Kortext is ACTIVE — it drives your own agent CLI
@@ -15,6 +15,27 @@ constitution. The v3 engine stays archived under `docs/codes/`.
 
 ### Added
 
+- **Readiness gate**: one gate at the head of the chain, so evidence that says
+  nothing produces nothing. A new project is judged on its brief — a countable
+  floor (skeleton lines and template placeholders are not content), then one
+  engine judgment cached per brief version; an existing project on whether
+  there is code to read. Blocked, the panel shows what the brief must answer
+  instead of the documents it would have invented. A missing agent CLI reports
+  through the same card rather than leaving Start to do nothing.
+- **Scope before writing**: every workflow step carries an `n/a when`
+  condition (LEGAL, GROWTH, CONTENT, DESIGN, DATABASE, API), phrased against
+  the brief for a new project and against the code for an existing one. The
+  step prompt decides scope first: when the condition holds the document lands
+  `not-applicable` with its reasoning — a complete outcome, not a gap. What the
+  inputs do not say, no document may assume.
+- **Interface language in the brief**: a required section naming the language
+  the product speaks to its users, and the default when there is more than one.
+  It settles what CONTENT is written in, which market LEGAL covers, which
+  language GROWTH optimizes for. `CONTENT.md` gains a Localization section.
+- **Language split**: document prose follows the brief; section headings, code,
+  identifiers, file names, commands, environment variables, table and column
+  names, API paths, branch and commit conventions stay English always. Product
+  copy follows the product's own interface language.
 - **Analysis engine (Phase A)**: dependency-gated chain over workflow
   `inputs/outputs/approver` metadata; spawns the selected agent CLI headless
   (prompt over stdin, cwd = repo), validates exit/output/frontmatter, lands
@@ -46,6 +67,12 @@ constitution. The v3 engine stays archived under `docs/codes/`.
 
 ### Removed
 
+- **`DECISIONS.md`** — the decision log covered decisions taken along the way,
+  and the way starts after Kortext retires, so it owned a file it could only
+  fill during analysis and then had to hope someone else kept. A decision now
+  lives in the document it shapes, and `foundation/PFD.md` carries the
+  consolidated list. A legacy `memory/decisions.md` is still migrated rather
+  than deleted.
 - **Reports** (routes, generation, templates) — no reports feature in v2.
 - **Agent-facing surface**: MCP server (`/mcp`), `/api/agent/*` REST
   fallback, request queue (`requests` table dropped on migration) — the
