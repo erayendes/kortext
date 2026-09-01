@@ -206,8 +206,20 @@ export function DocDrawer({
       {err && <div className="kx-error">{err}</div>}
       {doc.openQuestions && !editing && (
         <div className="kx-doc-askbar">
-          This document is waiting on you — answer the questions at the end (or remove the ones
-          you are content to leave open), then approve it.
+          {notes.length > 0 ? (
+            <>
+              {notes.length} answer{notes.length > 1 ? 's' : ''} ready — press{' '}
+              <strong>Request revision</strong> to send {notes.length > 1 ? 'them' : 'it'} back to{' '}
+              {(doc.author ?? 'the author').replace(/^\+/, '')}, who folds the answers in and drops
+              the questions they settle. Nothing is written until you do.
+            </>
+          ) : (
+            <>
+              This document is waiting on you. Click a question, type the answer, Add note — then
+              Request revision. Or edit the document yourself and remove the questions you are
+              content to leave open.
+            </>
+          )}
         </div>
       )}
       <div className="dr-body">
