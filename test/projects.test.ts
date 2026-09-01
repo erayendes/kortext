@@ -148,3 +148,20 @@ test('the documents language chosen in the form reaches the step prompt', async 
   assert.match(prompt, /ENGLISH ALWAYS/);
   rmSync(work, { recursive: true, force: true });
 });
+
+test('re-adding a registered folder names the project instead of the constraint', () => {
+  const work = tempDir();
+  const db = openDb(join(work, 'db.sqlite'));
+  const repo = join(work, 'same');
+  createProject(db, { name: 'First', repoPath: repo }, pkgRoot);
+  assert.throws(
+    () => createProject(db, { name: 'Second', repoPath: repo }, pkgRoot),
+    /already the project "First"/,
+  );
+  db.prepare('UPDATE projects SET archived = 1 WHERE repo_path = ?').run(repo);
+  assert.throws(
+    () => createProject(db, { name: 'Second', repoPath: repo }, pkgRoot),
+    /archived project "First" — unarchive it/,
+  );
+  rmSync(work, { recursive: true, force: true });
+});

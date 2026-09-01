@@ -232,11 +232,11 @@ export function DocDrawer({
   );
 }
 
-// One vocabulary for every doc state: waiting · writing… · paused · review ·
-// approved · failed · n/a · log. A draft reads `review` rather than `pending`,
-// because nothing is queued — the document is written and waiting on a human.
+// One vocabulary for every doc state: waiting · writing… · paused · pending ·
+// approved · failed · n/a · log. `pending` is a document waiting on a human;
+// `waiting` is one whose inputs are not settled, so nothing can run yet.
 const STATUS_LABEL: Record<string, string> = {
-  draft: 'review',
+  draft: 'pending',
   'not-applicable': 'n/a',
   approved: 'approved',
   log: 'log',

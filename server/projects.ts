@@ -138,6 +138,16 @@ export function createProject(
   if (!/^[A-Z][A-Z0-9]{1,7}$/.test(code)) {
     throw new Error(`code must be 2-8 chars, A-Z then A-Z0-9 (got: ${code})`);
   }
+  const taken = db
+    .prepare('SELECT name, archived FROM projects WHERE repo_path = ?')
+    .get(repoPath) as { name: string; archived: number } | undefined;
+  if (taken) {
+    throw new Error(
+      taken.archived
+        ? `This folder is already the archived project "${taken.name}" — unarchive it instead of adding it again.`
+        : `This folder is already the project "${taken.name}".`,
+    );
+  }
   mkdirSync(repoPath, { recursive: true });
   // existing projects take no brief — the ground truth is the code itself
   scaffoldProject(repoPath, pkgRoot, { skipBrief: kind === 'existing' });

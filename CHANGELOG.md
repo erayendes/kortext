@@ -96,8 +96,9 @@ constitution. The v3 engine stays archived under `docs/codes/`.
 - Saving a document re-enters the chain, so editing the brief re-runs the gate.
   Editing the brief is the way out of a closed gate, and only approving one
   triggered a re-scan, so a corrected brief sat behind its old verdict.
-- A draft document reads **review** rather than `pending` — nothing is queued;
-  the document is written and waiting on a human.
+- Adding a folder that is already registered says which project holds it, and
+  whether that project is archived, instead of surfacing the SQLite constraint
+  name.
 - The document list's last group is **Not applicable** rather than Reference:
   the group existed to hold the decision log alongside skipped documents, and
   with the log gone it holds one kind of thing and should say so.
