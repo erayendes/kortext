@@ -1,7 +1,6 @@
 ---
 status: uninitialized
 author: +designer
-reviewer: +frontend-developer
 approver: +prime
 ---
 

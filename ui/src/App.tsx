@@ -24,6 +24,35 @@ export function App() {
     refresh();
   }, []);
 
+  const live = projects.filter((p) => !p.archived);
+  const archived = projects.filter((p) => p.archived);
+  const projectCard = (p: Project) => (
+
+              <button key={p.id} className="kx-card" onClick={() => setSelected(p)}>
+                <span className="kx-card-head">
+                  {p.code && <span className="kx-card-code mono">{p.code}</span>}
+                  <span className="kx-card-name">{p.name}</span>
+                </span>
+                <span className="kx-card-path mono" title={p.repo_path}>
+                  {shortPath(p.repo_path)}
+                </span>
+                {p.docCounts && (
+                  <span
+                    className={`kx-card-counts mono${
+                      p.docCounts.core.settled === p.docCounts.core.total &&
+                      p.docCounts.foundation.settled === p.docCounts.foundation.total &&
+                      p.docCounts.core.total > 0
+                        ? ' done'
+                        : ''
+                    }`}
+                  >
+                    core {p.docCounts.core.settled}/{p.docCounts.core.total} · foundation{' '}
+                    {p.docCounts.foundation.settled}/{p.docCounts.foundation.total}
+                  </span>
+                )}
+              </button>
+  );
+
   return (
     <div className="kx-shell">
       <header className="kx-header">
@@ -66,33 +95,16 @@ export function App() {
               onCancel={() => setAdding(false)}
             />
           )}
-          <div className="kx-grid">
-            {projects.map((p) => (
-              <button key={p.id} className="kx-card" onClick={() => setSelected(p)}>
-                <span className="kx-card-head">
-                  {p.code && <span className="kx-card-code mono">{p.code}</span>}
-                  <span className="kx-card-name">{p.name}</span>
-                </span>
-                <span className="kx-card-path mono" title={p.repo_path}>
-                  {shortPath(p.repo_path)}
-                </span>
-                {p.docCounts && (
-                  <span
-                    className={`kx-card-counts mono${
-                      p.docCounts.core.settled === p.docCounts.core.total &&
-                      p.docCounts.foundation.settled === p.docCounts.foundation.total &&
-                      p.docCounts.core.total > 0
-                        ? ' done'
-                        : ''
-                    }`}
-                  >
-                    core {p.docCounts.core.settled}/{p.docCounts.core.total} · foundation{' '}
-                    {p.docCounts.foundation.settled}/{p.docCounts.foundation.total}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
+          <div className="kx-grid">{live.map(projectCard)}</div>
+          {archived.length > 0 && (
+            <details className="kx-doc-details kx-archive">
+              <summary className="kx-doc-group">
+                Archived
+                <span className="kx-doc-count mono">{archived.length}</span>
+              </summary>
+              <div className="kx-grid">{archived.map(projectCard)}</div>
+            </details>
+          )}
         </main>
       )}
       <footer className="kx-footer">
@@ -370,12 +382,18 @@ function AddProject({
         <div className="kx-brief-head">
           <span className="kx-cmd-title">Brief (BRD)</span>
           <span className="kx-doc-spacer" />
-          {briefMode === 'write' && (
-            <button className="btn btn-secondary btn-sm" onClick={() => setBrief(BRIEF_EXAMPLE)}>
-              Insert example
-            </button>
-          )}
           <nav className="kx-tabs kx-tabs-sm">
+            {/* An action, not a mode — it fills the editor and leaves you in it,
+                but it belongs to this row and reads wrong as a stray button. */}
+            <button
+              className="kx-tab"
+              onClick={() => {
+                setBrief(BRIEF_EXAMPLE);
+                setBriefMode('write');
+              }}
+            >
+              Example
+            </button>
             <button
               className={`kx-tab ${briefMode === 'write' ? 'active' : ''}`}
               onClick={() => setBriefMode('write')}
@@ -429,15 +447,16 @@ function AddProject({
           </label>
         )}
         <span className="kx-cmd-hint">
-          Write or upload the brief and it lands as the approved BRD — analysis starts
-          immediately; leave it empty to fill in and approve from Documents.
+          A brief that answers the five points lands approved and the project is ready to
+          start; a thinner one lands as a draft for you to finish from Documents. Nothing runs
+          until you press Start.
         </span>
       </div>
       )}
       {err && <div className="kx-error">{err}</div>}
       <div className="kx-form-row">
         <button className="btn btn-primary" onClick={submit}>
-          Add
+          Initialize
         </button>
         <button className="btn" onClick={onCancel}>
           Cancel
@@ -572,6 +591,22 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
           <>
             <button className="kx-link" disabled={busy} onClick={() => setArming('restart')}>
               Restart analysis
+            </button>
+            <button
+              className="kx-link"
+              disabled={busy}
+              onClick={() => {
+                setBusy(true);
+                api
+                  .archiveProject(project.id, !project.archived)
+                  .then(onBack)
+                  .catch((e) => {
+                    setErr(e.message);
+                    setBusy(false);
+                  });
+              }}
+            >
+              {project.archived ? 'Unarchive project' : 'Archive project'}
             </button>
             <button className="kx-link kx-link-danger" disabled={busy} onClick={() => setArming('cancel')}>
               Remove project

@@ -1,7 +1,6 @@
 ---
 status: uninitialized
 author: +db-admin
-reviewer: +backend-developer
 approver: +architect
 ---
 

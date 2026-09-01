@@ -1,7 +1,6 @@
 ---
 status: uninitialized
 author: +growth-expert
-reviewer: +product-manager
 approver: +prime
 ---
 

@@ -1,7 +1,6 @@
 ---
 status: uninitialized
 author: +copywriter
-reviewer:
 approver: +prime
 ---
 

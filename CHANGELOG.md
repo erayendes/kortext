@@ -32,6 +32,9 @@ constitution. The v3 engine stays archived under `docs/codes/`.
   the product speaks to its users, and the default when there is more than one.
   It settles what CONTENT is written in, which market LEGAL covers, which
   language GROWTH optimizes for. `CONTENT.md` gains a Localization section.
+- **Archive**: a project can be shelved rather than removed — the row and the
+  repo both stay, and the panel folds archived projects into their own
+  collapsed group instead of growing the grid forever.
 - **Language split**: document prose follows the brief; section headings, code,
   identifiers, file names, commands, environment variables, table and column
   names, API paths, branch and commit conventions stay English always. Product
@@ -64,6 +67,15 @@ constitution. The v3 engine stays archived under `docs/codes/`.
 - **Add-project form**: New/Existing mode toggle (= workflow choice), native
   folder Browse, project code field, brief write/upload tabs — a user-written
   brief lands approved and the chain starts immediately.
+
+### Changed
+
+- A brief written in the add form lands **approved only if it can start the
+  analysis**; a thinner one lands as a draft, so the panel never shows an
+  approved BRD next to "not enough to start". `Add` is now `Initialize`, and
+  `Insert example` joins the Write/Upload tab group as `Example`.
+- The document skeletons drop the unused `reviewer:` frontmatter slot; nothing
+  ever read it.
 
 ### Removed
 

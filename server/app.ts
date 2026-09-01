@@ -2,7 +2,7 @@ import express from 'express';
 import type Database from 'better-sqlite3';
 import { existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
-import { createProject, deriveCode, listProjects, removeProject, scaffoldProject } from './projects.js';
+import { createProject, deriveCode, listProjects, removeProject, scaffoldProject, setArchived } from './projects.js';
 import { analysisComplete, docPath, listDocs, setFrontmatterStatus } from './docs.js';
 import { pickDirectoryNative } from './pick-directory.js';
 import { spawnSync } from 'node:child_process';
@@ -133,6 +133,15 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   // the UI falls back to a typed path).
   app.post('/api/pick-directory', (_req, res) => {
     void pickDirectoryNative().then((path) => res.json({ path }));
+  });
+
+  // Archive is a shelf, not a bin: the row and the repo both stay.
+  app.post('/api/projects/:id/archive', (req, res) => {
+    const project = projectOr404(req.params.id, res);
+    if (!project) return;
+    const archived = req.body?.archived !== false;
+    setArchived(db, project.id, archived);
+    res.json({ archived: archived ? 1 : 0 });
   });
 
   app.delete('/api/projects/:id', (req, res) => {

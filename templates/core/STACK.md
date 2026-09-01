@@ -1,7 +1,6 @@
 ---
 status: uninitialized
 author: +architect
-reviewer:
 approver: +prime
 ---
 

@@ -48,15 +48,51 @@ test('duplicate repo_path is rejected by the registry', () => {
   rmSync(work, { recursive: true, force: true });
 });
 
-test('brief from the add form lands as prime-authored APPROVED BRD', () => {
+const FORM_BRIEF = `# Acme CRM
+
+## Product Vision & Goals
+
+Küçük satış ekipleri için bir CRM: müşteri kartı, görüşme notları, sonraki adım hatırlatması.
+Ekip bugün müşterileri ortak bir tabloda tutuyor ve görüşmeler arasında bağlamı kaybediyor.
+
+## Target Audience & Personas
+
+5-20 kişilik satış ekipleri, teknik olmayan kullanıcılar.
+
+## Interface Language
+
+Yalnızca Türkçe; ikinci dil v1 kapsamında değil.
+
+## Key Performance Indicators (KPIs)
+
+Aktif kullanıcı başına haftalık yazılan görüşme notu; son 30 günde notu olan müşteri oranı.
+
+## Future Scope & Out of Scope
+
+Faturalama yok, telefon entegrasyonu yok, mobil uygulama yok.`;
+
+test('a brief written in the add form lands as the prime-approved BRD', () => {
   const work = tempDir();
   const db = openDb(join(work, 'db.sqlite'));
   const repo = join(work, 'brf');
-  createProject(db, { name: 'Brf', repoPath: repo, brief: '# Acme\n\nKüçük CRM.' }, pkgRoot);
+  createProject(db, { name: 'Brf', repoPath: repo, brief: FORM_BRIEF }, pkgRoot);
   const body = readFileSync(join(repo, BRIEF_REL), 'utf8');
   assert.match(body, /status: approved/);
   assert.match(body, /author: \+prime/);
-  assert.match(body, /Küçük CRM/);
+  assert.match(body, /Küçük satış ekipleri/);
+  rmSync(work, { recursive: true, force: true });
+});
+
+test('a brief the gate would refuse lands as a draft, not approved', () => {
+  const work = tempDir();
+  const db = openDb(join(work, 'db.sqlite'));
+  const repo = join(work, 'thin');
+  createProject(db, { name: 'Thin', repoPath: repo, brief: 'deneme' }, pkgRoot);
+  // Approving a brief the gate then refuses reads as a contradiction: the panel
+  // would show an approved BRD next to "not enough to start".
+  const body = readFileSync(join(repo, BRIEF_REL), 'utf8');
+  assert.match(body, /status: draft/);
+  assert.match(body, /deneme/);
   rmSync(work, { recursive: true, force: true });
 });
 

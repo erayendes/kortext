@@ -1,7 +1,6 @@
 ---
 status: uninitialized
 author: +architect
-reviewer: +backend-developer
 updated_at: 1970-01-01T00:00:00Z
 ---
 

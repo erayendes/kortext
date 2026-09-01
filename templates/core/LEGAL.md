@@ -1,7 +1,6 @@
 ---
 status: uninitialized
 author: +compliance-expert
-reviewer:
 approver: +prime
 ---
 

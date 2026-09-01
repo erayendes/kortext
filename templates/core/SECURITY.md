@@ -1,7 +1,6 @@
 ---
 status: uninitialized
 author: +security-engineer
-reviewer:
 approver: +architect
 ---
 

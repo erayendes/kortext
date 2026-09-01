@@ -1,7 +1,6 @@
 ---
 status: uninitialized
 author: +product-manager
-reviewer:
 approver: +prime
 ---
 

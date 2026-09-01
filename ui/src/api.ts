@@ -4,6 +4,7 @@ export interface Project {
   code: string;
   repo_path: string;
   paused?: number;
+  archived?: number;
   created_at: string;
   docCounts?: {
     core: { settled: number; total: number };
@@ -70,6 +71,11 @@ export interface Readiness {
 
 export const api = {
   listProjects: () => req<{ projects: Project[] }>('/api/projects'),
+  archiveProject: (projectId: number, archived: boolean) =>
+    req<{ archived: number }>(`/api/projects/${projectId}/archive`, {
+      method: 'POST',
+      body: JSON.stringify({ archived }),
+    }),
   engines: () => req<{ engines: EngineInfo[]; selected: string | null }>('/api/engines'),
   selectEngine: (id: string) =>
     req<{ selected: string }>('/api/engines', { method: 'PUT', body: JSON.stringify({ id }) }),
