@@ -482,6 +482,7 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
   const [paused, setPaused] = useState(!!project.paused);
   const [status, setStatus] = useState('');
   const [hasJobs, setHasJobs] = useState(true); // pessimistic until the first poll
+  const [pending, setPending] = useState(true); // any document still unwritten
   const [err, setErr] = useState<string | null>(null);
   // Two-step in-place confirmation — browsers silently suppress repeated
   // native confirm() dialogs, which made Restart/Cancel look dead.
@@ -493,6 +494,15 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
     const t = setTimeout(() => setArming(null), 5000);
     return () => clearTimeout(t);
   }, [arming]);
+
+  const running = status.length > 0;
+
+  const start = () => {
+    if (paused) return togglePause(); // unpausing kicks the chain
+    // Already unpaused but idle — the gate refused, or the last pass ended.
+    // Re-enter the chain so the gate runs again and any freed step starts.
+    api.runNext(project.id).catch(() => {});
+  };
 
   const togglePause = () =>
     api
@@ -540,15 +550,15 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
         <button className="btn btn-sm" onClick={onBack}>
           ← Projects
         </button>
-        {paused ? (
+        {running ? (
+          <span className="kx-nav-status kx-running">{status}</span>
+        ) : paused && hasJobs ? (
+          <span className="kx-nav-status">⏸ Paused — running steps were stopped; nothing new starts.</span>
+        ) : pending ? (
           <span className="kx-nav-status">
-            {hasJobs
-              ? '⏸ Paused — running steps were stopped; nothing new starts.'
-              : 'Ready — press Start to begin the analysis.'}
+            {hasJobs ? 'Stopped — press Continue to pick it up.' : 'Ready — press Start to begin the analysis.'}
           </span>
-        ) : (
-          status && <span className="kx-nav-status kx-running">{status}</span>
-        )}
+        ) : null}
       </div>
       <div className="kx-main-head">
         <div className="kx-main-title">
@@ -571,10 +581,19 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
                 No
               </button>
             </>
-          ) : (
+          ) : running ? (
             <button className="btn btn-sm btn-primary" disabled={busy} onClick={togglePause}>
-              {paused ? (hasJobs ? '▶ Continue' : '▶ Start') : '⏸ Pause'}
+              ⏸ Pause
             </button>
+          ) : (
+            // Nothing is running: whatever the paused flag says, the only move
+            // left is to start it. Offering Pause against a stopped chain — a
+            // closed gate, a queue waiting on approvals — reads as a lie.
+            pending && (
+              <button className="btn btn-sm btn-primary" disabled={busy} onClick={start}>
+                {hasJobs ? '▶ Continue' : '▶ Start'}
+              </button>
+            )
           )}
         </div>
       </div>
@@ -584,6 +603,7 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
         paused={paused}
         onStatus={setStatus}
         onHasJobs={setHasJobs}
+        onPending={setPending}
       />
       <div className="kx-danger-zone">
         {arming === 'restart' ? (
@@ -710,11 +730,13 @@ function DocumentsTab({
   paused,
   onStatus,
   onHasJobs,
+  onPending,
 }: {
   project: Project;
   paused?: boolean;
   onStatus?: (text: string) => void;
   onHasJobs?: (has: boolean) => void;
+  onPending?: (pending: boolean) => void;
 }) {
   const [docs, setDocs] = useState<DocInfo[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -753,8 +775,9 @@ function DocumentsTab({
   useEffect(() => {
     onStatus?.(running.length > 0 ? `${running.map((j) => j.doc_rel).join(' · ')} writing…` : '');
     onHasJobs?.(jobs.length > 0);
+    onPending?.(docs.some((d) => d.status === 'uninitialized'));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [running.map((j) => j.id).join(','), jobs.length]);
+  }, [running.map((j) => j.id).join(','), jobs.length, docs.map((d) => d.status).join(',')]);
 
   // The list answers "what should I do now", so it groups by state, not by
   // folder — Needs you first, Reference (n/a + log) last and collapsed.

@@ -83,6 +83,10 @@ constitution. The v3 engine stays archived under `docs/codes/`.
 - Archive asks before it acts, like Restart and Remove, and the three project
   actions are separated and coloured by what they cost: restart blue, archive
   green, remove red.
+- The Start/Pause button follows what is actually happening rather than the
+  paused flag: Pause only while a step runs, Start or Continue whenever the
+  chain is stopped — including a chain the gate refused — and nothing at all
+  once every document is settled. The nav line says which of those it is.
 - A closed gate with no brief to open — an existing project, or a missing CLI —
   offers **Check again** rather than ending in a dead end.
 
