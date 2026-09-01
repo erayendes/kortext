@@ -41,6 +41,10 @@ approver: +prime
 
 - [High-level implementation steps — fine-grained detail is worked out per task]
 
+## Revision Requests
+
+- [`TARGET.md` — what must change there and why. One line per document. Leave this section empty when nothing upstream needs to change]
+
 ## Open Questions for prime
 
 - [Open questions awaiting a decision — escalated to `prime` or the relevant gate]

@@ -27,6 +27,10 @@ As a [User Type], I want to [Do Something], so that [I reach This Goal].
 - [ ] [Criterion 1: When the user presses the button, X must happen]
 - [ ] [Criterion 2: On error, this message must be shown]
 
+## Revision Requests
+
+- [`TARGET.md` — what must change there and why. One line per document. Leave this section empty when nothing upstream needs to change]
+
 ## Open Questions for prime
 
 - [Anything prime must answer before this document can be relied on — leave this section empty when there is nothing]

@@ -22,6 +22,10 @@ approver: +prime
 
 - [One line per main architectural choice: the rationale, and the alternative that lost]
 
+## Revision Requests
+
+- [`TARGET.md` — what must change there and why. One line per document. Leave this section empty when nothing upstream needs to change]
+
 ## Open Questions for prime
 
 - [Anything prime must answer before this document can be relied on — leave this section empty when there is nothing]

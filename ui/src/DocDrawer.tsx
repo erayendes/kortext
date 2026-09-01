@@ -61,15 +61,18 @@ export function DocDrawer({
     const all = mergeWrappedLines(parseMarkdown(stripFrontmatter(content)));
     // An Open Questions heading with nothing under it is structure, not
     // content — showing it makes every document look like it wants something.
-    const start = all.findIndex(
-      (t) => (t.kind === 'h1' || t.kind === 'h2' || t.kind === 'h3') && /open questions/i.test(t.text),
-    );
-    if (start === -1) return all;
-    const after = all.slice(start + 1);
-    const end = after.findIndex((t) => t.kind === 'h1' || t.kind === 'h2' || t.kind === 'h3');
-    const body = end === -1 ? after : after.slice(0, end);
-    const asks = body.some((t) => t.kind !== 'blank' && !/^\[.*\]$/.test(t.text.trim()));
-    return asks ? all : [...all.slice(0, start), ...(end === -1 ? [] : after.slice(end))];
+    const dropEmpty = (tokens: typeof all, heading: RegExp) => {
+      const start = tokens.findIndex(
+        (t) => (t.kind === 'h1' || t.kind === 'h2' || t.kind === 'h3') && heading.test(t.text),
+      );
+      if (start === -1) return tokens;
+      const after = tokens.slice(start + 1);
+      const end = after.findIndex((t) => t.kind === 'h1' || t.kind === 'h2' || t.kind === 'h3');
+      const body = end === -1 ? after : after.slice(0, end);
+      const used = body.some((t) => t.kind !== 'blank' && !/^\[.*\]$/.test(t.text.trim()));
+      return used ? tokens : [...tokens.slice(0, start), ...(end === -1 ? [] : after.slice(end))];
+    };
+    return dropEmpty(dropEmpty(all, /open questions/i), /revision requests/i);
   }, [content]);
 
   // Which blocks sit under the Open Questions heading — they are the ones the
@@ -89,7 +92,7 @@ export function DocDrawer({
     let inSection = false;
     for (const t of tokens) {
       if (t.kind === 'h1' || t.kind === 'h2' || t.kind === 'h3') {
-        inSection = /open questions/i.test(t.text);
+        inSection = /open questions|revision requests/i.test(t.text);
       }
       if (inSection) marked.add(t.index);
     }
@@ -204,6 +207,37 @@ export function DocDrawer({
         </div>
       </div>
       {err && <div className="kx-error">{err}</div>}
+      {doc.revisionRequests.length > 0 && !editing && (
+        <div className="kx-doc-changebar">
+          <div className="kx-changebar-head">
+            Another document has asked this one to change. Until it does, the analysis is not
+            finished.
+          </div>
+          <ul className="kx-changebar-list">
+            {doc.revisionRequests.map((r, i) => (
+              <li key={i}>
+                <span className="mono">{r.from.replace(/\.md$/, '')}</span> — {r.reason}
+              </li>
+            ))}
+          </ul>
+          <div className="kx-changebar-actions">
+            <button
+              className="btn btn-sm btn-primary"
+              disabled={busy}
+              onClick={() => act(() => api.sendBack(project.id, doc.rel).then(onClose))}
+            >
+              Send back for revision
+            </button>
+            <button
+              className="btn btn-sm btn-secondary"
+              disabled={busy}
+              onClick={() => act(() => api.dismissRequests(project.id, doc.rel))}
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
       {doc.openQuestions && !editing && (
         <div className="kx-doc-askbar">
           {notes.length > 0 ? (

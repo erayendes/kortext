@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { openDb } from '../server/db.js';
 import { createProject } from '../server/projects.js';
-import { docPath, listDocs, parseWorkflowSteps, setFrontmatterStatus, hasOpenQuestions } from '../server/docs.js';
+import { analysisComplete, docPath, listDocs, parseWorkflowSteps, setFrontmatterStatus, hasOpenQuestions, parseRevisionRequests, markRequestHandled, requestKey } from '../server/docs.js';
 
 const pkgRoot = process.cwd();
 
@@ -135,4 +135,39 @@ test('open questions are the ones a human still has to answer', () => {
 
   // A question outside the section is not tracked — one place to look is the point.
   assert.equal(hasOpenQuestions('# Doc\n\n## Scope\n\n- Which region?\n'), false);
+});
+
+test('a revision request lands in the inbox of the document it names', () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Req', repoPath: join(work, 'req') }, pkgRoot);
+
+  const parsed = parseRevisionRequests(`# TRD
+
+## Revision Requests
+
+- \`ENVIRONMENT.md\` — the access-log lines must follow the no-logs decision
+- [\`TARGET.md\` — what must change there and why]
+- A sentence about ENVIRONMENT.md that is not a request.
+`);
+  // Only the backticked form counts; the template's own prompt does not.
+  assert.deepEqual(parsed, [
+    { target: 'ENVIRONMENT.md', reason: 'the access-log lines must follow the no-logs decision' },
+  ]);
+
+  writeFileSync(
+    docPath(p, 'foundation/TRD.md'),
+    '---\nstatus: approved\n---\n\n## Revision Requests\n\n- `ENVIRONMENT.md` — logs must go\n',
+    'utf8',
+  );
+  writeFileSync(docPath(p, 'ENVIRONMENT.md'), '---\nstatus: approved\n---\n\n# Env\n', 'utf8');
+  const env = listDocs(db, p, pkgRoot).find((d) => d.rel === 'ENVIRONMENT.md')!;
+  assert.deepEqual(env.revisionRequests, [{ from: 'foundation/TRD.md', reason: 'logs must go' }]);
+
+  // An open demand keeps the handshake from completing, and being actioned clears it.
+  assert.equal(analysisComplete(db, p, pkgRoot), false);
+  markRequestHandled(p, requestKey('foundation/TRD.md', 'ENVIRONMENT.md', 'logs must go'));
+  const after = listDocs(db, p, pkgRoot).find((d) => d.rel === 'ENVIRONMENT.md')!;
+  assert.deepEqual(after.revisionRequests, []);
+  rmSync(work, { recursive: true, force: true });
 });

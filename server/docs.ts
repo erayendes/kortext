@@ -20,6 +20,30 @@ export interface DocInfo {
   blocked: boolean; // an input is not approved yet
   upstreamChanged: boolean; // an approved/draft doc whose input regressed
   openQuestions: boolean; // carries unanswered questions for prime
+  /** Changes other documents have asked of THIS one, still unactioned. */
+  revisionRequests: Array<{ from: string; reason: string }>;
+}
+
+/**
+ * A document that finds a problem upstream writes one line under
+ * `## Revision Requests`, naming the target file in backticks. Parsed so the
+ * panel can offer the action — a demand in prose is one nobody can act on.
+ */
+export function parseRevisionRequests(content: string): Array<{ target: string; reason: string }> {
+  const out: Array<{ target: string; reason: string }> = [];
+  let inSection = false;
+  for (const line of content.split('\n')) {
+    const heading = line.match(/^#{1,6}\s+(.*)$/);
+    if (heading) {
+      inSection = /revision requests/i.test(heading[1]);
+      continue;
+    }
+    if (!inSection) continue;
+    // `- \`TARGET.md\` — reason`; the template's own bracket prompt is not one.
+    const m = line.match(/^\s*[-*+]\s+`([A-Za-z][\w./-]*\.md)`\s*[—:-]?\s*(.*)$/);
+    if (m) out.push({ target: m[1].replace(/^\.kortext\//, ''), reason: m[2].trim() });
+  }
+  return out;
 }
 
 // Every written document keeps its questions under one heading, so "is anyone
@@ -122,10 +146,36 @@ export function setFrontmatterStatus(path: string, status: string): void {
   }
 }
 
+// A demand a human has already acted on is remembered next to the project, not
+// inside the document that made it — the requester is not re-run just to strike
+// its own line out.
+const HANDLED_REL = join('.kortext', '.revisions.json');
+
+export function requestKey(from: string, target: string, reason: string): string {
+  return `${from}→${target}: ${reason.slice(0, 120)}`;
+}
+
+export function readHandledRequests(project: Project): Set<string> {
+  const p = join(project.repo_path, HANDLED_REL);
+  if (!existsSync(p)) return new Set();
+  try {
+    return new Set(JSON.parse(readFileSync(p, 'utf8')) as string[]);
+  } catch {
+    return new Set();
+  }
+}
+
+export function markRequestHandled(project: Project, key: string): void {
+  const handled = readHandledRequests(project);
+  handled.add(key);
+  writeFileSync(join(project.repo_path, HANDLED_REL), JSON.stringify([...handled], null, 2), 'utf8');
+}
+
 export function listDocs(db: Database.Database, project: Project, pkgRoot: string): DocInfo[] {
   const map = loadDocMap(pkgRoot, project.kind ?? 'new');
   const statuses = new Map<string, string>();
   const docs: DocInfo[] = [];
+  const requests: Array<{ from: string; target: string; reason: string }> = [];
   const collect = (dir: string, group: 'core' | 'foundation', relPrefix: string, skip: Set<string>) => {
     if (!existsSync(dir)) return;
     for (const file of readdirSync(dir).filter((f) => f.endsWith('.md') && !skip.has(f)).sort()) {
@@ -144,12 +194,29 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
         blocked: false,
         upstreamChanged: false,
         openQuestions: status !== 'uninitialized' && hasOpenQuestions(body),
+        revisionRequests: [],
       });
+      if (status !== 'uninitialized') {
+        for (const r of parseRevisionRequests(body)) requests.push({ ...r, from: rel });
+      }
     }
   };
   // Root = the living core. TODO.md belongs to the Plan tab, not Documents.
   collect(join(project.repo_path, '.kortext'), 'core', '', new Set(['TODO.md']));
   collect(join(project.repo_path, '.kortext', 'foundation'), 'foundation', 'foundation/', new Set());
+
+  // Each request lands in the inbox of the document it names. One a human has
+  // already actioned is remembered outside the documents, so sending a file
+  // back does not leave the demand standing forever.
+  const handled = readHandledRequests(project);
+  for (const r of requests) {
+    const target = docs.find((d) => d.rel === r.target || d.rel.endsWith(`/${r.target}`));
+    // A document that was never written cannot be asked to change — the step
+    // that writes it will read the requester as an input anyway.
+    if (target && target.status !== 'uninitialized' && !handled.has(requestKey(r.from, r.target, r.reason))) {
+      target.revisionRequests.push({ from: r.from, reason: r.reason });
+    }
+  }
 
   // 'not-applicable' satisfies a dependency: the doc was considered and
   // deliberately skipped — downstream steps must not wait on it.
@@ -191,6 +258,7 @@ export function analysisComplete(db: Database.Database, project: Project, pkgRoo
   // BRD gates the new-project flow even though no step produces it
   if ((project.kind ?? 'new') === 'new' && !settled(byRel.get('foundation/BRD.md'))) return false;
   if (targets.some((rel) => docs.find((d) => d.rel === rel)?.openQuestions)) return false;
+  if (docs.some((d) => d.revisionRequests.length > 0)) return false;
   return targets.every((rel) => settled(byRel.get(rel)));
 }
 

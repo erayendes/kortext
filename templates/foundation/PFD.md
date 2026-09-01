@@ -37,6 +37,10 @@ approver: +prime
 
 - [ ] [Everything prime needs to decide on (e.g., budget/cost risks, API cost warnings, legal topics, content topics, technology choices)]
 
+## Revision Requests
+
+- [`TARGET.md` — what must change there and why. One line per document. Leave this section empty when nothing upstream needs to change]
+
 ## Open Questions for prime
 
 - [Anything prime must answer before this document can be relied on — leave this section empty when there is nothing]

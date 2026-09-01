@@ -32,6 +32,7 @@ export interface DocInfo {
   blocked: boolean;
   upstreamChanged: boolean;
   openQuestions: boolean;
+  revisionRequests: Array<{ from: string; reason: string }>;
 }
 
 export interface KopengPlan {
@@ -102,6 +103,16 @@ export const api = {
     req<{ ok: boolean }>(`/api/projects/${projectId}/docs/content`, {
       method: 'PUT',
       body: JSON.stringify({ rel, content }),
+    }),
+  sendBack: (projectId: number, rel: string) =>
+    req<{ started: string; notes: number }>(`/api/projects/${projectId}/docs/send-back`, {
+      method: 'POST',
+      body: JSON.stringify({ rel }),
+    }),
+  dismissRequests: (projectId: number, rel: string) =>
+    req<{ dismissed: number }>(`/api/projects/${projectId}/docs/dismiss-request`, {
+      method: 'POST',
+      body: JSON.stringify({ rel }),
     }),
   reviseDoc: (projectId: number, rel: string, notes: string[]) =>
     req<{ started: string }>(`/api/projects/${projectId}/docs/revise`, {

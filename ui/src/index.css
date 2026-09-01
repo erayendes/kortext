@@ -1523,7 +1523,13 @@ body {
 /* A document with unanswered questions is not finished — the row says so, and
    the section itself is tinted so it is not one heading among many. */
 .kx-card-action { margin-left: auto; }
+.kx-doc-changebar { margin: 0 18px 8px; padding: 10px 12px; border-radius: var(--r-md); background: var(--red-bg); border: 1px solid var(--red-border); font-size: 12.5px; display: flex; flex-direction: column; gap: 8px; }
+.kx-changebar-head { color: var(--red); font-weight: 600; }
+.kx-changebar-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+.kx-changebar-actions { display: flex; gap: 6px; }
+.kx-block.open-q { background: var(--amber-bg); }
 .kx-doc-askbar { margin: 0 18px; padding: 8px 12px; border-radius: var(--r-md); background: var(--amber-bg); border: 1px solid var(--amber-border); color: var(--amber); font-size: 12.5px; }
+.kx-doc-changes { font-family: var(--font-mono); font-size: 10px; padding: 2px 6px; border-radius: 999px; background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
 .kx-doc-ask { font-family: var(--font-mono); font-size: 10px; padding: 2px 6px; border-radius: 999px; background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-border); }
 .kx-block.open-q { background: var(--amber-bg); }
 .kx-block.open-q:first-of-type, .kx-block.kx-h2.open-q { font-weight: 650; }

@@ -923,6 +923,14 @@ function DocumentsTab({
                       Retry
                     </span>
                   )}
+                  {d.revisionRequests.length > 0 && (
+                    <span
+                      className="kx-doc-changes"
+                      title={d.revisionRequests.map((r) => `${r.from}: ${r.reason}`).join('\n')}
+                    >
+                      changes asked
+                    </span>
+                  )}
                   {d.openQuestions && (
                     <span className="kx-doc-ask" title="This document is waiting on an answer from you">
                       asks you

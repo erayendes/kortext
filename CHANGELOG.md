@@ -137,6 +137,14 @@ constitution. The v3 engine stays archived under `docs/codes/`.
   with `*` fell through to paragraphs full of literal asterisks — which the
   wrapped-line merge then glued into one wall of text. All three bullet
   characters, indented items and numbered lists are now blocks of their own.
+- **Revision Requests** turn a demand into an action. A document that finds a
+  problem in one already written names it under `## Revision Requests` with the
+  target file in backticks; the panel routes each line to that document's own
+  inbox, marks its row `changes asked`, and offers **Send back for revision**
+  (un-approve, hand the demands over as the revision notes) or **Dismiss**. The
+  handshake does not complete while any stands. Without this the late-compliance
+  order was a promise with nothing behind it: a consolidation could rule that a
+  document must change and nothing would ever act on it.
 - **Open Questions for prime** is a section every skeleton carries and every
   step writes into, so a document that is still waiting on an answer is one
   scan away: the row carries an `asks you` chip, the section is tinted in the

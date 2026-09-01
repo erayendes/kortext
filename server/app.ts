@@ -3,7 +3,7 @@ import type Database from 'better-sqlite3';
 import { existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { createProject, deriveCode, listProjects, removeProject, scaffoldProject, setArchived } from './projects.js';
-import { analysisComplete, docPath, listDocs, setFrontmatterStatus } from './docs.js';
+import { analysisComplete, docPath, listDocs, markRequestHandled, requestKey, setFrontmatterStatus } from './docs.js';
 import { pickDirectoryNative } from './pick-directory.js';
 import { spawnSync } from 'node:child_process';
 import { readdirSync } from 'node:fs';
@@ -296,6 +296,44 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     }
     void reviseDoc(db, project, String(rel), notes.map(String), engine, pkgRoot);
     res.status(202).json({ started: rel });
+  });
+
+  // Send a document back because another one asked: un-approve it, hand the
+  // demands over as the revision notes, and remember they were actioned so the
+  // requester's line does not stand forever.
+  app.post('/api/projects/:id/docs/send-back', (req, res) => {
+    const project = projectOr404(req.params.id, res);
+    if (!project) return;
+    const engine = selectedEngine(db);
+    if (!engine) return res.status(409).json({ error: 'no agent CLI installed' });
+    const rel = String(req.body?.rel ?? '');
+    const doc = listDocs(db, project, pkgRoot).find((d) => d.rel === rel);
+    if (!doc || doc.revisionRequests.length === 0) {
+      return res.status(409).json({ error: `no open revision request for ${rel}` });
+    }
+    if (runningDoc(db, project.id, rel)) {
+      return res.status(409).json({ error: `${rel} is being rewritten — wait for it to land` });
+    }
+    const notes = doc.revisionRequests.map((r) => `[${r.from} asks] ${r.reason}`);
+    for (const r of doc.revisionRequests) {
+      markRequestHandled(project, requestKey(r.from, rel, r.reason));
+    }
+    setFrontmatterStatus(docPath(project, rel), 'draft');
+    void reviseDoc(db, project, rel, notes, engine, pkgRoot);
+    res.status(202).json({ started: rel, notes: notes.length });
+  });
+
+  // A demand the human refuses: closed without touching the document.
+  app.post('/api/projects/:id/docs/dismiss-request', (req, res) => {
+    const project = projectOr404(req.params.id, res);
+    if (!project) return;
+    const rel = String(req.body?.rel ?? '');
+    const doc = listDocs(db, project, pkgRoot).find((d) => d.rel === rel);
+    if (!doc) return res.status(404).json({ error: `no such document: ${rel}` });
+    for (const r of doc.revisionRequests) {
+      markRequestHandled(project, requestKey(r.from, rel, r.reason));
+    }
+    res.json({ dismissed: doc.revisionRequests.length });
   });
 
   // Line-anchored Q&A — synchronous, nothing persisted.

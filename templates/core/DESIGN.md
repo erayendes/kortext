@@ -101,6 +101,10 @@ approver: +prime
 4. **Consistency:** All "shadow", "blur" and "transition" values must use the CSS defined in this file — no ad-hoc variants.
 5. **Zero Tolerance for Hardcoding:** A HEX code found in CSS files counts as a critical error (Blocker).
 
+## Revision Requests
+
+- [`TARGET.md` — what must change there and why. One line per document. Leave this section empty when nothing upstream needs to change]
+
 ## Open Questions for prime
 
 - [Anything prime must answer before this document can be relied on — leave this section empty when there is nothing]

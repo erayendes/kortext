@@ -35,6 +35,10 @@ All events must follow a naming convention like the examples below (e.g., `Objec
 
 - [A/B test plans, funnel stages (Acquisition, Activation, Retention...)]
 
+## Revision Requests
+
+- [`TARGET.md` — what must change there and why. One line per document. Leave this section empty when nothing upstream needs to change]
+
 ## Open Questions for prime
 
 - [Anything prime must answer before this document can be relied on — leave this section empty when there is nothing]

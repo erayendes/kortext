@@ -85,6 +85,7 @@ export function buildStepPrompt(
     "- Decide whether this document applies to THIS project, using the step's `n/a when` condition. If it is met, write the file with status: not-applicable and one line saying why, and stop. That is a complete, correct outcome — not a gap and not a failure.",
     '- If it applies, write only what the inputs support. Where they are silent, say so and leave the question to prime; never fill a section by assuming what the product is probably like.',
     "- Every question you leave for the human goes under the document's `## Open Questions for prime` heading, one `- ` item each, and nowhere else. Leave that section empty when there is nothing to ask — an empty section is the signal that the document stands on its own.",
+    "- When an ALREADY-WRITTEN document must change because of what you found, that is not prose: put one line under `## Revision Requests`, starting with the target file in backticks — `` - `ENVIRONMENT.md` — the access-log lines must follow the no-logs decision `` — and say what must change and why. The panel turns each line into an action the human can take; a demand written anywhere else in the document is a demand nobody can act on. Leave the section empty when nothing upstream needs to change.",
     '',
     'HARD RULES:',
     `- Produce EXACTLY this file and nothing else: .kortext/${step.output}`,
