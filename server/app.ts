@@ -8,7 +8,7 @@ import { pickDirectoryNative } from './pick-directory.js';
 import { spawnSync } from 'node:child_process';
 import { readdirSync } from 'node:fs';
 import { detectEngines, selectedEngine, setSetting, ENGINES } from './engines.js';
-import { abortRuns, advance, explainDoc, failStaleJobs, listJobs, nextStep, reviseDoc, runPlanning, runningJob } from './runner.js';
+import { abortRuns, advance, explainDoc, failStaleJobs, listJobs, nextStep, reviseDoc, runPlanning, runningDoc, runningJob } from './runner.js';
 import { isChecking, readReadiness } from './readiness.js';
 import { readFileSync, writeFileSync } from 'node:fs';
 import type { Project } from './db.js';
@@ -287,6 +287,12 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       docPath(project, String(rel)); // validates rel
     } catch (err) {
       return res.status(400).json({ error: (err as Error).message });
+    }
+    // The call is fire-and-forget, so anything that would make it refuse has to
+    // be answered here — otherwise the panel reports success, clears the notes
+    // and the answers are gone.
+    if (runningDoc(db, project.id, String(rel))) {
+      return res.status(409).json({ error: `${rel} is being rewritten — wait for it to land` });
     }
     void reviseDoc(db, project, String(rel), notes.map(String), engine, pkgRoot);
     res.status(202).json({ started: rel });

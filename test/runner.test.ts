@@ -347,3 +347,28 @@ test('the gate blocks an existing project whose folder holds no code', async () 
   assert.deepEqual(listJobs(db, p.id), []); // nothing ran, nothing was written
   rmSync(work, { recursive: true, force: true });
 });
+
+test('two documents can be revised at once; one document cannot be revised twice', async () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Rev2', repoPath: join(work, 'rev2') }, pkgRoot);
+  const { reviseDoc, runningDoc } = await import('../server/runner.js');
+  const engine = mockEngine(work, 'ok');
+
+  // Answering the second of two open documents used to be dropped, because the
+  // guard refused while ANY step was running.
+  db.prepare(
+    "INSERT INTO jobs (project_id, doc_rel, status) VALUES (?, 'ARCHITECTURE.md', 'running')",
+  ).run(p.id);
+  assert.equal(runningDoc(db, p.id, 'ARCHITECTURE.md'), true);
+  assert.equal(runningDoc(db, p.id, 'DESIGN.md'), false);
+
+  writeFileSync(docPath(p, 'DESIGN.md'), '---\nstatus: draft\nauthor: +mock\n---\n\n# D\n', 'utf8');
+  const out = await reviseDoc(db, p, 'DESIGN.md', ['[Q] answer'], engine, pkgRoot);
+  assert.equal(out.ok, true, out.error);
+
+  const busy = await reviseDoc(db, p, 'ARCHITECTURE.md', ['[Q] answer'], engine, pkgRoot);
+  assert.equal(busy.ok, false);
+  assert.match(busy.error ?? '', /already being rewritten/);
+  rmSync(work, { recursive: true, force: true });
+});

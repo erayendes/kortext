@@ -128,6 +128,11 @@ constitution. The v3 engine stays archived under `docs/codes/`.
 - The document list drops the `(core)` / `(foundation)` label — the group
   heading already says where a document sits — and the gate says it is reading
   the BRD, which is the file it is actually reading.
+- Two documents can be answered at once. A revision refused while *any* step
+  was running, and the route reported success anyway — so answering the second
+  of two documents that both asked something cleared the notes, closed the
+  drawer and did nothing. A revision now blocks only on the document it
+  rewrites, and a genuine refusal reaches the panel with the notes intact.
 - **Markdown renders.** Only `- ` counted as a bullet, so a document written
   with `*` fell through to paragraphs full of literal asterisks — which the
   wrapped-line merge then glued into one wall of text. All three bullet

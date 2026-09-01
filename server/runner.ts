@@ -33,6 +33,15 @@ export function runningJob(db: Database.Database, projectId: number): Job | unde
     .get(projectId) as Job | undefined;
 }
 
+/** Is this one document being written right now? */
+export function runningDoc(db: Database.Database, projectId: number, rel: string): boolean {
+  return (
+    db
+      .prepare("SELECT 1 FROM jobs WHERE project_id = ? AND doc_rel = ? AND status = 'running'")
+      .get(projectId, rel) !== undefined
+  );
+}
+
 // All currently producible docs: unwritten, inputs settled, not already
 // being written. Dependency-depth order (listDocs is sorted).
 export function producibleSteps(db: Database.Database, project: Project, pkgRoot: string): DocStep[] {
@@ -221,7 +230,12 @@ export async function reviseDoc(
 ): Promise<RunOutcome> {
   const step = loadDocMap(pkgRoot, project.kind ?? 'new').get(rel);
   if (!step) return { ok: false, error: `no producing step for ${rel}` };
-  if (runningJob(db, project.id)) return { ok: false, error: 'a step is already running' };
+  // Refusing while ANY step ran meant answering the second of two documents
+  // did nothing: the first revision was still writing, so the second was
+  // dropped and its questions stayed open. Only this document blocks itself.
+  if (runningDoc(db, project.id, rel)) {
+    return { ok: false, error: `${rel} is already being rewritten — wait for it to land` };
+  }
   const out = await runStep(db, project, step, engine, pkgRoot, notes);
   if (out.ok) await advance(db, project, engine, pkgRoot);
   return out;
