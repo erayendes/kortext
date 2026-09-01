@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { spawnCli } from './cli-spawn.js';
@@ -7,16 +7,24 @@ import type { Project } from './db.js';
 import { readFrontmatter } from './docs.js';
 import type { EngineSpec } from './engines.js';
 
-// One gate, at the head of the chain. A brief that names nothing produces
+// One gate, at the head of the chain. Evidence that says nothing produces
 // documents that invent everything, so the whole flow — not each step — is
-// what refuses to start. Two stages: a countable floor (cheap, deterministic,
-// runs on every check) and, only if the floor passes, one engine judgment
-// (cached per brief version, so approving a document does not re-spend it).
+// what refuses to start. What counts as evidence depends on the project: a new
+// one is judged on its brief, an existing one on whether there is code to read.
+//
+// A new project runs two stages: a countable floor (cheap, deterministic) and,
+// only if the floor passes, one engine judgment cached per brief version, so
+// approving a document does not re-spend it. An existing project runs the floor
+// alone — files on disk are evidence by their existence, and judging a codebase
+// is what the analysis itself is for.
 
 export interface Readiness {
   ready: boolean;
-  /** Which stage produced the verdict; 'error' means the check itself failed. */
-  stage: 'floor' | 'judgment' | 'error';
+  /**
+   * Which stage produced the verdict. 'error' means the check itself failed;
+   * 'no-engine' means there is no agent CLI to run anything with.
+   */
+  stage: 'floor' | 'judgment' | 'error' | 'no-engine';
   /** What the brief must answer before the analysis can start. */
   questions: string[];
   briefHash: string;
@@ -78,6 +86,39 @@ export function assessBrief(content: string): { ok: boolean; questions: string[]
   if (prose.length >= MIN_BODY_CHARS && unanswered.length === 0) return { ok: true, questions: [] };
   return { ok: false, questions: unanswered.length > 0 ? unanswered : BRIEF_SECTIONS.map((s) => s.ask) };
 }
+
+// Directories that are never the project's own work.
+const IGNORED_DIRS = new Set([
+  '.git', '.kortext', '.kopeng', 'node_modules', 'dist', 'build', 'out',
+  '.next', '.nuxt', 'coverage', 'vendor', '.venv', '__pycache__', 'Pods',
+]);
+
+// An existing project's evidence is its code. Counts real files, stopping as
+// soon as the floor is cleared — this walks a user's repo, so it never
+// enumerates more than it needs to answer the question.
+export function countSourceFiles(root: string, limit: number): number {
+  let seen = 0;
+  const walk = (dir: string): void => {
+    if (seen >= limit) return;
+    let entries;
+    try {
+      entries = readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return; // unreadable directory is not evidence
+    }
+    for (const entry of entries) {
+      if (seen >= limit) return;
+      if (entry.name.startsWith('.') || IGNORED_DIRS.has(entry.name)) continue;
+      if (entry.isDirectory()) walk(join(dir, entry.name));
+      else if (entry.isFile() && entry.name !== 'AGENTS.md') seen++;
+    }
+  };
+  walk(root);
+  return seen;
+}
+
+// A folder holding a stray README is not a project to analyse.
+const MIN_SOURCE_FILES = 3;
 
 function briefPath(project: Project): string {
   return join(project.repo_path, '.kortext', 'foundation', 'BRD.md');
@@ -142,7 +183,7 @@ export function isChecking(projectId: number): boolean {
 /**
  * The gate. Returns the cached verdict when the brief has not changed since it
  * was made, otherwise re-runs: floor first, engine judgment only if the floor
- * holds. `existing` projects have no brief and are never gated here.
+ * holds and the project is a new one.
  */
 export async function ensureReadiness(
   project: Project,
@@ -168,17 +209,33 @@ async function check(
   const verdict = (v: Omit<Readiness, 'briefHash' | 'checkedAt'>): Readiness =>
     write(project, { ...v, briefHash, checkedAt });
 
+  // An existing project has no brief: the code is the evidence. Cheap enough to
+  // recompute every time, so adding files opens the gate with no cache to clear.
+  if ((project.kind ?? 'new') === 'existing') {
+    if (countSourceFiles(project.repo_path, MIN_SOURCE_FILES) >= MIN_SOURCE_FILES) {
+      return verdict({ ready: true, stage: 'floor', questions: [] });
+    }
+    return verdict({
+      ready: false,
+      stage: 'floor',
+      questions: [
+        'This folder holds almost no code, so there is nothing to analyse yet.',
+        'Point the project at the repository you want documented — or add it as a new project and write a brief instead.',
+      ],
+    });
+  }
+
   // Not approved yet — the human is still writing it. No engine call, no cache
   // entry to invalidate later.
   if (readFrontmatter(content).status !== 'approved') {
     return { ready: false, stage: 'floor', questions: [], briefHash, checkedAt };
   }
 
-  const cached = readReadiness(project);
-  if (cached && cached.briefHash === briefHash && cached.stage !== 'error') return cached;
-
   const floor = assessBrief(content);
   if (!floor.ok) return verdict({ ready: false, stage: 'floor', questions: floor.questions });
+
+  const cached = readReadiness(project);
+  if (cached && cached.briefHash === briefHash && cached.stage === 'judgment') return cached;
 
   const logPath = join(homedir(), '.kortext', 'logs', `p${project.id}-readiness.log`);
   try {

@@ -70,14 +70,17 @@ export function buildStepPrompt(
     'You are executing ONE step of a Kortext analysis flow, headless, inside the project folder.',
     `Project: ${project.name} (kind: ${project.kind ?? 'new'}).`,
     '',
+    'FIRST DECIDE SCOPE, THEN WRITE:',
+    '- Read the step inputs first. They are the only evidence you have:',
+    ...step.inputs.map((i) => `    .kortext/${i}`),
+    "- Decide whether this document applies to THIS project, using the step's `n/a when` condition. If it is met, write the file with status: not-applicable and one line saying why, and stop. That is a complete, correct outcome — not a gap and not a failure.",
+    '- If it applies, write only what the inputs support. Where they are silent, say so and leave the question to +prime; never fill a section by assuming what the product is probably like.',
+    '',
     'HARD RULES:',
     `- Produce EXACTLY this file and nothing else: .kortext/${step.output}`,
     '- Fill the skeleton template already at that path (keep its section spirit, replace placeholder content).',
     `- Frontmatter must end up as: status: draft, author: ${step.author ?? '+agent'}${step.approver ? `, approver: ${step.approver}` : ''}.`,
     '- NEVER set status to approved — approval belongs to the human.',
-    '- Read the step inputs before writing; stay consistent with them:',
-    ...step.inputs.map((i) => `    .kortext/${i}`),
-    '- If this document clearly does not apply to the project, write it with status: not-applicable and one line saying why.',
     '- Language: write the document in the language of .kortext/foundation/BRD.md; if there is no BRD (existing project), match the language of the already-approved .kortext documents, else the language of the repo README; default to English.',
     '',
     'STEP DEFINITION (from the workflow):',
@@ -163,11 +166,11 @@ export async function advance(
     active(); // already looping — just wake it to re-scan
     return;
   }
-  // The readiness gate. A new project whose brief says nothing must produce
-  // nothing: no step starts until the brief carries enough to analyse. The
-  // verdict is cached per brief version, so this costs one engine run per
-  // edit of the brief, not one per approval. Existing projects have no brief.
-  if ((project.kind ?? 'new') === 'new' && !(await ensureReadiness(project, engine)).ready) return;
+  // The readiness gate. A project whose evidence says nothing must produce
+  // nothing: no step starts until there is a brief worth analysing, or code to
+  // read. For a new project the verdict is cached per brief version, so this
+  // costs one engine run per edit of the brief, not one per approval.
+  if (!(await ensureReadiness(project, engine)).ready) return;
   let wake = () => {};
   const arm = () => new Promise<void>((resolve) => (wake = resolve));
   advancing.set(project.id, () => wake());

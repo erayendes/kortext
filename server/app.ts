@@ -110,10 +110,23 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   app.get('/api/projects/:id/readiness', (req, res) => {
     const project = projectOr404(req.params.id, res);
     if (!project) return;
-    res.json({
-      readiness: (project.kind ?? 'new') === 'new' ? readReadiness(project) : null,
-      checking: isChecking(project.id),
-    });
+    // No CLI, no analysis — say so here rather than letting Start do nothing.
+    if (!selectedEngine(db)) {
+      return res.json({
+        readiness: {
+          ready: false,
+          stage: 'no-engine',
+          questions: [
+            'Kortext drives your own agent CLI; none is installed yet.',
+            'Install one — claude, codex or gemini — then pick it in the header and press Start.',
+          ],
+          briefHash: '',
+          checkedAt: new Date().toISOString(),
+        },
+        checking: false,
+      });
+    }
+    res.json({ readiness: readReadiness(project), checking: isChecking(project.id) });
   });
 
   // Native folder chooser (macOS osascript; other platforms return null and

@@ -711,7 +711,11 @@ function DocumentsTab({
       <HandshakeCard project={project} />
       <ReadinessCard
         gate={gate}
-        onOpenBrief={() => setOpen(docs.find((d) => d.rel === 'foundation/BRD.md') ?? null)}
+        // An existing project has no brief to open — the evidence is its code.
+        onOpenBrief={(() => {
+          const brd = docs.find((d) => d.rel === 'foundation/BRD.md');
+          return brd ? () => setOpen(brd) : null;
+        })()}
       />
       {err && <div className="kx-error">{err}</div>}
       {groups.map((g) => {
@@ -780,7 +784,7 @@ function ReadinessCard({
   onOpenBrief,
 }: {
   gate: { readiness: Readiness | null; checking: boolean };
-  onOpenBrief: () => void;
+  onOpenBrief: (() => void) | null;
 }) {
   if (gate.checking) {
     return (
@@ -792,22 +796,32 @@ function ReadinessCard({
   }
   const r = gate.readiness;
   if (!r || r.ready || r.questions.length === 0) return null;
+  const title = {
+    error: 'The check did not finish',
+    'no-engine': 'No agent CLI found',
+    floor: 'Not enough to start',
+    judgment: 'Not enough to start',
+  }[r.stage];
+  const lead = {
+    error: 'Nothing was written.',
+    'no-engine': 'Nothing can run until one is installed.',
+    floor: 'There is not enough here to analyse, so no document was written.',
+    judgment: 'There is not enough here to analyse, so no document was written.',
+  }[r.stage];
   return (
     <div className="kx-gate">
-      <h3>{r.stage === 'error' ? 'The check did not finish' : 'Not enough to start'}</h3>
-      <p>
-        {r.stage === 'error'
-          ? 'Nothing was written.'
-          : 'The brief does not say enough to analyse, so no document was written. Answer these in the brief, then press Start.'}
-      </p>
+      <h3>{title}</h3>
+      <p>{lead}</p>
       <ul className="kx-gate-questions">
         {r.questions.map((q) => (
           <li key={q}>{q}</li>
         ))}
       </ul>
-      <button className="btn btn-sm btn-primary" onClick={onOpenBrief}>
-        Open the brief
-      </button>
+      {onOpenBrief && r.stage !== 'no-engine' && (
+        <button className="btn btn-sm btn-primary" onClick={onOpenBrief}>
+          Open the brief
+        </button>
+      )}
     </div>
   );
 }

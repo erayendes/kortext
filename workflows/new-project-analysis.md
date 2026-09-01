@@ -2,6 +2,12 @@
 
 > **In this file:** The reference + foundation files for a new project are produced.
 
+> **Scope before writing.** Every step decides whether its document applies to THIS project
+> before it writes a line. The `n/a when` condition below each step is that test; when it is
+> met, the document is written with `status: not-applicable` and one line of reasoning, and
+> the flow carries on — a correct outcome, not a gap. Steps with no `n/a when` line always
+> apply. What the inputs do not say, no document may assume.
+
 ## Product Analysis
 
 1. **+compliance-expert:** Produce `LEGAL.md`. Scope: regulations that apply according to the BRD (KVKK, GDPR, CCPA, sector-specific) + data lifecycle rules (privacy, disclosure notices, consent, retention, deletion, third-party sharing).
@@ -9,6 +15,7 @@
    - activity: Applicable regulations identified. Data lifecycle rules defined.
    - inputs: `.kortext/foundation/BRD.md`
    - outputs: `.kortext/LEGAL.md`
+   - n/a when: the brief describes no personal data, no accounts, no third party receiving data and no regulated content — a tool whose data never leaves the user's own machine.
    - approver: +prime
 
 2. **+growth-expert:** Produce `GROWTH.md`. Scope: target audience, channel strategy, SEO/GEO, measurement, analytics, conversion tracking.
@@ -16,6 +23,7 @@
    - activity: Target audience and channels defined. SEO and measurement planned.
    - inputs: `.kortext/foundation/BRD.md`
    - outputs: `.kortext/GROWTH.md`
+   - n/a when: the brief describes no surface worth measuring and no acquisition channel — an internal tool, a library, or something with one known user.
    - approver: +prime
 
 3. **+product-manager:** Produce `PRD.md`. From BRD + LEGAL + GROWTH: scope, user types, main flows, priorities, acceptance criteria, out-of-scope items.
@@ -30,6 +38,7 @@
    - activity: Brand voice established. Page copy written.
    - inputs: `.kortext/foundation/PRD.md`, `.kortext/LEGAL.md`, `.kortext/GROWTH.md`
    - outputs: `.kortext/CONTENT.md`
+   - n/a when: nothing in the product is read by a person: no interface copy, no messages, no emails, no listing.
    - approver: +prime
 
 ## Technical Analysis
@@ -58,6 +67,7 @@
    - activity: Colors and typography chosen. Component principles defined.
    - inputs: `.kortext/foundation/PRD.md`, `.kortext/STACK.md`, `.kortext/CONTENT.md`
    - outputs: `.kortext/DESIGN.md`
+   - n/a when: the product has no visual surface — a CLI, a library, or a service that renders nothing.
    - approver: +prime
 
 5. **+db-admin:** Produce `DATABASE.md`. From PRD + SECURITY + STRUCTURE + STACK: tables, relationships, indexes, access rules, migration approach, data integrity.
@@ -65,6 +75,7 @@
    - activity: Database schema created. Tables and relationships defined.
    - inputs: `.kortext/foundation/PRD.md`, `.kortext/SECURITY.md`, `.kortext/STRUCTURE.md`, `.kortext/STACK.md`
    - outputs: `.kortext/DATABASE.md`
+   - n/a when: the product persists nothing beyond its own configuration: no database, no stored records, no user data at rest.
    - approver: +prime
 
 6. **+architect:** Produce `API.md`. Endpoint list, request/response models, error formats, authorization requirements, data flow.
@@ -72,6 +83,7 @@
    - activity: Endpoints defined. Request/response models specified.
    - inputs: `.kortext/foundation/PRD.md`, `.kortext/SECURITY.md`, `.kortext/STRUCTURE.md`, `.kortext/STACK.md`, `.kortext/DATABASE.md`
    - outputs: `.kortext/API.md`
+   - n/a when: nothing crosses a program boundary: the product exposes no endpoint and calls no external service.
    - approver: +prime
 
 7. **+architect:** Consolidate `TRD.md`. Merge the ARCHITECTURE + STACK + STRUCTURE + SECURITY + DATABASE + API + DESIGN outputs + engineering decisions into a single report.

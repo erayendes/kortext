@@ -62,7 +62,7 @@ export interface Job {
 
 export interface Readiness {
   ready: boolean;
-  stage: 'floor' | 'judgment' | 'error';
+  stage: 'floor' | 'judgment' | 'error' | 'no-engine';
   questions: string[];
   briefHash: string;
   checkedAt: string;

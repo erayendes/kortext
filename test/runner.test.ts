@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { openDb } from '../server/db.js';
@@ -158,6 +158,12 @@ test('existing project: no BRD scaffolded, chain starts from code-truth steps', 
   const db = openDb(join(work, 'db.sqlite'));
   const p = createProject(db, { name: 'Old App', repoPath: join(work, 'old'), kind: 'existing' }, pkgRoot);
   assert.equal(existsSync(join(work, 'old', '.kortext', 'foundation', 'BRD.md')), false);
+  // the readiness gate wants code to read — an existing project with an empty
+  // folder has no evidence, so give this one a real source tree
+  mkdirSync(join(work, 'old', 'src'), { recursive: true });
+  for (const f of ['index.ts', 'server.ts', 'db.ts']) {
+    writeFileSync(join(work, 'old', 'src', f), 'export const x = 1;\n');
+  }
   const step = nextStep(db, p, pkgRoot);
   assert.ok(step); // STACK/STRUCTURE have no inputs in the existing workflow
   assert.ok(['STACK.md', 'STRUCTURE.md'].includes(step.output));
@@ -317,5 +323,15 @@ test('abortRuns kills a running step: the job settles as stopped, not failed', a
   assert.equal(out.ok, false);
   assert.match(out.error!, /stopped/);
   assert.equal(listJobs(db, p.id)[0]!.status, 'stopped');
+  rmSync(work, { recursive: true, force: true });
+});
+
+test('the gate blocks an existing project whose folder holds no code', async () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Empty', repoPath: join(work, 'empty'), kind: 'existing' }, pkgRoot);
+  const { advance } = await import('../server/runner.js');
+  await advance(db, p, mockEngine(work, 'ok'), pkgRoot);
+  assert.deepEqual(listJobs(db, p.id), []); // nothing ran, nothing was written
   rmSync(work, { recursive: true, force: true });
 });

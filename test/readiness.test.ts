@@ -1,8 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { assessBrief } from '../server/readiness.js';
+import { assessBrief, countSourceFiles } from '../server/readiness.js';
 
 const FILLED = `---
 status: approved
@@ -66,4 +67,22 @@ test('headings alone are not content, however many there are', () => {
     .filter((l) => l.startsWith('#') || l.trim() === '')
     .join('\n');
   assert.equal(assessBrief(headingsOnly).ok, false);
+});
+
+test('countSourceFiles ignores scaffolding and stops at the limit', () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-readiness-'));
+  // a folder holding only kortext's own scaffolding is not a project
+  mkdirSync(join(work, '.kortext', 'foundation'), { recursive: true });
+  writeFileSync(join(work, '.kortext', 'STACK.md'), 'x');
+  writeFileSync(join(work, 'AGENTS.md'), 'x');
+  assert.equal(countSourceFiles(work, 3), 0);
+
+  mkdirSync(join(work, 'node_modules', 'left-pad'), { recursive: true });
+  writeFileSync(join(work, 'node_modules', 'left-pad', 'index.js'), 'x');
+  assert.equal(countSourceFiles(work, 3), 0); // dependencies are not the project
+
+  mkdirSync(join(work, 'src'));
+  for (const f of ['a.ts', 'b.ts', 'c.ts', 'd.ts']) writeFileSync(join(work, 'src', f), 'x');
+  assert.equal(countSourceFiles(work, 3), 3); // early exit: counts to the floor, not beyond
+  rmSync(work, { recursive: true, force: true });
 });
