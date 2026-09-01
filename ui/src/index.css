@@ -1339,9 +1339,14 @@ body {
 .kx-main-nav { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
 .kx-nav-status { font-size: 12px; color: var(--fg-muted); margin-left: auto; }
 .kx-arm-warn { font-size: 12px; color: var(--red); }
-.kx-danger-zone { margin-top: 28px; display: flex; justify-content: flex-end; align-items: center; gap: 14px; }
+.kx-danger-zone { margin-top: 28px; display: flex; justify-content: flex-end; align-items: center; gap: 10px; }
+.kx-danger-sep { font-family: var(--font-mono); font-size: 10.5px; color: var(--border-strong, var(--border)); user-select: none; }
 .kx-link { background: none; border: none; padding: 0; font-family: var(--font-mono); font-size: 10.5px; color: var(--fg-muted); cursor: pointer; }
 .kx-link:hover { color: var(--fg); }
+.kx-link-info { color: var(--blue); }
+.kx-link-info:hover { color: var(--blue); filter: brightness(.85); }
+.kx-link-ok { color: var(--green); }
+.kx-link-ok:hover { color: var(--green); filter: brightness(.85); }
 .kx-link-danger { color: var(--red); }
 .kx-link-danger:hover { color: #a92f26; }
 .kx-link:disabled { opacity: .5; cursor: default; }

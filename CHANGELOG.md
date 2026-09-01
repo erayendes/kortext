@@ -75,7 +75,16 @@ constitution. The v3 engine stays archived under `docs/codes/`.
   approved BRD next to "not enough to start". `Add` is now `Initialize`, and
   `Insert example` joins the Write/Upload tab group as `Example`.
 - The document skeletons drop the unused `reviewer:` frontmatter slot; nothing
-  ever read it.
+  ever read it. The three foundation skeletons (PRD, TRD, PFD) gain the
+  `approver:` their workflow step already declared.
+- `Example` hands over a `BRD.md` to edit and bring back through Upload instead
+  of overwriting the editor, and switches to the Upload tab so the round trip is
+  visible. It carries no frontmatter — kortext writes that on Initialize.
+- Archive asks before it acts, like Restart and Remove, and the three project
+  actions are separated and coloured by what they cost: restart blue, archive
+  green, remove red.
+- A closed gate with no brief to open — an existing project, or a missing CLI —
+  offers **Check again** rather than ending in a dead end.
 
 ### Removed
 

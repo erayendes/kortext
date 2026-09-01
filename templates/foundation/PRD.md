@@ -2,6 +2,7 @@
 status: uninitialized
 author: +product-manager
 updated_at: 1970-01-01T00:00:00Z
+approver: +prime
 ---
 
 # Product Requirements Document (PRD)

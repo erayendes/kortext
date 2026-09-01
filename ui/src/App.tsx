@@ -383,16 +383,25 @@ function AddProject({
           <span className="kx-cmd-title">Brief (BRD)</span>
           <span className="kx-doc-spacer" />
           <nav className="kx-tabs kx-tabs-sm">
-            {/* An action, not a mode — it fills the editor and leaves you in it,
-                but it belongs to this row and reads wrong as a stray button. */}
+            {/* Hands over a BRD.md to edit in your own editor and bring back
+                through Upload — it never overwrites what you have typed here.
+                No frontmatter: kortext writes that itself on Initialize. */}
             <button
               className="kx-tab"
+              title="Download a filled-in example BRD.md"
               onClick={() => {
-                setBrief(BRIEF_EXAMPLE);
-                setBriefMode('write');
+                const url = URL.createObjectURL(
+                  new Blob([BRIEF_EXAMPLE], { type: 'text/markdown' }),
+                );
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'BRD.md';
+                a.click();
+                URL.revokeObjectURL(url);
+                setBriefMode('upload'); // download → edit → bring it back here
               }}
             >
-              Example
+              Example ↓
             </button>
             <button
               className={`kx-tab ${briefMode === 'write' ? 'active' : ''}`}
@@ -476,7 +485,7 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
   const [err, setErr] = useState<string | null>(null);
   // Two-step in-place confirmation — browsers silently suppress repeated
   // native confirm() dialogs, which made Restart/Cancel look dead.
-  const [arming, setArming] = useState<'restart' | 'cancel' | null>(null);
+  const [arming, setArming] = useState<'restart' | 'archive' | 'cancel' | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -499,6 +508,18 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
       .then(() => setPaused(true)) // restart lands ready — Start begins it
       .catch((e) => setErr(e.message))
       .finally(() => setBusy(false));
+  };
+
+  const doArchive = () => {
+    setArming(null);
+    setBusy(true);
+    api
+      .archiveProject(project.id, !project.archived)
+      .then(onBack)
+      .catch((e) => {
+        setErr(e.message);
+        setBusy(false);
+      });
   };
 
   const doCancel = () => {
@@ -575,6 +596,20 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
               No
             </button>
           </>
+        ) : arming === 'archive' ? (
+          <>
+            <span className="kx-arm-warn">
+              {project.archived
+                ? 'Bring it back into the project list?'
+                : 'Fold it away? The repo and its documents are untouched.'}
+            </span>
+            <button className="kx-link kx-link-ok" disabled={busy} onClick={doArchive}>
+              {project.archived ? 'Yes, unarchive' : 'Yes, archive'}
+            </button>
+            <button className="kx-link" onClick={() => setArming(null)}>
+              No
+            </button>
+          </>
         ) : arming === 'cancel' ? (
           <>
             <span className="kx-arm-warn">
@@ -589,25 +624,14 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
           </>
         ) : (
           <>
-            <button className="kx-link" disabled={busy} onClick={() => setArming('restart')}>
+            <button className="kx-link kx-link-info" disabled={busy} onClick={() => setArming('restart')}>
               Restart analysis
             </button>
-            <button
-              className="kx-link"
-              disabled={busy}
-              onClick={() => {
-                setBusy(true);
-                api
-                  .archiveProject(project.id, !project.archived)
-                  .then(onBack)
-                  .catch((e) => {
-                    setErr(e.message);
-                    setBusy(false);
-                  });
-              }}
-            >
+            <span className="kx-danger-sep">·</span>
+            <button className="kx-link kx-link-ok" disabled={busy} onClick={() => setArming('archive')}>
               {project.archived ? 'Unarchive project' : 'Archive project'}
             </button>
+            <span className="kx-danger-sep">·</span>
             <button className="kx-link kx-link-danger" disabled={busy} onClick={() => setArming('cancel')}>
               Remove project
             </button>
@@ -776,6 +800,11 @@ function DocumentsTab({
           const brd = docs.find((d) => d.rel === 'foundation/BRD.md');
           return brd ? () => setOpen(brd) : null;
         })()}
+        onRecheck={() => {
+          // run-next re-enters the chain, which re-runs the gate; a 409 just
+          // means there was nothing to start, and the refresh shows the verdict.
+          api.runNext(project.id).catch(() => {}).then(refresh);
+        }}
       />
       {err && <div className="kx-error">{err}</div>}
       {groups.map((g) => {
@@ -842,9 +871,11 @@ function DocumentsTab({
 function ReadinessCard({
   gate,
   onOpenBrief,
+  onRecheck,
 }: {
   gate: { readiness: Readiness | null; checking: boolean };
   onOpenBrief: (() => void) | null;
+  onRecheck: () => void;
 }) {
   if (gate.checking) {
     return (
@@ -877,9 +908,16 @@ function ReadinessCard({
           <li key={q}>{q}</li>
         ))}
       </ul>
-      {onOpenBrief && r.stage !== 'no-engine' && (
+      {onOpenBrief && r.stage !== 'no-engine' ? (
         <button className="btn btn-sm btn-primary" onClick={onOpenBrief}>
           Open the brief
+        </button>
+      ) : (
+        // No brief to open: an existing project is judged on its code, and a
+        // missing CLI is fixed outside the panel. Both end in the same move —
+        // change the thing, ask again.
+        <button className="btn btn-sm btn-primary" onClick={onRecheck}>
+          Check again
         </button>
       )}
     </div>
