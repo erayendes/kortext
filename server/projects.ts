@@ -11,7 +11,6 @@ import {
 } from 'node:fs';
 import { join } from 'node:path';
 import type { Project } from './db.js';
-import { assessBrief } from './readiness.js';
 
 // Live workspace inside a registered repo — sealed layout (DECISIONS §19):
 //   AGENTS.md            (repo root — the agent's entry contract)
@@ -144,14 +143,12 @@ export function createProject(
   scaffoldProject(repoPath, pkgRoot, { skipBrief: kind === 'existing' });
   const brief = input.brief?.trim();
   if (brief) {
-    // The prime wrote (or uploaded) the brief in the add form, so it needs no
-    // separate approval round — but only if it can actually start the analysis.
-    // One that cannot lands as a draft, where the panel files it under Needs
-    // you; approving a brief the gate then refuses reads as a contradiction.
-    const status = assessBrief(brief).ok ? 'approved' : 'draft';
+    // The prime wrote (or uploaded) this, so submitting it IS the approval —
+    // nothing is judged at Initialize. The gate reads it when the chain is
+    // first entered, and demotes it back to a draft if it cannot start.
     writeFileSync(
       join(repoPath, BRIEF_REL),
-      `---\nstatus: ${status}\nauthor: +prime\napprover: +prime\n---\n\n${brief}\n`,
+      `---\nstatus: approved\nauthor: +prime\napprover: +prime\n---\n\n${brief}\n`,
       'utf8',
     );
   }

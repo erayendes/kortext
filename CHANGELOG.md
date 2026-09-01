@@ -88,6 +88,11 @@ constitution. The v3 engine stays archived under `docs/codes/`.
   the repository's language — English, in practice. When set it overrides the
   inputs, the repository and the README; code, names and headings stay English
   as before.
+- **Initialize judges nothing.** A brief written or uploaded in the form lands
+  approved — submitting your own brief is the approval — and is not read until
+  the chain is first entered. The gate is what reads it, and a refusal demotes
+  it back to a draft, so it lands under Needs you with the questions instead of
+  sitting approved next to "not enough to start". Re-approving it asks again.
 - Saving a document re-enters the chain, so editing the brief re-runs the gate.
   Editing the brief is the way out of a closed gate, and only approving one
   triggered a re-scan, so a corrected brief sat behind its old verdict.

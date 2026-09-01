@@ -4,7 +4,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { spawnCli } from './cli-spawn.js';
 import type { Project } from './db.js';
-import { readFrontmatter } from './docs.js';
+import { readFrontmatter, setFrontmatterStatus } from './docs.js';
 import type { EngineSpec } from './engines.js';
 
 // One gate, at the head of the chain. Evidence that says nothing produces
@@ -254,8 +254,17 @@ async function check(
     return { ready: false, stage: 'floor', questions: [], briefHash, checkedAt };
   }
 
+  // A refused brief is demoted from approved back to draft: the panel files it
+  // under Needs you, which is where a document waiting on a human belongs, and
+  // an approved brief sitting next to "not enough to start" claims two
+  // contradictory things. Re-approving it is what asks the gate again.
+  const refuse = (v: Omit<Readiness, 'briefHash' | 'checkedAt'>): Readiness => {
+    setFrontmatterStatus(path, 'draft');
+    return verdict(v);
+  };
+
   const floor = assessBrief(content);
-  if (!floor.ok) return verdict({ ready: false, stage: 'floor', questions: floor.questions });
+  if (!floor.ok) return refuse({ ready: false, stage: 'floor', questions: floor.questions });
 
   const cached = readReadiness(project);
   if (cached && cached.briefHash === briefHash && cached.stage === 'judgment') return cached;
@@ -284,10 +293,11 @@ async function check(
         questions: ['The readiness check did not complete — press Start to run it again.'],
       });
     }
-    return verdict({
-      ready: written.ready,
+    if (written.ready) return verdict({ ready: true, stage: 'judgment', questions: [] });
+    return refuse({
+      ready: false,
       stage: 'judgment',
-      questions: written.ready ? [] : (written.questions ?? []).slice(0, 6),
+      questions: (written.questions ?? []).slice(0, 6),
     });
   } catch {
     return verdict({

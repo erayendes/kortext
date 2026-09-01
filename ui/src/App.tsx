@@ -476,9 +476,9 @@ function AddProject({
           </label>
         )}
         <span className="kx-cmd-hint">
-          A brief that answers the five points lands approved and the project is ready to
-          start; a thinner one lands as a draft for you to finish from Documents. Nothing runs
-          until you press Start.
+          The brief lands as yours, approved — nothing is read until you press Start. If the
+          check then finds it too thin, it comes back to you with the questions it needs
+          answered.
         </span>
       </div>
       )}

@@ -83,16 +83,21 @@ test('a brief written in the add form lands as the prime-approved BRD', () => {
   rmSync(work, { recursive: true, force: true });
 });
 
-test('a brief the gate would refuse lands as a draft, not approved', () => {
+test('Initialize judges nothing: even a thin brief lands as written', async () => {
   const work = tempDir();
   const db = openDb(join(work, 'db.sqlite'));
   const repo = join(work, 'thin');
-  createProject(db, { name: 'Thin', repoPath: repo, brief: 'deneme' }, pkgRoot);
-  // Approving a brief the gate then refuses reads as a contradiction: the panel
-  // would show an approved BRD next to "not enough to start".
-  const body = readFileSync(join(repo, BRIEF_REL), 'utf8');
-  assert.match(body, /status: draft/);
-  assert.match(body, /deneme/);
+  const p = createProject(db, { name: 'Thin', repoPath: repo, brief: 'deneme' }, pkgRoot);
+  // Submitting your own brief is the approval; nothing has been read yet.
+  assert.match(readFileSync(join(repo, BRIEF_REL), 'utf8'), /status: approved/);
+
+  // The gate is what reads it, and a refusal sends it back to the human's desk
+  // rather than leaving an approved brief next to "not enough to start".
+  const { ensureReadiness } = await import('../server/readiness.js');
+  const verdict = await ensureReadiness(p, { id: 'x', binary: 'true', args: [], installHint: '' });
+  assert.equal(verdict.ready, false);
+  assert.equal(verdict.stage, 'floor');
+  assert.match(readFileSync(join(repo, BRIEF_REL), 'utf8'), /status: draft/);
   rmSync(work, { recursive: true, force: true });
 });
 
