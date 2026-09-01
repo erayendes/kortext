@@ -27,24 +27,29 @@ test('listDocs: dependency blocking follows approvals; regressed input warns dep
 
   let docs = listDocs(db, p, pkgRoot);
   const byRel = (rel: string) => docs.find((d) => d.rel === rel)!;
-  // BRD is draft and unblocked; LEGAL depends on BRD (not approved yet) → blocked
+  // BRD is draft and unblocked; GROWTH depends on BRD (not approved yet) → blocked
   assert.equal(byRel('foundation/BRD.md').status, 'draft');
   assert.equal(byRel('foundation/BRD.md').blocked, false);
-  assert.equal(byRel('LEGAL.md').blocked, true);
+  assert.equal(byRel('GROWTH.md').blocked, true);
   // BRD sorts before PRD (dependency depth)
   assert.ok(docs.findIndex((d) => d.rel === 'foundation/BRD.md') < docs.findIndex((d) => d.rel === 'foundation/PRD.md'));
 
-  // approve BRD → LEGAL unblocks
+  // approve BRD → GROWTH unblocks; LEGAL still waits on GROWTH, because what
+  // the product measures decides what compliance it owes
   setFrontmatterStatus(docPath(p, 'foundation/BRD.md'), 'approved');
   docs = listDocs(db, p, pkgRoot);
   assert.equal(byRel('foundation/BRD.md').status, 'approved');
+  assert.equal(byRel('GROWTH.md').blocked, false);
+  assert.equal(byRel('LEGAL.md').blocked, true);
+
+  setFrontmatterStatus(docPath(p, 'GROWTH.md'), 'approved');
+  docs = listDocs(db, p, pkgRoot);
   assert.equal(byRel('LEGAL.md').blocked, false);
 
-  // BRD falls back to draft after LEGAL was written → LEGAL warns upstreamChanged
-  setFrontmatterStatus(docPath(p, 'LEGAL.md'), 'draft'); // pretend agent wrote it
+  // BRD falls back to draft after GROWTH was written → GROWTH warns upstreamChanged
   setFrontmatterStatus(docPath(p, 'foundation/BRD.md'), 'draft');
   docs = listDocs(db, p, pkgRoot);
-  assert.equal(byRel('LEGAL.md').upstreamChanged, true);
+  assert.equal(byRel('GROWTH.md').upstreamChanged, true);
 
   rmSync(work, { recursive: true, force: true });
 });

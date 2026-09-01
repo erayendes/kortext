@@ -145,11 +145,17 @@ test('advance: chains every unblocked step, pauses at approval gates, resumes af
 
   approveBrief(p);
   await advance(db, p, engine, pkgRoot);
-  // GROWTH + LEGAL produced as drafts, then the chain pauses (PRD needs approvals)
+  // GROWTH is the only step the brief unblocks — LEGAL is written from it
   const drafts = listJobs(db, p.id).filter((j) => j.status === 'done').map((j) => j.doc_rel).sort();
-  assert.deepEqual(drafts, ['GROWTH.md', 'LEGAL.md']);
+  assert.deepEqual(drafts, ['GROWTH.md']);
 
   setFrontmatterStatus(docPath(p, 'GROWTH.md'), 'approved');
+  await advance(db, p, engine, pkgRoot);
+  assert.ok(
+    listJobs(db, p.id).some((j) => j.doc_rel === 'LEGAL.md' && j.status === 'done'),
+    'LEGAL should follow GROWTH',
+  );
+
   setFrontmatterStatus(docPath(p, 'LEGAL.md'), 'approved');
   await advance(db, p, engine, pkgRoot);
   const after = listJobs(db, p.id).filter((j) => j.status === 'done').map((j) => j.doc_rel);
@@ -183,6 +189,11 @@ test('advance runs independent steps in parallel (capped)', async () => {
   const db = openDb(join(work, 'db.sqlite'));
   const p = createProject(db, { name: 'Par', repoPath: join(work, 'par') }, pkgRoot);
   approveBrief(p);
+  // The head of the chain is serial (BRD → GROWTH → LEGAL → PRD); the fork is
+  // after PRD, so settle the prerequisites by hand and time only the fork.
+  for (const rel of ['GROWTH.md', 'LEGAL.md', 'foundation/PRD.md']) {
+    writeFileSync(docPath(p, rel), '---\nstatus: approved\nauthor: +mock\n---\n\n# Done\n', 'utf8');
+  }
   // slow mock: each step sleeps 400ms — two sequential ≈ 800ms, parallel ≈ 400ms
   const script = join(work, 'slow.sh');
   writeFileSync(script, `#!/bin/sh
@@ -204,7 +215,7 @@ printf -- '---\\nstatus: draft\\nauthor: +mock\\n---\\n\\n# Mock\\n' > ".kortext
   await advance(db, p, { id: 'slow', binary: script, args: [], installHint: '' }, pkgRoot);
   const elapsed = Date.now() - t0;
   const done = listJobs(db, p.id).filter((j) => j.status === 'done').map((j) => j.doc_rel).sort();
-  assert.deepEqual(done, ['GROWTH.md', 'LEGAL.md']);
+  assert.deepEqual(done, ['CONTENT.md', 'STACK.md', 'STRUCTURE.md']);
   assert.ok(elapsed < 750, `expected parallel (<750ms), took ${elapsed}ms`);
   rmSync(work, { recursive: true, force: true });
 });

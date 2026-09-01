@@ -1437,7 +1437,7 @@ body {
 .kx-h1 { font-size: 19px; font-weight: 650; margin: 10px 0 4px; }
 .kx-h2 { font-size: 16px; font-weight: 600; margin: 8px 0 3px; }
 .kx-h3 { font-size: 14px; font-weight: 600; margin: 6px 0 2px; }
-.kx-quote { color: var(--fg-mid); border-left: 3px solid var(--border-strong); padding-left: 10px; font-style: italic; }
+.kx-quote { color: var(--fg-mid); border-left: 2px solid var(--border); padding-left: 10px; }
 .kx-bullet { padding-left: 20px; text-indent: -12px; }
 .kx-bullet::before { content: '•  '; color: var(--fg-faint); }
 .kx-ordered { padding-left: 20px; text-indent: -12px; }
@@ -1507,12 +1507,15 @@ body {
 .kx-code-input { width: 130px; flex: none; }
 
 /* R3 — explain bubbles + footer */
-.kx-explain { display: flex; flex-direction: column; gap: 4px; margin: 4px 0 8px 16px; padding: 8px 12px; border-left: 3px solid var(--accent); border-radius: var(--r-md); background: var(--bg-subtle); font-size: 12.5px; }
+.kx-explain { display: flex; flex-direction: column; gap: 2px; margin: 4px 0 8px 16px; padding: 8px 12px; border-left: 2px solid var(--border); border-radius: var(--r-md); background: var(--bg-subtle); font-size: 12.5px; }
 .kx-explain-q { font-weight: 600; color: var(--fg); }
 .kx-explain-a { color: var(--fg-mid); white-space: pre-wrap; line-height: 1.5; }
 
 .kx-thread { margin: 2px 0 10px 16px; display: flex; flex-direction: column; gap: 6px; }
-.kx-thread-input { display: flex; gap: 6px; }
+.kx-thread-input { display: flex; flex-direction: column; gap: 6px; }
+.kx-thread-actions { display: flex; gap: 6px; }
+.kx-thread-text { height: auto; min-height: 46px; resize: vertical; font-family: inherit; padding: 6px 8px; }
+.kx-explain-who { font-size: 10px; color: var(--fg-faint); letter-spacing: .02em; }
 .kx-thread-input .kx-input { flex: 1; height: 30px; font-size: 12.5px; }
 
 /* R4 — handshake completion card */
@@ -1520,6 +1523,7 @@ body {
 /* A document with unanswered questions is not finished — the row says so, and
    the section itself is tinted so it is not one heading among many. */
 .kx-card-action { margin-left: auto; }
+.kx-doc-askbar { margin: 0 18px; padding: 8px 12px; border-radius: var(--r-md); background: var(--amber-bg); border: 1px solid var(--amber-border); color: var(--amber); font-size: 12.5px; }
 .kx-doc-ask { font-family: var(--font-mono); font-size: 10px; padding: 2px 6px; border-radius: 999px; background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-border); }
 .kx-block.open-q { background: var(--amber-bg); }
 .kx-block.open-q:first-of-type, .kx-block.kx-h2.open-q { font-weight: 650; }

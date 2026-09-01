@@ -57,13 +57,33 @@ export function DocDrawer({
   // Engine-written files hard-wrap prose at ~80 chars; the tokenizer is
   // line-oriented, so consecutive para/quote lines are merged back into one
   // flowing block (the thread anchors at paragraph granularity).
-  const tokens = useMemo(
-    () => mergeWrappedLines(parseMarkdown(stripFrontmatter(content))),
-    [content],
-  );
+  const tokens = useMemo(() => {
+    const all = mergeWrappedLines(parseMarkdown(stripFrontmatter(content)));
+    // An Open Questions heading with nothing under it is structure, not
+    // content — showing it makes every document look like it wants something.
+    const start = all.findIndex(
+      (t) => (t.kind === 'h1' || t.kind === 'h2' || t.kind === 'h3') && /open questions/i.test(t.text),
+    );
+    if (start === -1) return all;
+    const after = all.slice(start + 1);
+    const end = after.findIndex((t) => t.kind === 'h1' || t.kind === 'h2' || t.kind === 'h3');
+    const body = end === -1 ? after : after.slice(0, end);
+    const asks = body.some((t) => t.kind !== 'blank' && !/^\[.*\]$/.test(t.text.trim()));
+    return asks ? all : [...all.slice(0, start), ...(end === -1 ? [] : after.slice(end))];
+  }, [content]);
 
   // Which blocks sit under the Open Questions heading — they are the ones the
   // reader has to act on, so they get their own ground rather than blending in.
+  // Who answers on this machine — the thread says so rather than leaving the
+  // reply unattributed.
+  const [answerBy, setAnswerBy] = useState('agent');
+  useEffect(() => {
+    api
+      .engines()
+      .then((r) => setAnswerBy(r.selected ?? r.engines.find((e) => e.available)?.id ?? 'agent'))
+      .catch(() => {});
+  }, []);
+
   const openQ = useMemo(() => {
     const marked = new Set<number>();
     let inSection = false;
@@ -166,7 +186,15 @@ export function DocDrawer({
             </>
           )}
           {!editing && doc.status === 'draft' && (
-            <button className="btn btn-sm btn-success" disabled={busy} onClick={approve}>
+            // A document that still asks something is not finished, and
+            // approving it would bury the question under a green badge. Answer
+            // it in the section — or delete the ones you are content to leave.
+            <button
+              className="btn btn-sm btn-success"
+              disabled={busy || doc.openQuestions}
+              title={doc.openQuestions ? 'Answer the open questions in this document first' : ''}
+              onClick={approve}
+            >
               Approve
             </button>
           )}
@@ -176,6 +204,12 @@ export function DocDrawer({
         </div>
       </div>
       {err && <div className="kx-error">{err}</div>}
+      {doc.openQuestions && !editing && (
+        <div className="kx-doc-askbar">
+          This document is waiting on you — answer the questions at the end (or remove the ones
+          you are content to leave open), then approve it.
+        </div>
+      )}
       <div className="dr-body">
         {editing ? (
           <textarea className="kx-editor mono" value={draft} onChange={(e) => setDraft(e.target.value)} />
@@ -201,6 +235,7 @@ export function DocDrawer({
                     <LineThread
                       thread={explains.filter((x) => x.line === t.index)}
                       active={selected === t.index}
+                      answerBy={answerBy}
                       onAsk={(q) => ask(t.index, q)}
                       onNote={(text) => {
                         addLineNote(t.index, text);
@@ -401,6 +436,10 @@ function Inline({ text }: { text: string }) {
             <strong>
               <CodeBits text={s.value} />
             </strong>
+          ) : s.type === 'italic' ? (
+            <em>
+              <CodeBits text={s.value} />
+            </em>
           ) : s.type === 'code' ? (
             <code>{s.value}</code>
           ) : (
@@ -417,11 +456,13 @@ function Inline({ text }: { text: string }) {
 function LineThread({
   thread,
   active,
+  answerBy,
   onAsk,
   onNote,
 }: {
   thread: Explain[];
   active: boolean;
+  answerBy: string;
   onAsk: (q: string) => void;
   onNote: (text: string) => void;
 }) {
@@ -438,7 +479,9 @@ function LineThread({
     <div className="kx-thread">
       {thread.map((x, i) => (
         <div key={i} className="kx-explain">
+          <span className="kx-explain-who mono">prime</span>
           <span className="kx-explain-q">{x.question}</span>
+          <span className="kx-explain-who mono">{answerBy}</span>
           <span className={`kx-explain-a${x.answer === null ? ' kx-running' : ''}`}>
             {x.answer === null ? 'writing an answer…' : x.answer}
           </span>
@@ -446,20 +489,33 @@ function LineThread({
       ))}
       {(active || waiting) && (
         <div className="kx-thread-input">
-          <input
-            className="kx-input"
+          <textarea
+            className="kx-input kx-thread-text"
             autoFocus={active}
-            placeholder={thread.length > 0 ? 'Follow-up question… (Enter = Ask)' : 'Ask about this line, or write a note…'}
+            rows={2}
+            placeholder={
+              thread.length > 0
+                ? 'Follow-up question…  (Enter sends, Shift+Enter for a new line)'
+                : 'Ask about this line, or write a note…  (Enter sends, Shift+Enter for a new line)'
+            }
             value={text}
             onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && send('ask')}
+            onKeyDown={(e) => {
+              // Shift+Enter is how you write a second line; Enter alone sends.
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                send('ask');
+              }
+            }}
           />
-          <button className="btn btn-sm btn-secondary" disabled={waiting && !text.trim()} onClick={() => send('ask')}>
-            Ask
-          </button>
-          <button className="btn btn-sm" onClick={() => send('note')}>
-            Add note
-          </button>
+          <div className="kx-thread-actions">
+            <button className="btn btn-sm btn-primary" disabled={waiting && !text.trim()} onClick={() => send('ask')}>
+              Ask
+            </button>
+            <button className="btn btn-sm btn-secondary" onClick={() => send('note')}>
+              Add note
+            </button>
+          </div>
         </div>
       )}
     </div>

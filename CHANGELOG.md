@@ -96,6 +96,21 @@ constitution. The v3 engine stays archived under `docs/codes/`.
 - Saving a document re-enters the chain, so editing the brief re-runs the gate.
   Editing the brief is the way out of a closed gate, and only approving one
   triggered a re-scan, so a corrected brief sat behind its old verdict.
+- **GROWTH is written before LEGAL**, and LEGAL takes it as an input. What a
+  product measures decides the consent and disclosure it owes, so compliance
+  was being written against a document that did not exist yet and saying so in
+  its own text. Both workflows follow the new order.
+- Emphasis (`*italic*`, `_italic_`) renders instead of showing its markers, and
+  an Open Questions section with nothing in it is not shown at all.
+- The line thread: a textarea rather than an input (Enter sends, Shift+Enter
+  writes a second line), the buttons under the field with Ask as the primary,
+  and both sides labelled — `prime` asks, the engine answers under its own name.
+- A document with open questions **cannot be approved** until they are answered
+  or removed, and the drawer says so. Approving one would bury the question
+  under a green badge.
+- The document list drops the `(core)` / `(foundation)` label — the group
+  heading already says where a document sits — and the gate says it is reading
+  the BRD, which is the file it is actually reading.
 - **Markdown renders.** Only `- ` counted as a bullet, so a document written
   with `*` fell through to paragraphs full of literal asterisks — which the
   wrapped-line merge then glued into one wall of text. All three bullet

@@ -67,16 +67,16 @@
    - n/a when: no string in the codebase is read by a person: no interface copy, no messages, no emails.
    - approver: +prime
 
-5. **+compliance-expert:** Produce `LEGAL.md`. Scope: personal-data handling found in the code (KVKK/GDPR), license obligations of the dependency tree, terms/privacy needs, compliance gaps.
-   - inputs: `.kortext/foundation/PRD.md`, `.kortext/SECURITY.md`
-   - outputs: `.kortext/LEGAL.md`
-   - n/a when: the codebase touches no personal data, ships no third-party data flow and carries no licence obligation beyond permissive dependencies.
-   - approver: +prime
-
-6. **+growth-expert:** Produce `GROWTH.md`. Scope: current analytics/tracking state, SEO/ASO posture, activation and retention signals worth measuring; what to instrument next.
+5. **+growth-expert:** Produce `GROWTH.md`. Scope: current analytics/tracking state, SEO/ASO posture, activation and retention signals worth measuring; what to instrument next.
    - inputs: `.kortext/foundation/PRD.md`
    - outputs: `.kortext/GROWTH.md`
    - n/a when: the codebase serves no measurable surface and reaches no acquisition channel — an internal tool or a library.
+   - approver: +prime
+
+6. **+compliance-expert:** Produce `LEGAL.md`. Scope: personal-data handling found in the code (KVKK/GDPR), license obligations of the dependency tree, terms/privacy needs, compliance gaps. Read `GROWTH.md` first: the tracking the codebase already carries is what decides the consent and disclosure obligations.
+   - inputs: `.kortext/foundation/PRD.md`, `.kortext/SECURITY.md`, `.kortext/GROWTH.md`
+   - outputs: `.kortext/LEGAL.md`
+   - n/a when: the codebase touches no personal data, ships no third-party data flow and carries no licence obligation beyond permissive dependencies.
    - approver: +prime
 
 ## Technical Debt and TRD

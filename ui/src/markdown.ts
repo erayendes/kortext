@@ -132,16 +132,19 @@ export function parseMarkdown(md: string): MdToken[] {
 export type InlineSpan =
   | { type: 'text'; value: string }
   | { type: 'bold'; value: string }
+  | { type: 'italic'; value: string }
   | { type: 'code'; value: string };
 
 /**
- * Split a line into inline spans: `**bold**` and `` `code` `` are recognised,
- * everything else is plain text. Returned as data so the renderer can emit real
- * React nodes (no dangerouslySetInnerHTML).
+ * Split a line into inline spans: `**bold**`, `*italic*` / `_italic_` and
+ * `` `code` `` are recognised, everything else is plain text. Returned as data
+ * so the renderer can emit real React nodes (no dangerouslySetInnerHTML).
+ *
+ * Bold is matched before italic so `**x**` never reads as an empty emphasis.
  */
 export function parseInline(text: string): InlineSpan[] {
   const spans: InlineSpan[] = [];
-  const re = /\*\*(.+?)\*\*|`(.+?)`/g;
+  const re = /\*\*(.+?)\*\*|`(.+?)`|\*(\S(?:.*?\S)?)\*|(?<![A-Za-z0-9_])_(\S(?:.*?\S)?)_(?![A-Za-z0-9_])/g;
   let last = 0;
   let m: RegExpExecArray | null;
 
@@ -149,11 +152,9 @@ export function parseInline(text: string): InlineSpan[] {
     if (m.index > last) {
       spans.push({ type: 'text', value: text.slice(last, m.index) });
     }
-    if (m[1] !== undefined) {
-      spans.push({ type: 'bold', value: m[1] });
-    } else {
-      spans.push({ type: 'code', value: m[2] ?? '' });
-    }
+    if (m[1] !== undefined) spans.push({ type: 'bold', value: m[1] });
+    else if (m[2] !== undefined) spans.push({ type: 'code', value: m[2] });
+    else spans.push({ type: 'italic', value: m[3] ?? m[4] ?? '' });
     last = m.index + m[0].length;
   }
   if (last < text.length) {

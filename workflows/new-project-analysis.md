@@ -10,20 +10,20 @@
 
 ## Product Analysis
 
-1. **+compliance-expert:** Produce `LEGAL.md`. Scope: regulations that apply according to the BRD (KVKK, GDPR, CCPA, sector-specific) + data lifecycle rules (privacy, disclosure notices, consent, retention, deletion, third-party sharing).
-   - label: LEGAL.md
-   - activity: Applicable regulations identified. Data lifecycle rules defined.
-   - inputs: `.kortext/foundation/BRD.md`
-   - outputs: `.kortext/LEGAL.md`
-   - n/a when: the brief describes no personal data, no accounts, no third party receiving data and no regulated content — a tool whose data never leaves the user's own machine.
-   - approver: +prime
-
-2. **+growth-expert:** Produce `GROWTH.md`. Scope: target audience, channel strategy, SEO/GEO, measurement, analytics, conversion tracking.
+1. **+growth-expert:** Produce `GROWTH.md`. Scope: target audience, channel strategy, SEO/GEO, measurement, analytics, conversion tracking. Name the measurement mechanism concretely — whether anything third-party touches user data is what `LEGAL.md` is about to be written against.
    - label: GROWTH.md
    - activity: Target audience and channels defined. SEO and measurement planned.
    - inputs: `.kortext/foundation/BRD.md`
    - outputs: `.kortext/GROWTH.md`
    - n/a when: the brief describes no surface worth measuring and no acquisition channel — an internal tool, a library, or something with one known user.
+   - approver: +prime
+
+2. **+compliance-expert:** Produce `LEGAL.md`. Scope: regulations that apply according to the BRD (KVKK, GDPR, CCPA, sector-specific) + data lifecycle rules (privacy, disclosure notices, consent, retention, deletion, third-party sharing). The measurement plan in `GROWTH.md` is an input, not a guess: the tracking it names decides the consent and disclosure obligations.
+   - label: LEGAL.md
+   - activity: Applicable regulations identified. Data lifecycle rules defined.
+   - inputs: `.kortext/foundation/BRD.md`, `.kortext/GROWTH.md`
+   - outputs: `.kortext/LEGAL.md`
+   - n/a when: the brief describes no personal data, no accounts, no third party receiving data and no regulated content — a tool whose data never leaves the user's own machine.
    - approver: +prime
 
 3. **+product-manager:** Produce `PRD.md`. From BRD + LEGAL + GROWTH: scope, user types, main flows, priorities, acceptance criteria, out-of-scope items.

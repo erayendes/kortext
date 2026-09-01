@@ -607,7 +607,7 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
           ← Projects
         </button>
         {running ? (
-          <span className="kx-nav-status kx-running">{status || 'Reading the brief…'}</span>
+          <span className="kx-nav-status kx-running">{status || 'Reading the BRD…'}</span>
         ) : paused && hasJobs ? (
           <span className="kx-nav-status">⏸ Paused — running steps were stopped; nothing new starts.</span>
         ) : pending ? (
@@ -910,7 +910,6 @@ function DocumentsTab({
               return (
                 <button key={d.rel} className={`kx-doc-row${failed ? ' failed' : ''}`} onClick={() => setOpen(d)}>
                   <span className="kx-doc-name">{d.name}</span>
-                  <span className="kx-doc-scope">({d.group})</span>
                   {d.author && <span className="kx-doc-author mono">{d.author.replace(/^\+/, '')}</span>}
                   <span className="kx-doc-spacer" />
                   {failed && (
@@ -974,7 +973,7 @@ function ReadinessCard({
   if (gate.checking) {
     return (
       <div className="kx-gate">
-        <h3>Reading the brief…</h3>
+        <h3>Reading the BRD…</h3>
         <p>Checking whether it says enough to analyse. Nothing is being written yet.</p>
       </div>
     );
