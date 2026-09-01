@@ -51,7 +51,7 @@ Assess the project's compliance with KVKK, GDPR and any sector-specific regulati
 
 ### 0. Prerequisites
 
-Before writing, read the step's input documents — at minimum `.kortext/foundation/BRD.md` — plus `.kortext/DECISIONS.md` for decisions already taken, and `.kortext/GROWTH.md` if it exists (analytics and tracking choices carry compliance impact).
+Before writing, read the step's input documents — at minimum `.kortext/foundation/BRD.md` — plus `.kortext/GROWTH.md` if it exists (analytics and tracking choices carry compliance impact).
 
 ### 1. Legal Compliance Analysis
 

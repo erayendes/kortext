@@ -16,7 +16,6 @@ Make your decisions by reading from here, not by guessing from the code:
   A file marked `status: not-applicable` has been deliberately left empty for this project.
 - **`foundation/`** — *the frozen starting point*: `BRD` (brief), `PRD`, `TRD`, `PFD`. Read
   them when you need context; do not change them at will.
-- **`DECISIONS.md`** — the decision log (§3 below).
 - **`.kopeng/`** (if present) — the task structure: Version → Epic → Task files. Task
   tracking is Kopeng's job; if it is set up, take your next piece of work from there and
   update its status there.
@@ -25,27 +24,15 @@ Make your decisions by reading from here, not by guessing from the code:
 
 - **Follow the document — or update the document.** If you see that a decision conflicts
   with the guideline, do not silently deviate: either follow the decision, or talk to +prime
-  and update the RELEVANT DOCUMENT too (record the change in DECISIONS.md). Document and
-  code must not drift apart — that is the entire value of this project memory.
+  and update the RELEVANT DOCUMENT too. Document and code must not drift apart — that is
+  the entire value of this project memory.
 - **Tasks:** if `.kopeng/` exists, work from there. Otherwise work from +prime's
   instructions; if they ask, first split the work into tasks and show the list.
 - **Work that falls to +prime** (opening accounts, API keys, purchases, approvals): you
   cannot do it — report it, and if it creates a wait, make it visible.
+- **Read-before-Write:** read the current version of a shared file before writing to it.
 
-## 3. Decision log — DECISIONS.md
-
-Add every decision that shapes the process (technical/product/design/security) to the
-VERY TOP of `.kortext/DECISIONS.md` **the moment it is made**; old entries are never deleted:
-
-```
-## YYYY-MM-DD — [decision title]
-[One paragraph: rationale; if any, the rejected alternative and why.]
-```
-
-The next session (or another agent) reads the answer to "why is it like this" from here.
-**Read-before-Write:** read the current version of a shared file before writing to it.
-
-## 4. Behavior constitution (essentials)
+## 3. Behavior constitution (essentials)
 
 - **Language:** communicate with +prime in +prime's language; code, commits, variables and
   comments in English; in-product copy in the target project's language.
@@ -54,8 +41,8 @@ The next session (or another agent) reads the answer to "why is it like this" fr
   a leak: stop, report to +prime, suggest revoking the key; cleaning git history is +prime's
   decision.
 - **Getting stuck (3-attempt rule):** if 3 different approaches fail on the same blocker,
-  STOP; note the attempts and your suggestion in DECISIONS.md and ask +prime. No moving on
-  with a silent workaround.
+  STOP; tell +prime what you tried and what you suggest. No moving on with a silent
+  workaround.
 - **Conflict:** if you see a conflict between documents, stop producing and ask +prime; do
   not choose silently.
 - **Test discipline:** meet the quality bar in TEST.md; saying "done" means meeting the

@@ -41,7 +41,7 @@
    - outputs: `.kortext/STACK.md`, `.kortext/STRUCTURE.md`
    - approver: +prime
 
-2. **+architect:** Produce `ARCHITECTURE.md`. From PRD + STACK + STRUCTURE, design the shape of the system: components, data flow, boundaries and integration points, main architectural choices with one-line rationales (detailed decisions go to DECISIONS.md).
+2. **+architect:** Produce `ARCHITECTURE.md`. From PRD + STACK + STRUCTURE, design the shape of the system: components, data flow, boundaries and integration points, main architectural choices, each with its rationale and the alternative that lost.
    - inputs: `.kortext/foundation/PRD.md`, `.kortext/STACK.md`, `.kortext/STRUCTURE.md`
    - outputs: `.kortext/ARCHITECTURE.md`
    - approver: +prime
@@ -93,8 +93,6 @@
 1. **+operation-manager:** Consolidate `PFD.md`. From PRD + TRD + TEST: project scope, main decisions, open items, risks, dependencies, task headings to carry into the planning flow.
    - label: PFD.md
    - activity: Project summary drafted. Tasks for planning prepared.
-
-   **Memory (permanent decision log):** Add the lasting product/architecture decisions made during the analysis phase to the VERY TOP of `.kortext/DECISIONS.md` (format: `## YYYY-MM-DD — title` + one-paragraph rationale). One entry per decision: what was decided + a short rationale (e.g. "Stack: Next.js + Postgres — team familiarity + SSR need", "KVKK scope: user data will not leave the EU"). This file grows with new entries added on top during the planning flow.
    - inputs: `.kortext/foundation/PRD.md`, `.kortext/foundation/TRD.md`, `.kortext/TEST.md`
    - outputs: `.kortext/foundation/PFD.md`
    - approver: +prime

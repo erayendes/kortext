@@ -21,4 +21,4 @@ approver: +prime
 
 ## Why this way
 
-- [One-line rationales for the main architectural choices; detailed decisions live in DECISIONS.md]
+- [One line per main architectural choice: the rationale, and the alternative that lost]

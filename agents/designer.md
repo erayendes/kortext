@@ -50,7 +50,7 @@ Within +prime's vision, define the product's visual language and user experience
 
 ### 0. Prerequisites
 
-Before writing, read the step's inputs — `.kortext/foundation/PRD.md`, `.kortext/STACK.md`, `.kortext/CONTENT.md` — plus `.kortext/DECISIONS.md` for decisions already taken.
+Before writing, read the step's inputs — `.kortext/foundation/PRD.md`, `.kortext/STACK.md`, `.kortext/CONTENT.md`.
 
 ### 1. Design System
 

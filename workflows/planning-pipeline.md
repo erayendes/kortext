@@ -57,4 +57,3 @@ Body headings (all required; write "—" where one does not apply):
 7. **Self-check (before finishing):** does every file conform to the schema; are every
    epic's `version` and listed `tasks` real; are every task's frontmatter fields complete;
    are the ids on convention; is `project.yaml` at `status: draft`. Fix any problem you find.
-8. Add your decisions to `.kortext/DECISIONS.md` (why this versioning/split).

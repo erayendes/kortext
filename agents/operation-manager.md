@@ -48,13 +48,13 @@ Consolidate the analysis into `.kortext/foundation/PFD.md`: the project scope, t
 
 ### 0. Prerequisites
 
-Before writing, read the step's inputs — `.kortext/foundation/PRD.md`, `.kortext/foundation/TRD.md`, `.kortext/TEST.md` — plus `.kortext/DECISIONS.md` and skim the other approved `.kortext/` documents for anything the inputs missed.
+Before writing, read the step's inputs — `.kortext/foundation/PRD.md`, `.kortext/foundation/TRD.md`, `.kortext/TEST.md` — and skim the other approved `.kortext/` documents for anything the inputs missed.
 
 ### 1. Consolidation
 
 Build `.kortext/foundation/PFD.md`:
 1. Summarize the project scope in a few paragraphs a newcomer can follow
-2. List the key decisions already taken (pointing at `.kortext/DECISIONS.md` entries)
+2. List the key decisions already taken (pointing at the documents that record them)
 3. List open issues and unresolved questions — things +prime still needs to settle
 4. List risks and external dependencies (accounts, keys, third-party services, +prime actions)
 5. On an existing project: summarize the current state and the technical-debt list from the TRD
@@ -70,7 +70,7 @@ Build `.kortext/foundation/PFD.md`:
 Before finishing:
 1. Verify the PFD contradicts no approved document
 2. Verify every risk or open issue mentioned in the inputs is either resolved or carried into the PFD
-3. Record any consolidation decision you had to make in `.kortext/DECISIONS.md`
+3. Record any consolidation decision you had to make in the PFD itself, with its rationale
 
 ## artifacts
 

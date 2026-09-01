@@ -55,7 +55,7 @@ Act as the system's security shield. Assess the chosen stack for known vulnerabi
 
 ### 0. Prerequisites
 
-Before writing, read the step's input — `.kortext/STACK.md` — plus `.kortext/LEGAL.md` if it exists (data-protection obligations) and `.kortext/DECISIONS.md` for decisions already taken.
+Before writing, read the step's input — `.kortext/STACK.md` — plus `.kortext/LEGAL.md` if it exists (data-protection obligations).
 
 ### 1. Stack Security Analysis
 

@@ -25,8 +25,9 @@ constitution. The v3 engine stays archived under `docs/codes/`.
   `gemini`), selectable in the header; install hints when none found.
 - **Sealed layout** (§20): `.kortext/` flat root (ARCHITECTURE, STACK,
   STRUCTURE, API, DATABASE, SECURITY, DESIGN, TEST, LEGAL, GROWTH, CONTENT,
-  ENVIRONMENT, DECISIONS log) + `foundation/` (BRD, PRD, TRD, PFD);
-  `not-applicable` settles a dependency with reasoning.
+  ENVIRONMENT) + `foundation/` (BRD, PRD, TRD, PFD); `not-applicable` settles
+  a dependency with reasoning. No decision log: a decision is recorded in the
+  document it shapes, and the ones taken after the handshake are the client's.
 - **Document review**: line-token viewer with wrapped-line merging; inline
   line thread — select a line, converse with the author persona (ephemeral,
   never saved) or drop notes; batched notes re-run the producing step.

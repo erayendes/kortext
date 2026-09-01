@@ -62,7 +62,6 @@ AGENTS.md                  the agent's entry contract (handover constitution)
 .kortext/
   ARCHITECTURE.md STACK.md STRUCTURE.md API.md DATABASE.md SECURITY.md
   DESIGN.md TEST.md LEGAL.md GROWTH.md CONTENT.md ENVIRONMENT.md
-  DECISIONS.md             append-only decision log (status: log)
   foundation/              frozen starting docs: BRD, PRD, TRD, PFD
 .kopeng/                   only after "Kopeng'e aktar"
   project.yaml  versions/  epics/  tasks/

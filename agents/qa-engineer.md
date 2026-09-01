@@ -53,7 +53,7 @@ Define the test strategy covering Unit, Integration, UI (E2E), Smoke and Regress
 
 ### 0. Prerequisites
 
-Before writing, read the step's inputs — `.kortext/foundation/PRD.md`, `.kortext/foundation/TRD.md` — plus `.kortext/STACK.md` for tooling constraints and `.kortext/DECISIONS.md` for decisions already taken.
+Before writing, read the step's inputs — `.kortext/foundation/PRD.md`, `.kortext/foundation/TRD.md` — plus `.kortext/STACK.md` for tooling constraints.
 
 ### 1. Test Strategy
 

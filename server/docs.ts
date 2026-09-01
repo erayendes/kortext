@@ -156,8 +156,8 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
 }
 
 // The handshake is done when every document the workflow produces is settled
-// (approved or not-applicable). Docs without a producing step (DECISIONS log,
-// unmapped skeletons) don't gate completion.
+// (approved or not-applicable). Docs without a producing step (unmapped
+// skeletons a project already carried) don't gate completion.
 export function analysisComplete(db: Database.Database, project: Project, pkgRoot: string): boolean {
   const map = loadDocMap(pkgRoot, project.kind ?? 'new');
   const docs = listDocs(db, project, pkgRoot);

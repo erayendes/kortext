@@ -54,7 +54,7 @@ Define the brand voice and the rules for all product copy — buttons, error mes
 
 ### 0. Prerequisites
 
-Before writing, read the step's inputs — `.kortext/foundation/PRD.md`, `.kortext/LEGAL.md`, `.kortext/GROWTH.md` — plus `.kortext/DECISIONS.md` for decisions already taken.
+Before writing, read the step's inputs — `.kortext/foundation/PRD.md`, `.kortext/LEGAL.md`, `.kortext/GROWTH.md`.
 
 ### 1. Content Strategy
 

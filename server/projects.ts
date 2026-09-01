@@ -14,7 +14,7 @@ import type { Project } from './db.js';
 
 // Live workspace inside a registered repo — sealed layout (DECISIONS §19):
 //   AGENTS.md            (repo root — the agent's entry contract)
-//   .kortext/*.md        (the living core: STACK, SECURITY, …, DECISIONS, TODO)
+//   .kortext/*.md        (the living core: STACK, SECURITY, …, TODO)
 //   .kortext/foundation/ (frozen starting docs: BRD, PRD, TRD, PFD)
 // Workflows and personas are NOT copied — kortext itself drives the engine
 // with them during Phase A; after the handshake the docs are the contract.
@@ -58,6 +58,8 @@ function migrateLegacyLayout(kx: string): void {
   }
   const memory = join(kx, 'memory');
   if (existsSync(memory)) {
+    // DECISIONS.md is no longer a kortext artifact, but a legacy project may
+    // carry one — move it up rather than deleting it with the folder.
     const moves: Array<[string, string]> = [
       ['TODO.md', 'TODO.md'],
       ['decisions.md', 'DECISIONS.md'],

@@ -54,7 +54,7 @@ Model the data and design the database schema: tables, relationships, indexes, a
 
 ### 0. Prerequisites
 
-Before writing, read the step's inputs — `.kortext/foundation/PRD.md`, `.kortext/SECURITY.md`, `.kortext/STRUCTURE.md`, `.kortext/STACK.md` — plus `.kortext/DECISIONS.md` for decisions already taken.
+Before writing, read the step's inputs — `.kortext/foundation/PRD.md`, `.kortext/SECURITY.md`, `.kortext/STRUCTURE.md`, `.kortext/STACK.md`.
 
 ### 1. Database Schema Design
 
@@ -79,7 +79,7 @@ Document in `.kortext/DATABASE.md`:
 Anticipate the load in the PRD and document:
 1. Queries likely to become slow and the indexes that prevent it
 2. Where denormalization or caching is justified — and its consistency cost
-3. Record notable trade-off decisions in `.kortext/DECISIONS.md`
+3. Record notable trade-off decisions in `DATABASE.md` itself, with the cost each one accepts
 
 ## artifacts
 

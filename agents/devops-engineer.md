@@ -54,7 +54,7 @@ Define how the project is set up, run and shipped: environments (dev/prod), the 
 
 ### 0. Prerequisites
 
-Before writing, read the step's inputs — `.kortext/STACK.md`, `.kortext/STRUCTURE.md` — plus `.kortext/SECURITY.md` if it exists and `.kortext/DECISIONS.md` for decisions already taken.
+Before writing, read the step's inputs — `.kortext/STACK.md`, `.kortext/STRUCTURE.md` — plus `.kortext/SECURITY.md` if it exists.
 
 ### 1. Environments & Setup
 

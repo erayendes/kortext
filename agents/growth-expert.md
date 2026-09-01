@@ -54,7 +54,7 @@ Define everything the project needs to be discoverable and measurable: target au
 
 ### 0. Prerequisites
 
-Before writing, read the step's input — `.kortext/foundation/BRD.md` — plus `.kortext/LEGAL.md` if it exists (tracking and consent rules) and `.kortext/DECISIONS.md` for decisions already taken.
+Before writing, read the step's input — `.kortext/foundation/BRD.md` — plus `.kortext/LEGAL.md` if it exists (tracking and consent rules).
 
 ### 1. Growth Strategy
 

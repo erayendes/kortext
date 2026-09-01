@@ -52,7 +52,7 @@ Define the product requirements within +prime's vision: scope, user types, main 
 
 ### 0. Prerequisites
 
-Before writing, read the step's inputs — `.kortext/foundation/BRD.md`, `.kortext/LEGAL.md`, `.kortext/GROWTH.md` — plus `.kortext/DECISIONS.md` for decisions already taken.
+Before writing, read the step's inputs — `.kortext/foundation/BRD.md`, `.kortext/LEGAL.md`, `.kortext/GROWTH.md`.
 
 ### 1. Requirements Analysis
 
