@@ -72,12 +72,12 @@ test('nextStep: first unblocked unwritten doc by dependency depth; BRD gate resp
   const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
   const db = openDb(join(work, 'db.sqlite'));
   const p = createProject(db, { name: 'Acme', repoPath: join(work, 'acme') }, pkgRoot);
-  // BRD is draft (not approved) → LEGAL/GROWTH blocked → nothing to run yet
+  // BRD is draft (not approved) → everything downstream blocked → nothing to run
   assert.equal(nextStep(db, p, pkgRoot), null);
   approveBrief(p);
   const step = nextStep(db, p, pkgRoot);
   assert.ok(step);
-  assert.ok(['GROWTH.md', 'LEGAL.md'].includes(step.output));
+  assert.equal(step.output, 'foundation/PRD.md'); // the brief unblocks exactly one step
   rmSync(work, { recursive: true, force: true });
 });
 
@@ -145,14 +145,14 @@ test('advance: chains every unblocked step, pauses at approval gates, resumes af
 
   approveBrief(p);
   await advance(db, p, engine, pkgRoot);
-  // GROWTH is the only step the brief unblocks — LEGAL is written from it
+  // The brief unblocks the PRD and nothing else
   const drafts = listJobs(db, p.id).filter((j) => j.status === 'done').map((j) => j.doc_rel).sort();
-  assert.deepEqual(drafts, ['GROWTH.md']);
+  assert.deepEqual(drafts, ['foundation/PRD.md']);
 
-  setFrontmatterStatus(docPath(p, 'GROWTH.md'), 'approved');
+  setFrontmatterStatus(docPath(p, 'foundation/PRD.md'), 'approved');
   await advance(db, p, engine, pkgRoot);
-  const after = listJobs(db, p.id).filter((j) => j.status === 'done').map((j) => j.doc_rel);
-  assert.ok(after.includes('foundation/PRD.md'), 'PRD follows GROWTH');
+  const after = listJobs(db, p.id).filter((j) => j.status === 'done').map((j) => j.doc_rel).sort();
+  assert.deepEqual(after, ['GROWTH.md', 'STACK.md', 'STRUCTURE.md', 'foundation/PRD.md']);
   // LEGAL is written against the design, so it is nowhere near ready yet
   assert.ok(!after.includes('LEGAL.md'), 'compliance waits for the technical documents');
   rmSync(work, { recursive: true, force: true });
@@ -184,11 +184,13 @@ test('advance runs independent steps in parallel (capped)', async () => {
   const db = openDb(join(work, 'db.sqlite'));
   const p = createProject(db, { name: 'Par', repoPath: join(work, 'par') }, pkgRoot);
   approveBrief(p);
-  // The head of the chain is serial (BRD → GROWTH → LEGAL → PRD); the fork is
-  // after PRD, so settle the prerequisites by hand and time only the fork.
-  for (const rel of ['GROWTH.md', 'LEGAL.md', 'foundation/PRD.md']) {
-    writeFileSync(docPath(p, rel), '---\nstatus: approved\nauthor: +mock\n---\n\n# Done\n', 'utf8');
-  }
+  // The brief unblocks the PRD alone; the first fork is right after it, so
+  // settle the PRD by hand and time only the fork.
+  writeFileSync(
+    docPath(p, 'foundation/PRD.md'),
+    '---\nstatus: approved\nauthor: +mock\n---\n\n# Done\n',
+    'utf8',
+  );
   // slow mock: each step sleeps 400ms — two sequential ≈ 800ms, parallel ≈ 400ms
   const script = join(work, 'slow.sh');
   writeFileSync(script, `#!/bin/sh
@@ -210,7 +212,7 @@ printf -- '---\\nstatus: draft\\nauthor: +mock\\n---\\n\\n# Mock\\n' > ".kortext
   await advance(db, p, { id: 'slow', binary: script, args: [], installHint: '' }, pkgRoot);
   const elapsed = Date.now() - t0;
   const done = listJobs(db, p.id).filter((j) => j.status === 'done').map((j) => j.doc_rel).sort();
-  assert.deepEqual(done, ['CONTENT.md', 'STACK.md', 'STRUCTURE.md']);
+  assert.deepEqual(done, ['GROWTH.md', 'STACK.md', 'STRUCTURE.md']);
   assert.ok(elapsed < 750, `expected parallel (<750ms), took ${elapsed}ms`);
   rmSync(work, { recursive: true, force: true });
 });

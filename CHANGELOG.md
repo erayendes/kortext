@@ -96,6 +96,17 @@ constitution. The v3 engine stays archived under `docs/codes/`.
 - Saving a document re-enters the chain, so editing the brief re-runs the gate.
   Editing the brief is the way out of a closed gate, and only approving one
   triggered a re-scan, so a corrected brief sat behind its old verdict.
+- **The whole chain was re-derived from what each document actually needs.**
+  `PRD` is written from the brief alone (which now carries audience, language,
+  KPIs and scope), `GROWTH` instruments the flows the PRD defines rather than
+  guessing them, `SECURITY` defends the boundaries `ARCHITECTURE` draws instead
+  of advising a stack generically, `DATABASE` reads those boundaries too,
+  `ENVIRONMENT` knows which secrets exist, `DESIGN` comes before `CONTENT`
+  because copy is written into components, and `TEST` reads `LEGAL` so the
+  gates prove the obligations rather than only the features. The new-project
+  flow resolves into nine dependency waves; the existing-project flow gets the
+  same treatment, where the PRD is reverse-engineered from the whole technical
+  surface rather than from the folder layout alone.
 - **Compliance is written after the design, not before it.** `LEGAL.md` used to
   run second, with only the brief to go on, and then answer questions that are
   technical: where the data is hosted, which third parties touch it, which

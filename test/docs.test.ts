@@ -14,8 +14,9 @@ test('parseWorkflowSteps extracts inputs/outputs/author/approver per output', ()
   const prd = steps.find((s) => s.output === 'foundation/PRD.md');
   assert.ok(prd);
   assert.equal(prd.author, '+product-manager');
-  // LEGAL is written after the design, so the PRD is not waiting on it
-  assert.deepEqual(prd.inputs.sort(), ['GROWTH.md', 'foundation/BRD.md']);
+  // The PRD is written from the brief alone: measurement instruments it and
+  // compliance judges it, so both come after.
+  assert.deepEqual(prd.inputs, ['foundation/BRD.md']);
   const legal = steps.find((s) => s.output === 'LEGAL.md');
   assert.ok(legal);
   assert.ok(legal.inputs.includes('ENVIRONMENT.md'), 'compliance needs the hosting region');
@@ -32,30 +33,31 @@ test('listDocs: dependency blocking follows approvals; regressed input warns dep
 
   let docs = listDocs(db, p, pkgRoot);
   const byRel = (rel: string) => docs.find((d) => d.rel === rel)!;
-  // BRD is draft and unblocked; GROWTH depends on BRD (not approved yet) → blocked
+  // BRD is draft and unblocked; PRD depends on BRD (not approved yet) → blocked
   assert.equal(byRel('foundation/BRD.md').status, 'draft');
   assert.equal(byRel('foundation/BRD.md').blocked, false);
-  assert.equal(byRel('GROWTH.md').blocked, true);
+  assert.equal(byRel('foundation/PRD.md').blocked, true);
   // BRD sorts before PRD (dependency depth)
   assert.ok(docs.findIndex((d) => d.rel === 'foundation/BRD.md') < docs.findIndex((d) => d.rel === 'foundation/PRD.md'));
 
-  // approve BRD → GROWTH unblocks; LEGAL stays blocked far longer, because it
-  // is written against the design rather than before it
+  // approve BRD → PRD unblocks; LEGAL stays blocked far longer, because it is
+  // written against the design rather than before it
   setFrontmatterStatus(docPath(p, 'foundation/BRD.md'), 'approved');
   docs = listDocs(db, p, pkgRoot);
   assert.equal(byRel('foundation/BRD.md').status, 'approved');
-  assert.equal(byRel('GROWTH.md').blocked, false);
+  assert.equal(byRel('foundation/PRD.md').blocked, false);
   assert.equal(byRel('LEGAL.md').blocked, true);
 
-  setFrontmatterStatus(docPath(p, 'GROWTH.md'), 'approved');
+  setFrontmatterStatus(docPath(p, 'foundation/PRD.md'), 'approved');
   docs = listDocs(db, p, pkgRoot);
-  assert.equal(byRel('foundation/PRD.md').blocked, false);
+  assert.equal(byRel('GROWTH.md').blocked, false);
+  assert.equal(byRel('STACK.md').blocked, false);
   assert.equal(byRel('LEGAL.md').blocked, true); // still waiting on STACK, DATABASE, ENVIRONMENT
 
-  // BRD falls back to draft after GROWTH was written → GROWTH warns upstreamChanged
+  // BRD falls back to draft after PRD was written → PRD warns upstreamChanged
   setFrontmatterStatus(docPath(p, 'foundation/BRD.md'), 'draft');
   docs = listDocs(db, p, pkgRoot);
-  assert.equal(byRel('GROWTH.md').upstreamChanged, true);
+  assert.equal(byRel('foundation/PRD.md').upstreamChanged, true);
 
   rmSync(work, { recursive: true, force: true });
 });
