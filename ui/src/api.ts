@@ -122,7 +122,14 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ rel }),
     }),
-  createProject: (input: { name: string; repoPath: string; kind: 'new' | 'existing'; code?: string; brief?: string }) =>
+  createProject: (input: {
+    name: string;
+    repoPath: string;
+    kind: 'new' | 'existing';
+    code?: string;
+    brief?: string;
+    docLang?: string;
+  }) =>
     req<{ project: Project }>('/api/projects', { method: 'POST', body: JSON.stringify(input) }),
   pickDirectory: () => req<{ path: string | null }>('/api/pick-directory', { method: 'POST' }),
   removeProject: (id: number) => req<{ removed: boolean }>(`/api/projects/${id}`, { method: 'DELETE' }),

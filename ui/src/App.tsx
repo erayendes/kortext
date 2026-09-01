@@ -299,6 +299,7 @@ function AddProject({
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
   const [repoPath, setRepoPath] = useState('');
+  const [docLang, setDocLang] = useState('');
   const [brief, setBrief] = useState('');
   const [briefMode, setBriefMode] = useState<'write' | 'upload'>('write');
   const [uploadName, setUploadName] = useState<string | null>(null);
@@ -319,7 +320,14 @@ function AddProject({
 
   const submit = async () => {
     try {
-      const { project } = await api.createProject({ name, repoPath, kind, code: code || undefined, brief: brief || undefined });
+      const { project } = await api.createProject({
+        name,
+        repoPath,
+        kind,
+        code: code || undefined,
+        brief: brief || undefined,
+        docLang: docLang || undefined,
+      });
       onDone(project, brief.trim().length > 0);
     } catch (e) {
       setErr((e as Error).message);
@@ -372,9 +380,21 @@ function AddProject({
           Browse…
         </button>
       </div>
+      <div className="kx-form-row">
+        <input
+          className="kx-input kx-path"
+          placeholder={
+            kind === 'existing'
+              ? 'Documents language — e.g. Türkçe (there is no brief to take it from)'
+              : 'Documents language (optional) — leave empty to follow the brief'
+          }
+          value={docLang}
+          onChange={(e) => setDocLang(e.target.value)}
+        />
+      </div>
       {kind === 'existing' && (
         <span className="kx-cmd-hint">
-          No brief for an existing project — analysis derives from the code itself and starts when you hit Add.
+          No brief for an existing project — the code itself is the evidence. Nothing runs until you press Start.
         </span>
       )}
       {kind === 'new' && (

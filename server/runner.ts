@@ -81,7 +81,9 @@ export function buildStepPrompt(
     '- Fill the skeleton template already at that path: keep its section headings VERBATIM, replace the placeholder content under them.',
     `- Frontmatter must end up as: status: draft, author: ${step.author ?? '+agent'}${step.approver ? `, approver: ${step.approver}` : ''}.`,
     '- NEVER set status to approved — approval belongs to the human.',
-    '- Document language: write the PROSE in the language of .kortext/foundation/BRD.md; if there is no BRD (existing project), match the language of the already-approved .kortext documents, else the language of the repo README; default to English.',
+    project.doc_lang
+      ? `- Document language: write the PROSE in ${project.doc_lang}. This is +prime's stated choice — it overrides the language of the inputs, the repository and the README.`
+      : '- Document language: write the PROSE in the language of .kortext/foundation/BRD.md; if there is no BRD (existing project), match the language of the already-approved .kortext documents, else the language of the repo README; default to English.',
     '- ENGLISH ALWAYS, whatever the document language: the section headings (they are structure, and other documents cite them by name), code and code samples, identifiers, file and folder names, commands, environment-variable names, database table and column names, API paths and field names, branch and commit conventions, and every frontmatter key. Only the prose under the headings is written in the brief\'s language — never translate a name something is called by.',
     "- Product copy is the one exception: strings a user of the product will read (microcopy, error messages, page copy, email text) are written in the product's interface language from the brief — which may differ from the language of this document.",
     '',

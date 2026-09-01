@@ -232,11 +232,11 @@ export function DocDrawer({
   );
 }
 
-// One vocabulary for every doc state (UAT): next · writing… · paused ·
-// pending · approved · failed · n/a · log. `waiting` stays distinct from
-// `next` — it means an input is still unapproved, so nothing can run yet.
+// One vocabulary for every doc state: waiting · writing… · paused · review ·
+// approved · failed · n/a · log. A draft reads `review` rather than `pending`,
+// because nothing is queued — the document is written and waiting on a human.
 const STATUS_LABEL: Record<string, string> = {
-  draft: 'pending',
+  draft: 'review',
   'not-applicable': 'n/a',
   approved: 'approved',
   log: 'log',

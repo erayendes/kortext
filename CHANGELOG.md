@@ -83,6 +83,16 @@ constitution. The v3 engine stays archived under `docs/codes/`.
 - Archive asks before it acts, like Restart and Remove, and the three project
   actions are separated and coloured by what they cost: restart blue, archive
   green, remove red.
+- **Documents language** is a project setting on the add form. An existing
+  project has no brief to take a language from, so every document came out in
+  the repository's language — English, in practice. When set it overrides the
+  inputs, the repository and the README; code, names and headings stay English
+  as before.
+- Saving a document re-enters the chain, so editing the brief re-runs the gate.
+  Editing the brief is the way out of a closed gate, and only approving one
+  triggered a re-scan, so a corrected brief sat behind its old verdict.
+- A draft document reads **review** rather than `pending` — nothing is queued;
+  the document is written and waiting on a human.
 - The document list's last group is **Not applicable** rather than Reference:
   the group existed to hold the decision log alongside skipped documents, and
   with the log gone it holds one kind of thing and should say so.

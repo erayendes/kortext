@@ -51,6 +51,9 @@ export function openDb(path = defaultDbPath()): Database.Database {
   if (!cols.includes('archived')) {
     db.exec('ALTER TABLE projects ADD COLUMN archived INTEGER NOT NULL DEFAULT 0');
   }
+  if (!cols.includes('doc_lang')) {
+    db.exec("ALTER TABLE projects ADD COLUMN doc_lang TEXT NOT NULL DEFAULT ''");
+  }
   // The request-queue agent surface is gone (vision v2 — kortext drives the
   // engine itself); drop the leftover table from older installs.
   db.exec('DROP TABLE IF EXISTS requests');
@@ -65,5 +68,6 @@ export interface Project {
   code: string; // task-id prefix, e.g. ACME
   paused: number; // 1 = the automatic chain does not start new steps
   archived: number; // 1 = finished with, folded away in the panel; files untouched
+  doc_lang: string; // the language the documents are written in; '' = follow the brief
   created_at: string;
 }

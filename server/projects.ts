@@ -120,7 +120,14 @@ export function deriveCode(name: string): string {
 
 export function createProject(
   db: Database.Database,
-  input: { name: string; repoPath: string; kind?: 'new' | 'existing'; code?: string; brief?: string },
+  input: {
+    name: string;
+    repoPath: string;
+    kind?: 'new' | 'existing';
+    code?: string;
+    brief?: string;
+    docLang?: string;
+  },
   pkgRoot: string,
 ): Project {
   const name = input.name.trim();
@@ -149,8 +156,10 @@ export function createProject(
     );
   }
   const row = db
-    .prepare('INSERT INTO projects (name, repo_path, kind, code) VALUES (?, ?, ?, ?) RETURNING *')
-    .get(name, repoPath, kind, code) as Project;
+    .prepare(
+      'INSERT INTO projects (name, repo_path, kind, code, doc_lang) VALUES (?, ?, ?, ?, ?) RETURNING *',
+    )
+    .get(name, repoPath, kind, code, (input.docLang ?? '').trim()) as Project;
   return row;
 }
 

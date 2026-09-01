@@ -59,9 +59,9 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   });
 
   app.post('/api/projects', (req, res) => {
-    const { name, repoPath, kind, code, brief } = req.body ?? {};
+    const { name, repoPath, kind, code, brief, docLang } = req.body ?? {};
     try {
-      const project = createProject(db, { name, repoPath, kind, code, brief }, pkgRoot);
+      const project = createProject(db, { name, repoPath, kind, code, brief, docLang }, pkgRoot);
       // Nothing runs on Add — the project lands paused and the user presses
       // Start on the project screen (Start = the unpause endpoint).
       db.prepare('UPDATE projects SET paused = 1 WHERE id = ?').run(project.id);
@@ -239,6 +239,10 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     const { rel, content } = req.body ?? {};
     try {
       writeFileSync(docPath(project, String(rel)), String(content ?? ''), 'utf8');
+      // An edit changes the evidence, so the chain has to look again — editing
+      // the brief is the whole way out of a closed gate, and a save that
+      // changed nothing downstream is a no-op re-scan.
+      kickChain(project);
       res.json({ ok: true });
     } catch (err) {
       res.status(400).json({ error: (err as Error).message });

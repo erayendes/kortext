@@ -120,3 +120,26 @@ test('legacy layout migrates: references flatten, memory TODO/decisions survive'
   }
   rmSync(work, { recursive: true, force: true });
 });
+
+test('the documents language chosen in the form reaches the step prompt', async () => {
+  const work = tempDir();
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(
+    db,
+    { name: 'TR', repoPath: join(work, 'tr'), kind: 'existing', docLang: 'Türkçe' },
+    pkgRoot,
+  );
+  assert.equal(p.doc_lang, 'Türkçe');
+  const { buildStepPrompt } = await import('../server/runner.js');
+  const prompt = buildStepPrompt(
+    p,
+    { output: 'STACK.md', inputs: [], author: '+architect', approver: '+prime' },
+    '',
+    null,
+  );
+  // An existing project has no brief, so a stated language is the only thing
+  // standing between the reader and a document in the repository's language.
+  assert.match(prompt, /write the PROSE in Türkçe/);
+  assert.match(prompt, /ENGLISH ALWAYS/);
+  rmSync(work, { recursive: true, force: true });
+});
