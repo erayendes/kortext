@@ -110,6 +110,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ rel }),
     }),
+  proposeRevision: (projectId: number, rel: string) =>
+    req<{ proposal: string }>(`/api/projects/${projectId}/docs/propose`, {
+      method: 'POST',
+      body: JSON.stringify({ rel }),
+    }),
   dismissRequests: (projectId: number, rel: string) =>
     req<{ dismissed: number }>(`/api/projects/${projectId}/docs/dismiss-request`, {
       method: 'POST',

@@ -99,6 +99,16 @@ All notable changes to Kortext are documented here. The format is based on
 
 ### Added
 
+- **The brief's revision gets drafted, not demanded.** A document another one
+  has asked to change, that no step produces, now offers **Draft the change**:
+  the engine reads the document and the requests, writes a full revised version
+  to a scratch file, and the panel loads it into the editor unsaved. Nothing
+  reaches the document until the human presses Save — the brief is the one
+  input the chain never writes, and letting an agent write it would put the
+  readiness gate in the position of judging its own output. So the agent
+  proposes and prime decides, which is the same boundary with the typing taken
+  out. Offered only where a revision request is open; the gate's own questions
+  are still answered by a person.
 - **A guard for the order.** `test/order.test.ts` fails when a workflow step
   reads a document written after it, when a persona's declared upstream differs
   from the input list its step gives it, and when a skeleton is missing the

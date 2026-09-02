@@ -1,5 +1,5 @@
 import type Database from 'better-sqlite3';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { Project } from './db.js';
@@ -291,6 +291,57 @@ export async function explainDoc(
     throw new Error(`${engine.id} CLI failed: ${(res.stderrTail || res.stdoutTail).trim().slice(-300)}`);
   }
   return { answer: res.stdoutTail.trim() };
+}
+
+// A revision the human applies. The document nobody's step produces — the brief
+// — cannot be sent back to an author, but the change another document asked for
+// is still concrete work. So the engine drafts it and writes NOTHING the human
+// keeps: the proposal lands in a scratch file, is read once, and is deleted.
+// Applying it is the ordinary save the human already performs by hand.
+export async function proposeRevision(
+  project: Project,
+  rel: string,
+  notes: string[],
+  engine: EngineSpec,
+  pkgRoot: string,
+): Promise<{ proposal: string }> {
+  const scratch = join(project.repo_path, '.kortext', '.proposal.txt');
+  // ponytail: .txt, not .md — listDocs scans .kortext/*.md and would list it as a document
+  rmSync(scratch, { force: true });
+  const author = loadDocMap(pkgRoot, project.kind ?? 'new').get(rel)?.author ?? '+agent';
+  const prompt = [
+    `Another document has asked .kortext/${rel} to change. Draft that change.`,
+    ...(author !== '+agent' ? [`Write as ${author}, but the document belongs to the human — you propose, they decide.`] : []),
+    '',
+    'HARD RULES:',
+    `- Read .kortext/${rel}. Write the FULL revised document to .kortext/.proposal.txt — the whole file, frontmatter included, not a fragment and not a diff.`,
+    '- Touch NO other file. Do not modify the document itself; the human applies your draft.',
+    '- Keep the frontmatter exactly as it is, including the status line.',
+    '- Keep every section heading verbatim, and keep the document in its own language.',
+    '- Change ONLY what the requests below ask for. Everything they do not mention stays word for word.',
+    '',
+    'REQUESTS:',
+    ...notes.map((n) => `- ${n}`),
+  ].join('\n');
+  const res = await spawnCli({
+    binary: engine.binary,
+    args: engine.args,
+    cwd: project.repo_path,
+    stdin: prompt,
+    logPath: join(homedir(), '.kortext', 'logs', `p${project.id}-propose.log`),
+    signal: new AbortController().signal,
+    timeoutMs: 5 * 60 * 1000,
+  });
+  if (res.exitCode !== 0) {
+    throw new Error(`${engine.id} CLI failed: ${(res.stderrTail || res.stdoutTail).trim().slice(-300)}`);
+  }
+  if (!existsSync(scratch)) {
+    throw new Error(`${engine.id} wrote no proposal — nothing was changed`);
+  }
+  const proposal = readFileSync(scratch, 'utf8');
+  rmSync(scratch, { force: true });
+  if (proposal.trim().length === 0) throw new Error('the proposal came back empty');
+  return { proposal };
 }
 
 // "Kopeng'e aktar" = split the work into Version → Epic → Task files under

@@ -394,3 +394,46 @@ test("the brief has no producing step: a revision refuses, loudly, and leaves th
   rmSync(work, { recursive: true, force: true });
 });
 
+test('a proposed revision reaches the editor, never the document', async () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Propose', repoPath: join(work, 'propose') }, pkgRoot);
+  approveBrief(p);
+  const before = readFileSync(docPath(p, 'foundation/BRD.md'), 'utf8');
+
+  const script = join(work, 'proposer.sh');
+  writeFileSync(script, `#!/bin/sh
+cat > /dev/null
+printf -- '---\\nstatus: draft\\nauthor: +prime\\n---\\n\\n# Project Brief (BRD)\\n\\nrevised\\n' > .kortext/.proposal.txt
+`);
+  chmodSync(script, 0o755);
+  const { proposeRevision } = await import('../server/runner.js');
+  const out = await proposeRevision(
+    p,
+    'foundation/BRD.md',
+    ['[foundation/PRD.md asks] say it the other way round'],
+    { id: 'proposer', binary: script, args: [], installHint: '' },
+    pkgRoot,
+  );
+
+  assert.match(out.proposal, /revised/);
+  // The document is the human's: the proposal is theirs to apply, or not.
+  assert.equal(readFileSync(docPath(p, 'foundation/BRD.md'), 'utf8'), before);
+  // And the scratch file does not linger as a document-shaped thing in .kortext.
+  assert.equal(existsSync(join(p.repo_path, '.kortext', '.proposal.txt')), false);
+  rmSync(work, { recursive: true, force: true });
+});
+
+test('an engine that proposes nothing is an error, not an empty document', async () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Silent', repoPath: join(work, 'silent') }, pkgRoot);
+  approveBrief(p);
+  const { proposeRevision } = await import('../server/runner.js');
+  await assert.rejects(
+    () => proposeRevision(p, 'foundation/BRD.md', ['change it'], mockEngine(work, 'noop'), pkgRoot),
+    /wrote no proposal/,
+  );
+  rmSync(work, { recursive: true, force: true });
+});
+

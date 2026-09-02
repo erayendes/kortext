@@ -8,7 +8,7 @@ import { pickDirectoryNative } from './pick-directory.js';
 import { spawnSync } from 'node:child_process';
 import { readdirSync } from 'node:fs';
 import { detectEngines, selectedEngine, setSetting, ENGINES } from './engines.js';
-import { abortRuns, advance, explainDoc, failStaleJobs, listJobs, nextStep, reviseDoc, runPlanning, runningDoc, runningJob } from './runner.js';
+import { abortRuns, advance, explainDoc, failStaleJobs, listJobs, nextStep, proposeRevision, reviseDoc, runPlanning, runningDoc, runningJob } from './runner.js';
 import { isChecking, readReadiness } from './readiness.js';
 import { readFileSync, writeFileSync } from 'node:fs';
 import type { Project } from './db.js';
@@ -330,6 +330,31 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     setFrontmatterStatus(docPath(project, rel), 'draft');
     void reviseDoc(db, project, rel, notes, engine, pkgRoot);
     res.status(202).json({ started: rel, notes: notes.length });
+  });
+
+  // The document nobody's step produces still gets the change drafted for it:
+  // the engine writes a proposal to scratch, the panel loads it into the editor,
+  // and nothing reaches the document until the human presses Save.
+  app.post('/api/projects/:id/docs/propose', async (req, res) => {
+    const project = projectOr404(req.params.id, res);
+    if (!project) return;
+    const engine = selectedEngine(db);
+    if (!engine) return res.status(409).json({ error: 'no agent CLI installed' });
+    const rel = String(req.body?.rel ?? '');
+    const doc = listDocs(db, project, pkgRoot).find((d) => d.rel === rel);
+    if (!doc) return res.status(404).json({ error: `no such document: ${rel}` });
+    if (doc.revisionRequests.length === 0) {
+      return res.status(409).json({ error: `no open revision request for ${rel}` });
+    }
+    if (runningDoc(db, project.id, rel)) {
+      return res.status(409).json({ error: `${rel} is being rewritten — wait for it to land` });
+    }
+    try {
+      const notes = doc.revisionRequests.map((r) => `[${r.from} asks] ${r.reason}`);
+      res.json(await proposeRevision(project, rel, notes, engine, pkgRoot));
+    } catch (err) {
+      res.status(502).json({ error: (err as Error).message });
+    }
   });
 
   // A demand the human refuses: closed without touching the document.

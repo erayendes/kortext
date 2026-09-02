@@ -34,10 +34,12 @@ export function DocDrawer({
   const [notes, setNotes] = useState<Note[]>([]);
   const [explains, setExplains] = useState<Explain[]>([]);
   const [busy, setBusy] = useState(false);
+  const [proposed, setProposed] = useState(false); // the editor holds a draft the engine wrote
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
     setEditing(false);
+    setProposed(false);
     setSelected(null);
     setNotes([]);
     setExplains([]);
@@ -162,6 +164,17 @@ export function DocDrawer({
       await api.saveDoc(project.id, doc.rel, draft);
       setContent(draft);
       setEditing(false);
+      setProposed(false);
+    });
+
+  // The engine drafts the change another document asked for. It lands in the
+  // editor, unsaved: this document is the human's, so the last keystroke is too.
+  const proposeFix = () =>
+    act(async () => {
+      const { proposal } = await api.proposeRevision(project.id, doc.rel);
+      setDraft(proposal);
+      setProposed(true);
+      setEditing(true);
     });
 
   return (
@@ -183,7 +196,11 @@ export function DocDrawer({
               <button className="btn btn-sm btn-primary" disabled={busy} onClick={saveEdit}>
                 Save
               </button>
-              <button className="btn btn-sm" disabled={busy} onClick={() => { setEditing(false); setDraft(content); }}>
+              <button
+                className="btn btn-sm"
+                disabled={busy}
+                onClick={() => { setEditing(false); setDraft(content); setProposed(false); }}
+              >
                 Discard
               </button>
             </>
@@ -212,7 +229,7 @@ export function DocDrawer({
           <div className="kx-changebar-head">
             {doc.hasProducingStep
               ? 'Another document has asked this one to change. Until it does, the analysis is not finished.'
-              : 'Another document has asked this one to change. No agent writes this one — edit it yourself, approve it again, then dismiss the request.'}
+              : 'Another document has asked this one to change. This one is yours — draft the change with the agent or edit it yourself, then approve it again and dismiss the request.'}
           </div>
           <ul className="kx-changebar-list">
             {doc.revisionRequests.map((r, i) => (
@@ -222,13 +239,17 @@ export function DocDrawer({
             ))}
           </ul>
           <div className="kx-changebar-actions">
-            {doc.hasProducingStep && (
+            {doc.hasProducingStep ? (
               <button
                 className="btn btn-sm btn-primary"
                 disabled={busy}
                 onClick={() => act(() => api.sendBack(project.id, doc.rel).then(onClose))}
               >
                 Send back for revision
+              </button>
+            ) : (
+              <button className="btn btn-sm btn-primary" disabled={busy} onClick={proposeFix}>
+                {busy ? 'Drafting…' : 'Draft the change'}
               </button>
             )}
             <button
@@ -261,7 +282,15 @@ export function DocDrawer({
       )}
       <div className="dr-body">
         {editing ? (
-          <textarea className="kx-editor mono" value={draft} onChange={(e) => setDraft(e.target.value)} />
+          <>
+            {proposed && (
+              <div className="kx-changebar-head">
+                Drafted by the agent from the request above. Nothing is saved until you press Save —
+                read it, change what you want, then Save and approve.
+              </div>
+            )}
+            <textarea className="kx-editor mono" value={draft} onChange={(e) => setDraft(e.target.value)} />
+          </>
         ) : (
           <div className="kx-doc">
             {tokens.map((t) => (
