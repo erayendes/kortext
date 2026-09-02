@@ -24,6 +24,8 @@ export interface DocInfo {
   hasProducingStep: boolean;
   /** Changes other documents have asked of THIS one, still unactioned. */
   revisionRequests: Array<{ from: string; reason: string }>;
+  /** Changes THIS one has asked of others, still unactioned — decidable here too. */
+  sentRequests: Array<{ target: string; reason: string; targetHasStep: boolean }>;
 }
 
 /**
@@ -198,6 +200,7 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
         openQuestions: status !== 'uninitialized' && hasOpenQuestions(body),
         hasProducingStep: map.has(rel),
         revisionRequests: [],
+        sentRequests: [],
       });
       if (status !== 'uninitialized') {
         for (const r of parseRevisionRequests(body)) requests.push({ ...r, from: rel });
@@ -216,9 +219,17 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
     const target = docs.find((d) => d.rel === r.target || d.rel.endsWith(`/${r.target}`));
     // A document that was never written cannot be asked to change — the step
     // that writes it will read the requester as an input anyway.
-    if (target && target.status !== 'uninitialized' && !handled.has(requestKey(r.from, r.target, r.reason))) {
-      target.revisionRequests.push({ from: r.from, reason: r.reason });
-    }
+    if (!target || target.status === 'uninitialized') continue;
+    // Key on the RESOLVED rel, which is what the deciding route writes. Keying
+    // on the raw name a document typed (`BRD.md`) meant a decision recorded
+    // against `foundation/BRD.md` never matched, and the demand stood forever.
+    if (handled.has(requestKey(r.from, target.rel, r.reason))) continue;
+    target.revisionRequests.push({ from: r.from, reason: r.reason });
+    // The same demand, seen from the document that made it: deciding it there
+    // saves opening the target just to answer a question you already read.
+    docs
+      .find((d) => d.rel === r.from)
+      ?.sentRequests.push({ target: target.rel, reason: r.reason, targetHasStep: target.hasProducingStep });
   }
 
   // 'not-applicable' satisfies a dependency: the doc was considered and

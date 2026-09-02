@@ -34,6 +34,7 @@ export interface DocInfo {
   openQuestions: boolean;
   hasProducingStep: boolean;
   revisionRequests: Array<{ from: string; reason: string }>;
+  sentRequests: Array<{ target: string; reason: string; targetHasStep: boolean }>;
 }
 
 export interface KopengPlan {
@@ -105,18 +106,16 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify({ rel, content }),
     }),
-  sendBack: (projectId: number, rel: string) =>
-    req<{ started: string; notes: number }>(`/api/projects/${projectId}/docs/send-back`, {
+  decideRequest: (
+    projectId: number,
+    body: { from: string; target: string; reason: string; decision: 'apply' | 'dismiss'; instruction?: string },
+  ) =>
+    req<{ started?: string; dismissed?: number }>(`/api/projects/${projectId}/docs/decide-request`, {
       method: 'POST',
-      body: JSON.stringify({ rel }),
+      body: JSON.stringify(body),
     }),
   proposeRevision: (projectId: number, rel: string) =>
     req<{ proposal: string }>(`/api/projects/${projectId}/docs/propose`, {
-      method: 'POST',
-      body: JSON.stringify({ rel }),
-    }),
-  dismissRequests: (projectId: number, rel: string) =>
-    req<{ dismissed: number }>(`/api/projects/${projectId}/docs/dismiss-request`, {
       method: 'POST',
       body: JSON.stringify({ rel }),
     }),

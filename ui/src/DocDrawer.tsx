@@ -89,16 +89,25 @@ export function DocDrawer({
       .catch(() => {});
   }, []);
 
-  const openQ = useMemo(() => {
-    const marked = new Set<number>();
-    let inSection = false;
+  // Two different debts, two different colours. A question is work for the
+  // reader of THIS document; a revision request is a demand on another one.
+  // Painting both amber made them look like the same job.
+  const [openQ, changeReq] = useMemo(() => {
+    const asks = new Set<number>();
+    const demands = new Set<number>();
+    let section: 'ask' | 'demand' | null = null;
     for (const t of tokens) {
       if (t.kind === 'h1' || t.kind === 'h2' || t.kind === 'h3') {
-        inSection = /open questions|revision requests/i.test(t.text);
+        section = /open questions/i.test(t.text)
+          ? 'ask'
+          : /revision requests/i.test(t.text)
+            ? 'demand'
+            : null;
       }
-      if (inSection) marked.add(t.index);
+      if (section === 'ask') asks.add(t.index);
+      if (section === 'demand') demands.add(t.index);
     }
-    return marked;
+    return [asks, demands] as const;
   }, [tokens]);
 
   if (!doc) return <Drawer open={false} onClose={onClose}>{null}</Drawer>;
@@ -225,42 +234,43 @@ export function DocDrawer({
       </div>
       {err && <div className="kx-error">{err}</div>}
       {doc.revisionRequests.length > 0 && !editing && (
-        <div className="kx-doc-changebar">
-          <div className="kx-changebar-head">
-            {doc.hasProducingStep
-              ? 'Another document has asked this one to change. Until it does, the analysis is not finished.'
-              : 'Another document has asked this one to change. This one is yours — draft the change with the agent or edit it yourself, then approve it again and dismiss the request.'}
-          </div>
-          <ul className="kx-changebar-list">
-            {doc.revisionRequests.map((r, i) => (
-              <li key={i}>
-                <span className="mono">{r.from.replace(/\.md$/, '')}</span> — {r.reason}
-              </li>
-            ))}
-          </ul>
-          <div className="kx-changebar-actions">
-            {doc.hasProducingStep ? (
-              <button
-                className="btn btn-sm btn-primary"
-                disabled={busy}
-                onClick={() => act(() => api.sendBack(project.id, doc.rel).then(onClose))}
-              >
-                Send back for revision
-              </button>
-            ) : (
+        <RequestBar
+          project={project}
+          head={
+            doc.hasProducingStep
+              ? 'Another document has asked this one to change. Until it is settled, the analysis is not finished.'
+              : 'Another document has asked this one to change. This one is yours — draft the change with the agent or edit it yourself, then approve it again.'
+          }
+          extra={
+            doc.hasProducingStep ? null : (
               <button className="btn btn-sm btn-primary" disabled={busy} onClick={proposeFix}>
                 {busy ? 'Drafting…' : 'Draft the change'}
               </button>
-            )}
-            <button
-              className="btn btn-sm btn-secondary"
-              disabled={busy}
-              onClick={() => act(() => api.dismissRequests(project.id, doc.rel))}
-            >
-              Dismiss
-            </button>
-          </div>
-        </div>
+            )
+          }
+          items={doc.revisionRequests.map((r) => ({
+            label: r.from,
+            from: r.from,
+            target: doc.rel,
+            reason: r.reason,
+            canApply: doc.hasProducingStep,
+          }))}
+          onDone={onChanged}
+        />
+      )}
+      {doc.sentRequests.length > 0 && !editing && (
+        <RequestBar
+          project={project}
+          head="This document has asked others to change. Settle each one here — the target keeps its “changes asked” mark until you do."
+          items={doc.sentRequests.map((r) => ({
+            label: r.target,
+            from: doc.rel,
+            target: r.target,
+            reason: r.reason,
+            canApply: r.targetHasStep,
+          }))}
+          onDone={onChanged}
+        />
       )}
       {doc.openQuestions && !editing && (
         <div className="kx-doc-askbar">
@@ -298,6 +308,7 @@ export function DocDrawer({
                 <DocBlock
                   token={t}
                   openQuestion={openQ.has(t.index)}
+                  changeRequest={changeReq.has(t.index)}
                   selected={selected === t.index}
                   noted={notes.some((n) => n.line === t.index)}
                   onSelect={() => {
@@ -409,21 +420,123 @@ export function StatusBadge({
   );
 }
 
+// One demand, listed from either end: the document it was made of, and the
+// document that made it. Same three answers in both places.
+function RequestBar({
+  project,
+  head,
+  items,
+  extra,
+  onDone,
+}: {
+  project: Project;
+  head: string;
+  items: Array<{ label: string; from: string; target: string; reason: string; canApply: boolean }>;
+  extra?: React.ReactNode;
+  onDone: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [noting, setNoting] = useState<number | null>(null);
+  const [note, setNote] = useState('');
+
+  const decide = async (i: number, decision: 'apply' | 'dismiss', instruction?: string) => {
+    setBusy(true);
+    setErr(null);
+    try {
+      const it = items[i];
+      await api.decideRequest(project.id, {
+        from: it.from,
+        target: it.target,
+        reason: it.reason,
+        decision,
+        instruction,
+      });
+      setNoting(null);
+      setNote('');
+      onDone();
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="kx-doc-changebar">
+      <div className="kx-changebar-head">{head}</div>
+      {err && <div className="kx-error">{err}</div>}
+      <ul className="kx-changebar-list">
+        {items.map((it, i) => (
+          <li key={i}>
+            <span className="mono">{it.label.replace(/\.md$/, '').replace(/^foundation\//, '')}</span> — {it.reason}
+            <div className="kx-changebar-actions">
+              {it.canApply ? (
+                <>
+                  <button className="btn btn-sm btn-primary" disabled={busy} onClick={() => decide(i, 'apply')}>
+                    Apply
+                  </button>
+                  <button
+                    className="btn btn-sm"
+                    disabled={busy}
+                    onClick={() => setNoting(noting === i ? null : i)}
+                  >
+                    Apply with a note
+                  </button>
+                </>
+              ) : (
+                <span className="kx-cmd-hint">No agent writes that one — open it to draft the change.</span>
+              )}
+              <button className="btn btn-sm btn-secondary" disabled={busy} onClick={() => decide(i, 'dismiss')}>
+                Dismiss
+              </button>
+              {extra}
+            </div>
+            {noting === i && (
+              <div className="kx-note-input">
+                <input
+                  autoFocus
+                  value={note}
+                  placeholder="How it should be done instead — this rides along with the request"
+                  onChange={(e) => setNote(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && note.trim()) void decide(i, 'apply', note.trim());
+                    if (e.key === 'Escape') setNoting(null);
+                  }}
+                />
+                <button
+                  className="btn btn-sm btn-primary"
+                  disabled={busy || !note.trim()}
+                  onClick={() => decide(i, 'apply', note.trim())}
+                >
+                  Send
+                </button>
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function DocBlock({
   token,
   selected,
   noted,
   openQuestion,
+  changeRequest,
   onSelect,
 }: {
   token: MdToken;
   selected: boolean;
   noted: boolean;
   openQuestion?: boolean;
+  changeRequest?: boolean;
   onSelect: () => void;
 }) {
   if (token.kind === 'blank') return <div className="kx-blank" />;
-  const cls = `kx-block kx-${token.kind}${selected ? ' selected' : ''}${noted ? ' noted' : ''}${openQuestion ? ' open-q' : ''}`;
+  const cls = `kx-block kx-${token.kind}${selected ? ' selected' : ''}${noted ? ' noted' : ''}${openQuestion ? ' open-q' : ''}${changeRequest ? ' req-q' : ''}`;
   if (token.kind === 'table' && token.table) {
     return (
       <div className={cls} onClick={onSelect}>

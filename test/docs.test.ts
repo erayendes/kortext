@@ -192,8 +192,13 @@ test('a revision request lands in the inbox of the document it names', () => {
     'utf8',
   );
   writeFileSync(docPath(p, 'ENVIRONMENT.md'), '---\nstatus: approved\n---\n\n# Env\n', 'utf8');
-  const env = listDocs(db, p, pkgRoot).find((d) => d.rel === 'ENVIRONMENT.md')!;
+  const docs = listDocs(db, p, pkgRoot);
+  const env = docs.find((d) => d.rel === 'ENVIRONMENT.md')!;
   assert.deepEqual(env.revisionRequests, [{ from: 'foundation/TRD.md', reason: 'logs must go' }]);
+  // The same demand is decidable from the document that made it.
+  assert.deepEqual(docs.find((d) => d.rel === 'foundation/TRD.md')!.sentRequests, [
+    { target: 'ENVIRONMENT.md', reason: 'logs must go', targetHasStep: true },
+  ]);
 
   // An open demand keeps the handshake from completing, and being actioned clears it.
   assert.equal(analysisComplete(db, p, pkgRoot), false);
@@ -202,3 +207,23 @@ test('a revision request lands in the inbox of the document it names', () => {
   assert.deepEqual(after.revisionRequests, []);
   rmSync(work, { recursive: true, force: true });
 });
+
+test('a demand on a foundation document is settled by the path it was decided on', () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Key', repoPath: join(work, 'key') }, pkgRoot);
+  // Documents name their target the short way; the route records the rel.
+  // Keying the two differently left foundation demands standing forever.
+  writeFileSync(
+    docPath(p, 'foundation/PRD.md'),
+    '---\nstatus: approved\n---\n\n## Revision Requests\n\n- `BRD.md` — say it the other way round\n',
+    'utf8',
+  );
+  setFrontmatterStatus(docPath(p, 'foundation/BRD.md'), 'approved');
+  const brd = () => listDocs(db, p, pkgRoot).find((d) => d.rel === 'foundation/BRD.md')!;
+  assert.equal(brd().revisionRequests.length, 1);
+  markRequestHandled(p, requestKey('foundation/PRD.md', 'foundation/BRD.md', 'say it the other way round'));
+  assert.equal(brd().revisionRequests.length, 0);
+  rmSync(work, { recursive: true, force: true });
+});
+

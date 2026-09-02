@@ -301,73 +301,42 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     res.status(202).json({ started: rel });
   });
 
-  // Send a document back because another one asked: un-approve it, hand the
-  // demands over as the revision notes, and remember they were actioned so the
-  // requester's line does not stand forever.
-  app.post('/api/projects/:id/docs/send-back', (req, res) => {
+  // One demand, one decision — taken from either end. The document that made
+  // the request shows it too, so answering a question in STACK.md and settling
+  // what STACK.md asked of the brief are the same sitting.
+  app.post('/api/projects/:id/docs/decide-request', (req, res) => {
     const project = projectOr404(req.params.id, res);
     if (!project) return;
+    const { target, from, reason, decision, instruction } = req.body ?? {};
+    const rel = String(target ?? '');
+    const doc = listDocs(db, project, pkgRoot).find((d) => d.rel === rel);
+    if (!doc) return res.status(404).json({ error: `no such document: ${rel}` });
+    const request = doc.revisionRequests.find(
+      (r) => r.from === String(from ?? '') && r.reason === String(reason ?? ''),
+    );
+    if (!request) return res.status(409).json({ error: 'that request is already settled' });
+
+    if (decision === 'dismiss') {
+      markRequestHandled(project, requestKey(request.from, rel, request.reason));
+      return res.json({ dismissed: 1 });
+    }
+    // Applying means the document is rewritten, so it needs an author. The
+    // brief has none: it is prime's own, and its own drawer drafts the change.
+    if (!doc.hasProducingStep) {
+      return res.status(409).json({ error: `${rel} is prime's own document — open it and draft the change there` });
+    }
     const engine = selectedEngine(db);
     if (!engine) return res.status(409).json({ error: 'no agent CLI installed' });
-    const rel = String(req.body?.rel ?? '');
-    const doc = listDocs(db, project, pkgRoot).find((d) => d.rel === rel);
-    if (!doc || doc.revisionRequests.length === 0) {
-      return res.status(409).json({ error: `no open revision request for ${rel}` });
-    }
-    // Sending back means re-running the step that wrote the document. The brief
-    // has no step: nothing would run, and the document would be left in draft
-    // with its request already marked handled — stuck, and nowhere to see why.
-    if (!doc.hasProducingStep) {
-      return res.status(409).json({ error: `${rel} is prime's own document — edit it here` });
-    }
     if (runningDoc(db, project.id, rel)) {
       return res.status(409).json({ error: `${rel} is being rewritten — wait for it to land` });
     }
-    const notes = doc.revisionRequests.map((r) => `[${r.from} asks] ${r.reason}`);
-    for (const r of doc.revisionRequests) {
-      markRequestHandled(project, requestKey(r.from, rel, r.reason));
-    }
+    const notes = [`[${request.from} asks] ${request.reason}`];
+    const said = String(instruction ?? '').trim();
+    if (said) notes.push(`[prime decides] ${said}`);
+    markRequestHandled(project, requestKey(request.from, rel, request.reason));
     setFrontmatterStatus(docPath(project, rel), 'draft');
     void reviseDoc(db, project, rel, notes, engine, pkgRoot);
     res.status(202).json({ started: rel, notes: notes.length });
-  });
-
-  // The document nobody's step produces still gets the change drafted for it:
-  // the engine writes a proposal to scratch, the panel loads it into the editor,
-  // and nothing reaches the document until the human presses Save.
-  app.post('/api/projects/:id/docs/propose', async (req, res) => {
-    const project = projectOr404(req.params.id, res);
-    if (!project) return;
-    const engine = selectedEngine(db);
-    if (!engine) return res.status(409).json({ error: 'no agent CLI installed' });
-    const rel = String(req.body?.rel ?? '');
-    const doc = listDocs(db, project, pkgRoot).find((d) => d.rel === rel);
-    if (!doc) return res.status(404).json({ error: `no such document: ${rel}` });
-    if (doc.revisionRequests.length === 0) {
-      return res.status(409).json({ error: `no open revision request for ${rel}` });
-    }
-    if (runningDoc(db, project.id, rel)) {
-      return res.status(409).json({ error: `${rel} is being rewritten — wait for it to land` });
-    }
-    try {
-      const notes = doc.revisionRequests.map((r) => `[${r.from} asks] ${r.reason}`);
-      res.json(await proposeRevision(project, rel, notes, engine, pkgRoot));
-    } catch (err) {
-      res.status(502).json({ error: (err as Error).message });
-    }
-  });
-
-  // A demand the human refuses: closed without touching the document.
-  app.post('/api/projects/:id/docs/dismiss-request', (req, res) => {
-    const project = projectOr404(req.params.id, res);
-    if (!project) return;
-    const rel = String(req.body?.rel ?? '');
-    const doc = listDocs(db, project, pkgRoot).find((d) => d.rel === rel);
-    if (!doc) return res.status(404).json({ error: `no such document: ${rel}` });
-    for (const r of doc.revisionRequests) {
-      markRequestHandled(project, requestKey(r.from, rel, r.reason));
-    }
-    res.json({ dismissed: doc.revisionRequests.length });
   });
 
   // Line-anchored Q&A — synchronous, nothing persisted.

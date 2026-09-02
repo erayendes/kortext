@@ -1525,15 +1525,22 @@ body {
 .kx-card-action { margin-left: auto; }
 .kx-doc-changebar { margin: 0 18px 8px; padding: 10px 12px; border-radius: var(--r-md); background: var(--red-bg); border: 1px solid var(--red-border); font-size: 12.5px; display: flex; flex-direction: column; gap: 8px; }
 .kx-changebar-head { color: var(--red); font-weight: 600; }
-.kx-changebar-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
-.kx-changebar-actions { display: flex; gap: 6px; }
-.kx-block.open-q { background: var(--amber-bg); }
+.kx-changebar-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 10px; }
+/* Each demand carries its own answer: one decision per line, not one for the pile. */
+.kx-changebar-list > li + li { padding-top: 10px; border-top: 1px solid var(--red-border); }
+.kx-changebar-actions { display: flex; gap: 6px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
+.kx-changebar-actions .kx-cmd-hint { margin-right: auto; }
 .kx-doc-askbar { margin: 0 18px; padding: 8px 12px; border-radius: var(--r-md); background: var(--amber-bg); border: 1px solid var(--amber-border); color: var(--amber); font-size: 12.5px; }
 .kx-doc-changes { font-family: var(--font-mono); font-size: 10px; padding: 2px 6px; border-radius: 999px; background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
 .kx-doc-ask { font-family: var(--font-mono); font-size: 10px; padding: 2px 6px; border-radius: 999px; background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-border); }
 .kx-block.open-q { background: var(--amber-bg); }
 .kx-block.open-q:first-of-type, .kx-block.kx-h2.open-q { font-weight: 650; }
 .kx-block.open-q + .kx-blank { background: var(--amber-bg); }
+/* A revision request is a demand on another document — the same red as the
+   "changes asked" pill that carries it, so the block and the row agree. */
+.kx-block.req-q { background: var(--red-bg); }
+.kx-block.req-q:first-of-type, .kx-block.kx-h2.req-q { font-weight: 650; }
+.kx-block.req-q + .kx-blank { background: var(--red-bg); }
 /* Archived projects fold away — one summary line instead of a wall of cards. */
 .kx-archive { margin: 18px 22px 0; }
 .kx-archive > .kx-doc-group { color: var(--fg-muted, inherit); }

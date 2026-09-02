@@ -75,6 +75,12 @@ All notable changes to Kortext are documented here. The format is based on
 
 ### Fixed
 
+- **A demand on a foundation document was never actually settled.** Documents
+  name their target the short way (`` `BRD.md` ``) while the deciding route
+  recorded the resolved path (`foundation/BRD.md`), and the two were keyed
+  differently — so dismissing or applying a demand on the brief, the PRD, the
+  TRD or the PFD left it standing on the next read. Both ends now key on the
+  resolved path.
 - **Sending the brief back for revision left the project stuck.** "Send back for
   revision" re-runs the step that wrote the document — and no step writes the
   brief, which is prime's own. The route marked the request handled, set the
@@ -99,6 +105,19 @@ All notable changes to Kortext are documented here. The format is based on
 
 ### Added
 
+- **A demand is settled from either end, one at a time.** A revision request
+  used to be actionable only on the document it was made of, which meant
+  reading STACK.md, seeing what it asks of the brief, and having nowhere to say
+  yes. Both documents now show it: the target's inbox as before, and the
+  requester's own drawer under the requests it sent. Each demand carries its
+  own three answers — **Apply**, **Apply with a note** (a free-text instruction
+  that rides along with the request into the rewrite), **Dismiss** — instead of
+  one button acting on the whole pile. Apply is offered only where an agent
+  writes the target; the brief is still drafted from its own drawer.
+- **Revision requests read as a different debt from open questions.** Both
+  sections were painted the same amber, which made "a question you must answer"
+  and "a demand on another document" look like one job. Requests now carry the
+  red of the `changes asked` pill that represents them on the row.
 - **The brief's revision gets drafted, not demanded.** A document another one
   has asked to change, that no step produces, now offers **Draft the change**:
   the engine reads the document and the requests, writes a full revised version
