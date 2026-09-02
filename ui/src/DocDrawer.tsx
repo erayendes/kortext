@@ -210,8 +210,9 @@ export function DocDrawer({
       {doc.revisionRequests.length > 0 && !editing && (
         <div className="kx-doc-changebar">
           <div className="kx-changebar-head">
-            Another document has asked this one to change. Until it does, the analysis is not
-            finished.
+            {doc.hasProducingStep
+              ? 'Another document has asked this one to change. Until it does, the analysis is not finished.'
+              : 'Another document has asked this one to change. No agent writes this one — edit it yourself, approve it again, then dismiss the request.'}
           </div>
           <ul className="kx-changebar-list">
             {doc.revisionRequests.map((r, i) => (
@@ -221,13 +222,15 @@ export function DocDrawer({
             ))}
           </ul>
           <div className="kx-changebar-actions">
-            <button
-              className="btn btn-sm btn-primary"
-              disabled={busy}
-              onClick={() => act(() => api.sendBack(project.id, doc.rel).then(onClose))}
-            >
-              Send back for revision
-            </button>
+            {doc.hasProducingStep && (
+              <button
+                className="btn btn-sm btn-primary"
+                disabled={busy}
+                onClick={() => act(() => api.sendBack(project.id, doc.rel).then(onClose))}
+              >
+                Send back for revision
+              </button>
+            )}
             <button
               className="btn btn-sm btn-secondary"
               disabled={busy}
@@ -314,13 +317,19 @@ export function DocDrawer({
             </span>
           )}
           <div className="kx-note-input">
-            <button
-              className="btn btn-sm btn-primary"
-              disabled={busy || notes.length === 0}
-              onClick={requestRevision}
-            >
-              Request revision{notes.length > 0 ? ` (${notes.length})` : ''}
-            </button>
+            {doc.hasProducingStep ? (
+              <button
+                className="btn btn-sm btn-primary"
+                disabled={busy || notes.length === 0}
+                onClick={requestRevision}
+              >
+                Request revision{notes.length > 0 ? ` (${notes.length})` : ''}
+              </button>
+            ) : (
+              <span className="kx-cmd-hint">
+                No agent writes this document — use Edit to change it yourself.
+              </span>
+            )}
           </div>
         </div>
       )}

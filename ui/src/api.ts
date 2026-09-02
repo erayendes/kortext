@@ -32,6 +32,7 @@ export interface DocInfo {
   blocked: boolean;
   upstreamChanged: boolean;
   openQuestions: boolean;
+  hasProducingStep: boolean;
   revisionRequests: Array<{ from: string; reason: string }>;
 }
 

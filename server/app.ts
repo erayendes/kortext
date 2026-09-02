@@ -3,7 +3,7 @@ import type Database from 'better-sqlite3';
 import { existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { createProject, deriveCode, listProjects, removeProject, scaffoldProject, setArchived } from './projects.js';
-import { analysisComplete, docPath, listDocs, markRequestHandled, requestKey, setFrontmatterStatus } from './docs.js';
+import { analysisComplete, docPath, listDocs, loadDocMap, markRequestHandled, requestKey, setFrontmatterStatus } from './docs.js';
 import { pickDirectoryNative } from './pick-directory.js';
 import { spawnSync } from 'node:child_process';
 import { readdirSync } from 'node:fs';
@@ -291,6 +291,9 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     // The call is fire-and-forget, so anything that would make it refuse has to
     // be answered here — otherwise the panel reports success, clears the notes
     // and the answers are gone.
+    if (!loadDocMap(pkgRoot, project.kind ?? 'new').has(String(rel))) {
+      return res.status(409).json({ error: `${rel} is prime's own document — edit it here` });
+    }
     if (runningDoc(db, project.id, String(rel))) {
       return res.status(409).json({ error: `${rel} is being rewritten — wait for it to land` });
     }
@@ -310,6 +313,12 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     const doc = listDocs(db, project, pkgRoot).find((d) => d.rel === rel);
     if (!doc || doc.revisionRequests.length === 0) {
       return res.status(409).json({ error: `no open revision request for ${rel}` });
+    }
+    // Sending back means re-running the step that wrote the document. The brief
+    // has no step: nothing would run, and the document would be left in draft
+    // with its request already marked handled — stuck, and nowhere to see why.
+    if (!doc.hasProducingStep) {
+      return res.status(409).json({ error: `${rel} is prime's own document — edit it here` });
     }
     if (runningDoc(db, project.id, rel)) {
       return res.status(409).json({ error: `${rel} is being rewritten — wait for it to land` });

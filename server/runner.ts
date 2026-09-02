@@ -221,6 +221,16 @@ export async function advance(
 
 // Human asked for changes on a written doc: re-run its producing step with
 // the notes attached. The engine rewrites the file back to draft.
+// Callers fire this and forget it, so a refusal before `runStep` opens a job row
+// is a refusal nobody can see. Leave the row ourselves: the panel shows a failed
+// step, which is the truth, instead of a document that quietly never moved.
+function refuse(db: Database.Database, project: Project, rel: string, error: string): RunOutcome {
+  db.prepare(
+    "INSERT INTO jobs (project_id, doc_rel, status, error, finished_at) VALUES (?, ?, 'failed', ?, datetime('now'))",
+  ).run(project.id, rel, error);
+  return { ok: false, error };
+}
+
 export async function reviseDoc(
   db: Database.Database,
   project: Project,
@@ -230,12 +240,12 @@ export async function reviseDoc(
   pkgRoot: string,
 ): Promise<RunOutcome> {
   const step = loadDocMap(pkgRoot, project.kind ?? 'new').get(rel);
-  if (!step) return { ok: false, error: `no producing step for ${rel}` };
+  if (!step) return refuse(db, project, rel, `no producing step for ${rel}`);
   // Refusing while ANY step ran meant answering the second of two documents
   // did nothing: the first revision was still writing, so the second was
   // dropped and its questions stayed open. Only this document blocks itself.
   if (runningDoc(db, project.id, rel)) {
-    return { ok: false, error: `${rel} is already being rewritten — wait for it to land` };
+    return refuse(db, project, rel, `${rel} is already being rewritten — wait for it to land`);
   }
   const out = await runStep(db, project, step, engine, pkgRoot, notes);
   if (out.ok) await advance(db, project, engine, pkgRoot);

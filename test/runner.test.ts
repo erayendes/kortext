@@ -372,3 +372,25 @@ test('two documents can be revised at once; one document cannot be revised twice
   assert.match(busy.error ?? '', /already being rewritten/);
   rmSync(work, { recursive: true, force: true });
 });
+
+test("the brief has no producing step: a revision refuses, loudly, and leaves the file alone", async () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Brief', repoPath: join(work, 'brief') }, pkgRoot);
+  approveBrief(p);
+  const engine = mockEngine(work, 'ok');
+  const { reviseDoc } = await import('../server/runner.js');
+  const before = readFileSync(docPath(p, 'foundation/BRD.md'), 'utf8');
+
+  const out = await reviseDoc(db, p, 'foundation/BRD.md', ['change this'], engine, pkgRoot);
+  assert.equal(out.ok, false);
+  // Callers fire and forget, so the refusal has to be visible somewhere.
+  const jobs = listJobs(db, p.id).filter((j) => j.doc_rel === 'foundation/BRD.md');
+  assert.equal(jobs.length, 1);
+  assert.equal(jobs[0].status, 'failed');
+  assert.match(jobs[0].error ?? '', /no producing step/);
+  // And the brief itself is untouched — nothing wrote it, so nothing moved it.
+  assert.equal(readFileSync(docPath(p, 'foundation/BRD.md'), 'utf8'), before);
+  rmSync(work, { recursive: true, force: true });
+});
+

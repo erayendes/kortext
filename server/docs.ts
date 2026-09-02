@@ -20,6 +20,8 @@ export interface DocInfo {
   blocked: boolean; // an input is not approved yet
   upstreamChanged: boolean; // an approved/draft doc whose input regressed
   openQuestions: boolean; // carries unanswered questions for prime
+  /** A workflow step writes this document. The brief has none — it is prime's own. */
+  hasProducingStep: boolean;
   /** Changes other documents have asked of THIS one, still unactioned. */
   revisionRequests: Array<{ from: string; reason: string }>;
 }
@@ -194,6 +196,7 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
         blocked: false,
         upstreamChanged: false,
         openQuestions: status !== 'uninitialized' && hasOpenQuestions(body),
+        hasProducingStep: map.has(rel),
         revisionRequests: [],
       });
       if (status !== 'uninitialized') {

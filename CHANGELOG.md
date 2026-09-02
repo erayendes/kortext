@@ -75,6 +75,17 @@ All notable changes to Kortext are documented here. The format is based on
 
 ### Fixed
 
+- **Sending the brief back for revision left the project stuck.** "Send back for
+  revision" re-runs the step that wrote the document — and no step writes the
+  brief, which is prime's own. The route marked the request handled, set the
+  brief to `draft` and fired a call that returned "no producing step" into a
+  discarded promise; the panel got a 202 and reported that work had started.
+  Nothing had. The brief sat in `draft` with its request already consumed, so
+  GROWTH and LEGAL stayed blocked forever and the handshake could never
+  complete. Both revision routes now refuse a document no step produces, before
+  touching anything, and the panel offers Edit instead of a button that cannot
+  work. A refusal that never reached a job row now leaves one, so a fire-and-
+  forget call can no longer fail in silence.
 - **The panel listed the documents in traversal order, not dependency order.**
   `listDocs` walked the graph with one `seen` set shared across sibling
   branches, so the second branch to reach a shared input scored it 0 — and this

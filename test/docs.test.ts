@@ -105,6 +105,18 @@ test('parsePickedPath: trims, strips trailing slash, null on cancel/empty', asyn
   assert.equal(parsePickedPath('/Users/x\n', 1), null);
 });
 
+test('the brief is prime\'s own document; every other one has a step that writes it', () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Own', repoPath: join(work, 'own') }, pkgRoot);
+  const docs = listDocs(db, p, pkgRoot);
+  assert.equal(docs.find((d) => d.rel === 'foundation/BRD.md')!.hasProducingStep, false);
+  for (const d of docs.filter((x) => x.rel !== 'foundation/BRD.md')) {
+    assert.equal(d.hasProducingStep, true, d.rel);
+  }
+  rmSync(work, { recursive: true, force: true });
+});
+
 test('not-applicable input satisfies dependencies downstream', () => {
   const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
   const db = openDb(join(work, 'db.sqlite'));
