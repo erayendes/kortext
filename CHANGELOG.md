@@ -60,6 +60,19 @@ All notable changes to Kortext are documented here. The format is based on
   reference lists, which named four of six inputs and five of twelve documents,
   are now complete.
 
+- **Sections moved to the document that owns them.** `STACK.md` was choosing the
+  architecture pattern that `ARCHITECTURE.md` exists to choose, and naming a
+  cloud provider and CI/CD platform that `ENVIRONMENT.md` owns — a wave-2
+  document deciding for a wave-3 and a wave-5 one. Both sections are gone;
+  containerization stays as the local runtime it actually is. `ENVIRONMENT.md`
+  gains the CI/CD pipeline and branch strategy its own prompt asked for and had
+  no room for. `STACK.md` gains `Prerequisites from prime` — the planning flow
+  scans it to raise `assignee: prime` tasks, and it had nowhere to read them
+  from. `LEGAL.md` gains the data lifecycle its prompt names — retention,
+  erasure, third-party sharing, one row per marked column — and the notices
+  `CONTENT.md` is told to write. The brief's title says what the file is
+  (`Project Brief (BRD)`) instead of `Product Roadmap & Vision`.
+
 ### Added
 
 - **A guard for the order.** `test/order.test.ts` fails when a workflow step

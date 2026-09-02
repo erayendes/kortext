@@ -57,6 +57,15 @@ The `.env` file is git-ignored. Copy it from `.env.example`.
 
 - GitHub Repo: [to be filled by prime]
 - Organization: [to be filled by prime]
+- Branch strategy: [which branches exist, what merges into what, what is protected]
+
+## CI/CD Pipeline
+
+- **Cloud provider:** [e.g., AWS, Vercel, Google Cloud]
+- **CI/CD platform:** [e.g., GitHub Actions, GitLab CI]
+- **On every push:** [what runs — lint, typecheck, tests]
+- **On merge to the release branch:** [what deploys, and where]
+- **Rollback:** [how a bad release is undone, and by whom]
 
 ## Hosting & Deployment
 

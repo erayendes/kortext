@@ -42,7 +42,7 @@ status: approved
 author: +prime
 ---
 
-# Product Roadmap & Vision
+# Project Brief (BRD)
 
 ## Product Vision & Goals
 

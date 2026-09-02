@@ -4,7 +4,7 @@ author: +product-manager
 approver: +prime
 ---
 
-# Product Roadmap & Vision
+# Project Brief (BRD)
 
 ## Product Vision & Goals
 

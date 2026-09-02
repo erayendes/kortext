@@ -12,23 +12,25 @@ approver: +prime
 - **Backend:** [Language, framework, version — e.g., Node.js 20, NestJS]
 - **Database:** [Database, version — e.g., PostgreSQL 16, Redis]
 
-## Architecture Pattern
-
-- [e.g., Microservices, monolith, or serverless? Which design pattern (MVC, etc.) will be used?]
-
 ## Tooling & Prerequisites
 
 - **Package Manager:** [e.g., npm, yarn, pnpm]
 - **Environment:** [e.g., Docker Desktop, Node v20+]
+- **Containerization:** [e.g., Docker — the local runtime, not the deployment target]
 - **Testing:** [e.g., Jest, Cypress, Playwright]
 - **Tools:** [e.g., Postman, Antigravity, etc.]
 - **MCP's:** [e.g., Vercel MCP, Firebase MCP]
 
-## Infrastructure & Deployment (CI/CD)
+## Prerequisites from prime
 
-- **Cloud Provider:** [e.g., AWS, Vercel, Google Cloud]
-- **CI/CD Platform:** [e.g., GitHub Actions, GitLab CI]
-- **Containerization:** [e.g., Docker]
+> Everything the stack needs that only a person can supply. The planning flow turns each
+> row into an `assignee: prime` task and blocks whatever depends on it, so a missing row
+> becomes work nobody scheduled.
+
+| Need | Why the stack needs it | Blocks |
+| --- | --- | --- |
+| `[e.g., an Apple Developer account]` | [what cannot be built without it] | [what waits on it] |
+| `[e.g., a physical test device]` | [what cannot be verified without it] | [what waits on it] |
 
 ## Third-Party Services & Integrations
 
