@@ -31,6 +31,22 @@ approver: +prime
 - **Security:** [auth model, encryption requirements]
 - **Observability:** [logging, metrics, tracing]
 
+## Decisions
+
+> The engineering decisions this report merges, each with the document it was made in.
+
+- **[Decision]** — [what was chosen, and the alternative that lost] (`SOURCE.md`)
+
+## Compliance Rulings & Conflicts
+
+> Where `LEGAL.md` rules against the design, the contradiction is settled here: either the
+> design changes and this line says how, or it stands and this line names the residual risk
+> and who accepted it. An unresolved ruling is an open question, not a silent omission.
+
+| Ruling | Source | Resolution | Residual risk |
+| --- | --- | --- | --- |
+| [what compliance requires] | `LEGAL.md` | [what changed, or why it stands] | [none / what remains] |
+
 ## Technical Constraints & Risks
 
 - **Bottleneck:** [Where could the system slow down?]

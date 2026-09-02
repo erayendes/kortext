@@ -63,6 +63,7 @@ The `.env` file is git-ignored. Copy it from `.env.example`.
 - Production URL: [to be filled by prime]
 - Staging URL: [to be filled by prime]
 - Platform: [Firebase Hosting / Vercel / AWS]
+- **Hosting region:** [where the servers physically run — e.g., `eu-central-1` (Frankfurt). Compliance decides the cross-border transfer regime on this line, so name a region, not a provider]
 
 ## Server Access
 
@@ -72,6 +73,8 @@ The `.env` file is git-ignored. Copy it from `.env.example`.
 ## Database Instances
 
 - Provider: [Firebase / Supabase / PostgreSQL]
+- Engine + version: [e.g., PostgreSQL 16 — the schema is designed for this]
+- **Region:** [where the data physically sits]
 - Production Instance: [to be filled by prime]
 - Staging Instance: [to be filled by prime]
 

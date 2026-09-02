@@ -22,6 +22,7 @@ approver: +prime
 
 #### `GET /path/to/resource` (Description)
 
+- **Authorization:** [which role, from the model `SECURITY.md` defines — or `public`]
 - **Parameters / Query:**
   - `param` (type): [Description]
 - **Request Body:** (If any)

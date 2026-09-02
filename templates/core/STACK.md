@@ -32,9 +32,14 @@ approver: +prime
 
 ## Third-Party Services & Integrations
 
-- **Auth:** [e.g., Firebase, NextAuth, Auth0]
-- **Payments:** [e.g., Stripe, Iyzico]
-- **Storage/CDN:** [e.g., AWS S3, Cloudflare]
+> Every row here is a processor `LEGAL.md` will rule on. Name the region it runs in and
+> say plainly whether it sees user data — a service with no region named cannot be judged.
+
+| Service | Purpose | Region | Sees user data |
+| --- | --- | --- | --- |
+| `[Auth0]` | Auth | `[eu]` | [yes — email, name] |
+| `[Stripe]` | Payments | `[us]` | [yes — name, billing address] |
+| `[Cloudflare]` | CDN | `[global]` | [no] |
 
 ## Security & Policies
 

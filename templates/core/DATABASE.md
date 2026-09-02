@@ -18,6 +18,7 @@ approver: +architect
 - **Column Naming:** [e.g., snake_case / camelCase]
 - **Primary Keys:** [e.g., UUID / Auto-increment integer]
 - **Timestamps:** `created_at`, `updated_at` (required)
+- **Personal data:** every column holding personal data carries a `[PII]` marker in its line below, and is repeated in the roll-up section
 
 ## Entity-Relationship (ERD) Structure
 
@@ -26,7 +27,7 @@ approver: +architect
 - **Description:** [What the table does]
 - **Columns:**
   - `id` (PK, UUID)
-  - `[column_name]` ([type], [nullable/unique]) - [Description]
+  - `[column_name]` ([type], [nullable/unique]) [PII if personal] - [Description]
 - **Relations:**
   - `[FK/Relation]` -> `[Related Table]`
 
@@ -39,6 +40,15 @@ approver: +architect
 ## Indexes & Performance Optimizations
 
 - **[table_name]:** `[column_name]` (Index Type) -> Reason
+
+## Personal Data Columns
+
+> `LEGAL.md` is run against this list — it decides retention and erasure duties from it.
+> Write `none` when the schema holds no personal data at all.
+
+| Table.Column | What it holds | Why the product needs it |
+| --- | --- | --- |
+| `[table].[column]` | [e.g., the user's email address] | [what breaks without it] |
 
 ## Security Policies / Row-Level Security
 

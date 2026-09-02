@@ -39,6 +39,16 @@ approver: +architect
 - Outcome: `[Merge is blocked when tests fail]`
 - Outcome: `[PR is rejected when coverage drops below 80%]`
 
+## Compliance & Risk Gates
+
+> A gate here proves an obligation `LEGAL.md` states or a risk `TRD.md` registers.
+> Each row names what fails the release, not what someone should remember to check.
+
+| Obligation / risk | Source | The gate that proves it |
+| --- | --- | --- |
+| [e.g., consent is captured before any tracking fires] | `LEGAL.md` | [the test that fails when a tag loads without consent] |
+| [e.g., the job queue survives a restart] | `TRD.md` | [the test that proves it] |
+
 ## Acceptance Criteria (Definition of Done)
 
 - [What test criteria must a task meet before the QA persona can approve it?]

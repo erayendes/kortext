@@ -13,6 +13,16 @@ approver: +prime
   - **Do:** [e.g., Use simple sentences that guide the user]
   - **Don't:** [e.g., Don't drown the user in technical jargon]
 
+## Message Hierarchy & Page Copy
+
+> Written into the surfaces and components `DESIGN.md` names.
+
+### [Surface name]
+
+- **Headline:** [the one sentence this screen leads with]
+- **Support:** [the line under it]
+- **Action:** [what the primary button says]
+
 ## Microcopy (UI Interface Texts)
 
 - **Primary Buttons:** [e.g., 'Continue', 'Save', 'Get Started']
@@ -24,6 +34,17 @@ approver: +prime
 
 - **Validation Errors:** [e.g., 'This field is required.', 'Invalid email format.']
 - **Server/System Errors:** [e.g., 'Could not reach the server, please try again.']
+
+## Required Legal Notices
+
+> `LEGAL.md` names the notices this product owes its users. Write them here in full —
+> a reference is not a notice. Write `none` when compliance requires no user-facing text.
+
+### [Notice — e.g., Cookie consent banner]
+
+- **Where it appears:** [surface and moment]
+- **Copy:** [the text the user actually reads, in the interface language]
+- **Obligation it satisfies:** [the rule in `LEGAL.md` this discharges]
 
 ## Localization
 

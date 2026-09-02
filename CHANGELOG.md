@@ -39,11 +39,33 @@ All notable changes to Kortext are documented here. The format is based on
   compliance analysis is run against, which the step prompt demanded and the
   skeleton had no home for.
 
+- **Ten more skeletons stopped asking for what they had no room for.** The same
+  audit run against every template: a step prompt demanded something the
+  skeleton gave no home, so the agent either invented a structure or dropped it.
+  `SECURITY.md` gains the auth and authorization model the schema and the
+  endpoints are built on, plus secret management and logging — its audit
+  sections move below and are marked as the existing-project half.
+  `ENVIRONMENT.md` gains the hosting region compliance rules on, and the engine
+  and region the schema is designed for. `DATABASE.md` gains a personal-data
+  column roll-up and a `[PII]` marking convention. `STACK.md`'s third-party
+  bullets become a processor table with region and "sees user data". `API.md`
+  gains a per-endpoint authorization line. `DESIGN.md` gains the surface and
+  component inventory that `CONTENT.md` writes into and `GROWTH.md` measures.
+  `CONTENT.md` gains a page-copy section and the legal notices it is told to
+  write rather than reference. `TEST.md` gains compliance and risk gates.
+  `TRD.md` gains the decisions it merges and the table where a compliance ruling
+  against the design is resolved. `PFD.md` gains the collected decision log that
+  replaced `DECISIONS.md` in 5.0.0 and never had a home, plus risks,
+  dependencies and the task headings planning starts from — and its two
+  reference lists, which named four of six inputs and five of twelve documents,
+  are now complete.
+
 ### Added
 
 - **A guard for the order.** `test/order.test.ts` fails when a workflow step
-  reads a document written after it, and when a persona's declared upstream
-  differs from the input list its step gives it.
+  reads a document written after it, when a persona's declared upstream differs
+  from the input list its step gives it, and when a skeleton is missing the
+  revision inbox or the open-questions section the mechanisms depend on.
 
 ## [5.0.0] - 2026-09-01
 

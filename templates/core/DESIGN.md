@@ -68,6 +68,20 @@ approver: +prime
 
 ---
 
+## Surfaces & Components
+
+> Two documents read this section by name: `CONTENT.md` writes copy into the components,
+> `GROWTH.md` measures the surfaces. Name them concretely — an unnamed screen gets no copy
+> and no event.
+
+| Surface (screen) | Purpose | Main components |
+| --- | --- | --- |
+| `[Sign in]` | [what the user does here] | [Input, Button, ErrorText] |
+
+| Component | Purpose | Copy slots it carries |
+| --- | --- | --- |
+| `[EmptyState]` | [when it is shown] | [title, body, action label] |
+
 ## UI Components (Strict Atoms)
 
 ### Buttons
