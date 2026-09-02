@@ -73,6 +73,19 @@ All notable changes to Kortext are documented here. The format is based on
   `CONTENT.md` is told to write. The brief's title says what the file is
   (`Project Brief (BRD)`) instead of `Product Roadmap & Vision`.
 
+### Fixed
+
+- **The panel listed the documents in traversal order, not dependency order.**
+  `listDocs` walked the graph with one `seen` set shared across sibling
+  branches, so the second branch to reach a shared input scored it 0 — and this
+  graph is a diamond where nearly everything descends from the PRD. The list
+  read `PRD, ARCHITECTURE, DESIGN, STACK, …` with DATABASE ahead of ENVIRONMENT
+  and API ahead of DATABASE. The walk is now memoized per document, with the
+  path being walked as the cycle guard, and the panel reads
+  `PRD, STACK, STRUCTURE, ARCHITECTURE, DESIGN, GROWTH, SECURITY, ENVIRONMENT,
+  DATABASE, API, LEGAL, CONTENT, TRD, TEST, PFD`. The bug predates this
+  release; the re-derived chain is what made it visible.
+
 ### Added
 
 - **A guard for the order.** `test/order.test.ts` fails when a workflow step

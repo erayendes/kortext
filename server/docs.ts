@@ -234,12 +234,23 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
       });
   }
 
-  // Dependency-ish ordering: docs with fewer unmet/deeper inputs first (BRD → … → PFD).
-  const depth = (rel: string, seen = new Set<string>()): number => {
-    if (seen.has(rel)) return 0;
-    seen.add(rel);
+  // Dependency ordering: a document sits one step behind its deepest input
+  // (BRD → … → PFD). The graph is a diamond — nearly everything descends from
+  // the PRD — so the memo has to be per-document and the cycle guard has to be
+  // the path being walked, not every document already seen. Sharing one "seen"
+  // set across sibling branches makes the second branch to reach a shared input
+  // score it 0, which collapses the order into traversal order.
+  const memo = new Map<string, number>();
+  const depth = (rel: string, path = new Set<string>()): number => {
+    const done = memo.get(rel);
+    if (done !== undefined) return done;
+    if (path.has(rel)) return 0; // ponytail: the shipped workflows are acyclic; this is for hand-edited ones
+    path.add(rel);
     const ins = map.get(rel)?.inputs ?? [];
-    return ins.length === 0 ? 0 : 1 + Math.max(...ins.map((i) => depth(i, seen)));
+    const d = ins.length === 0 ? 0 : 1 + Math.max(...ins.map((i) => depth(i, path)));
+    path.delete(rel);
+    memo.set(rel, d);
+    return d;
   };
   docs.sort((a, b) => depth(a.rel) - depth(b.rel) || a.rel.localeCompare(b.rel));
   return docs;

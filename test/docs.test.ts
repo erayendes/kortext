@@ -39,6 +39,24 @@ test('listDocs: dependency blocking follows approvals; regressed input warns dep
   assert.equal(byRel('foundation/PRD.md').blocked, true);
   // BRD sorts before PRD (dependency depth)
   assert.ok(docs.findIndex((d) => d.rel === 'foundation/BRD.md') < docs.findIndex((d) => d.rel === 'foundation/PRD.md'));
+  // The graph is a diamond: nearly everything descends from the PRD, so a
+  // document must sort behind every input, not behind whichever branch was
+  // walked first. STACK feeds ARCHITECTURE, SECURITY feeds ENVIRONMENT feeds
+  // DATABASE feeds API.
+  const at = (rel: string) => docs.findIndex((d) => d.rel === rel);
+  for (const [before, after] of [
+    ['STACK.md', 'ARCHITECTURE.md'],
+    ['ARCHITECTURE.md', 'SECURITY.md'],
+    ['SECURITY.md', 'ENVIRONMENT.md'],
+    ['ENVIRONMENT.md', 'DATABASE.md'],
+    ['DATABASE.md', 'API.md'],
+    ['DESIGN.md', 'GROWTH.md'],
+    ['LEGAL.md', 'foundation/TRD.md'],
+    ['foundation/TRD.md', 'TEST.md'],
+    ['TEST.md', 'foundation/PFD.md'],
+  ]) {
+    assert.ok(at(before) < at(after), `${before} must sort before ${after}`);
+  }
 
   // approve BRD → PRD unblocks; LEGAL stays blocked far longer, because it is
   // written against the design rather than before it
