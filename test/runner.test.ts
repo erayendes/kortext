@@ -152,7 +152,7 @@ test('advance: chains every unblocked step, pauses at approval gates, resumes af
   setFrontmatterStatus(docPath(p, 'foundation/PRD.md'), 'approved');
   await advance(db, p, engine, pkgRoot);
   const after = listJobs(db, p.id).filter((j) => j.status === 'done').map((j) => j.doc_rel).sort();
-  assert.deepEqual(after, ['GROWTH.md', 'STACK.md', 'STRUCTURE.md', 'foundation/PRD.md']);
+  assert.deepEqual(after, ['STACK.md', 'STRUCTURE.md', 'foundation/PRD.md']);
   // LEGAL is written against the design, so it is nowhere near ready yet
   assert.ok(!after.includes('LEGAL.md'), 'compliance waits for the technical documents');
   rmSync(work, { recursive: true, force: true });
@@ -212,7 +212,7 @@ printf -- '---\\nstatus: draft\\nauthor: +mock\\n---\\n\\n# Mock\\n' > ".kortext
   await advance(db, p, { id: 'slow', binary: script, args: [], installHint: '' }, pkgRoot);
   const elapsed = Date.now() - t0;
   const done = listJobs(db, p.id).filter((j) => j.status === 'done').map((j) => j.doc_rel).sort();
-  assert.deepEqual(done, ['GROWTH.md', 'STACK.md', 'STRUCTURE.md']);
+  assert.deepEqual(done, ['STACK.md', 'STRUCTURE.md']);
   assert.ok(elapsed < 750, `expected parallel (<750ms), took ${elapsed}ms`);
   rmSync(work, { recursive: true, force: true });
 });
@@ -255,8 +255,9 @@ test('a mid-run approval wakes the active chain and fills free pool slots', asyn
   const db = openDb(join(work, 'db.sqlite'));
   const p = createProject(db, { name: 'Wake', repoPath: join(work, 'wake') }, pkgRoot);
   approveBrief(p);
-  // pre-write GROWTH as draft so only LEGAL is producible at loop start
-  writeFileSync(docPath(p, 'GROWTH.md'), '---\nstatus: draft\nauthor: +mock\n---\n\n# G\n');
+  setFrontmatterStatus(docPath(p, 'foundation/PRD.md'), 'approved');
+  // pre-write DESIGN as draft so only the STACK step is producible at loop start
+  writeFileSync(docPath(p, 'DESIGN.md'), '---\nstatus: draft\nauthor: +mock\n---\n\n# D\n');
   const slow = join(work, 'slow.sh');
   writeFileSync(slow, `#!/bin/sh
 prompt=$(cat)
@@ -272,17 +273,16 @@ printf -- '---\\nstatus: draft\\nauthor: +mock\\n---\\n\\n# S\\n' > ".kortext/$r
   const { advance } = await import('../server/runner.js');
 
   const t0 = Date.now();
-  const loop = advance(db, p, engine, pkgRoot); // starts LEGAL (0.6s)
+  const loop = advance(db, p, engine, pkgRoot); // starts STACK + STRUCTURE (0.6s)
   await new Promise((r) => setTimeout(r, 150));
-  // mid-run: GROWTH + LEGAL approvals unlock PRD; the nudge must start it NOW
-  setFrontmatterStatus(docPath(p, 'GROWTH.md'), 'approved');
-  setFrontmatterStatus(docPath(p, 'LEGAL.md'), 'approved');
+  // mid-run: the DESIGN approval unlocks GROWTH; the nudge must start it NOW
+  setFrontmatterStatus(docPath(p, 'DESIGN.md'), 'approved');
   await advance(db, p, engine, pkgRoot); // = kickChain from the approve route
   await loop;
   const elapsed = Date.now() - t0;
   const done = listJobs(db, p.id).filter((j) => j.status === 'done').map((j) => j.doc_rel);
-  assert.ok(done.includes('foundation/PRD.md'), `PRD should have run (done: ${done})`);
-  // sequential would be ≥1.2s (LEGAL finishes, then PRD); the wake overlaps them
+  assert.ok(done.includes('GROWTH.md'), `GROWTH should have run (done: ${done})`);
+  // sequential would be ≥1.2s (STACK finishes, then GROWTH); the wake overlaps them
   assert.ok(elapsed < 1100, `expected overlap via wake (<1100ms), took ${elapsed}ms`);
   rmSync(work, { recursive: true, force: true });
 });

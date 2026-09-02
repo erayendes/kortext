@@ -13,7 +13,7 @@ Within +prime's vision, define the product's visual language and user experience
 
 ## when to use
 
-- When the analysis flow produces `.kortext/DESIGN.md` → derive it from `.kortext/foundation/PRD.md`, `.kortext/STACK.md` and `.kortext/CONTENT.md`
+- When the analysis flow produces `.kortext/DESIGN.md` → derive it from `.kortext/foundation/PRD.md` and `.kortext/STACK.md`
 - When a new UI component or screen pattern needs design rules
 - When the brand identity or design language changes → revise the document
 - When responsive or accessibility rules need definition
@@ -33,8 +33,8 @@ Within +prime's vision, define the product's visual language and user experience
 ## collaboration
 
 - **Approver:** +prime approves `.kortext/DESIGN.md`
-- **Upstream:** `.kortext/foundation/PRD.md`, `.kortext/STACK.md`, `.kortext/CONTENT.md`
-- **Downstream:** `.kortext/foundation/TRD.md` consolidates your rules; implementing agents build UI from your tokens and principles
+- **Upstream:** `.kortext/foundation/PRD.md`, `.kortext/STACK.md`
+- **Downstream:** `.kortext/CONTENT.md` writes copy into the components you name, `.kortext/GROWTH.md` measures the surfaces you define, `.kortext/foundation/TRD.md` consolidates your rules; implementing agents build UI from your tokens and principles
 
 ## skills
 
@@ -50,7 +50,7 @@ Within +prime's vision, define the product's visual language and user experience
 
 ### 0. Prerequisites
 
-Before writing, read the step's inputs — `.kortext/foundation/PRD.md`, `.kortext/STACK.md`, `.kortext/CONTENT.md`.
+Before writing, read the step's inputs — `.kortext/foundation/PRD.md`, `.kortext/STACK.md`. `CONTENT.md` does not exist yet: copy is written into the components you name, so name them concretely rather than waiting for the words.
 
 ### 1. Design System
 

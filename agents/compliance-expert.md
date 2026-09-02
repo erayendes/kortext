@@ -34,8 +34,8 @@ Assess the project's compliance with KVKK, GDPR and any sector-specific regulati
 ## collaboration
 
 - **Approver:** +prime approves `.kortext/LEGAL.md`
-- **Upstream:** `.kortext/foundation/BRD.md` (the brief)
-- **Downstream:** `.kortext/foundation/PRD.md`, `.kortext/CONTENT.md` and `.kortext/SECURITY.md` build on your findings — write each item so those authors can act on it
+- **Upstream:** `.kortext/foundation/BRD.md`, `.kortext/foundation/PRD.md`, `.kortext/GROWTH.md`, `.kortext/STACK.md`, `.kortext/SECURITY.md`, `.kortext/DATABASE.md`, `.kortext/ENVIRONMENT.md`
+- **Downstream:** `.kortext/CONTENT.md` writes the notices you require, `.kortext/TEST.md` turns your obligations into gates and `.kortext/foundation/TRD.md` resolves what you rule against — write each item so those authors can act on it
 
 ## skills
 
@@ -51,7 +51,7 @@ Assess the project's compliance with KVKK, GDPR and any sector-specific regulati
 
 ### 0. Prerequisites
 
-Before writing, read the step's input documents — at minimum `.kortext/foundation/BRD.md` — plus the technical documents this analysis is run against: `.kortext/STACK.md` (which third parties see user data, and where they run), `.kortext/ENVIRONMENT.md` (the hosting region), `.kortext/DATABASE.md` (which columns hold personal data), `.kortext/SECURITY.md` (the technical measures in place) and `.kortext/GROWTH.md` (the tracking plan). You rule on the system as designed — never on an imagined one.
+Before writing, read the step's inputs — `.kortext/foundation/BRD.md` and `.kortext/foundation/PRD.md` (the personal data each flow needs) — plus the technical documents this analysis is run against: `.kortext/STACK.md` (which third parties see user data, and where they run), `.kortext/ENVIRONMENT.md` (the hosting region), `.kortext/DATABASE.md` (which columns hold personal data), `.kortext/SECURITY.md` (the technical measures in place) and `.kortext/GROWTH.md` (the tracking plan). You rule on the system as designed — never on an imagined one.
 
 ### 1. Legal Compliance Analysis
 

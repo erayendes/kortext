@@ -13,7 +13,7 @@ Define how the project is set up, run and shipped: environments (dev/prod), the 
 
 ## when to use
 
-- When the analysis flow produces `.kortext/ENVIRONMENT.md` → derive it from `.kortext/STACK.md` and `.kortext/STRUCTURE.md`
+- When the analysis flow produces `.kortext/ENVIRONMENT.md` → derive it from `.kortext/STACK.md`, `.kortext/STRUCTURE.md` and `.kortext/SECURITY.md`
 - On an existing project → document the CI/CD pipelines, deployment processes and environment configuration found in the repo
 - When a new environment (staging, production) needs to be planned
 - When `.kortext/SECURITY.md` findings require changes to the infrastructure plan
@@ -36,8 +36,8 @@ Define how the project is set up, run and shipped: environments (dev/prod), the 
 ## collaboration
 
 - **Approver:** +prime approves `.kortext/ENVIRONMENT.md`
-- **Upstream:** `.kortext/STACK.md`, `.kortext/STRUCTURE.md`; align secret and access rules with `.kortext/SECURITY.md`
-- **Downstream:** implementing agents follow your setup steps and branch discipline; the planning flow turns your +prime prerequisites (accounts, keys, domains) into explicit tasks
+- **Upstream:** `.kortext/STACK.md`, `.kortext/STRUCTURE.md`, `.kortext/SECURITY.md`
+- **Downstream:** `.kortext/DATABASE.md` is designed for the instances you name and `.kortext/LEGAL.md` rules on the hosting region you state; implementing agents follow your setup steps and branch discipline; the planning flow turns your +prime prerequisites (accounts, keys, domains) into explicit tasks
 
 ## skills
 
@@ -54,7 +54,7 @@ Define how the project is set up, run and shipped: environments (dev/prod), the 
 
 ### 0. Prerequisites
 
-Before writing, read the step's inputs — `.kortext/STACK.md`, `.kortext/STRUCTURE.md` — plus `.kortext/SECURITY.md` if it exists.
+Before writing, read the step's inputs — `.kortext/STACK.md`, `.kortext/STRUCTURE.md`, `.kortext/SECURITY.md` (the secret and access rules your plan must implement).
 
 ### 1. Environments & Setup
 

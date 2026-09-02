@@ -9,13 +9,14 @@
 > apply. What the inputs do not say, no document may assume.
 
 > **The order is the argument.** Each document is written only once every fact it depends on
-> exists. Product before measurement, because you cannot instrument a flow you have not
-> defined. Stack before architecture, architecture before security, security before schema:
-> each is the ground the next stands on. Compliance and content come near the end because
-> both judge a system rather than imagine one — the hosting region, the processor list and
-> the stored fields are what compliance rules on, and the components are what copy is written
-> into. Where a late document finds a problem, the fix is a revision of the document that
-> caused it, not a quiet assumption in the one that found it.
+> exists. Product first, because everything after it instruments, builds or judges what it
+> defines. Stack before architecture, architecture before security, security before the
+> environment it hardens and the schema it protects: each is the ground the next stands on.
+> Measurement, compliance and content come near the end because all three read a system
+> rather than imagine one — the surfaces are what a growth plan can measure, the hosting
+> region, the processor list and the stored fields are what compliance rules on, and the
+> components are what copy is written into. Where a late document finds a problem, the fix is
+> a revision of the document that caused it, not a quiet assumption in the one that found it.
 
 ## Product
 
@@ -24,14 +25,6 @@
    - activity: Scope and user types settled. Main flows defined.
    - inputs: `.kortext/foundation/BRD.md`
    - outputs: `.kortext/foundation/PRD.md`
-   - approver: +prime
-
-2. **+growth-expert:** Produce `GROWTH.md`. Scope: target audience, channel strategy, SEO/GEO, measurement, analytics, conversion tracking. The event taxonomy instruments the flows `PRD.md` defines — name them, do not invent parallel ones. Every third party that would touch user data here becomes a processor `LEGAL.md` has to account for, so name the measurement mechanism concretely.
-   - label: GROWTH.md
-   - activity: Target audience and channels defined. SEO and measurement planned.
-   - inputs: `.kortext/foundation/BRD.md`, `.kortext/foundation/PRD.md`
-   - outputs: `.kortext/GROWTH.md`
-   - n/a when: the brief describes no surface worth measuring and no acquisition channel — an internal tool, a library, or something with one known user.
    - approver: +prime
 
 ## Engineering
@@ -50,22 +43,29 @@
    - outputs: `.kortext/ARCHITECTURE.md`
    - approver: +prime
 
-3. **+security-engineer:** Produce `SECURITY.md`. Auth, authorization, secret management, data storage, logging, `.gitignore`, secure development discipline. Defend the boundaries `ARCHITECTURE.md` draws around the data `PRD.md` says the product handles — not a generic checklist for the stack.
+3. **+security-engineer:** Produce `SECURITY.md`. Auth, authorization, secret management, data storage, logging, `.gitignore`, secure development discipline. Defend the boundaries `ARCHITECTURE.md` draws around the data `PRD.md` says the product handles — not a generic checklist for the stack. The auth model written here is what the schema and the endpoints are built on, so name roles and permissions concretely.
    - label: SECURITY.md
    - activity: Auth and secret management established. Secure development rules defined.
    - inputs: `.kortext/foundation/PRD.md`, `.kortext/STACK.md`, `.kortext/ARCHITECTURE.md`
    - outputs: `.kortext/SECURITY.md`
    - approver: +prime
 
-4. **+db-admin:** Produce `DATABASE.md`. Tables, relationships, indexes, access rules, migration approach, data integrity. Mark which columns hold personal data — `LEGAL.md` reads this to decide retention and erasure duties.
+4. **+devops-engineer:** Produce `ENVIRONMENT.md`. Environments (dev/prod), environment-variable plan, setup steps, CI/CD approach, access ownership and account inventory (Access & Service section), secret management under the rules `SECURITY.md` sets. State the hosting region explicitly — it is the single fact that decides whether a cross-border transfer regime applies. The database instances named here are the ones the schema is designed for.
+   - label: ENVIRONMENT.md
+   - activity: Environments and deployment defined. Accounts and secrets planned.
+   - inputs: `.kortext/STACK.md`, `.kortext/STRUCTURE.md`, `.kortext/SECURITY.md`
+   - outputs: `.kortext/ENVIRONMENT.md`
+   - approver: +prime
+
+5. **+db-admin:** Produce `DATABASE.md`. Tables, relationships, indexes, access rules, migration approach, data integrity. Design for the engine and instances `ENVIRONMENT.md` names, under the access rules `SECURITY.md` sets. Mark which columns hold personal data — `LEGAL.md` reads this to decide retention and erasure duties.
    - label: DATABASE.md
    - activity: Database schema created. Tables and relationships defined.
-   - inputs: `.kortext/foundation/PRD.md`, `.kortext/ARCHITECTURE.md`, `.kortext/SECURITY.md`, `.kortext/STRUCTURE.md`, `.kortext/STACK.md`
+   - inputs: `.kortext/foundation/PRD.md`, `.kortext/ARCHITECTURE.md`, `.kortext/SECURITY.md`, `.kortext/ENVIRONMENT.md`, `.kortext/STRUCTURE.md`, `.kortext/STACK.md`
    - outputs: `.kortext/DATABASE.md`
    - n/a when: the product persists nothing beyond its own configuration: no database, no stored records, no user data at rest.
    - approver: +prime
 
-5. **+architect:** Produce `API.md`. Endpoint list, request/response models, error formats, authorization requirements, data flow.
+6. **+architect:** Produce `API.md`. Endpoint list, request/response models, error formats, authorization requirements, data flow. The authorization on every endpoint is the model `SECURITY.md` defines — apply it, do not invent a second one.
    - label: API.md
    - activity: Endpoints defined. Request/response models specified.
    - inputs: `.kortext/foundation/PRD.md`, `.kortext/ARCHITECTURE.md`, `.kortext/SECURITY.md`, `.kortext/STRUCTURE.md`, `.kortext/STACK.md`, `.kortext/DATABASE.md`
@@ -73,14 +73,7 @@
    - n/a when: nothing crosses a program boundary: the product exposes no endpoint and calls no external service.
    - approver: +prime
 
-6. **+devops-engineer:** Produce `ENVIRONMENT.md`. Environments (dev/prod), environment-variable plan, setup steps, CI/CD approach, access ownership and account inventory (Access & Service section), secret management. State the hosting region explicitly — it is the single fact that decides whether a cross-border transfer regime applies.
-   - label: ENVIRONMENT.md
-   - activity: Environments and deployment defined. Accounts and secrets planned.
-   - inputs: `.kortext/STACK.md`, `.kortext/STRUCTURE.md`, `.kortext/SECURITY.md`
-   - outputs: `.kortext/ENVIRONMENT.md`
-   - approver: +prime
-
-7. **+designer:** Produce `DESIGN.md`. Color palette, typography, component principles, responsive behavior, accessibility, core UI rules. The components named here are the ones `CONTENT.md` writes copy into, so name them concretely.
+7. **+designer:** Produce `DESIGN.md`. Color palette, typography, component principles, responsive behavior, accessibility, core UI rules. The components named here are the ones `CONTENT.md` writes copy into and the surfaces `GROWTH.md` measures, so name them concretely.
    - label: DESIGN.md
    - activity: Colors and typography chosen. Component principles defined.
    - inputs: `.kortext/foundation/PRD.md`, `.kortext/STACK.md`
@@ -90,7 +83,15 @@
 
 ## Judgement
 
-1. **+compliance-expert:** Produce `LEGAL.md`. Regulations that apply (KVKK, GDPR, CCPA, sector-specific) + data lifecycle rules (privacy, disclosure notices, consent, retention, deletion, third-party sharing). Judge the system as designed, not as imagined: the hosting region from `ENVIRONMENT.md`, the processors from `STACK.md` and `GROWTH.md`, the personal-data columns from `DATABASE.md`, the technical measures from `SECURITY.md`. Where the design breaks an obligation, name the document that must change and why — that is a revision request, not an open question.
+1. **+growth-expert:** Produce `GROWTH.md`. Scope: target audience, channel strategy, SEO/GEO, measurement, analytics, conversion tracking. The event taxonomy instruments the flows `PRD.md` defines on the surfaces `DESIGN.md` names — use both, do not invent parallel ones. Every third party that would touch user data here becomes a processor `LEGAL.md` has to account for, so name the measurement mechanism concretely.
+   - label: GROWTH.md
+   - activity: Target audience and channels defined. SEO and measurement planned.
+   - inputs: `.kortext/foundation/BRD.md`, `.kortext/foundation/PRD.md`, `.kortext/DESIGN.md`
+   - outputs: `.kortext/GROWTH.md`
+   - n/a when: the brief describes no surface worth measuring and no acquisition channel — an internal tool, a library, or something with one known user.
+   - approver: +prime
+
+2. **+compliance-expert:** Produce `LEGAL.md`. Regulations that apply (KVKK, GDPR, CCPA, sector-specific) + data lifecycle rules (privacy, disclosure notices, consent, retention, deletion, third-party sharing). Judge the system as designed, not as imagined: the hosting region from `ENVIRONMENT.md`, the processors from `STACK.md` and `GROWTH.md`, the personal-data columns from `DATABASE.md`, the technical measures from `SECURITY.md`. Where the design breaks an obligation, name the document that must change and why — that is a revision request, not an open question.
    - label: LEGAL.md
    - activity: Applicable regulations identified. Data lifecycle rules defined.
    - inputs: `.kortext/foundation/BRD.md`, `.kortext/foundation/PRD.md`, `.kortext/GROWTH.md`, `.kortext/STACK.md`, `.kortext/SECURITY.md`, `.kortext/DATABASE.md`, `.kortext/ENVIRONMENT.md`
@@ -98,7 +99,7 @@
    - n/a when: the design touches no personal data, no accounts, no third party receiving data and no regulated content — a tool whose data never leaves the user's own machine.
    - approver: +prime
 
-2. **+copywriter:** Produce `CONTENT.md`. Brand voice, message hierarchy, page copy, microcopy, SEO content direction. Write into the components `DESIGN.md` names and the flows `PRD.md` defines. Every string a user reads is written in the interface language the BRD names — and if the BRD names more than one, add the localization plan: source language, target languages, what is translated and what stays fixed. The notices `LEGAL.md` requires are content: write them, do not reference them.
+3. **+copywriter:** Produce `CONTENT.md`. Brand voice, message hierarchy, page copy, microcopy, SEO content direction. Write into the components `DESIGN.md` names and the flows `PRD.md` defines. Every string a user reads is written in the interface language the BRD names — and if the BRD names more than one, add the localization plan: source language, target languages, what is translated and what stays fixed. The notices `LEGAL.md` requires are content: write them, do not reference them.
    - label: CONTENT.md
    - activity: Brand voice established. Page copy written.
    - inputs: `.kortext/foundation/PRD.md`, `.kortext/DESIGN.md`, `.kortext/GROWTH.md`, `.kortext/LEGAL.md`

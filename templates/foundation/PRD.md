@@ -7,11 +7,18 @@ approver: +prime
 # Product Requirements Document (PRD)
 
 
-## Product Requirements
+## Scope
 
-- [Legal to-dos]
-- [Growth to-dos]
-- [Content to-dos]
+- **In scope:** [What this product does — one line per capability]
+- **Out of scope:** [What it deliberately does not do, and why]
+
+## User Types
+
+- **[User type]:** [what they can do, what they must never see]
+
+## Personal Data per Flow
+
+- **[Flow name]:** [which personal data the flow needs and why it needs it — write `none` where a flow needs no personal data. The compliance analysis is run against this list]
 
 ## User Stories (Tasks) & Acceptance Criteria
 

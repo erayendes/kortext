@@ -13,7 +13,7 @@ Define the brand voice and the rules for all product copy — buttons, error mes
 
 ## when to use
 
-- When the analysis flow produces `.kortext/CONTENT.md` → derive it from `.kortext/foundation/PRD.md`, `.kortext/LEGAL.md` and `.kortext/GROWTH.md`
+- When the analysis flow produces `.kortext/CONTENT.md` → derive it from `.kortext/foundation/PRD.md`, `.kortext/DESIGN.md`, `.kortext/GROWTH.md` and `.kortext/LEGAL.md`
 - When a feature or screen needs microcopy rules
 - When error message, notification or onboarding copy standards are being defined
 - When multi-language support (i18n) is planned → specify translation requirements
@@ -35,8 +35,8 @@ Define the brand voice and the rules for all product copy — buttons, error mes
 ## collaboration
 
 - **Approver:** +prime approves `.kortext/CONTENT.md`
-- **Upstream:** `.kortext/foundation/PRD.md`, `.kortext/LEGAL.md`, `.kortext/GROWTH.md`
-- **Downstream:** `.kortext/DESIGN.md` builds on your copy rules; implementing agents take microcopy and tone from your document
+- **Upstream:** `.kortext/foundation/PRD.md`, `.kortext/DESIGN.md`, `.kortext/GROWTH.md`, `.kortext/LEGAL.md`
+- **Downstream:** `.kortext/foundation/PFD.md` carries your rules forward; implementing agents take microcopy and tone from your document
 
 ## skills
 
@@ -54,15 +54,15 @@ Define the brand voice and the rules for all product copy — buttons, error mes
 
 ### 0. Prerequisites
 
-Before writing, read the step's inputs — `.kortext/foundation/PRD.md`, `.kortext/LEGAL.md`, `.kortext/GROWTH.md`.
+Before writing, read the step's inputs — `.kortext/foundation/PRD.md`, `.kortext/DESIGN.md` (the components you write into), `.kortext/GROWTH.md`, `.kortext/LEGAL.md`.
 
 ### 1. Content Strategy
 
 1. Define the brand voice (formal/friendly, technical/simple)
 2. Set the language level to match the target audience profile
-3. Define the message hierarchy and the key page copy
+3. Define the message hierarchy and write the key page copy into the components `.kortext/DESIGN.md` names
 4. Align SEO content direction with `.kortext/GROWTH.md`
-5. Cross-check legal wording (privacy, consent, cookies) against `.kortext/LEGAL.md`
+5. Write the notices `.kortext/LEGAL.md` requires (privacy, consent, cookies) — write them, do not reference them
 6. Write the result to `.kortext/CONTENT.md`
 
 ### 2. Microcopy Rules

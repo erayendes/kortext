@@ -36,8 +36,8 @@ Model the data and design the database schema: tables, relationships, indexes, a
 ## collaboration
 
 - **Approver:** +prime approves `.kortext/DATABASE.md`
-- **Upstream:** `.kortext/foundation/PRD.md`, `.kortext/SECURITY.md`, `.kortext/STRUCTURE.md`, `.kortext/STACK.md`
-- **Downstream:** `.kortext/API.md` and `.kortext/foundation/TRD.md` build on your schema; implementing agents follow your migration and integrity rules
+- **Upstream:** `.kortext/foundation/PRD.md`, `.kortext/ARCHITECTURE.md`, `.kortext/SECURITY.md`, `.kortext/ENVIRONMENT.md`, `.kortext/STRUCTURE.md`, `.kortext/STACK.md`
+- **Downstream:** `.kortext/API.md` and `.kortext/foundation/TRD.md` build on your schema, and `.kortext/LEGAL.md` decides retention and erasure duties from the columns you mark as personal data; implementing agents follow your migration and integrity rules
 
 ## skills
 
@@ -54,7 +54,7 @@ Model the data and design the database schema: tables, relationships, indexes, a
 
 ### 0. Prerequisites
 
-Before writing, read the step's inputs — `.kortext/foundation/PRD.md`, `.kortext/SECURITY.md`, `.kortext/STRUCTURE.md`, `.kortext/STACK.md`.
+Before writing, read the step's inputs — `.kortext/foundation/PRD.md`, `.kortext/ARCHITECTURE.md`, `.kortext/SECURITY.md` (the access rules), `.kortext/ENVIRONMENT.md` (the engine and instances you design for), `.kortext/STRUCTURE.md`, `.kortext/STACK.md`.
 
 ### 1. Database Schema Design
 

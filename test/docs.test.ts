@@ -50,8 +50,9 @@ test('listDocs: dependency blocking follows approvals; regressed input warns dep
 
   setFrontmatterStatus(docPath(p, 'foundation/PRD.md'), 'approved');
   docs = listDocs(db, p, pkgRoot);
-  assert.equal(byRel('GROWTH.md').blocked, false);
   assert.equal(byRel('STACK.md').blocked, false);
+  // measurement reads the surfaces design names, so GROWTH waits for DESIGN
+  assert.equal(byRel('GROWTH.md').blocked, true);
   assert.equal(byRel('LEGAL.md').blocked, true); // still waiting on STACK, DATABASE, ENVIRONMENT
 
   // BRD falls back to draft after PRD was written → PRD warns upstreamChanged
@@ -91,11 +92,11 @@ test('not-applicable input satisfies dependencies downstream', () => {
   const db = openDb(join(work, 'db.sqlite'));
   const p = createProject(db, { name: 'Acme', repoPath: join(work, 'acme') }, pkgRoot);
   setFrontmatterStatus(docPath(p, 'foundation/BRD.md'), 'approved');
-  setFrontmatterStatus(docPath(p, 'LEGAL.md'), 'approved');
-  setFrontmatterStatus(docPath(p, 'GROWTH.md'), 'not-applicable');
+  setFrontmatterStatus(docPath(p, 'foundation/PRD.md'), 'approved');
+  setFrontmatterStatus(docPath(p, 'DESIGN.md'), 'not-applicable');
   const docs = listDocs(db, p, pkgRoot);
-  const prd = docs.find((d) => d.rel === 'foundation/PRD.md')!;
-  assert.equal(prd.blocked, false); // GROWTH n/a + LEGAL approved unblock PRD
+  const growth = docs.find((d) => d.rel === 'GROWTH.md')!;
+  assert.equal(growth.blocked, false); // a product with no surface still gets measured
   rmSync(work, { recursive: true, force: true });
 });
 

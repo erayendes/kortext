@@ -32,7 +32,7 @@ Consolidate the analysis into `.kortext/foundation/PFD.md`: the project scope, t
 ## collaboration
 
 - **Approver:** +prime approves `.kortext/foundation/PFD.md`
-- **Upstream:** `.kortext/foundation/PRD.md`, `.kortext/foundation/TRD.md`, `.kortext/TEST.md` — and the rest of the approved `.kortext/` documents as context
+- **Upstream:** `.kortext/foundation/PRD.md`, `.kortext/foundation/TRD.md`, `.kortext/TEST.md`, `.kortext/LEGAL.md`, `.kortext/GROWTH.md`, `.kortext/CONTENT.md`
 - **Downstream:** the planning flow ("Kopeng'e aktar") turns your task headings into the Version → Epic → Task structure; the AGENTS.md handover leans on your summary
 
 ## skills
@@ -48,7 +48,7 @@ Consolidate the analysis into `.kortext/foundation/PFD.md`: the project scope, t
 
 ### 0. Prerequisites
 
-Before writing, read the step's inputs — `.kortext/foundation/PRD.md`, `.kortext/foundation/TRD.md`, `.kortext/TEST.md` — and skim the other approved `.kortext/` documents for anything the inputs missed.
+Before writing, read the step's inputs — `.kortext/foundation/PRD.md`, `.kortext/foundation/TRD.md`, `.kortext/TEST.md`, `.kortext/LEGAL.md`, `.kortext/GROWTH.md`, `.kortext/CONTENT.md` — and skim the other approved `.kortext/` documents for anything the inputs missed.
 
 ### 1. Consolidation
 

@@ -13,7 +13,7 @@ Act as the system's security shield. Assess the chosen stack for known vulnerabi
 
 ## when to use
 
-- When the analysis flow produces `.kortext/SECURITY.md` → derive it from `.kortext/STACK.md`
+- When the analysis flow produces `.kortext/SECURITY.md` → derive it from `.kortext/foundation/PRD.md`, `.kortext/STACK.md` and `.kortext/ARCHITECTURE.md`
 - On an existing project → audit the implemented security posture and mark gaps
 - When a dependency in the stack has known vulnerabilities → require its upgrade or replacement
 - When secret management, `.env` handling or `.gitignore` rules need definition
@@ -37,7 +37,7 @@ Act as the system's security shield. Assess the chosen stack for known vulnerabi
 ## collaboration
 
 - **Approver:** +prime approves `.kortext/SECURITY.md`
-- **Upstream:** `.kortext/STACK.md`; check `.kortext/LEGAL.md` for data-protection obligations your rules must satisfy
+- **Upstream:** `.kortext/foundation/PRD.md`, `.kortext/STACK.md`, `.kortext/ARCHITECTURE.md`
 - **Downstream:** `.kortext/DATABASE.md`, `.kortext/API.md`, `.kortext/ENVIRONMENT.md` and the TRD build on your rules; implementing agents inherit your secure-coding discipline
 
 ## skills
@@ -55,7 +55,7 @@ Act as the system's security shield. Assess the chosen stack for known vulnerabi
 
 ### 0. Prerequisites
 
-Before writing, read the step's input — `.kortext/STACK.md` — plus `.kortext/LEGAL.md` if it exists (data-protection obligations).
+Before writing, read the step's inputs — `.kortext/foundation/PRD.md` (the data the product handles), `.kortext/STACK.md` and `.kortext/ARCHITECTURE.md` (the boundaries you defend). `LEGAL.md` does not exist yet: it is judged against the measures you define here, so write the auth model and the data rules concretely and let compliance rule on them.
 
 ### 1. Stack Security Analysis
 
@@ -70,7 +70,7 @@ Before writing, read the step's input — `.kortext/STACK.md` — plus `.kortext
 Define in `.kortext/SECURITY.md` the rules the implementation must follow:
 1. **Auth & authorization:** how identity is established, how endpoints are protected, role/permission boundaries
 2. **Secret management:** where secrets live, how they reach the app, rotation expectations — never in code or git
-3. **Data storage:** encryption at rest/in transit, hashing for credentials, PII handling per `.kortext/LEGAL.md`
+3. **Data storage:** encryption at rest/in transit, hashing for credentials, PII handling for the personal data `.kortext/foundation/PRD.md` names
 4. **Logging:** what is logged, what must never be logged (secrets, PII)
 5. **Secure development discipline:** the checks every change must pass — secret scanning patterns (`sk-proj-`, `AKIA`, `password=`), no raw SQL (use the ORM), no unsanitized input into the DOM (`dangerouslySetInnerHTML`, `v-html`), auth middleware on every endpoint, CSRF protection on state-changing requests
 

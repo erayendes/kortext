@@ -4,6 +4,47 @@ All notable changes to Kortext are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and Kortext adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **Document order re-derived a second time, on one rule: a document is placed
+  where it can be *read*, not where it can *judge*.** `SECURITY.md` moves ahead
+  of the environment, the schema and the endpoints, because the auth model it
+  defines is what all three are built on — retrofitting it changes tables and
+  routes, while a security rule written slightly early is corrected by a
+  revision request. `ENVIRONMENT.md` moves ahead of `DATABASE.md`, so the schema
+  is designed for the engine, instances and region that actually host it.
+  `GROWTH.md` moves to the judgement block after `DESIGN.md`, so measurement
+  instruments surfaces that exist instead of a brief. The new chain:
+  BRD, PRD, STACK, STRUCTURE, ARCHITECTURE, SECURITY, ENVIRONMENT, DATABASE,
+  API, DESIGN, GROWTH, LEGAL, CONTENT, TRD, TEST, PFD.
+- **Existing-project flow: `CONTENT.md` now follows `GROWTH.md` and
+  `LEGAL.md`.** It declared both as inputs while running before either, so the
+  copy rules were written against two documents that did not exist yet.
+- **Personas match the chain again.** Nine of eleven declared an upstream the
+  workflow never gave them — the PRD claimed to derive from LEGAL and GROWTH,
+  DESIGN from CONTENT, SECURITY from LEGAL while never reading ARCHITECTURE,
+  CONTENT never reading DESIGN, TEST never reading LEGAL. Every `Upstream:` and
+  prerequisite line is now the step's own input list.
+
+### Fixed
+
+- **The PRD skeleton stopped asking for documents that do not exist.** Its
+  first section held `[Legal to-dos]`, `[Growth to-dos]` and `[Content to-dos]`
+  — three placeholders for documents written five to six waves later, which the
+  product manager could only leave in brackets. Where a later document needs
+  the PRD changed, that is a revision request. In their place: `Scope`,
+  `User Types` and `Personal Data per Flow` — the last one is the list the
+  compliance analysis is run against, which the step prompt demanded and the
+  skeleton had no home for.
+
+### Added
+
+- **A guard for the order.** `test/order.test.ts` fails when a workflow step
+  reads a document written after it, and when a persona's declared upstream
+  differs from the input list its step gives it.
+
 ## [5.0.0] - 2026-09-01
 
 **v1.0 — the active project brain.** Full vision rewrite (dev/DECISIONS.md
