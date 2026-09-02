@@ -103,8 +103,41 @@ All notable changes to Kortext are documented here. The format is based on
   DATABASE, API, LEGAL, CONTENT, TRD, TEST, PFD`. The bug predates this
   release; the re-derived chain is what made it visible.
 
+### Changed
+
+- **State and debt stop competing for the same badge.** A document is in
+  exactly one of six states — `waiting`, `writing…`, `paused`, `pending`,
+  `approved`, `n/a` — and what is owed on top rides alongside as its own badge:
+  `failed`, `change request`, `dependent`. `failed` and `log` stop being
+  states: a failed step leaves the document `waiting` with a badge that says
+  the last attempt failed, and nothing has written `log` since `DECISIONS.md`
+  was removed in 5.0.0. A badge outranks the state for grouping — an approved
+  document with an open demand belongs under **Needs you**, not folded away in
+  the collapsed Approved group where it used to hide. `dependent` is the one
+  exception: it is news rather than a job, so the document stays put.
+- **`upstream changed` becomes `dependent`, and means something narrower.** It
+  used to fire on any written document whose input fell out of approved,
+  including drafts about to be rewritten anyway. Now only an approved document
+  carries it, and it means an input is *moving* — someone has asked that input
+  to change, or it left approved. Nothing is wrong yet; the document is judged
+  when the input settles again.
+
 ### Added
 
+- **A document is re-read when the input it stands on changes.** Approving a
+  rewritten document leaves every approved reader of it resting on text that no
+  longer exists, and nothing checked. Now each reader is judged against the new
+  version: the engine reads both and writes a verdict, and the server turns a
+  `needsChange` verdict into an ordinary revision request filed under the source
+  document — so a finding arrives through the mechanism that already carries
+  demands, rather than as a new kind of thing. `needsChange: false` clears the
+  badge and nothing else happens. Silent on the first pass, because nothing
+  downstream is approved yet; it costs runs only when a document is genuinely
+  revised.
+- **Ask, on a demand.** The revision bar's actions are now **Ask · Apply · Add
+  note · Dismiss** — Ask puts the question to the author of the document that
+  made the demand, inline, kept nowhere, the same conversation the drawer
+  already offers on a line.
 - **A demand is settled from either end, one at a time.** A revision request
   used to be actionable only on the document it was made of, which meant
   reading STACK.md, seeing what it asks of the brief, and having nowhere to say

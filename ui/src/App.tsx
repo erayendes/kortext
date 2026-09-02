@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api, type DocInfo, type EngineInfo, type HandshakeState, type Job, type KopengPlan, type Project, type Readiness } from './api';
-import { DocDrawer, StatusBadge } from './DocDrawer';
+import { DocBadges, DocDrawer, StatusBadge } from './DocDrawer';
 
 // ponytail: last two segments read fine in a card; the full path lives in the tooltip
 function shortPath(p: string) {
@@ -844,14 +844,19 @@ function DocumentsTab({
   // considered and deliberately skipped, so they are the least interesting.
   const bucketOf = (d: DocInfo): 'needs' | 'progress' | 'next' | 'approved' | 'na' => {
     const job = jobFor(d.rel);
-    if (d.status === 'draft') return 'needs';
+    // A badge outranks the state for grouping — a failed attempt and an open
+    // demand are both work for prime, wherever the document itself stands.
+    // `dependent` is the exception: it is news, not a job, so the document
+    // stays where it is.
     if (d.status === 'uninitialized' && job?.status === 'failed' && !paused) return 'needs';
+    if (d.revisionRequests.length > 0) return 'needs';
+    if (d.status === 'draft') return 'needs';
     if (d.status === 'uninitialized' && (job?.status === 'running' || (paused && job?.status === 'stopped'))) {
       return 'progress';
     }
     if (d.status === 'uninitialized') return 'next';
     if (d.status === 'approved') return 'approved';
-    return 'na'; // considered and deliberately skipped (plus any stale log file)
+    return 'na'; // considered and deliberately skipped
   };
 
   const groups: {
@@ -902,7 +907,10 @@ function DocumentsTab({
             </summary>
             {items.map((d) => {
               const job = jobFor(d.rel);
-              const isRunning = job?.status === 'running';
+              // An approved document with a job running is being RE-READ, not
+              // written — it keeps its state and says so with the badge.
+              const rechecking = job?.status === 'running' && d.status === 'approved';
+              const isRunning = job?.status === 'running' && !rechecking;
               // 'stopped' is the user's own pause/restart — not a failure: its own
               // badge, no red row, no Retry; Continue picks the step up again.
               const stopped = job?.status === 'stopped' && d.status === 'uninitialized';
@@ -923,27 +931,9 @@ function DocumentsTab({
                       Retry
                     </span>
                   )}
-                  {d.revisionRequests.length > 0 && (
-                    <span
-                      className="kx-doc-changes"
-                      title={d.revisionRequests.map((r) => `${r.from}: ${r.reason}`).join('\n')}
-                    >
-                      changes asked
-                    </span>
-                  )}
-                  {d.openQuestions && (
-                    <span className="kx-doc-ask" title="This document is waiting on an answer from you">
-                      asks you
-                    </span>
-                  )}
-                  {d.upstreamChanged && <span className="kx-doc-warn">upstream changed</span>}
+                  <DocBadges doc={d} failed={failed} rechecking={rechecking} />
                   <span title={failed ? job?.error ?? '' : ''}>
-                    <StatusBadge
-                      doc={d}
-                      running={isRunning}
-                      stopped={stopped}
-                      failed={failed}
-                    />
+                    <StatusBadge doc={d} running={isRunning} stopped={stopped} />
                   </span>
                 </button>
               );
@@ -954,6 +944,12 @@ function DocumentsTab({
       <DocDrawer
         project={project}
         doc={open}
+        failedError={
+          open && open.status === 'uninitialized' && jobFor(open.rel)?.status === 'failed'
+            ? jobFor(open.rel)?.error ?? 'no reason recorded'
+            : null
+        }
+        onRetry={runNext}
         onClose={() => setOpen(null)}
         onChanged={refresh}
       />

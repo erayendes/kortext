@@ -73,10 +73,13 @@ test('listDocs: dependency blocking follows approvals; regressed input warns dep
   assert.equal(byRel('GROWTH.md').blocked, true);
   assert.equal(byRel('LEGAL.md').blocked, true); // still waiting on STACK, DATABASE, ENVIRONMENT
 
-  // BRD falls back to draft after PRD was written → PRD warns upstreamChanged
+  // Only an approved document is dependent: a draft one is about to be
+  // rewritten anyway, so an input that moved under it is not news.
   setFrontmatterStatus(docPath(p, 'foundation/BRD.md'), 'draft');
   docs = listDocs(db, p, pkgRoot);
-  assert.equal(byRel('foundation/PRD.md').upstreamChanged, true);
+  assert.deepEqual(byRel('foundation/PRD.md').dependentOn, ['foundation/BRD.md']);
+  // …and a document still in draft is not: STACK reads the same brief.
+  assert.deepEqual(byRel('STACK.md').dependentOn, []);
 
   rmSync(work, { recursive: true, force: true });
 });

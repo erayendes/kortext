@@ -8,7 +8,7 @@ import { pickDirectoryNative } from './pick-directory.js';
 import { spawnSync } from 'node:child_process';
 import { readdirSync } from 'node:fs';
 import { detectEngines, selectedEngine, setSetting, ENGINES } from './engines.js';
-import { abortRuns, advance, explainDoc, failStaleJobs, listJobs, nextStep, proposeRevision, reviseDoc, runPlanning, runningDoc, runningJob } from './runner.js';
+import { abortRuns, advance, explainDoc, failStaleJobs, listJobs, nextStep, proposeRevision, recheckDependents, reviseDoc, runPlanning, runningDoc, runningJob } from './runner.js';
 import { isChecking, readReadiness } from './readiness.js';
 import { readFileSync, writeFileSync } from 'node:fs';
 import type { Project } from './db.js';
@@ -46,7 +46,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
 
   app.get('/api/projects', (_req, res) => {
     // Cards show per-group progress (core 5/14 · foundation 1/3) — counted the
-    // same way the group headers count: approved | not-applicable | log = settled.
+    // same way the group headers count: approved | not-applicable = settled.
     const projects = listProjects(db).map((p) => {
       const docCounts = {
         core: { settled: 0, total: 0 },
@@ -56,7 +56,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
         for (const d of listDocs(db, p, pkgRoot)) {
           const g = docCounts[d.group];
           g.total++;
-          if (d.status === 'approved' || d.status === 'not-applicable' || d.status === 'log') {
+          if (d.status === 'approved' || d.status === 'not-applicable') {
             g.settled++;
           }
         }
@@ -267,6 +267,11 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     try {
       setFrontmatterStatus(docPath(project, String(rel)), 'approved');
       kickChain(project);
+      // Approving a document that was rewritten leaves every approved reader of
+      // it standing on the old text. Judge each — silent on the first pass,
+      // because nothing downstream is approved yet.
+      const engine = selectedEngine(db);
+      if (engine) recheckDependents(db, project, String(rel), engine, pkgRoot);
       res.json({ ok: true });
     } catch (err) {
       res.status(400).json({ error: (err as Error).message });

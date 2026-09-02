@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { openDb } from '../server/db.js';
 import { createProject } from '../server/projects.js';
-import { setFrontmatterStatus, docPath } from '../server/docs.js';
+import { setFrontmatterStatus, docPath, listDocs } from '../server/docs.js';
 import { abortRuns, buildStepPrompt, nextStep, runStep, runningJob, listJobs } from '../server/runner.js';
 import type { EngineSpec } from '../server/engines.js';
 
@@ -434,6 +434,42 @@ test('an engine that proposes nothing is an error, not an empty document', async
     () => proposeRevision(p, 'foundation/BRD.md', ['change it'], mockEngine(work, 'noop'), pkgRoot),
     /wrote no proposal/,
   );
+  rmSync(work, { recursive: true, force: true });
+});
+
+test('a verdict becomes a demand in the document that caused it', async () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Recheck', repoPath: join(work, 'recheck') }, pkgRoot);
+  const { appendRevisionRequest } = await import('../server/runner.js');
+
+  // The line lands under the heading, above whatever follows it.
+  writeFileSync(
+    docPath(p, 'STACK.md'),
+    '---\nstatus: approved\n---\n\n# Stack\n\n## Revision Requests\n\n- `API.md` — an older demand\n\n## Open Questions for prime\n\n- something\n',
+    'utf8',
+  );
+  appendRevisionRequest(p, 'STACK.md', 'foundation/PRD.md', 'the runtime changed, the flow list must follow');
+  const stack = readFileSync(docPath(p, 'STACK.md'), 'utf8');
+  const lines = stack.split('\n');
+  const head = lines.findIndex((l) => l === '## Revision Requests');
+  const next = lines.findIndex((l) => l === '## Open Questions for prime');
+  const at = lines.findIndex((l) => l.startsWith('- `PRD.md`'));
+  assert.ok(at > head && at < next, `the demand must sit inside the section (${at} vs ${head}..${next})`);
+  assert.match(stack, /- `PRD\.md` — the runtime changed, the flow list must follow/);
+  // Frontmatter is untouched: writing a demand does not un-approve the writer.
+  assert.match(stack, /status: approved/);
+  // The panel reads it back as a demand on the PRD — which has to have been
+  // written, or there is nothing to ask of it.
+  setFrontmatterStatus(docPath(p, 'foundation/PRD.md'), 'approved');
+  const prd = listDocs(db, p, pkgRoot).find((d) => d.rel === 'foundation/PRD.md')!;
+  assert.equal(prd.revisionRequests.length, 1);
+  assert.equal(prd.revisionRequests[0].from, 'STACK.md');
+
+  // A document with no such section gets one rather than losing the finding.
+  writeFileSync(docPath(p, 'DESIGN.md'), '---\nstatus: approved\n---\n\n# Design\n', 'utf8');
+  appendRevisionRequest(p, 'DESIGN.md', 'CONTENT.md', 'the empty state lost its slot');
+  assert.match(readFileSync(docPath(p, 'DESIGN.md'), 'utf8'), /## Revision Requests\n\n- `CONTENT\.md` —/);
   rmSync(work, { recursive: true, force: true });
 });
 

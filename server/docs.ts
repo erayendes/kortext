@@ -18,7 +18,12 @@ export interface DocInfo {
   author: string | null;
   inputs: string[];
   blocked: boolean; // an input is not approved yet
-  upstreamChanged: boolean; // an approved/draft doc whose input regressed
+  /**
+   * Approved, but an input is moving: it carries an open demand of its own, or
+   * it fell out of approved. Nothing is wrong yet — when that input settles
+   * again, this document is re-read against it.
+   */
+  dependentOn: string[];
   openQuestions: boolean; // carries unanswered questions for prime
   /** A workflow step writes this document. The brief has none — it is prime's own. */
   hasProducingStep: boolean;
@@ -196,7 +201,7 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
         author: fm.author ?? map.get(rel)?.author ?? null,
         inputs: map.get(rel)?.inputs ?? [],
         blocked: false,
-        upstreamChanged: false,
+        dependentOn: [],
         openQuestions: status !== 'uninitialized' && hasOpenQuestions(body),
         hasProducingStep: map.has(rel),
         revisionRequests: [],
@@ -238,14 +243,16 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
   const byRel = new Map(docs.map((d) => [d.rel, d]));
   for (const doc of docs) {
     doc.blocked = doc.inputs.some((i) => !settled(statuses.get(i)));
-    // Already-written doc whose input fell out of approved — the reader
-    // should re-check it against the new upstream.
-    doc.upstreamChanged =
-      doc.status !== 'uninitialized' &&
-      doc.inputs.some((i) => {
-        const input = byRel.get(i);
-        return input ? !settled(input.status) : false;
-      });
+    // Only an approved document can be dependent: an unwritten one has nothing
+    // to re-read, and one still in draft is about to be rewritten anyway. The
+    // input is "moving" either because someone asked it to change or because it
+    // fell out of approved — for the reader the two mean the same thing.
+    if (doc.status !== 'approved') continue;
+    doc.dependentOn = doc.inputs.filter((i) => {
+      const input = byRel.get(i);
+      if (!input) return false;
+      return input.revisionRequests.length > 0 || !settled(input.status);
+    });
   }
 
   // Dependency ordering: a document sits one step behind its deepest input

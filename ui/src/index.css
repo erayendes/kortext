@@ -1410,7 +1410,6 @@ body {
 .kx-doc-name { font-size: 13px; font-weight: 550; color: var(--fg); }
 .kx-doc-author { font-size: 10.5px; color: var(--fg-faint); }
 .kx-doc-spacer { flex: 1; }
-.kx-doc-warn { font-size: 10px; color: var(--amber, #b45309); background: rgba(217,119,6,.1); padding: 2px 7px; border-radius: 5px; }
 /* Badge heat map: amber = your move, green = settled, blue = the engine's move,
    gray = passive, red = alarm, violet = out-of-cycle file. */
 .kx-status { font-size: 10.5px; font-weight: 600; padding: 2px 8px; border-radius: 6px; background: var(--bg-muted); color: var(--fg-mid); white-space: nowrap; }
@@ -1418,12 +1417,20 @@ body {
 .kx-status-paused { background: var(--amber-bg); color: var(--amber); }
 .kx-status-draft { background: var(--violet-bg); color: var(--violet); }
 .kx-status-approved { background: var(--green-bg); color: var(--green); }
-.kx-status-failed { background: var(--red-bg); color: var(--red); }
-.kx-status-log { background: var(--pink-bg); color: var(--pink); }
+/* Six states, one badge. What is OWED rides alongside as a kx-badge. */
 /* n/a and waiting carry no pill — they are the quiet, no-action states. */
 .kx-status-waiting { background: var(--bg-muted); color: var(--fg-secondary); }
 .kx-status-not-applicable { background: transparent; color: var(--fg-muted); padding-left: 0; padding-right: 0; }
-.kx-status-warn { color: var(--amber); }
+.kx-changebar-chat { margin-top: 8px; display: flex; flex-direction: column; gap: 8px; font-size: 12.5px; }
+.kx-chat-q { font-weight: 600; }
+.kx-chat-a { color: var(--fg-secondary); white-space: pre-wrap; }
+.kx-doc-dependbar { margin: 0 18px 8px; padding: 8px 12px; border-radius: var(--r-md); background: transparent; border: 1px dashed var(--pink-border); color: var(--fg-secondary); font-size: 12.5px; }
+.kx-doc-dependbar .mono { color: var(--pink); }
+.kx-badge { font-family: var(--font-mono); font-size: 10px; padding: 2px 7px; border-radius: 999px; border: 1px solid transparent; }
+.kx-badge-failed { background: var(--red-bg); color: var(--red); border-color: var(--red-border); }
+/* One family, two weights: a demand you answer, and news that one may be coming. */
+.kx-badge-change { background: var(--pink-bg); color: var(--pink); border-color: var(--pink-border, transparent); }
+.kx-badge-dependent { background: transparent; color: var(--pink); border-color: var(--pink-border, currentColor); opacity: .75; }
 .dr-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--border); }
 .dr-title { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .dr-actions { display: flex; gap: 6px; flex-shrink: 0; }
@@ -1531,8 +1538,6 @@ body {
 .kx-changebar-actions { display: flex; gap: 6px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
 .kx-changebar-actions .kx-cmd-hint { margin-right: auto; }
 .kx-doc-askbar { margin: 0 18px; padding: 8px 12px; border-radius: var(--r-md); background: var(--amber-bg); border: 1px solid var(--amber-border); color: var(--amber); font-size: 12.5px; }
-.kx-doc-changes { font-family: var(--font-mono); font-size: 10px; padding: 2px 6px; border-radius: 999px; background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
-.kx-doc-ask { font-family: var(--font-mono); font-size: 10px; padding: 2px 6px; border-radius: 999px; background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-border); }
 .kx-block.open-q { background: var(--amber-bg); }
 .kx-block.open-q:first-of-type, .kx-block.kx-h2.open-q { font-weight: 650; }
 .kx-block.open-q + .kx-blank { background: var(--amber-bg); }

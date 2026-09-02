@@ -19,11 +19,15 @@ interface Explain {
 export function DocDrawer({
   project,
   doc,
+  failedError,
+  onRetry,
   onClose,
   onChanged,
 }: {
   project: Project;
   doc: DocInfo | null;
+  failedError?: string | null;
+  onRetry?: () => void;
   onClose: () => void;
   onChanged: () => void;
 }) {
@@ -233,6 +237,26 @@ export function DocDrawer({
         </div>
       </div>
       {err && <div className="kx-error">{err}</div>}
+      {failedError && !editing && (
+        <div className="kx-doc-changebar">
+          <div className="kx-changebar-head">The last attempt to write this document failed.</div>
+          <div className="kx-cmd-hint">{failedError}</div>
+          {onRetry && (
+            <div className="kx-changebar-actions">
+              <button className="btn btn-sm btn-primary" onClick={onRetry}>
+                Retry
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+      {doc.dependentOn.length > 0 && !editing && (
+        <div className="kx-doc-dependbar">
+          <span className="mono">{doc.dependentOn.map((d) => d.replace(/^foundation\//, '').replace(/\.md$/, '')).join(', ')}</span>{' '}
+          — an input of this document is moving. Nothing is wrong yet; when it settles, this one is
+          read against it again and you are told if it has to change.
+        </div>
+      )}
       {doc.revisionRequests.length > 0 && !editing && (
         <RequestBar
           project={project}
@@ -384,16 +408,19 @@ const STATUS_LABEL: Record<string, string> = {
   draft: 'pending',
   'not-applicable': 'n/a',
   approved: 'approved',
-  log: 'log',
 };
 
+/**
+ * Where the document itself stands — one of six, always exactly one. What is
+ * owed on top of it (a failed attempt, a demand, a moving input) is a badge,
+ * because those ride alongside a state rather than replacing it.
+ */
 export function statusOf(
   doc: DocInfo,
-  opts: { running?: boolean; stopped?: boolean; failed?: boolean } = {},
+  opts: { running?: boolean; stopped?: boolean } = {},
 ): { key: string; label: string } {
   if (opts.running) return { key: 'writing', label: 'writing…' };
   if (opts.stopped) return { key: 'paused', label: 'paused' };
-  if (opts.failed) return { key: 'failed', label: 'failed' };
   // Unwritten docs all read 'waiting' — the group heading already says Next,
   // so a separate 'next' pill only added noise.
   if (doc.status === 'uninitialized') return { key: 'waiting', label: 'waiting' };
@@ -404,19 +431,49 @@ export function StatusBadge({
   doc,
   running,
   stopped,
-  failed,
 }: {
   doc: DocInfo;
   running?: boolean;
   stopped?: boolean;
-  failed?: boolean;
 }) {
-  const { key, label } = statusOf(doc, { running, stopped, failed });
+  const { key, label } = statusOf(doc, { running, stopped });
+  return <span className={`kx-status kx-status-${key}`}>{label}</span>;
+}
+
+/** What is owed on this document, next to the state it is in. */
+export function DocBadges({
+  doc,
+  failed,
+  rechecking,
+}: {
+  doc: DocInfo;
+  failed?: boolean;
+  rechecking?: boolean;
+}) {
   return (
-    <span className={`kx-status kx-status-${key}`}>
-      {label}
-      {doc.upstreamChanged && <span className="kx-status-warn"> ⚠</span>}
-    </span>
+    <>
+      {failed && <span className="kx-badge kx-badge-failed">failed</span>}
+      {doc.revisionRequests.length > 0 && (
+        <span
+          className="kx-badge kx-badge-change"
+          title={doc.revisionRequests.map((r) => `${r.from}: ${r.reason}`).join('\n')}
+        >
+          change request
+        </span>
+      )}
+      {(doc.dependentOn.length > 0 || rechecking) && (
+        <span
+          className="kx-badge kx-badge-dependent"
+          title={
+            rechecking
+              ? 'Being read again against the input that changed'
+              : `Waiting on ${doc.dependentOn.join(', ')} to settle`
+          }
+        >
+          dependent
+        </span>
+      )}
+    </>
   );
 }
 
@@ -439,6 +496,26 @@ function RequestBar({
   const [err, setErr] = useState<string | null>(null);
   const [noting, setNoting] = useState<number | null>(null);
   const [note, setNote] = useState('');
+  // Asking about a demand is the same inline conversation as asking about a
+  // line: the author of the document that made it answers, nothing is kept.
+  const [asking, setAsking] = useState<number | null>(null);
+  const [question, setQuestion] = useState('');
+  const [chat, setChat] = useState<Array<{ i: number; q: string; a: string | null }>>([]);
+
+  const ask = (i: number) => {
+    const q = question.trim();
+    if (!q) return;
+    const it = items[i];
+    const history = chat.filter((c) => c.i === i && c.a).map((c) => ({ q: c.q, a: c.a as string }));
+    setChat((cs) => [...cs, { i, q, a: null }]);
+    setQuestion('');
+    api
+      .explainDoc(project.id, it.from, `[asks ${it.target}] ${it.reason}`, q, history)
+      .then((r) => setChat((cs) => cs.map((c) => (c.q === q && c.a === null ? { ...c, a: r.answer } : c))))
+      .catch((e) =>
+        setChat((cs) => cs.map((c) => (c.q === q && c.a === null ? { ...c, a: `— ${(e as Error).message}` } : c))),
+      );
+  };
 
   const decide = async (i: number, decision: 'apply' | 'dismiss', instruction?: string) => {
     setBusy(true);
@@ -471,6 +548,9 @@ function RequestBar({
           <li key={i}>
             <span className="mono">{it.label.replace(/\.md$/, '').replace(/^foundation\//, '')}</span> — {it.reason}
             <div className="kx-changebar-actions">
+              <button className="btn btn-sm" disabled={busy} onClick={() => setAsking(asking === i ? null : i)}>
+                Ask
+              </button>
               {it.canApply ? (
                 <>
                   <button className="btn btn-sm btn-primary" disabled={busy} onClick={() => decide(i, 'apply')}>
@@ -481,7 +561,7 @@ function RequestBar({
                     disabled={busy}
                     onClick={() => setNoting(noting === i ? null : i)}
                   >
-                    Apply with a note
+                    Add note
                   </button>
                 </>
               ) : (
@@ -492,6 +572,35 @@ function RequestBar({
               </button>
               {extra}
             </div>
+            {chat.filter((c) => c.i === i).length > 0 && (
+              <div className="kx-changebar-chat">
+                {chat
+                  .filter((c) => c.i === i)
+                  .map((c, k) => (
+                    <div key={k}>
+                      <div className="kx-chat-q">{c.q}</div>
+                      <div className="kx-chat-a">{c.a ?? 'thinking…'}</div>
+                    </div>
+                  ))}
+              </div>
+            )}
+            {asking === i && (
+              <div className="kx-note-input">
+                <input
+                  autoFocus
+                  value={question}
+                  placeholder={`Ask ${it.from.replace(/^foundation\//, '').replace(/\.md$/, '')} why — the answer is not kept`}
+                  onChange={(e) => setQuestion(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') ask(i);
+                    if (e.key === 'Escape') setAsking(null);
+                  }}
+                />
+                <button className="btn btn-sm" disabled={!question.trim()} onClick={() => ask(i)}>
+                  Send
+                </button>
+              </div>
+            )}
             {noting === i && (
               <div className="kx-note-input">
                 <input

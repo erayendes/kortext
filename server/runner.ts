@@ -1,11 +1,11 @@
 import type Database from 'better-sqlite3';
-import { existsSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { Project } from './db.js';
 import { spawnCli } from './cli-spawn.js';
 import type { EngineSpec } from './engines.js';
-import { listDocs, loadDocMap, readFrontmatter, workflowNameFor, type DocStep } from './docs.js';
+import { docPath, listDocs, loadDocMap, readFrontmatter, workflowNameFor, type DocStep } from './docs.js';
 import { ensureReadiness } from './readiness.js';
 
 export interface Job {
@@ -291,6 +291,109 @@ export async function explainDoc(
     throw new Error(`${engine.id} CLI failed: ${(res.stderrTail || res.stdoutTail).trim().slice(-300)}`);
   }
   return { answer: res.stdoutTail.trim() };
+}
+
+// ---------------------------------------------------------------------------
+// Re-reading a document against an input that moved
+// ---------------------------------------------------------------------------
+
+/** Appends one demand under the source's `## Revision Requests` heading. */
+export function appendRevisionRequest(project: Project, sourceRel: string, targetRel: string, reason: string): void {
+  const path = docPath(project, sourceRel);
+  const lines = readFileSync(path, 'utf8').split('\n');
+  const target = targetRel.replace(/^foundation\//, '');
+  const line = `- \`${target}\` — ${reason.replace(/\s+/g, ' ').trim()}`;
+  const head = lines.findIndex((l) => /^#{1,6}\s+Revision Requests\s*$/i.test(l));
+  if (head === -1) {
+    // No section to file it under: give the document one rather than dropping
+    // a finding the panel would then never surface.
+    lines.push('', '## Revision Requests', '', line);
+  } else {
+    let end = head + 1;
+    while (end < lines.length && !/^#{1,6}\s/.test(lines[end])) end++;
+    // Past the last item of the section, before the next heading.
+    let at = end;
+    while (at > head + 1 && lines[at - 1].trim() === '') at--;
+    lines.splice(at, 0, line);
+  }
+  writeFileSync(path, lines.join('\n'), 'utf8');
+}
+
+/**
+ * One reader, one moved input. The engine only judges — the server writes the
+ * demand, so a verdict cannot arrive as prose nobody can act on.
+ */
+async function runRecheck(
+  db: Database.Database,
+  project: Project,
+  readerRel: string,
+  sourceRel: string,
+  engine: EngineSpec,
+): Promise<void> {
+  const job = db
+    .prepare("INSERT INTO jobs (project_id, doc_rel, kind) VALUES (?, ?, 'recheck') RETURNING *")
+    .get(project.id, readerRel) as Job;
+  const settle = (status: 'done' | 'failed', error?: string) =>
+    db
+      .prepare("UPDATE jobs SET status = ?, error = ?, finished_at = datetime('now') WHERE id = ?")
+      .run(status, error ?? null, job.id);
+  const verdictRel = `.kortext/.recheck-${readerRel.replace(/[^A-Za-z0-9]/g, '-')}.json`;
+  const verdictPath = join(project.repo_path, verdictRel);
+  rmSync(verdictPath, { force: true });
+  const prompt = [
+    `.kortext/${sourceRel} has just been rewritten and approved. .kortext/${readerRel} was written against the OLD text and is still approved.`,
+    '',
+    'Read both. Decide ONE thing: does the reader now say something the new source contradicts, or leave out something the new source requires?',
+    '',
+    'HARD RULES:',
+    `- Write your verdict to ${verdictRel} and NOTHING else. Modify no document.`,
+    '- Shape: { "needsChange": true|false, "reason": "one sentence naming what must change in the reader and why" }',
+    '- `needsChange: false` is the normal answer. Say true only for a real contradiction or a real gap — not for wording you would have phrased differently.',
+    '- The reason is read by the human as a demand on the reader, so write it in the language of the documents.',
+  ].join('\n');
+  try {
+    const res = await spawnCli({
+      binary: engine.binary,
+      args: engine.args,
+      cwd: project.repo_path,
+      stdin: prompt,
+      logPath: join(homedir(), '.kortext', 'logs', `p${project.id}-recheck.log`),
+      signal: new AbortController().signal,
+      timeoutMs: 5 * 60 * 1000,
+    });
+    if (res.exitCode !== 0 || !existsSync(verdictPath)) {
+      settle('failed', `${engine.id} returned no verdict for ${readerRel}`);
+      return;
+    }
+    const verdict = JSON.parse(readFileSync(verdictPath, 'utf8')) as { needsChange?: boolean; reason?: string };
+    rmSync(verdictPath, { force: true });
+    if (verdict.needsChange && (verdict.reason ?? '').trim()) {
+      appendRevisionRequest(project, sourceRel, readerRel, String(verdict.reason));
+    }
+    settle('done');
+  } catch (err) {
+    rmSync(verdictPath, { force: true });
+    settle('failed', (err as Error).message);
+  }
+}
+
+/**
+ * A document was approved after being rewritten. Every approved document that
+ * reads it was written against the old text, so each is judged against the new
+ * one. On the first pass nothing downstream is approved yet, so this is silent
+ * until a document is genuinely revised.
+ */
+export function recheckDependents(
+  db: Database.Database,
+  project: Project,
+  sourceRel: string,
+  engine: EngineSpec,
+  pkgRoot: string,
+): void {
+  const readers = listDocs(db, project, pkgRoot).filter(
+    (d) => d.status === 'approved' && d.inputs.includes(sourceRel) && !runningDoc(db, project.id, d.rel),
+  );
+  for (const r of readers) void runRecheck(db, project, r.rel, sourceRel, engine);
 }
 
 // A revision the human applies. The document nobody's step produces — the brief

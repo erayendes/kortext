@@ -30,7 +30,7 @@ export interface DocInfo {
   author: string | null;
   inputs: string[];
   blocked: boolean;
-  upstreamChanged: boolean;
+  dependentOn: string[];
   openQuestions: boolean;
   hasProducingStep: boolean;
   revisionRequests: Array<{ from: string; reason: string }>;
