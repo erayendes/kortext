@@ -494,6 +494,7 @@ function RequestBar({
 }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [settled, setSettled] = useState<Set<string>>(new Set());
   const [noting, setNoting] = useState<number | null>(null);
   const [note, setNote] = useState('');
   // Asking about a demand is the same inline conversation as asking about a
@@ -517,11 +518,14 @@ function RequestBar({
       );
   };
 
+  const keyOf = (it: { from: string; target: string; reason: string }) =>
+    `${it.from}→${it.target}: ${it.reason}`;
+
   const decide = async (i: number, decision: 'apply' | 'dismiss', instruction?: string) => {
+    const it = items[i];
     setBusy(true);
     setErr(null);
     try {
-      const it = items[i];
       await api.decideRequest(project.id, {
         from: it.from,
         target: it.target,
@@ -529,6 +533,9 @@ function RequestBar({
         decision,
         instruction,
       });
+      // The list only clears on the next refresh, so remember what was answered:
+      // otherwise the buttons come back for a second press the server refuses.
+      setSettled((s) => new Set(s).add(keyOf(it)));
       setNoting(null);
       setNote('');
       onDone();
@@ -544,86 +551,114 @@ function RequestBar({
       <div className="kx-changebar-head">{head}</div>
       {err && <div className="kx-error">{err}</div>}
       <ul className="kx-changebar-list">
-        {items.map((it, i) => (
-          <li key={i}>
-            <span className="mono">{it.label.replace(/\.md$/, '').replace(/^foundation\//, '')}</span> — {it.reason}
-            <div className="kx-changebar-actions">
-              <button className="btn btn-sm" disabled={busy} onClick={() => setAsking(asking === i ? null : i)}>
-                Ask
-              </button>
-              {it.canApply ? (
-                <>
-                  <button className="btn btn-sm btn-primary" disabled={busy} onClick={() => decide(i, 'apply')}>
-                    Apply
-                  </button>
-                  <button
-                    className="btn btn-sm"
-                    disabled={busy}
-                    onClick={() => setNoting(noting === i ? null : i)}
-                  >
-                    Add note
-                  </button>
-                </>
+        {items.map((it, i) => {
+          const done = settled.has(keyOf(it));
+          const talk = chat.filter((c) => c.i === i);
+          return (
+            <li key={i}>
+              <span className="mono">{it.label.replace(/\.md$/, '').replace(/^foundation\//, '')}</span> —{' '}
+              {it.reason}
+              {done ? (
+                <div className="kx-changebar-actions">
+                  <span className="kx-cmd-hint">Settled — this list refreshes in a moment.</span>
+                </div>
               ) : (
-                <span className="kx-cmd-hint">No agent writes that one — open it to draft the change.</span>
+                <div className="kx-changebar-actions">
+                  <button className="btn btn-sm" disabled={busy} onClick={() => setAsking(asking === i ? null : i)}>
+                    Ask
+                  </button>
+                  {it.canApply ? (
+                    <>
+                      <button className="btn btn-sm btn-primary" disabled={busy} onClick={() => decide(i, 'apply')}>
+                        Apply
+                      </button>
+                      <button
+                        className="btn btn-sm"
+                        disabled={busy}
+                        onClick={() => setNoting(noting === i ? null : i)}
+                      >
+                        Add note
+                      </button>
+                    </>
+                  ) : (
+                    <span className="kx-cmd-hint">No agent writes that one — open it to draft the change.</span>
+                  )}
+                  <button className="btn btn-sm btn-secondary" disabled={busy} onClick={() => decide(i, 'dismiss')}>
+                    Dismiss
+                  </button>
+                  {extra}
+                </div>
               )}
-              <button className="btn btn-sm btn-secondary" disabled={busy} onClick={() => decide(i, 'dismiss')}>
-                Dismiss
-              </button>
-              {extra}
-            </div>
-            {chat.filter((c) => c.i === i).length > 0 && (
-              <div className="kx-changebar-chat">
-                {chat
-                  .filter((c) => c.i === i)
-                  .map((c, k) => (
-                    <div key={k}>
-                      <div className="kx-chat-q">{c.q}</div>
-                      <div className="kx-chat-a">{c.a ?? 'thinking…'}</div>
+              {(talk.length > 0 || asking === i || noting === i) && !done && (
+                <div className="kx-thread">
+                  {talk.map((c, k) => (
+                    <div key={k} className="kx-explain">
+                      <span className="kx-explain-who mono">prime</span>
+                      <span className="kx-explain-q">{c.q}</span>
+                      <span className="kx-explain-who mono">
+                        {it.from.replace(/^foundation\//, '').replace(/\.md$/, '')}
+                      </span>
+                      <span className={`kx-explain-a${c.a === null ? ' kx-running' : ''}`}>
+                        {c.a === null ? 'writing an answer…' : c.a}
+                      </span>
                     </div>
                   ))}
-              </div>
-            )}
-            {asking === i && (
-              <div className="kx-note-input">
-                <input
-                  autoFocus
-                  value={question}
-                  placeholder={`Ask ${it.from.replace(/^foundation\//, '').replace(/\.md$/, '')} why — the answer is not kept`}
-                  onChange={(e) => setQuestion(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') ask(i);
-                    if (e.key === 'Escape') setAsking(null);
-                  }}
-                />
-                <button className="btn btn-sm" disabled={!question.trim()} onClick={() => ask(i)}>
-                  Send
-                </button>
-              </div>
-            )}
-            {noting === i && (
-              <div className="kx-note-input">
-                <input
-                  autoFocus
-                  value={note}
-                  placeholder="How it should be done instead — this rides along with the request"
-                  onChange={(e) => setNote(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && note.trim()) void decide(i, 'apply', note.trim());
-                    if (e.key === 'Escape') setNoting(null);
-                  }}
-                />
-                <button
-                  className="btn btn-sm btn-primary"
-                  disabled={busy || !note.trim()}
-                  onClick={() => decide(i, 'apply', note.trim())}
-                >
-                  Send
-                </button>
-              </div>
-            )}
-          </li>
-        ))}
+                  {(asking === i || noting === i) && (
+                    <div className="kx-thread-input">
+                      <textarea
+                        className="kx-input kx-thread-text"
+                        autoFocus
+                        rows={2}
+                        placeholder={
+                          asking === i
+                            ? 'Ask about this demand…  (Enter sends, Shift+Enter for a new line)'
+                            : 'How it should be done instead — this rides along with the request…  (Enter sends, Shift+Enter for a new line)'
+                        }
+                        value={asking === i ? question : note}
+                        onChange={(e) => (asking === i ? setQuestion(e.target.value) : setNote(e.target.value))}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            if (asking === i) ask(i);
+                            else if (note.trim()) void decide(i, 'apply', note.trim());
+                          }
+                          if (e.key === 'Escape') {
+                            setAsking(null);
+                            setNoting(null);
+                          }
+                        }}
+                      />
+                      <div className="kx-thread-actions">
+                        {asking === i ? (
+                          <button className="btn btn-sm btn-primary" disabled={!question.trim()} onClick={() => ask(i)}>
+                            Ask
+                          </button>
+                        ) : (
+                          <button
+                            className="btn btn-sm btn-primary"
+                            disabled={busy || !note.trim()}
+                            onClick={() => decide(i, 'apply', note.trim())}
+                          >
+                            Apply with this note
+                          </button>
+                        )}
+                        <button
+                          className="btn btn-sm btn-secondary"
+                          onClick={() => {
+                            setAsking(null);
+                            setNoting(null);
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
