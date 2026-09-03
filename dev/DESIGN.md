@@ -436,6 +436,14 @@ Panelin render ettiği markdown. Aynı yedi boyu kullanır: gövde `--fs-body`, 
 
 İkisi aynı rengi paylaşırsa hangisinin sende olduğu kaybolur.
 
+Açık soru her zaman `#n` ile numaralanır (`.kx-qno`) — madde imi (`•`) o satırda basılmaz,
+ikisi aynı asılı girintiye düşüp üst üste binerdi. Not eklenince (`.noted`) amber zemin geri
+çekilir, yalnız sol çubuk kalır: zemin + çubuk üst üste amber-üstüne-amber kahverengiye
+kayardı.
+
+Alıntı (`>`) gri zemin kullanır, kenar çizgisi yok — seçim/not çubuğu (`box-shadow: inset 3px`)
+zaten sol kenarı işaretliyor, ikinci bir çizgi üst üste binerdi.
+
 ---
 
 ## 12 · Yazı dili

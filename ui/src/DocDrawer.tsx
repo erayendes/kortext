@@ -705,7 +705,7 @@ function DocBlock({
   onSelect: () => void;
 }) {
   if (token.kind === 'blank') return <div className="kx-blank" />;
-  const cls = `kx-block kx-${token.kind}${selected ? ' selected' : ''}${noted ? ' noted' : ''}${openQuestion ? ' open-q' : ''}${changeRequest ? ' req-q' : ''}`;
+  const cls = `kx-block kx-${token.kind}${selected ? ' selected' : ''}${noted ? ' noted' : ''}${openQuestion ? ' open-q' : ''}${changeRequest ? ' req-q' : ''}${questionNo ? ' kx-numbered' : ''}`;
   if (token.kind === 'table' && token.table) {
     return (
       <div className={cls} onClick={onSelect}>
@@ -750,7 +750,7 @@ function DocBlock({
   }
   return (
     <div className={cls} onClick={onSelect}>
-      {questionNo && <span className="kx-qno mono">{questionNo}</span>}
+      {questionNo && <span className="kx-qno mono">#{questionNo}</span>}
       <Inline text={token.text} />
     </div>
   );

@@ -1541,10 +1541,14 @@ body {
 .kx-h1 { font-size: 19px; font-weight: 650; margin: 10px 0 4px; }
 .kx-h2 { font-size: 16px; font-weight: 600; margin: 8px 0 3px; }
 .kx-h3 { font-size: 14px; font-weight: 600; margin: 6px 0 2px; }
-.kx-quote { color: var(--fg-mid); border-left: 2px solid var(--border); padding-left: 10px; }
+/* Gri zemin yeter — kenar çizgisi seçim/not çubuğuyla aynı hizada çakışıyordu. */
+.kx-quote { color: var(--fg-mid); background: var(--bg-subtle); padding-left: 10px; }
 .kx-bullet { padding-left: 20px; text-indent: -12px; }
 .kx-bullet::before { content: '•  '; color: var(--fg-faint); }
 .kx-ordered { padding-left: 20px; text-indent: -12px; }
+/* Numaralı soru: #n kendi işaretidir, madde imi ve asılı girinti ona çarpardı. */
+.kx-block.kx-numbered { padding-left: 8px; text-indent: 0; }
+.kx-block.kx-numbered::before { content: none; }
 .kx-code { font-family: var(--font-mono); font-size: var(--fs-ui); background: var(--bg-inset); border: 1px solid var(--border); padding: 10px 12px; border-radius: var(--r-md); overflow-x: auto; white-space: pre; }
 .kx-mermaid { padding: 12px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--bg); overflow-x: auto; }
 .kx-mermaid-svg { display: flex; justify-content: center; }
@@ -1622,8 +1626,9 @@ body {
 .kx-explain-q { font-weight: 600; color: var(--fg); }
 .kx-explain-a { color: var(--fg-mid); white-space: pre-wrap; line-height: 1.5; }
 
-.kx-thread { margin: var(--sp-3) 8px var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-2); }
-.kx-thread-input { display: flex; flex-direction: column; gap: var(--sp-2); }
+/* Sol biraz içeri — üstteki blok gibi kenara yapışmasın; sağ blokla aynı hizada kalır. */
+.kx-thread { margin: var(--sp-3) 8px var(--sp-4) 16px; display: flex; flex-direction: column; gap: var(--sp-3); }
+.kx-thread-input { display: flex; flex-direction: column; gap: var(--sp-3); }
 .kx-thread-actions { display: flex; gap: var(--sp-2); justify-content: flex-end; }
 .kx-thread-text { height: auto; min-height: var(--control-h); resize: vertical; font-family: inherit; padding: var(--sp-2) var(--sp-3); line-height: 1.5; }
 .kx-explain-who { font-size: var(--fs-micro); color: var(--fg-faint); letter-spacing: .02em; }
@@ -1650,6 +1655,9 @@ body {
 .kx-block.req-q { background: var(--red-bg); }
 .kx-block.kx-h2.req-q { background: none; font-weight: 650; }
 .kx-block.req-q + .kx-blank { background: var(--red-bg); }
+/* Answered: the fill was "you owe this" — the note bar already says "answered",
+   stacking both read as a muddy coffee brown. */
+.kx-block.open-q.noted, .kx-block.req-q.noted { background: none; }
 /* Archived projects fold away — one summary line instead of a wall of cards. */
 .kx-archive { margin: 18px 22px 0; }
 .kx-archive > .kx-doc-group { color: var(--fg-muted, inherit); }
