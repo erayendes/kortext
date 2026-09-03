@@ -25,7 +25,7 @@ dense, and quiet**. The aesthetic is **Vercel/Geist-grade restraint**:
 
 ---
 
-## 1. Setup — fonts & theme
+## 1. Setup — fonts & root attributes
 
 Load fonts (Google Fonts):
 
@@ -33,212 +33,210 @@ Load fonts (Google Fonts):
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600;700&family=Overpass+Mono:wght@400;500;600;700&display=swap">
 ```
 
-**One configuration, one choice.** The system had four `data-*` axes — theme,
-accent, density, radius — and the panel set none of them: `<html>` carried no
-attribute, so three of the four could never change and dark mode could never
-appear at all. Accent, density and radius are gone (2026-09-03); the values they
-scaled are now literal. Theme stays, and this time it is wired to a control.
+The system is **themeable via data-attributes on `<html>`**. Defaults:
 
-**Theme is the one axis that stays**, because it is the one a person has an
-opinion about. Three states: it defaults to the operating system, and an explicit
-choice overrides it and is remembered.
-
-```css
-:root                    { /* light — §2 */ }
-:root[data-theme='dark'] { /* dark  — §3 */ }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) { /* dark — §3, again */ }
-}
+```html
+<html data-theme="light" data-accent="neutral" data-density="comfortable" data-radius="default">
 ```
 
-The dark values appear twice; plain CSS has no way to alias a block, and the
-alternative — a class the script swaps — puts the theme behind JavaScript that
-has not run yet, which is a flash of the wrong theme on every load. Duplication
-is the cheaper honesty.
+| Attribute | Values | Default | Effect |
+|---|---|---|---|
+| `data-theme` | `light` · `dark` | `light` | Color scheme |
+| `data-accent` | `neutral` · `indigo` · `blue` · `green` | `neutral` | Single accent hue |
+| `data-density` | `compact` · `comfortable` | `comfortable` | Scales control heights/padding (`--d-scale` 1 → 1.2) |
+| `data-radius` | `sharp` · `default` · `round` | `default` | Scales all radii (`--r-scale` 0.4 / 1 / 1.6) |
 
-`data-theme` is set by one control in the panel header — **Auto · Light · Dark** —
-and persisted. Unset means auto, which is what a first visit gets. The control is
-the segmented control of §5.6, not three buttons in a row: three buttons ask
-which one is pressed, a segment shows which one is on.
-
-**Always build from the tokens below — never hard-code a value a token covers.**
-That rule was in this document already and the stylesheet broke it: all ten type
-tokens went unused while 15 hand-written sizes accumulated, half of them
-half-pixel. A token nobody uses is not a system, it is a suggestion.
+Every component reads these tokens, so changing one attribute retunes the whole system live.
+**Always build components from the tokens below — never hard-code a color/size that a token covers.**
 
 ---
 
 ## 2. Design tokens (`:root`)
 
-Roughly 50 tokens, each earning its place: every one below is used, and nothing
-used is missing. Grouped by what it answers, not by what it looks like.
-
-### 2.1 Surfaces & borders (light)
+### 2.1 Neutral ramp (cool-neutral, Geist-like)
 
 ```css
---bg:#ffffff; --bg-subtle:#fbfbfc; --bg-muted:#f5f5f6; --bg-inset:#f7f7f8;
---bg-hover:#f2f2f4; --bg-active:#ececef;
---border:#e4e4e7; --border-strong:#d4d4d8; --border-faint:#eeeef1;
---border-hover:#c6c6cc;   /* the border a control takes under the cursor */
---scroll-thumb:#e0e0e4;
+--gray-50:  #fafafa;   --gray-100: #f5f5f6;   --gray-150: #efeff1;
+--gray-200: #e9e9ec;   --gray-300: #e0e0e4;   --gray-400: #c6c6cc;
+--gray-500: #9a9aa3;   --gray-600: #71717a;   --gray-700: #52525b;
+--gray-800: #2a2a30;   --gray-900: #18181b;   --gray-950: #0b0b0d;
 ```
 
-> The 12-step grey ramp is gone. It never fed the semantic tokens — those are
-> literal hexes — so it was twelve public names duplicating values written
-> elsewhere, and exactly two of them were ever used. Those two are above, named
-> for their job instead of their position on a ramp.
-
-### 2.2 Text (light)
+### 2.2 Semantic surfaces & borders (light)
 
 ```css
---fg:#18181b; --fg-secondary:#51515a; --fg-muted:#71717a; --fg-faint:#a3a3ad;
+--bg:          #ffffff;   /* base canvas */
+--bg-subtle:   #fbfbfc;   /* page background, sidebars */
+--bg-muted:    #f5f5f6;   /* badges, inset fills */
+--bg-inset:    #f7f7f8;
+--bg-hover:    #f2f2f4;   /* row/nav hover */
+--bg-active:   #ececef;   /* selected row, progress track */
+--border:      #eaeaec;   /* default hairline */
+--border-strong:#dcdce0;  /* inputs, secondary buttons */
+--border-faint:#f0f0f2;   /* internal dividers */
 ```
 
-### 2.3 Accent — one, neutral
+### 2.3 Text (light)
+
+```css
+--fg:           #18181b;   /* primary */
+--fg-secondary: #51515a;   /* body secondary */
+--fg-muted:     #76767f;   /* metadata */
+--fg-faint:     #a3a3ad;   /* labels, placeholders */
+```
+
+### 2.4 Accent (default = neutral / Vercel black)
 
 ```css
 --accent:#18181b; --accent-hover:#000000; --accent-fg:#ffffff;
 --accent-tint:#f4f4f5; --accent-tint-border:#e2e2e6; --accent-ring:rgba(24,24,27,0.16);
 ```
 
-The indigo / blue / green variants are gone with `data-accent`. Kortext is a
-neutral tool; a second hue was a setting nobody set.
-
-### 2.4 Status flavours — the ONLY non-neutral UI colours
-
-Each flavour is a foreground, a tint background and a tint border. **Never
-introduce a status colour outside this set.**
+Accent variants (swap by `data-accent`):
 
 ```css
---green:#157a52;  --green-bg:#eaf5ef;  --green-border:#cfe9dd;   /* approved · success · done */
---amber:#9a6a16;  --amber-bg:#faf2e2;  --amber-border:#ecdcb8;   /* your turn · paused · a question */
---red:#c5392f;    --red-bg:#fbeceb;    --red-border:#f1cfcc;     /* failed · destructive */
---blue:#2563c9;   --blue-bg:#eaf1fc;   --blue-border:#cfe0f6;    /* running · information */
---violet:#5b4bcc; --violet-bg:#efedfb; --violet-border:#dad5f4;  /* pending review */
---pink:#c02a72;   --pink-bg:#fdebf3;   --pink-border:#f6cede;    /* a demand · a moving input */
+[data-accent="indigo"] { --accent:#5b5bd6; --accent-hover:#4d4dc8; --accent-fg:#fff;
+  --accent-tint:#efeffb; --accent-tint-border:#dcdcf5; --accent-ring:rgba(91,91,214,0.22); }
+[data-accent="blue"]   { --accent:#2563eb; --accent-hover:#1d56d6; --accent-fg:#fff;
+  --accent-tint:#eaf1fe; --accent-tint-border:#cfe0fb; --accent-ring:rgba(37,99,235,0.22); }
+[data-accent="green"]  { --accent:#11875a; --accent-hover:#0d7350; --accent-fg:#fff;
+  --accent-tint:#e7f5ee; --accent-tint-border:#cce9da; --accent-ring:rgba(17,135,90,0.22); }
 ```
 
-### 2.5 Type — seven roles
+### 2.5 Status flavours (light) — the ONLY non-neutral UI colors
 
-The scale is named by **duty**, not by pixels. `--fs-13` told you a number;
-`--fs-body` tells you where it goes, which is the difference between a system
-and a list.
+Each flavour has a foreground, a tint background, and a tint border. **Never introduce a status color outside this set.**
 
 ```css
---font-sans:'Barlow', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
---font-mono:'Overpass Mono', ui-monospace, 'SF Mono', Menlo, monospace;
-
---fs-title:18px;    /* the one page or document title            h1 */
---fs-section:16px;  /* a section inside a document               h2 */
---fs-heading:14px;  /* card name, drawer title, panel head       h3 */
---fs-body:13px;     /* prose, inputs, the base                       */
---fs-ui:12px;       /* buttons, controls, chrome                     */
---fs-label:11px;    /* meta, ids, counts, footer                     */
---fs-micro:10px;    /* badges, mono eyebrows                         */
+--green:#157a52;  --green-bg:#eaf5ef;  --green-border:#cfe9dd;   /* success / passed / approved / done */
+--amber:#9a6a16;  --amber-bg:#faf2e2;  --amber-border:#ecdcb8;   /* warning / queued / in-progress / debt */
+--red:#c5392f;    --red-bg:#fbeceb;    --red-border:#f1cfcc;     /* error / blocked / failed / bug */
+--blue:#2563c9;   --blue-bg:#eaf1fc;   --blue-border:#cfe0f6;    /* info / pending / test / task */
+--violet:#5b4bcc; --violet-bg:#efedfb; --violet-border:#dad5f4;  /* review / epic */
 ```
 
-Base body: `font-family:var(--font-sans); font-size:var(--fs-body); line-height:1.5; color:var(--fg);`
-Enable figures: `font-feature-settings:"cv01","ss01","tnum";` — tabular numerals everywhere.
+### 2.6 Agent identity hues — dots & avatars ONLY (never fills/text)
 
-**Two vocabularies, one scale.** Panel chrome speaks in roles: a `Dismiss` button
-is `--fs-ui`, not an `h4`. Document prose — the markdown the panel renders inside
-`.kx-doc` — speaks in headings, and they map onto the same seven:
-
-| in a document | token | px |
-|---|---|---|
-| `h1` | `--fs-title` | 18 |
-| `h2` | `--fs-section` | 16 |
-| `h3` | `--fs-heading` | 14 |
-| body | `--fs-body` | 13 |
-
-### 2.6 Radius
+Equal lightness & chroma, varied hue (oklch). Used for the 16 agent personas' identity dots & square avatars. **Never use these as text or surface fills.**
 
 ```css
---r-sm:4px; --r-md:8px; --r-lg:12px; --r-pill:999px;
+--a-red:    oklch(0.64 0.16 25);    --a-orange: oklch(0.66 0.15 55);
+--a-amber:  oklch(0.70 0.13 85);    --a-green:  oklch(0.66 0.14 150);
+--a-teal:   oklch(0.66 0.11 190);   --a-cyan:   oklch(0.68 0.11 220);
+--a-blue:   oklch(0.62 0.15 255);   --a-indigo: oklch(0.58 0.16 280);
+--a-purple: oklch(0.60 0.16 310);   --a-pink:   oklch(0.66 0.16 350);
 ```
 
-`--r-xl` is gone (one use) along with `--r-scale` and `data-radius`.
-
-### 2.7 Control size
+### 2.7 Radius (scaled by `--r-scale`)
 
 ```css
---control-h:36px;      /* inputs, selects */
---control-h-sm:29px;   /* every button — see §5.1, there is one button size */
+--r-scale: 1;                              /* sharp=0.4, round=1.6 */
+--r-sm: calc(4px * var(--r-scale));        /* badges-square, checks, kbd, small btn */
+--r-md: calc(6px * var(--r-scale));        /* buttons, inputs, nav items, rows */
+--r-lg: calc(9px * var(--r-scale));        /* cards, panels, popovers */
+--r-xl: calc(13px * var(--r-scale));       /* large surfaces */
+--r-pill: 999px;                            /* pills, badges, dots, toggles */
 ```
 
-`--row-h`, `--pad-x` and `--gap` are gone (never used), along with `--d-scale`
-and `data-density`. The scaled values are literal now: what was
-`calc(24px * 1.2)` is 29px, because there is no second density to scale to.
-
-### 2.8 Shadow & motion
+### 2.8 Density (scaled by `--d-scale`)
 
 ```css
---terminal-bg:#09090b;   /* the one surface that ignores the theme */
-
---shadow-xs: 0 1px 1px rgba(24,24,27,0.04);        /* a raised control */
---shadow-lg: 0 12px 32px rgba(24,24,27,0.12), 0 2px 6px rgba(24,24,27,0.06);  /* a drawer, a popover */
---speed:130ms;
---ease:cubic-bezier(0.2, 0, 0, 1);
+--d-scale: 1;                  /* comfortable = 1.2 */
+--row-h: calc(30px * var(--d-scale));
+--control-h: calc(30px * var(--d-scale));
+--control-h-sm: calc(24px * var(--d-scale));
+--pad-x: calc(10px * var(--d-scale));
+--gap: calc(8px * var(--d-scale));
 ```
 
-`--shadow-sm`, `--shadow-md` and `--shadow-pop` are gone — three depths nothing
-reached for. Two is the honest number: a thing that is slightly off the page, and
-a thing that is over it.
+### 2.9 Type tokens
 
-> **Agent identity hues (`--a-*`) are gone.** Ten oklch values for a 16-persona
-> colour roster that died with the v6 dashboard; the panel writes an author's
-> name in mono grey and has not asked for a colour since. If personas ever want
-> colour again, it comes back as a decision, not as ten tokens waiting.
+```css
+--font-sans: 'Barlow', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+--font-mono: 'Overpass Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+--fs-11:11px; --fs-12:12px; --fs-13:13px; --fs-14:14px; --fs-16:16px;
+--fs-18:18px; --fs-20:20px; --fs-24:24px; --fs-30:30px; --fs-40:40px;
+```
+
+Base body: `font-family: var(--font-sans); font-size: 13px; line-height: 1.5; color: var(--fg);`
+Enable figures/features: `font-feature-settings: "cv01","ss01","tnum";` — tabular numerals everywhere.
+
+### 2.10 Shadow & motion
+
+```css
+--shadow-xs: 0 1px 1px rgba(24,24,27,0.04);
+--shadow-sm: 0 1px 2px rgba(24,24,27,0.06), 0 1px 1px rgba(24,24,27,0.04);
+--shadow-md: 0 4px 12px rgba(24,24,27,0.08), 0 1px 2px rgba(24,24,27,0.05);
+--shadow-lg: 0 12px 32px rgba(24,24,27,0.12), 0 2px 6px rgba(24,24,27,0.06);
+--shadow-pop: 0 8px 28px rgba(24,24,27,0.14), 0 1px 2px rgba(24,24,27,0.08);
+--speed: 130ms;
+--ease: cubic-bezier(0.2, 0, 0, 1);
+```
 
 ---
 
 ## 3. Dark theme
 
-Same token names, different values. Applied by `:root[data-theme='dark']` and,
-for anyone who never chose, by the media query in §1 — the same block written
-twice.
+Set `data-theme="dark"`. Overrides (use these exact values):
 
 ```css
-:root[data-theme='dark'] {
-  --bg:#0a0a0b; --bg-subtle:#0f0f10; --bg-muted:#161618; --bg-inset:#121214;
+[data-theme="dark"] {
+  --gray-50:#161618; --gray-100:#1a1a1d; --gray-150:#1e1e21; --gray-200:#232327;
+  --gray-300:#2c2c31; --gray-400:#3a3a40; --gray-500:#5b5b63; --gray-600:#8a8a93;
+  --gray-700:#a7a7b0; --gray-800:#cdcdd3; --gray-900:#ededef; --gray-950:#050506;
+
+  --bg:#0a0a0b; --bg-subtle:#0e0e10; --bg-muted:#161618; --bg-inset:#121214;
   --bg-hover:#1a1a1d; --bg-active:#212126;
-  --border:#222226; --border-strong:#2e2e34; --border-faint:#1a1a1e;
-  --border-hover:#3a3a40; --scroll-thumb:#2e2e34;
+  --border:#222226; --border-strong:#2e2e34; --border-faint:#18181b;
 
-  --fg:#ededef; --fg-secondary:#a1a1aa; --fg-muted:#8b8b93; --fg-faint:#63636b;
+  --fg:#ededef; --fg-secondary:#9c9ca5; --fg-muted:#6e6e77; --fg-faint:#54545c;
 
-  --accent:#ededef; --accent-fg:#0a0a0b;
-  /* darker, not whiter: the accent is already near-white, so a #ffffff hover
-     moved a primary button nowhere. A light-on-dark control reacts by dimming. */
-  --accent-hover:#cfcfd4;
-  --accent-tint:#18181b; --accent-tint-border:#26262b; --accent-ring:rgba(237,237,239,0.22);
+  /* neutral accent in dark = near-white pill (Vercel dark) */
+  --accent:#ededef; --accent-hover:#ffffff; --accent-fg:#0a0a0b;
+  --accent-tint:#1c1c20; --accent-tint-border:#2a2a30; --accent-ring:rgba(237,237,239,0.16);
 
   --green:#46c08a; --green-bg:#10231b; --green-border:#1d3b2e;
-  --amber:#d9a441; --amber-bg:#241c0e; --amber-border:#3d3016;
+  --amber:#d3a55e; --amber-bg:#241c0e; --amber-border:#3a2e16;
   --red:#e0726a;   --red-bg:#26120f;   --red-border:#3d201c;
-  --blue:#6a9bf0;  --blue-bg:#101a2b;  --blue-border:#1d2e4a;
-  --violet:#8d81ea; --violet-bg:#171429; --violet-border:#282348;
-  --pink:#ee7bb0;  --pink-bg:#2b1220;  --pink-border:#4a2038;
+  --blue:#5e9bf0;  --blue-bg:#0f1c30;  --blue-border:#1c3252;
+  --violet:#8b7df0;--violet-bg:#171530;--violet-border:#272350;
+
+  --shadow-xs:0 1px 1px rgba(0,0,0,0.4);
+  --shadow-sm:0 1px 2px rgba(0,0,0,0.5);
+  --shadow-md:0 6px 16px rgba(0,0,0,0.55);
+  --shadow-lg:0 14px 36px rgba(0,0,0,0.6);
+  --shadow-pop:0 10px 30px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04);
 }
+[data-theme="dark"][data-accent="indigo"] { --accent:#6d6df0; --accent-hover:#7e7ef5; --accent-fg:#fff; --accent-tint:#1a1a3a; --accent-tint-border:#2a2a55; --accent-ring:rgba(109,109,240,0.3); }
+[data-theme="dark"][data-accent="blue"]   { --accent:#3b82f6; --accent-hover:#4f8ff7; --accent-fg:#fff; --accent-tint:#10243f; --accent-tint-border:#1d3a5e; --accent-ring:rgba(59,130,246,0.3); }
+[data-theme="dark"][data-accent="green"]  { --accent:#22a06b; --accent-hover:#28b277; --accent-fg:#fff; --accent-tint:#0f2a1e; --accent-tint-border:#1c4231; --accent-ring:rgba(34,160,107,0.3); }
 ```
 
-Dark is not a filter over light: surfaces lift with elevation, borders stay
-quiet, and a tint background is a near-black with a hue in it — never a
-lightened light-mode value.
+The agent identity hues (`--a-*`) stay identical across themes.
 
 ---
 
 ## 4. Typography — duties
 
+**Two families, sharp separation of duties.** Barlow carries the product; Overpass Mono carries
+machine speech and numerics. Tight letter-spacing on display sizes, generous line-height on copy.
+
 ### Barlow (product)
 
-Everything a person reads as language: titles, prose, labels, buttons. Weights
-300–700; the system uses 400 for body, 500 for controls, 600–650 for headings.
+| Role | Size / weight | Notes |
+|---|---|---|
+| Display | 30px · 600 | `letter-spacing:-0.02em` |
+| Title | 20px · 600 | `letter-spacing:-0.01em` |
+| Heading | 16px · 600 | |
+| Body | 13px · 450 | line-height 1.5 |
+| Small | 12px · 500 | |
+| Micro / label (`.eyebrow`) | 11px · 600 | `letter-spacing:0.06em; text-transform:uppercase; color:var(--fg-faint)` |
 
 ### Overpass Mono (machine) — use `.mono` / `var(--font-mono)`
 
-Everything a machine owns: file paths, ids, codes, counts, commands, timestamps,
-persona handles. If the user cannot retype it from memory, it is mono.
+Always mono for: agent handles (`+backend-developer`), timestamps (`12:38 · 2m 03s`),
+IDs (`TR-E01`, `NOT-T01`), file paths (`references/PRD.md`), terminal output, metrics (`12%`),
+counts (`5/9`), keyboard keys. Always tabular figures (`font-feature-settings:"tnum"`).
 
 ---
 
@@ -248,82 +246,46 @@ All components live in **one stylesheet** (`styles/kortext.css`) shared by the p
 
 ### 5.1 Buttons — `.btn`
 
-`.btn` is the **base every clickable control carries**: size, font, focus ring,
-disabled. It is never used alone — a variant always sits on it, and the variant
-owns the hover. One primary per view.
-
-Two families, one geometry. A **solid** variant shows its box always. A **link**
-variant shows none until you point at it, and then it becomes its solid twin:
-`.btn-link-success:hover` is `.btn-success` as it sits. Same height, same
-padding, same radius, same font — the only difference is the resting box.
+One primary per view. Primary = accent fill; secondary = bordered surface; ghost disappears until hover.
 
 ```css
-/* ONE SIZE. The small one was on 19 call sites out of 21, so it is the size —
-   a modifier that is almost always on is not a modifier. */
 .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px;
-  height:var(--control-h-sm); padding:0 9.6px;
-  font-size:var(--fs-ui); font-weight:500; line-height:1;
-  border-radius:var(--r-sm); border:1px solid transparent;
+  height:var(--control-h); padding:0 calc(11px*var(--d-scale));
+  font-size:var(--fs-13); font-weight:500; line-height:1;
+  border-radius:var(--r-md); border:1px solid transparent;
   background:var(--bg); color:var(--fg); cursor:pointer; white-space:nowrap; user-select:none;
   transition:background var(--speed) var(--ease), border-color var(--speed) var(--ease), box-shadow var(--speed) var(--ease), color var(--speed) var(--ease); }
 .btn:focus-visible { outline:none; box-shadow:0 0 0 3px var(--accent-ring); }
 .btn .ic { width:14px; height:14px; flex:none; }
-/* The base declares NO hover: a rule here would silently outrank a variant's. */
-.btn:hover { background:none; border-color:transparent; }
 
-/* ── solid: the box is always there ─────────────────────────────────────── */
-.btn-primary         { background:var(--accent); color:var(--accent-fg); border-color:var(--accent); }
-.btn-primary:hover   { background:var(--accent-hover); border-color:var(--accent-hover); }
-.btn-secondary       { background:var(--bg); color:var(--fg); border-color:var(--border-strong); box-shadow:var(--shadow-xs); }
-.btn-secondary:hover { background:var(--bg-active); border-color:var(--border-hover); }
-.btn-success         { background:var(--green-bg); color:var(--green); border-color:var(--green-border); }
-.btn-success:hover   { background:var(--green-bg); color:var(--green); border-color:var(--green); }
-.btn-danger          { background:var(--red-bg); color:var(--red); border-color:var(--red-border); }
-.btn-danger:hover    { background:var(--red-bg); color:var(--red); border-color:var(--red); }
+.btn-primary   { background:var(--accent); color:var(--accent-fg); border-color:var(--accent); }
+.btn-primary:hover { background:var(--accent-hover); border-color:var(--accent-hover); }
+.btn-secondary { background:var(--bg); color:var(--fg); border-color:var(--border-strong); box-shadow:var(--shadow-xs); }
+.btn-secondary:hover { background:var(--bg-muted); border-color:var(--gray-400); }
+.btn-ghost     { background:transparent; color:var(--fg-secondary); }
+.btn-ghost:hover { background:var(--bg-hover); color:var(--fg); }
+.btn-danger    { background:var(--bg); color:var(--red); border-color:var(--red-border); }
+.btn-danger:hover { background:var(--red-bg); }
+.btn-success   { background:var(--green-bg); color:var(--green); border-color:var(--green-border); }   /* "Approved" confirmed state */
 
-/* ── link: no box until you point at it ─────────────────────────────────── */
-.btn-link-primary,
-.btn-link-success,
-.btn-link-danger { height:var(--control-h-sm); padding:0 9.6px;
-                   border-radius:var(--r-sm); background:none; border-color:transparent; }
-.btn-link-primary       { color:var(--fg-secondary); }
-.btn-link-primary:hover { background:var(--bg-active); border-color:var(--border-strong); color:var(--fg); }
-.btn-link-success       { color:var(--green); }
-.btn-link-success:hover { background:var(--green-bg); border-color:var(--green-border); color:var(--green); }
-.btn-link-danger        { color:var(--red); }
-.btn-link-danger:hover  { background:var(--red-bg); border-color:var(--red-border); color:var(--red); }
-
-/* ── the one exception ──────────────────────────────────────────────────── */
-/* A × inside a 6px-padded chip: full button height would grow the chip around
-   it. Carries the family, keeps its own geometry, and takes no hover — it sits
-   in a row you are reading, not a control you are aiming at. */
-.btn-x       { height:auto; padding:0 4px; font-size:14px; margin-left:auto;
-               background:none; border-color:transparent; color:var(--fg-faint); }
-.btn-x:hover { background:none; border-color:transparent; color:var(--fg-secondary); }
-
-.btn[disabled] { opacity:0.45; pointer-events:none; }   /* one rule, every variant */
+.btn-sm   { height:var(--control-h-sm); padding:0 calc(8px*var(--d-scale)); font-size:var(--fs-12); border-radius:var(--r-sm); }
+.btn-icon { width:var(--control-h); padding:0; }   /* square; +.btn-sm → width:var(--control-h-sm) */
+.btn[disabled] { opacity:0.45; pointer-events:none; }
 ```
 
 Leading icon: `<button class="btn btn-secondary"><i class="ic">…</i> New item</button>`.
-Link: `<button class="btn btn-link-danger">Remove project</button>`.
-
-> **Retired (2026-09-03):** `.btn-sm` (folded into `.btn`), `.btn-ghost` and
-> `.btn-icon` (defined, never used), the bare `.btn` variant (with no box at
-> rest it *was* the link), the `info` tone, and the `.kx-link*` family — which
-> became `.btn-link*` and stopped being 10.5px mono, because a link that is a
-> button should read like one.
 
 ### 5.2 Badges & pills — `.badge`
 
 ```css
 .badge { display:inline-flex; align-items:center; gap:5px; height:20px; padding:0 8px;
-  font-size:var(--fs-ui); font-weight:500; line-height:1; border-radius:var(--r-pill);
+  font-size:var(--fs-12); font-weight:500; line-height:1; border-radius:var(--r-pill);
   border:1px solid var(--border); background:var(--bg-muted); color:var(--fg-secondary); white-space:nowrap; }
 .badge .dot { width:6px; height:6px; border-radius:999px; background:var(--fg-muted); flex:none; }
 .badge-square { border-radius:var(--r-sm); }            /* IDs / versions */
 .badge-solid  { background:var(--accent); color:var(--accent-fg); border-color:var(--accent); }
 .badge-count  { min-width:18px; height:18px; padding:0 5px; justify-content:center;
-  font-family:var(--font-mono); font-size:var(--fs-label); font-weight:500;
+  font-family:var(--font-mono); font-size:var(--fs-11); font-weight:500;
   background:var(--bg-active); color:var(--fg-secondary); border-color:transparent; }
 ```
 
@@ -357,25 +319,24 @@ Always monospace, with a colored identity dot. Three forms: **token** (inline in
 
 ```css
 .agent { display:inline-flex; align-items:center; gap:6px; font-family:var(--font-mono);
-  font-size:var(--fs-ui); font-weight:500; color:var(--fg-secondary); white-space:nowrap; }
+  font-size:var(--fs-12); font-weight:500; color:var(--fg-secondary); white-space:nowrap; }
 .agent .adot { width:7px; height:7px; border-radius:999px; flex:none;
   box-shadow:0 0 0 2px color-mix(in oklab, currentColor 14%, transparent); }
 .agent.chip { height:22px; padding:0 9px 0 7px; border-radius:var(--r-pill);
   border:1px solid var(--border); background:var(--bg-subtle); }
 .avatar { width:24px; height:24px; border-radius:var(--r-sm); flex:none;
   display:inline-flex; align-items:center; justify-content:center;
-  font-family:var(--font-mono); font-size:11px; font-weight:600; background:var(--fg); color:#fff; }
+  font-family:var(--font-mono); font-size:11px; font-weight:600; background:var(--gray-900); color:#fff; }
 ```
 
-The `.adot` colour is inherited, not per-agent: the identity hues were removed with the
-v6 dashboard (§2.8), so a persona reads as its handle in mono, not as a colour.
+The `.adot` color is set inline per agent, e.g. `style="background:var(--a-blue);color:var(--a-blue)"`
 (color drives the soft ring). Avatar background uses the same `--a-*` hue. **`+prime` (the human)
 is the exception** — it renders as a solid accent chip: `style="background:var(--accent);color:var(--accent-fg);border-color:var(--accent)"`.
 
 ### 5.4 Inputs — `.input`, `.select`, `.input-group`, `.kbd`
 
 ```css
-.input,.select { height:var(--control-h); width:100%; padding:0 10px; font-size:var(--fs-body);
+.input,.select { height:var(--control-h); width:100%; padding:0 10px; font-size:var(--fs-13);
   color:var(--fg); background:var(--bg); border:1px solid var(--border-strong);
   border-radius:var(--r-md); outline:none;
   transition:border-color var(--speed) var(--ease), box-shadow var(--speed) var(--ease); }
@@ -396,15 +357,15 @@ Search is first-class (⌘K) — show a trailing `.kbd` inside the input group.
 ```css
 .toggle { position:relative; display:inline-block; width:34px; height:20px; flex:none; cursor:pointer; }
 .toggle input { position:absolute; opacity:0; inset:0; margin:0; cursor:pointer; }
-.toggle .track { position:absolute; inset:0; border-radius:999px; background:var(--border-strong);
+.toggle .track { position:absolute; inset:0; border-radius:999px; background:var(--gray-300);
   transition:background var(--speed) var(--ease); }
 .toggle .thumb { position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:999px;
-  background:#fff; box-shadow:var(--shadow-xs);
+  background:#fff; box-shadow:var(--shadow-sm);
   transition:transform var(--speed) var(--ease), background var(--speed) var(--ease); }
 .toggle input:checked + .track { background:var(--accent); }
 .toggle input:checked + .track + .thumb { transform:translateX(14px); background:var(--accent-fg); }
 .toggle input:focus-visible + .track { box-shadow:0 0 0 3px var(--accent-ring); }
-@media (prefers-color-scheme: dark) .toggle .thumb { background:#ededef; }
+[data-theme="dark"] .toggle .thumb { background:#ededef; }
 
 .check { width:16px; height:16px; border-radius:var(--r-sm); border:1px solid var(--border-strong);
   background:var(--bg); display:inline-flex; align-items:center; justify-content:center; cursor:pointer;
@@ -417,20 +378,17 @@ Search is first-class (⌘K) — show a trailing `.kbd` inside the input group.
 **Canonical off-state thumb** (per design decision): dark knob + white ring in light, white knob + dark ring in dark.
 
 ```css
-.toggle input:not(:checked) + .track + .thumb { background:#18181b; box-shadow:0 0 0 1.5px #fff, var(--shadow-xs); }
-@media (prefers-color-scheme: dark) .toggle input:not(:checked) + .track + .thumb { background:#fff; box-shadow:0 0 0 1.5px #18181b, var(--shadow-xs); }
+.toggle input:not(:checked) + .track + .thumb { background:#18181b; box-shadow:0 0 0 1.5px #fff, var(--shadow-sm); }
+[data-theme="dark"] .toggle input:not(:checked) + .track + .thumb { background:#fff; box-shadow:0 0 0 1.5px #18181b, var(--shadow-sm); }
 ```
 
 ### 5.6 Segmented control & tabs
 
-> **Specified here since the v6 handoff and never built** — the panel improvised a
-> row of buttons instead. It is the theme switch in §1, so it is real now.
-
 ```css
 .seg { display:inline-flex; padding:2px; gap:2px; background:var(--bg-muted);
   border:1px solid var(--border); border-radius:var(--r-md); }
-.seg button { height:29px; padding:0 10px; border:none; background:transparent;
-  font-size:var(--fs-ui); font-weight:500; color:var(--fg-muted);
+.seg button { height:calc(24px*var(--d-scale)); padding:0 10px; border:none; background:transparent;
+  font-size:var(--fs-12); font-weight:500; color:var(--fg-muted);
   border-radius:calc(var(--r-md) - 2px); cursor:pointer;
   transition:background var(--speed) var(--ease), color var(--speed) var(--ease); }
 .seg button:hover { color:var(--fg-secondary); }
@@ -438,7 +396,7 @@ Search is first-class (⌘K) — show a trailing `.kbd` inside the input group.
 
 .tabs { display:flex; gap:2px; border-bottom:1px solid var(--border); }
 .tab { position:relative; height:34px; padding:0 11px; display:inline-flex; align-items:center; gap:7px;
-  font-size:var(--fs-body); font-weight:500; color:var(--fg-muted); cursor:pointer; border:none; background:transparent; }
+  font-size:var(--fs-13); font-weight:500; color:var(--fg-muted); cursor:pointer; border:none; background:transparent; }
 .tab:hover { color:var(--fg-secondary); }
 .tab.on { color:var(--fg); }
 .tab.on::after { content:""; position:absolute; left:6px; right:6px; bottom:-1px; height:2px; background:var(--accent); border-radius:2px; }
@@ -447,8 +405,8 @@ Search is first-class (⌘K) — show a trailing `.kbd` inside the input group.
 ### 5.7 Nav item & rows
 
 ```css
-.nav-item { display:flex; align-items:center; gap:9px; height:36px; padding:0 9px;
-  border-radius:var(--r-md); font-size:var(--fs-body); font-weight:450; color:var(--fg-secondary);
+.nav-item { display:flex; align-items:center; gap:9px; height:var(--row-h); padding:0 9px;
+  border-radius:var(--r-md); font-size:var(--fs-13); font-weight:450; color:var(--fg-secondary);
   cursor:pointer; user-select:none;
   transition:background var(--speed) var(--ease), color var(--speed) var(--ease); }
 .nav-item .ic { width:16px; height:16px; flex:none; color:var(--fg-muted); transition:color var(--speed) var(--ease); }
@@ -457,7 +415,7 @@ Search is first-class (⌘K) — show a trailing `.kbd` inside the input group.
 .nav-item.active { background:var(--bg-active); color:var(--fg); font-weight:550; }
 .nav-item.active .ic { color:var(--fg); }
 
-.row { display:flex; align-items:center; gap:10px; height:36px; padding:0 10px;
+.row { display:flex; align-items:center; gap:10px; height:var(--row-h); padding:0 10px;
   border-radius:var(--r-md); cursor:pointer; transition:background var(--speed) var(--ease); }
 .row:hover { background:var(--bg-hover); }
 .row.active { background:var(--bg-active); }
@@ -467,10 +425,10 @@ Search is first-class (⌘K) — show a trailing `.kbd` inside the input group.
 
 ```css
 .card { background:var(--bg); border:1px solid var(--border); border-radius:var(--r-lg); }
-.card-pad { padding:19.2px; }
+.card-pad { padding:calc(16px*var(--d-scale)); }
 .panel-head { display:flex; align-items:center; justify-content:space-between; gap:8px;
-  padding:13.2px 16.8px; border-bottom:1px solid var(--border); }
-.panel-title { font-size:var(--fs-body); font-weight:600; color:var(--fg); white-space:nowrap; }
+  padding:calc(11px*var(--d-scale)) calc(14px*var(--d-scale)); border-bottom:1px solid var(--border); }
+.panel-title { font-size:var(--fs-13); font-weight:600; color:var(--fg); white-space:nowrap; }
 
 .progress { height:6px; border-radius:999px; background:var(--bg-active); overflow:hidden; }
 .progress > span { display:block; height:100%; border-radius:999px; background:var(--accent); }
@@ -481,9 +439,9 @@ Search is first-class (⌘K) — show a trailing `.kbd` inside the input group.
 
 ```css
 .kcard { background:var(--bg); border:1px solid var(--border); border-radius:var(--r-md);
-  padding:12px; box-shadow:var(--shadow-xs); cursor:grab;
+  padding:calc(10px*var(--d-scale)); box-shadow:var(--shadow-xs); cursor:grab;
   transition:border-color var(--speed) var(--ease), box-shadow var(--speed) var(--ease), transform var(--speed) var(--ease); }
-.kcard:hover { border-color:var(--border-strong); box-shadow:var(--shadow-xs); }
+.kcard:hover { border-color:var(--border-strong); box-shadow:var(--shadow-sm); }
 ```
 
 Card anatomy: type chip (top-left) + ID badge-square (top-right) → title (13px/500) → agent token →
@@ -507,14 +465,14 @@ Six gates per item — letters `A C D S Q U` (Architecture, Code, Design, Securi
 ### 5.11 Terminal
 
 ```css
-.terminal { font-family:var(--font-mono); font-size:var(--fs-ui); line-height:1.65;
-  background:var(--terminal-bg); color:#d6d6da; border-radius:var(--r-lg); }
+.terminal { font-family:var(--font-mono); font-size:var(--fs-12); line-height:1.65;
+  background:var(--gray-950); color:#d6d6da; border-radius:var(--r-lg); }
+[data-theme] .terminal { background:var(--gray-950); }
 .terminal .t-dim{color:#6f6f78;} .terminal .t-green{color:#4ec38a;} .terminal .t-amber{color:#d9a85a;}
 .terminal .t-red{color:#e0726a;} .terminal .t-blue{color:#6aa6f0;}
 ```
 
-The terminal is **always dark** (`--terminal-bg: #09090b`), in either theme — it shows a
-machine's own output, and that surface does not follow the room it is read in.
+The terminal is **always dark** (`--gray-950`), even in light theme.
 
 ### 5.12 Notifications
 
@@ -523,7 +481,7 @@ machine's own output, and that surface does not follow the room it is read in.
 ```css
 .toast { display:flex; gap:11px; align-items:flex-start; padding:12px 12px 12px 13px;
   background:var(--bg); border:1px solid var(--border); border-left-width:3px;
-  border-radius:var(--r-lg); box-shadow:var(--shadow-xs); }
+  border-radius:var(--r-lg); box-shadow:var(--shadow-md); }
 .toast.t-success{border-left-color:var(--green);}  .toast.t-success > svg.ti{color:var(--green);}
 .toast.t-info{border-left-color:var(--blue);}       .toast.t-info > svg.ti{color:var(--blue);}
 .toast.t-warn{border-left-color:var(--amber);}      .toast.t-warn > svg.ti{color:var(--amber);}
@@ -538,16 +496,16 @@ machine's own output, and that surface does not follow the room it is read in.
 ```css
 .hr { height:1px; background:var(--border); border:0; margin:0; }
 .vr { width:1px; align-self:stretch; background:var(--border); }
-.eyebrow { font-size:var(--fs-label); font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:var(--fg-faint); }
-.tip { font-size:var(--fs-ui); color:#fff; background:var(--fg); padding:4px 8px; border-radius:var(--r-sm); box-shadow:var(--shadow-xs); }
+.eyebrow { font-size:var(--fs-11); font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:var(--fg-faint); }
+.tip { font-size:var(--fs-12); color:#fff; background:var(--gray-900); padding:4px 8px; border-radius:var(--r-sm); box-shadow:var(--shadow-md); }
 /* utilities */
 .muted{color:var(--fg-muted);} .faint{color:var(--fg-faint);} .secondary{color:var(--fg-secondary);}
-.flex{display:flex;} .items-center{align-items:center;} .gap{gap:9.6px;}
+.flex{display:flex;} .items-center{align-items:center;} .gap{gap:var(--gap);}
 .grow{flex:1 1 auto;min-width:0;} .truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 ```
 
 Custom scrollbars: add `.kx-scroll` to scroll containers
-(`::-webkit-scrollbar{width:10px}`, thumb `var(--border-strong)` 999px radius with 3px `--bg` border).
+(`::-webkit-scrollbar{width:10px}`, thumb `var(--gray-300)` 999px radius with 3px `--bg` border).
 
 ---
 
