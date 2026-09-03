@@ -246,34 +246,78 @@ All components live in **one stylesheet** (`styles/kortext.css`) shared by the p
 
 ### 5.1 Buttons — `.btn`
 
-One primary per view. Primary = accent fill; secondary = bordered surface; ghost disappears until hover.
+`.btn` is the **base every clickable control carries**: size, font, focus ring,
+disabled. It is never used alone — a variant always sits on it, and the variant
+owns the hover. One primary per view.
+
+Two families, one geometry. A **solid** variant shows its box always. A **link**
+variant shows none until you point at it, and then it becomes its solid twin:
+`.btn-link-success:hover` is `.btn-success` as it sits. Same height, same
+padding, same radius, same font — the only difference is the resting box.
 
 ```css
+/* ONE SIZE. The small one was on 19 call sites out of 21, so it is the size —
+   a modifier that is almost always on is not a modifier. */
 .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px;
-  height:var(--control-h); padding:0 calc(11px*var(--d-scale));
-  font-size:var(--fs-13); font-weight:500; line-height:1;
-  border-radius:var(--r-md); border:1px solid transparent;
+  height:var(--control-h-sm); padding:0 calc(8px*var(--d-scale));
+  font-size:var(--fs-12); font-weight:500; line-height:1;
+  border-radius:var(--r-sm); border:1px solid transparent;
   background:var(--bg); color:var(--fg); cursor:pointer; white-space:nowrap; user-select:none;
   transition:background var(--speed) var(--ease), border-color var(--speed) var(--ease), box-shadow var(--speed) var(--ease), color var(--speed) var(--ease); }
 .btn:focus-visible { outline:none; box-shadow:0 0 0 3px var(--accent-ring); }
 .btn .ic { width:14px; height:14px; flex:none; }
+/* The base declares NO hover: a rule here would silently outrank a variant's. */
+.btn:hover { background:none; border-color:transparent; }
 
-.btn-primary   { background:var(--accent); color:var(--accent-fg); border-color:var(--accent); }
-.btn-primary:hover { background:var(--accent-hover); border-color:var(--accent-hover); }
-.btn-secondary { background:var(--bg); color:var(--fg); border-color:var(--border-strong); box-shadow:var(--shadow-xs); }
-.btn-secondary:hover { background:var(--bg-muted); border-color:var(--gray-400); }
-.btn-ghost     { background:transparent; color:var(--fg-secondary); }
-.btn-ghost:hover { background:var(--bg-hover); color:var(--fg); }
-.btn-danger    { background:var(--bg); color:var(--red); border-color:var(--red-border); }
-.btn-danger:hover { background:var(--red-bg); }
-.btn-success   { background:var(--green-bg); color:var(--green); border-color:var(--green-border); }   /* "Approved" confirmed state */
+/* ── solid: the box is always there ─────────────────────────────────────── */
+.btn-primary         { background:var(--accent); color:var(--accent-fg); border-color:var(--accent); }
+.btn-primary:hover   { background:var(--accent-hover); border-color:var(--accent-hover); }
+.btn-secondary       { background:var(--bg); color:var(--fg); border-color:var(--border-strong); box-shadow:var(--shadow-xs); }
+.btn-secondary:hover { background:var(--bg-active); border-color:var(--gray-400); }
+.btn-success         { background:var(--green-bg); color:var(--green); border-color:var(--green-border); }
+.btn-success:hover   { background:var(--green-bg); color:var(--green); border-color:var(--green); }
+.btn-danger          { background:var(--red-bg); color:var(--red); border-color:var(--red-border); }
+.btn-danger:hover    { background:var(--red-bg); color:var(--red); border-color:var(--red); }
 
-.btn-sm   { height:var(--control-h-sm); padding:0 calc(8px*var(--d-scale)); font-size:var(--fs-12); border-radius:var(--r-sm); }
-.btn-icon { width:var(--control-h); padding:0; }   /* square; +.btn-sm → width:var(--control-h-sm) */
-.btn[disabled] { opacity:0.45; pointer-events:none; }
+/* ── link: no box until you point at it ─────────────────────────────────── */
+.btn-link-primary,
+.btn-link-success,
+.btn-link-danger { height:var(--control-h-sm); padding:0 calc(8px*var(--d-scale));
+                   border-radius:var(--r-sm); background:none; border-color:transparent; }
+.btn-link-primary       { color:var(--fg-secondary); }
+.btn-link-primary:hover { background:var(--bg-active); border-color:var(--border-strong); color:var(--fg); }
+.btn-link-success       { color:var(--green); }
+.btn-link-success:hover { background:var(--green-bg); border-color:var(--green-border); color:var(--green); }
+.btn-link-danger        { color:var(--red); }
+.btn-link-danger:hover  { background:var(--red-bg); border-color:var(--red-border); color:var(--red); }
+
+/* ── the one exception ──────────────────────────────────────────────────── */
+/* A × inside a 6px-padded chip: full button height would grow the chip around
+   it. Carries the family, keeps its own geometry, and takes no hover — it sits
+   in a row you are reading, not a control you are aiming at. */
+.btn-x       { height:auto; padding:0 4px; font-size:14px; margin-left:auto;
+               background:none; border-color:transparent; color:var(--fg-faint); }
+.btn-x:hover { background:none; border-color:transparent; color:var(--fg-secondary); }
+
+.btn[disabled] { opacity:0.45; pointer-events:none; }   /* one rule, every variant */
+```
+
+**Dark**: `--accent-hover` must be *darker* than `--accent`, not lighter. On a
+dark ground the accent is already near-white (`#ededef`), so a `#ffffff` hover
+moves it nowhere — a light-on-dark button reacts by dimming.
+
+```css
+[data-theme='dark'] { --accent-hover: #cfcfd4; }
 ```
 
 Leading icon: `<button class="btn btn-secondary"><i class="ic">…</i> New item</button>`.
+Link: `<button class="btn btn-link-danger">Remove project</button>`.
+
+> **Retired (2026-09-03):** `.btn-sm` (folded into `.btn`), `.btn-ghost` and
+> `.btn-icon` (defined, never used), the bare `.btn` variant (with no box at
+> rest it *was* the link), the `info` tone, and the `.kx-link*` family — which
+> became `.btn-link*` and stopped being 10.5px mono, because a link that is a
+> button should read like one.
 
 ### 5.2 Badges & pills — `.badge`
 
