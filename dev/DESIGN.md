@@ -268,15 +268,41 @@ karara ek, en sonda soru.
 ## 7 · Girdiler
 
 ```css
---control-h:36px;      /* input, select */
---control-h-sm:29px;   /* her buton — §6, tek boy vardır */
+--control-h:36px;      /* metin girdisi */
+--control-h-sm:29px;   /* buton ve select — §6, tek boy vardır */
 
-.input,.select { height:var(--control-h); width:100%; padding:0 10px; font-size:var(--fs-body);
+.input { height:var(--control-h); width:100%; padding:0 10px; font-size:var(--fs-body);
   border:1px solid var(--border-strong); border-radius:var(--r-sm);
   background:var(--bg); color:var(--fg); }
 .input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-ring); }
 .input::placeholder { color:var(--fg-faint); }
+```
 
+### Select
+
+Yerli ok tema tanımaz ve her platformda başka çizilir. `appearance:none` ile kapatılır,
+chevron gömülü SVG olarak gelir — metnin rengini miras alsın diye. Buton boyundadır: bir
+kontrol satırında select ile düğme aynı hizada durur.
+
+```css
+.select { height:var(--control-h-sm); padding:0 28px 0 9.6px;
+  font-family:inherit; font-size:var(--fs-ui); font-weight:500; line-height:1;
+  color:var(--fg); background-color:var(--bg);
+  border:1px solid var(--border-strong); border-radius:var(--r-sm);
+  cursor:pointer; appearance:none;
+  background-image:url("…chevron svg, stroke=currentColor…");
+  background-repeat:no-repeat; background-position:right 8px center; }
+.select:hover { background-color:var(--bg-active); border-color:var(--border-hover); }
+.select:focus-visible { outline:none; box-shadow:0 0 0 3px var(--accent-ring); border-color:var(--accent); }
+.select[disabled] { opacity:0.45; pointer-events:none; }
+```
+
+### Segmented control
+
+Aralarından **birinin** seçili olduğu durumlar içindir. Üç düğme "hangisine basıldı?" diye
+sordurur; segment "hangisi açık" diye gösterir.
+
+```css
 .seg { display:inline-flex; padding:2px; gap:2px; background:var(--bg-muted);
   border:1px solid var(--border); border-radius:var(--r-md); }
 .seg button { height:29px; padding:0 11px; border:none; background:transparent;
@@ -284,10 +310,20 @@ karara ek, en sonda soru.
   border-radius:calc(var(--r-md) - 2px); cursor:pointer; white-space:nowrap; }
 .seg button:hover { color:var(--fg-secondary); }
 .seg button.on { background:var(--bg); color:var(--fg); box-shadow:var(--shadow-xs); }
+
+/* .seg-sm — bir kez kurulup unutulan ayar için: yarı boy, hap biçimli. */
+.seg-sm { padding:1px; border-radius:var(--r-pill); }
+.seg-sm button { height:16px; padding:0 8px; font-size:var(--fs-micro); border-radius:var(--r-pill); }
 ```
 
-Segmented control, aralarından **birinin** seçili olduğu durumlar içindir. Üç düğme "hangisine
-basıldı?" diye sordurur; segment "hangisi açık" diye gösterir. Tema anahtarı budur.
+Tam boy `.seg` bir ekranın işleyişini değiştiren seçim içindir. `.seg-sm` bir tercih içindir —
+tema anahtarı footer'da bu boyda durur, çünkü ilgiyi hak eden bir kontrol değildir.
+
+### Sekmeler
+
+`.kx-tab`, `.btn-link-primary` üstünde bir modifier'dır: hover'ı ailenin hover'ıdır (zemin
+dolar), alt çizgi ise "hangisi açık"ı söyler. İkisi farklı iş yapar — biri imlecin nerede
+olduğunu, öteki seçimin ne olduğunu.
 
 ---
 
@@ -354,8 +390,10 @@ ayrı bir düğme yoktur.
 
 Belgenin üstünde duran bilgi şeritleri. **Rengi, kimin sırada olduğunu söyler.**
 
-Panel başlığı tek satır: **Kortext | project brain: [motor]**. Tema anahtarı footer'da —
-bir kez kurulup unutulan bir ayar, her ekranda üstte durmasın.
+Panel başlığı tek satır: **Kortext | project brain: [motor]**.
+
+Footer: solda **Kortext v5.0.0 by Milowda** ve **Kopeng — task board**, sağda tema anahtarı
+(`.seg-sm`). Bir kez kurulup unutulan bir ayar her ekranda üstte durmaz.
 
 | bant | renk | anlamı |
 |---|---|---|

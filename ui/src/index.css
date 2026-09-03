@@ -971,6 +971,19 @@ body {
 
 /* §7 — segmented control. Aralarından BİRİNİN seçili olduğu durumlar için:
    üç düğme "hangisine basıldı?" diye sordurur, segment "hangisi açık" der. */
+/* §7 — select. Yerli ok tema tanımaz ve her platformda başka çizilir; kendi
+   chevron'umuzu currentColor ile gömüyoruz, böylece metin rengini miras alıyor. */
+.select { height: var(--control-h-sm); padding: 0 28px 0 9.6px; font-family: inherit;
+  font-size: var(--fs-ui); font-weight: 500; line-height: 1; color: var(--fg);
+  background-color: var(--bg); border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm); cursor: pointer; appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
+  background-repeat: no-repeat; background-position: right 8px center;
+  transition: background-color var(--speed) var(--ease), border-color var(--speed) var(--ease), box-shadow var(--speed) var(--ease); }
+.select:hover { background-color: var(--bg-active); border-color: var(--border-hover); }
+.select:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-ring); border-color: var(--accent); }
+.select[disabled] { opacity: 0.45; pointer-events: none; }
+
 .seg { display: inline-flex; padding: 2px; gap: 2px; background: var(--bg-muted);
   border: 1px solid var(--border); border-radius: var(--r-md); }
 .seg button { height: 29px; padding: 0 11px; border: none; background: transparent;
@@ -979,6 +992,9 @@ body {
   transition: background var(--speed) var(--ease), color var(--speed) var(--ease); }
 .seg button:hover { color: var(--fg-secondary); }
 .seg button.on { background: var(--bg); color: var(--fg); box-shadow: var(--shadow-xs); }
+/* Bir kez kurulup unutulan ayar için: yarı boy, hap biçimli. */
+.seg-sm { padding: 1px; border-radius: var(--r-pill); }
+.seg-sm button { height: 16px; padding: 0 8px; font-size: var(--fs-micro); border-radius: var(--r-pill); }
 
 /* ----- base: badges / pills (handoff) ----- */
 .badge { display: inline-flex; align-items: center; gap: 5px; height: 20px; padding: 0 8px; font-size: var(--fs-ui); font-weight: 500; line-height: 1; border-radius: var(--r-pill); border: 1px solid var(--border); background: var(--bg-muted); color: var(--fg-secondary); white-space: nowrap; }
@@ -1006,9 +1022,9 @@ body {
 .agentx .adotx { display: inline-block; width: 7px; height: 7px; border-radius: 999px; margin-right: 4px; vertical-align: middle; position: relative; top: -1px; }
 
 /* ----- base: inputs (handoff) ----- */
-.input, .select { height: var(--control-h); width: 100%; padding: 0 10px; font-size: var(--fs-body); color: var(--fg); background: var(--bg); border: 1px solid var(--border-strong); border-radius: var(--r-md); outline: none; font-family: inherit; transition: border-color var(--speed) var(--ease), box-shadow var(--speed) var(--ease); }
+.input { height: var(--control-h); width: 100%; padding: 0 10px; font-size: var(--fs-body); color: var(--fg); background: var(--bg); border: 1px solid var(--border-strong); border-radius: var(--r-md); outline: none; font-family: inherit; transition: border-color var(--speed) var(--ease), box-shadow var(--speed) var(--ease); }
 .input::placeholder { color: var(--fg-faint); }
-.input:focus, .select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
+.input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
 .input-group { position: relative; display: flex; align-items: center; }
 .input-group .ic-lead { position: absolute; left: 9px; width: 15px; height: 15px; color: var(--fg-faint); pointer-events: none; }
 .input-group .input { padding-left: 30px; }
@@ -1426,7 +1442,7 @@ body {
 .kx-link-danger { color: var(--red); }
 .kx-link-danger:hover { color: #a92f26; }
 .kx-link:disabled { opacity: .5; cursor: default; }
-.kx-footer { display: flex; align-items: center; gap: 16px; padding: 14px 24px; margin-top: auto; border-top: 1px solid var(--border); font-size: var(--fs-label); color: var(--fg-faint); }
+.kx-footer { display: flex; align-items: center; gap: 18px; padding: 14px 24px; margin-top: auto; border-top: 1px solid var(--border); font-size: var(--fs-label); color: var(--fg-faint); }
 .kx-footer a { color: var(--fg-muted); text-decoration: none; }
 .kx-footer a:hover { color: var(--fg); text-decoration: underline; text-underline-offset: 3px; }
 .kx-proj-actions { display: flex; align-items: center; gap: 8px; }
@@ -1451,7 +1467,7 @@ body {
 .kx-input:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-ring); border-color: var(--accent); }
 .kx-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); }
 .kx-tab { border-radius: 0; border-bottom: 2px solid transparent; }
-.kx-tab:hover { background: none; border-color: transparent; border-bottom-color: var(--border-strong); color: var(--fg); }
+.kx-tab:hover { background: var(--bg-active); border-color: transparent; border-bottom-color: var(--border-strong); color: var(--fg); }
 .kx-tab.active { color: var(--fg); border-bottom-color: var(--accent); font-weight: 550; }
 .kx-tab.active:hover { border-bottom-color: var(--accent); }
 
@@ -1581,7 +1597,7 @@ body {
 /* R1 — engine badge + step runner states */
 .kx-theme { margin-right: auto; }
 .kx-engine { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-ui); color: var(--fg-mid); }
-.kx-engine-select { height: 24px; border: 1px solid var(--border); border-radius: var(--r-sm, 6px); background: var(--bg); color: var(--fg); font-size: var(--fs-label); padding: 0 4px; }
+.kx-engine-select { font-family: var(--font-mono); }
 .kx-engine-warn { font-size: var(--fs-label); color: var(--red); background: rgba(204,107,107,.08); padding: 4px 10px; border-radius: var(--r-md); }
 .kx-engine-warn code { font-size: var(--fs-micro); }
 .kx-docs-toolbar { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }

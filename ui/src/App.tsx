@@ -132,17 +132,17 @@ export function App() {
         </main>
       )}
       <footer className="kx-footer">
-        <ThemeSwitch />
         <span>
           Kortext <Version /> by{' '}
           <a href="https://milowda.com" target="_blank" rel="noreferrer">
             Milowda
           </a>
         </span>
-        <span className="kx-doc-spacer" />
         <a href="https://github.com/erayendes/kopeng" target="_blank" rel="noreferrer">
           Kopeng — task board
         </a>
+        <span className="kx-doc-spacer" />
+        <ThemeSwitch />
       </footer>
     </div>
   );
@@ -183,7 +183,7 @@ function ThemeSwitch() {
     }
   }, [choice]);
   return (
-    <span className="seg kx-theme">
+    <span className="seg seg-sm kx-theme">
       {(['auto', 'light', 'dark'] as ThemeChoice[]).map((t) => (
         <button key={t} className={t === choice ? 'on' : ''} onClick={() => setChoice(t)}>
           {t === 'auto' ? 'Auto' : t === 'light' ? 'Light' : 'Dark'}
@@ -217,7 +217,7 @@ function EngineBadge() {
   return (
     <span className="kx-engine">
       <select
-        className="kx-engine-select mono"
+        className="select kx-engine-select"
         value={selected ?? available[0].id}
         onChange={(e) => api.selectEngine(e.target.value).then((r) => setSelected(r.selected))}
       >
