@@ -132,17 +132,21 @@ export function App() {
         </main>
       )}
       <footer className="kx-footer">
-        <span>
-          Kortext <Version /> by{' '}
-          <a href="https://milowda.com" target="_blank" rel="noreferrer">
-            Milowda
+        <div className="kx-footer-row">
+          <span>
+            Kortext <Version /> by{' '}
+            <a href="https://milowda.com" target="_blank" rel="noreferrer">
+              Milowda
+            </a>
+          </span>
+          <span className="kx-doc-spacer" />
+          <ThemeSwitch />
+        </div>
+        <div className="kx-footer-row">
+          <a href="https://github.com/erayendes/kopeng" target="_blank" rel="noreferrer">
+            Kopeng — task board
           </a>
-        </span>
-        <a href="https://github.com/erayendes/kopeng" target="_blank" rel="noreferrer">
-          Kopeng — task board
-        </a>
-        <span className="kx-doc-spacer" />
-        <ThemeSwitch />
+        </div>
       </footer>
     </div>
   );
@@ -471,40 +475,38 @@ function AddProject({
         <div className="kx-brief-head">
           <span className="kx-cmd-title">Brief (BRD)</span>
           <span className="kx-doc-spacer" />
-          <nav className="kx-tabs kx-tabs-sm">
-            {/* Hands over a BRD.md to edit in your own editor and bring back
-                through Upload — it never overwrites what you have typed here.
-                No frontmatter: kortext writes that itself on Initialize. */}
+          <button
+            className="btn btn-link-primary"
+            title="Download a filled-in example BRD.md"
+            onClick={() => {
+              const url = URL.createObjectURL(
+                new Blob([BRIEF_EXAMPLE], { type: 'text/markdown' }),
+              );
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = 'BRD.md';
+              a.click();
+              URL.revokeObjectURL(url);
+              setBriefMode('upload'); // download → edit → bring it back here
+            }}
+          >
+            Example ↓
+          </button>
+          {/* Write and Upload are one choice, so they are a segment, not two tabs. */}
+          <span className="seg">
             <button
-              className="btn btn-link-primary kx-tab"
-              title="Download a filled-in example BRD.md"
-              onClick={() => {
-                const url = URL.createObjectURL(
-                  new Blob([BRIEF_EXAMPLE], { type: 'text/markdown' }),
-                );
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'BRD.md';
-                a.click();
-                URL.revokeObjectURL(url);
-                setBriefMode('upload'); // download → edit → bring it back here
-              }}
-            >
-              Example ↓
-            </button>
-            <button
-              className={`btn btn-link-primary kx-tab ${briefMode === 'write' ? 'active' : ''}`}
+              className={briefMode === 'write' ? 'on' : ''}
               onClick={() => setBriefMode('write')}
             >
               Write
             </button>
             <button
-              className={`btn btn-link-primary kx-tab ${briefMode === 'upload' ? 'active' : ''}`}
+              className={briefMode === 'upload' ? 'on' : ''}
               onClick={() => setBriefMode('upload')}
             >
               Upload
             </button>
-          </nav>
+          </span>
         </div>
         {briefMode === 'write' && (
           <>

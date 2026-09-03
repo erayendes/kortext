@@ -935,7 +935,7 @@ body {
 /* §6 — TEK BOY. Küçük boy 21 kullanımın 19'undaydı; neredeyse hep açık olan bir
    modifier, modifier değildir. `.btn` her kontrolün taşıdığı TABAN: boyut, font,
    odak halkası, pasif hâl. Tek başına kullanılmaz, üstüne hep bir varyant biner. */
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: var(--control-h-sm); padding: 0 9.6px; font-size: var(--fs-ui); font-weight: 500; line-height: 1; border-radius: var(--r-sm); border: 1px solid transparent; background: var(--bg); color: var(--fg); cursor: pointer; white-space: nowrap; user-select: none; font-family: inherit; transition: background var(--speed) var(--ease), border-color var(--speed) var(--ease), box-shadow var(--speed) var(--ease), color var(--speed) var(--ease); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: var(--control-h); padding: 0 12px; font-size: var(--fs-ui); font-weight: 500; line-height: 1; border-radius: var(--r-sm); border: 1px solid transparent; background: var(--bg); color: var(--fg); cursor: pointer; white-space: nowrap; user-select: none; font-family: inherit; transition: background var(--speed) var(--ease), border-color var(--speed) var(--ease), box-shadow var(--speed) var(--ease), color var(--speed) var(--ease); }
 .btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-ring); }
 .btn .ic { width: 14px; height: 14px; flex: none; }
 /* Hover varyantındır: tabanda bir kural varyantınkini sessizce ezerdi. */
@@ -954,7 +954,7 @@ body {
 
 /* link — duruşta kutusu yok, üstüne gelince solid ikizine dönüşür */
 .btn-link-primary, .btn-link-success, .btn-link-danger {
-  height: var(--control-h-sm); padding: 0 9.6px; border-radius: var(--r-sm);
+  height: var(--control-h); padding: 0 12px; border-radius: var(--r-sm);
   background: none; border-color: transparent; }
 .btn-link-primary { color: var(--fg-secondary); }
 .btn-link-primary:hover { background: var(--bg-active); border-color: var(--border-strong); color: var(--fg); }
@@ -973,7 +973,7 @@ body {
    üç düğme "hangisine basıldı?" diye sordurur, segment "hangisi açık" der. */
 /* §7 — select. Yerli ok tema tanımaz ve her platformda başka çizilir; kendi
    chevron'umuzu currentColor ile gömüyoruz, böylece metin rengini miras alıyor. */
-.select { height: var(--control-h-sm); padding: 0 28px 0 9.6px; font-family: inherit;
+.select { height: var(--control-h); padding: 0 30px 0 12px; font-family: inherit;
   font-size: var(--fs-ui); font-weight: 500; line-height: 1; color: var(--fg);
   background-color: var(--bg); border: 1px solid var(--border-strong);
   border-radius: var(--r-sm); cursor: pointer; appearance: none; -webkit-appearance: none;
@@ -986,7 +986,7 @@ body {
 
 .seg { display: inline-flex; padding: 2px; gap: 2px; background: var(--bg-muted);
   border: 1px solid var(--border); border-radius: var(--r-md); }
-.seg button { height: 29px; padding: 0 11px; border: none; background: transparent;
+.seg button { height: calc(var(--control-h) - 6px); padding: 0 12px; border: none; background: transparent;
   font-family: inherit; font-size: var(--fs-ui); font-weight: 500; color: var(--fg-muted);
   border-radius: calc(var(--r-md) - 2px); cursor: pointer; white-space: nowrap;
   transition: background var(--speed) var(--ease), color var(--speed) var(--ease); }
@@ -1442,7 +1442,8 @@ body {
 .kx-link-danger { color: var(--red); }
 .kx-link-danger:hover { color: #a92f26; }
 .kx-link:disabled { opacity: .5; cursor: default; }
-.kx-footer { display: flex; align-items: center; gap: 18px; padding: 14px 24px; margin-top: auto; border-top: 1px solid var(--border); font-size: var(--fs-label); color: var(--fg-faint); }
+.kx-footer-row { display: flex; align-items: center; gap: 18px; width: 100%; }
+.kx-footer { display: flex; flex-direction: column; align-items: stretch; gap: 6px; padding: 14px 24px; margin-top: auto; border-top: 1px solid var(--border); font-size: var(--fs-label); color: var(--fg-faint); }
 .kx-footer a { color: var(--fg-muted); text-decoration: none; }
 .kx-footer a:hover { color: var(--fg); text-decoration: underline; text-underline-offset: 3px; }
 .kx-proj-actions { display: flex; align-items: center; gap: 8px; }
@@ -1580,6 +1581,7 @@ body {
 .kx-form { max-width: 640px; }
 .kx-path { flex: 1; }
 .kx-brief { display: flex; flex-direction: column; gap: 6px; }
+.kx-brief-head .seg { flex: none; }
 .kx-brief-head { display: flex; align-items: center; justify-content: space-between; }
 .kx-brief-text { min-height: 180px; font-size: var(--fs-ui); }
 .kx-upload { position: relative; overflow: hidden; cursor: pointer; display: inline-flex; align-items: center; }

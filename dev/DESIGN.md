@@ -203,8 +203,12 @@ Hareket işlevsel: 130ms geçiş, ve "canlı" için tek bir yavaş nabız (1.8s)
 
 ## 6 · Butonlar
 
-Tek boy. İki aile: **solid** kutusunu hep gösterir, **link** ancak üstüne gelince gösterir —
-ve o an solid ikizine dönüşür. Bir ekranda yalnız **bir** birincil düğme olur.
+Tek boy — ve o boy **tek satır metin girdisinin boyudur** (`--control-h`, 36px). Bir kontrol
+satırında girdi, düğme, select ve segment aynı hizada durur; farklı yükseklikte iki kontrol
+yan yana gelmez.
+
+İki aile: **solid** kutusunu hep gösterir, **link** ancak üstüne gelince gösterir — ve o an
+solid ikizine dönüşür. Bir ekranda yalnız **bir** birincil düğme olur.
 
 `.btn` her kontrolün taşıdığı **tabandır**: boyut, font, odak halkası, pasif hâl. Tek başına
 kullanılmaz; üstüne her zaman bir varyant biner ve **hover varyantındır**. Tabanın kendi
@@ -212,7 +216,7 @@ hover'ı yoktur — orada bir kural varyantınkini sessizce ezerdi.
 
 ```css
 .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px;
-  height:var(--control-h-sm); padding:0 9.6px;
+  height:var(--control-h); padding:0 12px;
   font-family:inherit; font-size:var(--fs-ui); font-weight:500; line-height:1;
   border-radius:var(--r-sm); border:1px solid transparent;
   background:var(--bg); color:var(--fg); cursor:pointer; white-space:nowrap; user-select:none;
@@ -234,7 +238,7 @@ hover'ı yoktur — orada bir kural varyantınkini sessizce ezerdi.
 
 /* link — duruşta kutusu yok, üstüne gelince solid ikizi */
 .btn-link-primary, .btn-link-success, .btn-link-danger {
-  height:var(--control-h-sm); padding:0 9.6px; border-radius:var(--r-sm);
+  height:var(--control-h); padding:0 12px; border-radius:var(--r-sm);
   background:none; border-color:transparent; }
 .btn-link-primary       { color:var(--fg-secondary); }
 .btn-link-primary:hover { background:var(--bg-active); border-color:var(--border-strong); color:var(--fg); }
@@ -268,8 +272,8 @@ karara ek, en sonda soru.
 ## 7 · Girdiler
 
 ```css
---control-h:36px;      /* metin girdisi */
---control-h-sm:29px;   /* buton ve select — §6, tek boy vardır */
+--control-h:36px;      /* HER kontrol: girdi, buton, select, segment */
+--control-h-sm:29px;   /* yalnız daraltılmış bağlamlar */
 
 .input { height:var(--control-h); width:100%; padding:0 10px; font-size:var(--fs-body);
   border:1px solid var(--border-strong); border-radius:var(--r-sm);
@@ -285,7 +289,7 @@ chevron gömülü SVG olarak gelir — metnin rengini miras alsın diye. Buton b
 kontrol satırında select ile düğme aynı hizada durur.
 
 ```css
-.select { height:var(--control-h-sm); padding:0 28px 0 9.6px;
+.select { height:var(--control-h); padding:0 30px 0 12px;
   font-family:inherit; font-size:var(--fs-ui); font-weight:500; line-height:1;
   color:var(--fg); background-color:var(--bg);
   border:1px solid var(--border-strong); border-radius:var(--r-sm);
@@ -305,7 +309,7 @@ sordurur; segment "hangisi açık" diye gösterir.
 ```css
 .seg { display:inline-flex; padding:2px; gap:2px; background:var(--bg-muted);
   border:1px solid var(--border); border-radius:var(--r-md); }
-.seg button { height:29px; padding:0 11px; border:none; background:transparent;
+.seg button { height:calc(var(--control-h) - 6px); padding:0 12px; border:none; background:transparent;
   font-family:inherit; font-size:var(--fs-ui); font-weight:500; color:var(--fg-muted);
   border-radius:calc(var(--r-md) - 2px); cursor:pointer; white-space:nowrap; }
 .seg button:hover { color:var(--fg-secondary); }
@@ -319,11 +323,19 @@ sordurur; segment "hangisi açık" diye gösterir.
 Tam boy `.seg` bir ekranın işleyişini değiştiren seçim içindir. `.seg-sm` bir tercih içindir —
 tema anahtarı footer'da bu boyda durur, çünkü ilgiyi hak eden bir kontrol değildir.
 
-### Sekmeler
+**İki seçenek de bir segmenttir.** Alt çizgili sekme çifti yerine `.seg` kullanılır: aynı
+kontrol yüksekliğinde durur, seçili olan yuvadan yükselir, ve "hangisi açık" sorusu ikinci
+bir kalıp öğrenmeden cevaplanır. Brief'in **Write | Upload** çifti böyledir.
 
-`.kx-tab`, `.btn-link-primary` üstünde bir modifier'dır: hover'ı ailenin hover'ıdır (zemin
-dolar), alt çizgi ise "hangisi açık"ı söyler. İkisi farklı iş yapar — biri imlecin nerede
-olduğunu, öteki seçimin ne olduğunu.
+Bir eylem sekme değildir. Brief başlığındaki **Example ↓** bir dosya indirir — seçim değil,
+iş yapar — ve `.btn-link-primary` olarak segmentin dışında durur.
+
+```html
+<button class="btn btn-link-primary">Example ↓</button>
+<span class="seg">
+  <button class="on">Write</button><button>Upload</button>
+</span>
+```
 
 ---
 
