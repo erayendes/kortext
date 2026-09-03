@@ -114,6 +114,19 @@ export function DocDrawer({
     return [asks, demands] as const;
   }, [tokens]);
 
+  // Her açık soru bir numara taşır: not çipi "#2: cevabım" diye okunur, alıntının
+  // ilk 80 karakteri diye değil.
+  const qNo = useMemo(() => {
+    const n = new Map<number, number>();
+    let inAsk = false;
+    let i = 0;
+    for (const t of tokens) {
+      if (t.kind === 'h1' || t.kind === 'h2' || t.kind === 'h3') inAsk = /open questions/i.test(t.text);
+      if (inAsk && t.kind === 'bullet' && t.text.trim()) n.set(t.index, ++i);
+    }
+    return n;
+  }, [tokens]);
+
   if (!doc) return <Drawer open={false} onClose={onClose}>{null}</Drawer>;
 
   const act = async (fn: () => Promise<unknown>) => {
@@ -163,7 +176,8 @@ export function DocDrawer({
 
   const addLineNote = (line: number, text: string) => {
     const token = tokens.find((t) => t.index === line);
-    setNotes((ns) => [...ns, { line, excerpt: token?.text?.slice(0, 80) ?? '', text }]);
+    const no = qNo.get(line);
+    setNotes((ns) => [...ns, { line, excerpt: no ? `#${no}` : (token?.text?.slice(0, 60) ?? ''), text }]);
   };
 
   const approve = () =>
@@ -193,31 +207,15 @@ export function DocDrawer({
   return (
     <Drawer open={!!doc} onClose={onClose} width={720}>
       <div className="dr-head">
-        <div className="dr-title">
-          <span className="kx-doc-name">{doc.name}</span>
-          <StatusBadge doc={doc} />
+        <div className="dr-ident">
+          <div className="dr-title">
+            <span className="kx-doc-name">{doc.name}.md</span>
+            <StatusBadge doc={doc} />
+          </div>
           {doc.author && <span className="kx-doc-author mono">{doc.author.replace(/^\+/, '')}</span>}
         </div>
         <div className="dr-actions">
-          {!editing && doc.status !== 'uninitialized' && (
-            <button className="btn btn-link-primary" disabled={busy} onClick={() => setEditing(true)}>
-              Edit
-            </button>
-          )}
-          {editing && (
-            <>
-              <button className="btn btn-primary" disabled={busy} onClick={saveEdit}>
-                Save
-              </button>
-              <button
-                className="btn btn-link-primary"
-                disabled={busy}
-                onClick={() => { setEditing(false); setDraft(content); setProposed(false); }}
-              >
-                Discard
-              </button>
-            </>
-          )}
+          {/* Approve · Edit · Close — karar, düzenleme, çıkış. */}
           {!editing && doc.status === 'draft' && (
             // A document that still asks something is not finished, and
             // approving it would bury the question under a green badge. Answer
@@ -230,6 +228,25 @@ export function DocDrawer({
             >
               Approve
             </button>
+          )}
+          {!editing && doc.status !== 'uninitialized' && (
+            <button className="btn btn-secondary" disabled={busy} onClick={() => setEditing(true)}>
+              Edit
+            </button>
+          )}
+          {editing && (
+            <>
+              <button className="btn btn-primary" disabled={busy} onClick={saveEdit}>
+                Save
+              </button>
+              <button
+                className="btn btn-secondary"
+                disabled={busy}
+                onClick={() => { setEditing(false); setDraft(content); setProposed(false); }}
+              >
+                Discard
+              </button>
+            </>
           )}
           <button className="btn btn-link-primary" onClick={onClose}>
             Close
@@ -332,6 +349,7 @@ export function DocDrawer({
                 <DocBlock
                   token={t}
                   openQuestion={openQ.has(t.index)}
+                  questionNo={qNo.get(t.index)}
                   changeRequest={changeReq.has(t.index)}
                   selected={selected === t.index}
                   noted={notes.some((n) => n.line === t.index)}
@@ -368,7 +386,7 @@ export function DocDrawer({
               {notes.map((n, i) => (
                 <div key={i} className="kx-note">
                   {n.excerpt && <span className="kx-note-exc mono">{n.excerpt}</span>}
-                  <span>{n.text}</span>
+                  <span className="kx-note-body">{n.text}</span>
                   <button className="btn btn-x" onClick={() => setNotes(notes.filter((_, j) => j !== i))}>
                     ×
                   </button>
@@ -613,7 +631,7 @@ function RequestBar({
                       <textarea
                         className="kx-input kx-thread-text"
                         autoFocus
-                        rows={2}
+                        rows={1}
                         placeholder={
                           asking === i
                             ? 'Ask about this demand…  (Enter sends, Shift+Enter for a new line)'
@@ -675,6 +693,7 @@ function DocBlock({
   noted,
   openQuestion,
   changeRequest,
+  questionNo,
   onSelect,
 }: {
   token: MdToken;
@@ -682,6 +701,7 @@ function DocBlock({
   noted: boolean;
   openQuestion?: boolean;
   changeRequest?: boolean;
+  questionNo?: number;
   onSelect: () => void;
 }) {
   if (token.kind === 'blank') return <div className="kx-blank" />;
@@ -730,6 +750,7 @@ function DocBlock({
   }
   return (
     <div className={cls} onClick={onSelect}>
+      {questionNo && <span className="kx-qno mono">{questionNo}</span>}
       <Inline text={token.text} />
     </div>
   );
@@ -838,7 +859,7 @@ function LineThread({
           <textarea
             className="kx-input kx-thread-text"
             autoFocus={active}
-            rows={2}
+            rows={1}
             placeholder={
               thread.length > 0
                 ? 'Follow-up question…  (Enter sends, Shift+Enter for a new line)'
@@ -855,11 +876,12 @@ function LineThread({
             }}
           />
           <div className="kx-thread-actions">
-            <button className="btn btn-primary" disabled={waiting && !text.trim()} onClick={() => send('ask')}>
-              Ask
-            </button>
-            <button className="btn btn-secondary" onClick={() => send('note')}>
+            {/* Cevabı toplamak asıl iş; sormak ondan önce gelen bir adım. */}
+            <button className="btn btn-primary" disabled={!text.trim()} onClick={() => send('note')}>
               Add note
+            </button>
+            <button className="btn btn-secondary" disabled={!text.trim()} onClick={() => send('ask')}>
+              Ask
             </button>
           </div>
         </div>

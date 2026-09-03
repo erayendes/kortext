@@ -28,11 +28,11 @@ As a [User Type], I want to [Do Something], so that [I reach This Goal].
 
 **Acceptance Criteria:**
 
-- [ ] Code review
-- [ ] Quality control
-- [ ] Security check
-- [ ] [Criterion 1: When the user presses the button, X must happen]
-- [ ] [Criterion 2: On error, this message must be shown]
+> What must be observably true for this story to be done. Behaviour only — code
+> review, QA and security are release gates, and `TEST.md` owns them.
+
+- [ ] [When the user presses the button, X must happen]
+- [ ] [On error, this message must be shown]
 
 ## Revision Requests
 
