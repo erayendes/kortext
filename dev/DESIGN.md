@@ -354,6 +354,9 @@ ayrı bir düğme yoktur.
 
 Belgenin üstünde duran bilgi şeritleri. **Rengi, kimin sırada olduğunu söyler.**
 
+Panel başlığı tek satır: **Kortext | project brain: [motor]**. Tema anahtarı footer'da —
+bir kez kurulup unutulan bir ayar, her ekranda üstte durmasın.
+
 | bant | renk | anlamı |
 |---|---|---|
 | Hazırlık kapısı `.kx-gate` | mavi zemin + mavi yazı, çerçevesiz | sistem okuyor |
@@ -438,6 +441,7 @@ Bu dokümanın tarif ettiği ama stil dosyasının uygulamadığı beş kalem va
 | **§4 boşluk ölçeği** | `--sp-1 … --sp-6` tanımlandı. |
 | **§6 buton seti** | Yeni taban (tek boy, hover'sız), dört solid + üç link varyantı, `.btn-x`. `.btn-sm` ve `.kx-link*` çağrı yerleri taşındı; çıplak `.btn` kalmadı — hepsi `btn-link-primary` oldu. Talep eylemleri §6'nın sırasına geçti: **Apply · Dismiss · Add note · Ask**. |
 | **§7 `.seg`** | v6'dan beri tanımlıydı, yazıldı. İlk kullanıcısı tema anahtarı. |
+| **sekmeler** | `.kx-tab` de buton ailesine girdi (`btn btn-link-primary`); alt çizgi "hangisi açık"ı söylemeye devam ediyor. |
 | **§1 tema** | `prefers-color-scheme` medya sorgusu + `data-theme` override. Panel başlığında **Auto · Light · Dark**; seçim `localStorage`'da. **Karanlık tema panelde ilk kez görünür oldu** — 54 token'lık blok bugüne dek erişilemiyordu. |
 
 > Ek A'daki kaldırmalar **uygulanmadı**: eski token'lar (`--gray-*`, `--a-*`, `--fs-*`'in

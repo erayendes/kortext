@@ -81,10 +81,9 @@ export function App() {
     <div className="kx-shell">
       <header className="kx-header">
         <span className="kx-logo">Kortext</span>
-        <span className="kx-tagline">project brain</span>
-        <span className="kx-doc-spacer" />
-        <ThemeSwitch />
+        <span className="kx-tagline">project brain:</span>
         <EngineBadge />
+        <span className="kx-doc-spacer" />
       </header>
       {error && <div className="kx-error">{error}</div>}
       {selected ? (
@@ -133,6 +132,7 @@ export function App() {
         </main>
       )}
       <footer className="kx-footer">
+        <ThemeSwitch />
         <span>
           Kortext <Version /> by{' '}
           <a href="https://milowda.com" target="_blank" rel="noreferrer">
@@ -216,7 +216,6 @@ function EngineBadge() {
   }
   return (
     <span className="kx-engine">
-      Engine:
       <select
         className="kx-engine-select mono"
         value={selected ?? available[0].id}
@@ -477,7 +476,7 @@ function AddProject({
                 through Upload — it never overwrites what you have typed here.
                 No frontmatter: kortext writes that itself on Initialize. */}
             <button
-              className="kx-tab"
+              className="btn btn-link-primary kx-tab"
               title="Download a filled-in example BRD.md"
               onClick={() => {
                 const url = URL.createObjectURL(
@@ -494,13 +493,13 @@ function AddProject({
               Example ↓
             </button>
             <button
-              className={`kx-tab ${briefMode === 'write' ? 'active' : ''}`}
+              className={`btn btn-link-primary kx-tab ${briefMode === 'write' ? 'active' : ''}`}
               onClick={() => setBriefMode('write')}
             >
               Write
             </button>
             <button
-              className={`kx-tab ${briefMode === 'upload' ? 'active' : ''}`}
+              className={`btn btn-link-primary kx-tab ${briefMode === 'upload' ? 'active' : ''}`}
               onClick={() => setBriefMode('upload')}
             >
               Upload
