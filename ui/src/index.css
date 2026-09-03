@@ -1517,7 +1517,7 @@ body {
 .kx-status-waiting { background: var(--bg-muted); color: var(--fg-secondary); }
 .kx-status-not-applicable { background: transparent; color: var(--fg-muted); padding-left: 0; padding-right: 0; }
 .kx-doc-changebar .kx-thread { margin-top: 8px; background: var(--bg-surface, transparent); }
-.kx-doc-dependbar { margin: 0 18px 8px; padding: 8px 12px; border-radius: var(--r-md); background: transparent; border: 1px dashed var(--pink-border); color: var(--fg-secondary); font-size: var(--fs-ui); }
+.kx-doc-dependbar { margin: 0 18px 8px; padding: 8px 12px; border-radius: var(--r-md); background: transparent; border: 1px solid var(--pink-border); color: var(--fg-secondary); font-size: var(--fs-ui); }
 .kx-doc-dependbar .mono { color: var(--pink); }
 .kx-badge { font-family: var(--font-mono); font-size: var(--fs-micro); padding: 2px 7px; border-radius: 999px; border: 1px solid transparent; }
 .kx-badge-failed { background: var(--red-bg); color: var(--red); border-color: var(--red-border); }
@@ -1582,6 +1582,8 @@ body {
 .kx-path { flex: 1; }
 .kx-brief { display: flex; flex-direction: column; gap: 6px; }
 .kx-brief-head .seg { flex: none; }
+/* §4 — bir eylem ile bir seçim grubu arasında bir adım boşluk. */
+.kx-brief-head { gap: var(--sp-3); }
 .kx-brief-head { display: flex; align-items: center; justify-content: space-between; }
 .kx-brief-text { min-height: 180px; font-size: var(--fs-ui); }
 .kx-upload { position: relative; overflow: hidden; cursor: pointer; display: inline-flex; align-items: center; }
@@ -1627,8 +1629,8 @@ body {
 /* A document with unanswered questions is not finished — the row says so, and
    the section itself is tinted so it is not one heading among many. */
 .kx-card-action { margin-left: auto; }
-.kx-doc-changebar { margin: 0 18px 8px; padding: 10px 12px; border-radius: var(--r-md); background: var(--red-bg); border: 1px solid var(--red-border); font-size: var(--fs-ui); display: flex; flex-direction: column; gap: 8px; }
-.kx-changebar-head { color: var(--red); font-weight: 600; }
+.kx-doc-changebar { margin: 0 18px 8px; padding: 10px 12px; border-radius: var(--r-md); background: var(--pink-bg); border: 1px solid var(--pink-border); font-size: var(--fs-ui); display: flex; flex-direction: column; gap: 8px; }
+.kx-changebar-head { color: var(--pink); font-weight: 600; }
 .kx-changebar-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 10px; }
 /* Each demand carries its own answer: one decision per line, not one for the pile. */
 .kx-changebar-list > li + li { padding-top: 10px; border-top: 1px solid var(--red-border); }
@@ -1650,9 +1652,9 @@ body {
 .kx-archive .kx-card { opacity: .72; }
 /* Readiness gate — the analysis refused to start; amber because it is the
    human's turn, not a failure. */
-.kx-gate { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; padding: 18px; border: 1px solid var(--amber-border); border-radius: var(--r-lg); background: var(--amber-bg); }
-.kx-gate h3 { margin: 0; font-size: var(--fs-heading); font-weight: 650; color: var(--amber); }
-.kx-gate p { margin: 0; font-size: var(--fs-ui); color: var(--fg-muted, inherit); max-width: 68ch; }
+.kx-gate { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; padding: 18px; border: none; border-radius: var(--r-lg); background: var(--blue-bg); }
+.kx-gate h3 { margin: 0; font-size: var(--fs-heading); font-weight: 650; color: var(--blue); }
+.kx-gate p { margin: 0; font-size: var(--fs-ui); color: var(--blue); opacity: .8; max-width: 68ch; }
 .kx-gate-questions { margin: 2px 0 2px; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: var(--fs-body); }
 .kx-handshake { display: flex; flex-direction: column; gap: 14px; padding: 18px; border: 1px solid rgba(52,146,90,.35); border-radius: var(--r-lg); background: rgba(52,146,90,.06); }
 .kx-handshake-head { display: flex; flex-direction: column; gap: 4px; }

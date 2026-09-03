@@ -179,6 +179,10 @@ kendi kendine hizalanır.
 --sp-3:12px;  /* kart içi padding           */  --sp-6:32px;  /* sayfa kenarı  */
 ```
 
+**Kontrol satırının boşluğu.** Aynı işi yapan kontroller `--sp-2` ile yan yana durur; bir
+eylem ile bir seçim grubu arasında `--sp-3` vardır. `Example ↓` ile `Write | Upload` segmenti
+yapışık durmaz — biri iş yapar, öteki soru sorar, ve aradaki boşluk bunu söyler.
+
 ---
 
 ## 5 · Köşe, gölge, hareket
@@ -491,7 +495,11 @@ Bu dokümanın tarif ettiği ama stil dosyasının uygulamadığı beş kalem va
 | **§4 boşluk ölçeği** | `--sp-1 … --sp-6` tanımlandı. |
 | **§6 buton seti** | Yeni taban (tek boy, hover'sız), dört solid + üç link varyantı, `.btn-x`. `.btn-sm` ve `.kx-link*` çağrı yerleri taşındı; çıplak `.btn` kalmadı — hepsi `btn-link-primary` oldu. Talep eylemleri §6'nın sırasına geçti: **Apply · Dismiss · Add note · Ask**. |
 | **§7 `.seg`** | v6'dan beri tanımlıydı, yazıldı. İlk kullanıcısı tema anahtarı. |
-| **sekmeler** | `.kx-tab` de buton ailesine girdi (`btn btn-link-primary`); alt çizgi "hangisi açık"ı söylemeye devam ediyor. |
+| **sekmeler** | Alt çizgili sekme kalıbı panelden kalktı: `Write | Upload` bir `.seg` oldu, `Example ↓` segmentin dışında bir eylem. |
+| **tek kontrol yüksekliği** | Girdi, buton, select ve segment `--control-h` (36px). Bir kontrol satırı düz bir çizgi. |
+| **`.select`** | Yerli ok kapatıldı, chevron gömülü SVG; buton boyunda. |
+| **`.seg-sm`** | Hap biçimli yarı boy. Tema anahtarı footer'da bu boyda. |
+| **bantlar** | Talep bandı `change request` rozetiyle aynı pembeye, bağımlılık bandı `dependent` rozeti gibi düz çerçeveye, hazırlık kapısı `writing` gibi mavi zemine geçti. |
 | **§1 tema** | `prefers-color-scheme` medya sorgusu + `data-theme` override. Panel başlığında **Auto · Light · Dark**; seçim `localStorage`'da. **Karanlık tema panelde ilk kez görünür oldu** — 54 token'lık blok bugüne dek erişilemiyordu. |
 
 > Ek A'daki kaldırmalar **uygulanmadı**: eski token'lar (`--gray-*`, `--a-*`, `--fs-*`'in
