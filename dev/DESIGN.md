@@ -33,18 +33,31 @@ Load fonts (Google Fonts):
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600;700&family=Overpass+Mono:wght@400;500;600;700&display=swap">
 ```
 
-**One configuration.** The system had four `data-*` axes — theme, accent, density,
-radius — and the panel set none of them: `<html>` carried no attribute, so three
-of the four could never change and dark mode could never appear. Accent, density
-and radius are gone (2026-09-03); the values they scaled are now literal.
+**One configuration, one choice.** The system had four `data-*` axes — theme,
+accent, density, radius — and the panel set none of them: `<html>` carried no
+attribute, so three of the four could never change and dark mode could never
+appear at all. Accent, density and radius are gone (2026-09-03); the values they
+scaled are now literal. Theme stays, and this time it is wired to a control.
 
-**Theme follows the operating system.** Not an attribute, not a toggle — a media
-query, so a panel opened on a dark desktop is dark without anyone wiring a
-switch:
+**Theme is the one axis that stays**, because it is the one a person has an
+opinion about. Three states: it defaults to the operating system, and an explicit
+choice overrides it and is remembered.
 
 ```css
-@media (prefers-color-scheme: dark) { :root { /* §3 */ } }
+:root                    { /* light — §2 */ }
+:root[data-theme='dark'] { /* dark  — §3 */ }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) { /* dark — §3, again */ }
+}
 ```
+
+The dark values appear twice; plain CSS has no way to alias a block, and the
+alternative — a class the script swaps — puts the theme behind JavaScript that
+has not run yet, which is a flash of the wrong theme on every load. Duplication
+is the cheaper honesty.
+
+`data-theme` is set by one control in the panel header — **Auto · Light · Dark** —
+and persisted. Unset means auto, which is what a first visit gets.
 
 **Always build from the tokens below — never hard-code a value a token covers.**
 That rule was in this document already and the stylesheet broke it: all ten type
@@ -179,32 +192,31 @@ a thing that is over it.
 
 ## 3. Dark theme
 
-Same token names, different values, chosen by the operating system. There is no
-attribute and no switch: a panel opened on a dark desktop is dark.
+Same token names, different values. Applied by `:root[data-theme='dark']` and,
+for anyone who never chose, by the media query in §1 — the same block written
+twice.
 
 ```css
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg:#0a0a0b; --bg-subtle:#0f0f10; --bg-muted:#161618; --bg-inset:#121214;
-    --bg-hover:#1a1a1d; --bg-active:#212126;
-    --border:#222226; --border-strong:#2e2e34; --border-faint:#1a1a1e;
-    --border-hover:#3a3a40; --scroll-thumb:#2e2e34;
+:root[data-theme='dark'] {
+  --bg:#0a0a0b; --bg-subtle:#0f0f10; --bg-muted:#161618; --bg-inset:#121214;
+  --bg-hover:#1a1a1d; --bg-active:#212126;
+  --border:#222226; --border-strong:#2e2e34; --border-faint:#1a1a1e;
+  --border-hover:#3a3a40; --scroll-thumb:#2e2e34;
 
-    --fg:#ededef; --fg-secondary:#a1a1aa; --fg-muted:#8b8b93; --fg-faint:#63636b;
+  --fg:#ededef; --fg-secondary:#a1a1aa; --fg-muted:#8b8b93; --fg-faint:#63636b;
 
-    --accent:#ededef; --accent-fg:#0a0a0b;
-    /* darker, not whiter: the accent is already near-white, so a #ffffff hover
-       moved a primary button nowhere. A light-on-dark control reacts by dimming. */
-    --accent-hover:#cfcfd4;
-    --accent-tint:#18181b; --accent-tint-border:#26262b; --accent-ring:rgba(237,237,239,0.22);
+  --accent:#ededef; --accent-fg:#0a0a0b;
+  /* darker, not whiter: the accent is already near-white, so a #ffffff hover
+     moved a primary button nowhere. A light-on-dark control reacts by dimming. */
+  --accent-hover:#cfcfd4;
+  --accent-tint:#18181b; --accent-tint-border:#26262b; --accent-ring:rgba(237,237,239,0.22);
 
-    --green:#46c08a; --green-bg:#10231b; --green-border:#1d3b2e;
-    --amber:#d9a441; --amber-bg:#241c0e; --amber-border:#3d3016;
-    --red:#e0726a;   --red-bg:#26120f;   --red-border:#3d201c;
-    --blue:#6a9bf0;  --blue-bg:#101a2b;  --blue-border:#1d2e4a;
-    --violet:#8d81ea; --violet-bg:#171429; --violet-border:#282348;
-    --pink:#ee7bb0;  --pink-bg:#2b1220;  --pink-border:#4a2038;
-  }
+  --green:#46c08a; --green-bg:#10231b; --green-border:#1d3b2e;
+  --amber:#d9a441; --amber-bg:#241c0e; --amber-border:#3d3016;
+  --red:#e0726a;   --red-bg:#26120f;   --red-border:#3d201c;
+  --blue:#6a9bf0;  --blue-bg:#101a2b;  --blue-border:#1d2e4a;
+  --violet:#8d81ea; --violet-bg:#171429; --violet-border:#282348;
+  --pink:#ee7bb0;  --pink-bg:#2b1220;  --pink-border:#4a2038;
 }
 ```
 
