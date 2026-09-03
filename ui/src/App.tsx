@@ -47,7 +47,7 @@ export function App() {
                   <span className="kx-card-name">{p.name}</span>
                   {p.archived === 1 && (
                     <button
-                      className="kx-link kx-link-ok kx-card-action"
+                      className="btn btn-link-success kx-card-action"
                       onClick={(e) => {
                         e.stopPropagation();
                         void unarchive(p);
@@ -83,6 +83,7 @@ export function App() {
         <span className="kx-logo">Kortext</span>
         <span className="kx-tagline">project brain</span>
         <span className="kx-doc-spacer" />
+        <ThemeSwitch />
         <EngineBadge />
       </header>
       {error && <div className="kx-error">{error}</div>}
@@ -155,6 +156,41 @@ function Version() {
     api.health().then((h) => setVersion(h.version)).catch(() => {});
   }, []);
   return version ? <span className="kx-version mono">v{version}</span> : null;
+}
+
+// §1 — Tema. Üç durum: auto işletim sistemini takip eder, light ve dark onu ezer
+// ve hatırlanır. Nitelik yoksa auto demektir, ilk açılışın hâli budur.
+type ThemeChoice = 'auto' | 'light' | 'dark';
+
+function ThemeSwitch() {
+  const [choice, setChoice] = useState<ThemeChoice>(() => {
+    try {
+      const v = localStorage.getItem('kx-theme');
+      return v === 'light' || v === 'dark' ? v : 'auto';
+    } catch {
+      return 'auto';
+    }
+  });
+  useEffect(() => {
+    const root = document.documentElement;
+    if (choice === 'auto') root.removeAttribute('data-theme');
+    else root.setAttribute('data-theme', choice);
+    try {
+      if (choice === 'auto') localStorage.removeItem('kx-theme');
+      else localStorage.setItem('kx-theme', choice);
+    } catch {
+      /* private mode — the choice lasts the session */
+    }
+  }, [choice]);
+  return (
+    <span className="seg kx-theme">
+      {(['auto', 'light', 'dark'] as ThemeChoice[]).map((t) => (
+        <button key={t} className={t === choice ? 'on' : ''} onClick={() => setChoice(t)}>
+          {t === 'auto' ? 'Auto' : t === 'light' ? 'Light' : 'Dark'}
+        </button>
+      ))}
+    </span>
+  );
 }
 
 function EngineBadge() {
@@ -245,7 +281,7 @@ function TransferPanel({ project }: { project: Project }) {
           </span>
           <span className="kx-doc-spacer" />
           {plan.status !== 'approved' && (
-            <button className="btn btn-sm btn-success" onClick={() => api.approvePlan(project.id).then(() => setPlan({ ...plan, status: 'approved' }))}>
+            <button className="btn btn-success" onClick={() => api.approvePlan(project.id).then(() => setPlan({ ...plan, status: 'approved' }))}>
               Approve plan
             </button>
           )}
@@ -263,7 +299,7 @@ function TransferPanel({ project }: { project: Project }) {
               onChange={(e) => setReviseText(e.target.value)}
             />
             <button
-              className="btn btn-sm btn-secondary"
+              className="btn btn-secondary"
               disabled={!reviseText.trim()}
               onClick={() => {
                 transfer([reviseText.trim()]);
@@ -521,7 +557,7 @@ function AddProject({
         <button className="btn btn-primary" onClick={submit}>
           Initialize
         </button>
-        <button className="btn" onClick={onCancel}>
+        <button className="btn btn-link-primary" onClick={onCancel}>
           Cancel
         </button>
       </div>
@@ -603,7 +639,7 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
   return (
     <main className="kx-main">
       <div className="kx-main-nav">
-        <button className="btn btn-sm" onClick={onBack}>
+        <button className="btn btn-link-primary" onClick={onBack}>
           ← Projects
         </button>
         {running ? (
@@ -630,15 +666,15 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
           {arming === 'restart' ? (
             <>
               <span className="kx-arm-warn">Wipe .kortext/ + .kopeng/ and start over?</span>
-              <button className="btn btn-sm btn-danger" disabled={busy} onClick={doRestart}>
+              <button className="btn btn-danger" disabled={busy} onClick={doRestart}>
                 Yes, restart
               </button>
-              <button className="btn btn-sm" onClick={() => setArming(null)}>
+              <button className="btn btn-link-primary" onClick={() => setArming(null)}>
                 No
               </button>
             </>
           ) : running ? (
-            <button className="btn btn-sm btn-primary" disabled={busy} onClick={togglePause}>
+            <button className="btn btn-primary" disabled={busy} onClick={togglePause}>
               ⏸ Pause
             </button>
           ) : (
@@ -646,7 +682,7 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
             // left is to start it. Offering Pause against a stopped chain — a
             // closed gate, a queue waiting on approvals — reads as a lie.
             pending && (
-              <button className="btn btn-sm btn-primary" disabled={busy} onClick={start}>
+              <button className="btn btn-primary" disabled={busy} onClick={start}>
                 {hasJobs ? '▶ Continue' : '▶ Start'}
               </button>
             )
@@ -666,10 +702,10 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
         {arming === 'restart' ? (
           <>
             <span className="kx-arm-warn">Wipe .kortext/ + .kopeng/ and start over?</span>
-            <button className="kx-link kx-link-danger" disabled={busy} onClick={doRestart}>
+            <button className="btn btn-link-danger" disabled={busy} onClick={doRestart}>
               Yes, restart
             </button>
-            <button className="kx-link" onClick={() => setArming(null)}>
+            <button className="btn btn-link-primary" onClick={() => setArming(null)}>
               No
             </button>
           </>
@@ -680,10 +716,10 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
                 ? 'Bring it back into the project list?'
                 : 'Fold it away? The repo and its documents are untouched.'}
             </span>
-            <button className="kx-link kx-link-ok" disabled={busy} onClick={doArchive}>
+            <button className="btn btn-link-success" disabled={busy} onClick={doArchive}>
               {project.archived ? 'Yes, unarchive' : 'Yes, archive'}
             </button>
-            <button className="kx-link" onClick={() => setArming(null)}>
+            <button className="btn btn-link-primary" onClick={() => setArming(null)}>
               No
             </button>
           </>
@@ -692,24 +728,24 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
             <span className="kx-arm-warn">
               Delete .kortext/, .kopeng/, AGENTS.md and remove the project?
             </span>
-            <button className="kx-link kx-link-danger" disabled={busy} onClick={doCancel}>
+            <button className="btn btn-link-danger" disabled={busy} onClick={doCancel}>
               Yes, remove
             </button>
-            <button className="kx-link" onClick={() => setArming(null)}>
+            <button className="btn btn-link-primary" onClick={() => setArming(null)}>
               No
             </button>
           </>
         ) : (
           <>
-            <button className="kx-link kx-link-info" disabled={busy} onClick={() => setArming('restart')}>
+            <button className="btn btn-link-primary" disabled={busy} onClick={() => setArming('restart')}>
               Restart analysis
             </button>
             <span className="kx-danger-sep">·</span>
-            <button className="kx-link kx-link-ok" disabled={busy} onClick={() => setArming('archive')}>
+            <button className="btn btn-link-success" disabled={busy} onClick={() => setArming('archive')}>
               {project.archived ? 'Unarchive project' : 'Archive project'}
             </button>
             <span className="kx-danger-sep">·</span>
-            <button className="kx-link kx-link-danger" disabled={busy} onClick={() => setArming('cancel')}>
+            <button className="btn btn-link-danger" disabled={busy} onClick={() => setArming('cancel')}>
               Remove project
             </button>
           </>
@@ -922,7 +958,7 @@ function DocumentsTab({
                   <span className="kx-doc-spacer" />
                   {failed && (
                     <span
-                      className="btn btn-sm btn-secondary"
+                      className="btn btn-secondary"
                       onClick={(e) => {
                         e.stopPropagation();
                         runNext();
@@ -1006,7 +1042,7 @@ function ReadinessCard({
         ))}
       </ul>
       {onOpenBrief && r.stage !== 'no-engine' ? (
-        <button className="btn btn-sm btn-primary" onClick={onOpenBrief}>
+        <button className="btn btn-primary" onClick={onOpenBrief}>
           Open the brief
         </button>
       ) : (
@@ -1014,7 +1050,7 @@ function ReadinessCard({
         // missing CLI is fixed outside the panel. Both end in the same move —
         // change the thing, ask again. The button reports that it ran, because
         // a re-check that finds the same thing looks like a dead button.
-        <button className="btn btn-sm btn-primary" disabled={rechecking} onClick={recheck}>
+        <button className="btn btn-primary" disabled={rechecking} onClick={recheck}>
           {rechecking ? 'Checking…' : 'Check again'}
         </button>
       )}

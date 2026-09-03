@@ -200,17 +200,17 @@ export function DocDrawer({
         </div>
         <div className="dr-actions">
           {!editing && doc.status !== 'uninitialized' && (
-            <button className="btn btn-sm" disabled={busy} onClick={() => setEditing(true)}>
+            <button className="btn btn-link-primary" disabled={busy} onClick={() => setEditing(true)}>
               Edit
             </button>
           )}
           {editing && (
             <>
-              <button className="btn btn-sm btn-primary" disabled={busy} onClick={saveEdit}>
+              <button className="btn btn-primary" disabled={busy} onClick={saveEdit}>
                 Save
               </button>
               <button
-                className="btn btn-sm"
+                className="btn btn-link-primary"
                 disabled={busy}
                 onClick={() => { setEditing(false); setDraft(content); setProposed(false); }}
               >
@@ -223,7 +223,7 @@ export function DocDrawer({
             // approving it would bury the question under a green badge. Answer
             // it in the section — or delete the ones you are content to leave.
             <button
-              className="btn btn-sm btn-success"
+              className="btn btn-success"
               disabled={busy || doc.openQuestions}
               title={doc.openQuestions ? 'Answer the open questions in this document first' : ''}
               onClick={approve}
@@ -231,7 +231,7 @@ export function DocDrawer({
               Approve
             </button>
           )}
-          <button className="btn btn-sm" onClick={onClose}>
+          <button className="btn btn-link-primary" onClick={onClose}>
             Close
           </button>
         </div>
@@ -243,7 +243,7 @@ export function DocDrawer({
           <div className="kx-cmd-hint">{failedError}</div>
           {onRetry && (
             <div className="kx-changebar-actions">
-              <button className="btn btn-sm btn-primary" onClick={onRetry}>
+              <button className="btn btn-primary" onClick={onRetry}>
                 Retry
               </button>
             </div>
@@ -267,7 +267,7 @@ export function DocDrawer({
           }
           extra={
             doc.hasProducingStep ? null : (
-              <button className="btn btn-sm btn-primary" disabled={busy} onClick={proposeFix}>
+              <button className="btn btn-primary" disabled={busy} onClick={proposeFix}>
                 {busy ? 'Drafting…' : 'Draft the change'}
               </button>
             )
@@ -369,7 +369,7 @@ export function DocDrawer({
                 <div key={i} className="kx-note">
                   {n.excerpt && <span className="kx-note-exc mono">{n.excerpt}</span>}
                   <span>{n.text}</span>
-                  <button className="kx-note-x" onClick={() => setNotes(notes.filter((_, j) => j !== i))}>
+                  <button className="btn btn-x" onClick={() => setNotes(notes.filter((_, j) => j !== i))}>
                     ×
                   </button>
                 </div>
@@ -383,7 +383,7 @@ export function DocDrawer({
           <div className="kx-note-input">
             {doc.hasProducingStep ? (
               <button
-                className="btn btn-sm btn-primary"
+                className="btn btn-primary"
                 disabled={busy || notes.length === 0}
                 onClick={requestRevision}
               >
@@ -564,30 +564,35 @@ function RequestBar({
                 </div>
               ) : (
                 <div className="kx-changebar-actions">
-                  <button className="btn btn-sm" disabled={busy} onClick={() => setAsking(asking === i ? null : i)}>
-                    Ask
-                  </button>
                   {it.canApply ? (
-                    <>
-                      <button className="btn btn-sm btn-primary" disabled={busy} onClick={() => decide(i, 'apply')}>
-                        Apply
-                      </button>
-                      <button
-                        className="btn btn-sm"
-                        disabled={busy}
-                        onClick={() => setNoting(noting === i ? null : i)}
-                      >
-                        Add note
-                      </button>
-                    </>
-                  ) : (
-                    <span className="kx-cmd-hint">No agent writes that one — open it to draft the change.</span>
-                  )}
-                  <button className="btn btn-sm btn-secondary" disabled={busy} onClick={() => decide(i, 'dismiss')}>
+                <>
+                  <button className="btn btn-primary" disabled={busy} onClick={() => decide(i, 'apply')}>
+                    Apply
+                  </button>
+                  <button className="btn btn-secondary" disabled={busy} onClick={() => decide(i, 'dismiss')}>
                     Dismiss
                   </button>
-                  {extra}
-                </div>
+                  <button
+                    className="btn btn-link-primary"
+                    disabled={busy}
+                    onClick={() => setNoting(noting === i ? null : i)}
+                  >
+                    Add note
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button className="btn btn-secondary" disabled={busy} onClick={() => decide(i, 'dismiss')}>
+                    Dismiss
+                  </button>
+                  <span className="kx-cmd-hint">No agent writes that one — open it to draft the change.</span>
+                </>
+              )}
+              <button className="btn btn-link-primary" disabled={busy} onClick={() => setAsking(asking === i ? null : i)}>
+                Ask
+              </button>
+              {extra}
+            </div>
               )}
               {(talk.length > 0 || asking === i || noting === i) && !done && (
                 <div className="kx-thread">
@@ -630,12 +635,12 @@ function RequestBar({
                       />
                       <div className="kx-thread-actions">
                         {asking === i ? (
-                          <button className="btn btn-sm btn-primary" disabled={!question.trim()} onClick={() => ask(i)}>
+                          <button className="btn btn-primary" disabled={!question.trim()} onClick={() => ask(i)}>
                             Ask
                           </button>
                         ) : (
                           <button
-                            className="btn btn-sm btn-primary"
+                            className="btn btn-primary"
                             disabled={busy || !note.trim()}
                             onClick={() => decide(i, 'apply', note.trim())}
                           >
@@ -643,7 +648,7 @@ function RequestBar({
                           </button>
                         )}
                         <button
-                          className="btn btn-sm btn-secondary"
+                          className="btn btn-secondary"
                           onClick={() => {
                             setAsking(null);
                             setNoting(null);
@@ -850,10 +855,10 @@ function LineThread({
             }}
           />
           <div className="kx-thread-actions">
-            <button className="btn btn-sm btn-primary" disabled={waiting && !text.trim()} onClick={() => send('ask')}>
+            <button className="btn btn-primary" disabled={waiting && !text.trim()} onClick={() => send('ask')}>
               Ask
             </button>
-            <button className="btn btn-sm btn-secondary" onClick={() => send('note')}>
+            <button className="btn btn-secondary" onClick={() => send('note')}>
               Add note
             </button>
           </div>

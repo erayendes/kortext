@@ -428,15 +428,19 @@ Panelin render ettiği markdown. Aynı yedi boyu kullanır: gövde `--fs-body`, 
 | §7'nin eski sözlüğü (16 persona, gate kareleri, board kolonları, item tipleri) | v6 ekranlarına aitti; v1.0'da karşılıkları yok. Yerine §8. |
 | Lucide ikon haritası | Panel hiç SVG ikon kullanmıyor; birkaç metin glifi (`▶ ⏸ × ← →`) yeterli oldu. |
 
-## Ek B — Dokümanda var, kodda yok
+## Ek B — Uygulandı (2026-09-03)
 
-Bunlar spec olarak burada duruyor ama `ui/src/index.css` henüz uygulamıyor. Bir spec'in
-uygulanmaması, kullanılmayan bir token'la aynı arızadır — listeyi kapatmak bir iş kalemidir.
+Bu dokümanın tarif ettiği ama stil dosyasının uygulamadığı beş kalem vardı. Hepsi kapandı:
 
-- **§3 yedi rol** — stil dosyası hiçbir `--fs-*` token'ı tanımlamıyor; her boy elle yazılmış
-  `px` (bugün 15 farklı boy, altısı yarım piksel).
-- **§4 boşluk ölçeği** — hiç yok; her padding elle yazılmış.
-- **§6 buton seti** — kod hâlâ eski tabanı (`--control-h` + `.btn-sm`) ve `.kx-link*` ailesini taşıyor.
-- **§7 `.seg`** — v6 devrinden beri tanımlı, hiç yazılmamış.
-- **§1 tema** — `<html>` hiçbir `data-theme` yazmıyor ve `prefers-color-scheme` sorgusu yok;
-  panel kalıcı olarak açık temada.
+| kalem | ne yapıldı |
+|---|---|
+| **§3 yedi rol** | `--fs-*` token'ları tanımlandı, canlı kurallardaki **75** elle yazılmış boy role bağlandı. Yarım pikseller en yakın role yuvarlandı. Canlı kuralda elle yazılmış boy kalmadı. |
+| **§4 boşluk ölçeği** | `--sp-1 … --sp-6` tanımlandı. |
+| **§6 buton seti** | Yeni taban (tek boy, hover'sız), dört solid + üç link varyantı, `.btn-x`. `.btn-sm` ve `.kx-link*` çağrı yerleri taşındı; çıplak `.btn` kalmadı — hepsi `btn-link-primary` oldu. Talep eylemleri §6'nın sırasına geçti: **Apply · Dismiss · Add note · Ask**. |
+| **§7 `.seg`** | v6'dan beri tanımlıydı, yazıldı. İlk kullanıcısı tema anahtarı. |
+| **§1 tema** | `prefers-color-scheme` medya sorgusu + `data-theme` override. Panel başlığında **Auto · Light · Dark**; seçim `localStorage`'da. **Karanlık tema panelde ilk kez görünür oldu** — 54 token'lık blok bugüne dek erişilemiyordu. |
+
+> Ek A'daki kaldırmalar **uygulanmadı**: eski token'lar (`--gray-*`, `--a-*`, `--fs-*`'in
+> eski hâli yoktu zaten, `--shadow-sm/md/pop`, `--r-xl`, `data-accent/density/radius`) yerinde
+> duruyor, çünkü henüz silinmemiş v6 CSS'i onlara dayanıyor. Ölü CSS turunda birlikte gidecekler.
+

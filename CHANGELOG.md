@@ -166,6 +166,32 @@ All notable changes to Kortext are documented here. The format is based on
   from the input list its step gives it, and when a skeleton is missing the
   revision inbox or the open-questions section the mechanisms depend on.
 
+## [Unreleased]
+
+### Added
+
+- **The design system is in the code now.** DESIGN.md described five things the
+  stylesheet did not implement, and the list had grown long enough to write down
+  as work. All five are closed. Seven type roles named by duty replace the ten
+  `--fs-*` tokens the stylesheet never declared — and the 75 hand-written sizes
+  that filled the gap, six of them half-pixel, are bound to those roles; no live
+  rule carries a literal size any more. A six-step spacing scale exists for the
+  first time. The button set lands: one size, four solid variants, three link
+  variants that show no box until you point at them, and `.btn-x` for the × in a
+  chip. `.seg`, specified since the v6 handoff and never written, is real and its
+  first user is the theme switch.
+- **Dark mode is reachable.** `<html>` carried no `data-theme` and the stylesheet
+  had no `prefers-color-scheme` query, so 54 tokens of dark theme could never
+  appear. Theme now follows the operating system, and **Auto · Light · Dark** in
+  the header overrides it and is remembered — the panel's first three-state
+  control, built from the segmented control the system had been specifying all
+  along.
+
+### Changed
+
+- A revision's actions read **Apply · Dismiss · Add note · Ask** — the decision
+  first, then what rides along with it, then the question.
+
 ## [5.0.0] - 2026-09-01
 
 **v1.0 — the active project brain.** Full vision rewrite (dev/DECISIONS.md
