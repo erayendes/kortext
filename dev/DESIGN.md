@@ -1,598 +1,442 @@
-# kortext — Design System (`DESIGN.md`)
+# Kortext — Tasarım Sistemi
 
-> **How to use this file:** Give it to an AI together with the request you want built.
-> Everything below is the *complete, authoritative* spec for the kortext interface — tokens,
-> type, color, components, vocabulary and rules. Reproduce it **exactly**. Do not invent
-> colors, fonts, spacings or component variants that aren't listed here. When in doubt, use a
-> token (`var(--…)`) rather than a literal value.
-
----
-
-## 0. What kortext is (so you design in the right spirit)
-
-kortext is a **command surface for one human** — `+prime` — directing an army of AI agents that
-operate like a full software house. A dozen agents work in parallel, so the UI must stay **calm,
-dense, and quiet**. The aesthetic is **Vercel/Geist-grade restraint**:
-
-- Near-monochrome **cool-neutral** palette. White-first (light mode is the default).
-- Color is **signal only** — agent identity dots and a tight set of status flavours. Never decoration.
-- One accent that earns its place (neutral black by default).
-- A strict typographic split: **Barlow** for the product, **Overpass Mono** for everything the
-  machine speaks (agent handles, timestamps, IDs, file paths, terminals, metrics).
-- 8-pt rhythm, functional motion only (130ms ease; a single slow pulse for "live").
-
-**Anti-goals:** no gradients, no emoji, no decorative SVG illustration, no rounded-corner-with-left-accent-border cards, no Inter/Roboto. Less is more — every element must earn its place.
+> Panelin görsel dili. Hangi renk ne anlama gelir, hangi boy nerede kullanılır, bir düğme
+> ne zaman hangi biçimi alır. Canlı hâli: `dev/concepts/` altındaki tasarım sistemi dosyası.
+>
+> **Açıklamalar Türkçe, token ve sınıf adları İngilizce.** Bir şeyin adı çevrilmez —
+> `--fs-body` her dilde `--fs-body`'dir.
 
 ---
 
-## 1. Setup — fonts & root attributes
+## 0 · İlkeler
 
-Load fonts (Google Fonts):
+Sonraki her karar bu beşten çıkar.
 
-```html
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600;700&family=Overpass+Mono:wght@400;500;600;700&display=swap">
-```
+**Sessiz olan doğrudur.** Kortext bir araç, bir gösteri değil. Bir düzine ajan paralel
+çalışırken ekranın sakin, yoğun ve sessiz kalması gerekir. Renk yalnız bir şey söylemesi
+gerektiğinde girer; geri kalan her şey nötr.
 
-The system is **themeable via data-attributes on `<html>`**. Defaults:
+**Renk anlam taşır.** Yeşil onaydır, kırmızı hatadır, pembe bir taleptir. Dekoratif renk
+yok — bir rengi görüyorsan bir sebebi vardır.
 
-```html
-<html data-theme="light" data-accent="neutral" data-density="comfortable" data-radius="default">
-```
+**Her token bir işe aittir.** Ölçek değil, rol. `--fs-body` nerede kullanılacağını söyler;
+`--fs-13` yalnız bir sayıdır. Sayıyı değil işi seçersin.
 
-| Attribute | Values | Default | Effect |
-|---|---|---|---|
-| `data-theme` | `light` · `dark` | `light` | Color scheme |
-| `data-accent` | `neutral` · `indigo` · `blue` · `green` | `neutral` | Single accent hue |
-| `data-density` | `compact` · `comfortable` | `comfortable` | Scales control heights/padding (`--d-scale` 1 → 1.2) |
-| `data-radius` | `sharp` · `default` · `round` | `default` | Scales all radii (`--r-scale` 0.4 / 1 / 1.6) |
+**Makine ile insan farklı yazar.** Dosya yolu, id, komut — mono. İnsanın okuduğu her cümle —
+Barlow. Karışırsa ikisi de güven kaybeder.
 
-Every component reads these tokens, so changing one attribute retunes the whole system live.
-**Always build components from the tokens below — never hard-code a color/size that a token covers.**
+**Tek konfigürasyon.** Kimsenin değiştirmediği ayar, ayar değildir. Tek eksen kaldı: tema,
+çünkü insanın fikri olan tek şey o.
+
+**Olmayacaklar:** gradyan yok, emoji yok, dekoratif SVG yok, sol kenarı vurgulu yuvarlak
+kart yok, Inter/Roboto yok.
 
 ---
 
-## 2. Design tokens (`:root`)
+## 1 · Tema
 
-### 2.1 Neutral ramp (cool-neutral, Geist-like)
-
-```css
---gray-50:  #fafafa;   --gray-100: #f5f5f6;   --gray-150: #efeff1;
---gray-200: #e9e9ec;   --gray-300: #e0e0e4;   --gray-400: #c6c6cc;
---gray-500: #9a9aa3;   --gray-600: #71717a;   --gray-700: #52525b;
---gray-800: #2a2a30;   --gray-900: #18181b;   --gray-950: #0b0b0d;
-```
-
-### 2.2 Semantic surfaces & borders (light)
+Üç durum. **Auto** işletim sistemini takip eder ve ilk açılışın hâlidir. **Light** ve **Dark**
+senin seçimindir; sistemi ezer ve hatırlanır. Başka görünüm ayarı yoktur.
 
 ```css
---bg:          #ffffff;   /* base canvas */
---bg-subtle:   #fbfbfc;   /* page background, sidebars */
---bg-muted:    #f5f5f6;   /* badges, inset fills */
---bg-inset:    #f7f7f8;
---bg-hover:    #f2f2f4;   /* row/nav hover */
---bg-active:   #ececef;   /* selected row, progress track */
---border:      #eaeaec;   /* default hairline */
---border-strong:#dcdce0;  /* inputs, secondary buttons */
---border-faint:#f0f0f2;   /* internal dividers */
+:root                    { /* açık — §2 */ }
+:root[data-theme='dark'] { /* koyu — §2, aynı adlar başka değerler */ }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) { /* koyu, ikinci kez */ }
+}
 ```
 
-### 2.3 Text (light)
+Koyu değerler iki kez yazılır. Düz CSS'te blok takma adı yoktur; alternatifi — script'in
+takıp çıkardığı bir sınıf — sayfa yüklenirken yanlış temayı gösterir, yani her açılışta bir
+flaş. Tekrar daha ucuz dürüstlüktür.
+
+`data-theme`'i panel başlığındaki tek kontrol yazar (**Auto · Light · Dark**, §7'nin
+segmented control'ü) ve saklar. Nitelik yoksa auto demektir.
+
+> Karanlık tema açığın filtrelenmiş hâli değildir: yüzeyler yükseldikçe açılır, kenarlıklar
+> sessiz kalır, renkli zeminler içine renk karışmış bir siyahtır — açık moddaki değerin
+> açılmışı değil.
+
+---
+
+## 2 · Renk
+
+### Yüzeyler ve kenarlıklar
+
+Arayüzün zemini. Sıralama önemli: `--bg` en alt katman, `--bg-active` en üst. Bir yüzey ne
+kadar yukarıdaysa o kadar açıktır (koyu temada da öyle — orada "açık" demek daha az siyah).
 
 ```css
---fg:           #18181b;   /* primary */
---fg-secondary: #51515a;   /* body secondary */
---fg-muted:     #76767f;   /* metadata */
---fg-faint:     #a3a3ad;   /* labels, placeholders */
+--bg:#ffffff;         /* sayfanın zemini      */  --bg-subtle:#fbfbfc;  /* kart, panel        */
+--bg-muted:#f5f5f6;   /* gömük yuva           */  --bg-inset:#f7f7f8;   /* kod kutusu         */
+--bg-hover:#f2f2f4;   /* imlecin altındaki    */  --bg-active:#ececef;  /* basılı, seçili     */
+
+--border:#e4e4e7;         /* varsayılan çizgi   */  --border-strong:#d4d4d8;  /* kontrol kenarı */
+--border-faint:#eeeef1;   /* ayraç              */  --border-hover:#c6c6cc;   /* imleç altı     */
+--scroll-thumb:#e0e0e4;
 ```
 
-### 2.4 Accent (default = neutral / Vercel black)
+> 12 adımlı gri rampa kaldırıldı. Semantik token'ları hiç beslemiyordu — onlar zaten düz
+> hex — yani başka yerde yazılı değerlerin on iki kopyasıydı ve yalnız ikisi kullanılıyordu.
+> O ikisi yukarıda, işiyle adlandırılmış hâlde.
+
+### Metin
+
+Dört basamak. Aşağı indikçe önem azalır — `--fg` okunması gereken, `--fg-faint` orada
+olduğu bilinsin yeter.
+
+```css
+--fg:#18181b;        /* ana metin   */  --fg-secondary:#51515a;  /* açıklama */
+--fg-muted:#71717a;  /* etiket, meta */  --fg-faint:#a3a3ad;      /* en sessiz */
+```
+
+### Vurgu
+
+Tek vurgu rengi, o da nötr. Kortext bir marka gösterisi değil; birincil eylem siyahtır,
+çünkü dikkat çekmesi gereken tek şey odur.
 
 ```css
 --accent:#18181b; --accent-hover:#000000; --accent-fg:#ffffff;
 --accent-tint:#f4f4f5; --accent-tint-border:#e2e2e6; --accent-ring:rgba(24,24,27,0.16);
 ```
 
-Accent variants (swap by `data-accent`):
+Koyu temada `--accent-hover` **daha koyu** olmalı, daha beyaz değil: orada accent zaten
+neredeyse beyazdır (`#ededef`), `#ffffff` hover'ı hiçbir yere götürmez. Açık zeminli bir
+kontrol tepki vermek için kararır.
 
 ```css
-[data-accent="indigo"] { --accent:#5b5bd6; --accent-hover:#4d4dc8; --accent-fg:#fff;
-  --accent-tint:#efeffb; --accent-tint-border:#dcdcf5; --accent-ring:rgba(91,91,214,0.22); }
-[data-accent="blue"]   { --accent:#2563eb; --accent-hover:#1d56d6; --accent-fg:#fff;
-  --accent-tint:#eaf1fe; --accent-tint-border:#cfe0fb; --accent-ring:rgba(37,99,235,0.22); }
-[data-accent="green"]  { --accent:#11875a; --accent-hover:#0d7350; --accent-fg:#fff;
-  --accent-tint:#e7f5ee; --accent-tint-border:#cce9da; --accent-ring:rgba(17,135,90,0.22); }
+:root[data-theme='dark'] { --accent:#ededef; --accent-fg:#0a0a0b; --accent-hover:#cfcfd4; }
 ```
 
-### 2.5 Status flavours (light) — the ONLY non-neutral UI colors
+### Durum renkleri
 
-Each flavour has a foreground, a tint background, and a tint border. **Never introduce a status color outside this set.**
-
-```css
---green:#157a52;  --green-bg:#eaf5ef;  --green-border:#cfe9dd;   /* success / passed / approved / done */
---amber:#9a6a16;  --amber-bg:#faf2e2;  --amber-border:#ecdcb8;   /* warning / queued / in-progress / debt */
---red:#c5392f;    --red-bg:#fbeceb;    --red-border:#f1cfcc;     /* error / blocked / failed / bug */
---blue:#2563c9;   --blue-bg:#eaf1fc;   --blue-border:#cfe0f6;    /* info / pending / test / task */
---violet:#5b4bcc; --violet-bg:#efedfb; --violet-border:#dad5f4;  /* review / epic */
-```
-
-### 2.6 Agent identity hues — dots & avatars ONLY (never fills/text)
-
-Equal lightness & chroma, varied hue (oklch). Used for the 16 agent personas' identity dots & square avatars. **Never use these as text or surface fills.**
+Arayüzdeki **tek** nötr olmayan renkler. Her biri üçlü gelir: metin, zemin, kenarlık. Bu
+setin dışında bir durum rengi icat edilmez.
 
 ```css
---a-red:    oklch(0.64 0.16 25);    --a-orange: oklch(0.66 0.15 55);
---a-amber:  oklch(0.70 0.13 85);    --a-green:  oklch(0.66 0.14 150);
---a-teal:   oklch(0.66 0.11 190);   --a-cyan:   oklch(0.68 0.11 220);
---a-blue:   oklch(0.62 0.15 255);   --a-indigo: oklch(0.58 0.16 280);
---a-purple: oklch(0.60 0.16 310);   --a-pink:   oklch(0.66 0.16 350);
-```
-
-### 2.7 Radius (scaled by `--r-scale`)
-
-```css
---r-scale: 1;                              /* sharp=0.4, round=1.6 */
---r-sm: calc(4px * var(--r-scale));        /* badges-square, checks, kbd, small btn */
---r-md: calc(6px * var(--r-scale));        /* buttons, inputs, nav items, rows */
---r-lg: calc(9px * var(--r-scale));        /* cards, panels, popovers */
---r-xl: calc(13px * var(--r-scale));       /* large surfaces */
---r-pill: 999px;                            /* pills, badges, dots, toggles */
-```
-
-### 2.8 Density (scaled by `--d-scale`)
-
-```css
---d-scale: 1;                  /* comfortable = 1.2 */
---row-h: calc(30px * var(--d-scale));
---control-h: calc(30px * var(--d-scale));
---control-h-sm: calc(24px * var(--d-scale));
---pad-x: calc(10px * var(--d-scale));
---gap: calc(8px * var(--d-scale));
-```
-
-### 2.9 Type tokens
-
-```css
---font-sans: 'Barlow', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
---font-mono: 'Overpass Mono', ui-monospace, 'SF Mono', Menlo, monospace;
---fs-11:11px; --fs-12:12px; --fs-13:13px; --fs-14:14px; --fs-16:16px;
---fs-18:18px; --fs-20:20px; --fs-24:24px; --fs-30:30px; --fs-40:40px;
-```
-
-Base body: `font-family: var(--font-sans); font-size: 13px; line-height: 1.5; color: var(--fg);`
-Enable figures/features: `font-feature-settings: "cv01","ss01","tnum";` — tabular numerals everywhere.
-
-### 2.10 Shadow & motion
-
-```css
---shadow-xs: 0 1px 1px rgba(24,24,27,0.04);
---shadow-sm: 0 1px 2px rgba(24,24,27,0.06), 0 1px 1px rgba(24,24,27,0.04);
---shadow-md: 0 4px 12px rgba(24,24,27,0.08), 0 1px 2px rgba(24,24,27,0.05);
---shadow-lg: 0 12px 32px rgba(24,24,27,0.12), 0 2px 6px rgba(24,24,27,0.06);
---shadow-pop: 0 8px 28px rgba(24,24,27,0.14), 0 1px 2px rgba(24,24,27,0.08);
---speed: 130ms;
---ease: cubic-bezier(0.2, 0, 0, 1);
+--green:#157a52;  --green-bg:#eaf5ef;  --green-border:#cfe9dd;   /* onaylandı, geçti      */
+--amber:#9a6a16;  --amber-bg:#faf2e2;  --amber-border:#ecdcb8;   /* sıra sende, duraklatıldı */
+--red:#c5392f;    --red-bg:#fbeceb;    --red-border:#f1cfcc;     /* düştü, yıkıcı         */
+--blue:#2563c9;   --blue-bg:#eaf1fc;   --blue-border:#cfe0f6;    /* yazılıyor, bilgi      */
+--violet:#5b4bcc; --violet-bg:#efedfb; --violet-border:#dad5f4;  /* incelemede            */
+--pink:#c02a72;   --pink-bg:#fdebf3;   --pink-border:#f6cede;    /* talep, hareketli girdi */
 ```
 
 ---
 
-## 3. Dark theme
+## 3 · Tipografi
 
-Set `data-theme="dark"`. Overrides (use these exact values):
+İki aile. **Barlow** insanın dilini yazar — başlık, cümle, düğme. **Overpass Mono** makinenin
+sahip olduğu her şeyi — dosya yolu, id, komut, zaman damgası. Ölçüt basit: kullanıcı ezberden
+yazamıyorsa mono.
 
 ```css
-[data-theme="dark"] {
-  --gray-50:#161618; --gray-100:#1a1a1d; --gray-150:#1e1e21; --gray-200:#232327;
-  --gray-300:#2c2c31; --gray-400:#3a3a40; --gray-500:#5b5b63; --gray-600:#8a8a93;
-  --gray-700:#a7a7b0; --gray-800:#cdcdd3; --gray-900:#ededef; --gray-950:#050506;
-
-  --bg:#0a0a0b; --bg-subtle:#0e0e10; --bg-muted:#161618; --bg-inset:#121214;
-  --bg-hover:#1a1a1d; --bg-active:#212126;
-  --border:#222226; --border-strong:#2e2e34; --border-faint:#18181b;
-
-  --fg:#ededef; --fg-secondary:#9c9ca5; --fg-muted:#6e6e77; --fg-faint:#54545c;
-
-  /* neutral accent in dark = near-white pill (Vercel dark) */
-  --accent:#ededef; --accent-hover:#ffffff; --accent-fg:#0a0a0b;
-  --accent-tint:#1c1c20; --accent-tint-border:#2a2a30; --accent-ring:rgba(237,237,239,0.16);
-
-  --green:#46c08a; --green-bg:#10231b; --green-border:#1d3b2e;
-  --amber:#d3a55e; --amber-bg:#241c0e; --amber-border:#3a2e16;
-  --red:#e0726a;   --red-bg:#26120f;   --red-border:#3d201c;
-  --blue:#5e9bf0;  --blue-bg:#0f1c30;  --blue-border:#1c3252;
-  --violet:#8b7df0;--violet-bg:#171530;--violet-border:#272350;
-
-  --shadow-xs:0 1px 1px rgba(0,0,0,0.4);
-  --shadow-sm:0 1px 2px rgba(0,0,0,0.5);
-  --shadow-md:0 6px 16px rgba(0,0,0,0.55);
-  --shadow-lg:0 14px 36px rgba(0,0,0,0.6);
-  --shadow-pop:0 10px 30px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04);
-}
-[data-theme="dark"][data-accent="indigo"] { --accent:#6d6df0; --accent-hover:#7e7ef5; --accent-fg:#fff; --accent-tint:#1a1a3a; --accent-tint-border:#2a2a55; --accent-ring:rgba(109,109,240,0.3); }
-[data-theme="dark"][data-accent="blue"]   { --accent:#3b82f6; --accent-hover:#4f8ff7; --accent-fg:#fff; --accent-tint:#10243f; --accent-tint-border:#1d3a5e; --accent-ring:rgba(59,130,246,0.3); }
-[data-theme="dark"][data-accent="green"]  { --accent:#22a06b; --accent-hover:#28b277; --accent-fg:#fff; --accent-tint:#0f2a1e; --accent-tint-border:#1c4231; --accent-ring:rgba(34,160,107,0.3); }
+--font-sans:'Barlow', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+--font-mono:'Overpass Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 ```
 
-The agent identity hues (`--a-*`) stay identical across themes.
+### Yedi rol
+
+Ölçek sayıyla değil **görevle** adlandırılır. "Hangi boyu kullanayım?" sorusunun cevabı
+vardır: kart adı yazıyorsan `heading`, buton yazıyorsan `ui`.
+
+```css
+--fs-title:18px;    /* sayfanın veya belgenin tek başlığı        h1 */
+--fs-section:16px;  /* belge içindeki bölüm                      h2 */
+--fs-heading:14px;  /* kart adı, drawer başlığı, panel başı      h3 */
+--fs-body:13px;     /* düzyazı, input — taban                        */
+--fs-ui:12px;       /* buton, kontrol, panel kromu                   */
+--fs-label:11px;    /* meta, id, sayaç, footer                       */
+--fs-micro:10px;    /* rozet, mono eyebrow                           */
+```
+
+Taban: `font-family:var(--font-sans); font-size:var(--fs-body); line-height:1.5; color:var(--fg);`
+Rakamlar için `font-feature-settings:"cv01","ss01","tnum";` — tabular, yani bir sütunda alt
+alta gelen sayılar hizalanır.
+
+**İki sözlük, tek ölçek.** Panel kromu rol adıyla konuşur — `Dismiss` düğmesi bir başlık
+değildir. Belgenin içindeki markdown h1/h2/h3 der. İkisi aynı yedi boyu paylaşır, farklı
+kelimelerle.
+
+### Ağırlık
+
+`400` gövde · `500` kontrol ve etiket · `600` bölüm başlığı · `650` sayfa başlığı.
+
+### Mono
+
+Mono, yanındaki düzyazıyla **aynı boyu** kullanır. `.mono` sınıfı yalnız aileyi değiştirir.
 
 ---
 
-## 4. Typography — duties
+## 4 · Boşluk
 
-**Two families, sharp separation of duties.** Barlow carries the product; Overpass Mono carries
-machine speech and numerics. Tight letter-spacing on display sizes, generous line-height on copy.
+Altı adım, hepsi 4'ün katı. Aradaki değerler yoktur — 13px diye bir boşluk yoksa arayüz
+kendi kendine hizalanır.
 
-### Barlow (product)
-
-| Role | Size / weight | Notes |
-|---|---|---|
-| Display | 30px · 600 | `letter-spacing:-0.02em` |
-| Title | 20px · 600 | `letter-spacing:-0.01em` |
-| Heading | 16px · 600 | |
-| Body | 13px · 450 | line-height 1.5 |
-| Small | 12px · 500 | |
-| Micro / label (`.eyebrow`) | 11px · 600 | `letter-spacing:0.06em; text-transform:uppercase; color:var(--fg-faint)` |
-
-### Overpass Mono (machine) — use `.mono` / `var(--font-mono)`
-
-Always mono for: agent handles (`+backend-developer`), timestamps (`12:38 · 2m 03s`),
-IDs (`TR-E01`, `NOT-T01`), file paths (`references/PRD.md`), terminal output, metrics (`12%`),
-counts (`5/9`), keyboard keys. Always tabular figures (`font-feature-settings:"tnum"`).
+```css
+--sp-1:4px;   /* ikon ile yazı arası        */  --sp-4:16px;  /* bölüm içi     */
+--sp-2:8px;   /* kontrol içi, küçük boşluk  */  --sp-5:24px;  /* bölümler arası */
+--sp-3:12px;  /* kart içi padding           */  --sp-6:32px;  /* sayfa kenarı  */
+```
 
 ---
 
-## 5. Components
+## 5 · Köşe, gölge, hareket
 
-All components live in **one stylesheet** (`styles/kortext.css`) shared by the product. Reproduce the class API exactly. Below are the canonical specs — copy the CSS verbatim into your build.
+```css
+--r-sm:4px;    /* kontrol */   --r-md:8px;   /* kart  */
+--r-lg:12px;   /* panel   */   --r-pill:999px; /* rozet */
 
-### 5.1 Buttons — `.btn`
+--shadow-xs:0 1px 1px rgba(24,24,27,0.03);                                  /* sayfadan az yukarıda */
+--shadow-lg:0 6px 18px rgba(24,24,27,0.07), 0 1px 3px rgba(24,24,27,0.04);  /* sayfanın üstünde     */
+:root[data-theme='dark'] { --shadow-lg:0 6px 18px rgba(0,0,0,0.5); }
 
-One primary per view. Primary = accent fill; secondary = bordered surface; ghost disappears until hover.
+--speed:130ms;  --ease:cubic-bezier(0.2, 0, 0, 1);
+```
+
+İki yükseklik yeter: bir şey ya sayfadan **hafifçe ayrık**tır (kontrol), ya da **üstünde
+durur** (drawer, popover). Arası yoktur.
+
+Hareket işlevsel: 130ms geçiş, ve "canlı" için tek bir yavaş nabız (1.8s). Başka animasyon yok.
+
+---
+
+## 6 · Butonlar
+
+Tek boy. İki aile: **solid** kutusunu hep gösterir, **link** ancak üstüne gelince gösterir —
+ve o an solid ikizine dönüşür. Bir ekranda yalnız **bir** birincil düğme olur.
+
+`.btn` her kontrolün taşıdığı **tabandır**: boyut, font, odak halkası, pasif hâl. Tek başına
+kullanılmaz; üstüne her zaman bir varyant biner ve **hover varyantındır**. Tabanın kendi
+hover'ı yoktur — orada bir kural varyantınkini sessizce ezerdi.
 
 ```css
 .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px;
-  height:var(--control-h); padding:0 calc(11px*var(--d-scale));
-  font-size:var(--fs-13); font-weight:500; line-height:1;
-  border-radius:var(--r-md); border:1px solid transparent;
+  height:var(--control-h-sm); padding:0 9.6px;
+  font-family:inherit; font-size:var(--fs-ui); font-weight:500; line-height:1;
+  border-radius:var(--r-sm); border:1px solid transparent;
   background:var(--bg); color:var(--fg); cursor:pointer; white-space:nowrap; user-select:none;
-  transition:background var(--speed) var(--ease), border-color var(--speed) var(--ease), box-shadow var(--speed) var(--ease), color var(--speed) var(--ease); }
+  transition:background var(--speed) var(--ease), border-color var(--speed) var(--ease),
+             box-shadow var(--speed) var(--ease), color var(--speed) var(--ease); }
 .btn:focus-visible { outline:none; box-shadow:0 0 0 3px var(--accent-ring); }
-.btn .ic { width:14px; height:14px; flex:none; }
+.btn:hover { background:none; border-color:transparent; }   /* hover varyantındır */
+.btn[disabled] { opacity:0.45; pointer-events:none; }        /* tek kural, her varyant */
 
-.btn-primary   { background:var(--accent); color:var(--accent-fg); border-color:var(--accent); }
-.btn-primary:hover { background:var(--accent-hover); border-color:var(--accent-hover); }
-.btn-secondary { background:var(--bg); color:var(--fg); border-color:var(--border-strong); box-shadow:var(--shadow-xs); }
-.btn-secondary:hover { background:var(--bg-muted); border-color:var(--gray-400); }
-.btn-ghost     { background:transparent; color:var(--fg-secondary); }
-.btn-ghost:hover { background:var(--bg-hover); color:var(--fg); }
-.btn-danger    { background:var(--bg); color:var(--red); border-color:var(--red-border); }
-.btn-danger:hover { background:var(--red-bg); }
-.btn-success   { background:var(--green-bg); color:var(--green); border-color:var(--green-border); }   /* "Approved" confirmed state */
+/* solid — kutusu hep orada */
+.btn-primary         { background:var(--accent); color:var(--accent-fg); border-color:var(--accent); }
+.btn-primary:hover   { background:var(--accent-hover); border-color:var(--accent-hover); }
+.btn-secondary       { background:var(--bg); color:var(--fg); border-color:var(--border-strong); box-shadow:var(--shadow-xs); }
+.btn-secondary:hover { background:var(--bg-active); border-color:var(--border-hover); }
+.btn-success         { background:var(--green-bg); color:var(--green); border-color:var(--green-border); }
+.btn-success:hover   { background:var(--green-bg); color:var(--green); border-color:var(--green); }
+.btn-danger          { background:var(--red-bg); color:var(--red); border-color:var(--red-border); }
+.btn-danger:hover    { background:var(--red-bg); color:var(--red); border-color:var(--red); }
 
-.btn-sm   { height:var(--control-h-sm); padding:0 calc(8px*var(--d-scale)); font-size:var(--fs-12); border-radius:var(--r-sm); }
-.btn-icon { width:var(--control-h); padding:0; }   /* square; +.btn-sm → width:var(--control-h-sm) */
-.btn[disabled] { opacity:0.45; pointer-events:none; }
+/* link — duruşta kutusu yok, üstüne gelince solid ikizi */
+.btn-link-primary, .btn-link-success, .btn-link-danger {
+  height:var(--control-h-sm); padding:0 9.6px; border-radius:var(--r-sm);
+  background:none; border-color:transparent; }
+.btn-link-primary       { color:var(--fg-secondary); }
+.btn-link-primary:hover { background:var(--bg-active); border-color:var(--border-strong); color:var(--fg); }
+.btn-link-success       { color:var(--green); }
+.btn-link-success:hover { background:var(--green-bg); border-color:var(--green-border); color:var(--green); }
+.btn-link-danger        { color:var(--red); }
+.btn-link-danger:hover  { background:var(--red-bg); border-color:var(--red-border); color:var(--red); }
+
+/* tek istisna: 6px padding'li çipin içindeki × */
+.btn-x       { height:auto; padding:0 4px; font-size:var(--fs-heading); margin-left:auto;
+               background:none; border-color:transparent; color:var(--fg-faint); }
+.btn-x:hover { background:none; border-color:transparent; color:var(--fg-secondary); }
 ```
 
-Leading icon: `<button class="btn btn-secondary"><i class="ic">…</i> New item</button>`.
+| varyant | ne zaman |
+|---|---|
+| `.btn-primary` | ekrandaki asıl eylem — devam ettiren tek düğme |
+| `.btn-secondary` | alternatif eylem — vazgeç, kapat, reddet |
+| `.btn-success` | onaylama — yalnız **Approve** |
+| `.btn-danger` | geri alınamayan işlem |
+| `.btn-link-primary` | ikincil, sessiz — Close, Edit, Ask, Add note |
+| `.btn-link-success` | olumlu ama sessiz — Archive |
+| `.btn-link-danger` | yıkıcı ama sessiz — tehlike bölgesi |
+| `.btn-x` | çip içindeki ×. Aileyi taşır, boyunu taşımaz; hover'ı yoktur çünkü nişan aldığın bir kontrol değil, okuduğun bir satırda durur |
 
-### 5.2 Badges & pills — `.badge`
+**Eylem sırası** bir talebin altında: `Apply · Dismiss · Add note · Ask` — önce karar, sonra
+karara ek, en sonda soru.
 
-```css
-.badge { display:inline-flex; align-items:center; gap:5px; height:20px; padding:0 8px;
-  font-size:var(--fs-12); font-weight:500; line-height:1; border-radius:var(--r-pill);
-  border:1px solid var(--border); background:var(--bg-muted); color:var(--fg-secondary); white-space:nowrap; }
-.badge .dot { width:6px; height:6px; border-radius:999px; background:var(--fg-muted); flex:none; }
-.badge-square { border-radius:var(--r-sm); }            /* IDs / versions */
-.badge-solid  { background:var(--accent); color:var(--accent-fg); border-color:var(--accent); }
-.badge-count  { min-width:18px; height:18px; padding:0 5px; justify-content:center;
-  font-family:var(--font-mono); font-size:var(--fs-11); font-weight:500;
-  background:var(--bg-active); color:var(--fg-secondary); border-color:transparent; }
-```
+---
 
-**Status flavour classes** (apply to `.badge`, `.kc-type`, `.st-pill`, `.banner`):
-
-```css
-.s-green{color:var(--green);background:var(--green-bg);border-color:var(--green-border);}
-.s-amber{color:var(--amber);background:var(--amber-bg);border-color:var(--amber-border);}
-.s-red{color:var(--red);background:var(--red-bg);border-color:var(--red-border);}
-.s-blue{color:var(--blue);background:var(--blue-bg);border-color:var(--blue-border);}
-.s-violet{color:var(--violet);background:var(--violet-bg);border-color:var(--violet-border);}
-.s-neutral{color:var(--fg-secondary);background:var(--bg-muted);border-color:var(--border);}
-.s-green .dot{background:var(--green);} .s-amber .dot{background:var(--amber);}
-.s-red .dot{background:var(--red);}     .s-blue .dot{background:var(--blue);}
-.s-violet .dot{background:var(--violet);}
-```
-
-**Live pulse** (use on the dot inside an "active" badge):
+## 7 · Girdiler
 
 ```css
-.dot-live{position:relative;}
-.dot-live::after{content:"";position:absolute;inset:-3px;border-radius:999px;
-  border:1px solid currentColor;opacity:0.5;animation:kx-pulse 1.8s var(--ease) infinite;}
-@keyframes kx-pulse{0%{transform:scale(0.6);opacity:0.6}100%{transform:scale(1.7);opacity:0}}
-```
+--control-h:36px;      /* input, select */
+--control-h-sm:29px;   /* her buton — §6, tek boy vardır */
 
-### 5.3 Agent token — `.agent` (three forms)
-
-Always monospace, with a colored identity dot. Three forms: **token** (inline in logs),
-**chip** (bordered, assignable), **avatar/initial** (square mono initials).
-
-```css
-.agent { display:inline-flex; align-items:center; gap:6px; font-family:var(--font-mono);
-  font-size:var(--fs-12); font-weight:500; color:var(--fg-secondary); white-space:nowrap; }
-.agent .adot { width:7px; height:7px; border-radius:999px; flex:none;
-  box-shadow:0 0 0 2px color-mix(in oklab, currentColor 14%, transparent); }
-.agent.chip { height:22px; padding:0 9px 0 7px; border-radius:var(--r-pill);
-  border:1px solid var(--border); background:var(--bg-subtle); }
-.avatar { width:24px; height:24px; border-radius:var(--r-sm); flex:none;
-  display:inline-flex; align-items:center; justify-content:center;
-  font-family:var(--font-mono); font-size:11px; font-weight:600; background:var(--gray-900); color:#fff; }
-```
-
-The `.adot` color is set inline per agent, e.g. `style="background:var(--a-blue);color:var(--a-blue)"`
-(color drives the soft ring). Avatar background uses the same `--a-*` hue. **`+prime` (the human)
-is the exception** — it renders as a solid accent chip: `style="background:var(--accent);color:var(--accent-fg);border-color:var(--accent)"`.
-
-### 5.4 Inputs — `.input`, `.select`, `.input-group`, `.kbd`
-
-```css
-.input,.select { height:var(--control-h); width:100%; padding:0 10px; font-size:var(--fs-13);
-  color:var(--fg); background:var(--bg); border:1px solid var(--border-strong);
-  border-radius:var(--r-md); outline:none;
-  transition:border-color var(--speed) var(--ease), box-shadow var(--speed) var(--ease); }
+.input,.select { height:var(--control-h); width:100%; padding:0 10px; font-size:var(--fs-body);
+  border:1px solid var(--border-strong); border-radius:var(--r-sm);
+  background:var(--bg); color:var(--fg); }
+.input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-ring); }
 .input::placeholder { color:var(--fg-faint); }
-.input:focus,.select:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-ring); }
-.input-group { position:relative; display:flex; align-items:center; }
-.input-group .ic-lead { position:absolute; left:9px; width:15px; height:15px; color:var(--fg-faint); pointer-events:none; }
-.input-group .input { padding-left:30px; }
-.kbd { display:inline-flex; align-items:center; gap:1px; height:18px; padding:0 5px;
-  font-family:var(--font-mono); font-size:11px; color:var(--fg-muted);
-  background:var(--bg-muted); border:1px solid var(--border); border-radius:var(--r-sm); white-space:nowrap; }
-```
 
-Search is first-class (⌘K) — show a trailing `.kbd` inside the input group.
-
-### 5.5 Toggle & checkbox
-
-```css
-.toggle { position:relative; display:inline-block; width:34px; height:20px; flex:none; cursor:pointer; }
-.toggle input { position:absolute; opacity:0; inset:0; margin:0; cursor:pointer; }
-.toggle .track { position:absolute; inset:0; border-radius:999px; background:var(--gray-300);
-  transition:background var(--speed) var(--ease); }
-.toggle .thumb { position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:999px;
-  background:#fff; box-shadow:var(--shadow-sm);
-  transition:transform var(--speed) var(--ease), background var(--speed) var(--ease); }
-.toggle input:checked + .track { background:var(--accent); }
-.toggle input:checked + .track + .thumb { transform:translateX(14px); background:var(--accent-fg); }
-.toggle input:focus-visible + .track { box-shadow:0 0 0 3px var(--accent-ring); }
-[data-theme="dark"] .toggle .thumb { background:#ededef; }
-
-.check { width:16px; height:16px; border-radius:var(--r-sm); border:1px solid var(--border-strong);
-  background:var(--bg); display:inline-flex; align-items:center; justify-content:center; cursor:pointer;
-  transition:background var(--speed) var(--ease), border-color var(--speed) var(--ease); }
-.check.on { background:var(--accent); border-color:var(--accent); }
-.check svg { width:11px; height:11px; color:#fff; opacity:0; }
-.check.on svg { opacity:1; }
-```
-
-**Canonical off-state thumb** (per design decision): dark knob + white ring in light, white knob + dark ring in dark.
-
-```css
-.toggle input:not(:checked) + .track + .thumb { background:#18181b; box-shadow:0 0 0 1.5px #fff, var(--shadow-sm); }
-[data-theme="dark"] .toggle input:not(:checked) + .track + .thumb { background:#fff; box-shadow:0 0 0 1.5px #18181b, var(--shadow-sm); }
-```
-
-### 5.6 Segmented control & tabs
-
-```css
 .seg { display:inline-flex; padding:2px; gap:2px; background:var(--bg-muted);
   border:1px solid var(--border); border-radius:var(--r-md); }
-.seg button { height:calc(24px*var(--d-scale)); padding:0 10px; border:none; background:transparent;
-  font-size:var(--fs-12); font-weight:500; color:var(--fg-muted);
-  border-radius:calc(var(--r-md) - 2px); cursor:pointer;
-  transition:background var(--speed) var(--ease), color var(--speed) var(--ease); }
+.seg button { height:29px; padding:0 11px; border:none; background:transparent;
+  font-family:inherit; font-size:var(--fs-ui); font-weight:500; color:var(--fg-muted);
+  border-radius:calc(var(--r-md) - 2px); cursor:pointer; white-space:nowrap; }
 .seg button:hover { color:var(--fg-secondary); }
 .seg button.on { background:var(--bg); color:var(--fg); box-shadow:var(--shadow-xs); }
-
-.tabs { display:flex; gap:2px; border-bottom:1px solid var(--border); }
-.tab { position:relative; height:34px; padding:0 11px; display:inline-flex; align-items:center; gap:7px;
-  font-size:var(--fs-13); font-weight:500; color:var(--fg-muted); cursor:pointer; border:none; background:transparent; }
-.tab:hover { color:var(--fg-secondary); }
-.tab.on { color:var(--fg); }
-.tab.on::after { content:""; position:absolute; left:6px; right:6px; bottom:-1px; height:2px; background:var(--accent); border-radius:2px; }
 ```
 
-### 5.7 Nav item & rows
-
-```css
-.nav-item { display:flex; align-items:center; gap:9px; height:var(--row-h); padding:0 9px;
-  border-radius:var(--r-md); font-size:var(--fs-13); font-weight:450; color:var(--fg-secondary);
-  cursor:pointer; user-select:none;
-  transition:background var(--speed) var(--ease), color var(--speed) var(--ease); }
-.nav-item .ic { width:16px; height:16px; flex:none; color:var(--fg-muted); transition:color var(--speed) var(--ease); }
-.nav-item:hover { background:var(--bg-hover); color:var(--fg); }
-.nav-item:hover .ic { color:var(--fg-secondary); }
-.nav-item.active { background:var(--bg-active); color:var(--fg); font-weight:550; }
-.nav-item.active .ic { color:var(--fg); }
-
-.row { display:flex; align-items:center; gap:10px; height:var(--row-h); padding:0 10px;
-  border-radius:var(--r-md); cursor:pointer; transition:background var(--speed) var(--ease); }
-.row:hover { background:var(--bg-hover); }
-.row.active { background:var(--bg-active); }
-```
-
-### 5.8 Card / panel / progress
-
-```css
-.card { background:var(--bg); border:1px solid var(--border); border-radius:var(--r-lg); }
-.card-pad { padding:calc(16px*var(--d-scale)); }
-.panel-head { display:flex; align-items:center; justify-content:space-between; gap:8px;
-  padding:calc(11px*var(--d-scale)) calc(14px*var(--d-scale)); border-bottom:1px solid var(--border); }
-.panel-title { font-size:var(--fs-13); font-weight:600; color:var(--fg); white-space:nowrap; }
-
-.progress { height:6px; border-radius:999px; background:var(--bg-active); overflow:hidden; }
-.progress > span { display:block; height:100%; border-radius:999px; background:var(--accent); }
-.progress.thin { height:4px; }
-```
-
-### 5.9 Kanban card — `.kcard`
-
-```css
-.kcard { background:var(--bg); border:1px solid var(--border); border-radius:var(--r-md);
-  padding:calc(10px*var(--d-scale)); box-shadow:var(--shadow-xs); cursor:grab;
-  transition:border-color var(--speed) var(--ease), box-shadow var(--speed) var(--ease), transform var(--speed) var(--ease); }
-.kcard:hover { border-color:var(--border-strong); box-shadow:var(--shadow-sm); }
-```
-
-Card anatomy: type chip (top-left) + ID badge-square (top-right) → title (13px/500) → agent token →
-footer with dependency count (mono) + gate squares. Epic cards add `.bg-subtle`, bold title, and a
-`.progress.thin` + `count/total` + `%` row. Type chip (`.kc-type`) uses status flavours:
-**Epic→s-violet, Task→s-blue, Debt→s-amber, Bug→s-red**.
-
-### 5.10 Gate squares
-
-Six gates per item — letters `A C D S Q U` (Architecture, Code, Design, Security, QA, UAT).
-
-```css
-.gate { width:18px; height:18px; border-radius:5px; border:1px solid var(--border); background:transparent;
-  display:inline-flex; align-items:center; justify-content:center;
-  font-family:var(--font-mono); font-size:10px; font-weight:600; color:var(--fg-faint); }
-.gate.g-pass { color:var(--green); border-color:var(--green-border); background:var(--green-bg); }
-.gate.g-fail { color:var(--red);   border-color:var(--red-border);   background:var(--red-bg); }
-.gate.g-todo { color:var(--fg-faint); border-color:var(--border); background:transparent; }
-```
-
-### 5.11 Terminal
-
-```css
-.terminal { font-family:var(--font-mono); font-size:var(--fs-12); line-height:1.65;
-  background:var(--gray-950); color:#d6d6da; border-radius:var(--r-lg); }
-[data-theme] .terminal { background:var(--gray-950); }
-.terminal .t-dim{color:#6f6f78;} .terminal .t-green{color:#4ec38a;} .terminal .t-amber{color:#d9a85a;}
-.terminal .t-red{color:#e0726a;} .terminal .t-blue{color:#6aa6f0;}
-```
-
-The terminal is **always dark** (`--gray-950`), even in light theme.
-
-### 5.12 Notifications
-
-**Toasts** (transient, top-right): white card, 3px left border in the status flavour, mono refs.
-
-```css
-.toast { display:flex; gap:11px; align-items:flex-start; padding:12px 12px 12px 13px;
-  background:var(--bg); border:1px solid var(--border); border-left-width:3px;
-  border-radius:var(--r-lg); box-shadow:var(--shadow-md); }
-.toast.t-success{border-left-color:var(--green);}  .toast.t-success > svg.ti{color:var(--green);}
-.toast.t-info{border-left-color:var(--blue);}       .toast.t-info > svg.ti{color:var(--blue);}
-.toast.t-warn{border-left-color:var(--amber);}      .toast.t-warn > svg.ti{color:var(--amber);}
-.toast.t-error{border-left-color:var(--red);}        .toast.t-error > svg.ti{color:var(--red);}
-```
-
-**Inline banner** (persistent, top of view): `.banner` + a status flavour class, icon + text + optional action button.
-**Bell list**: panel with header (`.badge-count`), `.notif-item` rows; unread rows get `background: color-mix(in oklab, var(--accent) 6%, var(--bg))` and an accent `.notif-dot`.
-
-### 5.13 Misc
-
-```css
-.hr { height:1px; background:var(--border); border:0; margin:0; }
-.vr { width:1px; align-self:stretch; background:var(--border); }
-.eyebrow { font-size:var(--fs-11); font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:var(--fg-faint); }
-.tip { font-size:var(--fs-12); color:#fff; background:var(--gray-900); padding:4px 8px; border-radius:var(--r-sm); box-shadow:var(--shadow-md); }
-/* utilities */
-.muted{color:var(--fg-muted);} .faint{color:var(--fg-faint);} .secondary{color:var(--fg-secondary);}
-.flex{display:flex;} .items-center{align-items:center;} .gap{gap:var(--gap);}
-.grow{flex:1 1 auto;min-width:0;} .truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-```
-
-Custom scrollbars: add `.kx-scroll` to scroll containers
-(`::-webkit-scrollbar{width:10px}`, thumb `var(--gray-300)` 999px radius with 3px `--bg` border).
+Segmented control, aralarından **birinin** seçili olduğu durumlar içindir. Üç düğme "hangisine
+basıldı?" diye sordurur; segment "hangisi açık" diye gösterir. Tema anahtarı budur.
 
 ---
 
-## 6. Iconography
+## 8 · Durum sözlüğü
 
-Icons come from **Lucide** (lucide.dev, MIT). Served through one helper `icon(name, className)`
-that maps a kortext-semantic name → Lucide glyph and returns inline SVG with `stroke="currentColor"`,
-so every icon inherits its surrounding text color and size.
+Sistemin kalbi. Bir belge **tam olarak bir durumdadır** — bu onun nerede olduğudur. Üstüne
+binen rozetler ise **ne borcu olduğunu** söyler. İki farklı soru, o yüzden iki ayrı gösterim.
 
-- **Grid 24px · stroke 1.75px · round caps & joins · `fill:none`.**
-- Size is set via CSS `width/height`, never baked in. Default **16px**; scale 14 / 16 / 20 / 24.
-- Render: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">…</svg>`.
+### Durumlar — biri, yalnız biri
 
-Semantic name → Lucide mapping (the set actually used — add new ones by pointing a kortext name at any Lucide glyph):
+| durum | ne demek | renk |
+|---|---|---|
+| `waiting` | sırasını bekliyor, zincir henüz gelmedi | nötr |
+| `writing` | ajan şu an yazıyor | mavi, yavaş nabız |
+| `paused` | yazım durduruldu | amber |
+| `pending` | yazıldı, onayını bekliyor | mor |
+| `approved` | onayladın | yeşil |
+| `n/a` | değerlendirildi, bilerek atlandı | rozetsiz, silik çerçeve |
 
-| Group | name → Lucide |
+`n/a` bir renk değildir, rengin yokluğudur: metnin kendi mürekkebinde bir çerçeve, palete
+katılmadan "atlandı" der.
+
+### Rozetler — durumun üstüne biner
+
+| rozet | ne demek | renk |
+|---|---|---|
+| `failed` | son deneme düştü, sebep belgede yazıyor | kırmızı |
+| `change request` | başka bir belge bunun değişmesini istiyor | pembe |
+| `dependent` | girdisi oynuyor; oturunca yeniden okunacak | pembe, içi boş |
+
+**Rozet grubu ezer.** `failed` ve `change request` taşıyan belge, durumu ne olursa olsun
+**Needs you**'ya çıkar. Tek istisna `dependent`: o bir iş değil haberdir, belgeyi yerinden
+oynatmaz.
+
+### Gruplar
+
+`Needs you` → `In progress` → `Next` → `Approved` → `Not applicable`. Son ikisi varsayılan
+kapalıdır: biri bitmiş, öteki bilerek atlanmış.
+
+---
+
+## 9 · Satırlar ve kartlar
+
+Belge satırının okuma sırası soldan sağa: **adı**, **yazarı**, **ne borcu var**, **nerede**.
+Durum en sağdadır çünkü en son bakılan şeydir — önce hangi belge olduğunu, sonra sende bir iş
+olup olmadığını görürsün.
+
+```html
+<button class="kx-doc-row">
+  <span class="kx-doc-name">API</span>
+  <span class="kx-doc-author mono">architect</span>
+  <span class="kx-doc-spacer"></span>
+  <span class="kx-badge kx-badge-change">change request</span>
+  <span class="kx-status kx-status-approved">approved</span>
+</button>
+```
+
+Komut kartı (`.kx-cmd-card`) tıklanınca içeriğini kopyalar; ipucu kartın içinde yazar,
+ayrı bir düğme yoktur.
+
+---
+
+## 10 · Bantlar
+
+Belgenin üstünde duran bilgi şeritleri. **Rengi, kimin sırada olduğunu söyler.**
+
+| bant | renk | anlamı |
+|---|---|---|
+| Hazırlık kapısı `.kx-gate` | mavi zemin + mavi yazı, çerçevesiz | sistem okuyor |
+| Talep `.kx-doc-changebar` | pembe zemin, pembe çerçeve ve yazı | bir karar bekleniyor |
+| Bağımlılık `.kx-doc-dependbar` | zeminsiz, düz pembe çerçeve | yalnız haber |
+| Açık soru `.kx-doc-askbar` | amber | sende, ve onayı kilitler |
+
+Talep bandı `change request` rozetiyle **aynı rengi** taşır: satırda rozeti görüp belgeyi
+açtığında aynı pembeyi bulursun. Bağımlılık bandı da `dependent` rozetinin büyük hâlidir —
+içi boş, çerçeveli.
+
+---
+
+## 11 · Belge görünümü
+
+Panelin render ettiği markdown. Aynı yedi boyu kullanır: gövde `--fs-body`, başlıklar
+`--fs-title` / `--fs-section` / `--fs-heading`.
+
+İki tür borç, iki renk:
+
+- **amber blok** (`.open-q`) → `## Open Questions for prime` — senin cevaplaman gereken
+- **pembe blok** (`.req-q`) → `## Revision Requests` — başka bir belgeye yazılmış talep
+
+İkisi aynı rengi paylaşırsa hangisinin sende olduğu kaybolur.
+
+---
+
+## 12 · Yazı dili
+
+- **Başlıklar, kod, adlar — her zaman İngilizce.** Bölüm başlıkları yapıdır ve başka belgeler
+  onlara adıyla atıf yapar. Dosya adı, komut, tablo kolonu, API yolu, branch adı da öyle.
+- **Düzyazı brief'in dilinde.** Belgeyi okuyan insan hangi dili konuşuyorsa o.
+- **Ürün metni arayüz dilinde.** Kullanıcının okuduğu her string — buton yazısı, hata mesajı,
+  e-posta. Bu, belgenin dilinden farklı olabilir.
+- **Bir şeyin adı çevrilmez.** `PRD.md` her dilde `PRD.md`'dir.
+
+---
+
+## 13 · Kurallar
+
+**Yap**
+- Token'dan kur — bir token'ın karşıladığı değeri elle yazma
+- Ekranda tek birincil düğme bırak
+- Yıkıcı eylemi sayfanın en altına, sessiz link olarak koy
+- Durum ile borcu ayrı göster
+- Makinenin sahip olduğu her şeyi mono yaz
+- Açık temayı varsayılan tut, koyuyu her değişiklikte kontrol et
+
+**Yapma**
+- Yeni bir durum rengi icat etme — set kapalı
+- Persona veya kategori için renk üretme
+- Yarım piksel boy kullanma
+- Aynı ekranda iki farklı düğme boyu kullanma
+- Bir uyarıyı yalnız renge yükleme — metni de söylesin
+- Gradyan, emoji, dekoratif SVG kullanma
+
+---
+
+## Ek A — Bu sistemden çıkanlar (2026-09-03)
+
+| çıkan | sebep |
 |---|---|
-| **Navigation** | `dashboard`→LayoutDashboard, `board`→SquareKanban, `memory`→Brain, `foundation`→FolderRoot, `references`→FolderBookmark, `reports`→FolderCheck, `folderOpen`→FolderOpen, `team`→Users, `search`→Search, `bell`→Bell, `sidebar`→PanelLeft |
-| **Engine & settings** | `setup`→Cog, `project`→FolderKanban, `rocket`→Rocket, `integrations`→Blocks, `environments`→Layers, `models`→Cpu, `llmauth`→KeyRound, `agents`→Bot, `askAi`→BotMessageSquare, `rules`→Scale, `workflows`→Workflow, `hooks`→Webhook, `scripts`→FileCode, `worktree`→GitBranch, `review`→ShieldUser, `terminal`→Terminal, `clipboard`→ClipboardPaste |
-| **Theme** | `sun`→Sun, `moon`→Moon, `eclipse`→Eclipse |
-| **Item types** | `epic`→Bookmark, `task`→SquareCheck, `bug`→Bug, `debt`→Coins |
-| **Item detail** | `itemType`→LaptopMinimalCheck, `version`→Box, `testUrl`→SquareArrowOutUpRight, `childItem`→ListTree, `activity`→Activity, `comment`→MessageCircle, `send`→Send, `description`→TextAlignStart, `deps`/`link2`→Link2, `acceptance`→ListChecks, `gates`→LayoutList, `cost`→Currency |
-| **Platforms** | `web`→Globe, `ios`→Smartphone, `android`→TabletSmartphone, `desktop`→Monitor, `api`/`server`→Server, `cli`→SquareTerminal |
-| **Integrations** | `github`→GitMerge, `vercel`→Triangle, `supabase`/`database`→Database, `sentry`→Radio, `stripe`→CreditCard, `firebase`→Flame, `slack`→MessageSquare |
-| **Files & visibility** | `fileText`→FileText, `file`→File, `folder`→Folder, `public`/`eye`→Eye, `secret`→EyeOff, `lock`→LockKeyhole, `unlock`→LockKeyholeOpen |
-| **Actions** | `refresh`→RefreshCw, `play`→Play, `pause`→Pause, `copy`→Copy, `more`→Ellipsis, `moreV`→EllipsisVertical, `plus`→Plus, `check`→Check, `x`→X, `arrowRight`/`arrowLeft`, `chevron*`→Chevron*, `quote`→Quote, `shield`→Shield, `info`→Info |
-| **Status glyphs** | `stTodo`→CircleDashed, `stProgress`→CircleEllipsis, `stReview`→CircleDot, `stDone`→CircleCheck, `stFail`→CircleAlert, `circle`→Circle |
-| **Custom (filled)** | `dot` = `<circle cx="12" cy="12" r="4.5" fill="currentColor" stroke="none"/>` |
+| `data-accent` · `data-density` · `data-radius` | Panel hiçbirini yazmıyordu; üçü de hiç değişemezdi. Ölçekledikleri değerler artık düz. |
+| 12 adımlı gri rampa | Semantik token'ları beslemiyordu, ikisi kullanılıyordu. O ikisi `--border-hover` ve `--scroll-thumb` oldu. |
+| 10 persona rengi (`--a-*`) | v6 dashboard'ıyla birlikte öldü. Persona bugün mono gri bir handle. |
+| `--shadow-sm/md/pop` · `--r-xl` · `--row-h` · `--pad-x` · `--gap` | Hiç kullanılmadı. |
+| `.btn-sm` | 21 kullanımın 19'undaydı — neredeyse hep açık olan bir modifier, modifier değildir. Küçük boy artık boyun kendisi. |
+| `.btn-ghost` · `.btn-icon` | Tanımlıydı, hiç kullanılmadı. |
+| Çıplak `.btn` varyantı | Duruşta kutusu olmayınca link'in ta kendisiydi. |
+| `.kx-link*` ailesi | `.btn-link*` oldu ve 10.5px mono olmaktan çıktı — buton olan bir link buton gibi okunmalı. |
+| `--fs-11 … --fs-40` | On token, yedi rol oldu. |
+| §7'nin eski sözlüğü (16 persona, gate kareleri, board kolonları, item tipleri) | v6 ekranlarına aitti; v1.0'da karşılıkları yok. Yerine §8. |
+| Lucide ikon haritası | Panel hiç SVG ikon kullanmıyor; birkaç metin glifi (`▶ ⏸ × ← →`) yeterli oldu. |
 
----
+## Ek B — Dokümanda var, kodda yok
 
-## 7. Vocabulary — fixed sets (one canonical form each)
+Bunlar spec olarak burada duruyor ama `ui/src/index.css` henüz uygulamıyor. Bir spec'in
+uygulanmaması, kullanılmayan bir token'la aynı arızadır — listeyi kapatmak bir iş kalemidir.
 
-Every concept has **exactly one canonical visual form** so the same word always reads the same. Every color is one of the status flavours; nothing invents a hue.
-
-| Vocabulary | Canonical form | Values & flavours |
-|---|---|---|
-| **File status** (lifecycle) | **pill** (`.st-pill`) | `queued`(neutral) → `drafting`(amber) → `pending`(blue) → `approved`(green) |
-| **Agent status** | **badge + dot** in cards/panels · **dot + count** in bottom status bar | `active`(green, **live pulse**) · `queued`(amber) · `blocked`(red) |
-| **Item status** (board columns) | **badge + dot** | `to do`(neutral) · `in progress`(amber) · `test`(blue) · `review`(violet) · `done`(green) |
-| **Item type** | **chip** (`.kc-type`, top-left of card) | `Epic`(violet) · `Task`(blue) · `Debt`(amber) · `Bug`(red) |
-| **Roles / who speaks** | **mono token** (`.agent`) | `+prime` = the human (solid accent chip) · `system` & `engine` = machine actors (muted dot) · `+persona` = any of the 16 agents (identity dot) |
-| **Item duties** | **text label** + the agent token it points at | Assignee · Approver · Gatekeeper · Reviewer |
-| **Gate status** | **square** on cards (`.gate`, letter) + label in detail | 6 gates `A C D S Q U` · `pending`(todo) / `passed`(g-pass) / `failed`(g-fail) |
-
-### The roster — `+prime` + 16 agent personas
-
-`+prime` is the human (initials `pr`, solid accent). Each agent: `+<id>` token, identity hue, square avatar with initials.
-
-| Agent | Role | Hue |
-|---|---|---|
-| `+operation-manager` | Orchestration | indigo |
-| `+product-manager` | Product | purple |
-| `+engineering-manager` | Engineering lead | red |
-| `+delivery-manager` | Delivery | amber |
-| `+designer` | Design | pink |
-| `+growth-expert` | Growth | green |
-| `+copywriter` | Content | amber |
-| `+backend-developer` | Backend | blue |
-| `+frontend-developer` | Frontend | cyan |
-| `+db-admin` | Database | teal |
-| `+devops-engineer` | DevOps | orange |
-| `+security-engineer` | Security | red |
-| `+qa-engineer` | QA | green |
-| `+legal-expert` | Legal | purple |
-| `+compliance-expert` | Compliance | teal |
-| `+env-agent` | Environment | orange |
-
-Avatar/token initials = first letter of first word + first letter of second word, lowercase
-(e.g. `backend-developer` → `bd`, `db-admin` → `da`).
-
----
-
-## 8. Hard rules (do / don't)
-
-**Do**
-- Build everything from tokens. Reference `var(--…)`; never hard-code a color the tokens cover.
-- One primary button per view.
-- Mono for ALL machine output (handles, IDs, times, paths, metrics, counts, keys).
-- Color only as signal — status flavours + agent identity dots.
-- 8-pt rhythm; functional motion only (130ms `var(--ease)`; the 1.8s pulse for "live" alone).
-- Keep light-mode the default; verify dark works via the override block.
-
-**Don't**
-- No gradients, no emoji, no decorative/illustrative SVG.
-- No new fonts (Barlow + Overpass Mono only; the product also ships Hanken Grotesk/JetBrains Mono and IBM Plex as optional `data-font` swaps — don't introduce others).
-- Don't use agent identity hues (`--a-*`) as text or surface fills — dots/avatars only.
-- Don't invent status colors outside the five flavours.
-- Don't give a vocabulary a second visual form — one canonical form each (§7).
-- No rounded-card-with-left-accent-border tropes (toasts' 3px left border is the *only* sanctioned use).
+- **§3 yedi rol** — stil dosyası hiçbir `--fs-*` token'ı tanımlamıyor; her boy elle yazılmış
+  `px` (bugün 15 farklı boy, altısı yarım piksel).
+- **§4 boşluk ölçeği** — hiç yok; her padding elle yazılmış.
+- **§6 buton seti** — kod hâlâ eski tabanı (`--control-h` + `.btn-sm`) ve `.kx-link*` ailesini taşıyor.
+- **§7 `.seg`** — v6 devrinden beri tanımlı, hiç yazılmamış.
+- **§1 tema** — `<html>` hiçbir `data-theme` yazmıyor ve `prefers-color-scheme` sorgusu yok;
+  panel kalıcı olarak açık temada.
