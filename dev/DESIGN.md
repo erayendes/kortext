@@ -57,7 +57,9 @@ has not run yet, which is a flash of the wrong theme on every load. Duplication
 is the cheaper honesty.
 
 `data-theme` is set by one control in the panel header — **Auto · Light · Dark** —
-and persisted. Unset means auto, which is what a first visit gets.
+and persisted. Unset means auto, which is what a first visit gets. The control is
+the segmented control of §5.6, not three buttons in a row: three buttons ask
+which one is pressed, a segment shows which one is on.
 
 **Always build from the tokens below — never hard-code a value a token covers.**
 That rule was in this document already and the stylesheet broke it: all ten type
@@ -420,6 +422,9 @@ Search is first-class (⌘K) — show a trailing `.kbd` inside the input group.
 ```
 
 ### 5.6 Segmented control & tabs
+
+> **Specified here since the v6 handoff and never built** — the panel improvised a
+> row of buttons instead. It is the theme switch in §1, so it is real now.
 
 ```css
 .seg { display:inline-flex; padding:2px; gap:2px; background:var(--bg-muted);
