@@ -1,7 +1,7 @@
 {
   "name": "kortext",
   "version": "3.1.0",
-  "description": "Project brain for AI-driven development — brief to analysis docs, approvals, and reports. Passive: your own coding agent does the work.",
+  "description": "The project brain for AI-driven development: a brief becomes approved analysis documents, then your own agent CLI (Claude Code, Codex, Gemini) writes the code.",
   "type": "module",
   "private": false,
   "bin": {
@@ -43,7 +43,9 @@
     "documentation",
     "claude",
     "codex",
-    "mcp",
+    "gemini",
+    "agents-md",
+    "agentic-coding",
     "local-first"
   ],
   "author": "Eray Endes",
