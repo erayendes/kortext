@@ -206,7 +206,7 @@ No fs-watch — the panel polls (docs 3s, transfer 4s, handshake 5s).
 | `GET …/readiness` | the gate's standing verdict + whether a check is out |
 | `POST …/pause` | pause / continue (continue kicks the chain) |
 | `POST …/restart` | pause, abort, wipe `.kortext/` + `.kopeng/`, re-scaffold, land paused |
-| `POST …/cancel` | pause, abort, then remove what kortext wrote (`.kortext/`, `.kopeng/`, the `AGENTS.md` block, the `CLAUDE.md` pointer) + the row |
+| `POST …/cancel` | pause, abort, then remove what kortext wrote (`.kortext/`, `.kopeng/`, the `AGENTS.md` block, the `CLAUDE.md` pointer, the project's logs) + the row |
 | `POST …/archive` | shelve — row and repo both stay |
 | `GET …/docs` | document list (+ idempotent self-heal scaffold) |
 | `GET \| PUT …/docs/content` | read · write as-is (`settleRequests` closes the demands) |
@@ -256,7 +256,7 @@ enforces that and the ordering.
 
 ## 9 · Verification
 
-`npm test` → `node:test`, **59 tests**, six files: `order` (a step cannot read a document
+`npm test` → `node:test`, **60 tests**, six files: `order` (a step cannot read a document
 written after it; personas match their step; skeletons keep both required sections) · `docs`
 (frontmatter, request parsing, open questions, ordering) · `runner` (producibility, prompt
 assembly, job lifecycle, nothing starts after an abort) · `readiness` (floor threshold, template recognition, source counting)

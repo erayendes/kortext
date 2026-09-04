@@ -97,7 +97,8 @@ installed, and the dropdown shows you what it fell back to.
 - **Restart** wipes `.kortext/` and starts the analysis over, from the same brief.
 - **Archive** puts a finished project on a shelf. The row stays, the repo is untouched.
 - **Cancel** removes what Kortext wrote — `.kortext/`, its block in `AGENTS.md`, its pointer
-  line in `CLAUDE.md` — and unregisters the project. Anything you wrote yourself stays.
+  line in `CLAUDE.md`, and the project's logs — and unregisters the project. Anything you wrote
+  yourself stays.
 
 ## The handshake
 

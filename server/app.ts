@@ -31,6 +31,7 @@ import {
   listJobs,
   nextStep,
   proposeRevision,
+  removeRunLogs,
   recheckDependents,
   reviseDoc,
   runPlanning,
@@ -255,6 +256,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       rmSync(join(project.repo_path, '.kortext'), { recursive: true, force: true });
       rmSync(join(project.repo_path, '.kopeng'), { recursive: true, force: true });
       uninstallContract(project.repo_path);
+      removeRunLogs(project.id);
       removeProject(db, project.id);
       // The row is gone, so nothing can pause the loop any more; anything that
       // slipped through between the abort and here is killed now.

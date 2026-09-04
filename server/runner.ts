@@ -555,6 +555,23 @@ export async function runPlanning(
   }
 }
 
+/**
+ * Cancel promises to take back everything kortext wrote, and the logs are
+ * kortext's writing too: without this they outlive the project they belong to,
+ * in a directory nothing ever cleans.
+ */
+export function removeRunLogs(projectId: number, dir = join(homedir(), '.kortext', 'logs')): void {
+  let entries: string[];
+  try {
+    entries = readdirSync(dir);
+  } catch {
+    return; // no logs directory yet
+  }
+  for (const f of entries.filter((f) => f.startsWith(`p${projectId}-`))) {
+    rmSync(join(dir, f), { force: true });
+  }
+}
+
 // A server restart orphans 'running' rows — settle them so Retry works.
 export function failStaleJobs(db: Database.Database): void {
   db.prepare(

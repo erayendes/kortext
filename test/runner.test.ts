@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  readdirSync,
   chmodSync,
   existsSync,
   mkdirSync,
@@ -624,5 +625,19 @@ printf -- '---\\nstatus: draft\\nauthor: +mock\\n---\\n\\n# S\\n' > ".kortext/$r
     listJobs(db, p.id).every((j) => j.status !== 'running'),
     'every job settles when the project is paused and the runs are aborted',
   );
+  rmSync(work, { recursive: true, force: true });
+});
+
+test('cancel takes its own logs back, and leaves every other project alone', async () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const logs = join(work, 'logs');
+  mkdirSync(logs, { recursive: true });
+  for (const f of ['p7-STACK.md.log', 'p7-readiness.log', 'p70-STACK.md.log', 'p8-plan.log']) {
+    writeFileSync(join(logs, f), 'x', 'utf8');
+  }
+  const { removeRunLogs } = await import('../server/runner.js');
+  removeRunLogs(7, logs);
+  assert.deepEqual(readdirSync(logs).sort(), ['p70-STACK.md.log', 'p8-plan.log']);
+  removeRunLogs(999, join(work, 'nope')); // a directory that does not exist is not an error
   rmSync(work, { recursive: true, force: true });
 });
