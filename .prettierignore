@@ -10,3 +10,7 @@ archive
 # Prose and tables are wrapped by hand here; a formatter would re-flow the
 # columns and the line breaks that were chosen for reading, not for parsing.
 *.md
+
+# Citation metadata follows the CFF convention (and the other repos' style):
+# double quotes, written by hand.
+CITATION.cff

@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "Kortext"
+abstract: "A project brain for AI-driven development. Kortext turns a brief, or an existing codebase, into an approved analysis foundation by driving your own installed agent CLI (claude, codex, gemini) headlessly inside your repository, one document at a time and in dependency order. Every document lands as a draft for you to approve, question or send back; when they are all settled Kortext retires and the documents become the project's contract."
+type: software
+authors:
+  - family-names: "Endes"
+    given-names: "Eray"
+    alias: "erayendes"
+repository-code: "https://github.com/erayendes/kortext"
+url: "https://github.com/erayendes/kortext"
+license: MIT
+version: 3.1.0
+date-released: "2026-09-04"
+keywords:
+  - ai
+  - agent
+  - project-planning
+  - analysis
+  - documentation
+  - claude
+  - codex
+  - gemini
+  - local-first
