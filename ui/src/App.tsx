@@ -208,7 +208,10 @@ function EngineBadge() {
   const [engines, setEngines] = useState<EngineInfo[]>([]);
 
   useEffect(() => {
-    api.engines().then((r) => setEngines(r.engines));
+    api
+      .engines()
+      .then((r) => setEngines(r.engines))
+      .catch(() => {}); // no server, no warning to show
   }, []);
 
   if (engines.length === 0 || engines.some((e) => e.available)) return null;
@@ -233,10 +236,14 @@ function EngineSelect({
   className?: string;
 }) {
   if (engines.length === 0) return null;
+  // A project whose CLI was uninstalled still carries its name; the server has
+  // already fallen back to something installed, so the control says so instead
+  // of rendering a value no option carries and going blank.
+  const shown = engines.some((e) => e.id === value) ? (value as string) : engines[0].id;
   return (
     <select
       className={`select ${className}`.trim()}
-      value={value ?? engines[0].id}
+      value={shown}
       onChange={(e) => onChange(e.target.value)}
       title="The agent CLI that writes this project's documents"
     >
@@ -926,9 +933,13 @@ function DocumentsTab({
   // and a Pause button standing over a chain that had already finished.
   const [offline, setOffline] = useState(false);
 
-  const refresh = () =>
-    Promise.all([api.listDocs(project.id), api.jobs(project.id), api.readiness(project.id)])
+  const refresh = () => {
+    // Which project this asked about. A slow answer for the project you just
+    // left must not paint its documents onto the one you opened.
+    const asked = project.id;
+    return Promise.all([api.listDocs(asked), api.jobs(asked), api.readiness(asked)])
       .then(([d, j, g]) => {
+        if (asked !== project.id) return;
         setDocs(d.docs);
         setJobs(j.jobs);
         setGate(g);
@@ -937,11 +948,13 @@ function DocumentsTab({
         setErr(null);
       })
       .catch((e) => {
+        if (asked !== project.id) return;
         setOffline(true);
         setErr(
           `${e.message} — the panel has lost the kortext server; this page may be out of date.`,
         );
       });
+  };
 
   useEffect(() => {
     refresh();

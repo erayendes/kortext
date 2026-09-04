@@ -15,8 +15,19 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
     headers: { 'Content-Type': 'application/json' },
     ...init,
   });
-  const body = await res.json();
-  if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
+  // Parse defensively: a restarted server, a proxy error page or an empty body
+  // is not JSON, and parsing first would replace the real status with a syntax
+  // error — the one thing the server's JSON 404 exists to avoid.
+  const text = await res.text();
+  let body: unknown;
+  try {
+    body = text ? JSON.parse(text) : null;
+  } catch {
+    if (!res.ok) throw new Error(`HTTP ${res.status} — ${res.statusText || 'no answer'}`);
+    throw new Error('the server answered with something that is not JSON');
+  }
+  const error = (body as { error?: string } | null)?.error;
+  if (!res.ok) throw new Error(error ?? `HTTP ${res.status}`);
   return body as T;
 }
 

@@ -51,10 +51,17 @@ export function DocDrawer({
     setNotes([]);
     setExplains([]);
     setErr(null);
+    // The previous document's text goes with it. Keeping it meant a slow or
+    // failed load rendered one document's body under another's name — and the
+    // editor still held it, so Save wrote it into the file now open.
+    setContent('');
+    setDraft('');
     if (doc) {
+      const opened = doc.rel;
       api
         .docContent(project.id, doc.rel)
         .then((r) => {
+          if (opened !== doc.rel) return; // the reader moved on while this was in flight
           setContent(r.content);
           setDraft(r.content);
         })
