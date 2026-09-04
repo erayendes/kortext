@@ -1,6 +1,6 @@
 # Kortext v1.0 — Architecture
 
-Bu dosya v1.0'ın kanonik mimari referansı (vizyon v2, R1–R6 turu, 2026-08-30; karar: [DECISIONS.md](./DECISIONS.md) Bölüm 20). Eski v3.1 mimarisi: git geçmişi + Bölüm 18 gerekçesi. Eski kod referansı: `docs/codes/`.
+Bu dosya v1.0'ın kanonik mimari referansı (vizyon v2, R1–R6 turu, 2026-08-30; karar: [DECISIONS.md](./DECISIONS.md) Bölüm 20). Eski v3.1 mimarisi: git geçmişi + Bölüm 18 gerekçesi. Eski kod referansı: `archive/v3-engine/`.
 
 ---
 
@@ -44,6 +44,6 @@ Belgeler **projenin kendi reposunda** — mühürlü yerleşim (§20): `.kortext
 ## 5. Sınırlar (bilinçli YOK'lar)
 
 - Raporlar, istek kuyruğu, MCP sunucusu, `/api/agent/*` REST — **söküldü** (R6). Dış ajan analiz sırasında Kortext'le hiç konuşmaz.
-- Worker pool, orchestrator/chainer, gate-engine, worktree, Slack/Telegram, model-atama — yok (arşiv: `docs/codes/`).
+- Worker pool, orchestrator/chainer, gate-engine, worktree, Slack/Telegram, model-atama — yok (arşiv: `archive/v3-engine/`).
 - Kortext LLM API çağırmaz, API anahtarı tutmaz — kullanıcının kendi CLI'ı ve aboneliği.
 - Kopeng'e build-time/runtime bağımlılık yok (yalnız `which kopeng` tespiti).

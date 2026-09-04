@@ -2,7 +2,7 @@
 
 ## What this folder is
 
-Kortext'in npm paketi (`erayendes/kortext`) + GitHub repo'su. **Pasif proje beyni:** brief → analiz belgeleri → onay → rapor; işi kullanıcının kendi coding ajanı yapar (AGENTS.md kontratı), görevler opsiyonel Kopeng aktarımıyla. Express + SQLite (global `~/.kortext/`) + React panel + MCP. Orkestrasyon YOK — eski v3 motoru `docs/codes/` arşivinde (karar: dev/DECISIONS.md Bölüm 18).
+Kortext'in npm paketi (`erayendes/kortext`) + GitHub repo'su. **Pasif proje beyni:** brief → analiz belgeleri → onay → rapor; işi kullanıcının kendi coding ajanı yapar (AGENTS.md kontratı), görevler opsiyonel Kopeng aktarımıyla. Express + SQLite (global `~/.kortext/`) + React panel + MCP. Orkestrasyon YOK — eski v3 motoru `archive/v3-engine/` arşivinde (karar: dev/DECISIONS.md Bölüm 18).
 
 ## User profile
 
@@ -21,7 +21,7 @@ Eray is a non-coder, communicates in Turkish, code / commits / comments in Engli
 "Claude için kural / mapping / behavior"           → CLAUDE.md (bu dosya)
 Kod (feature / bug fix / refactor)                 → server/  ui/  bin/  test/
 Persona / workflow / template düzenleme            → agents/  workflows/  templates/
-Eski v3 kodu (salt referans, düzenleme YOK)        → docs/codes/
+Eski v3 kodu (salt referans, düzenleme YOK)        → archive/v3-engine/
 ```
 
 > **Doküman yeri (2026-06-17):** tüm geliştirici dokümanları `dev/`'da. Canlı: `dev/{DECISIONS,DESIGN,HANDOVER,TODO,UAT}.md`. Güncellenmeyi bekleyenler: `dev/pending-update/` (ARCHITECTURE, SETUP, USER-GUIDE, PRODUCT). Arşiv: `dev/{concepts,specs,superpowers}/`. `docs/` → Docusaurus public site için ayrıldı.

@@ -3,7 +3,7 @@ import type Database from 'better-sqlite3';
 
 // The engine is the user's own installed agent CLI — kortext drives it
 // headlessly during Phase A. Args are the battle-tested v3 sets (see
-// docs/codes/server/engine/executors/*): prompt goes in over stdin for all.
+// archive/v3-engine/server/engine/executors/*): prompt goes in over stdin for all.
 export interface EngineSpec {
   id: string;
   binary: string;
