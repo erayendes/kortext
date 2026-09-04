@@ -3,7 +3,7 @@ import type Database from 'better-sqlite3';
 import { existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { createProject, deriveCode, listProjects, removeProject, scaffoldProject, setArchived } from './projects.js';
-import { analysisComplete, docPath, listDocs, loadDocMap, markRequestHandled, requestKey, setFrontmatterStatus } from './docs.js';
+import { analysisComplete, docPath, listDocs, loadDocMap, markRequestHandled, setFrontmatterStatus } from './docs.js';
 import { pickDirectoryNative } from './pick-directory.js';
 import { spawnSync } from 'node:child_process';
 import { readdirSync } from 'node:fs';
@@ -246,9 +246,23 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   app.put('/api/projects/:id/docs/content', (req, res) => {
     const project = projectOr404(req.params.id, res);
     if (!project) return;
-    const { rel, content } = req.body ?? {};
+    const { rel, content, settleRequests } = req.body ?? {};
     try {
       writeFileSync(docPath(project, String(rel)), String(content ?? ''), 'utf8');
+      // Saving the agent's draft IS the answer to the demands that produced it.
+      // Without this the change landed on disk and the request still stood, so
+      // the document never left "Needs you" — the loop had no way to close.
+      if (settleRequests) {
+        for (const r of listDocs(db, project, pkgRoot).find((d) => d.rel === String(rel))?.revisionRequests ?? []) {
+          markRequestHandled(
+            project,
+            r.from,
+            String(rel),
+            r.reason,
+            `applied — prime saved the change into ${rel}`,
+          );
+        }
+      }
       // An edit changes the evidence, so the chain has to look again — editing
       // the brief is the whole way out of a closed gate, and a save that
       // changed nothing downstream is a no-op re-scan.
@@ -279,6 +293,35 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   });
 
   // Human asked for changes: re-run the producing step with the notes.
+  // The engine drafts the change another document demanded. The demands live in
+  // the documents themselves, so the panel sends only the file — reading which
+  // ones still stand is the server's job, not the caller's.
+  app.post('/api/projects/:id/docs/propose', async (req, res) => {
+    const project = projectOr404(req.params.id, res);
+    if (!project) return;
+    const engine = selectedEngine(db);
+    if (!engine) return res.status(409).json({ error: 'no agent CLI installed' });
+    const { rel } = req.body ?? {};
+    try {
+      docPath(project, String(rel)); // validates rel
+    } catch (err) {
+      return res.status(400).json({ error: (err as Error).message });
+    }
+    const notes =
+      listDocs(db, project, pkgRoot)
+        .find((d) => d.rel === String(rel))
+        ?.revisionRequests.map((r) => r.reason) ?? [];
+    if (notes.length === 0) {
+      return res.status(409).json({ error: `nothing is asking ${rel} to change` });
+    }
+    try {
+      const { proposal } = await proposeRevision(project, String(rel), notes, engine, pkgRoot);
+      res.json({ proposal });
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  });
+
   app.post('/api/projects/:id/docs/revise', (req, res) => {
     const project = projectOr404(req.params.id, res);
     if (!project) return;
@@ -321,8 +364,15 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     );
     if (!request) return res.status(409).json({ error: 'that request is already settled' });
 
+    const said = String(instruction ?? '').trim();
     if (decision === 'dismiss') {
-      markRequestHandled(project, requestKey(request.from, rel, request.reason));
+      markRequestHandled(
+        project,
+        request.from,
+        rel,
+        request.reason,
+        said ? `dismissed by prime — ${said}` : 'dismissed by prime — no change made',
+      );
       return res.json({ dismissed: 1 });
     }
     // Applying means the document is rewritten, so it needs an author. The
@@ -336,9 +386,14 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       return res.status(409).json({ error: `${rel} is being rewritten — wait for it to land` });
     }
     const notes = [`[${request.from} asks] ${request.reason}`];
-    const said = String(instruction ?? '').trim();
     if (said) notes.push(`[prime decides] ${said}`);
-    markRequestHandled(project, requestKey(request.from, rel, request.reason));
+    markRequestHandled(
+      project,
+      request.from,
+      rel,
+      request.reason,
+      said ? `applied — the agent rewrote ${rel}; prime said: ${said}` : `applied — the agent rewrote ${rel}`,
+    );
     setFrontmatterStatus(docPath(project, rel), 'draft');
     void reviseDoc(db, project, rel, notes, engine, pkgRoot);
     res.status(202).json({ started: rel, notes: notes.length });
@@ -436,6 +491,10 @@ ${body}`, 'utf8');
       transferred,
     });
   });
+
+  // A missing /api route used to reach the SPA fallback, and the panel reported
+  // "Unexpected token '<'" instead of the route it could not find.
+  app.use('/api', (req, res) => res.status(404).json({ error: `no such endpoint: ${req.method} ${req.originalUrl}` }));
 
   // Built panel (ui/dist) with SPA fallback; in dev the vite server proxies /api here.
   const uiDist = join(pkgRoot, 'ui', 'dist');

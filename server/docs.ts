@@ -38,6 +38,11 @@ export interface DocInfo {
  * `## Revision Requests`, naming the target file in backticks. Parsed so the
  * panel can offer the action — a demand in prose is one nobody can act on.
  */
+// `- [ ] \`TARGET.md\` — reason`. The checkbox is optional (older documents and
+// the templates write the bare form) and, when ticked, means the demand is
+// settled. The template's own bracket prompt is not a request.
+const REQUEST_LINE = /^\s*[-*+]\s+(?:\[([ xX]?)\]\s*)?`([A-Za-z][\w./-]*\.md)`\s*[—:-]?\s*(.*)$/;
+
 export function parseRevisionRequests(content: string): Array<{ target: string; reason: string }> {
   const out: Array<{ target: string; reason: string }> = [];
   let inSection = false;
@@ -48,9 +53,12 @@ export function parseRevisionRequests(content: string): Array<{ target: string; 
       continue;
     }
     if (!inSection) continue;
-    // `- \`TARGET.md\` — reason`; the template's own bracket prompt is not one.
-    const m = line.match(/^\s*[-*+]\s+`([A-Za-z][\w./-]*\.md)`\s*[—:-]?\s*(.*)$/);
-    if (m) out.push({ target: m[1].replace(/^\.kortext\//, ''), reason: m[2].trim() });
+    const m = line.match(REQUEST_LINE);
+    // A ticked box is a demand that has been settled — the line under it says
+    // how. Both the panel and every agent reading the document see the same mark.
+    if (m && (m[1] ?? '').trim().toLowerCase() !== 'x') {
+      out.push({ target: m[2]!.replace(/^\.kortext\//, ''), reason: m[3]!.trim() });
+    }
   }
   return out;
 }
@@ -155,29 +163,40 @@ export function setFrontmatterStatus(path: string, status: string): void {
   }
 }
 
-// A demand a human has already acted on is remembered next to the project, not
-// inside the document that made it — the requester is not re-run just to strike
-// its own line out.
-const HANDLED_REL = join('.kortext', '.revisions.json');
-
-export function requestKey(from: string, target: string, reason: string): string {
-  return `${from}→${target}: ${reason.slice(0, 120)}`;
-}
-
-export function readHandledRequests(project: Project): Set<string> {
-  const p = join(project.repo_path, HANDLED_REL);
-  if (!existsSync(p)) return new Set();
-  try {
-    return new Set(JSON.parse(readFileSync(p, 'utf8')) as string[]);
-  } catch {
-    return new Set();
+// A settled demand is recorded where it was made. Keeping the outcome in a
+// side file meant the document still read as an open demand to every agent that
+// opened it — the panel knew it was closed and the model did not. So the line
+// itself carries the verdict, and the document is the only source of truth.
+export function markRequestHandled(
+  project: Project,
+  from: string,
+  target: string,
+  reason: string,
+  outcome: string,
+): void {
+  const path = docPath(project, from);
+  if (!existsSync(path)) return;
+  const day = new Date().toISOString().slice(0, 10);
+  const lines = readFileSync(path, 'utf8').split('\n');
+  let inSection = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] ?? '';
+    const heading = line.match(/^#{1,6}\s+(.*)$/);
+    if (heading) {
+      inSection = /revision requests/i.test(heading[1] ?? '');
+      continue;
+    }
+    if (!inSection) continue;
+    const m = line.match(REQUEST_LINE);
+    if (!m) continue;
+    if (m[2]!.replace(/^\.kortext\//, '') !== target.replace(/^.*\//, '') && m[2] !== target) continue;
+    if ((m[3] ?? '').trim() !== reason.trim()) continue;
+    // The ticked box says it is closed; the line under it says what closed it,
+    // so "dismissed" and "the agent rewrote it" are not the same record.
+    lines.splice(i, 1, `- [x] \`${m[2]}\` — ${m[3]}`, `  - ${outcome} · ${day}`);
+    writeFileSync(path, lines.join('\n'), 'utf8');
+    return;
   }
-}
-
-export function markRequestHandled(project: Project, key: string): void {
-  const handled = readHandledRequests(project);
-  handled.add(key);
-  writeFileSync(join(project.repo_path, HANDLED_REL), JSON.stringify([...handled], null, 2), 'utf8');
 }
 
 export function listDocs(db: Database.Database, project: Project, pkgRoot: string): DocInfo[] {
@@ -219,7 +238,6 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
   // Each request lands in the inbox of the document it names. One a human has
   // already actioned is remembered outside the documents, so sending a file
   // back does not leave the demand standing forever.
-  const handled = readHandledRequests(project);
   for (const r of requests) {
     const target = docs.find((d) => d.rel === r.target || d.rel.endsWith(`/${r.target}`));
     // A document that was never written cannot be asked to change — the step
@@ -228,7 +246,6 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
     // Key on the RESOLVED rel, which is what the deciding route writes. Keying
     // on the raw name a document typed (`BRD.md`) meant a decision recorded
     // against `foundation/BRD.md` never matched, and the demand stood forever.
-    if (handled.has(requestKey(r.from, target.rel, r.reason))) continue;
     target.revisionRequests.push({ from: r.from, reason: r.reason });
     // The same demand, seen from the document that made it: deciding it there
     // saves opening the target just to answer a question you already read.

@@ -101,10 +101,10 @@ export const api = {
   listDocs: (projectId: number) => req<{ docs: DocInfo[] }>(`/api/projects/${projectId}/docs`),
   docContent: (projectId: number, rel: string) =>
     req<{ content: string }>(`/api/projects/${projectId}/docs/content?rel=${encodeURIComponent(rel)}`),
-  saveDoc: (projectId: number, rel: string, content: string) =>
+  saveDoc: (projectId: number, rel: string, content: string, settleRequests = false) =>
     req<{ ok: boolean }>(`/api/projects/${projectId}/docs/content`, {
       method: 'PUT',
-      body: JSON.stringify({ rel, content }),
+      body: JSON.stringify({ rel, content, settleRequests }),
     }),
   decideRequest: (
     projectId: number,

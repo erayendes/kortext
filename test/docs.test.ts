@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { openDb } from '../server/db.js';
 import { createProject } from '../server/projects.js';
-import { analysisComplete, docPath, listDocs, parseWorkflowSteps, setFrontmatterStatus, hasOpenQuestions, parseRevisionRequests, markRequestHandled, requestKey } from '../server/docs.js';
+import { analysisComplete, docPath, listDocs, parseWorkflowSteps, setFrontmatterStatus, hasOpenQuestions, parseRevisionRequests, markRequestHandled } from '../server/docs.js';
 
 const pkgRoot = process.cwd();
 
@@ -205,7 +205,7 @@ test('a revision request lands in the inbox of the document it names', () => {
 
   // An open demand keeps the handshake from completing, and being actioned clears it.
   assert.equal(analysisComplete(db, p, pkgRoot), false);
-  markRequestHandled(p, requestKey('foundation/TRD.md', 'ENVIRONMENT.md', 'logs must go'));
+  markRequestHandled(p, 'foundation/TRD.md', 'ENVIRONMENT.md', 'logs must go', 'dismissed by prime — no change made');
   const after = listDocs(db, p, pkgRoot).find((d) => d.rel === 'ENVIRONMENT.md')!;
   assert.deepEqual(after.revisionRequests, []);
   rmSync(work, { recursive: true, force: true });
@@ -225,8 +225,13 @@ test('a demand on a foundation document is settled by the path it was decided on
   setFrontmatterStatus(docPath(p, 'foundation/BRD.md'), 'approved');
   const brd = () => listDocs(db, p, pkgRoot).find((d) => d.rel === 'foundation/BRD.md')!;
   assert.equal(brd().revisionRequests.length, 1);
-  markRequestHandled(p, requestKey('foundation/PRD.md', 'foundation/BRD.md', 'say it the other way round'));
+  markRequestHandled(p, 'foundation/PRD.md', 'foundation/BRD.md', 'say it the other way round', 'applied — the agent rewrote it');
   assert.equal(brd().revisionRequests.length, 0);
+  // The ticked box is what closes it, and the line under it says what closed
+  // it — a dismissal and a rewrite must not leave the same record.
+  const prd = readFileSync(docPath(p, 'foundation/PRD.md'), 'utf8');
+  assert.match(prd, /^- \[x\] `BRD\.md` — say it the other way round$/m);
+  assert.match(prd, /^ {2}- applied — the agent rewrote it · \d{4}-\d{2}-\d{2}$/m);
   rmSync(work, { recursive: true, force: true });
 });
 
