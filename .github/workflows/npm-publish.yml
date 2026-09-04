@@ -24,6 +24,7 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      - run: node bin/kortext.js --version
       - run: npm pack --dry-run
       - run: npm publish --provenance --access public
         env:
