@@ -118,7 +118,10 @@ test('legacy layout migrates: references flatten, memory TODO/decisions survive'
   for (const d of ['references', 'memory', 'workflows', 'agents', 'templates']) {
     mkdirSync(join(kx, d), { recursive: true });
   }
-  writeFileSync(join(kx, 'references', 'STACK.md'), '---\nstatus: approved\n---\n\n# Stack: eski içerik\n');
+  writeFileSync(
+    join(kx, 'references', 'STACK.md'),
+    '---\nstatus: approved\n---\n\n# Stack: eski içerik\n',
+  );
   writeFileSync(join(kx, 'memory', 'TODO.md'), '---\nstatus: approved\n---\n\n- [ ] X\n');
   writeFileSync(join(kx, 'memory', 'decisions.md'), '# eski karar\n');
   writeFileSync(join(kx, 'workflows', 'old.md'), 'x');
@@ -174,7 +177,7 @@ test('re-adding a registered folder names the project instead of the constraint'
   rmSync(work, { recursive: true, force: true });
 });
 
-test("the contract goes in as a block: a hand-written AGENTS.md survives, and cancel takes back only the block", () => {
+test('the contract goes in as a block: a hand-written AGENTS.md survives, and cancel takes back only the block', () => {
   const work = tempDir();
   const repo = join(work, 'acme');
   mkdirSync(repo, { recursive: true });
@@ -192,7 +195,10 @@ test("the contract goes in as a block: a hand-written AGENTS.md survives, and ca
   // block nor the pointer.
   scaffoldProject(repo, pkgRoot, { skipBrief: true });
   assert.equal(agents().split('<!-- kortext:start -->').length - 1, 1);
-  assert.equal(readFileSync(join(repo, 'CLAUDE.md'), 'utf8').split('<!-- kortext -->').length - 1, 1);
+  assert.equal(
+    readFileSync(join(repo, 'CLAUDE.md'), 'utf8').split('<!-- kortext -->').length - 1,
+    1,
+  );
 
   uninstallContract(repo);
   assert.equal(agents().trim(), '# My own rules\n\nNever touch the migrations.'.trim());
@@ -226,7 +232,11 @@ test('an AGENTS.md kortext never wrote is left alone by cancel', () => {
 test('a project carries its own engine; a project without one falls back to the global setting', () => {
   const work = tempDir();
   const db = openDb(join(work, 'db.sqlite'));
-  const a = createProject(db, { name: 'Acme', repoPath: join(work, 'a'), engine: 'codex' }, pkgRoot);
+  const a = createProject(
+    db,
+    { name: 'Acme', repoPath: join(work, 'a'), engine: 'codex' },
+    pkgRoot,
+  );
   const b = createProject(db, { name: 'Beta', repoPath: join(work, 'b'), code: 'BETA' }, pkgRoot);
   assert.equal(a.engine, 'codex');
   assert.equal(b.engine, '');

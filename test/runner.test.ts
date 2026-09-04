@@ -1,12 +1,27 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { openDb } from '../server/db.js';
 import { createProject } from '../server/projects.js';
 import { setFrontmatterStatus, docPath, listDocs } from '../server/docs.js';
-import { abortRuns, buildStepPrompt, nextStep, runStep, runningJob, listJobs } from '../server/runner.js';
+import {
+  abortRuns,
+  buildStepPrompt,
+  nextStep,
+  runStep,
+  runningJob,
+  listJobs,
+} from '../server/runner.js';
 import type { EngineSpec } from '../server/engines.js';
 
 const pkgRoot = process.cwd();
@@ -119,7 +134,12 @@ test('buildStepPrompt carries hard rules, inputs, persona and revision notes', (
   const p = createProject(db, { name: 'Acme', repoPath: join(work, 'acme') }, pkgRoot);
   const prompt = buildStepPrompt(
     p,
-    { output: 'LEGAL.md', inputs: ['foundation/BRD.md'], author: '+compliance-expert', approver: '+prime' },
+    {
+      output: 'LEGAL.md',
+      inputs: ['foundation/BRD.md'],
+      author: '+compliance-expert',
+      approver: '+prime',
+    },
     '1. **+compliance-expert:** LEGAL üret.',
     'persona body',
     ['KVKK bölümünü genişlet'],
@@ -146,12 +166,18 @@ test('advance: chains every unblocked step, pauses at approval gates, resumes af
   approveBrief(p);
   await advance(db, p, engine, pkgRoot);
   // The brief unblocks the PRD and nothing else
-  const drafts = listJobs(db, p.id).filter((j) => j.status === 'done').map((j) => j.doc_rel).sort();
+  const drafts = listJobs(db, p.id)
+    .filter((j) => j.status === 'done')
+    .map((j) => j.doc_rel)
+    .sort();
   assert.deepEqual(drafts, ['foundation/PRD.md']);
 
   setFrontmatterStatus(docPath(p, 'foundation/PRD.md'), 'approved');
   await advance(db, p, engine, pkgRoot);
-  const after = listJobs(db, p.id).filter((j) => j.status === 'done').map((j) => j.doc_rel).sort();
+  const after = listJobs(db, p.id)
+    .filter((j) => j.status === 'done')
+    .map((j) => j.doc_rel)
+    .sort();
   assert.deepEqual(after, ['STACK.md', 'STRUCTURE.md', 'foundation/PRD.md']);
   // LEGAL is written against the design, so it is nowhere near ready yet
   assert.ok(!after.includes('LEGAL.md'), 'compliance waits for the technical documents');
@@ -161,7 +187,11 @@ test('advance: chains every unblocked step, pauses at approval gates, resumes af
 test('existing project: no BRD scaffolded, chain starts from code-truth steps', async () => {
   const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
   const db = openDb(join(work, 'db.sqlite'));
-  const p = createProject(db, { name: 'Old App', repoPath: join(work, 'old'), kind: 'existing' }, pkgRoot);
+  const p = createProject(
+    db,
+    { name: 'Old App', repoPath: join(work, 'old'), kind: 'existing' },
+    pkgRoot,
+  );
   assert.equal(existsSync(join(work, 'old', '.kortext', 'foundation', 'BRD.md')), false);
   // the readiness gate wants code to read — an existing project with an empty
   // folder has no evidence, so give this one a real source tree
@@ -174,7 +204,10 @@ test('existing project: no BRD scaffolded, chain starts from code-truth steps', 
   assert.ok(['STACK.md', 'STRUCTURE.md'].includes(step.output));
   const { advance } = await import('../server/runner.js');
   await advance(db, p, mockEngine(work, 'ok'), pkgRoot);
-  const done = listJobs(db, p.id).filter((j) => j.status === 'done').map((j) => j.doc_rel).sort();
+  const done = listJobs(db, p.id)
+    .filter((j) => j.status === 'done')
+    .map((j) => j.doc_rel)
+    .sort();
   assert.deepEqual(done, ['STACK.md', 'STRUCTURE.md']); // ARCHITECTURE waits for approvals
   rmSync(work, { recursive: true, force: true });
 });
@@ -193,7 +226,9 @@ test('advance runs independent steps in parallel (capped)', async () => {
   );
   // slow mock: each step sleeps 400ms — two sequential ≈ 800ms, parallel ≈ 400ms
   const script = join(work, 'slow.sh');
-  writeFileSync(script, `#!/bin/sh
+  writeFileSync(
+    script,
+    `#!/bin/sh
 prompt=$(cat)
 case "$prompt" in
   *readiness.json*) printf '{ "ready": true }\\n' > .kortext/.readiness.json; exit 0;;
@@ -201,7 +236,8 @@ esac
 rel=$(printf '%s' "$prompt" | grep 'Produce EXACTLY' | sed 's/.*: \\.kortext\\///')
 sleep 0.4
 printf -- '---\\nstatus: draft\\nauthor: +mock\\n---\\n\\n# Mock\\n' > ".kortext/$rel"
-`);
+`,
+  );
   chmodSync(script, 0o755);
   const { advance } = await import('../server/runner.js');
   const { ensureReadiness } = await import('../server/readiness.js');
@@ -211,7 +247,10 @@ printf -- '---\\nstatus: draft\\nauthor: +mock\\n---\\n\\n# Mock\\n' > ".kortext
   const t0 = Date.now();
   await advance(db, p, { id: 'slow', binary: script, args: [], installHint: '' }, pkgRoot);
   const elapsed = Date.now() - t0;
-  const done = listJobs(db, p.id).filter((j) => j.status === 'done').map((j) => j.doc_rel).sort();
+  const done = listJobs(db, p.id)
+    .filter((j) => j.status === 'done')
+    .map((j) => j.doc_rel)
+    .sort();
   assert.deepEqual(done, ['STACK.md', 'STRUCTURE.md']);
   assert.ok(elapsed < 750, `expected parallel (<750ms), took ${elapsed}ms`);
   rmSync(work, { recursive: true, force: true });
@@ -227,16 +266,29 @@ test('reviseDoc re-runs the producing step with notes; explainDoc answers withou
 
   // revise: capture the prompt the engine receives
   const cap = join(work, 'cap.sh');
-  writeFileSync(cap, `#!/bin/sh
+  writeFileSync(
+    cap,
+    `#!/bin/sh
 prompt=$(cat)
 printf '%s' "$prompt" > prompt-capture.txt
 rel=$(printf '%s' "$prompt" | grep 'Produce EXACTLY' | sed 's/.*: \\.kortext\\///')
 printf -- '---\\nstatus: draft\\nauthor: +mock\\n---\\n\\n# Revised\\n' > ".kortext/$rel"
-`);
+`,
+  );
   chmodSync(cap, 0o755);
-  const out = await reviseDoc(db, p, 'LEGAL.md', ['KVKK bölümünü genişlet'], { id: 'cap', binary: cap, args: [], installHint: '' }, pkgRoot);
+  const out = await reviseDoc(
+    db,
+    p,
+    'LEGAL.md',
+    ['KVKK bölümünü genişlet'],
+    { id: 'cap', binary: cap, args: [], installHint: '' },
+    pkgRoot,
+  );
   assert.equal(out.ok, true);
-  assert.match(readFileSync(join(work, 'rev', 'prompt-capture.txt'), 'utf8'), /REVISION REQUEST[\s\S]*KVKK bölümünü genişlet/);
+  assert.match(
+    readFileSync(join(work, 'rev', 'prompt-capture.txt'), 'utf8'),
+    /REVISION REQUEST[\s\S]*KVKK bölümünü genişlet/,
+  );
   assert.match(readFileSync(docPath(p, 'LEGAL.md'), 'utf8'), /# Revised/);
 
   // explain: answer comes from stdout, no file touched
@@ -244,7 +296,15 @@ printf -- '---\\nstatus: draft\\nauthor: +mock\\n---\\n\\n# Revised\\n' > ".kort
   writeFileSync(ans, '#!/bin/sh\ncat > /dev/null\nprintf "MOCK CEVAP: satır şunu diyor"\n');
   chmodSync(ans, 0o755);
   const before = readFileSync(docPath(p, 'LEGAL.md'), 'utf8');
-  const r = await explainDoc(p, 'LEGAL.md', 'seçili satır', 'bu ne demek?', [], { id: 'ans', binary: ans, args: [], installHint: '' }, pkgRoot);
+  const r = await explainDoc(
+    p,
+    'LEGAL.md',
+    'seçili satır',
+    'bu ne demek?',
+    [],
+    { id: 'ans', binary: ans, args: [], installHint: '' },
+    pkgRoot,
+  );
   assert.match(r.answer, /MOCK CEVAP/);
   assert.equal(readFileSync(docPath(p, 'LEGAL.md'), 'utf8'), before);
   rmSync(work, { recursive: true, force: true });
@@ -259,7 +319,9 @@ test('a mid-run approval wakes the active chain and fills free pool slots', asyn
   // pre-write DESIGN as draft so only the STACK step is producible at loop start
   writeFileSync(docPath(p, 'DESIGN.md'), '---\nstatus: draft\nauthor: +mock\n---\n\n# D\n');
   const slow = join(work, 'slow.sh');
-  writeFileSync(slow, `#!/bin/sh
+  writeFileSync(
+    slow,
+    `#!/bin/sh
 prompt=$(cat)
 case "$prompt" in
   *readiness.json*) printf '{ "ready": true }\\n' > .kortext/.readiness.json; exit 0;;
@@ -267,7 +329,8 @@ esac
 rel=$(printf '%s' "$prompt" | grep 'Produce EXACTLY' | sed 's/.*: \\.kortext\\///')
 sleep 0.6
 printf -- '---\\nstatus: draft\\nauthor: +mock\\n---\\n\\n# S\\n' > ".kortext/$rel"
-`);
+`,
+  );
   chmodSync(slow, 0o755);
   const engine = { id: 'slow', binary: slow, args: [], installHint: '' };
   const { advance } = await import('../server/runner.js');
@@ -280,7 +343,9 @@ printf -- '---\\nstatus: draft\\nauthor: +mock\\n---\\n\\n# S\\n' > ".kortext/$r
   await advance(db, p, engine, pkgRoot); // = kickChain from the approve route
   await loop;
   const elapsed = Date.now() - t0;
-  const done = listJobs(db, p.id).filter((j) => j.status === 'done').map((j) => j.doc_rel);
+  const done = listJobs(db, p.id)
+    .filter((j) => j.status === 'done')
+    .map((j) => j.doc_rel);
   assert.ok(done.includes('GROWTH.md'), `GROWTH should have run (done: ${done})`);
   // sequential would be ≥1.2s (STACK finishes, then GROWTH); the wake overlaps them
   assert.ok(elapsed < 1100, `expected overlap via wake (<1100ms), took ${elapsed}ms`);
@@ -294,23 +359,43 @@ test('runPlanning: engine writes .kopeng tree → done with counts; empty tasks 
   const { runPlanning } = await import('../server/runner.js');
 
   const good = join(work, 'plan-good.sh');
-  writeFileSync(good, `#!/bin/sh
+  writeFileSync(
+    good,
+    `#!/bin/sh
 cat > /dev/null
 mkdir -p .kopeng/versions .kopeng/epics .kopeng/tasks
 printf 'name: Plan\\ncode: PLN\\nstatus: draft\\n' > .kopeng/project.yaml
 printf 'id: v0.1\\n' > .kopeng/versions/v0.1.yaml
 printf 'id: PLN-E01\\nversion: v0.1\\n' > .kopeng/epics/PLN-E01.yaml
 printf -- '---\\nid: PLN-T001\\nassignee: ai\\nblocked_by: []\\n---\\n\\n## Description\\nX\\n' > .kopeng/tasks/PLN-T001.md
-`);
+`,
+  );
   chmodSync(good, 0o755);
-  const ok = await runPlanning(db, p, { id: 'g', binary: good, args: [], installHint: '' }, pkgRoot);
+  const ok = await runPlanning(
+    db,
+    p,
+    { id: 'g', binary: good, args: [], installHint: '' },
+    pkgRoot,
+  );
   assert.equal(ok.ok, true);
 
   const bad = join(work, 'plan-bad.sh');
-  writeFileSync(bad, '#!/bin/sh\ncat > /dev/null\nmkdir -p .kopeng\nprintf "status: draft\\n" > .kopeng/project.yaml\n');
+  writeFileSync(
+    bad,
+    '#!/bin/sh\ncat > /dev/null\nmkdir -p .kopeng\nprintf "status: draft\\n" > .kopeng/project.yaml\n',
+  );
   chmodSync(bad, 0o755);
-  const p2 = createProject(db, { name: 'Plan2', repoPath: join(work, 'plan2'), code: 'PL2' }, pkgRoot);
-  const fail = await runPlanning(db, p2, { id: 'b', binary: bad, args: [], installHint: '' }, pkgRoot);
+  const p2 = createProject(
+    db,
+    { name: 'Plan2', repoPath: join(work, 'plan2'), code: 'PL2' },
+    pkgRoot,
+  );
+  const fail = await runPlanning(
+    db,
+    p2,
+    { id: 'b', binary: bad, args: [], installHint: '' },
+    pkgRoot,
+  );
   assert.equal(fail.ok, false);
   assert.match(fail.error!, /tasks\/ is empty/);
   rmSync(work, { recursive: true, force: true });
@@ -327,7 +412,13 @@ test('abortRuns kills a running step: the job settles as stopped, not failed', a
   writeFileSync(slow, '#!/bin/sh\ncat > /dev/null\nsleep 30\n');
   chmodSync(slow, 0o755);
 
-  const running = runStep(db, p, step, { id: 'slow', binary: slow, args: [], installHint: '' }, pkgRoot);
+  const running = runStep(
+    db,
+    p,
+    step,
+    { id: 'slow', binary: slow, args: [], installHint: '' },
+    pkgRoot,
+  );
   await new Promise((r) => setTimeout(r, 300)); // let it spawn
   assert.ok(runningJob(db, p.id));
   abortRuns(p.id);
@@ -341,7 +432,11 @@ test('abortRuns kills a running step: the job settles as stopped, not failed', a
 test('the gate blocks an existing project whose folder holds no code', async () => {
   const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
   const db = openDb(join(work, 'db.sqlite'));
-  const p = createProject(db, { name: 'Empty', repoPath: join(work, 'empty'), kind: 'existing' }, pkgRoot);
+  const p = createProject(
+    db,
+    { name: 'Empty', repoPath: join(work, 'empty'), kind: 'existing' },
+    pkgRoot,
+  );
   const { advance } = await import('../server/runner.js');
   await advance(db, p, mockEngine(work, 'ok'), pkgRoot);
   assert.deepEqual(listJobs(db, p.id), []); // nothing ran, nothing was written
@@ -373,7 +468,7 @@ test('two documents can be revised at once; one document cannot be revised twice
   rmSync(work, { recursive: true, force: true });
 });
 
-test("the brief has no producing step: a revision refuses, loudly, and leaves the file alone", async () => {
+test('the brief has no producing step: a revision refuses, loudly, and leaves the file alone', async () => {
   const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
   const db = openDb(join(work, 'db.sqlite'));
   const p = createProject(db, { name: 'Brief', repoPath: join(work, 'brief') }, pkgRoot);
@@ -402,10 +497,13 @@ test('a proposed revision reaches the editor, never the document', async () => {
   const before = readFileSync(docPath(p, 'foundation/BRD.md'), 'utf8');
 
   const script = join(work, 'proposer.sh');
-  writeFileSync(script, `#!/bin/sh
+  writeFileSync(
+    script,
+    `#!/bin/sh
 cat > /dev/null
 printf -- '---\\nstatus: draft\\nauthor: +prime\\n---\\n\\n# Project Brief (BRD)\\n\\nrevised\\n' > .kortext/.proposal.txt
-`);
+`,
+  );
   chmodSync(script, 0o755);
   const { proposeRevision } = await import('../server/runner.js');
   const out = await proposeRevision(
@@ -449,13 +547,21 @@ test('a verdict becomes a demand in the document that caused it', async () => {
     '---\nstatus: approved\n---\n\n# Stack\n\n## Revision Requests\n\n- `API.md` — an older demand\n\n## Open Questions for prime\n\n- something\n',
     'utf8',
   );
-  appendRevisionRequest(p, 'STACK.md', 'foundation/PRD.md', 'the runtime changed, the flow list must follow');
+  appendRevisionRequest(
+    p,
+    'STACK.md',
+    'foundation/PRD.md',
+    'the runtime changed, the flow list must follow',
+  );
   const stack = readFileSync(docPath(p, 'STACK.md'), 'utf8');
   const lines = stack.split('\n');
   const head = lines.findIndex((l) => l === '## Revision Requests');
   const next = lines.findIndex((l) => l === '## Open Questions for prime');
   const at = lines.findIndex((l) => l.startsWith('- `PRD.md`'));
-  assert.ok(at > head && at < next, `the demand must sit inside the section (${at} vs ${head}..${next})`);
+  assert.ok(
+    at > head && at < next,
+    `the demand must sit inside the section (${at} vs ${head}..${next})`,
+  );
   assert.match(stack, /- `PRD\.md` — the runtime changed, the flow list must follow/);
   // Frontmatter is untouched: writing a demand does not un-approve the writer.
   assert.match(stack, /status: approved/);
@@ -469,7 +575,9 @@ test('a verdict becomes a demand in the document that caused it', async () => {
   // A document with no such section gets one rather than losing the finding.
   writeFileSync(docPath(p, 'DESIGN.md'), '---\nstatus: approved\n---\n\n# Design\n', 'utf8');
   appendRevisionRequest(p, 'DESIGN.md', 'CONTENT.md', 'the empty state lost its slot');
-  assert.match(readFileSync(docPath(p, 'DESIGN.md'), 'utf8'), /## Revision Requests\n\n- `CONTENT\.md` —/);
+  assert.match(
+    readFileSync(docPath(p, 'DESIGN.md'), 'utf8'),
+    /## Revision Requests\n\n- `CONTENT\.md` —/,
+  );
   rmSync(work, { recursive: true, force: true });
 });
-

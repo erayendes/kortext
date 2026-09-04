@@ -2,13 +2,41 @@ import express from 'express';
 import type Database from 'better-sqlite3';
 import { existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
-import { createProject, deriveCode, listProjects, removeProject, scaffoldProject, setArchived, uninstallContract } from './projects.js';
-import { analysisComplete, docPath, listDocs, loadDocMap, markRequestHandled, setFrontmatterStatus } from './docs.js';
+import {
+  createProject,
+  deriveCode,
+  listProjects,
+  removeProject,
+  scaffoldProject,
+  setArchived,
+  uninstallContract,
+} from './projects.js';
+import {
+  analysisComplete,
+  docPath,
+  listDocs,
+  loadDocMap,
+  markRequestHandled,
+  setFrontmatterStatus,
+} from './docs.js';
 import { pickDirectoryNative } from './pick-directory.js';
 import { spawnSync } from 'node:child_process';
 import { readdirSync } from 'node:fs';
 import { detectEngines, engineFor, selectedEngine, setSetting, ENGINES } from './engines.js';
-import { abortRuns, advance, explainDoc, failStaleJobs, listJobs, nextStep, proposeRevision, recheckDependents, reviseDoc, runPlanning, runningDoc, runningJob } from './runner.js';
+import {
+  abortRuns,
+  advance,
+  explainDoc,
+  failStaleJobs,
+  listJobs,
+  nextStep,
+  proposeRevision,
+  recheckDependents,
+  reviseDoc,
+  runPlanning,
+  runningDoc,
+  runningJob,
+} from './runner.js';
 import { isChecking, readReadiness } from './readiness.js';
 import { readFileSync, writeFileSync } from 'node:fs';
 import type { Project } from './db.js';
@@ -71,7 +99,11 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   app.post('/api/projects', (req, res) => {
     const { name, repoPath, kind, code, brief, docLang, engine } = req.body ?? {};
     try {
-      const project = createProject(db, { name, repoPath, kind, code, brief, docLang, engine }, pkgRoot);
+      const project = createProject(
+        db,
+        { name, repoPath, kind, code, brief, docLang, engine },
+        pkgRoot,
+      );
       // Nothing runs on Add — the project lands paused and the user presses
       // Start on the project screen (Start = the unpause endpoint).
       db.prepare('UPDATE projects SET paused = 1 WHERE id = ?').run(project.id);
@@ -118,9 +150,9 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     if (!engine) return res.status(409).json({ error: 'no agent CLI installed' });
     const step = nextStep(db, project, pkgRoot);
     if (!step) {
-      return res
-        .status(409)
-        .json({ error: runningJob(db, project.id) ? 'a step is already running' : 'nothing to run' });
+      return res.status(409).json({
+        error: runningJob(db, project.id) ? 'a step is already running' : 'nothing to run',
+      });
     }
     void advance(db, project, engine, pkgRoot);
     res.status(202).json({ started: step.output });
@@ -225,8 +257,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
 
   const projectOr404 = (id: string, res: express.Response): Project | undefined => {
     const p = db.prepare('SELECT * FROM projects WHERE id = ?').get(Number(id)) as
-      | Project
-      | undefined;
+      Project | undefined;
     if (!p) res.status(404).json({ error: 'project not found' });
     return p;
   };
@@ -266,7 +297,8 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       // Without this the change landed on disk and the request still stood, so
       // the document never left "Needs you" — the loop had no way to close.
       if (settleRequests) {
-        for (const r of listDocs(db, project, pkgRoot).find((d) => d.rel === String(rel))?.revisionRequests ?? []) {
+        for (const r of listDocs(db, project, pkgRoot).find((d) => d.rel === String(rel))
+          ?.revisionRequests ?? []) {
           markRequestHandled(
             project,
             r.from,
@@ -391,7 +423,9 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     // Applying means the document is rewritten, so it needs an author. The
     // brief has none: it is prime's own, and its own drawer drafts the change.
     if (!doc.hasProducingStep) {
-      return res.status(409).json({ error: `${rel} is prime's own document — open it and draft the change there` });
+      return res
+        .status(409)
+        .json({ error: `${rel} is prime's own document — open it and draft the change there` });
     }
     const engine = engineFor(db, project);
     if (!engine) return res.status(409).json({ error: 'no agent CLI installed' });
@@ -405,7 +439,9 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       request.from,
       rel,
       request.reason,
-      said ? `applied — the agent rewrote ${rel}; prime said: ${said}` : `applied — the agent rewrote ${rel}`,
+      said
+        ? `applied — the agent rewrote ${rel}; prime said: ${said}`
+        : `applied — the agent rewrote ${rel}`,
     );
     setFrontmatterStatus(docPath(project, rel), 'draft');
     void reviseDoc(db, project, rel, notes, engine, pkgRoot);
@@ -423,9 +459,20 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       return res.status(400).json({ error: 'question required' });
     }
     const history = Array.isArray(req.body?.history)
-      ? req.body.history.map((h: { q?: unknown; a?: unknown }) => ({ q: String(h.q ?? ''), a: String(h.a ?? '') }))
+      ? req.body.history.map((h: { q?: unknown; a?: unknown }) => ({
+          q: String(h.q ?? ''),
+          a: String(h.a ?? ''),
+        }))
       : [];
-    explainDoc(project, String(rel ?? ''), String(excerpt ?? ''), question, history, engine, pkgRoot)
+    explainDoc(
+      project,
+      String(rel ?? ''),
+      String(excerpt ?? ''),
+      question,
+      history,
+      engine,
+      pkgRoot,
+    )
       .then((r) => res.json(r))
       .catch((err) => res.status(500).json({ error: (err as Error).message }));
   });
@@ -439,7 +486,8 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     if (!analysisComplete(db, project, pkgRoot)) {
       return res.status(409).json({ error: 'analysis is not complete yet' });
     }
-    if (runningJob(db, project.id)) return res.status(409).json({ error: 'a job is already running' });
+    if (runningJob(db, project.id))
+      return res.status(409).json({ error: 'a job is already running' });
     const notes = Array.isArray(req.body?.notes) ? req.body.notes.map(String) : [];
     void runPlanning(db, project, engine, pkgRoot, notes);
     res.status(202).json({ started: '.kopeng/' });
@@ -459,7 +507,10 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     };
     let status: string | null = null;
     try {
-      status = readFileSync(join(dir, 'project.yaml'), 'utf8').match(/^status:\s*(.+)$/m)?.[1]?.trim() ?? null;
+      status =
+        readFileSync(join(dir, 'project.yaml'), 'utf8')
+          .match(/^status:\s*(.+)$/m)?.[1]
+          ?.trim() ?? null;
     } catch {
       /* not produced yet */
     }
@@ -479,8 +530,14 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     const p = join(project.repo_path, '.kopeng', 'project.yaml');
     try {
       const body = readFileSync(p, 'utf8');
-      writeFileSync(p, /^status:/m.test(body) ? body.replace(/^status:.*$/m, 'status: approved') : `status: approved
-${body}`, 'utf8');
+      writeFileSync(
+        p,
+        /^status:/m.test(body)
+          ? body.replace(/^status:.*$/m, 'status: approved')
+          : `status: approved
+${body}`,
+        'utf8',
+      );
       res.json({ ok: true });
     } catch (err) {
       res.status(400).json({ error: (err as Error).message });
@@ -507,7 +564,9 @@ ${body}`, 'utf8');
 
   // A missing /api route used to reach the SPA fallback, and the panel reported
   // "Unexpected token '<'" instead of the route it could not find.
-  app.use('/api', (req, res) => res.status(404).json({ error: `no such endpoint: ${req.method} ${req.originalUrl}` }));
+  app.use('/api', (req, res) =>
+    res.status(404).json({ error: `no such endpoint: ${req.method} ${req.originalUrl}` }),
+  );
 
   // Built panel (ui/dist) with SPA fallback; in dev the vite server proxies /api here.
   const uiDist = join(pkgRoot, 'ui', 'dist');

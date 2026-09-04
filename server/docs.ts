@@ -111,8 +111,7 @@ export function parseWorkflowSteps(md: string): DocStep[] {
       author = stepStart[1];
       continue;
     }
-    const paths = (s: string) =>
-      [...s.matchAll(/`\.kortext\/([^`]+)`/g)].map((m) => m[1]);
+    const paths = (s: string) => [...s.matchAll(/`\.kortext\/([^`]+)`/g)].map((m) => m[1]);
     if (/^\s*-\s*inputs:/.test(line)) inputs = paths(line);
     else if (/^\s*-\s*outputs:/.test(line)) outputs = paths(line);
     else if (/^\s*-\s*approver:/.test(line)) approver = line.split('approver:')[1].trim();
@@ -128,7 +127,10 @@ export function workflowNameFor(kind: 'new' | 'existing'): string {
   return kind === 'existing' ? 'existing-project-analysis' : 'new-project-analysis';
 }
 
-export function loadDocMap(pkgRoot: string, kind: 'new' | 'existing' = 'new'): Map<string, DocStep> {
+export function loadDocMap(
+  pkgRoot: string,
+  kind: 'new' | 'existing' = 'new',
+): Map<string, DocStep> {
   const map = new Map<string, DocStep>();
   for (const wf of [`${workflowNameFor(kind)}.md`, 'planning-pipeline.md']) {
     const p = join(pkgRoot, 'workflows', wf);
@@ -189,7 +191,8 @@ export function markRequestHandled(
     if (!inSection) continue;
     const m = line.match(REQUEST_LINE);
     if (!m) continue;
-    if (m[2]!.replace(/^\.kortext\//, '') !== target.replace(/^.*\//, '') && m[2] !== target) continue;
+    if (m[2]!.replace(/^\.kortext\//, '') !== target.replace(/^.*\//, '') && m[2] !== target)
+      continue;
     if ((m[3] ?? '').trim() !== reason.trim()) continue;
     // The ticked box says it is closed; the line under it says what closed it,
     // so "dismissed" and "the agent rewrote it" are not the same record.
@@ -204,9 +207,16 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
   const statuses = new Map<string, string>();
   const docs: DocInfo[] = [];
   const requests: Array<{ from: string; target: string; reason: string }> = [];
-  const collect = (dir: string, group: 'core' | 'foundation', relPrefix: string, skip: Set<string>) => {
+  const collect = (
+    dir: string,
+    group: 'core' | 'foundation',
+    relPrefix: string,
+    skip: Set<string>,
+  ) => {
     if (!existsSync(dir)) return;
-    for (const file of readdirSync(dir).filter((f) => f.endsWith('.md') && !skip.has(f)).sort()) {
+    for (const file of readdirSync(dir)
+      .filter((f) => f.endsWith('.md') && !skip.has(f))
+      .sort()) {
       const rel = `${relPrefix}${file}`;
       const body = readFileSync(join(dir, file), 'utf8');
       const fm = readFrontmatter(body);
@@ -233,7 +243,12 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
   };
   // Root = the living core. TODO.md belongs to the Plan tab, not Documents.
   collect(join(project.repo_path, '.kortext'), 'core', '', new Set(['TODO.md']));
-  collect(join(project.repo_path, '.kortext', 'foundation'), 'foundation', 'foundation/', new Set());
+  collect(
+    join(project.repo_path, '.kortext', 'foundation'),
+    'foundation',
+    'foundation/',
+    new Set(),
+  );
 
   // Each request lands in the inbox of the document it names. One a human has
   // already actioned is remembered outside the documents, so sending a file
@@ -251,7 +266,11 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
     // saves opening the target just to answer a question you already read.
     docs
       .find((d) => d.rel === r.from)
-      ?.sentRequests.push({ target: target.rel, reason: r.reason, targetHasStep: target.hasProducingStep });
+      ?.sentRequests.push({
+        target: target.rel,
+        reason: r.reason,
+        targetHasStep: target.hasProducingStep,
+      });
   }
 
   // 'not-applicable' satisfies a dependency: the doc was considered and
@@ -297,7 +316,11 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
 // The handshake is done when every document the workflow produces is settled
 // (approved or not-applicable). Docs without a producing step (unmapped
 // skeletons a project already carried) don't gate completion.
-export function analysisComplete(db: Database.Database, project: Project, pkgRoot: string): boolean {
+export function analysisComplete(
+  db: Database.Database,
+  project: Project,
+  pkgRoot: string,
+): boolean {
   const map = loadDocMap(pkgRoot, project.kind ?? 'new');
   const docs = listDocs(db, project, pkgRoot);
   const byRel = new Map(docs.map((d) => [d.rel, d.status]));

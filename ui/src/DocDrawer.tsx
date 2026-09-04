@@ -130,13 +130,19 @@ export function DocDrawer({
     let inAsk = false;
     let i = 0;
     for (const t of tokens) {
-      if (t.kind === 'h1' || t.kind === 'h2' || t.kind === 'h3') inAsk = /open questions/i.test(t.text);
+      if (t.kind === 'h1' || t.kind === 'h2' || t.kind === 'h3')
+        inAsk = /open questions/i.test(t.text);
       if (inAsk && t.kind === 'bullet' && t.text.trim()) n.set(t.index, ++i);
     }
     return n;
   }, [tokens]);
 
-  if (!doc) return <Drawer open={false} onClose={onClose}>{null}</Drawer>;
+  if (!doc)
+    return (
+      <Drawer open={false} onClose={onClose}>
+        {null}
+      </Drawer>
+    );
 
   const act = async (fn: () => Promise<unknown>) => {
     setBusy(true);
@@ -179,14 +185,19 @@ export function DocDrawer({
         setExplains((xs) => xs.map((x) => (x === entry ? { ...x, answer: r.answer } : x))),
       )
       .catch((e) =>
-        setExplains((xs) => xs.map((x) => (x === entry ? { ...x, answer: `Error: ${e.message}` } : x))),
+        setExplains((xs) =>
+          xs.map((x) => (x === entry ? { ...x, answer: `Error: ${e.message}` } : x)),
+        ),
       );
   };
 
   const addLineNote = (line: number, text: string) => {
     const token = tokens.find((t) => t.index === line);
     const no = qNo.get(line);
-    setNotes((ns) => [...ns, { line, excerpt: no ? `#${no}` : (token?.text?.slice(0, 60) ?? ''), text }]);
+    setNotes((ns) => [
+      ...ns,
+      { line, excerpt: no ? `#${no}` : (token?.text?.slice(0, 60) ?? ''), text },
+    ]);
   };
 
   const approve = () =>
@@ -224,7 +235,9 @@ export function DocDrawer({
             <span className="kx-doc-name">{doc.name}.md</span>
             <StatusBadge doc={doc} />
           </div>
-          {doc.author && <span className="kx-doc-author mono">{doc.author.replace(/^\+/, '')}</span>}
+          {doc.author && (
+            <span className="kx-doc-author mono">{doc.author.replace(/^\+/, '')}</span>
+          )}
         </div>
         <div className="dr-actions">
           {/* Approve · Edit · Close — karar, düzenleme, çıkış. */}
@@ -254,7 +267,12 @@ export function DocDrawer({
               <button
                 className="btn btn-secondary"
                 disabled={busy}
-                onClick={() => { setEditing(false); setDraft(content); setProposed(false); setRawEdit(false); }}
+                onClick={() => {
+                  setEditing(false);
+                  setDraft(content);
+                  setProposed(false);
+                  setRawEdit(false);
+                }}
               >
                 Discard
               </button>
@@ -281,7 +299,11 @@ export function DocDrawer({
       )}
       {doc.dependentOn.length > 0 && !editing && (
         <div className="kx-doc-dependbar">
-          <span className="mono">{doc.dependentOn.map((d) => d.replace(/^foundation\//, '').replace(/\.md$/, '')).join(', ')}</span>{' '}
+          <span className="mono">
+            {doc.dependentOn
+              .map((d) => d.replace(/^foundation\//, '').replace(/\.md$/, ''))
+              .join(', ')}
+          </span>{' '}
           — an input of this document is moving. Nothing is wrong yet; when it settles, this one is
           read against it again and you are told if it has to change.
         </div>
@@ -355,7 +377,11 @@ export function DocDrawer({
             {proposed && !rawEdit ? (
               <ProposalDiff before={content} after={draft} onEdit={() => setRawEdit(true)} />
             ) : (
-              <textarea className="kx-editor mono" value={draft} onChange={(e) => setDraft(e.target.value)} />
+              <textarea
+                className="kx-editor mono"
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+              />
             )}
           </>
         ) : (
@@ -403,7 +429,10 @@ export function DocDrawer({
                 <div key={i} className="kx-note">
                   {n.excerpt && <span className="kx-note-exc mono">{n.excerpt}</span>}
                   <span className="kx-note-body">{n.text}</span>
-                  <button className="btn btn-x" onClick={() => setNotes(notes.filter((_, j) => j !== i))}>
+                  <button
+                    className="btn btn-x"
+                    onClick={() => setNotes(notes.filter((_, j) => j !== i))}
+                  >
                     ×
                   </button>
                 </div>
@@ -411,7 +440,8 @@ export function DocDrawer({
             </div>
           ) : (
             <span className="kx-cmd-hint">
-              Click a line: chat with its author right below (Ask) or collect a revision note (Add note).
+              Click a line: chat with its author right below (Ask) or collect a revision note (Add
+              note).
             </span>
           )}
           <div className="kx-note-input">
@@ -546,9 +576,13 @@ function RequestBar({
     setQuestion('');
     api
       .explainDoc(project.id, it.from, `[asks ${it.target}] ${it.reason}`, q, history)
-      .then((r) => setChat((cs) => cs.map((c) => (c.q === q && c.a === null ? { ...c, a: r.answer } : c))))
+      .then((r) =>
+        setChat((cs) => cs.map((c) => (c.q === q && c.a === null ? { ...c, a: r.answer } : c))),
+      )
       .catch((e) =>
-        setChat((cs) => cs.map((c) => (c.q === q && c.a === null ? { ...c, a: `— ${(e as Error).message}` } : c))),
+        setChat((cs) =>
+          cs.map((c) => (c.q === q && c.a === null ? { ...c, a: `— ${(e as Error).message}` } : c)),
+        ),
       );
   };
 
@@ -594,36 +628,48 @@ function RequestBar({
           const talk = chat.filter((c) => c.i === i);
           return (
             <li key={i}>
-              <span className="mono">{it.label.replace(/\.md$/, '').replace(/^foundation\//, '')}</span> —{' '}
-              {it.reason}
+              <span className="mono">
+                {it.label.replace(/\.md$/, '').replace(/^foundation\//, '')}
+              </span>{' '}
+              — {it.reason}
               <div className="kx-changebar-actions">
-                  {it.canApply && (
-                    <button className="btn btn-primary" disabled={busy} onClick={() => decide(i, 'apply')}>
-                      Apply
-                    </button>
-                  )}
-                  <button className="btn btn-link-primary" disabled={busy} onClick={() => decide(i, 'dismiss')}>
-                    Dismiss
-                  </button>
+                {it.canApply && (
                   <button
-                    className="btn btn-secondary"
+                    className="btn btn-primary"
                     disabled={busy}
-                    onClick={() => setNoting(noting === i ? null : i)}
+                    onClick={() => decide(i, 'apply')}
                   >
-                    Add note
+                    Apply
                   </button>
-                  {!it.canApply && (
-                    <span className="kx-cmd-hint">No agent writes that one — open it to draft the change.</span>
-                  )}
-                  {extra}
-                  <button
-                    className="btn btn-link-primary"
-                    disabled={busy}
-                    onClick={() => setAsking(asking === i ? null : i)}
-                  >
-                    Ask
-                  </button>
-                </div>
+                )}
+                <button
+                  className="btn btn-link-primary"
+                  disabled={busy}
+                  onClick={() => decide(i, 'dismiss')}
+                >
+                  Dismiss
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  disabled={busy}
+                  onClick={() => setNoting(noting === i ? null : i)}
+                >
+                  Add note
+                </button>
+                {!it.canApply && (
+                  <span className="kx-cmd-hint">
+                    No agent writes that one — open it to draft the change.
+                  </span>
+                )}
+                {extra}
+                <button
+                  className="btn btn-link-primary"
+                  disabled={busy}
+                  onClick={() => setAsking(asking === i ? null : i)}
+                >
+                  Ask
+                </button>
+              </div>
               {(talk.length > 0 || asking === i || noting === i) && (
                 <div className="kx-thread">
                   {talk.map((c, k) => (
@@ -650,7 +696,9 @@ function RequestBar({
                             : 'How it should be done instead — this rides along with the request…  (Enter sends, Shift+Enter for a new line)'
                         }
                         value={asking === i ? question : note}
-                        onChange={(e) => (asking === i ? setQuestion(e.target.value) : setNote(e.target.value))}
+                        onChange={(e) =>
+                          asking === i ? setQuestion(e.target.value) : setNote(e.target.value)
+                        }
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' && !e.shiftKey) {
                             e.preventDefault();
@@ -665,7 +713,11 @@ function RequestBar({
                       />
                       <div className="kx-thread-actions">
                         {asking === i ? (
-                          <button className="btn btn-primary" disabled={!question.trim()} onClick={() => ask(i)}>
+                          <button
+                            className="btn btn-primary"
+                            disabled={!question.trim()}
+                            onClick={() => ask(i)}
+                          >
                             Ask
                           </button>
                         ) : (
@@ -715,7 +767,10 @@ function CopyButton({ text }: { text: string }) {
       title={done ? 'Copied' : 'Copy'}
       onClick={(e) => {
         e.stopPropagation();
-        void navigator.clipboard.writeText(text).then(() => setDone(true)).catch(() => {});
+        void navigator.clipboard
+          .writeText(text)
+          .then(() => setDone(true))
+          .catch(() => {});
       }}
     >
       {done ? (
@@ -749,9 +804,12 @@ function AlertIcon({ kind }: { kind: AlertKind }) {
   const d = {
     note: 'M8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM7.25 7.25h1.5v4h-1.5v-4zM8 4.5a.9.9 0 110 1.8.9.9 0 010-1.8z',
     tip: 'M8 1.5c-2.35 0-4 1.75-4 3.9 0 1.5.8 2.5 1.5 3.3.4.45.6.8.6 1.3v.5h3.8v-.5c0-.5.2-.85.6-1.3.7-.8 1.5-1.8 1.5-3.3 0-2.15-1.65-3.9-4-3.9zM6.1 12h3.8v1.1H6.1V12zm.6 2.1h2.6l-.6.9H7.3l-.6-.9z',
-    important: 'M8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM7.25 4.5h1.5v4.5h-1.5V4.5zM8 10.2a.9.9 0 110 1.8.9.9 0 010-1.8z',
-    warning: 'M8 1.6a.9.9 0 01.78.45l6 10.35A.9.9 0 0114 13.8H2a.9.9 0 01-.78-1.4l6-10.35A.9.9 0 018 1.6zm-.75 4.15v4h1.5v-4h-1.5zM8 10.9a.9.9 0 100 1.8.9.9 0 000-1.8z',
-    caution: 'M5.2 1.5h5.6L14.5 5.2v5.6L10.8 14.5H5.2L1.5 10.8V5.2L5.2 1.5zM7.25 4.5v4.5h1.5V4.5h-1.5zM8 10.2a.9.9 0 110 1.8.9.9 0 010-1.8z',
+    important:
+      'M8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM7.25 4.5h1.5v4.5h-1.5V4.5zM8 10.2a.9.9 0 110 1.8.9.9 0 010-1.8z',
+    warning:
+      'M8 1.6a.9.9 0 01.78.45l6 10.35A.9.9 0 0114 13.8H2a.9.9 0 01-.78-1.4l6-10.35A.9.9 0 018 1.6zm-.75 4.15v4h1.5v-4h-1.5zM8 10.9a.9.9 0 100 1.8.9.9 0 000-1.8z',
+    caution:
+      'M5.2 1.5h5.6L14.5 5.2v5.6L10.8 14.5H5.2L1.5 10.8V5.2L5.2 1.5zM7.25 4.5v4.5h1.5V4.5h-1.5zM8 10.2a.9.9 0 110 1.8.9.9 0 010-1.8z',
   }[kind];
   return (
     <svg className="kx-alert-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
@@ -858,7 +916,13 @@ function DocBlock({
       {questionNo && <span className="kx-qno mono">#{questionNo}</span>}
       {task ? (
         <>
-          <input type="checkbox" className="kx-task-box" checked={task[1] !== ' '} readOnly tabIndex={-1} />
+          <input
+            type="checkbox"
+            className="kx-task-box"
+            checked={task[1] !== ' '}
+            readOnly
+            tabIndex={-1}
+          />
           <span className="kx-task-text">
             <Inline text={task[2] ?? ''} />
           </span>
@@ -911,7 +975,8 @@ function lineDiff(a: string, b: string): { sign: ' ' | '-' | '+'; text: string }
   const lcs = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(0));
   for (let i = n - 1; i >= 0; i--) {
     for (let j = m - 1; j >= 0; j--) {
-      lcs[i]![j] = x[i] === y[j] ? lcs[i + 1]![j + 1]! + 1 : Math.max(lcs[i + 1]![j]!, lcs[i]![j + 1]!);
+      lcs[i]![j] =
+        x[i] === y[j] ? lcs[i + 1]![j + 1]! + 1 : Math.max(lcs[i + 1]![j]!, lcs[i]![j + 1]!);
     }
   }
   const out: { sign: ' ' | '-' | '+'; text: string }[] = [];
@@ -954,7 +1019,9 @@ function ProposalDiff({
     <>
       <div className="kx-diff-bar">
         <span className="kx-cmd-hint">
-          {changed === 0 ? 'The draft matches the document — nothing changed.' : `${changed} line${changed === 1 ? '' : 's'} changed`}
+          {changed === 0
+            ? 'The draft matches the document — nothing changed.'
+            : `${changed} line${changed === 1 ? '' : 's'} changed`}
         </span>
         <button className="btn btn-secondary" onClick={onEdit}>
           Edit text
@@ -964,7 +1031,9 @@ function ProposalDiff({
         {lines.map((l, i) => (
           <div
             key={i}
-            className={l.sign === '+' ? 'kx-diff-add' : l.sign === '-' ? 'kx-diff-del' : 'kx-diff-same'}
+            className={
+              l.sign === '+' ? 'kx-diff-add' : l.sign === '-' ? 'kx-diff-del' : 'kx-diff-same'
+            }
           >
             <span className="kx-diff-sign">{l.sign === ' ' ? '' : l.sign}</span>
             {l.text}
@@ -1087,10 +1156,18 @@ function LineThread({
           />
           <div className="kx-thread-actions">
             {/* Sormak önce gelen adım, not bırakmak asıl iş — ve son buton sağda durur. */}
-            <button className="btn btn-link-primary" disabled={!text.trim()} onClick={() => send('ask')}>
+            <button
+              className="btn btn-link-primary"
+              disabled={!text.trim()}
+              onClick={() => send('ask')}
+            >
               Ask
             </button>
-            <button className="btn btn-primary" disabled={!text.trim()} onClick={() => send('note')}>
+            <button
+              className="btn btn-primary"
+              disabled={!text.trim()}
+              onClick={() => send('note')}
+            >
               Add note
             </button>
           </div>

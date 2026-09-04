@@ -37,13 +37,19 @@ const JUDGMENT_TIMEOUT_MS = 5 * 60 * 1000;
 // The skeleton's own asks, kept in the order the template lists them. A floor
 // failure quotes these rather than inventing new questions.
 const BRIEF_SECTIONS: Array<{ heading: RegExp; ask: string }> = [
-  { heading: /vision|goal/i, ask: 'Product Vision & Goals — what is this product, and why does it exist?' },
+  {
+    heading: /vision|goal/i,
+    ask: 'Product Vision & Goals — what is this product, and why does it exist?',
+  },
   { heading: /audience|persona/i, ask: 'Target Audience & Personas — who is it for?' },
   {
     heading: /language|locali[sz]|locale/i,
     ask: 'Interface Language — which language does the product speak to its users, and is more than one in scope?',
   },
-  { heading: /kpi|performance indicator/i, ask: 'Key Performance Indicators — what does success look like?' },
+  {
+    heading: /kpi|performance indicator/i,
+    ask: 'Key Performance Indicators — what does success look like?',
+  },
   { heading: /scope/i, ask: 'Future Scope & Out of Scope — what is deliberately not in it?' },
 ];
 
@@ -78,7 +84,10 @@ function isSkeletonLine(line: string): boolean {
 export function assessBrief(content: string): { ok: boolean; questions: string[] } {
   const body = stripFrontmatter(content);
   const lines = body.split('\n');
-  const prose = lines.filter((l) => !isSkeletonLine(l)).join(' ').trim();
+  const prose = lines
+    .filter((l) => !isSkeletonLine(l))
+    .join(' ')
+    .trim();
   const allAsks = BRIEF_SECTIONS.map((s) => s.ask);
 
   // Nothing was written: the whole template is still asking its own questions.
@@ -106,13 +115,27 @@ export function assessBrief(content: string): { ok: boolean; questions: string[]
   if (!templateShaped) return { ok: true, questions: [] };
 
   const unanswered = BRIEF_SECTIONS.filter((s) => !answered.has(s.ask)).map((s) => s.ask);
-  return unanswered.length === 0 ? { ok: true, questions: [] } : { ok: false, questions: unanswered };
+  return unanswered.length === 0
+    ? { ok: true, questions: [] }
+    : { ok: false, questions: unanswered };
 }
 
 // Directories that are never the project's own work.
 const IGNORED_DIRS = new Set([
-  '.git', '.kortext', '.kopeng', 'node_modules', 'dist', 'build', 'out',
-  '.next', '.nuxt', 'coverage', 'vendor', '.venv', '__pycache__', 'Pods',
+  '.git',
+  '.kortext',
+  '.kopeng',
+  'node_modules',
+  'dist',
+  'build',
+  'out',
+  '.next',
+  '.nuxt',
+  'coverage',
+  'vendor',
+  '.venv',
+  '__pycache__',
+  'Pods',
 ]);
 
 // An existing project's evidence is its code. Counts real files, stopping as

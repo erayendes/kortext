@@ -5,7 +5,14 @@ import { join } from 'node:path';
 import type { Project } from './db.js';
 import { spawnCli } from './cli-spawn.js';
 import type { EngineSpec } from './engines.js';
-import { docPath, listDocs, loadDocMap, readFrontmatter, workflowNameFor, type DocStep } from './docs.js';
+import {
+  docPath,
+  listDocs,
+  loadDocMap,
+  readFrontmatter,
+  workflowNameFor,
+  type DocStep,
+} from './docs.js';
 import { ensureReadiness } from './readiness.js';
 
 export interface Job {
@@ -44,11 +51,17 @@ export function runningDoc(db: Database.Database, projectId: number, rel: string
 
 // All currently producible docs: unwritten, inputs settled, not already
 // being written. Dependency-depth order (listDocs is sorted).
-export function producibleSteps(db: Database.Database, project: Project, pkgRoot: string): DocStep[] {
+export function producibleSteps(
+  db: Database.Database,
+  project: Project,
+  pkgRoot: string,
+): DocStep[] {
   const running = new Set(
-    (db
-      .prepare("SELECT doc_rel FROM jobs WHERE project_id = ? AND status = 'running'")
-      .all(project.id) as { doc_rel: string }[]).map((r) => r.doc_rel),
+    (
+      db
+        .prepare("SELECT doc_rel FROM jobs WHERE project_id = ? AND status = 'running'")
+        .all(project.id) as { doc_rel: string }[]
+    ).map((r) => r.doc_rel),
   );
   const docs = listDocs(db, project, pkgRoot);
   const map = loadDocMap(pkgRoot, project.kind ?? 'new');
@@ -85,7 +98,7 @@ export function buildStepPrompt(
     "- Decide whether this document applies to THIS project, using the step's `n/a when` condition. If it is met, write the file with status: not-applicable and one line saying why, and stop. That is a complete, correct outcome — not a gap and not a failure.",
     '- If it applies, write only what the inputs support. Where they are silent, say so and leave the question to prime; never fill a section by assuming what the product is probably like.',
     "- Every question you leave for the human goes under the document's `## Open Questions for prime` heading, one `- ` item each, and nowhere else. Leave that section empty when there is nothing to ask — an empty section is the signal that the document stands on its own.",
-    "- When an ALREADY-WRITTEN document must change because of what you found, that is not prose: put one line under `## Revision Requests`, starting with the target file in backticks — `` - `ENVIRONMENT.md` — the access-log lines must follow the no-logs decision `` — and say what must change and why. The panel turns each line into an action the human can take; a demand written anywhere else in the document is a demand nobody can act on. Leave the section empty when nothing upstream needs to change.",
+    '- When an ALREADY-WRITTEN document must change because of what you found, that is not prose: put one line under `## Revision Requests`, starting with the target file in backticks — `` - `ENVIRONMENT.md` — the access-log lines must follow the no-logs decision `` — and say what must change and why. The panel turns each line into an action the human can take; a demand written anywhere else in the document is a demand nobody can act on. Leave the section empty when nothing upstream needs to change.',
     '',
     'HARD RULES:',
     `- Produce EXACTLY this file and nothing else: .kortext/${step.output}`,
@@ -95,7 +108,7 @@ export function buildStepPrompt(
     project.doc_lang
       ? `- Document language: write the PROSE in ${project.doc_lang}. This is prime's stated choice — it overrides the language of the inputs, the repository and the README.`
       : '- Document language: write the PROSE in the language of .kortext/foundation/BRD.md; if there is no BRD (existing project), match the language of the already-approved .kortext documents, else the language of the repo README; default to English.',
-    '- ENGLISH ALWAYS, whatever the document language: the section headings (they are structure, and other documents cite them by name), code and code samples, identifiers, file and folder names, commands, environment-variable names, database table and column names, API paths and field names, branch and commit conventions, and every frontmatter key. Only the prose under the headings is written in the brief\'s language — never translate a name something is called by.',
+    "- ENGLISH ALWAYS, whatever the document language: the section headings (they are structure, and other documents cite them by name), code and code samples, identifiers, file and folder names, commands, environment-variable names, database table and column names, API paths and field names, branch and commit conventions, and every frontmatter key. Only the prose under the headings is written in the brief's language — never translate a name something is called by.",
     "- Product copy is the one exception: strings a user of the product will read (microcopy, error messages, page copy, email text) are written in the product's interface language from the brief — which may differ from the language of this document.",
     '',
     'STEP DEFINITION (from the workflow):',
@@ -109,7 +122,7 @@ export function buildStepPrompt(
       '',
       'REVISION REQUEST — the human reviewed the current draft and asks for changes.',
       'Rewrite the document addressing EVERY note below (keep what was not objected to).',
-      "A note is written in `[the line it was left on] the note`. When that line is one of your own",
+      'A note is written in `[the line it was left on] the note`. When that line is one of your own',
       'open questions, the note IS the answer: fold it into the document as a settled fact, in the',
       'section where it belongs, and DELETE that question from `## Open Questions for prime`. An',
       'answered question is not restated, not moved, and not kept "for reference" — it is gone, and',
@@ -131,9 +144,7 @@ export function stepTextFor(pkgRoot: string, project: Project, outputRel: string
     'utf8',
   );
   const blocks = wf.split(/\n(?=\d+\. \*\*\+)/);
-  return (
-    blocks.find((b) => b.includes(`\`.kortext/${outputRel}\``) && /- outputs:/.test(b)) ?? ''
-  );
+  return blocks.find((b) => b.includes(`\`.kortext/${outputRel}\``) && /- outputs:/.test(b)) ?? '';
 }
 
 export function personaBodyFor(pkgRoot: string, step: DocStep): string | null {
@@ -201,9 +212,10 @@ export async function advance(
     const inFlight = new Set<Promise<unknown>>();
     for (;;) {
       // Paused = don't start new steps; running ones finish and the loop exits.
-      const paused = (db.prepare('SELECT paused FROM projects WHERE id = ?').get(project.id) as
-        | { paused: number }
-        | undefined)?.paused;
+      const paused = (
+        db.prepare('SELECT paused FROM projects WHERE id = ?').get(project.id) as
+          { paused: number } | undefined
+      )?.paused;
       const room = paused ? 0 : MAX_PARALLEL - inFlight.size;
       if (room > 0) {
         for (const step of producibleSteps(db, project, pkgRoot).slice(0, room)) {
@@ -288,7 +300,9 @@ export async function explainDoc(
     timeoutMs: 3 * 60 * 1000,
   });
   if (res.exitCode !== 0) {
-    throw new Error(`${engine.id} CLI failed: ${(res.stderrTail || res.stdoutTail).trim().slice(-300)}`);
+    throw new Error(
+      `${engine.id} CLI failed: ${(res.stderrTail || res.stdoutTail).trim().slice(-300)}`,
+    );
   }
   return { answer: res.stdoutTail.trim() };
 }
@@ -298,7 +312,12 @@ export async function explainDoc(
 // ---------------------------------------------------------------------------
 
 /** Appends one demand under the source's `## Revision Requests` heading. */
-export function appendRevisionRequest(project: Project, sourceRel: string, targetRel: string, reason: string): void {
+export function appendRevisionRequest(
+  project: Project,
+  sourceRel: string,
+  targetRel: string,
+  reason: string,
+): void {
   const path = docPath(project, sourceRel);
   const lines = readFileSync(path, 'utf8').split('\n');
   const target = targetRel.replace(/^foundation\//, '');
@@ -365,7 +384,10 @@ async function runRecheck(
       settle('failed', `${engine.id} returned no verdict for ${readerRel}`);
       return;
     }
-    const verdict = JSON.parse(readFileSync(verdictPath, 'utf8')) as { needsChange?: boolean; reason?: string };
+    const verdict = JSON.parse(readFileSync(verdictPath, 'utf8')) as {
+      needsChange?: boolean;
+      reason?: string;
+    };
     rmSync(verdictPath, { force: true });
     if (verdict.needsChange && (verdict.reason ?? '').trim()) {
       appendRevisionRequest(project, sourceRel, readerRel, String(verdict.reason));
@@ -391,7 +413,8 @@ export function recheckDependents(
   pkgRoot: string,
 ): void {
   const readers = listDocs(db, project, pkgRoot).filter(
-    (d) => d.status === 'approved' && d.inputs.includes(sourceRel) && !runningDoc(db, project.id, d.rel),
+    (d) =>
+      d.status === 'approved' && d.inputs.includes(sourceRel) && !runningDoc(db, project.id, d.rel),
   );
   for (const r of readers) void runRecheck(db, project, r.rel, sourceRel, engine);
 }
@@ -414,7 +437,9 @@ export async function proposeRevision(
   const author = loadDocMap(pkgRoot, project.kind ?? 'new').get(rel)?.author ?? '+agent';
   const prompt = [
     `Another document has asked .kortext/${rel} to change. Draft that change.`,
-    ...(author !== '+agent' ? [`Write as ${author}, but the document belongs to the human — you propose, they decide.`] : []),
+    ...(author !== '+agent'
+      ? [`Write as ${author}, but the document belongs to the human — you propose, they decide.`]
+      : []),
     '',
     'HARD RULES:',
     `- Read .kortext/${rel}. Write the FULL revised document to .kortext/.proposal.txt — the whole file, frontmatter included, not a fragment and not a diff.`,
@@ -436,7 +461,9 @@ export async function proposeRevision(
     timeoutMs: 5 * 60 * 1000,
   });
   if (res.exitCode !== 0) {
-    throw new Error(`${engine.id} CLI failed: ${(res.stderrTail || res.stdoutTail).trim().slice(-300)}`);
+    throw new Error(
+      `${engine.id} CLI failed: ${(res.stderrTail || res.stdoutTail).trim().slice(-300)}`,
+    );
   }
   if (!existsSync(scratch)) {
     throw new Error(`${engine.id} wrote no proposal — nothing was changed`);
@@ -458,7 +485,9 @@ export async function runPlanning(
   reviseNotes: string[] = [],
 ): Promise<RunOutcome> {
   const job = db
-    .prepare("INSERT INTO jobs (project_id, doc_rel, kind) VALUES (?, '.kopeng/', 'plan') RETURNING *")
+    .prepare(
+      "INSERT INTO jobs (project_id, doc_rel, kind) VALUES (?, '.kopeng/', 'plan') RETURNING *",
+    )
     .get(project.id) as Job;
   const workflow = readFileSync(join(pkgRoot, 'workflows', 'planning-pipeline.md'), 'utf8');
   const lines = [
@@ -554,7 +583,12 @@ export async function runStep(
     personaBodyFor(pkgRoot, step),
     reviseNotes,
   );
-  const logPath = join(homedir(), '.kortext', 'logs', `p${project.id}-${step.output.replace(/\//g, '_')}.log`);
+  const logPath = join(
+    homedir(),
+    '.kortext',
+    'logs',
+    `p${project.id}-${step.output.replace(/\//g, '_')}.log`,
+  );
 
   const settle = (status: 'done' | 'failed' | 'stopped', error?: string): RunOutcome => {
     db.prepare(

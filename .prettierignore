@@ -1,5 +1,12 @@
-dist
 node_modules
-legacy
-.kortext
+dist
+ui/dist
 package-lock.json
+ui/package-lock.json
+
+# Never edited again — formatting it would rewrite history for no reason.
+archive
+
+# Prose and tables are wrapped by hand here; a formatter would re-flow the
+# columns and the line breaks that were chosen for reading, not for parsing.
+*.md

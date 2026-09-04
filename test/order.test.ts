@@ -42,9 +42,11 @@ test('personas declare the same upstream the workflow gives them', () => {
 // back, and a document with no question section cannot hold the approval.
 test('every workflow-produced skeleton carries the two mechanism sections', () => {
   for (const step of workflow('new-project-analysis')) {
-    const skeleton = readFileSync(join(pkgRoot, 'templates', step.output.includes('/') ? step.output : `core/${step.output}`), 'utf8');
+    const skeleton = readFileSync(
+      join(pkgRoot, 'templates', step.output.includes('/') ? step.output : `core/${step.output}`),
+      'utf8',
+    );
     assert.match(skeleton, /^## Revision Requests$/m, step.output);
     assert.match(skeleton, /^## Open Questions for prime$/m, step.output);
   }
 });
-

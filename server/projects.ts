@@ -20,7 +20,11 @@ import type { Project } from './db.js';
 // with them during Phase A; after the handshake the docs are the contract.
 export const BRIEF_REL = join('.kortext', 'foundation', 'BRD.md');
 
-export function scaffoldProject(repoPath: string, pkgRoot: string, opts: { skipBrief?: boolean } = {}): void {
+export function scaffoldProject(
+  repoPath: string,
+  pkgRoot: string,
+  opts: { skipBrief?: boolean } = {},
+): void {
   const kx = join(repoPath, '.kortext');
   migrateLegacyLayout(kx);
   mkdirSync(join(kx, 'foundation'), { recursive: true });
@@ -70,7 +74,11 @@ export function writeContractBlock(path: string, body: string): void {
   const start = current.indexOf(BLOCK_START);
   const end = current.indexOf(BLOCK_END);
   if (start !== -1 && end > start) {
-    writeFileSync(path, current.slice(0, start) + block + current.slice(end + BLOCK_END.length), 'utf8');
+    writeFileSync(
+      path,
+      current.slice(0, start) + block + current.slice(end + BLOCK_END.length),
+      'utf8',
+    );
     return;
   }
   writeFileSync(path, `${current.replace(/\s*$/, '')}\n\n${block}\n`, 'utf8');
@@ -210,9 +218,8 @@ export function createProject(
   if (!/^[A-Z][A-Z0-9]{1,7}$/.test(code)) {
     throw new Error(`code must be 2-8 chars, A-Z then A-Z0-9 (got: ${code})`);
   }
-  const codeTaken = db
-    .prepare('SELECT name FROM projects WHERE code = ?')
-    .get(code) as { name: string } | undefined;
+  const codeTaken = db.prepare('SELECT name FROM projects WHERE code = ?').get(code) as
+    { name: string } | undefined;
   if (codeTaken) {
     throw new Error(
       `The code ${code} already belongs to "${codeTaken.name}" — task ids carry it, so two projects cannot share one. Pick another, or remove that project first.`,
@@ -246,15 +253,24 @@ export function createProject(
     .prepare(
       'INSERT INTO projects (name, repo_path, kind, code, doc_lang, engine) VALUES (?, ?, ?, ?, ?, ?) RETURNING *',
     )
-    .get(name, repoPath, kind, code, (input.docLang ?? '').trim(), (input.engine ?? '').trim()) as Project;
+    .get(
+      name,
+      repoPath,
+      kind,
+      code,
+      (input.docLang ?? '').trim(),
+      (input.engine ?? '').trim(),
+    ) as Project;
   return row;
 }
 
 // Out of the way, not gone: the row stays, the repo is untouched, and the
 // panel folds it into its own group.
 export function setArchived(db: Database.Database, id: number, archived: boolean): boolean {
-  return db.prepare('UPDATE projects SET archived = ? WHERE id = ?').run(archived ? 1 : 0, id)
-    .changes > 0;
+  return (
+    db.prepare('UPDATE projects SET archived = ? WHERE id = ?').run(archived ? 1 : 0, id).changes >
+    0
+  );
 }
 
 // Unregister only — never touches files in the repo.

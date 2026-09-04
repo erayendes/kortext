@@ -25,7 +25,8 @@ test('an unknown language is left alone, as one plain run', () => {
 });
 
 test('shell: the command, its flags, strings and comments', () => {
-  const code = '# clone it\ngit clone https://example.com/x.git\ncd x\nnpm install --save-dev "a b"';
+  const code =
+    '# clone it\ngit clone https://example.com/x.git\ncd x\nnpm install --save-dev "a b"';
   roundTrips(code, 'bash');
   const kinds = kindsOf(code, 'bash');
   assert.ok(kinds.includes('com:# clone it'));

@@ -174,7 +174,8 @@ export type InlineSpan =
  */
 export function parseInline(text: string): InlineSpan[] {
   const spans: InlineSpan[] = [];
-  const re = /\*\*(.+?)\*\*|`(.+?)`|\*(\S(?:.*?\S)?)\*|(?<![A-Za-z0-9_])_(\S(?:.*?\S)?)_(?![A-Za-z0-9_])/g;
+  const re =
+    /\*\*(.+?)\*\*|`(.+?)`|\*(\S(?:.*?\S)?)\*|(?<![A-Za-z0-9_])_(\S(?:.*?\S)?)_(?![A-Za-z0-9_])/g;
   let last = 0;
   let m: RegExpExecArray | null;
 

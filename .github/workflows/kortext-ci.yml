@@ -30,6 +30,9 @@ jobs:
       - name: Install dependencies
         run: npm ci && npm --prefix ui ci
 
+      - name: Format check (prettier)
+        run: npm run format:check
+
       - name: Typecheck (server + panel)
         run: npm run typecheck
 

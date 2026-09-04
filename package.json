@@ -30,6 +30,8 @@
     "dev:web": "npm --prefix ui run dev",
     "build": "tsc -p tsconfig.json && npm --prefix ui run build",
     "typecheck": "tsc -p tsconfig.json --noEmit && npm --prefix ui run typecheck",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "test": "tsx --test test/*.test.ts",
     "prepack": "npm run build"
   },
@@ -57,6 +59,7 @@
     "@types/better-sqlite3": "^7.6.12",
     "@types/express": "^5.0.0",
     "@types/node": "^22.10.5",
+    "prettier": "^3.9.6",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   }

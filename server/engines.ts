@@ -45,8 +45,7 @@ export function detectEngines(): Array<EngineSpec & { available: boolean }> {
 
 export function getSetting(db: Database.Database, key: string): string | null {
   const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key) as
-    | { value: string }
-    | undefined;
+    { value: string } | undefined;
   return row?.value ?? null;
 }
 
@@ -68,13 +67,13 @@ export function engineFor(
   project: { engine?: string },
 ): (EngineSpec & { available: boolean }) | null {
   const detected = detectEngines();
-  return (
-    detected.find((e) => e.id === project.engine && e.available) ?? selectedEngine(db)
-  );
+  return detected.find((e) => e.id === project.engine && e.available) ?? selectedEngine(db);
 }
 
 // Selected engine: explicit setting if still installed, else first available.
-export function selectedEngine(db: Database.Database): (EngineSpec & { available: boolean }) | null {
+export function selectedEngine(
+  db: Database.Database,
+): (EngineSpec & { available: boolean }) | null {
   const detected = detectEngines();
   const chosen = getSetting(db, 'engine');
   return (

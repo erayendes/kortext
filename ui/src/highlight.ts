@@ -81,7 +81,10 @@ const RULES: Record<Exclude<Lang, 'plain'>, { rules: Rule[]; flags: string }> = 
     flags: 'g',
     rules: [
       { kind: 'com', src: '//[^\\n]*|/\\*[\\s\\S]*?\\*/' },
-      { kind: 'str', src: `"(?:[^"\\\\\\n]|\\\\.)*"|'(?:[^'\\\\\\n]|\\\\.)*'|\`(?:[^\`\\\\]|\\\\.)*\`` },
+      {
+        kind: 'str',
+        src: `"(?:[^"\\\\\\n]|\\\\.)*"|'(?:[^'\\\\\\n]|\\\\.)*'|\`(?:[^\`\\\\]|\\\\.)*\``,
+      },
       { kind: 'kw', src: `\\b(?:${JS_KEYWORDS})\\b` },
       { kind: 'num', src: '\\b\\d+(?:\\.\\d+)?\\b' },
     ],

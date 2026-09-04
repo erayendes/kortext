@@ -5,12 +5,23 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { openDb } from '../server/db.js';
 import { createProject } from '../server/projects.js';
-import { analysisComplete, docPath, listDocs, parseWorkflowSteps, setFrontmatterStatus, hasOpenQuestions, parseRevisionRequests, markRequestHandled } from '../server/docs.js';
+import {
+  analysisComplete,
+  docPath,
+  listDocs,
+  parseWorkflowSteps,
+  setFrontmatterStatus,
+  hasOpenQuestions,
+  parseRevisionRequests,
+  markRequestHandled,
+} from '../server/docs.js';
 
 const pkgRoot = process.cwd();
 
 test('parseWorkflowSteps extracts inputs/outputs/author/approver per output', () => {
-  const steps = parseWorkflowSteps(readFileSync(join(pkgRoot, 'workflows', 'new-project-analysis.md'), 'utf8'));
+  const steps = parseWorkflowSteps(
+    readFileSync(join(pkgRoot, 'workflows', 'new-project-analysis.md'), 'utf8'),
+  );
   const prd = steps.find((s) => s.output === 'foundation/PRD.md');
   assert.ok(prd);
   assert.equal(prd.author, '+product-manager');
@@ -38,7 +49,10 @@ test('listDocs: dependency blocking follows approvals; regressed input warns dep
   assert.equal(byRel('foundation/BRD.md').blocked, false);
   assert.equal(byRel('foundation/PRD.md').blocked, true);
   // BRD sorts before PRD (dependency depth)
-  assert.ok(docs.findIndex((d) => d.rel === 'foundation/BRD.md') < docs.findIndex((d) => d.rel === 'foundation/PRD.md'));
+  assert.ok(
+    docs.findIndex((d) => d.rel === 'foundation/BRD.md') <
+      docs.findIndex((d) => d.rel === 'foundation/PRD.md'),
+  );
   // The graph is a diamond: nearly everything descends from the PRD, so a
   // document must sort behind every input, not behind whichever branch was
   // walked first. STACK feeds ARCHITECTURE, SECURITY feeds ENVIRONMENT feeds
@@ -108,7 +122,7 @@ test('parsePickedPath: trims, strips trailing slash, null on cancel/empty', asyn
   assert.equal(parsePickedPath('/Users/x\n', 1), null);
 });
 
-test('the brief is prime\'s own document; every other one has a step that writes it', () => {
+test("the brief is prime's own document; every other one has a step that writes it", () => {
   const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
   const db = openDb(join(work, 'db.sqlite'));
   const p = createProject(db, { name: 'Own', repoPath: join(work, 'own') }, pkgRoot);
@@ -205,7 +219,13 @@ test('a revision request lands in the inbox of the document it names', () => {
 
   // An open demand keeps the handshake from completing, and being actioned clears it.
   assert.equal(analysisComplete(db, p, pkgRoot), false);
-  markRequestHandled(p, 'foundation/TRD.md', 'ENVIRONMENT.md', 'logs must go', 'dismissed by prime — no change made');
+  markRequestHandled(
+    p,
+    'foundation/TRD.md',
+    'ENVIRONMENT.md',
+    'logs must go',
+    'dismissed by prime — no change made',
+  );
   const after = listDocs(db, p, pkgRoot).find((d) => d.rel === 'ENVIRONMENT.md')!;
   assert.deepEqual(after.revisionRequests, []);
   rmSync(work, { recursive: true, force: true });
@@ -225,7 +245,13 @@ test('a demand on a foundation document is settled by the path it was decided on
   setFrontmatterStatus(docPath(p, 'foundation/BRD.md'), 'approved');
   const brd = () => listDocs(db, p, pkgRoot).find((d) => d.rel === 'foundation/BRD.md')!;
   assert.equal(brd().revisionRequests.length, 1);
-  markRequestHandled(p, 'foundation/PRD.md', 'foundation/BRD.md', 'say it the other way round', 'applied — the agent rewrote it');
+  markRequestHandled(
+    p,
+    'foundation/PRD.md',
+    'foundation/BRD.md',
+    'say it the other way round',
+    'applied — the agent rewrote it',
+  );
   assert.equal(brd().revisionRequests.length, 0);
   // The ticked box is what closes it, and the line under it says what closed
   // it — a dismissal and a rewrite must not leave the same record.
@@ -234,4 +260,3 @@ test('a demand on a foundation document is settled by the path it was decided on
   assert.match(prd, /^ {2}- applied — the agent rewrote it · \d{4}-\d{2}-\d{2}$/m);
   rmSync(work, { recursive: true, force: true });
 });
-

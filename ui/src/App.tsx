@@ -1,5 +1,14 @@
 import { useEffect, useState } from 'react';
-import { api, type DocInfo, type EngineInfo, type HandshakeState, type Job, type KopengPlan, type Project, type Readiness } from './api';
+import {
+  api,
+  type DocInfo,
+  type EngineInfo,
+  type HandshakeState,
+  type Job,
+  type KopengPlan,
+  type Project,
+  type Readiness,
+} from './api';
 import { DocBadges, DocDrawer, StatusBadge } from './DocDrawer';
 
 // ponytail: last two segments read fine in a card; the full path lives in the tooltip
@@ -27,54 +36,57 @@ export function App() {
   const live = projects.filter((p) => !p.archived);
   const archived = projects.filter((p) => p.archived);
   const unarchive = (p: Project) =>
-    api.archiveProject(p.id, false).then(refresh).catch((e) => setError(e.message));
+    api
+      .archiveProject(p.id, false)
+      .then(refresh)
+      .catch((e) => setError(e.message));
 
   // A div, not a button: an archived card carries its own Unarchive control,
   // and a button inside a button is not a thing.
   const projectCard = (p: Project) => (
-              <div
-                key={p.id}
-                className="kx-card"
-                role="button"
-                tabIndex={0}
-                onClick={() => setSelected(p)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') setSelected(p);
-                }}
-              >
-                <span className="kx-card-head">
-                  {p.code && <span className="kx-card-code mono">{p.code}</span>}
-                  <span className="kx-card-name">{p.name}</span>
-                  {p.archived === 1 && (
-                    <button
-                      className="btn btn-link-success kx-card-action"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void unarchive(p);
-                      }}
-                    >
-                      Unarchive
-                    </button>
-                  )}
-                </span>
-                <span className="kx-card-path mono" title={p.repo_path}>
-                  {shortPath(p.repo_path)}
-                </span>
-                {p.docCounts && (
-                  <span
-                    className={`kx-card-counts mono${
-                      p.docCounts.core.settled === p.docCounts.core.total &&
-                      p.docCounts.foundation.settled === p.docCounts.foundation.total &&
-                      p.docCounts.core.total > 0
-                        ? ' done'
-                        : ''
-                    }`}
-                  >
-                    core {p.docCounts.core.settled}/{p.docCounts.core.total} · foundation{' '}
-                    {p.docCounts.foundation.settled}/{p.docCounts.foundation.total}
-                  </span>
-                )}
-              </div>
+    <div
+      key={p.id}
+      className="kx-card"
+      role="button"
+      tabIndex={0}
+      onClick={() => setSelected(p)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') setSelected(p);
+      }}
+    >
+      <span className="kx-card-head">
+        {p.code && <span className="kx-card-code mono">{p.code}</span>}
+        <span className="kx-card-name">{p.name}</span>
+        {p.archived === 1 && (
+          <button
+            className="btn btn-link-success kx-card-action"
+            onClick={(e) => {
+              e.stopPropagation();
+              void unarchive(p);
+            }}
+          >
+            Unarchive
+          </button>
+        )}
+      </span>
+      <span className="kx-card-path mono" title={p.repo_path}>
+        {shortPath(p.repo_path)}
+      </span>
+      {p.docCounts && (
+        <span
+          className={`kx-card-counts mono${
+            p.docCounts.core.settled === p.docCounts.core.total &&
+            p.docCounts.foundation.settled === p.docCounts.foundation.total &&
+            p.docCounts.core.total > 0
+              ? ' done'
+              : ''
+          }`}
+        >
+          core {p.docCounts.core.settled}/{p.docCounts.core.total} · foundation{' '}
+          {p.docCounts.foundation.settled}/{p.docCounts.foundation.total}
+        </span>
+      )}
+    </div>
   );
 
   return (
@@ -152,7 +164,10 @@ export function App() {
 function Version() {
   const [version, setVersion] = useState('');
   useEffect(() => {
-    api.health().then((h) => setVersion(h.version)).catch(() => {});
+    api
+      .health()
+      .then((h) => setVersion(h.version))
+      .catch(() => {});
   }, []);
   return version ? <span className="kx-version mono">v{version}</span> : null;
 }
@@ -284,12 +299,19 @@ function TransferPanel({ project }: { project: Project }) {
           <span className="kx-cmd-title">
             Plan ready: {plan.versions} version · {plan.epics} epic · {plan.tasks} task
           </span>
-          <span className={`kx-status kx-status-${plan.status === 'approved' ? 'approved' : 'draft'}`}>
+          <span
+            className={`kx-status kx-status-${plan.status === 'approved' ? 'approved' : 'draft'}`}
+          >
             {plan.status ?? 'draft'}
           </span>
           <span className="kx-doc-spacer" />
           {plan.status !== 'approved' && (
-            <button className="btn btn-success" onClick={() => api.approvePlan(project.id).then(() => setPlan({ ...plan, status: 'approved' }))}>
+            <button
+              className="btn btn-success"
+              onClick={() =>
+                api.approvePlan(project.id).then(() => setPlan({ ...plan, status: 'approved' }))
+              }
+            >
               Approve plan
             </button>
           )}
@@ -328,8 +350,8 @@ function TransferPanel({ project }: { project: Project }) {
         Transfer to Kopeng
       </button>
       <span className="kx-cmd-hint">
-        Splits the work into tasks (Version → Epic → Task) and writes the files Kopeng
-        reads under .kopeng/.
+        Splits the work into tasks (Version → Epic → Task) and writes the files Kopeng reads under
+        .kopeng/.
       </span>
       {err && <span className="kx-doc-fail">{err}</span>}
     </div>
@@ -489,97 +511,97 @@ function AddProject({
       </div>
       {kind === 'existing' && (
         <span className="kx-cmd-hint">
-          No brief for an existing project — the code itself is the evidence. Nothing runs until you press Start.
+          No brief for an existing project — the code itself is the evidence. Nothing runs until you
+          press Start.
         </span>
       )}
       {kind === 'new' && (
-      <div className="kx-brief">
-        <div className="kx-brief-head">
-          <span className="kx-cmd-title">Brief (BRD)</span>
-          <span className="kx-doc-spacer" />
-          <button
-            className="btn btn-link-primary"
-            title="Download a filled-in example BRD.md"
-            onClick={() => {
-              const url = URL.createObjectURL(
-                new Blob([BRIEF_EXAMPLE], { type: 'text/markdown' }),
-              );
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = 'BRD.md';
-              a.click();
-              URL.revokeObjectURL(url);
-              setBriefMode('upload'); // download → edit → bring it back here
-            }}
-          >
-            Example ↓
-          </button>
-          {/* Write and Upload are one choice, so they are a segment, not two tabs. */}
-          <span className="seg">
+        <div className="kx-brief">
+          <div className="kx-brief-head">
+            <span className="kx-cmd-title">Brief (BRD)</span>
+            <span className="kx-doc-spacer" />
             <button
-              className={briefMode === 'write' ? 'on' : ''}
-              onClick={() => setBriefMode('write')}
+              className="btn btn-link-primary"
+              title="Download a filled-in example BRD.md"
+              onClick={() => {
+                const url = URL.createObjectURL(
+                  new Blob([BRIEF_EXAMPLE], { type: 'text/markdown' }),
+                );
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'BRD.md';
+                a.click();
+                URL.revokeObjectURL(url);
+                setBriefMode('upload'); // download → edit → bring it back here
+              }}
             >
-              Write
+              Example ↓
             </button>
-            <button
-              className={briefMode === 'upload' ? 'on' : ''}
-              onClick={() => setBriefMode('upload')}
-            >
-              Upload
-            </button>
+            {/* Write and Upload are one choice, so they are a segment, not two tabs. */}
+            <span className="seg">
+              <button
+                className={briefMode === 'write' ? 'on' : ''}
+                onClick={() => setBriefMode('write')}
+              >
+                Write
+              </button>
+              <button
+                className={briefMode === 'upload' ? 'on' : ''}
+                onClick={() => setBriefMode('upload')}
+              >
+                Upload
+              </button>
+            </span>
+          </div>
+          {briefMode === 'write' && (
+            <>
+              <textarea
+                className="kx-editor kx-brief-text"
+                placeholder={[
+                  'Write the brief in any language — the documents come back in the language you use here.',
+                  '',
+                  'The analysis cannot start until it answers five things:',
+                  '• what you are building, and why it should exist',
+                  '• who it is for',
+                  '• which language the product speaks to its users, and the default if there is more than one',
+                  '• how you will know it worked',
+                  '• what is deliberately out of scope',
+                  '',
+                  'Leave it empty to fill in and approve later from Documents.',
+                ].join('\n')}
+                value={brief}
+                onChange={(e) => setBrief(e.target.value)}
+              />
+            </>
+          )}
+          {briefMode === 'upload' && (
+            <label className="kx-drop">
+              <input
+                type="file"
+                accept=".md,.txt,text/markdown,text/plain"
+                onChange={(e) => uploadBrief(e.target.files?.[0])}
+              />
+              {uploadName ? (
+                <span>
+                  <strong>{uploadName}</strong> loaded ({brief.length} chars) — click again to
+                  replace, or edit in the Write tab.
+                </span>
+              ) : (
+                <span>Click to pick your .md / .txt brief file</span>
+              )}
+            </label>
+          )}
+          <span className="kx-cmd-hint">
+            The brief lands as yours, approved — nothing is read until you press Start. If the check
+            then finds it too thin, it comes back to you with the questions it needs answered.
           </span>
         </div>
-        {briefMode === 'write' && (
-          <>
-            <textarea
-              className="kx-editor kx-brief-text"
-              placeholder={[
-                'Write the brief in any language — the documents come back in the language you use here.',
-                '',
-                'The analysis cannot start until it answers five things:',
-                '• what you are building, and why it should exist',
-                '• who it is for',
-                '• which language the product speaks to its users, and the default if there is more than one',
-                '• how you will know it worked',
-                '• what is deliberately out of scope',
-                '',
-                'Leave it empty to fill in and approve later from Documents.',
-              ].join('\n')}
-              value={brief}
-              onChange={(e) => setBrief(e.target.value)}
-            />
-          </>
-        )}
-        {briefMode === 'upload' && (
-          <label className="kx-drop">
-            <input
-              type="file"
-              accept=".md,.txt,text/markdown,text/plain"
-              onChange={(e) => uploadBrief(e.target.files?.[0])}
-            />
-            {uploadName ? (
-              <span>
-                <strong>{uploadName}</strong> loaded ({brief.length} chars) — click again to replace,
-                or edit in the Write tab.
-              </span>
-            ) : (
-              <span>Click to pick your .md / .txt brief file</span>
-            )}
-          </label>
-        )}
-        <span className="kx-cmd-hint">
-          The brief lands as yours, approved — nothing is read until you press Start. If the
-          check then finds it too thin, it comes back to you with the questions it needs
-          answered.
-        </span>
-      </div>
       )}
       {err && <div className="kx-error">{err}</div>}
       {engines.length === 0 && (
         <span className="kx-cmd-hint">
-          No agent CLI found on your PATH. Install one — claude, codex or gemini — and pick it
-          here; the project can be added now and started later.
+          No agent CLI found on your PATH. Install one — claude, codex or gemini — and pick it here;
+          the project can be added now and started later.
         </span>
       )}
       <div className="kx-form-row">
@@ -691,10 +713,14 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
         {running ? (
           <span className="kx-nav-status kx-running">{status || 'Reading the BRD…'}</span>
         ) : paused && hasJobs ? (
-          <span className="kx-nav-status">⏸ Paused — running steps were stopped; nothing new starts.</span>
+          <span className="kx-nav-status">
+            ⏸ Paused — running steps were stopped; nothing new starts.
+          </span>
         ) : pending ? (
           <span className="kx-nav-status">
-            {hasJobs ? 'Stopped — press Continue to pick it up.' : 'Ready — press Start to begin the analysis.'}
+            {hasJobs
+              ? 'Stopped — press Continue to pick it up.'
+              : 'Ready — press Start to begin the analysis.'}
           </span>
         ) : null}
       </div>
@@ -791,15 +817,27 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
           </>
         ) : (
           <>
-            <button className="btn btn-link-primary" disabled={busy} onClick={() => setArming('restart')}>
+            <button
+              className="btn btn-link-primary"
+              disabled={busy}
+              onClick={() => setArming('restart')}
+            >
               Restart analysis
             </button>
             <span className="kx-danger-sep">·</span>
-            <button className="btn btn-link-success" disabled={busy} onClick={() => setArming('archive')}>
+            <button
+              className="btn btn-link-success"
+              disabled={busy}
+              onClick={() => setArming('archive')}
+            >
               {project.archived ? 'Unarchive project' : 'Archive project'}
             </button>
             <span className="kx-danger-sep">·</span>
-            <button className="btn btn-link-danger" disabled={busy} onClick={() => setArming('cancel')}>
+            <button
+              className="btn btn-link-danger"
+              disabled={busy}
+              onClick={() => setArming('cancel')}
+            >
               Remove project
             </button>
           </>
@@ -813,7 +851,11 @@ function HandshakeCard({ project }: { project: Project }) {
   const [state, setState] = useState<HandshakeState | null>(null);
 
   useEffect(() => {
-    const refresh = () => api.handshake(project.id).then(setState).catch(() => {});
+    const refresh = () =>
+      api
+        .handshake(project.id)
+        .then(setState)
+        .catch(() => {});
     refresh();
     const timer = setInterval(refresh, 5000);
     return () => clearInterval(timer);
@@ -841,8 +883,8 @@ function HandshakeCard({ project }: { project: Project }) {
       <div className="kx-handshake-head">
         <span className="kx-handshake-title">✓ Analysis complete — handshake done</span>
         <span className="kx-cmd-hint">
-          Kortext's job is done; the documents are now the project's sacred guideline. From
-          here on it's between you and your client.
+          Kortext's job is done; the documents are now the project's sacred guideline. From here on
+          it's between you and your client.
         </span>
       </div>
       {/* Kopeng is not released, so nothing advertises it: the transfer panel
@@ -851,7 +893,8 @@ function HandshakeCard({ project }: { project: Project }) {
       {state.kopengInstalled && <TransferPanel project={project} />}
       <div className="kx-handshake-cards">
         <span className="kx-cmd-hint">
-          Click a card — the command is copied to your clipboard; paste it into your client (CLI or app).
+          Click a card — the command is copied to your clipboard; paste it into your client (CLI or
+          app).
         </span>
         {instructions.map((c) => (
           <CommandCard key={c.title} title={c.title} command={c.command} />
@@ -901,7 +944,9 @@ function DocumentsTab({
       })
       .catch((e) => {
         setOffline(true);
-        setErr(`${e.message} — the panel has lost the kortext server; this page may be out of date.`);
+        setErr(
+          `${e.message} — the panel has lost the kortext server; this page may be out of date.`,
+        );
       });
 
   useEffect(() => {
@@ -911,7 +956,11 @@ function DocumentsTab({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project.id]);
 
-  const runNext = () => api.runNext(project.id).then(refresh).catch((e) => setErr(e.message));
+  const runNext = () =>
+    api
+      .runNext(project.id)
+      .then(refresh)
+      .catch((e) => setErr(e.message));
 
   // Latest job per doc decides the row extras (spinner / red error).
   const jobFor = (rel: string) => jobs.find((j) => j.doc_rel === rel);
@@ -924,7 +973,12 @@ function DocumentsTab({
     onHasJobs?.(jobs.length > 0);
     onPending?.(docs.some((d) => d.status === 'uninitialized'));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [running.map((j) => j.id).join(','), jobs.length, docs.map((d) => d.status).join(','), offline]);
+  }, [
+    running.map((j) => j.id).join(','),
+    jobs.length,
+    docs.map((d) => d.status).join(','),
+    offline,
+  ]);
 
   // The list answers "what should I do now", so it groups by state, not by
   // folder — Needs you first, Not applicable last and collapsed: those were
@@ -942,7 +996,10 @@ function DocumentsTab({
     if (job?.status === 'running' && d.status !== 'approved') return 'progress';
     if (d.revisionRequests.length > 0) return 'needs';
     if (d.status === 'draft') return 'needs';
-    if (d.status === 'uninitialized' && (job?.status === 'running' || (paused && job?.status === 'stopped'))) {
+    if (
+      d.status === 'uninitialized' &&
+      (job?.status === 'running' || (paused && job?.status === 'stopped'))
+    ) {
       return 'progress';
     }
     if (d.status === 'uninitialized') return 'next';
@@ -983,12 +1040,18 @@ function DocumentsTab({
         onRecheck={() =>
           // run-next re-enters the chain, which re-runs the gate; a 409 just
           // means there was nothing to start, and the refresh shows the verdict.
-          api.runNext(project.id).catch(() => {}).then(refresh)
+          api
+            .runNext(project.id)
+            .catch(() => {})
+            .then(refresh)
         }
       />
       {err && <div className="kx-error">{err}</div>}
       {groups.map((g) => {
-        const items = sortFor(g.key, ordered.filter((d) => bucketOf(d) === g.key));
+        const items = sortFor(
+          g.key,
+          ordered.filter((d) => bucketOf(d) === g.key),
+        );
         if (items.length === 0) return null;
         return (
           <details key={g.key} className="kx-doc-details" open={!g.closed}>
@@ -1007,9 +1070,15 @@ function DocumentsTab({
               const stopped = job?.status === 'stopped' && d.status === 'uninitialized';
               const failed = job?.status === 'failed' && d.status === 'uninitialized' && !paused;
               return (
-                <button key={d.rel} className={`kx-doc-row${failed ? ' failed' : ''}`} onClick={() => setOpen(d)}>
+                <button
+                  key={d.rel}
+                  className={`kx-doc-row${failed ? ' failed' : ''}`}
+                  onClick={() => setOpen(d)}
+                >
                   <span className="kx-doc-name">{d.name}</span>
-                  {d.author && <span className="kx-doc-author mono">{d.author.replace(/^\+/, '')}</span>}
+                  {d.author && (
+                    <span className="kx-doc-author mono">{d.author.replace(/^\+/, '')}</span>
+                  )}
                   <span className="kx-doc-spacer" />
                   {failed && (
                     <span
@@ -1023,7 +1092,7 @@ function DocumentsTab({
                     </span>
                   )}
                   <DocBadges doc={d} failed={failed} rechecking={rechecking} />
-                  <span title={failed ? job?.error ?? '' : ''}>
+                  <span title={failed ? (job?.error ?? '') : ''}>
                     <StatusBadge doc={d} running={isRunning} stopped={stopped} />
                   </span>
                 </button>
@@ -1037,7 +1106,7 @@ function DocumentsTab({
         doc={open}
         failedError={
           open && open.status === 'uninitialized' && jobFor(open.rel)?.status === 'failed'
-            ? jobFor(open.rel)?.error ?? 'no reason recorded'
+            ? (jobFor(open.rel)?.error ?? 'no reason recorded')
             : null
         }
         onRetry={runNext}

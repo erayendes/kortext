@@ -90,7 +90,8 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify({ id }),
     }),
-  jobs: (projectId: number) => req<{ jobs: Job[]; running: Job | null }>(`/api/projects/${projectId}/jobs`),
+  jobs: (projectId: number) =>
+    req<{ jobs: Job[]; running: Job | null }>(`/api/projects/${projectId}/jobs`),
   runNext: (projectId: number) =>
     req<{ started: string }>(`/api/projects/${projectId}/run-next`, { method: 'POST' }),
   handshake: (projectId: number) => req<HandshakeState>(`/api/projects/${projectId}/handshake`),
@@ -106,7 +107,9 @@ export const api = {
     req<{ ok: boolean }>(`/api/projects/${projectId}/kopeng/approve`, { method: 'POST' }),
   listDocs: (projectId: number) => req<{ docs: DocInfo[] }>(`/api/projects/${projectId}/docs`),
   docContent: (projectId: number, rel: string) =>
-    req<{ content: string }>(`/api/projects/${projectId}/docs/content?rel=${encodeURIComponent(rel)}`),
+    req<{ content: string }>(
+      `/api/projects/${projectId}/docs/content?rel=${encodeURIComponent(rel)}`,
+    ),
   saveDoc: (projectId: number, rel: string, content: string, settleRequests = false) =>
     req<{ ok: boolean }>(`/api/projects/${projectId}/docs/content`, {
       method: 'PUT',
@@ -114,12 +117,21 @@ export const api = {
     }),
   decideRequest: (
     projectId: number,
-    body: { from: string; target: string; reason: string; decision: 'apply' | 'dismiss'; instruction?: string },
+    body: {
+      from: string;
+      target: string;
+      reason: string;
+      decision: 'apply' | 'dismiss';
+      instruction?: string;
+    },
   ) =>
-    req<{ started?: string; dismissed?: number }>(`/api/projects/${projectId}/docs/decide-request`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
+    req<{ started?: string; dismissed?: number }>(
+      `/api/projects/${projectId}/docs/decide-request`,
+      {
+        method: 'POST',
+        body: JSON.stringify(body),
+      },
+    ),
   proposeRevision: (projectId: number, rel: string) =>
     req<{ proposal: string }>(`/api/projects/${projectId}/docs/propose`, {
       method: 'POST',
@@ -154,15 +166,17 @@ export const api = {
     brief?: string;
     docLang?: string;
     engine?: string;
-  }) =>
-    req<{ project: Project }>('/api/projects', { method: 'POST', body: JSON.stringify(input) }),
+  }) => req<{ project: Project }>('/api/projects', { method: 'POST', body: JSON.stringify(input) }),
   pickDirectory: () => req<{ path: string | null }>('/api/pick-directory', { method: 'POST' }),
-  removeProject: (id: number) => req<{ removed: boolean }>(`/api/projects/${id}`, { method: 'DELETE' }),
+  removeProject: (id: number) =>
+    req<{ removed: boolean }>(`/api/projects/${id}`, { method: 'DELETE' }),
   pauseProject: (id: number, paused: boolean) =>
     req<{ paused: boolean }>(`/api/projects/${id}/pause`, {
       method: 'POST',
       body: JSON.stringify({ paused }),
     }),
-  restartProject: (id: number) => req<{ ok: boolean }>(`/api/projects/${id}/restart`, { method: 'POST' }),
-  cancelProject: (id: number) => req<{ ok: boolean }>(`/api/projects/${id}/cancel`, { method: 'POST' }),
+  restartProject: (id: number) =>
+    req<{ ok: boolean }>(`/api/projects/${id}/restart`, { method: 'POST' }),
+  cancelProject: (id: number) =>
+    req<{ ok: boolean }>(`/api/projects/${id}/cancel`, { method: 'POST' }),
 };

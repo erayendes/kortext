@@ -30,11 +30,7 @@ export function Drawer({ open, onClose, children, width = 464 }: DrawerProps) {
 
   return (
     <>
-      <div
-        className={`drawer-backdrop${open ? ' open' : ''}`}
-        onClick={onClose}
-        aria-hidden
-      />
+      <div className={`drawer-backdrop${open ? ' open' : ''}`} onClick={onClose} aria-hidden />
       <aside
         className={`drawer${open ? ' open' : ''}`}
         style={{ width }}
