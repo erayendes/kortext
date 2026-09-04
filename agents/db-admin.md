@@ -58,7 +58,7 @@ Before writing, read the step's inputs — `.kortext/PRODUCT.md`, `.kortext/ARCH
 
 ### 1. Database Schema Design
 
-From the PRD and the technical references:
+From PRODUCT.md and the technical references:
 1. Identify the entities — extract the data needs behind each user story
 2. If SQL: draw the ERD, apply normalization, define foreign-key relationships
 3. If NoSQL: decide collection/subcollection layout by read frequency
@@ -76,7 +76,7 @@ Document in `.kortext/DATABASE.md`:
 
 ### 3. Performance Guidance
 
-Anticipate the load in the PRD and document:
+Anticipate the load in PRODUCT.md and document:
 1. Queries likely to become slow and the indexes that prevent it
 2. Where denormalization or caching is justified — and its consistency cost
 3. Record notable trade-off decisions in `DATABASE.md` itself, with the cost each one accepts

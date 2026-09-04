@@ -15,8 +15,9 @@ Make your decisions by reading from here, not by guessing from the code:
   `SECURITY` · `ENVIRONMENT` · `DATABASE` · `API` · `DESIGN` · `GROWTH` · `LEGAL` · `CONTENT` ·
   `ENGINEERING` (the technical contract) · `TEST`. Follow them when producing code and content.
   A file marked `status: not-applicable` was considered and deliberately left empty for this
-  project. `BRIEF` and `PRODUCT` are where the project came from — read them for context, and do
-  not change them at will.
+  project. `PRODUCT` is where the project came from — read it for context, and do not change it
+  at will. `BRIEF` sits beside it when the project started from one; a project analysed from an
+  existing codebase has none, because the code was the brief.
 - **`.kopeng/`** (if present) — the task structure: Version → Epic → Task files. Task
   tracking is Kopeng's job; if it is set up, take your next piece of work from there and
   update its status there.

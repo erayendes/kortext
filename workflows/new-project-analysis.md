@@ -20,7 +20,7 @@
 
 ## Product
 
-1. **+product-manager:** Produce `PRODUCT.md`. From the BRD: scope, user types, main flows, priorities, acceptance criteria, out-of-scope items. State plainly which personal data each flow needs — that list is what the compliance analysis will be run against later.
+1. **+product-manager:** Produce `PRODUCT.md`. From the brief: scope, user types, main flows, priorities, acceptance criteria, out-of-scope items. State plainly which personal data each flow needs — that list is what the compliance analysis will be run against later.
    - label: PRODUCT.md
    - activity: Scope and user types settled. Main flows defined.
    - inputs: `.kortext/BRIEF.md`
@@ -36,7 +36,7 @@
    - outputs: `.kortext/STACK.md`, `.kortext/STRUCTURE.md`
    - approver: +prime
 
-2. **+architect:** Produce `ARCHITECTURE.md`. From PRD + STACK + STRUCTURE, design the shape of the system: components, data flow, boundaries and integration points, main architectural choices, each with its rationale and the alternative that lost. The boundaries drawn here are the ones `SECURITY.md` will defend.
+2. **+architect:** Produce `ARCHITECTURE.md`. From PRODUCT + STACK + STRUCTURE, design the shape of the system: components, data flow, boundaries and integration points, main architectural choices, each with its rationale and the alternative that lost. The boundaries drawn here are the ones `SECURITY.md` will defend.
    - label: ARCHITECTURE.md
    - activity: Components and data flow designed. Boundaries named.
    - inputs: `.kortext/PRODUCT.md`, `.kortext/STACK.md`, `.kortext/STRUCTURE.md`
@@ -99,7 +99,7 @@
    - n/a when: the design touches no personal data, no accounts, no third party receiving data and no regulated content — a tool whose data never leaves the user's own machine.
    - approver: +prime
 
-3. **+copywriter:** Produce `CONTENT.md`. Brand voice, message hierarchy, page copy, microcopy, SEO content direction. Write into the components `DESIGN.md` names and the flows `PRODUCT.md` defines. Every string a user reads is written in the interface language the BRD names — and if the BRD names more than one, add the localization plan: source language, target languages, what is translated and what stays fixed. The notices `LEGAL.md` requires are content: write them, do not reference them.
+3. **+copywriter:** Produce `CONTENT.md`. Brand voice, message hierarchy, page copy, microcopy, SEO content direction. Write into the components `DESIGN.md` names and the flows `PRODUCT.md` defines. Every string a user reads is written in the interface language BRIEF.md names — and if BRIEF.md names more than one, add the localization plan: source language, target languages, what is translated and what stays fixed. The notices `LEGAL.md` requires are content: write them, do not reference them.
    - label: CONTENT.md
    - activity: Brand voice established. Page copy written.
    - inputs: `.kortext/PRODUCT.md`, `.kortext/DESIGN.md`, `.kortext/GROWTH.md`, `.kortext/LEGAL.md`

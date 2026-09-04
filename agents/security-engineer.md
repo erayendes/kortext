@@ -38,7 +38,7 @@ Act as the system's security shield. Assess the chosen stack for known vulnerabi
 
 - **Approver:** +prime approves `.kortext/SECURITY.md`
 - **Upstream:** `.kortext/PRODUCT.md`, `.kortext/STACK.md`, `.kortext/ARCHITECTURE.md`
-- **Downstream:** `.kortext/DATABASE.md`, `.kortext/API.md`, `.kortext/ENVIRONMENT.md` and the TRD build on your rules; implementing agents inherit your secure-coding discipline
+- **Downstream:** `.kortext/DATABASE.md`, `.kortext/API.md`, `.kortext/ENVIRONMENT.md` and ENGINEERING.md build on your rules; implementing agents inherit your secure-coding discipline
 
 ## skills
 

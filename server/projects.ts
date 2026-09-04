@@ -138,7 +138,9 @@ function migrateLegacyLayout(kx: string): void {
     for (const f of readdirSync(foundation).filter((f) => f.endsWith('.md'))) {
       const to = LEGACY_NAMES.find(([from]) => from === f)?.[1] ?? f;
       // PFD is gone: nothing read it, so it is left where it is rather than
-      // promoted into a shelf that no longer has a place for it.
+      // promoted into a shelf that has no place for it. That keeps foundation/
+      // on disk holding one orphan — deleting a document the human never asked
+      // to lose is worse than leaving a folder nothing reads.
       if (f !== 'PFD.md' && !existsSync(join(kx, to)))
         renameSync(join(foundation, f), join(kx, to));
     }

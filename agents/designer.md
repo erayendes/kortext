@@ -63,7 +63,7 @@ Before writing, read the step's inputs — `.kortext/PRODUCT.md`, `.kortext/STAC
 
 ### 2. Flows & Responsive Rules
 
-1. Describe the key user flows from the PRD in design terms
+1. Describe the key user flows from PRODUCT.md in design terms
 2. Define responsive breakpoints and layout behavior at each
 3. Note platform-specific rules where the product targets iOS/Android/web
 

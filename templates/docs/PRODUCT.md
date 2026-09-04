@@ -4,7 +4,7 @@ author: +product-manager
 approver: +prime
 ---
 
-# Product Requirements Document (PRD)
+# Product
 
 
 ## Scope

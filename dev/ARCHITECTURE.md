@@ -79,7 +79,11 @@ CLAUDE.md          if it exists: a one-line pointer (the file is not kortext's)
 
 Workflows and personas are **not** copied into the repo — they go into the prompt during the
 analysis, and afterwards the documents are the contract. `scaffoldProject` is idempotent and
-runs whenever the panel looks at a project, so anything missing comes back.
+runs whenever the panel looks at a project, so anything missing comes back — and a project from
+the two-shelf era migrates on that same pass: its documents come up from `foundation/` under
+their current names, keeping their content. The one document that has no successor, `PFD.md`,
+stays where it lies, so a migrated project keeps a `foundation/` folder holding that single
+orphan. Deleting a document the human never asked to lose would be the worse trade.
 
 **The contract is a block, not a file.** A repo may already carry the user's own `AGENTS.md`,
 so `templates/AGENTS.md` goes in between `<!-- kortext:start -->` and `<!-- kortext:end -->`:

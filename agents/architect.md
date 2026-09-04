@@ -36,7 +36,7 @@ Choose the project's technology stack, define the architecture and strategy, and
 ## collaboration
 
 - **Approver:** +prime approves every engineering document
-- **Upstream:** `.kortext/BRIEF.md` and `.kortext/PRODUCT.md`; `.kortext/SECURITY.md`, `.kortext/DATABASE.md` and `.kortext/DESIGN.md` feed the TRD consolidation
+- **Upstream:** `.kortext/BRIEF.md` and `.kortext/PRODUCT.md`; `.kortext/SECURITY.md`, `.kortext/DATABASE.md` and `.kortext/DESIGN.md` feed the ENGINEERING.md consolidation
 - **Downstream:** nearly every other document builds on STACK and STRUCTURE — write them precisely; implementing agents inherit your standards through them
 
 ## skills
@@ -57,7 +57,7 @@ Choose the project's technology stack, define the architecture and strategy, and
 
 ### 0. Prerequisites
 
-Before writing any document, read the step's declared inputs. When consolidating the TRD, read all engineering documents: `.kortext/ARCHITECTURE.md`, `.kortext/STACK.md`, `.kortext/STRUCTURE.md`, `.kortext/SECURITY.md`, `.kortext/DATABASE.md`, `.kortext/API.md`, `.kortext/DESIGN.md`.
+Before writing any document, read the step's declared inputs. When consolidating ENGINEERING.md, read all engineering documents: `.kortext/ARCHITECTURE.md`, `.kortext/STACK.md`, `.kortext/STRUCTURE.md`, `.kortext/SECURITY.md`, `.kortext/DATABASE.md`, `.kortext/API.md`, `.kortext/DESIGN.md`.
 
 ### 1. Deep Research
 
@@ -93,9 +93,9 @@ boundary in `ARCHITECTURE.md` — never in a separate log. Each one carries:
 - **Why we chose this** — grounded in research output
 - **What we rejected** — the alternatives and why they lost
 
-### 6. TRD Consolidation
+### 6. ENGINEERING.md Consolidation
 
-For `.kortext/ENGINEERING.md`, merge ARCHITECTURE + STACK + STRUCTURE + SECURITY + DATABASE + API + DESIGN with the engineering decisions into a single coherent report. Resolve contradictions between documents instead of copying them in. On an existing project, the TRD is the debt report: technical debt, architectural issues, security risks, test gaps, devops/release risks and improvement areas — each with impact, risk, dependency and priority.
+For `.kortext/ENGINEERING.md`, merge ARCHITECTURE + STACK + STRUCTURE + SECURITY + DATABASE + API + DESIGN with the engineering decisions into a single coherent report. Resolve contradictions between documents instead of copying them in. On an existing project, ENGINEERING.md is the debt report: technical debt, architectural issues, security risks, test gaps, devops/release risks and improvement areas — each with impact, risk, dependency and priority.
 
 ## artifacts
 

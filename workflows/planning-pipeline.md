@@ -41,7 +41,7 @@ Body headings (all required; write "—" where one does not apply):
 
 1. **ID convention:** project code as prefix — `<CODE>-E01` (epic), `<CODE>-T001` (task).
    Slug/kebab-case ids are FORBIDDEN.
-2. **Scope ceiling:** if the PRD/BRD sets an item limit or an "MVP/small" note, do NOT
+2. **Scope ceiling:** if PRODUCT.md or BRIEF.md sets an item limit or an "MVP/small" note, do NOT
    exceed it; when in doubt, fewer, larger tasks. One feature = one task; do NOT split it
    into frontend/backend/test.
 3. **Few versions:** 1–3 versions for an MVP; every epic belongs to a version; tasks do not

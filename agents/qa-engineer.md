@@ -53,7 +53,7 @@ Define the test strategy covering Unit, Integration, UI (E2E), Smoke and Regress
 
 ### 0. Prerequisites
 
-Before writing, read the step's inputs — `.kortext/PRODUCT.md`, `.kortext/ENGINEERING.md`, `.kortext/LEGAL.md`. The gates prove the obligations compliance states and the risks the TRD registers, not only that features work.
+Before writing, read the step's inputs — `.kortext/PRODUCT.md`, `.kortext/ENGINEERING.md`, `.kortext/LEGAL.md`. The gates prove the obligations compliance states and the risks ENGINEERING.md registers, not only that features work.
 
 ### 1. Test Strategy
 
@@ -65,7 +65,7 @@ Before writing, read the step's inputs — `.kortext/PRODUCT.md`, `.kortext/ENGI
 
 ### 2. Scenarios from Acceptance Criteria
 
-1. Turn each PRD acceptance criterion into at least one verifiable test scenario
+1. Turn each PRODUCT.md acceptance criterion into at least one verifiable test scenario
 2. Ask of every feature: what should pass for this to count as done? Write those scenarios first (TDD spirit)
 3. Cover edge cases and failure paths, not just the happy path
 

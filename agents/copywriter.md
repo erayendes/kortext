@@ -23,7 +23,7 @@ Define the brand voice and the rules for all product copy — buttons, error mes
 ## constraints
 
 - Never contradict the defined brand voice
-- Do not write copy for features the PRD does not confirm
+- Do not write copy for features PRODUCT.md does not confirm
 - Do not use wording that conflicts with `.kortext/LEGAL.md` (KVKK/GDPR)
 - Do not write code — your output is content direction
 - The document stays a draft until +prime approves it

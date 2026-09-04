@@ -11,7 +11,7 @@
 
 ## Technical Discovery
 
-1. **+architect:** Produce `STACK.md` + `STRUCTURE.md`. Scan the existing codebase — the ground truth is THE CODE ITSELF (there is no BRD in this flow). Scope: STACK (technology stack, MCP servers, dev tools, dependencies, language/framework versions), STRUCTURE (folder structure, naming conventions, coding standards + project terminology glossary).
+1. **+architect:** Produce `STACK.md` + `STRUCTURE.md`. Scan the existing codebase — the ground truth is THE CODE ITSELF (there is no brief in this flow). Scope: STACK (technology stack, MCP servers, dev tools, dependencies, language/framework versions), STRUCTURE (folder structure, naming conventions, coding standards + project terminology glossary).
    - inputs:
    - outputs: `.kortext/STACK.md`, `.kortext/STRUCTURE.md`
    - approver: +prime
@@ -79,7 +79,7 @@
    - n/a when: no string in the codebase is read by a person: no interface copy, no messages, no emails.
    - approver: +prime
 
-## Technical Debt and TRD
+## Technical Debt and the Engineering Contract
 
 1. **+architect:** Consolidate `ENGINEERING.md`. Scope: technical debt from the discovery outputs + architectural issues + security risks + test gaps + devops/release risks + improvement areas. For each debt item: impact, risk, dependencies, priority level.
    - inputs: `.kortext/PRODUCT.md`, `.kortext/STACK.md`, `.kortext/STRUCTURE.md`, `.kortext/ARCHITECTURE.md`, `.kortext/DATABASE.md`, `.kortext/SECURITY.md`, `.kortext/API.md`, `.kortext/ENVIRONMENT.md`, `.kortext/TEST.md`, `.kortext/LEGAL.md`

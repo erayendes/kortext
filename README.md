@@ -72,6 +72,14 @@ npm install -g @google/gemini-cli           # gemini
 npm install -g kortext
 ```
 
+npm no longer runs a package's install scripts by default. Kortext's SQLite binding ships
+prebuilt binaries for the common platforms, so this is usually enough; if `kortext` starts and
+cannot open its database, install it once with the script allowed:
+
+```sh
+npm install -g --allow-scripts=better-sqlite3 kortext
+```
+
 Node 22 itself, per platform:
 
 <details>

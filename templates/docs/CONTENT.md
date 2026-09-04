@@ -48,7 +48,7 @@ approver: +prime
 
 ## Localization
 
-- [Interface language(s) from the BRD; if more than one: source language, target languages, what is translated and what is never translated (product name, code identifiers, legal terms)]
+- [Interface language(s) from BRIEF.md; if more than one: source language, target languages, what is translated and what is never translated (product name, code identifiers, legal terms)]
 
 ## Email & Notification Templates
 
