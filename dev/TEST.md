@@ -1,471 +1,217 @@
-# Kortext — UAT
+# Kortext — Test
 
-> Birleşik: UAT test rehberi + oturum promptu (eski UAT-GUIDE.md + UAT-SESSION-PROMPT.md, 2026-06-17).
+One document, two jobs: a step-by-step trace of what the code actually does on a real run, and
+the checklist that says whether the run passed. Every step names the file behind it, so a
+surprise on screen can be read back to the line that caused it.
+
+Replaces the old UAT + SIMULATION pair, both of which described the archived v3 engine
+(bootstrap wizard on `:3199`, one daemon per project, `kortext init/serve/purge`, worktrees,
+Board, deploy gates). None of that exists.
+
+**Example project:** *Acme CRM*, code `ACME`.
 
 ---
 
-## Kortext v3.1.0 — UAT Test Rehberi (Eray)
+## 0 · Before you start
 
----
+- **Node ≥ 22** and **at least one agent CLI** on the PATH: `claude`, `codex` or `gemini`.
+  Kortext has no LLM key of its own; it spends the subscription behind that CLI.
+- **A real run costs real money and real minutes.** Each step is one headless CLI call; a step
+  is killed at 15 minutes, the planning run at 30. Keep the first pass small — a brief with
+  5–8 features, not a platform.
+- **You are prime.** Nothing is approved without you. That is the whole point of the flow.
 
-## ⭐ TAM & GERÇEK UAT — uçtan uca, gerçek Claude ajanı (2026-06-07)
-
-> Paketlenmiş `kortext` + **gerçek claude executor** ile fikir→backlog→kod→review→release zincirini GUI'de doğrular. Sen **+prime**'sın: kapıları tarayıcıda sen onaylarsın. Aşağıdaki §0-§10 eski tur-1 testidir, referans.
-
-### Önce bil (gerçekçi beklenti)
-- **Gerçek claude koşar** → her adım dakikalar sürer; tam zincir uzun. **İlk UAT'ı KÜÇÜK tut** (5-8 özellikli minik fikir). Beğenince büyüt.
-- **Maliyet:** gerçek claude = API/kullanım maliyeti.
-- **Takılma riski:** bir adım çok uzun "running" kalırsa (bilinen hung-claude follow-up'ı) o koşuyu durdur/retry. (Canlı teyitte bir adım ~70dk takıldı.)
-- **Sen +prime'sın:** hiçbir şey onayın olmadan kapıdan geçmez — UAT'ın özü bu.
-
-### Adım 1 — Paketle + global kur (terminal, tek sefer)
-> ⚠️ Komut bloklarında **inline `# yorum` KULLANMA** — zsh'de `setopt interactivecomments` kapalıysa yorum komuta argüman olur (`npm pack #` → "Invalid tag name"). Aşağısı yorumsuz; satır satır çalıştır.
 ```bash
-cd /Users/erayendes/Documents/_codebase/kortext
-npm run build
-npm pack
-npm install -g ./kortext-3.1.0.tgz
-kortext --version
-lsof -ti tcp:3200 | xargs kill 2>/dev/null
-```
-Beklenen: `kortext --version` → `3.1.0`.
-
-### Adım 2 — Başlat (terminal) → kurulum sihirbazı (GUI)
-```bash
-KORTEXT_DRIVE_ENABLED=1 KORTEXT_CLAUDE_BIN=$(which claude) kortext start
-```
-`kortext start` (path **yok**) herhangi bir yerden çalışır → kurulum **sihirbazını tarayıcıda açar**. Proje klasörünü **sihirbazda seçersin** — terminalde `cd` / `init` / git komutu yok. `KORTEXT_DRIVE_ENABLED=1` build'i açar, `KORTEXT_CLAUDE_BIN` gerçek executor. Sonrası **tamamen GUI**. ⚠️ Ajanlar gerçek kodu seçtiğin repoya (worktree'lerde, `development`'a merge) yazar — kendi repon.
-
-> Build fazı git ister; artık sihirbaz projeyi oluştururken git'i otomatik kurar (git init + ilk commit + `development` dalı). Mevcut git repo'su olan klasörlerde sadece `development` dalı garanti edilir — elle git komutu gerekmez.
-
-### Adım 3 — Onboarding (GUI)
-Sihirbazda: proje **adı** + **kod** (örn. `DV`) + **agent = Claude** (binary `/opt/homebrew/bin/claude`) + **BRD** (fikrini sade dille; sıralı özellikler → doğal bağımlılık). Onayla → motor **analiz**'i başlatır.
-
-### Adım 4 — Analiz (GUI, +prime kapıları)
-"Active work"te koşan adımlar, "For review"da sana gelen +prime kapıları. Her artefaktı (BRD/PRD/TRD/references) incele → **Approve** (veya Reject + sebep). Onaylanınca motor **planning**'i başlatır.
-
-### Adım 5 — Planning → Board dolar (GUI)
-**Board**'da epic'ler + item'lar + **kodlu id'ler** (`DV-001`, `DV-E01`). **Bağımlılık doğrula:** bağımlısı olan item'lar **`blocked`**, köksüzler `to_do` (yeni bağımlılık-sıralı motor).
-
-### Adım 6 — Build fazı (GUI)
-Dashboard'da **"Auto"** (veya "Run once") → motor **bloksuz** item'ları gerçek claude ile kodlar (her biri ayrı git worktree). Blocker bitince bağımlıları otomatik `to_do`'ya düşer. Kodlanan item review'a girer → qa/security/designer + **UAT** sana gelir → Approve/Reject (Reject→motor bug açar).
-
-### Adım 7 — Epic → staging → version → preprod → release (GUI)
-Epic'in çocukları bitince → **staging** deploy (mock) + gate-persona raporları → **staging-onay** sorusu → Approve. Version'ın tüm epic'leri onaylı → **preprod** deploy + **preprod-onay** → Approve → motor **gerçek `development→main` merge + sürüm etiketi** (prod push hâlâ mock).
-
-### Doğrulama checklist
-- [ ] Onboarding→analiz→planning kesintisiz, +prime kapıları GUI'de
-- [ ] Board: kodlu id'ler + gerçek bağımlılıklar + `blocked` durumları
-- [ ] Build: bağımlılık sırasında kodlama, blocker bitince bağımlı açıldı
-- [ ] Review gate'leri + UAT +prime'a geldi, onay/red çalıştı (red→bug)
-- [ ] Epic→staging-onay, version→preprod-onay, son merge+tag
-
-### Temizlik
-```bash
-kortext stop            # tüm daemon'ları durdur
-kortext list            # kayıtlı projeler
-kortext purge <proje>   # test projesini sicilden + .kortext/ sil (sorar)
+npm run build && npm pack && npm install -g ./kortext-3.1.0.tgz
 ```
 
 ---
 
-## (Legacy) Faz 11-13 + CLI redesign tur-1 testi
+## 1 · Start
 
-> Bu dosya **Faz 11-13'ün** (onboarding wizard + dashboard polish + foundation/ kategorisi + ALL-CAPS references + 12 workflow rewrite) **+ CLI redesign**'ın lokal kullanıcı doğrulamasıdır. main HEAD `6dc2fb6`+. Bu UAT npm publish'ten **önce** koşulur; pass ederse v3.1.0 release flow tetiklenir.
-> **Not:** CLI redesign implementation tamamlanana kadar UAT iki turda koşulur: (1) mevcut `init/serve` ile dashboard + foundation/ + workflow akışı, (2) v3.1 CLI redesign sonrası `start/stop/list/...` yeni komutlar + onboard akışı + multi-project. Aşağıdaki §1-§10 birinci turdur.
-> Hedef: yeni `.kortext/` mimari'sinin gerçek kurulumda çalıştığını + ekranların açıldığını + temel akışların kırılmadığını teyit etmek.
-> Süre: ~30-45 dakika.
-> **Test klasörü:** `/Users/erayendes/Documents/_codebase/kortext-uat` (Eray'ın belirlediği)
+```bash
+kortext
+```
+
+**Expect:** two lines — `kortext panel: http://localhost:3441` and `db: ~/.kortext/kortext.db`
+— and the browser opening the panel. `--port` moves it, `--db` moves the database, `--no-open`
+keeps the browser shut. There are no subcommands: `kortext` is the whole CLI.
+→ [server/index.ts](../server/index.ts)
+
+**Expect in the header:** `Kortext | project brain` — and, when no agent CLI is on the `PATH`
+at all, the warning that says so. The engine itself is not chosen here: it belongs to a project.
+→ [server/engines.ts](../server/engines.ts)
+
+- [ ] The panel opens and the footer says `v3.1.0`.
+- [ ] With no CLI installed the header warns; with one installed it stays quiet.
 
 ---
 
-## 0. Ön hazırlık
+## 2 · Add a project
 
-> ⚠️ **macOS zsh için tek seferlik ayar — şimdi yap:**
-> ```bash
-> setopt interactivecomments
-> ```
-> Bu komut açık olmadan, copy-paste sırasında `#` yorum satırları "command not found: #" hatası verir VE çoklu komut block'larında satır karışıklığı yaratır (kazara yanlış klasörde init yapma riski). Komutu çalıştırınca terminal oturumun süresince yorumlar çalışır. Kalıcı yapmak için `~/.zshrc`'ye ekle.
+**Add project** takes: name, code (2–8 chars, `ACME`), *New* or *Existing*, the folder (Browse
+opens the macOS chooser; other platforms take a typed path), an optional document language, the
+**agent CLI** (the dropdown beside Initialize — the choice is the project's, not the app's), and
+— for a new project — the brief, written in the form or uploaded.
 
-Aşağıdaki şartların doğru olduğundan emin ol — bunları **tek tek** ayrı satırlarda çalıştır, copy-paste değil:
+**Expect on disk:** `AGENTS.md` at the repo root carrying kortext's block between
+`<!-- kortext:start -->` and `<!-- kortext:end -->`, a `CLAUDE.md` pointer line if that file
+already existed, and `.kortext/` with 12 core skeletons plus `foundation/`.
+→ [server/projects.ts](../server/projects.ts)
 
-- `node --version` — v22 veya üstü gerekli
-- `git --version` — ≥ 2.30
-- `which claude` — Claude CLI yüklü olmalı (executor seçimi için)
-- `which agy` — opsiyonel (Antigravity)
-- `which codex` — opsiyonel
+**Expect on screen:** the project lands **paused**. Nothing runs until you press **Start**.
 
-Ayrıca **dashboard'da kullanılacak `KORTEXT_PORT=3200` portu boş olmalı**. Çakışırsa `kortext serve --port 3210` ile aç.
-
----
-
-## 1. Build + pack (tgz üret)
-
-main artık Faz 13 sonrası güncel. Doğrudan main'den çalış:
-
-```bash
-cd ~/Documents/_codebase/kortext
-git checkout main
-git pull --ff-only origin main
-git log --oneline -3
-## 6dc2fb6 (Faz 13 — workflow content rewrite + foundation/ category + docs konsolidasyon + repo housekeeping)
-## (öncesinde Faz 11-12 commit'leri)
-
-npm install
-npm run build         # dist/ üretir (server + web)
-npm pack              # kortext-3.0.0.tgz oluşur (package.json hâlâ 3.0.0)
-ls -lh kortext-3.0.0.tgz
-```
-
-Çıktı: `kortext-3.0.0.tgz` ~5-10 MB.
-
-> 💡 **Neden hâlâ `3.0.0.tgz`?** `package.json`'da version henüz `3.0.0`. v3.1.0 release flow (3.0.0 → 3.1.0 bump + CHANGELOG'a `[3.1.0]` bölümü + `git tag v3.1.0` + npm-publish workflow tetikleme) **bu UAT pass ettikten sonra** yapılır. UAT sırasında dosya adı önemli değil; pakettin içeriği `dist/` + `templates/` + `agents/` + `workflows/` + `rules/` doğru olmalı.
-
-Quick sanity:
-```bash
-tar tzf kortext-3.0.0.tgz | grep -E "(package/templates|package/agents|package/dist/server)" | head -10
-## package/templates/AGENTS.md
-## package/templates/.gitignore
-## package/templates/references/blueprint.md
-## package/agents/+product-manager.md
-## package/dist/server/index.js
-## package/dist/server/db/migrations/003_add_reports_index.sql
-## package/dist/server/db/migrations/004_add_workflow_persona_index.sql
-```
-
-`templates/` + 4 SQL migration tgz'nin içinde görüyorsan **Faz 12 doğru paketlenmiş** demektir.
+- [ ] A hand-written `AGENTS.md` in that folder survived, with the block appended.
+- [ ] The card shows `core 0/12 · foundation 0/4`.
+- [ ] Adding the same folder twice is refused by name, and so is a duplicate code.
+- [ ] The CLI picked in the form is the one the steps run on, and a second project can be added
+      on a different one without disturbing the first.
 
 ---
 
-## 2. Test klasörü + global install
+## 3 · The gate
 
-Eray'ın UAT klasörü: `/Users/erayendes/Documents/_codebase/kortext-uat` (boş klasör).
+**Start** does not start the chain — it asks the gate first.
+→ [server/readiness.ts](../server/readiness.ts)
 
-**Komutları tek tek çalıştır** (block paste DEĞİL — `kortext init` ilerideki adımda **yanlış klasörde** çalışırsa Kortext kaynak repo'sunu bozarsın):
+| project | what is judged |
+| --- | --- |
+| new | the brief: ≥ 240 characters of real prose outside the skeleton (floor), then one engine judgment cached per brief hash |
+| existing | the code: at least 3 source files that are not `node_modules`, `dist`, `.git`… |
 
-```bash
-npm uninstall -g kortext 2>/dev/null || true
-```
+**Expect when the brief is thin:** a blue band with up to six questions, and the brief demoted
+from `approved` back to `draft` — it moves to **Needs you**, which is where a document waiting
+on a human belongs. Editing the brief and approving it again re-asks the gate.
 
-```bash
-cd ~/Documents/_codebase/kortext-uat
-```
-
-```bash
-pwd
-```
-✅ Çıktı **kesinlikle** `/Users/erayendes/Documents/_codebase/kortext-uat` olmalı. Değilse `cd` tekrar.
-
-```bash
-ls -a
-```
-Klasör boş olmalı (`.` `..` ve belki `.DS_Store`). Yoksa:
-```bash
-rm -rf .kortext agents workflows rules workspace AGENTS.md .env.example .gitignore node_modules
-```
-
-```bash
-npm install -g ~/Documents/_codebase/kortext/kortext-3.0.0.tgz
-```
-
-```bash
-kortext --version
-```
-Beklenen: `3.0.0`
-
-```bash
-kortext --help
-```
-Beklenen: `init / serve / start / approve / status / logs / cleanup / archive / doctor / mcp` listede. `archive` subcommand'i v3.1 ile geldi (Faz 12.6) — listede görüyorsan **Faz 12 doğru paketlenmiş** demektir.
-
-> **v3.1 CLI redesign uyarısı:** Yukarıdaki komut listesi v3.0 production durumudur. v3.1 implementation sırasında CLI 9 komutluk yeni yüzeye geçecek (`start/stop/pause/list/remove/purge/update/doctor/help`). UAT'ın ikinci turu redesign tamamlandıktan sonra koşulacak. Bkz. [DECISIONS Bölüm 0](./DECISIONS.md).
-
-> ⚠️ **`npm install -g` izin hatası alırsan:** macOS'ta global npm dizini bazen root sahipliğinde olur. `sudo` kullanma yerine `npm config get prefix` ile yolu kontrol et; Eray'ın daha önceki kurulumunda muhtemelen düzeltilmiş olarak çalışıyor. Sorun çıkarsa `nvm` veya `npm config set prefix ~/.npm-global` ile user-local prefix kullan.
+- [ ] A one-line brief produces questions, not documents.
+- [ ] With no agent CLI installed, the gate says exactly that instead of failing silently.
+- [ ] Answering the questions in the brief opens the gate on the next Start.
 
 ---
 
-## 3. `kortext init` — yeni `.kortext/` layout
+## 4 · The chain
 
-⚠️ **Çok önemli:** `init`'i çalıştırmadan önce `pwd` ile **tekrar teyit et** doğru klasörde olduğunu:
+Steps run in dependency order, at most **three in parallel**, and every document lands as
+`draft` written by its persona. A step whose inputs are not settled never runs.
+→ [server/runner.ts](../server/runner.ts)
 
-```bash
-pwd
-```
-Çıktı `/Users/erayendes/Documents/_codebase/kortext-uat` değilse DURMA, `cd` ile geri dön. Yanlış klasörde init çalıştırırsan Kortext kaynak repo'sunda `.kortext/references|reports|memory/` oluşturur ve kafa karıştırır.
+The order for a new project: `PRD` · `STACK`+`STRUCTURE` · `ARCHITECTURE` · `SECURITY` ·
+`ENVIRONMENT` · `DATABASE` · `API` · `DESIGN` · `GROWTH` · `LEGAL` · `CONTENT` · `TRD` · `TEST`
+· `PFD`. An existing project starts from the code and ends at `PFD`.
 
-```bash
-kortext init
-```
-
-Beklenen çıktı (örnek):
-```
-✓ Created AGENTS.md
-✓ Created .gitignore
-✓ Created .env.example
-✓ Created .kortext/data/ (SQLite + log + worktree)
-✓ Created .kortext/foundation/ (BRD + PRD + TRD + PFD)
-✓ Created .kortext/references/ (13 templates, ALL-CAPS)
-✓ Created .kortext/reports/ (8 scope templates)
-✓ Created .kortext/memory/ (handover.md + decisions.md + learned.md)
-Initialized Kortext project at /Users/erayendes/Documents/_codebase/kortext-uat
-```
-
-**Doğrulama (kritik):**
-
-```bash
-ls -a
-## Beklenen: . .. .gitignore .env.example .kortext AGENTS.md
-## Eski v3.0'da olan ama v3.1'de OLMAMASI gereken: agents/ workflows/ rules/ workspace/
-
-ls .kortext/
-## Beklenen: data foundation references reports memory
-
-ls .kortext/foundation/ | wc -l       # 4 olmalı (BRD/PRD/TRD/PFD — Faz 13 yeni kategori)
-ls .kortext/references/ | wc -l       # 13 olmalı (Faz 13: ALL-CAPS rename + required-skills.md silindi)
-ls .kortext/reports/ | wc -l          # 8 olmalı (Faz 13: scope sayısı düşürüldü)
-ls .kortext/memory/                    # decisions.md  handover.md  learned.md
-ls .kortext/data/                      # kortext.db (init migrate koştu)
-```
-
-✅ Pass: proje kökünde `agents/workflows/rules/workspace/` **YOK**, `.kortext/` altında templates kopyalandı.
-❌ Fail: `agents/` proje kökünde varsa Faz 12.2 yanlış paketlendi.
-
-Frontmatter check:
-```bash
-head -8 .kortext/references/blueprint.md
-## Beklenen:
-## ---
-## status: uninitialized
-## author: +product-manager  (veya benzeri)
-## approver: +prime
-## ---
-```
-
-INFO callout sökülmüş olmalı — `grep "INFO" .kortext/references/*.md` boş dönmeli.
+- [ ] Documents appear in dependency order, three at most in flight.
+- [ ] Approving one wakes the chain immediately — it does not wait for another step to finish.
+- [ ] **Pause** stops new steps; a running one finishes. **Continue** picks it back up.
+- [ ] Switching the CLI from the dropdown next to Start moves the steps that begin after it;
+      the running one finishes on the old CLI.
+- [ ] A failed step stays visible with its reason and can be retried.
+- [ ] The raw output is in `~/.kortext/logs/p<id>-<doc>.log`.
 
 ---
 
-## 4. `kortext serve` — dashboard
+## 5 · Review in the drawer
+
+Open any document. Everything you can do to it is here:
+
+| action | what happens |
+| --- | --- |
+| **Approve** | `draft → approved`; the chain advances and every approved reader of it is re-judged |
+| select a line → **Ask** | the author persona answers, in the panel only — nothing is written |
+| **Add note** → revise | the producing step re-runs with your notes; the document returns as `draft` |
+| **Edit** | you write the file yourself; saving settles the demands that produced it |
+| a demand (`change request`) | **Apply** re-runs the author with it, **Dismiss** closes it with your reason — decidable from either end, the document that asked or the one asked |
+| `not-applicable` | the step judged the document irrelevant and said why; it satisfies dependencies like an approval |
+
+- [ ] Ask answers about the selected passage and writes nothing to disk.
+- [ ] A revision request comes back as a rewritten draft, with the answered question **gone**
+      from `## Open Questions for prime` rather than restated.
+- [ ] A demand ticked `- [x]` in the source document carries the outcome line beneath it.
+- [ ] The brief has no producing step, so **Propose** drafts the change and you apply it.
+- [ ] Approving a rewritten document raises demands on the approved documents that read it —
+      or stays silent when there is nothing wrong.
+
+---
+
+## 6 · Handshake
+
+When every mapped document is `approved` or `not-applicable`, with no open questions and no
+standing demands, analysis is complete.
+→ `analysisComplete` in [server/docs.ts](../server/docs.ts)
+
+**Expect:** the completion card — *"Analysis complete — handshake done"* — with three starter
+commands that copy on click. Kortext's job is over; the documents are the contract and
+`AGENTS.md` hands your agent the terms.
+
+- [ ] The card appears only when the last document settles.
+- [ ] A starter command pasted into your own agent gets it reading `.kortext/` first.
+
+---
+
+## 7 · Kopeng — optional
+
+With `kopeng` on the PATH, **Transfer to Kopeng** splits the work in one long run into
+`.kopeng/project.yaml` + `versions/` + `epics/` + `tasks/`, with ids carrying the project code
+(`ACME-E01`, `ACME-T001`). The panel summarises the plan; **Approve plan** is the last signature
+of the handshake. Without kopeng installed, the button is replaced by an install card.
+
+- [ ] Transfer is refused while the analysis is incomplete.
+- [ ] A finished run leaves `project.yaml` plus at least one task, or it fails loudly.
+
+---
+
+## 8 · Lifecycle
+
+| action | what it touches |
+| --- | --- |
+| **Pause / Continue** | only whether new steps start |
+| **Restart** | wipes `.kortext/` and `.kopeng/`, re-scaffolds, lands paused |
+| **Archive** | a shelf: the row and the repo both stay, the card folds away |
+| **Cancel** | removes what kortext wrote — `.kortext/`, `.kopeng/`, the `AGENTS.md` block, the `CLAUDE.md` pointer — and the registry row. Your own files survive |
+| **Delete** (list) | unregisters only; the repo is untouched |
+
+- [ ] Restart wipes and lands ready, not running.
+- [ ] Cancel leaves a hand-written `AGENTS.md` in place, minus the block.
+- [ ] Restart and Cancel both arm in place before they act.
+
+---
+
+## 9 · Traps worth knowing
+
+1. **A CLI that is installed is not a CLI that is authenticated.** Kortext only runs `which`; a
+   logged-out CLI fails inside the step, and the reason lands on the job row.
+2. **Steps are long.** Minutes each, and a stuck one is killed at 15. Pause aborts the whole
+   process group rather than waiting.
+3. **A restart mid-step** settles the orphaned `running` rows at boot — they show as failed with
+   "kortext restarted mid-step — retry", which is the truth, not a bug.
+4. **The panel polls** (documents every 3s), so a change made on disk shows up a beat later.
+
+---
+
+## 10 · Cleanup
+
+Cancel each test project from its own screen (that is the tested path), then:
 
 ```bash
-kortext serve
-```
-
-Beklenen çıktı:
-```
-[engine] Boot: syncing personas + workflows into SQL index...
-[engine] ✓ 14 personas + N workflow_steps indexed
-[server] Listening on http://localhost:3200
-[browser] Opening http://localhost:3200 ...
-```
-
-✅ **Beklenti (Faz 13 sonrası):** Workflow .md'lerinde `+ajan` placeholder **0 yer**. Boot başarılı: 14 valid persona handle + `+prime` synthetic row index'lenir. Log mesajında "0 step skipped — no persona handle" görmelisin.
-
-⚠️ **Eğer boot'ta `fatal: workflow references unknown persona +X` hatası alırsan**: workflow .md'lerinde gerçek bir typo/geçersiz handle var demektir (Faz 13 rewrite kapsam dışı bir şey kalmış). Fatal throw mesajı hangi step + hangi handle olduğunu söyler; not al, fix turu açılır.
-
-**Tarayıcı kontrolü** — http://localhost:3200 açıldığında:
-
-- [ ] Sidebar görünüyor (Dashboard / Board / Memory / Reports / References + Settings sub-panes)
-- [ ] Onboarding ekranı geliyor (`.kortext/references/blueprint.md` status `uninitialized` olduğu için)
-
----
-
-## 5. Onboarding wizard
-
-Onboarding ekranında:
-
-1. **Project Name:** `Acme CRM UAT v3.1`
-2. **Project Code:** `ACMEV31`
-3. **Project Type:** `existing` veya `new`
-4. **Target Platform:** Web (chip)
-5. **Executor:** Mock seç (Claude/AGY testi için sonra)
-6. **Blueprint:** Eray'ın yazdığı yeni bir blueprint markdown (eski `blueprint-helsinki.md` Faz 13 docs konsolidasyonunda kaldırıldı). En basit hali: 1-2 paragraflık problem tanımı + hedef + kısıtlar.
-7. **Submit**
-
-Beklenen:
-- [ ] Form yeşil geçer, `Initializing…` durduktan sonra dashboard'a yönlendirilir
-- [ ] `.kortext/foundation/BRD.md` status'u `approved` olur (`head -8` ile teyit) — Faz 13 ile blueprint artık `foundation/` altında, eski `references/blueprint.md` lokasyonunda DEĞİL
-- [ ] `.kortext/data/kortext.db`'de yeni `run` satırı oluşur (mock executor new-project-analysis tetikler)
-- [ ] Dashboard'da "Active work" tablosu yeni run'ı gösterir
-
-⚠️ **Mock executor sahte success döner — gerçek dosya yazılmaz.** Foundation/references/reports dolduğunu doğrulamak için Claude executor ile yeniden koşman gerek (TODO Sırada §1).
-
----
-
-## 6. Board ekranı "+ New Item" modal
-
-Sidebar → Board.
-
-- [ ] "Filter" + "+ New task" butonları görünür
-- [ ] "+ New task" tıklayınca modal açılır
-- [ ] Modal alanları: Type (dropdown) / Title (required) / Epic (dropdown) / Owner (persona) / Acceptance criteria / Dependencies / Notes
-- [ ] Type=task, Title="UAT test login flow", Submit
-- [ ] Modal kapanır, board'da `T01 — UAT test login flow` görünür
-
-Sonra DB direkt teyit:
-```bash
-sqlite3 ~/Documents/_codebase/kortext-uat/.kortext/data/kortext.db \
-  "SELECT id, type, title, status FROM backlog_items;"
-## T01 | task | UAT test login flow | to_do
-```
-
----
-
-## 7. Settings readonly editor
-
-Sidebar → Settings → Agents.
-
-- [ ] Sol kolonda persona listesi (14 entry)
-- [ ] Persona seçilince sağda markdown render gözüküyor
-- [ ] "Edit" / "Save" butonları **YOK** — bunun yerine "Source / Rendered" toggle var
-- [ ] Toggle: Rendered = HTML rendered markdown; Source = raw .md text
-
-Workflows ve Rules pane'lerinde aynı pattern.
-
----
-
-## 8. Prompt cache token usage delta (Faz 12.7)
-
-Üç defa aynı pipeline'ı koş (mock değil — Claude executor ile):
-
-```bash
-## Onboarding'i Claude executor ile yeniden yap, ya da:
-kortext start new-project-analysis --executor claude
-## Log dosyasında token usage'ı oku:
-tail -20 .kortext/data/logs/run-*-step-*.log | grep -i "token"
-```
-
-Üç koşumun token kullanımı:
-- **İlk koş:** baseline (cache miss)
-- **2. koş:** input tokens ~%90 azalmış olmalı (cache hit)
-- **3. koş:** 2. ile benzer
-
-Eğer fark yoksa: `claude --print` çıktısında `cache_read_input_tokens` field'ına bak — 0'dan büyükse cache çalışıyor demektir.
-
-⚠️ Bu test gerçek Claude API çağrısı yapıyor — kredi yakıyor. 3× küçük task ile test et.
-
----
-
-## 9. Handover rotation (Faz 12.6)
-
-Manuel test:
-
-```bash
-## 6 fake entry yaz handover.md'ye
-for i in $(seq 1 6); do
-  cat >> .kortext/memory/handover.md <<EOF
-
----
-status: approved
-author: +product-manager
-updated_at: $(date -u +%Y-%m-%dT%H:%M:%SZ)
----
-
-## Handover: UAT test entry $i
-
-Test content $i
-
-EOF
-done
-
-kortext archive handover
-ls .kortext/memory/
-## Beklenen: handover.md (boş) + handover-2026-05-25-XXXX.md (rotated)
-```
-
-✅ Pass: rotation çalıştı, archive dosyası timestamp suffix'iyle yazıldı.
-
----
-
-## 10. Cleanup
-
-UAT bitince:
-```bash
-cd ~
-rm -rf ~/Documents/_codebase/kortext-uat
 npm uninstall -g kortext
+rm -rf ~/.kortext
 ```
+
+`~/.kortext` holds the registry and the logs for **every** project — remove it only when you
+are done with all of them.
 
 ---
 
-## Sonuç raporlama
+## Session prompt
 
-Hangi adımda pass / fail olduğunu [HANDOVER.md](./HANDOVER.md) §1 "Şu an" bölümüne yaz. Fail varsa: hangi adım, hangi log, hangi screenshot. Sonraki oturum açar açmaz fix turuna geçilir.
+To run a test pass in a fresh Claude Code session, paste this:
 
-✅ Hepsi pass: Release flow başlatılır. **Versiyon numarası belirsiz** — [TODO Açık sorular](./TODO.md)'deki v3.x naming çatışmasını Eray çözmeden numara verilmez. Genel akış:
-1. main güncel + tag karar verilen versiyon
-2. `package.json` 3.0.0 → karar verilen versiyon
-3. `CHANGELOG.md` ilgili bölüm ekle
-4. `git tag vX.Y.Z && git push origin vX.Y.Z` → npm-publish.yml otomatik tetikler
-5. npm registry'de `kortext@X.Y.Z` yayınlanır (provenance-attested)
-
----
-
-## Notlar
-
-- **Faz 13 (workflow content rewrite)** main'de — `+ajan` placeholder yok, persona FK validation pass. Mock executor ile sahte success akışı + Claude executor ile gerçek foundation/reports yazımı ayrı testler (Claude testi: TODO Sırada §1).
-- **Faz 12.9 yarım UI** (Reports SQL revamp + Memory archive dropdown) eksik ama mevcut ekranlar v3.0 endpoint'leriyle çalışır — UAT'da Reports/Memory ekranları açılıyor mu kontrol et, "tıkırında" olmayabilir. Bkz. [TODO v3.1.x follow-up](./TODO.md).
-- **`app.listen` EADDRINUSE silent fail** hâlâ açık (Faz 10 borcu, [TODO v3.0.1 borç](./TODO.md)). Eğer `kortext serve` çıktısı boş geliyorsa port çakışmasıdır — `lsof -ti:3200 | xargs kill` ile temizle.
-
----
-
-## Kortext — UAT Oturum Promptu
-
-> Yeni bir Claude Code oturumu açıp **sadece UAT** yapmak için: ya bu dosyanın altındaki bloğu kopyala-yapıştır, ya da oturuma sadece **"şunu oku ve uygula: docs/UAT.md"** yaz (oturum dosyayı kendi okur).
-
----
-
-Bu oturum **sadece Kortext UAT'ı** içindir — kod geliştirme değil, ürünü gerçek koşullarda test etme + gözlem + küçük düzeltme.
-
-**Önce oku:** `docs/UAT.md` (en üstteki "⭐ TAM & GERÇEK UAT" bölümü), `docs/HANDOVER.md` (son durum), `docs/DECISIONS.md` Bölüm 7 (bu sürümde ne yapıldı). Bunları okuyup bana tek paragraf "neredeyiz" özeti ver, sonra UAT'a hazırlan.
-
-**Ben (Eray):** non-coder, Türkçe konuşurum, GUI-first. Terminal sadece sistem kontrolü için. Bana sade dille anlat (jargon değil), somut göster (ekran/dosya yolu/durum). Mimari kararları AskUserQuestion ile öneri-başta sor.
-
-**Rolün (UAT kolaylaştırıcı):**
-1. Paketlenmiş kurulumu hazırla (build + pack + global install) — her zaman **en güncel build**.
-2. Daemon'u başlat, ben tarayıcıda gezerim; sen yan masadan **logları/DB durumunu** izle (`/api/...`, daemon.log, `kortext list`).
-3. **Ne olduğunu bana açıkla** — "şu an X ajanı Y üretiyor" gibi; ekranda anlamadığım şeyi netleştir.
-4. **UAT bulgularını topla** (UX kusuru, kafa karışıklığı, bug) → kaydet; küçük/net olanları (metin, etiket, görünür davranış) onayımla hemen düzelt; büyük olanları TODO'ya yaz, sormadan büyük refactor yapma.
-5. UAT sonunda **temizlik** yap (aşağıda).
-
-**Akış (gerçek claude ajanıyla, ben +prime):** `kortext start` (proje yok) → sihirbaz tarayıcıda açılır → onboarding (proje bilgisi + BRD + **proje dizinini sihirbazda seç** = boş bir klasör) → Kortext klasörü iskeleler + **git'i otomatik kurar** + gerçek daemon'u doğurur + tarayıcı oraya geçer → analiz (12 adım sıralı, +prime kapıları) → planning (Board: kodlu id'ler `<KOD>-NNN`/`<KOD>-E0N` + bağımlılıklar + `blocked` durumları) → "Auto" ile build (bloksuz item'lar paralel kodlanır, 6 eşzamanlı; blocker bitince bağımlı açılır; review+UAT bana gelir) → epic→staging-onay → version→preprod-onay → gerçek `development→main` merge+tag.
-
-**Kurulum (yorumsuz — zsh'de `#` komuta argüman olur):**
-```
-cd /Users/erayendes/Documents/_codebase/kortext
-npm run build
-npm pack
-npm install -g ./kortext-3.1.0.tgz
-kortext --version
-```
-`kortext --version` → `3.1.0` olmalı.
-
-**Test projesi başlat** (tek komut — sihirbaz dizini sorar, git'i otomatik kurar):
-```
-KORTEXT_DRIVE_ENABLED=1 KORTEXT_CLAUDE_BIN=$(which claude) kortext start
-```
-Sihirbaz `:3199`'da açılır → onboarding'i doldur, **proje dizinini sihirbazda seç** (boş bir klasör; örn. `/Users/erayendes/Documents/_codebase/milowda-pass`) → Başlat. Kortext o klasörü iskeleler, **git'i otomatik kurar** (init + commit + `development`), gerçek projeyi `:3200`'de doğurur, tarayıcı oraya geçer; analiz kendiliğinden başlar. **Elle `kortext init` / `git` YOK** — eski akış buydu, artık gerekmiyor.
-
-**Bilinen tuzaklar / gotcha'lar:**
-- Komut bloklarında **inline `# yorum` yok** (zsh `interactivecomments` kapalı → `npm pack #` "Invalid tag name" verir).
-- `--executor=claude` için `KORTEXT_CLAUDE_BIN=$(which claude)` **şart** (sihirbazdaki "binary path" alanına da yazılabilir). Bu env sihirbazdan doğan gerçek daemon'a da geçer.
-- Build fazı git ister; sihirbaz projeyi oluştururken git'i **otomatik** kurar (init + commit + `development`). Mevcut git repo'lu klasör seçersen sadece `development` dalı garanti edilir, dosyalarına dokunulmaz. Elle git komutu YOK.
-- `kortext start` önce sihirbazı `:3199`'da açar; onboarding bitince gerçek proje `:3200`'e (sıradaki boş porta) geçer ve tarayıcı oraya yönlenir. Açmazsa `open http://localhost:3199` (sihirbaz) / handoff sonrası `:3200`.
-- Gerçek claude **yavaş** (adım başına dakikalar) + maliyetli. **İlk UAT'ı KÜÇÜK fikirle** yap (5-8 özellik). Bir adım çok uzun "running" kalırsa (bilinen hung-claude follow-up'ı) o koşuyu durdur/retry.
-- **Kendi Claude Code oturumunu (beni/ajanı) öldürme** — `pkill claude` YASAK. Ajan süreçlerini sadece `lsof +D <proje-dizini>` ile hedefli kapat.
-- Deploy'lar (staging/preprod/prod-push) **mock**; gerçek olan tek şey son `development→main` merge+tag.
-
-**Açık UX tartışmaları (UAT'ta netleşecek):**
-- Dashboard şeffaflığı: "Active work" satırı adımın ne ürettiğini göstermeli (şu an `new-project-analysis 1/12 + persona` kriptik).
-- Analiz neden tek-tek koşuyor (bağımlılık zinciri — sıralı) vs build neden paralel (bağımsız item'lar, 6 eşzamanlı) — kullanıcıya bunu görünür kıl.
-
-**Temizlik (UAT bitince / sıfırlamak için):**
-```
-kortext stop
-kortext purge <proje-slug> --yes
-lsof -ti:3199 | xargs kill
-```
-- `kortext stop` sadece **kayıtlı** projeleri durdurur. Sihirbaz daemon'u (`:3199`) kayıtsızdır ama artık **handoff sonrası kendini kapatır** ("bellboy" self-shutdown, ~2sn) → normalde `:3199` kendiliğinden boşalır. Üstteki `lsof -ti:3199 | xargs kill` yalnız emniyet kemeri (örn. onboarding'i yarıda bırakıp hiç submit etmediysen).
-- Ardından test klasörünün içini boşalt (gerekirse `rm -rf <dizin> && mkdir <dizin>`) ve `lsof +D <dizin>` ile kalan ajan süreci kalmadığını doğrula. `:3199` + `:3200` boş + `kortext list` temiz olmalı.
-
-**Davranış kuralları:** `origin/main`'e ben **açıkça "push" demeden** push yok (lokal commit serbest). Büyük mimari kararları sormadan alma. Doğrulamadan "oldu" deme (curl/log/ekran göster).
+> This session is a Kortext test pass — not development. Read `dev/TEST.md` first, then give me
+> one paragraph on where we are.
+>
+> I am Eray: non-coder, Turkish, GUI-first. Explain plainly, show concretely (screen, file path,
+> state). Ask before any architectural decision.
+>
+> Your job: build and install the current package, start it, and watch the logs and the database
+> from the side while I drive the panel. Tell me what is happening in plain words. Collect every
+> finding — UX flaw, confusion, bug. Fix the small and obvious ones with my approval; write the
+> big ones down and do not refactor without asking. No push to `origin/main` unless I say push.

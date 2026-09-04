@@ -1,8 +1,8 @@
-# Kortext v1.0 — Developer Brief (code side)
+# Kortext v3.1 — Developer Brief (code side)
 
 ## What this folder is
 
-Kortext'in npm paketi (`erayendes/kortext`) + GitHub repo'su. **Pasif proje beyni:** brief → analiz belgeleri → onay → rapor; işi kullanıcının kendi coding ajanı yapar (AGENTS.md kontratı), görevler opsiyonel Kopeng aktarımıyla. Express + SQLite (global `~/.kortext/`) + React panel + MCP. Orkestrasyon YOK — eski v3 motoru `archive/v3-engine/` arşivinde (karar: dev/DECISIONS.md Bölüm 18).
+Kortext'in npm paketi (`erayendes/kortext`) + GitHub repo'su. **Analiz beyni:** brief → analiz belgeleri → prime onayı → el sıkışma; kortext kullanıcının kendi kurulu ajan CLI'ını (claude / codex / gemini) headless sürer, kodu kullanıcının kendi ajanı yazar (AGENTS.md kontratı), görevler opsiyonel Kopeng aktarımıyla. Express 5 + SQLite (global `~/.kortext/`) + React 19 panel. Orkestrasyon YOK, MCP sunucusu YOK, rapor üretimi YOK — eski v3 motoru `archive/v3-engine/` arşivinde.
 
 ## User profile
 
@@ -11,15 +11,11 @@ Eray is a non-coder, communicates in Turkish, code / commits / comments in Engli
 ## Dosya haritası — Claude için: hangi durumda nereye yaz
 
 ```
-"decisions güncelle" / "bu kararı kaydet"          → dev/DECISIONS.md
 "mimari değişti" / "yeni bileşen"                  → dev/ARCHITECTURE.md
 "tasarım güncelle" / "yeni UI / renk"              → dev/DESIGN.md
-"handover yaz" / oturum sonu / "devam notu"        → dev/HANDOVER.md
-"todo'ya ekle" / "sonraki iş"                      → dev/TODO.md
-"UAT senaryosu" / "kullanıcı testi"                → dev/UAT.md
+"UAT / uçtan uca akış / test senaryosu"           → dev/TEST.md
 "ürün konumlandırma / marka / persona"             → dev/PRODUCT.md
-"uçtan uca akış / simülasyon"                      → dev/SIMULATION.md
-Kullanıcının okuduğu her şey                       → docs/
+Kullanıcının okuduğu her şey                       → README.md · docs/
 "Claude için kural / mapping / behavior"           → CLAUDE.md (bu dosya)
 Kod (feature / bug fix / refactor)                 → server/  ui/  bin/  test/
 Persona / workflow / template düzenleme            → agents/  workflows/  templates/
@@ -27,14 +23,16 @@ Eski v3 kodu ve tasarım turları (düzenleme YOK)    → archive/
 ```
 
 > **Doküman yeri (2026-09-04):** okuyucusuna göre ayrıldı.
-> **`docs/`** = kullanıcının okuduğu: `README`, `CHANGELOG`, `SETUP`, `USER-GUIDE`. Docusaurus
+> **`docs/`** = kullanıcının okuduğu: `GUIDE`, `CHANGELOG` (+ `assets/`). Kök `README.md`
+> kurulum dahil her şeyi anlatır — npm paket sayfası onu okur, o yüzden kökte durur. Docusaurus
 > sitesi buradan kurulacak.
-> **`dev/`** = geliştiricinin okuduğu, sekiz dosya: `ARCHITECTURE`, `DECISIONS`, `DESIGN`,
-> `HANDOVER`, `PRODUCT`, `SIMULATION`, `TODO`, `UAT`.
-> **`archive/`** = bir daha düzenlenmeyecek olan: `v3-engine/` (eski motor), `concepts/`
-> (v2–v6 wireframe ve mockup'lar), `specs/`, `superpowers/`.
+> **`dev/`** = geliştiricinin okuduğu, dört dosya: `ARCHITECTURE`, `DESIGN`, `PRODUCT`,
+> `TEST`. Günlük tutmuyoruz: bir karar ait olduğu belgeye yazılır, açık iş GitHub issue'suna.
+> **`archive/`** = bir daha düzenlenmeyecek olan: `v3-engine/` (eski motor), `DECISIONS.md`
+> (karar günlüğü), `HANDOVER.md` (oturum devir notları), `TODO.md` (eski iş listesi),
+> `concepts/` (v2–v6 wireframe ve mockup'lar), `specs/`, `superpowers/`.
 
-Detaylı mimari için [dev/ARCHITECTURE.md](dev/ARCHITECTURE.md), karar geçmişi için [dev/DECISIONS.md](dev/DECISIONS.md), aktif faz durumu için [dev/HANDOVER.md](dev/HANDOVER.md).
+Detaylı mimari için [dev/ARCHITECTURE.md](dev/ARCHITECTURE.md).
 
 ## Working style — for Claude on code side
 
@@ -47,8 +45,8 @@ Detaylı mimari için [dev/ARCHITECTURE.md](dev/ARCHITECTURE.md), karar geçmiş
 
 ```bash
 npm install && npm --prefix ui install   # install deps (root + panel)
-npm run dev                   # server :4200 (tsx watch, --no-open)
-npm run dev:web               # vite panel :5300 (proxy /api → 4200)
+npm run dev                   # server :3441 (tsx watch, --no-open)
+npm run dev:web               # vite panel :3442 (proxy /api → 3441)
 npm test                      # node:test suite
 npm run build                 # tsc → dist/ + vite → ui/dist/
 npm run typecheck             # server + panel

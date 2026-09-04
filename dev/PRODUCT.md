@@ -1,34 +1,80 @@
 # Product
 
+What Kortext is, who it is for, and how it speaks. Architecture lives in
+[ARCHITECTURE.md](./ARCHITECTURE.md), the visual language in [DESIGN.md](./DESIGN.md).
+
 ## Register
 
-product
+product — calm, exact, not selling. A tool does not explain itself; it shows its work.
 
 ## Users
 
-Technical founders, solo engineers, and small engineering leads who want AI agent teams to run software projects autonomously with minimal intervention. They sit at a real-time dashboard, approve critical gates, and let agents handle the rest. Context: focused work session, usually one monitor, high trust in the tool once it proves itself.
+Someone turning an idea, or an existing codebase, into a document foundation their own agent can
+safely work on top of. They already have an agent CLI installed and paid for (Claude Code, Codex,
+Gemini CLI); what is missing is not the agent but the ground it stands on.
 
-## Product Purpose
+They sit at two ends, and both have the same problem:
 
-Kortext is an autonomous AI agent runtime. You write a blueprint, flip it to approved, and the agents — backed by a TypeScript runtime, SQLite state store, and git worktrees — handle analysis, planning, development, and testing end-to-end. The dashboard surfaces what's running, what needs a human decision, and what shipped. Success looks like: zero surprises, every approval prompt answered in under 30 seconds, no manual task coordination needed.
+- **The solo developer / technical founder.** Their agent can write code, but it re-invents the
+  architecture every session; two weeks later the project does not remember its own decisions.
+- **The non-coding product owner.** They know what they want and not how to say it. "Build this"
+  is not enough — the agent has to read what things are first.
 
-## Brand Personality
+Shared context: one screen, a focused session, more time in the panel than in the terminal. The
+critical decisions are the human's; the writing is the agent's.
 
-Reliable, Silent, Sharp. The tool that does the work without making noise about it. Control-room confidence — things are under control, even when a lot is happening. No cheerfulness, no friction.
+Kortext deliberately sits **between the two**. A term is never shortened away, and never left
+unexplained either: a thing is called by its name, met with one sentence where it first appears,
+and not explained a second time. It neither lectures the reader who does not know what an agent
+CLI is, nor shuts them out.
+
+## What the product is for
+
+Kortext is an **analysis brain**. It turns a brief — or existing code — into an approved document
+foundation, by driving the user's own agent CLI headlessly, in dependency order. Every document
+lands as a draft; the user approves it, leaves notes, requests a revision, or selects a line and
+asks its author about it. The chain advances on approvals.
+
+When every document is settled, Kortext **retires**. The documents become the project's contract
+and `AGENTS.md` the handover constitution; the user's own agent writes the code. Kortext writes
+no code, runs no tasks, calls no LLM API and holds no key.
+
+Success looks like this: a session opened two weeks later does not rediscover the project — it
+reads it. And no document was written by inventing something the brief never said.
+
+## Brand personality
+
+**Reliable, silent, sharp.** The tool that does not announce the work it is doing. Staying calm
+on screen while a dozen steps run is a feature. No cheer, no friction, no "great!".
+
+And one more thing: honesty. Kortext says when it does not know. If the brief is thin it produces
+no documents and asks instead — and it shows that as the correct outcome, not as a failure.
 
 ## Anti-references
 
-- **Jira / Confluence**: Heavy, nested, enterprise-bureaucratic. Every action requires three clicks and a dropdown. Status is obscured by process.
-- **Typical SaaS landing page aesthetic**: Purple gradients, "empower your team", generous whitespace hiding shallow feature sets. Performative instead of functional.
+- **Jira / Confluence.** Heavy, nested, enterprise-bureaucratic. Three clicks and a dropdown per
+  action; the status disappears under the process.
+- **The typical SaaS landing page.** Purple gradients, "empower your team", generous whitespace
+  covering a thin feature set. Performative rather than functional.
+- **The "does everything by itself" autonomous agent promise.** Kortext tried it and dropped it:
+  no orchestration, no worker pool, no automated development. The smaller the promise got, the
+  more of it was true.
 
-## Design Principles
+## Design principles
 
-1. **Show, don't announce.** Status is visible at a glance. No banners proclaiming things are fine; the layout itself communicates health.
-2. **Silence is a feature.** Colour and motion earn their place. Nothing decorative; every element is load-bearing.
-3. **Expert confidence.** The interface assumes the user knows what a worktree is. No onboarding hand-holding on core concepts; complexity is surfaced directly, not hidden behind abstraction.
-4. **Density with breathing room.** Compact enough to see the whole system at once; generous enough that scanning is fast. Linear-class information density, not Grafana-class chaos.
-5. **One decision at a time.** Approval prompts, blocked items, and gate failures are surfaced clearly and individually — not buried in a list of everything.
+1. **Show, don't announce.** State is visible at a glance. No banner declaring things are fine;
+   the layout itself says it.
+2. **Silence is a feature.** Colour and motion earn their place. Nothing is decorative; every
+   element is load-bearing.
+3. **One decision at a time.** A document awaiting approval, a standing demand, a failed step —
+   each surfaced individually, not buried in a list of everything.
+4. **Density that breathes.** Tight enough to see the whole system on one screen, open enough to
+   scan quickly.
+5. **What the user does not know is explained, not hidden.** The agent CLI, `AGENTS.md`,
+   `.kortext/` — all visible. But the interface never assumes anyone knows what a worktree is.
 
-## Accessibility & Inclusion
+## Accessibility
 
-WCAG AA minimum. Reduced motion support required (agents run 24/7; some users monitor on large displays in dark rooms — flicker and animation must be dimmable). Color-blind safe status indicators (never color-only; always paired with label or icon).
+WCAG AA at minimum. Reduced-motion support is required — the one animation is the "alive" pulse,
+and it must be able to stop. Status indicators are colour-blind safe: colour never carries meaning
+alone, always alongside a label (`writing`, `approved`, `change request`).

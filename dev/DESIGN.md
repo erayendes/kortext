@@ -1,409 +1,253 @@
-# Kortext — Tasarım Sistemi
+# Kortext — Design System
 
-> Panelin görsel dili. Hangi renk ne anlama gelir, hangi boy nerede kullanılır, bir düğme
-> ne zaman hangi biçimi alır. Turların görsel kaydı: `archive/concepts/`.
->
-> **Açıklamalar Türkçe, token ve sınıf adları İngilizce.** Bir şeyin adı çevrilmez —
-> `--fs-body` her dilde `--fs-body`'dir.
+The panel's visual language: what a colour means, which size goes where, when a button takes
+which shape. The token values below are the ones live in `ui/src/index.css`; that file is the
+implementation, this document is the argument. Visual history: `archive/concepts/`.
 
 ---
 
-## 0 · İlkeler
+## 0 · Principles
 
-Sonraki her karar bu beşten çıkar.
+**Quiet is correct.** Kortext is a tool, not a show. A dozen agents can be working in parallel
+and the screen stays calm. Colour enters only when it has something to say.
 
-**Sessiz olan doğrudur.** Kortext bir araç, bir gösteri değil. Bir düzine ajan paralel
-çalışırken ekranın sakin, yoğun ve sessiz kalması gerekir. Renk yalnız bir şey söylemesi
-gerektiğinde girer; geri kalan her şey nötr.
+**Colour carries meaning.** Green is approval, red is failure, pink is a demand. No decorative
+colour — if you see one, there is a reason.
 
-**Renk anlam taşır.** Yeşil onaydır, kırmızı hatadır, pembe bir taleptir. Dekoratif renk
-yok — bir rengi görüyorsan bir sebebi vardır.
+**Every token names a job, not a size.** `--fs-body` says where it goes; `--fs-13` is just a
+number. You pick the job.
 
-**Her token bir işe aittir.** Ölçek değil, rol. `--fs-body` nerede kullanılacağını söyler;
-`--fs-13` yalnız bir sayıdır. Sayıyı değil işi seçersin.
+**Machine and human write differently.** Paths, ids, commands — mono. Every sentence a human
+reads — Barlow. Blur the two and both lose their credibility.
 
-**Makine ile insan farklı yazar.** Dosya yolu, id, komut — mono. İnsanın okuduğu her cümle —
-Barlow. Karışırsa ikisi de güven kaybeder.
+**One configuration.** A setting nobody changes is not a setting. One axis survives: theme.
 
-**Tek konfigürasyon.** Kimsenin değiştirmediği ayar, ayar değildir. Tek eksen kaldı: tema,
-çünkü insanın fikri olan tek şey o.
-
-**Olmayacaklar:** gradyan yok, emoji yok, dekoratif SVG yok, sol kenarı vurgulu yuvarlak
-kart yok, Inter/Roboto yok.
+**Never:** gradients, emoji, decorative SVG, rounded cards with a coloured left edge,
+Inter/Roboto.
 
 ---
 
-## 1 · Tema
+## 1 · Theme
 
-Üç durum. **Auto** işletim sistemini takip eder ve ilk açılışın hâlidir. **Light** ve **Dark**
-senin seçimindir; sistemi ezer ve hatırlanır. Başka görünüm ayarı yoktur.
+Three states. **Auto** follows the OS and is the first-run state; **Light** and **Dark** are the
+user's choice, override the OS and are remembered in `localStorage`. No other appearance setting.
 
 ```css
-:root                    { /* açık — §2 */ }
-:root[data-theme='dark'] { /* koyu — §2, aynı adlar başka değerler */ }
+:root                    { /* light */ }
+:root[data-theme='dark'] { /* dark — same names, other values */ }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) { /* koyu, ikinci kez */ }
+  :root:not([data-theme='light']) { /* dark, written a second time */ }
 }
 ```
 
-Koyu değerler iki kez yazılır. Düz CSS'te blok takma adı yoktur; alternatifi — script'in
-takıp çıkardığı bir sınıf — sayfa yüklenirken yanlış temayı gösterir, yani her açılışta bir
-flaş. Tekrar daha ucuz dürüstlüktür.
+The dark values are written twice on purpose. Plain CSS has no block alias, and the alternative
+— a class a script adds on load — shows the wrong theme for one frame on every open. Repetition
+is the cheaper honesty. `data-theme` is written by one control (the footer's `.seg-sm`); no
+attribute means auto.
 
-`data-theme`'i panel başlığındaki tek kontrol yazar (**Auto · Light · Dark**, §7'nin
-segmented control'ü) ve saklar. Nitelik yoksa auto demektir.
-
-> Karanlık tema açığın filtrelenmiş hâli değildir: yüzeyler yükseldikçe açılır, kenarlıklar
-> sessiz kalır, renkli zeminler içine renk karışmış bir siyahtır — açık moddaki değerin
-> açılmışı değil.
+> Dark is not light run through a filter: surfaces lighten as they rise, borders stay quiet, and
+> a tinted background is a black with colour mixed in — not a lightened light-mode value.
 
 ---
 
-## 2 · Renk
+## 2 · Colour
 
-### Yüzeyler ve kenarlıklar
+**Surfaces** rise in order — `--bg` is the floor, `--bg-active` the top. Higher means lighter
+(in dark too, where "lighter" means less black).
 
-Arayüzün zemini. Sıralama önemli: `--bg` en alt katman, `--bg-active` en üst. Bir yüzey ne
-kadar yukarıdaysa o kadar açıktır (koyu temada da öyle — orada "açık" demek daha az siyah).
+| token | light | dark | used for |
+| --- | --- | --- | --- |
+| `--bg` | `#ffffff` | `#0a0a0b` | the page |
+| `--bg-subtle` | `#fbfbfc` | `#0e0e10` | card, panel |
+| `--bg-muted` | `#f5f5f6` | `#161618` | a sunken well |
+| `--bg-inset` | `#f7f7f8` | `#121214` | code box |
+| `--bg-hover` | `#f2f2f4` | `#1a1a1d` | under the cursor |
+| `--bg-active` | `#ececef` | `#212126` | pressed, selected |
+| `--border` | `#eaeaec` | `#2a2a30` | default line |
+| `--border-strong` | `#dcdce0` | `#3a3a42` | control edge |
+| `--border-faint` | `#f0f0f2` | `#1f1f24` | divider |
+| `--border-hover` | `#c6c6cc` | `#3a3a40` | under the cursor |
 
-```css
---bg:#ffffff;         /* sayfanın zemini      */  --bg-subtle:#fbfbfc;  /* kart, panel        */
---bg-muted:#f5f5f6;   /* gömük yuva           */  --bg-inset:#f7f7f8;   /* kod kutusu         */
---bg-hover:#f2f2f4;   /* imlecin altındaki    */  --bg-active:#ececef;  /* basılı, seçili     */
+**Text** has four steps, importance falling: `--fg` `#18181b`/`#ededef` (read this) ·
+`--fg-secondary` `#51515a`/`#9c9ca5` · `--fg-muted` `#76767f`/`#6e6e77` · `--fg-faint`
+`#a3a3ad`/`#54545c` (just needs to exist).
 
---border:#e4e4e7;         /* varsayılan çizgi   */  --border-strong:#d4d4d8;  /* kontrol kenarı */
---border-faint:#eeeef1;   /* ayraç              */  --border-hover:#c6c6cc;   /* imleç altı     */
---scroll-thumb:#e0e0e4;
-```
+**Accent** is single and neutral. Kortext is not a brand show; the primary action is black,
+because it is the one thing that must be seen. `--accent` `#18181b` / dark `#ededef`, plus
+`--accent-fg`, `--accent-tint`, `--accent-tint-border`, `--accent-ring`.
 
-> 12 adımlı gri rampa kaldırıldı. Semantik token'ları hiç beslemiyordu — onlar zaten düz
-> hex — yani başka yerde yazılı değerlerin on iki kopyasıydı ve yalnız ikisi kullanılıyordu.
-> O ikisi yukarıda, işiyle adlandırılmış hâlde.
+> In dark, `--accent-hover` is **darker**, not whiter: the accent there is already near white
+> (`#ededef`), so a white hover goes nowhere. A light-on-dark control darkens to respond —
+> `#cfcfd4`.
 
-### Metin
+**State colours** are the only non-neutral colours in the interface. Each comes as a triple
+(text, background, border) and the set is closed.
 
-Dört basamak. Aşağı indikçe önem azalır — `--fg` okunması gereken, `--fg-faint` orada
-olduğu bilinsin yeter.
+| token | light | dark | reads as |
+| --- | --- | --- | --- |
+| `--green` | `#157a52` | `#46c08a` | approved, passed |
+| `--amber` | `#9a6a16` | `#d3a55e` | your turn, paused |
+| `--red` | `#c5392f` | `#e0726a` | failed, destructive |
+| `--blue` | `#2563c9` | `#5e9bf0` | writing, info |
+| `--violet` | `#5b4bcc` | `#8b7df0` | in review |
+| `--pink` | `#c02a72` | `#ee7bb0` | a demand, a moving input |
 
-```css
---fg:#18181b;        /* ana metin   */  --fg-secondary:#51515a;  /* açıklama */
---fg-muted:#71717a;  /* etiket, meta */  --fg-faint:#a3a3ad;      /* en sessiz */
-```
+**One palette, three contexts.** These six speak three languages and never collide, because none
+stands next to another: state lives at the edge of a row, an alert inside a document body, syntax
+inside a code block.
 
-### Vurgu
-
-Tek vurgu rengi, o da nötr. Kortext bir marka gösterisi değil; birincil eylem siyahtır,
-çünkü dikkat çekmesi gereken tek şey odur.
-
-```css
---accent:#18181b; --accent-hover:#000000; --accent-fg:#ffffff;
---accent-tint:#f4f4f5; --accent-tint-border:#e2e2e6; --accent-ring:rgba(24,24,27,0.16);
-```
-
-Koyu temada `--accent-hover` **daha koyu** olmalı, daha beyaz değil: orada accent zaten
-neredeyse beyazdır (`#ededef`), `#ffffff` hover'ı hiçbir yere götürmez. Açık zeminli bir
-kontrol tepki vermek için kararır.
-
-```css
-:root[data-theme='dark'] { --accent:#ededef; --accent-fg:#0a0a0b; --accent-hover:#cfcfd4; }
-```
-
-### Durum renkleri
-
-Arayüzdeki **tek** nötr olmayan renkler. Her biri üçlü gelir: metin, zemin, kenarlık. Bu
-setin dışında bir durum rengi icat edilmez.
-
-```css
---green:#157a52;  --green-bg:#eaf5ef;  --green-border:#cfe9dd;   /* onaylandı, geçti      */
---amber:#9a6a16;  --amber-bg:#faf2e2;  --amber-border:#ecdcb8;   /* sıra sende, duraklatıldı */
---red:#c5392f;    --red-bg:#fbeceb;    --red-border:#f1cfcc;     /* düştü, yıkıcı         */
---blue:#2563c9;   --blue-bg:#eaf1fc;   --blue-border:#cfe0f6;    /* yazılıyor, bilgi      */
---violet:#5b4bcc; --violet-bg:#efedfb; --violet-border:#dad5f4;  /* incelemede            */
---pink:#c02a72;   --pink-bg:#fdebf3;   --pink-border:#f6cede;    /* talep, hareketli girdi */
-```
-
-#### Aynı palet, üç bağlam
-
-Bu altı renk arayüzde **üç ayrı dil** konuşur. Karışmazlar çünkü hiçbiri diğerinin yanında
-durmaz: durum satırın kenarında, uyarı belge gövdesinde, sözdizimi kod bloğunun içinde.
-
-| renk | satırda (durum) | gövdede (uyarı) | blokta (sözdizimi) |
+| colour | in a row (state) | in a body (alert) | in a block (syntax) |
 |---|---|---|---|
-| yeşil | approved | Tip | string |
-| amber | sıra sende, duraklatıldı | Warning | sayı |
-| mor | pending | Important | anahtar kelime |
-| mavi | yazılıyor | Note | JSON anahtarı |
-| kırmızı | failed | Caution | — |
-| pembe | talep, bağımlılık | — | — |
+| green | approved | Tip | string |
+| amber | your turn, paused | Warning | number |
+| violet | pending | Important | keyword |
+| blue | writing | Note | JSON key |
+| red | failed | Caution | — |
+| pink | demand, dependency | — | — |
 
-Kural değişmedi: **yeni durum rengi icat edilmez.** Genişleyen şey, bir rengin nerede
-okunduğuna göre ne söylediği. Bir belge gövdesindeki amber `Warning` bir durum değildir;
-o satırın kendisi bir durum taşımıyor.
-
----
-
-## 3 · Tipografi
-
-İki aile. **Barlow** insanın dilini yazar — başlık, cümle, düğme. **Overpass Mono** makinenin
-sahip olduğu her şeyi — dosya yolu, id, komut, zaman damgası. Ölçüt basit: kullanıcı ezberden
-yazamıyorsa mono.
-
-```css
---font-sans:'Barlow', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
---font-mono:'Overpass Mono', ui-monospace, 'SF Mono', Menlo, monospace;
-```
-
-### Yedi rol
-
-Ölçek sayıyla değil **görevle** adlandırılır. "Hangi boyu kullanayım?" sorusunun cevabı
-vardır: kart adı yazıyorsan `heading`, buton yazıyorsan `ui`.
-
-```css
---fs-title:18px;    /* sayfanın veya belgenin tek başlığı        h1 */
---fs-section:16px;  /* belge içindeki bölüm                      h2 */
---fs-heading:14px;  /* kart adı, drawer başlığı, panel başı      h3 */
---fs-body:13px;     /* düzyazı, input — taban                        */
---fs-ui:12px;       /* buton, kontrol, panel kromu                   */
---fs-label:11px;    /* meta, id, sayaç, footer                       */
---fs-micro:10px;    /* rozet, mono eyebrow                           */
-```
-
-Taban: `font-family:var(--font-sans); font-size:var(--fs-body); line-height:1.5; color:var(--fg);`
-Rakamlar için `font-feature-settings:"cv01","ss01","tnum";` — tabular, yani bir sütunda alt
-alta gelen sayılar hizalanır.
-
-**İki sözlük, tek ölçek.** Panel kromu rol adıyla konuşur — `Dismiss` düğmesi bir başlık
-değildir. Belgenin içindeki markdown h1/h2/h3 der. İkisi aynı yedi boyu paylaşır, farklı
-kelimelerle.
-
-### Ağırlık
-
-`400` gövde · `500` kontrol ve etiket · `600` bölüm başlığı · `650` sayfa başlığı.
-
-### Mono
-
-Mono, yanındaki düzyazıyla **aynı boyu** kullanır. `.mono` sınıfı yalnız aileyi değiştirir.
+The rule stands: **no new state colour is invented.** What expands is what a colour says
+depending on where it is read.
 
 ---
 
-## 4 · Boşluk
+## 3 · Typography
 
-Altı adım, hepsi 4'ün katı. Aradaki değerler yoktur — 13px diye bir boşluk yoksa arayüz
-kendi kendine hizalanır.
+Two families. **Barlow** writes the human's language — headings, sentences, buttons.
+**Overpass Mono** writes everything the machine owns — paths, ids, commands, timestamps. The
+test: if the user cannot type it from memory, it is mono.
 
-```css
---sp-1:4px;   /* ikon ile yazı arası        */  --sp-4:16px;  /* bölüm içi     */
---sp-2:8px;   /* kontrol içi, küçük boşluk  */  --sp-5:24px;  /* bölümler arası */
---sp-3:12px;  /* kart içi padding           */  --sp-6:32px;  /* sayfa kenarı  */
-```
+Seven roles, named by job, not by number:
 
-**Kontrol satırının boşluğu.** Aynı işi yapan kontroller `--sp-2` ile yan yana durur; bir
-eylem ile bir seçim grubu arasında `--sp-3` vardır. `Example ↓` ile `Write | Upload` segmenti
-yapışık durmaz — biri iş yapar, öteki soru sorar, ve aradaki boşluk bunu söyler.
+| token | px | where |
+| --- | --- | --- |
+| `--fs-title` | 18 | the single title of a page or document (h1) |
+| `--fs-section` | 16 | a section inside a document (h2) |
+| `--fs-heading` | 14 | card name, drawer title, panel head (h3) |
+| `--fs-body` | 13 | prose, inputs — the base |
+| `--fs-ui` | 12 | buttons, controls, panel chrome |
+| `--fs-label` | 11 | meta, id, counter, footer |
+| `--fs-micro` | 10 | badge, mono eyebrow |
 
----
+Base: `font-family:var(--font-sans); font-size:var(--fs-body); line-height:1.5; color:var(--fg)`
+with `font-feature-settings:"cv01","ss01","tnum"` so numbers align in a column.
 
-## 5 · Köşe, gölge, hareket
+Weights: `400` body · `500` control and label · `600` section heading · `650` page title.
+Mono takes the **same size** as the prose beside it; `.mono` changes the family only.
 
-```css
---r-sm:4px;    /* kontrol */   --r-md:8px;   /* kart  */
---r-lg:12px;   /* panel   */   --r-pill:999px; /* rozet */
-
---shadow-xs:0 1px 1px rgba(24,24,27,0.03);                                  /* sayfadan az yukarıda */
---shadow-lg:0 6px 18px rgba(24,24,27,0.07), 0 1px 3px rgba(24,24,27,0.04);  /* sayfanın üstünde     */
-:root[data-theme='dark'] { --shadow-lg:0 6px 18px rgba(0,0,0,0.5); }
-
---speed:130ms;  --ease:cubic-bezier(0.2, 0, 0, 1);
-```
-
-İki yükseklik yeter: bir şey ya sayfadan **hafifçe ayrık**tır (kontrol), ya da **üstünde
-durur** (drawer, popover). Arası yoktur.
-
-Hareket işlevsel: 130ms geçiş, ve "canlı" için tek bir yavaş nabız (1.8s). Başka animasyon yok.
+**Two vocabularies, one scale.** Panel chrome speaks in role names — a `Dismiss` button is not a
+heading. Markdown inside a document says h1/h2/h3. Same seven sizes, different words.
 
 ---
 
-## 6 · Butonlar
+## 4 · Spacing
 
-Tek boy — ve o boy **tek satır metin girdisinin boyudur** (`--control-h`, 36px). Bir kontrol
-satırında girdi, düğme, select ve segment aynı hizada durur; farklı yükseklikte iki kontrol
-yan yana gelmez.
+Six steps, all multiples of 4. Nothing in between — with no 13px there is nothing to misalign.
 
-İki aile: **solid** kutusunu hep gösterir, **link** ancak üstüne gelince gösterir — ve o an
-solid ikizine dönüşür. Bir ekranda yalnız **bir** birincil düğme olur.
+`--sp-1` 4px (icon to text) · `--sp-2` 8px (inside a control) · `--sp-3` 12px (card padding) ·
+`--sp-4` 16px (within a section) · `--sp-5` 24px (between sections) · `--sp-6` 32px (page edge).
 
-`.btn` her kontrolün taşıdığı **tabandır**: boyut, font, odak halkası, pasif hâl. Tek başına
-kullanılmaz; üstüne her zaman bir varyant biner ve **hover varyantındır**. Tabanın kendi
-hover'ı yoktur — orada bir kural varyantınkini sessizce ezerdi.
+Controls doing the same job sit `--sp-2` apart; an action and a choice group are `--sp-3` apart.
+`Example ↓` does not touch the `Write | Upload` segment — one does work, the other asks a
+question, and the gap says so.
 
-```css
-.btn { display:inline-flex; align-items:center; justify-content:center; gap:6px;
-  height:var(--control-h); padding:0 12px;
-  font-family:inherit; font-size:var(--fs-ui); font-weight:500; line-height:1;
-  border-radius:var(--r-sm); border:1px solid transparent;
-  background:var(--bg); color:var(--fg); cursor:pointer; white-space:nowrap; user-select:none;
-  transition:background var(--speed) var(--ease), border-color var(--speed) var(--ease),
-             box-shadow var(--speed) var(--ease), color var(--speed) var(--ease); }
-.btn:focus-visible { outline:none; box-shadow:0 0 0 3px var(--accent-ring); }
-.btn:hover { background:none; border-color:transparent; }   /* hover varyantındır */
-.btn[disabled] { opacity:0.45; pointer-events:none; }        /* tek kural, her varyant */
+---
 
-/* solid — kutusu hep orada */
-.btn-primary         { background:var(--accent); color:var(--accent-fg); border-color:var(--accent); }
-.btn-primary:hover   { background:var(--accent-hover); border-color:var(--accent-hover); }
-.btn-secondary       { background:var(--bg); color:var(--fg); border-color:var(--border-strong); box-shadow:var(--shadow-xs); }
-.btn-secondary:hover { background:var(--bg-active); border-color:var(--border-hover); }
-.btn-success         { background:var(--green-bg); color:var(--green); border-color:var(--green-border); }
-.btn-success:hover   { background:var(--green-bg); color:var(--green); border-color:var(--green); }
-.btn-danger          { background:var(--red-bg); color:var(--red); border-color:var(--red-border); }
-.btn-danger:hover    { background:var(--red-bg); color:var(--red); border-color:var(--red); }
+## 5 · Radius, shadow, motion
 
-/* link — duruşta kutusu yok, üstüne gelince solid ikizi */
-.btn-link-primary, .btn-link-success, .btn-link-danger {
-  height:var(--control-h); padding:0 12px; border-radius:var(--r-sm);
-  background:none; border-color:transparent; }
-.btn-link-primary       { color:var(--fg-secondary); }
-.btn-link-primary:hover { background:var(--bg-active); border-color:var(--border-strong); color:var(--fg); }
-.btn-link-success       { color:var(--green); }
-.btn-link-success:hover { background:var(--green-bg); border-color:var(--green-border); color:var(--green); }
-.btn-link-danger        { color:var(--red); }
-.btn-link-danger:hover  { background:var(--red-bg); border-color:var(--red-border); color:var(--red); }
+`--r-sm` 4px (control) · `--r-md` 6px (card) · `--r-lg` 9px (panel) · `--r-pill` 999px (badge).
 
-/* tek istisna: 6px padding'li çipin içindeki × */
-.btn-x       { height:auto; padding:0 4px; font-size:var(--fs-heading); margin-left:auto;
-               background:none; border-color:transparent; color:var(--fg-faint); }
-.btn-x:hover { background:none; border-color:transparent; color:var(--fg-secondary); }
-```
+Two elevations, nothing between: `--shadow-xs` is *slightly off the page* (a control),
+`--shadow-lg` *above it* (drawer, popover). Dark keeps the same two, blacker.
 
-| varyant | ne zaman |
+Motion is functional: `--speed` 130ms with `--ease` `cubic-bezier(0.2,0,0,1)`, plus one slow
+pulse (1.8s) for "alive". No other animation.
+
+---
+
+## 6 · Buttons
+
+One height, and it is the height of a single-line text input (`--control-h`, 36px). In a control
+row the input, button, select and segment line up; two different heights never sit side by side.
+
+Two families: **solid** always shows its box; **link** shows it only on hover — and then becomes
+its solid twin. One primary button per screen.
+
+`.btn` is the **base** every control carries: size, font, focus ring, disabled state. It is never
+used alone, and **hover belongs to the variant** — the base deliberately has no hover of its own,
+because a rule there would quietly beat the variant's.
+
+| variant | when |
 |---|---|
-| `.btn-primary` | ekrandaki asıl eylem — devam ettiren tek düğme |
-| `.btn-secondary` | alternatif eylem — vazgeç, kapat, reddet |
-| `.btn-success` | onaylama — yalnız **Approve** |
-| `.btn-danger` | geri alınamayan işlem |
-| `.btn-link-primary` | ikincil, sessiz — Close, Edit, Ask, Add note |
-| `.btn-link-success` | olumlu ama sessiz — Archive |
-| `.btn-link-danger` | yıkıcı ama sessiz — tehlike bölgesi |
-| `.btn-x` | çip içindeki ×. Aileyi taşır, boyunu taşımaz; hover'ı yoktur çünkü nişan aldığın bir kontrol değil, okuduğun bir satırda durur |
+| `.btn-primary` | the real action — the one button that moves things on |
+| `.btn-secondary` | the alternative — cancel, close, decline |
+| `.btn-success` | approval — **Approve** only |
+| `.btn-danger` | an irreversible action |
+| `.btn-link-primary` | secondary and quiet — Close, Edit, Ask, Add note |
+| `.btn-link-success` | positive and quiet — Archive |
+| `.btn-link-danger` | destructive and quiet — the danger zone |
+| `.btn-x` | the × inside a chip. Carries the family, not the height; no hover, because it sits in a line you read, not a control you aim at |
 
-**Eylem sırası** bir talebin altında: `Apply · Dismiss · Add note · Ask` — önce karar, sonra
-karara ek, en sonda soru.
-
----
-
-## 7 · Girdiler
-
-```css
---control-h:36px;      /* HER kontrol: girdi, buton, select, segment */
---control-h-sm:29px;   /* yalnız daraltılmış bağlamlar */
-
-.input { height:var(--control-h); width:100%; padding:0 10px; font-size:var(--fs-body);
-  border:1px solid var(--border-strong); border-radius:var(--r-sm);
-  background:var(--bg); color:var(--fg); }
-.input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-ring); }
-.input::placeholder { color:var(--fg-faint); }
-```
-
-### Select
-
-Yerli ok tema tanımaz ve her platformda başka çizilir. `appearance:none` ile kapatılır,
-chevron gömülü SVG olarak gelir — metnin rengini miras alsın diye. Buton boyundadır: bir
-kontrol satırında select ile düğme aynı hizada durur.
-
-```css
-.select { height:var(--control-h); padding:0 30px 0 12px;
-  font-family:inherit; font-size:var(--fs-ui); font-weight:500; line-height:1;
-  color:var(--fg); background-color:var(--bg);
-  border:1px solid var(--border-strong); border-radius:var(--r-sm);
-  cursor:pointer; appearance:none;
-  background-image:url("…chevron svg, stroke=currentColor…");
-  background-repeat:no-repeat; background-position:right 8px center; }
-.select:hover { background-color:var(--bg-active); border-color:var(--border-hover); }
-.select:focus-visible { outline:none; box-shadow:0 0 0 3px var(--accent-ring); border-color:var(--accent); }
-.select[disabled] { opacity:0.45; pointer-events:none; }
-```
-
-### Segmented control
-
-Aralarından **birinin** seçili olduğu durumlar içindir. Üç düğme "hangisine basıldı?" diye
-sordurur; segment "hangisi açık" diye gösterir.
-
-```css
-.seg { display:inline-flex; padding:2px; gap:2px; background:var(--bg-muted);
-  border:1px solid var(--border); border-radius:var(--r-md); }
-.seg button { height:calc(var(--control-h) - 6px); padding:0 12px; border:none; background:transparent;
-  font-family:inherit; font-size:var(--fs-ui); font-weight:500; color:var(--fg-muted);
-  border-radius:calc(var(--r-md) - 2px); cursor:pointer; white-space:nowrap; }
-.seg button:hover { color:var(--fg-secondary); }
-.seg button.on { background:var(--bg); color:var(--fg); box-shadow:var(--shadow-xs); }
-
-/* .seg-sm — bir kez kurulup unutulan ayar için: yarı boy, hap biçimli. */
-.seg-sm { padding:1px; border-radius:var(--r-pill); }
-.seg-sm button { height:16px; padding:0 8px; font-size:var(--fs-micro); border-radius:var(--r-pill); }
-```
-
-Tam boy `.seg` bir ekranın işleyişini değiştiren seçim içindir. `.seg-sm` bir tercih içindir —
-tema anahtarı footer'da bu boyda durur, çünkü ilgiyi hak eden bir kontrol değildir.
-
-**İki seçenek de bir segmenttir.** Alt çizgili sekme çifti yerine `.seg` kullanılır: aynı
-kontrol yüksekliğinde durur, seçili olan yuvadan yükselir, ve "hangisi açık" sorusu ikinci
-bir kalıp öğrenmeden cevaplanır. Brief'in **Write | Upload** çifti böyledir.
-
-Bir eylem sekme değildir. Brief başlığındaki **Example ↓** bir dosya indirir — seçim değil,
-iş yapar — ve `.btn-link-primary` olarak segmentin dışında durur.
-
-```html
-<button class="btn btn-link-primary">Example ↓</button>
-<span class="seg">
-  <button class="on">Write</button><button>Upload</button>
-</span>
-```
+Action order under a demand: `Apply · Dismiss · Add note · Ask` — decision, then addition to the
+decision, then the question.
 
 ---
 
-## 8 · Durum sözlüğü
+## 7 · Inputs
 
-Sistemin kalbi. Bir belge **tam olarak bir durumdadır** — bu onun nerede olduğudur. Üstüne
-binen rozetler ise **ne borcu olduğunu** söyler. İki farklı soru, o yüzden iki ayrı gösterim.
+`--control-h` 36px for **every** control; `--control-h-sm` 29px only in compressed contexts.
+`.input` takes `--fs-body` and a `--border-strong` edge, and on focus swaps to the accent border
+plus a 3px `--accent-ring`.
 
-### Durumlar — biri, yalnız biri
+**Select.** The native arrow ignores the theme and is drawn differently on every platform, so
+`appearance:none` kills it and the chevron comes back as an inline SVG that inherits the text
+colour. Button height, so a select and a button line up.
 
-| durum | ne demek | renk |
+**Segmented control.** For "which one is on", not "which was pressed". Full-size `.seg` is for a
+choice that changes how a screen works; `.seg-sm` (half height, pill) is for a preference set once
+and forgotten — the theme switch sits in the footer at that size.
+
+**Two options are still a segment**: instead of an underlined tab pair, `.seg` keeps the control
+height and lifts the selected one out of its well. The brief's **Write | Upload** works this way.
+An action is not a tab — **Example ↓** downloads a file and stands outside the segment as
+`.btn-link-primary`.
+
+---
+
+## 8 · State vocabulary
+
+The heart of the system. A document is in **exactly one** state — where it is. Badges ride on top
+— what it owes. Two questions, so two displays.
+
+| state | means | colour |
 |---|---|---|
-| `waiting` | sırasını bekliyor, zincir henüz gelmedi | nötr |
-| `writing` | ajan şu an yazıyor | mavi, yavaş nabız |
-| `paused` | yazım durduruldu | amber |
-| `pending` | yazıldı, onayını bekliyor | mor |
-| `approved` | onayladın | yeşil |
-| `n/a` | değerlendirildi, bilerek atlandı | rozetsiz, silik çerçeve |
+| `waiting` | queued; the chain has not reached it | neutral |
+| `writing` | the agent is writing it now | blue, slow pulse |
+| `paused` | writing was stopped | amber |
+| `pending` | written, waiting for your approval | violet |
+| `approved` | you approved it | green |
+| `n/a` | considered, deliberately skipped | no badge, faint outline |
 
-`n/a` bir renk değildir, rengin yokluğudur: metnin kendi mürekkebinde bir çerçeve, palete
-katılmadan "atlandı" der.
+`n/a` is not a colour but the absence of one: an outline in the text's own ink.
 
-### Rozetler — durumun üstüne biner
-
-| rozet | ne demek | renk |
+| badge | means | colour |
 |---|---|---|
-| `failed` | son deneme düştü, sebep belgede yazıyor | kırmızı |
-| `change request` | başka bir belge bunun değişmesini istiyor | pembe |
-| `dependent` | girdisi oynuyor; oturunca yeniden okunacak | pembe, içi boş |
+| `failed` | the last attempt fell over; the reason is in the document | red |
+| `change request` | another document wants this one changed | pink |
+| `dependent` | an input is moving; it will be re-read when that settles | pink, hollow |
 
-**Rozet grubu ezer.** `failed` ve `change request` taşıyan belge, durumu ne olursa olsun
-**Needs you**'ya çıkar. Tek istisna `dependent`: o bir iş değil haberdir, belgeyi yerinden
-oynatmaz.
+**A badge beats the state.** Anything carrying `failed` or `change request` moves to **Needs
+you** whatever its state. The exception is `dependent`: news, not work, so it stays put.
 
-### Gruplar
-
-`Needs you` → `In progress` → `Next` → `Approved` → `Not applicable`. Son ikisi varsayılan
-kapalıdır: biri bitmiş, öteki bilerek atlanmış.
+Groups: `Needs you` → `In progress` → `Next` → `Approved` → `Not applicable`. The last two are
+collapsed by default — one is finished, the other deliberately skipped.
 
 ---
 
-## 9 · Satırlar ve kartlar
+## 9 · Rows, cards, bands
 
-Belge satırının okuma sırası soldan sağa: **adı**, **yazarı**, **ne borcu var**, **nerede**.
-Durum en sağdadır çünkü en son bakılan şeydir — önce hangi belge olduğunu, sonra sende bir iş
-olup olmadığını görürsün.
+A document row reads left to right: **name**, **author**, **what it owes**, **where it is**. The
+state sits last because it is what you check last — first which document, then whether you owe it
+something.
 
 ```html
 <button class="kx-doc-row">
@@ -415,192 +259,120 @@ olup olmadığını görürsün.
 </button>
 ```
 
-Komut kartı (`.kx-cmd-card`) tıklanınca içeriğini kopyalar; ipucu kartın içinde yazar,
-ayrı bir düğme yoktur.
+A command card (`.kx-cmd-card`) copies its content on click; the hint lives inside the card, not
+in a separate button.
 
----
+**Bands** sit above a document, and the colour says whose turn it is:
 
-## 10 · Bantlar
-
-Belgenin üstünde duran bilgi şeritleri. **Rengi, kimin sırada olduğunu söyler.**
-
-Panel başlığı tek satır: **Kortext | project brain: [motor]**.
-
-Footer: solda **Kortext v3.1.0 by Milowda** ve **Kopeng — task board**, sağda tema anahtarı
-(`.seg-sm`). Bir kez kurulup unutulan bir ayar her ekranda üstte durmaz.
-
-| bant | renk | anlamı |
+| band | colour | means |
 |---|---|---|
-| Hazırlık kapısı `.kx-gate` | mavi zemin + mavi yazı, çerçevesiz | sistem okuyor |
-| Talep `.kx-doc-changebar` | pembe zemin, pembe çerçeve ve yazı | bir karar bekleniyor |
-| Bağımlılık `.kx-doc-dependbar` | zeminsiz, düz pembe çerçeve | yalnız haber |
-| Açık soru `.kx-doc-askbar` | amber | sende, ve onayı kilitler |
+| readiness gate `.kx-gate` | blue ground, blue text, no frame | the system is reading |
+| demand `.kx-doc-changebar` | pink ground, pink frame and text | a decision is waited on |
+| dependency `.kx-doc-dependbar` | no ground, plain pink frame | news only |
+| open question `.kx-doc-askbar` | amber | yours, and it blocks approval |
 
-Talep bandı `change request` rozetiyle **aynı rengi** taşır: satırda rozeti görüp belgeyi
-açtığında aynı pembeyi bulursun. Bağımlılık bandı da `dependent` rozetinin büyük hâlidir —
-içi boş, çerçeveli.
+The demand band shares its pink with the `change request` badge: you see the badge in the row,
+open the document and find the same pink. The dependency band is the `dependent` badge enlarged —
+hollow, framed.
+
+Panel header is one line: **Kortext | project brain**, and nothing else unless there is no
+agent CLI at all — the engine belongs to a project, so its control sits on the project screen,
+beside Start, at the same height as Start. Footer: **Kortext v3.1.0 by
+Milowda** and **Kopeng — task board** on the left, the theme switch (`.seg-sm`) on the right. A
+setting configured once does not sit at the top of every screen.
 
 ---
 
-## 11 · Belge görünümü
+## 10 · Document view
 
-Panelin render ettiği markdown. Aynı yedi boyu kullanır: gövde `--fs-body`, başlıklar
+The markdown the panel renders, on the same seven sizes: body `--fs-body`, headings
 `--fs-title` / `--fs-section` / `--fs-heading`.
 
-İki tür borç, iki renk:
+Two kinds of debt, two colours — **amber** `.open-q` (`## Open Questions for prime`, yours to
+answer) and **pink** `.req-q` (`## Revision Requests`, a demand written to another document).
+Share one colour and you lose which is yours. Pink lands only on a **standing** demand: a closed
+one (`- [x]`) stays in the document unpainted — it is no longer a debt but the record of one.
 
-- **amber blok** (`.open-q`) → `## Open Questions for prime` — senin cevaplaman gereken
-- **pembe blok** (`.req-q`) → `## Revision Requests` — başka bir belgeye yazılmış talep
+An open question is always numbered `#n` (`.kx-qno`), and the bullet is suppressed on that line —
+both fall into the same hanging indent and would overlap. Once a note is added (`.noted`) the
+amber ground withdraws and only the left bar stays; ground plus bar would read as brown.
 
-İkisi aynı rengi paylaşırsa hangisinin sende olduğu kaybolur.
+**Blockquote** has no ground: a grey bar on the left, GitHub-style. The bar is not a `border` but
+the **same mechanism as the selection/note bar** (`box-shadow: inset 3px`), so a blue selection or
+an amber note replaces it instead of sitting beside it. It starts at the heading column
+(`margin-left: 8px`), because a rule that overhangs the text it aligns with reads as a margin.
 
-Pembe yalnız **ayakta duran** talebe düşer. Kapanmış bir talep (`- [x]`) belgede kalır ama
-boyanmaz: o artık bir borç değil, ne olduğunun kaydıdır — altındaki satır neyin kapattığını
-söyler.
+**Alerts** use GitHub's `> [!NOTE]` syntax — five kinds, each with its own 16px inline SVG, label
+and ground: NOTE blue · TIP green · IMPORTANT violet · WARNING amber · CAUTION red. The block is
+parsed as one piece, so a reader asks about the whole alert, not one of its lines.
 
-Açık soru her zaman `#n` ile numaralanır (`.kx-qno`) — madde imi (`•`) o satırda basılmaz,
-ikisi aynı asılı girintiye düşüp üst üste binerdi. Not eklenince (`.noted`) amber zemin geri
-çekilir, yalnız sol çubuk kalır: zemin + çubuk üst üste amber-üstüne-amber kahverengiye
-kayardı.
+**Code.** Inline code is a token inside the sentence: 0.9em, `--bg-inset` ground, 4px corner. A
+block is a framed panel with a **Copy** button that appears on hover, becomes ✓ *Copied* and
+reverts after 1.6s — a code block is there to be taken somewhere, not read. Highlighting comes
+from our own painter (`ui/src/highlight.ts`, no dependency), six token kinds from the §2 palette:
+keyword/command violet · string green · number amber · JSON key blue · comment `--fg-faint` italic
+· flag `--fg-muted`. An unknown or unlabelled language is **not painted at all**, so folder trees
+and output dumps stay plain. The painter's one hard rule: text in equals text out.
 
-### Alıntı
+**Lists and boxes.** Top-level bullets are filled (`•`), nested ones hollow (`◦`); indentation
+comes from the source. A wrapped line rejoins its own item instead of falling to the left margin.
+`- [ ]` and `- [x]` are drawn as real boxes, and they are **read-only**: the mark is placed by
+whoever wrote the document, not by the panel.
 
-Alıntı (`>`) zeminsizdir: sol kenarında gri bir çubuk taşır, GitHub'daki gibi. Çubuk `border`
-değil, **seçim/not çubuğuyla aynı mekanizma** (`box-shadow: inset 3px`) — böylece seçildiğinde
-mavi, not alındığında amber çubuk onun *yerine* geçer, yanına eklenmez. İki ayrı mekanizma
-kullanılsaydı yan yana iki şerit çıkardı; bu yüzden bir zamanlar çubuk hiç çizilmiyordu.
+**Headings.** `H1` and `H2` carry a thin `--border` line beneath them — a section boundary reads
+cheaper and sharper than whitespace alone.
 
-Çubuk, bloğun kenarından değil **başlık sütunundan** başlar (`margin-left: 8px` — `.kx-block`'un
-kendi iç boşluğu kadar). Bir kural, hizalandığı metnin dışına taşarsa kenar boşluğu gibi okunur.
-
-### Uyarılar
-
-GitHub'ın `> [!NOTE]` sözdizimi. Beş tür, her biri kendi simgesi + etiketi + zemini ile; blok
-**tek parça** olarak ayrıştırılır, yani okuyucu uyarının tamamına soru sorar, bir satırına değil.
-
-| tür | renk |
-|---|---|
-| `NOTE` | mavi |
-| `TIP` | yeşil |
-| `IMPORTANT` | mor |
-| `WARNING` | amber |
-| `CAUTION` | kırmızı |
-
-Renkler §2'deki durum paletidir; anlamları bağlamdan gelir (§2 · *Aynı palet, üç bağlam*).
-Simgeler 16px gömülü SVG, harici paket yok — rengi bloktan miras alırlar.
-
-### Kod
-
-Satır içi `` `kod` `` cümlenin içinde bir jetondur: 0.9em, `--bg-inset` zemin, 4px köşe.
-İkinci bir yazı tipi gibi değil, aynı cümlenin bir parçası gibi okunmalı.
-
-Blok, çerçeveli bir panel ve sağ üstünde bir **Copy** düğmesi taşır; düğme hover'da belirir,
-basılınca ✓ *Copied* olur ve 1.6 sn sonra kendine döner. Bir kod bloğu okunmak için değil,
-başka bir yere götürülmek için oradadır.
-
-Sözdizimi renklendirmesi kendi yazdığımız boyayıcıdan gelir (`ui/src/highlight.ts`, bağımlılık
-yok). Altı jeton türü, §2 paletinden:
-
-| jeton | renk |
-|---|---|
-| anahtar kelime / komut | mor |
-| string | yeşil |
-| sayı | amber |
-| JSON anahtarı | mavi |
-| yorum | `--fg-faint`, italik |
-| bayrak (`--save-dev`) | `--fg-muted` |
-
-Tanımadığı dil ya da dilsiz blok **hiç boyanmaz** — klasör ağaçları ve çıktı dökümleri düz kalır.
-Boyayıcının tek katı kuralı: giren metin ile çıkan metin birebir aynıdır.
-
-### Listeler ve kutular
-
-Üst seviye madde dolu (`•`), iç içe olan içi boş (`◦`) işaret taşır; girinti kaynaktaki
-girintiden gelir. 80 karakterde sarılan bir maddenin devam satırı kendi maddesine katılır —
-listeden kopup sol kenara düşmez.
-
-`- [ ]` ve `- [x]` gerçek kutu olarak çizilir. Kutu **salt okunurdur**: işareti belgeyi yazan
-koyar, panel değil. Kabul kriteri de kapanmış bir revizyon talebi de aynı kutuyla okunur.
-
-### Başlıklar
-
-`H1` ve `H2` altlarında ince bir çizgi taşır (`--border`). Bölüm sınırı, boşluktan daha ucuz
-ve daha kesin okunur.
-
-### Öneri diff'i
-
-Ajanın taslağı ayrı bir kutuda değil, **editörün kendisinde** gösterilir: belgenin tamamı,
-değişen satırlar işaretli. Çıkan satır kırmızı (`--red-bg`), gelen satır yeşil (`--green-bg`),
-üstte kaç satırın değiştiği ve **Edit text** — düz metin editörüne geçiş. İki kutu iki belge
-demekti; okuyucu ikisini kafasında birleştirmek zorunda kalıyordu.
+**Proposal diff.** The agent's draft is shown in the editor itself, not in a second box: the whole
+document with the changed lines marked, removed in `--red-bg`, added in `--green-bg`, the line
+count above and **Edit text** to drop into plain text. Two boxes meant two documents, and the
+reader had to merge them in their head.
 
 ---
 
-## 12 · Yazı dili
+## 11 · Writing
 
-- **Başlıklar, kod, adlar — her zaman İngilizce.** Bölüm başlıkları yapıdır ve başka belgeler
-  onlara adıyla atıf yapar. Dosya adı, komut, tablo kolonu, API yolu, branch adı da öyle.
-- **Düzyazı brief'in dilinde.** Belgeyi okuyan insan hangi dili konuşuyorsa o.
-- **Ürün metni arayüz dilinde.** Kullanıcının okuduğu her string — buton yazısı, hata mesajı,
-  e-posta. Bu, belgenin dilinden farklı olabilir.
-- **Bir şeyin adı çevrilmez.** `PRD.md` her dilde `PRD.md`'dir.
-
----
-
-## 13 · Kurallar
-
-**Yap**
-- Token'dan kur — bir token'ın karşıladığı değeri elle yazma
-- Ekranda tek birincil düğme bırak
-- Yıkıcı eylemi sayfanın en altına, sessiz link olarak koy
-- Durum ile borcu ayrı göster
-- Makinenin sahip olduğu her şeyi mono yaz
-- Açık temayı varsayılan tut, koyuyu her değişiklikte kontrol et
-
-**Yapma**
-- Yeni bir durum rengi icat etme — set kapalı
-- Persona veya kategori için renk üretme
-- Yarım piksel boy kullanma
-- Aynı ekranda iki farklı düğme boyu kullanma
-- Bir uyarıyı yalnız renge yükleme — metni de söylesin
-- Gradyan, emoji, dekoratif SVG kullanma
+- **Headings, code and names are always English.** Section headings are structure and other
+  documents cite them by name; so are file names, commands, table columns, API paths, branches.
+- **Prose is in the brief's language** — whatever the human reading it speaks.
+- **Product copy is in the interface language** — every string the end user reads. It may differ
+  from the document's language.
+- **A name is never translated.** `PRD.md` is `PRD.md` in every language.
 
 ---
 
-## Ek A — Bu sistemden çıkanlar (2026-09-03)
+## 12 · The dead-CSS sweep (2026-09-04)
 
-| çıkan | sebep |
-|---|---|
-| `data-accent` · `data-density` · `data-radius` | Panel hiçbirini yazmıyordu; üçü de hiç değişemezdi. Ölçekledikleri değerler artık düz. |
-| 12 adımlı gri rampa | Semantik token'ları beslemiyordu, ikisi kullanılıyordu. O ikisi `--border-hover` ve `--scroll-thumb` oldu. |
-| 10 persona rengi (`--a-*`) | v6 dashboard'ıyla birlikte öldü. Persona bugün mono gri bir handle. |
-| `--shadow-sm/md/pop` · `--r-xl` · `--row-h` · `--pad-x` · `--gap` | Hiç kullanılmadı. |
-| `.btn-sm` | 21 kullanımın 19'undaydı — neredeyse hep açık olan bir modifier, modifier değildir. Küçük boy artık boyun kendisi. |
-| `.btn-ghost` · `.btn-icon` | Tanımlıydı, hiç kullanılmadı. |
-| Çıplak `.btn` varyantı | Duruşta kutusu olmayınca link'in ta kendisiydi. |
-| `.kx-link*` ailesi | `.btn-link*` oldu ve 10.5px mono olmaktan çıktı — buton olan bir link buton gibi okunmalı. |
-| `--fs-11 … --fs-40` | On token, yedi rol oldu. |
-| §7'nin eski sözlüğü (16 persona, gate kareleri, board kolonları, item tipleri) | v6 ekranlarına aitti; v1.0'da karşılıkları yok. Yerine §8. |
-| Lucide ikon haritası | Panel hiç SVG ikon kullanmıyor; birkaç metin glifi (`▶ ⏸ × ← →`) yeterli oldu. |
+`index.css` still carried the whole v6 dashboard — a board, a sidebar, a terminal, an
+onboarding flow, a settings page, none of them rendered by any component. It was removed in one
+pass, with a rule kept only when **every** class in its selector is one the panel actually
+renders (dynamic names — `hl-${kind}`, `kx-status-${key}`, `kx-alert-${kind}`, `kx-${mdKind}` —
+enumerated from the code that builds them, so a rule reached only through a template literal
+survives).
 
-## Ek B — Uygulandı (2026-09-03)
+| | before | after |
+| --- | --- | --- |
+| lines | 1734 | 643 |
+| rules | 1256 | 354 |
+| custom properties | 169 | 76 |
 
-Bu dokümanın tarif ettiği ama stil dosyasının uygulamadığı beş kalem vardı. Hepsi kapandı:
+Gone with it: the `--color-*` alias family, the unused greys, the ten persona colours `--a-*`,
+`--radius-*`, `--shadow-md/pop`, `--sidebar-w` / `--header-h` / `--footer-h`, the `.kx-link*`
+family superseded by `.btn-link*`, and the `data-accent` / `data-density` / `data-radius`
+switches with their `--r-scale` / `--d-scale` multipliers — no code ever wrote those attributes,
+so the radii and control heights are now the literal values they always computed to.
 
-| kalem | ne yapıldı |
-|---|---|
-| **§3 yedi rol** | `--fs-*` token'ları tanımlandı, canlı kurallardaki **75** elle yazılmış boy role bağlandı. Yarım pikseller en yakın role yuvarlandı. Canlı kuralda elle yazılmış boy kalmadı. |
-| **§4 boşluk ölçeği** | `--sp-1 … --sp-6` tanımlandı. |
-| **§6 buton seti** | Yeni taban (tek boy, hover'sız), dört solid + üç link varyantı, `.btn-x`. `.btn-sm` ve `.kx-link*` çağrı yerleri taşındı; çıplak `.btn` kalmadı — hepsi `btn-link-primary` oldu. Talep eylemleri §6'nın sırasına geçti: **Apply · Dismiss · Add note · Ask**. |
-| **§7 `.seg`** | v6'dan beri tanımlıydı, yazıldı. İlk kullanıcısı tema anahtarı. |
-| **sekmeler** | Alt çizgili sekme kalıbı panelden kalktı: `Write | Upload` bir `.seg` oldu, `Example ↓` segmentin dışında bir eylem. |
-| **tek kontrol yüksekliği** | Girdi, buton, select ve segment `--control-h` (36px). Bir kontrol satırı düz bir çizgi. |
-| **`.select`** | Yerli ok kapatıldı, chevron gömülü SVG; buton boyunda. |
-| **`.seg-sm`** | Hap biçimli yarı boy. Tema anahtarı footer'da bu boyda. |
-| **bantlar** | Talep bandı `change request` rozetiyle aynı pembeye, bağımlılık bandı `dependent` rozeti gibi düz çerçeveye, hazırlık kapısı `writing` gibi mavi zemine geçti. |
-| **§1 tema** | `prefers-color-scheme` medya sorgusu + `data-theme` override. Panel başlığında **Auto · Light · Dark**; seçim `localStorage`'da. **Karanlık tema panelde ilk kez görünür oldu** — 54 token'lık blok bugüne dek erişilemiyordu. |
+Two things were left on purpose: `--sp-1`, `--sp-5` and `--sp-6` (a spacing scale with holes
+invites hand-written pixels) and `var(--bg-surface, transparent)`, which reads an undefined
+token through a fallback and is therefore correct as written.
 
-> Ek A'daki kaldırmalar **uygulanmadı**: eski token'lar (`--gray-*`, `--a-*`, `--fs-*`'in
-> eski hâli yoktu zaten, `--shadow-sm/md/pop`, `--r-xl`, `data-accent/density/radius`) yerinde
-> duruyor, çünkü henüz silinmemiş v6 CSS'i onlara dayanıyor. Ölü CSS turunda birlikte gidecekler.
+---
 
+## 13 · Rules
+
+**Do** — build from tokens; leave one primary button per screen; put the destructive action at the
+bottom as a quiet link; show state and debt separately; set everything the machine owns in mono;
+keep light the default and check dark on every change.
+
+**Don't** — invent a state colour (the set is closed); give a persona or category its own colour;
+use half-pixel sizes; put two button heights on one screen; carry a warning in colour alone; use
+gradients, emoji or decorative SVG.
