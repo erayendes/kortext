@@ -22,6 +22,8 @@ Three things follow from that.
   often starts three others at once.
 - **The panel is the only place you work.** Nothing needs a terminal after `kortext`.
 
+![The project list — one card per project, with what is settled in each](assets/panel-projects.png)
+
 ## Starting: the gate
 
 Press **Start** and Kortext reads your evidence before it spends anything.
@@ -41,6 +43,8 @@ minute; an invented product costs you the whole analysis.
 ## Reviewing a document
 
 Open any document from the list. Everything happens in the drawer.
+
+![A document in the drawer: its status, its author, and the questions it is asking you](assets/panel-document.png)
 
 **Approve** — the document becomes ground for the ones after it, and the chain moves on.
 
@@ -92,6 +96,8 @@ that moment finishes on the old one.
   line in `CLAUDE.md` — and unregisters the project. Anything you wrote yourself stays.
 
 ## The handshake
+
+![The handshake card — three starter commands, copied on click](assets/panel-handshake.png)
 
 When every document is approved or `n/a`, with nothing left open, the analysis is complete and
 Kortext is done. The completion card gives you three starter commands; copy one into your own

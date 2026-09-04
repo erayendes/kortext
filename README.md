@@ -22,6 +22,10 @@ Kortext holds no API key and calls no LLM API of its own — it spawns the
 agent CLI you already have installed and pay for, headlessly, inside your
 repo.
 
+<p align="center">
+  <img src="docs/assets/panel-documents.png" alt="The analysis in flight: documents in dependency order, each with its author and state" width="880">
+</p>
+
 ## How it works
 
 1. **Add a project.** Pick the repo folder and the agent CLI it runs on — the
@@ -110,6 +114,10 @@ Never `sudo npm install -g`. On `EACCES`:
 `npm config set prefix ~/.npm-global` and put `~/.npm-global/bin` on your `PATH`.
 </details>
 
+<p align="center">
+  <img src="docs/assets/panel-handshake.png" alt="Analysis complete — the handshake card with starter commands" width="880">
+</p>
+
 ## Quick start
 
 Requires **Node ≥ 22** and at least one agent CLI on your PATH
@@ -167,8 +175,13 @@ npm install && npm --prefix ui install
 npm run dev        # server :3441 (tsx watch)
 npm run dev:web    # vite panel :3442 (proxy /api → 3441)
 npm test           # node:test suite
+npm run typecheck  # server + panel
+npm run format     # prettier writes; format:check verifies (CI runs the check)
 npm run build      # tsc → dist/ + vite → ui/dist/
 ```
+
+Issues and pull requests are welcome — see [CONTRIBUTING](.github/CONTRIBUTING.md),
+[SUPPORT](.github/SUPPORT.md) and the [security policy](.github/SECURITY.md).
 
 ## Docs
 
