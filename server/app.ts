@@ -4,7 +4,6 @@ import { existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   createProject,
-  deriveCode,
   listProjects,
   removeProject,
   scaffoldProject,
@@ -44,13 +43,6 @@ import type { Project } from './db.js';
 
 export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string): express.Express {
   failStaleJobs(db);
-  // Projects created before the code column existed get one derived from the name.
-  for (const p of db.prepare("SELECT id, name FROM projects WHERE code = ''").all() as {
-    id: number;
-    name: string;
-  }[]) {
-    db.prepare('UPDATE projects SET code = ? WHERE id = ?').run(deriveCode(p.name), p.id);
-  }
   const app = express();
   app.use(express.json());
 

@@ -5,7 +5,6 @@ import {
   mkdirSync,
   readFileSync,
   readdirSync,
-  renameSync,
   rmSync,
   writeFileSync,
 } from 'node:fs';
@@ -26,7 +25,6 @@ export function scaffoldProject(
 ): void {
   const kx = join(repoPath, '.kortext');
   mkdirSync(kx, { recursive: true });
-  migrateLegacyLayout(kx);
 
   const templates = join(pkgRoot, 'templates');
   installContract(repoPath, templates);
@@ -120,68 +118,6 @@ function installContract(repoPath: string, templates: string): void {
 export function uninstallContract(repoPath: string): void {
   removeContractBlock(join(repoPath, 'AGENTS.md'));
   removePointer(join(repoPath, 'CLAUDE.md'));
-}
-
-// One-time sweep for projects scaffolded before today's layout: the documents
-// come up to one shelf and take their current names, package-content copies
-// disappear. A project analysed under the old names keeps its content — only
-// the file it lives in changes.
-const LEGACY_NAMES: Array<[string, string]> = [
-  ['BRD.md', 'BRIEF.md'],
-  ['PRD.md', 'PRODUCT.md'],
-  ['TRD.md', 'ENGINEERING.md'],
-];
-
-function migrateLegacyLayout(kx: string): void {
-  const foundation = join(kx, 'foundation');
-  if (existsSync(foundation)) {
-    for (const f of readdirSync(foundation).filter((f) => f.endsWith('.md'))) {
-      const to = LEGACY_NAMES.find(([from]) => from === f)?.[1] ?? f;
-      // PFD is not promoted: it was a summary of the other documents, nothing
-      // ever read it, and the shelf has no place for it.
-      if (f !== 'PFD.md' && !existsSync(join(kx, to))) {
-        renameSync(join(foundation, f), join(kx, to));
-      }
-    }
-    // One shelf means one shelf: the folder goes, PFD with it. Leaving a
-    // directory the panel never shows and no step reads is how a migration
-    // half-happens and confuses whoever opens the repo next.
-    rmSync(foundation, { recursive: true, force: true });
-  }
-  for (const [from, to] of LEGACY_NAMES) {
-    if (existsSync(join(kx, from)) && !existsSync(join(kx, to))) {
-      renameSync(join(kx, from), join(kx, to));
-    }
-  }
-  migrateOlderLayout(kx);
-}
-
-function migrateOlderLayout(kx: string): void {
-  const refs = join(kx, 'references');
-  if (existsSync(refs)) {
-    for (const f of readdirSync(refs).filter((f) => f.endsWith('.md'))) {
-      if (!existsSync(join(kx, f))) renameSync(join(refs, f), join(kx, f));
-    }
-    rmSync(refs, { recursive: true, force: true });
-  }
-  const memory = join(kx, 'memory');
-  if (existsSync(memory)) {
-    // DECISIONS.md is no longer a kortext artifact, but a legacy project may
-    // carry one — move it up rather than deleting it with the folder.
-    const moves: Array<[string, string]> = [
-      ['TODO.md', 'TODO.md'],
-      ['decisions.md', 'DECISIONS.md'],
-    ];
-    for (const [from, to] of moves) {
-      if (existsSync(join(memory, from)) && !existsSync(join(kx, to))) {
-        renameSync(join(memory, from), join(kx, to));
-      }
-    }
-    rmSync(memory, { recursive: true, force: true });
-  }
-  for (const dir of ['workflows', 'agents', 'templates']) {
-    rmSync(join(kx, dir), { recursive: true, force: true });
-  }
 }
 
 function copyIfMissing(from: string, to: string): void {

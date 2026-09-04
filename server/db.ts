@@ -14,6 +14,10 @@ CREATE TABLE IF NOT EXISTS projects (
   repo_path TEXT NOT NULL UNIQUE,
   kind TEXT NOT NULL DEFAULT 'new',   -- new | existing → which analysis workflow applies
   code TEXT NOT NULL DEFAULT '',      -- task-id prefix, e.g. ACME
+  paused INTEGER NOT NULL DEFAULT 0,  -- 1 = the chain starts no new steps
+  archived INTEGER NOT NULL DEFAULT 0,-- 1 = folded away in the panel; files untouched
+  doc_lang TEXT NOT NULL DEFAULT '',  -- the language the documents are written in
+  engine TEXT NOT NULL DEFAULT '',    -- the agent CLI this project runs on
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE TABLE IF NOT EXISTS settings (
@@ -38,28 +42,6 @@ export function openDb(path = defaultDbPath()): Database.Database {
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
   db.exec(SCHEMA);
-  const cols = (db.pragma('table_info(projects)') as { name: string }[]).map((c) => c.name);
-  if (!cols.includes('kind')) {
-    db.exec("ALTER TABLE projects ADD COLUMN kind TEXT NOT NULL DEFAULT 'new'");
-  }
-  if (!cols.includes('code')) {
-    db.exec("ALTER TABLE projects ADD COLUMN code TEXT NOT NULL DEFAULT ''");
-  }
-  if (!cols.includes('paused')) {
-    db.exec('ALTER TABLE projects ADD COLUMN paused INTEGER NOT NULL DEFAULT 0');
-  }
-  if (!cols.includes('archived')) {
-    db.exec('ALTER TABLE projects ADD COLUMN archived INTEGER NOT NULL DEFAULT 0');
-  }
-  if (!cols.includes('doc_lang')) {
-    db.exec("ALTER TABLE projects ADD COLUMN doc_lang TEXT NOT NULL DEFAULT ''");
-  }
-  if (!cols.includes('engine')) {
-    db.exec("ALTER TABLE projects ADD COLUMN engine TEXT NOT NULL DEFAULT ''");
-  }
-  // The request-queue agent surface is gone (vision v2 — kortext drives the
-  // engine itself); drop the leftover table from older installs.
-  db.exec('DROP TABLE IF EXISTS requests');
   return db;
 }
 

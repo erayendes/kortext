@@ -206,10 +206,10 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
   const statuses = new Map<string, string>();
   const docs: DocInfo[] = [];
   const requests: Array<{ from: string; target: string; reason: string }> = [];
-  const collect = (dir: string, skip: Set<string>) => {
+  const collect = (dir: string) => {
     if (!existsSync(dir)) return;
     for (const file of readdirSync(dir)
-      .filter((f) => f.endsWith('.md') && !skip.has(f))
+      .filter((f) => f.endsWith('.md'))
       .sort()) {
       const rel = file;
       const body = readFileSync(join(dir, file), 'utf8');
@@ -234,8 +234,8 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
       }
     }
   };
-  // One shelf. TODO.md is not a kortext document — a legacy project may carry one.
-  collect(join(project.repo_path, '.kortext'), new Set(['TODO.md']));
+  // One shelf: every .md in .kortext/ is a document of this project.
+  collect(join(project.repo_path, '.kortext'));
 
   // Each request lands in the inbox of the document it names. One a human has
   // already actioned is remembered outside the documents, so sending a file

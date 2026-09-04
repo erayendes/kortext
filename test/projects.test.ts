@@ -109,34 +109,6 @@ test('Initialize judges nothing: even a thin brief lands as written', async () =
   rmSync(work, { recursive: true, force: true });
 });
 
-test('legacy layout migrates: references flatten, memory TODO/decisions survive', () => {
-  const work = tempDir();
-  const db = openDb(join(work, 'db.sqlite'));
-  const repo = join(work, 'legacy');
-  const kx = join(repo, '.kortext');
-  // hand-build a pre-flat project
-  for (const d of ['references', 'memory', 'workflows', 'agents', 'templates']) {
-    mkdirSync(join(kx, d), { recursive: true });
-  }
-  writeFileSync(
-    join(kx, 'references', 'STACK.md'),
-    '---\nstatus: approved\n---\n\n# Stack: eski içerik\n',
-  );
-  writeFileSync(join(kx, 'memory', 'TODO.md'), '---\nstatus: approved\n---\n\n- [ ] X\n');
-  writeFileSync(join(kx, 'memory', 'decisions.md'), '# eski karar\n');
-  writeFileSync(join(kx, 'workflows', 'old.md'), 'x');
-
-  createProject(db, { name: 'Legacy', repoPath: repo }, pkgRoot);
-
-  assert.match(readFileSync(join(kx, 'STACK.md'), 'utf8'), /eski içerik/); // moved, not overwritten
-  assert.match(readFileSync(join(kx, 'TODO.md'), 'utf8'), /- \[ \] X/);
-  assert.match(readFileSync(join(kx, 'DECISIONS.md'), 'utf8'), /eski karar/);
-  for (const d of ['references', 'memory', 'workflows', 'agents', 'templates']) {
-    assert.equal(existsSync(join(kx, d)), false);
-  }
-  rmSync(work, { recursive: true, force: true });
-});
-
 test('the documents language chosen in the form reaches the step prompt', async () => {
   const work = tempDir();
   const db = openDb(join(work, 'db.sqlite'));
@@ -243,32 +215,5 @@ test('a project carries its own engine; a project without one falls back to the 
   // engineFor never returns an uninstalled CLI: with none installed on this
   // machine it falls through to the global resolution, which is also null.
   assert.equal(engineFor(db, { engine: 'nope' })?.id ?? null, selectedEngine(db)?.id ?? null);
-  rmSync(work, { recursive: true, force: true });
-});
-
-test('a project analysed under the old names comes up to one shelf and keeps its content', () => {
-  const work = tempDir();
-  const repo = join(work, 'legacy');
-  mkdirSync(join(repo, '.kortext', 'foundation'), { recursive: true });
-  const write = (rel: string, body: string) =>
-    writeFileSync(join(repo, '.kortext', rel), body, 'utf8');
-  write('foundation/BRD.md', '---\nstatus: approved\n---\n\nthe original brief\n');
-  write('foundation/PRD.md', '---\nstatus: approved\n---\n\nthe product doc\n');
-  write('foundation/TRD.md', '---\nstatus: draft\n---\n\nthe technical doc\n');
-  write('foundation/PFD.md', '---\nstatus: approved\n---\n\nthe summary nobody read\n');
-  write('STACK.md', '---\nstatus: approved\n---\n\nthe stack\n');
-
-  scaffoldProject(repo, pkgRoot, { skipBrief: true });
-
-  const read = (f: string) => readFileSync(join(repo, '.kortext', f), 'utf8');
-  assert.match(read('BRIEF.md'), /the original brief/);
-  assert.match(read('PRODUCT.md'), /the product doc/);
-  assert.match(read('ENGINEERING.md'), /the technical doc/);
-  assert.match(read('STACK.md'), /the stack/, 'a document already on the shelf is untouched');
-  assert.ok(!existsSync(join(repo, '.kortext', 'BRD.md')), 'the old name is gone');
-  // The old shelf goes entirely: PFD is not promoted, and foundation/ does not
-  // survive holding it.
-  assert.ok(!existsSync(join(repo, '.kortext', 'PFD.md')), 'PFD is not promoted');
-  assert.ok(!existsSync(join(repo, '.kortext', 'foundation')), 'the old folder is gone');
   rmSync(work, { recursive: true, force: true });
 });
