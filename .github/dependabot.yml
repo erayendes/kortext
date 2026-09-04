@@ -1,0 +1,63 @@
+# Actions are pinned to commit SHAs (supply-chain hardening), which freezes them until
+# something bumps them deliberately — that something is this file.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: ci
+    groups:
+      actions:
+        patterns: ['*']
+
+  # This project's stack: npm at the root, and the panel's own tree under ui/.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore
+    open-pull-requests-limit: 5
+    groups:
+      dev-dependencies:
+        dependency-type: development
+      production:
+        dependency-type: production
+        update-types: ['minor', 'patch']
+
+  - package-ecosystem: npm
+    directory: /ui
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore
+    open-pull-requests-limit: 5
+    groups:
+      dev-dependencies:
+        dependency-type: development
+      production:
+        dependency-type: production
+        update-types: ['minor', 'patch']
+
+  # - package-ecosystem: swift
+  #   directory: /
+  #   schedule:
+  #     interval: monthly
+  #   commit-message:
+  #     prefix: chore
+
+  # - package-ecosystem: pip
+  #   directory: /
+  #   schedule:
+  #     interval: monthly
+  #   commit-message:
+  #     prefix: chore
+
+  # - package-ecosystem: docker
+  #   directory: /
+  #   schedule:
+  #     interval: monthly
+  #   commit-message:
+  #     prefix: ci

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/erayendes/kortext/security/advisories/new
+    about: Report security issues privately. Do not open a public issue.
+  - name: Questions and support
+    url: https://github.com/erayendes/kortext/blob/main/.github/SUPPORT.md
+    about: Read the support guidance or contact the maintainer.

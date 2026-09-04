@@ -1,0 +1,42 @@
+name: Bug report
+description: Something does not work as expected.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please remove secrets, access tokens, private keys, and personal data before posting.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Explain the problem and what you expected instead.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Kortext version
+      description: The panel prints it in its footer, next to "by Milowda".
+      placeholder: 3.1.0
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How can we reproduce it?
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Add any useful output. Redact sensitive information.

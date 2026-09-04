@@ -2,9 +2,9 @@ name: Kortext CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'v*']
   pull_request:
-    branches: [main]
+    branches: [main, 'v*']
 
 # Cancel superseded runs on the same ref to save CI minutes.
 concurrency:
