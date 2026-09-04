@@ -26,7 +26,7 @@ export function scaffoldProject(repoPath: string, pkgRoot: string, opts: { skipB
   mkdirSync(join(kx, 'foundation'), { recursive: true });
 
   const templates = join(pkgRoot, 'templates');
-  copyIfMissing(join(templates, 'AGENTS.md'), join(repoPath, 'AGENTS.md'));
+  installContract(repoPath, templates);
   copyDirIfMissing(join(templates, 'core'), kx);
   for (const doc of ['PRD.md', 'TRD.md', 'PFD.md']) {
     copyIfMissing(join(templates, 'foundation', doc), join(kx, 'foundation', doc));
@@ -43,6 +43,77 @@ export function scaffoldProject(repoPath: string, pkgRoot: string, opts: { skipB
       writeFileSync(brief, '---\nstatus: draft\n---\n\n# BRD\n', 'utf8');
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// The handover contract
+// ---------------------------------------------------------------------------
+// A repo may already carry an AGENTS.md the user wrote themselves, so the
+// contract goes in as a MARKED BLOCK rather than a file: their text survives,
+// re-scaffolding refreshes only the block, and cancel takes back exactly what
+// kortext wrote. Claude Code reads CLAUDE.md rather than AGENTS.md, so when that
+// file exists it gets a one-line pointer — the contract itself stays in one
+// place, and two copies can never drift apart.
+const BLOCK_START = '<!-- kortext:start -->';
+const BLOCK_END = '<!-- kortext:end -->';
+const POINTER = '<!-- kortext --> Read AGENTS.md and the .kortext/ docs before any work.';
+
+export function writeContractBlock(path: string, body: string): void {
+  const block = `${BLOCK_START}\n${body.trim()}\n${BLOCK_END}`;
+  if (!existsSync(path)) {
+    writeFileSync(path, `${block}\n`, 'utf8');
+    return;
+  }
+  const current = readFileSync(path, 'utf8');
+  // The panel re-scaffolds on every poll; an unchanged block is not rewritten.
+  if (current.includes(block)) return;
+  const start = current.indexOf(BLOCK_START);
+  const end = current.indexOf(BLOCK_END);
+  if (start !== -1 && end > start) {
+    writeFileSync(path, current.slice(0, start) + block + current.slice(end + BLOCK_END.length), 'utf8');
+    return;
+  }
+  writeFileSync(path, `${current.replace(/\s*$/, '')}\n\n${block}\n`, 'utf8');
+}
+
+/** Takes back only kortext's block. A file that held anything else stays. */
+export function removeContractBlock(path: string): void {
+  if (!existsSync(path)) return;
+  const current = readFileSync(path, 'utf8');
+  const start = current.indexOf(BLOCK_START);
+  const end = current.indexOf(BLOCK_END);
+  if (start === -1 || end < start) return; // not ours — never written by kortext
+  const rest = (current.slice(0, start) + current.slice(end + BLOCK_END.length)).trim();
+  if (rest === '') rmSync(path, { force: true });
+  else writeFileSync(path, `${rest}\n`, 'utf8');
+}
+
+function writePointer(path: string): void {
+  if (!existsSync(path)) return; // kortext never invents another tool's memory file
+  const current = readFileSync(path, 'utf8');
+  if (current.includes('<!-- kortext -->')) return;
+  writeFileSync(path, `${current.replace(/\s*$/, '')}\n\n${POINTER}\n`, 'utf8');
+}
+
+function removePointer(path: string): void {
+  if (!existsSync(path)) return;
+  const kept = readFileSync(path, 'utf8')
+    .split('\n')
+    .filter((l) => !l.includes('<!-- kortext -->'));
+  writeFileSync(path, `${kept.join('\n').replace(/\s*$/, '')}\n`, 'utf8');
+}
+
+function installContract(repoPath: string, templates: string): void {
+  const template = join(templates, 'AGENTS.md');
+  if (!existsSync(template)) return;
+  writeContractBlock(join(repoPath, 'AGENTS.md'), readFileSync(template, 'utf8'));
+  writePointer(join(repoPath, 'CLAUDE.md'));
+}
+
+/** Cancel: give the repo back exactly as it was, minus kortext's own writing. */
+export function uninstallContract(repoPath: string): void {
+  removeContractBlock(join(repoPath, 'AGENTS.md'));
+  removePointer(join(repoPath, 'CLAUDE.md'));
 }
 
 // One-time sweep for projects scaffolded before the flat layout: reference
@@ -126,6 +197,7 @@ export function createProject(
     code?: string;
     brief?: string;
     docLang?: string;
+    engine?: string;
   },
   pkgRoot: string,
 ): Project {
@@ -172,9 +244,9 @@ export function createProject(
   }
   const row = db
     .prepare(
-      'INSERT INTO projects (name, repo_path, kind, code, doc_lang) VALUES (?, ?, ?, ?, ?) RETURNING *',
+      'INSERT INTO projects (name, repo_path, kind, code, doc_lang, engine) VALUES (?, ?, ?, ?, ?, ?) RETURNING *',
     )
-    .get(name, repoPath, kind, code, (input.docLang ?? '').trim()) as Project;
+    .get(name, repoPath, kind, code, (input.docLang ?? '').trim(), (input.engine ?? '').trim()) as Project;
   return row;
 }
 

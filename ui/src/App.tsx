@@ -81,7 +81,7 @@ export function App() {
     <div className="kx-shell">
       <header className="kx-header">
         <span className="kx-logo">Kortext</span>
-        <span className="kx-tagline">project brain:</span>
+        <span className="kx-tagline">project brain</span>
         <EngineBadge />
         <span className="kx-doc-spacer" />
       </header>
@@ -142,11 +142,6 @@ export function App() {
           <span className="kx-doc-spacer" />
           <ThemeSwitch />
         </div>
-        <div className="kx-footer-row">
-          <a href="https://github.com/erayendes/kopeng" target="_blank" rel="noreferrer">
-            Kopeng — task board
-          </a>
-        </div>
       </footer>
     </div>
   );
@@ -197,41 +192,51 @@ function ThemeSwitch() {
   );
 }
 
+// The engine belongs to a project, not to the app: each one is added with the
+// CLI it runs on and switches on its own screen. All the header owes anyone is
+// the warning that there is no CLI at all.
 function EngineBadge() {
   const [engines, setEngines] = useState<EngineInfo[]>([]);
-  const [selected, setSelected] = useState<string | null>(null);
 
   useEffect(() => {
-    api.engines().then((r) => {
-      setEngines(r.engines);
-      setSelected(r.selected);
-    });
+    api.engines().then((r) => setEngines(r.engines));
   }, []);
 
-  const available = engines.filter((e) => e.available);
-  if (engines.length === 0) return null;
-  if (available.length === 0) {
-    const hint = engines[0]?.installHint ?? '';
-    return (
-      <span className="kx-engine-warn">
-        No agent CLI found — required to produce documents. Install one: <code className="mono">{hint}</code>
-      </span>
-    );
-  }
+  if (engines.length === 0 || engines.some((e) => e.available)) return null;
   return (
-    <span className="kx-engine">
-      <select
-        className="select kx-engine-select"
-        value={selected ?? available[0].id}
-        onChange={(e) => api.selectEngine(e.target.value).then((r) => setSelected(r.selected))}
-      >
-        {available.map((e) => (
-          <option key={e.id} value={e.id}>
-            {e.id}
-          </option>
-        ))}
-      </select>
+    <span className="kx-engine-warn">
+      No agent CLI found — required to produce documents. Install one:{' '}
+      <code className="mono">{engines[0]?.installHint ?? ''}</code>
     </span>
+  );
+}
+
+/** The installed CLIs, as a dropdown. Empty list renders nothing. */
+function EngineSelect({
+  engines,
+  value,
+  onChange,
+  className = '',
+}: {
+  engines: EngineInfo[];
+  value: string | null;
+  onChange: (id: string) => void;
+  className?: string;
+}) {
+  if (engines.length === 0) return null;
+  return (
+    <select
+      className={`select ${className}`.trim()}
+      value={value ?? engines[0].id}
+      onChange={(e) => onChange(e.target.value)}
+      title="The agent CLI that writes this project's documents"
+    >
+      {engines.map((e) => (
+        <option key={e.id} value={e.id}>
+          {e.id}
+        </option>
+      ))}
+    </select>
   );
 }
 
@@ -377,6 +382,22 @@ function AddProject({
   const [briefMode, setBriefMode] = useState<'write' | 'upload'>('write');
   const [uploadName, setUploadName] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  // The engine is asked for HERE, next to Initialize, rather than ranked for the
+  // user: the three CLIs are equals, and only the person who installed them knows
+  // which one they actually use. One installed CLI answers the question itself.
+  const [engines, setEngines] = useState<EngineInfo[]>([]);
+  const [engine, setEngine] = useState<string | null>(null);
+
+  useEffect(() => {
+    api
+      .engines()
+      .then(({ engines, selected }) => {
+        const usable = engines.filter((e) => e.available);
+        setEngines(usable);
+        setEngine(selected ?? (usable.length === 1 ? usable[0].id : null));
+      })
+      .catch(() => {});
+  }, []);
 
   const browse = async () => {
     const { path } = await api.pickDirectory();
@@ -394,6 +415,7 @@ function AddProject({
   const submit = async () => {
     try {
       const { project } = await api.createProject({
+        engine: engine ?? undefined,
         name,
         repoPath,
         kind,
@@ -554,7 +576,14 @@ function AddProject({
       </div>
       )}
       {err && <div className="kx-error">{err}</div>}
+      {engines.length === 0 && (
+        <span className="kx-cmd-hint">
+          No agent CLI found on your PATH. Install one — claude, codex or gemini — and pick it
+          here; the project can be added now and started later.
+        </span>
+      )}
       <div className="kx-form-row">
+        <EngineSelect engines={engines} value={engine} onChange={setEngine} />
         <button className="btn btn-primary" onClick={submit}>
           Initialize
         </button>
@@ -580,6 +609,22 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
   // native confirm() dialogs, which made Restart/Cancel look dead.
   const [arming, setArming] = useState<'restart' | 'archive' | 'cancel' | null>(null);
   const [busy, setBusy] = useState(false);
+  // Switching engine mid-project is a quota move: the CLI you started on ran out,
+  // so the rest of the analysis continues on another. A running step finishes on
+  // the old one; everything that starts after this sees the new one.
+  const [engines, setEngines] = useState<EngineInfo[]>([]);
+  const [engine, setEngine] = useState<string | null>(project.engine || null);
+
+  useEffect(() => {
+    api
+      .engines()
+      .then(({ engines, selected }) => {
+        const usable = engines.filter((e) => e.available);
+        setEngines(usable);
+        setEngine((current) => current ?? selected ?? usable[0]?.id ?? null);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!arming) return;
@@ -664,6 +709,14 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
           </span>
         </div>
         <div className="kx-proj-actions">
+          <EngineSelect
+            engines={engines}
+            value={engine}
+            onChange={(id) => {
+              setEngine(id);
+              api.setProjectEngine(project.id, id).catch((e) => setErr((e as Error).message));
+            }}
+          />
           {arming === 'restart' ? (
             <>
               <span className="kx-arm-warn">Wipe .kortext/ + .kopeng/ and start over?</span>
@@ -727,7 +780,7 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
         ) : arming === 'cancel' ? (
           <>
             <span className="kx-arm-warn">
-              Delete .kortext/, .kopeng/, AGENTS.md and remove the project?
+              Delete .kortext/, .kopeng/ and kortext's AGENTS.md block, then remove the project?
             </span>
             <button className="btn btn-link-danger" disabled={busy} onClick={doCancel}>
               Yes, remove
@@ -792,21 +845,10 @@ function HandshakeCard({ project }: { project: Project }) {
           here on it's between you and your client.
         </span>
       </div>
-      {state.kopengInstalled ? (
-        <TransferPanel project={project} />
-      ) : (
-        <CommandCard
-          className="kx-kopeng-promo"
-          badge="Kopeng"
-          title="From here the work moves task by task — watch it on a board."
-          hint={
-            '"Transfer to Kopeng" splits the work into Version → Epic → Task in one click; ' +
-            'your agent pulls tasks while you watch the kanban. Install it and the button ' +
-            'appears right here:'
-          }
-          command="npm install -g kopeng"
-        />
-      )}
+      {/* Kopeng is not released, so nothing advertises it: the transfer panel
+          appears for whoever has the binary, and everyone else sees nothing
+          rather than an install command that 404s. */}
+      {state.kopengInstalled && <TransferPanel project={project} />}
       <div className="kx-handshake-cards">
         <span className="kx-cmd-hint">
           Click a card — the command is copied to your clipboard; paste it into your client (CLI or app).
@@ -1085,25 +1127,12 @@ function copyText(text: string) {
 }
 
 // The whole card is the copy button — no truncated code peeking out of a
-// too-small box; the command wraps in full and one click grabs it. The Kopeng
-// promo is the same card with a badge and a longer pitch.
-function CommandCard({
-  title,
-  command,
-  badge,
-  hint,
-  className,
-}: {
-  title: string;
-  command: string;
-  badge?: string;
-  hint?: string;
-  className?: string;
-}) {
+// too-small box; the command wraps in full and one click grabs it.
+function CommandCard({ title, command }: { title: string; command: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <button
-      className={`kx-cmd-card${className ? ` ${className}` : ''}${copied ? ' copied' : ''}`}
+      className={`kx-cmd-card${copied ? ' copied' : ''}`}
       onClick={() => {
         copyText(command).then(() => {
           setCopied(true);
@@ -1111,12 +1140,10 @@ function CommandCard({
         });
       }}
     >
-      {badge && <span className="kx-kopeng-badge">{badge}</span>}
       <div className="kx-cmd-head">
-        <span className={badge ? 'kx-kopeng-title' : 'kx-cmd-title'}>{title}</span>
+        <span className="kx-cmd-title">{title}</span>
         <span className="kx-cmd-copy">{copied ? '✓ Copied' : 'Copy'}</span>
       </div>
-      {hint && <span className="kx-cmd-hint">{hint}</span>}
       <code className="kx-cmd mono">{command}</code>
     </button>
   );

@@ -54,6 +54,9 @@ export function openDb(path = defaultDbPath()): Database.Database {
   if (!cols.includes('doc_lang')) {
     db.exec("ALTER TABLE projects ADD COLUMN doc_lang TEXT NOT NULL DEFAULT ''");
   }
+  if (!cols.includes('engine')) {
+    db.exec("ALTER TABLE projects ADD COLUMN engine TEXT NOT NULL DEFAULT ''");
+  }
   // The request-queue agent surface is gone (vision v2 — kortext drives the
   // engine itself); drop the leftover table from older installs.
   db.exec('DROP TABLE IF EXISTS requests');
@@ -69,5 +72,6 @@ export interface Project {
   paused: number; // 1 = the automatic chain does not start new steps
   archived: number; // 1 = finished with, folded away in the panel; files untouched
   doc_lang: string; // the language the documents are written in; '' = follow the brief
+  engine: string; // the agent CLI this project runs on; '' = whatever is installed
   created_at: string;
 }

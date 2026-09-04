@@ -19,14 +19,14 @@ const { values } = parseArgs({
 if (values.help) {
   console.log(`kortext — project brain for AI-driven development
 
-Usage: kortext [--port 4200] [--db ~/.kortext/kortext.db] [--no-open]
+Usage: kortext [--port 3441] [--db ~/.kortext/kortext.db] [--no-open]
 
 Starts the server and opens the panel in your browser.
 Data lives in a global SQLite database — one database, multiple projects.`);
   process.exit(0);
 }
 
-const PORT = Number(values.port ?? process.env.PORT ?? 4200);
+const PORT = Number(values.port ?? process.env.PORT ?? 3441);
 const DB_PATH = values.db ?? defaultDbPath();
 
 const here = dirname(fileURLToPath(import.meta.url));

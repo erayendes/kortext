@@ -56,6 +56,23 @@ export function setSetting(db: Database.Database, key: string, value: string): v
   ).run(key, value);
 }
 
+/**
+ * The engine a project runs on. Its own choice wins as long as that CLI is still
+ * installed; otherwise anything installed is better than refusing to run — a
+ * project whose CLI was uninstalled keeps working, and the panel's dropdown
+ * shows what it actually fell back to. A project with no choice of its own
+ * (added before the column existed) follows the global setting.
+ */
+export function engineFor(
+  db: Database.Database,
+  project: { engine?: string },
+): (EngineSpec & { available: boolean }) | null {
+  const detected = detectEngines();
+  return (
+    detected.find((e) => e.id === project.engine && e.available) ?? selectedEngine(db)
+  );
+}
+
 // Selected engine: explicit setting if still installed, else first available.
 export function selectedEngine(db: Database.Database): (EngineSpec & { available: boolean }) | null {
   const detected = detectEngines();

@@ -3,6 +3,7 @@ export interface Project {
   name: string;
   code: string;
   repo_path: string;
+  engine?: string;
   paused?: number;
   archived?: number;
   created_at: string;
@@ -84,6 +85,11 @@ export const api = {
   engines: () => req<{ engines: EngineInfo[]; selected: string | null }>('/api/engines'),
   selectEngine: (id: string) =>
     req<{ selected: string }>('/api/engines', { method: 'PUT', body: JSON.stringify({ id }) }),
+  setProjectEngine: (projectId: number, id: string) =>
+    req<{ engine: string }>(`/api/projects/${projectId}/engine`, {
+      method: 'PUT',
+      body: JSON.stringify({ id }),
+    }),
   jobs: (projectId: number) => req<{ jobs: Job[]; running: Job | null }>(`/api/projects/${projectId}/jobs`),
   runNext: (projectId: number) =>
     req<{ started: string }>(`/api/projects/${projectId}/run-next`, { method: 'POST' }),
@@ -147,6 +153,7 @@ export const api = {
     code?: string;
     brief?: string;
     docLang?: string;
+    engine?: string;
   }) =>
     req<{ project: Project }>('/api/projects', { method: 'POST', body: JSON.stringify(input) }),
   pickDirectory: () => req<{ path: string | null }>('/api/pick-directory', { method: 'POST' }),

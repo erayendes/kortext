@@ -4,7 +4,15 @@ import { mkdtempSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { openDb } from '../server/db.js';
-import { createProject, listProjects, removeProject, BRIEF_REL } from '../server/projects.js';
+import { engineFor, selectedEngine } from '../server/engines.js';
+import {
+  createProject,
+  listProjects,
+  removeProject,
+  scaffoldProject,
+  uninstallContract,
+  BRIEF_REL,
+} from '../server/projects.js';
 
 const pkgRoot = process.cwd();
 
@@ -163,5 +171,67 @@ test('re-adding a registered folder names the project instead of the constraint'
     () => createProject(db, { name: 'Second', repoPath: repo }, pkgRoot),
     /archived project "First" — unarchive it/,
   );
+  rmSync(work, { recursive: true, force: true });
+});
+
+test("the contract goes in as a block: a hand-written AGENTS.md survives, and cancel takes back only the block", () => {
+  const work = tempDir();
+  const repo = join(work, 'acme');
+  mkdirSync(repo, { recursive: true });
+  writeFileSync(join(repo, 'AGENTS.md'), '# My own rules\n\nNever touch the migrations.\n', 'utf8');
+  writeFileSync(join(repo, 'CLAUDE.md'), '# Project memory\n', 'utf8');
+
+  scaffoldProject(repo, pkgRoot, { skipBrief: true });
+  const agents = () => readFileSync(join(repo, 'AGENTS.md'), 'utf8');
+  assert.match(agents(), /Never touch the migrations/);
+  assert.match(agents(), /<!-- kortext:start -->/);
+  assert.match(agents(), /Handover Constitution/);
+  assert.match(readFileSync(join(repo, 'CLAUDE.md'), 'utf8'), /<!-- kortext --> Read AGENTS\.md/);
+
+  // Re-scaffolding (the panel does it on every poll) neither duplicates the
+  // block nor the pointer.
+  scaffoldProject(repo, pkgRoot, { skipBrief: true });
+  assert.equal(agents().split('<!-- kortext:start -->').length - 1, 1);
+  assert.equal(readFileSync(join(repo, 'CLAUDE.md'), 'utf8').split('<!-- kortext -->').length - 1, 1);
+
+  uninstallContract(repo);
+  assert.equal(agents().trim(), '# My own rules\n\nNever touch the migrations.'.trim());
+  assert.equal(readFileSync(join(repo, 'CLAUDE.md'), 'utf8'), '# Project memory\n');
+  rmSync(work, { recursive: true, force: true });
+});
+
+test('with no AGENTS.md of its own the block is the whole file, and cancel removes it', () => {
+  const work = tempDir();
+  const repo = join(work, 'acme');
+  mkdirSync(repo, { recursive: true });
+  scaffoldProject(repo, pkgRoot, { skipBrief: true });
+  assert.ok(existsSync(join(repo, 'AGENTS.md')));
+  // No CLAUDE.md existed, so kortext must not have invented one.
+  assert.ok(!existsSync(join(repo, 'CLAUDE.md')));
+  uninstallContract(repo);
+  assert.ok(!existsSync(join(repo, 'AGENTS.md')));
+  rmSync(work, { recursive: true, force: true });
+});
+
+test('an AGENTS.md kortext never wrote is left alone by cancel', () => {
+  const work = tempDir();
+  const repo = join(work, 'acme');
+  mkdirSync(repo, { recursive: true });
+  writeFileSync(join(repo, 'AGENTS.md'), '# Mine alone\n', 'utf8');
+  uninstallContract(repo);
+  assert.equal(readFileSync(join(repo, 'AGENTS.md'), 'utf8'), '# Mine alone\n');
+  rmSync(work, { recursive: true, force: true });
+});
+
+test('a project carries its own engine; a project without one falls back to the global setting', () => {
+  const work = tempDir();
+  const db = openDb(join(work, 'db.sqlite'));
+  const a = createProject(db, { name: 'Acme', repoPath: join(work, 'a'), engine: 'codex' }, pkgRoot);
+  const b = createProject(db, { name: 'Beta', repoPath: join(work, 'b'), code: 'BETA' }, pkgRoot);
+  assert.equal(a.engine, 'codex');
+  assert.equal(b.engine, '');
+  // engineFor never returns an uninstalled CLI: with none installed on this
+  // machine it falls through to the global resolution, which is also null.
+  assert.equal(engineFor(db, { engine: 'nope' })?.id ?? null, selectedEngine(db)?.id ?? null);
   rmSync(work, { recursive: true, force: true });
 });

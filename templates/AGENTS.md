@@ -1,4 +1,4 @@
-# AGENTS.md — Handover Constitution (Kortext v1.0)
+# AGENTS.md — Handover Constitution (Kortext v3.1)
 
 > This project was analyzed with **Kortext**: every analysis document was produced from the
 > brief, +prime (the human) approved each one individually, and Kortext completed its job

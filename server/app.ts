@@ -2,12 +2,12 @@ import express from 'express';
 import type Database from 'better-sqlite3';
 import { existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
-import { createProject, deriveCode, listProjects, removeProject, scaffoldProject, setArchived } from './projects.js';
+import { createProject, deriveCode, listProjects, removeProject, scaffoldProject, setArchived, uninstallContract } from './projects.js';
 import { analysisComplete, docPath, listDocs, loadDocMap, markRequestHandled, setFrontmatterStatus } from './docs.js';
 import { pickDirectoryNative } from './pick-directory.js';
 import { spawnSync } from 'node:child_process';
 import { readdirSync } from 'node:fs';
-import { detectEngines, selectedEngine, setSetting, ENGINES } from './engines.js';
+import { detectEngines, engineFor, selectedEngine, setSetting, ENGINES } from './engines.js';
 import { abortRuns, advance, explainDoc, failStaleJobs, listJobs, nextStep, proposeRevision, recheckDependents, reviseDoc, runPlanning, runningDoc, runningJob } from './runner.js';
 import { isChecking, readReadiness } from './readiness.js';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -26,7 +26,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   app.use(express.json());
 
   const kickChain = (project: Project) => {
-    const engine = selectedEngine(db);
+    const engine = engineFor(db, project);
     if (engine) void advance(db, project, engine, pkgRoot);
   };
 
@@ -69,9 +69,9 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   });
 
   app.post('/api/projects', (req, res) => {
-    const { name, repoPath, kind, code, brief, docLang } = req.body ?? {};
+    const { name, repoPath, kind, code, brief, docLang, engine } = req.body ?? {};
     try {
-      const project = createProject(db, { name, repoPath, kind, code, brief, docLang }, pkgRoot);
+      const project = createProject(db, { name, repoPath, kind, code, brief, docLang, engine }, pkgRoot);
       // Nothing runs on Add — the project lands paused and the user presses
       // Start on the project screen (Start = the unpause endpoint).
       db.prepare('UPDATE projects SET paused = 1 WHERE id = ?').run(project.id);
@@ -92,6 +92,17 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     res.json({ selected: id });
   });
 
+  // A project's own engine — changed mid-flight when a quota runs out. Only the
+  // steps that start after it see the change; a running one finishes on the old CLI.
+  app.put('/api/projects/:id/engine', (req, res) => {
+    const project = projectOr404(req.params.id, res);
+    if (!project) return;
+    const { id } = req.body ?? {};
+    if (!ENGINES.some((e) => e.id === id)) return res.status(400).json({ error: 'unknown engine' });
+    db.prepare('UPDATE projects SET engine = ? WHERE id = ?').run(String(id), project.id);
+    res.json({ engine: id });
+  });
+
   app.get('/api/projects/:id/jobs', (req, res) => {
     const project = projectOr404(req.params.id, res);
     if (!project) return;
@@ -103,7 +114,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   app.post('/api/projects/:id/run-next', (req, res) => {
     const project = projectOr404(req.params.id, res);
     if (!project) return;
-    const engine = selectedEngine(db);
+    const engine = engineFor(db, project);
     if (!engine) return res.status(409).json({ error: 'no agent CLI installed' });
     const step = nextStep(db, project, pkgRoot);
     if (!step) {
@@ -121,7 +132,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     const project = projectOr404(req.params.id, res);
     if (!project) return;
     // No CLI, no analysis — say so here rather than letting Start do nothing.
-    if (!selectedEngine(db)) {
+    if (!engineFor(db, project)) {
       return res.json({
         readiness: {
           ready: false,
@@ -193,7 +204,9 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   });
 
   // Cancel: the user is done with kortext for this project — remove every
-  // trace from the repo (.kortext/, .kopeng/, AGENTS.md) and the registry row.
+  // trace kortext wrote (.kortext/, .kopeng/, the AGENTS.md block and the
+  // CLAUDE.md pointer) and the registry row. A hand-written AGENTS.md or
+  // CLAUDE.md is the user's own file and survives.
   app.post('/api/projects/:id/cancel', async (req, res) => {
     const project = projectOr404(req.params.id, res);
     if (!project) return;
@@ -202,7 +215,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       await new Promise((r) => setTimeout(r, 1500));
       rmSync(join(project.repo_path, '.kortext'), { recursive: true, force: true });
       rmSync(join(project.repo_path, '.kopeng'), { recursive: true, force: true });
-      rmSync(join(project.repo_path, 'AGENTS.md'), { force: true });
+      uninstallContract(project.repo_path);
       removeProject(db, project.id);
       res.json({ ok: true });
     } catch (err) {
@@ -284,7 +297,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       // Approving a document that was rewritten leaves every approved reader of
       // it standing on the old text. Judge each — silent on the first pass,
       // because nothing downstream is approved yet.
-      const engine = selectedEngine(db);
+      const engine = engineFor(db, project);
       if (engine) recheckDependents(db, project, String(rel), engine, pkgRoot);
       res.json({ ok: true });
     } catch (err) {
@@ -299,7 +312,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   app.post('/api/projects/:id/docs/propose', async (req, res) => {
     const project = projectOr404(req.params.id, res);
     if (!project) return;
-    const engine = selectedEngine(db);
+    const engine = engineFor(db, project);
     if (!engine) return res.status(409).json({ error: 'no agent CLI installed' });
     const { rel } = req.body ?? {};
     try {
@@ -325,7 +338,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   app.post('/api/projects/:id/docs/revise', (req, res) => {
     const project = projectOr404(req.params.id, res);
     if (!project) return;
-    const engine = selectedEngine(db);
+    const engine = engineFor(db, project);
     if (!engine) return res.status(409).json({ error: 'no agent CLI installed' });
     const { rel, notes } = req.body ?? {};
     if (!Array.isArray(notes) || notes.length === 0) {
@@ -380,7 +393,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     if (!doc.hasProducingStep) {
       return res.status(409).json({ error: `${rel} is prime's own document — open it and draft the change there` });
     }
-    const engine = selectedEngine(db);
+    const engine = engineFor(db, project);
     if (!engine) return res.status(409).json({ error: 'no agent CLI installed' });
     if (runningDoc(db, project.id, rel)) {
       return res.status(409).json({ error: `${rel} is being rewritten — wait for it to land` });
@@ -403,7 +416,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   app.post('/api/projects/:id/docs/explain', (req, res) => {
     const project = projectOr404(req.params.id, res);
     if (!project) return;
-    const engine = selectedEngine(db);
+    const engine = engineFor(db, project);
     if (!engine) return res.status(409).json({ error: 'no agent CLI installed' });
     const { rel, excerpt, question } = req.body ?? {};
     if (!question || typeof question !== 'string') {
@@ -421,7 +434,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   app.post('/api/projects/:id/transfer', (req, res) => {
     const project = projectOr404(req.params.id, res);
     if (!project) return;
-    const engine = selectedEngine(db);
+    const engine = engineFor(db, project);
     if (!engine) return res.status(409).json({ error: 'no agent CLI installed' });
     if (!analysisComplete(db, project, pkgRoot)) {
       return res.status(409).json({ error: 'analysis is not complete yet' });
