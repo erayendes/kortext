@@ -30,6 +30,8 @@ export type MdToken = {
   lang?: string;
   /** For tables: parsed rows of cells (first row is the header). */
   table?: { header: string[]; rows: string[][] };
+  /** Nesting level of a list item, from its leading indent (0 = top level). */
+  depth?: number;
   /** Index into the token stream (stable selection key). */
   index: number;
   /** Whether this token can be selected for annotation (blank lines cannot). */
@@ -49,7 +51,7 @@ function isSeparatorRow(row: string): boolean {
   return tableCells(row).every((c) => /^:?-+:?$/.test(c));
 }
 
-function classifyLine(line: string): { kind: MdTokenKind; text: string } {
+function classifyLine(line: string): { kind: MdTokenKind; text: string; depth?: number } {
   if (line.trim() === '') return { kind: 'blank', text: '' };
   if (line.startsWith('### ')) return { kind: 'h3', text: line.slice(4) };
   if (line.startsWith('## ')) return { kind: 'h2', text: line.slice(3) };
@@ -58,8 +60,10 @@ function classifyLine(line: string): { kind: MdTokenKind; text: string } {
   // All three markdown bullet characters, and indented ones: a document that
   // used `*` was rendering as paragraphs full of literal asterisks, which the
   // wrapped-line merge then glued into a wall of text.
-  const bullet = line.match(/^\s*[-*+] (.*)$/);
-  if (bullet) return { kind: 'bullet', text: bullet[1] };
+  const bullet = line.match(/^(\s*)[-*+] (.*)$/);
+  // The indent is the nesting: a sub-item under a request (what settled it) was
+  // rendering as its sibling, which reads as a second, unrelated demand.
+  if (bullet) return { kind: 'bullet', text: bullet[2], depth: Math.floor(bullet[1].length / 2) };
   // The marker stays in the text so the numbering survives; the kind exists so
   // the item is a block of its own rather than merged into the paragraph above.
   if (/^\s*\d+[.)] /.test(line)) return { kind: 'ordered', text: line.trim() };
@@ -114,15 +118,15 @@ export function parseMarkdown(md: string): MdToken[] {
         });
       } else {
         for (const b of block) {
-          const { kind, text } = classifyLine(b);
-          out.push({ kind, text, index: index++, selectable: kind !== 'blank' });
+          const { kind, text, depth } = classifyLine(b);
+          out.push({ kind, text, depth, index: index++, selectable: kind !== 'blank' });
         }
       }
       continue;
     }
 
-    const { kind, text } = classifyLine(line);
-    out.push({ kind, text, index: index++, selectable: kind !== 'blank' });
+    const { kind, text, depth } = classifyLine(line);
+    out.push({ kind, text, depth, index: index++, selectable: kind !== 'blank' });
     i++;
   }
 

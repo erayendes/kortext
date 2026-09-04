@@ -842,6 +842,10 @@ function DocumentsTab({
     readiness: null,
     checking: false,
   });
+  // The panel cannot see the server. What it last knew is not what is true now,
+  // so it stops claiming a step is in flight — a dead server left "X writing…"
+  // and a Pause button standing over a chain that had already finished.
+  const [offline, setOffline] = useState(false);
 
   const refresh = () =>
     Promise.all([api.listDocs(project.id), api.jobs(project.id), api.readiness(project.id)])
@@ -850,9 +854,13 @@ function DocumentsTab({
         setJobs(j.jobs);
         setGate(g);
         onChecking?.(g.checking);
+        setOffline(false);
         setErr(null);
       })
-      .catch((e) => setErr(e.message));
+      .catch((e) => {
+        setOffline(true);
+        setErr(`${e.message} — the panel has lost the kortext server; this page may be out of date.`);
+      });
 
   useEffect(() => {
     refresh();
@@ -868,13 +876,13 @@ function DocumentsTab({
 
   // The running-status line lives in the nav row next to ← Projects; the
   // Start/Continue label needs to know whether anything ever ran.
-  const running = jobs.filter((j) => j.status === 'running');
+  const running = offline ? [] : jobs.filter((j) => j.status === 'running');
   useEffect(() => {
     onStatus?.(running.length > 0 ? `${running.map((j) => j.doc_rel).join(' · ')} writing…` : '');
     onHasJobs?.(jobs.length > 0);
     onPending?.(docs.some((d) => d.status === 'uninitialized'));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [running.map((j) => j.id).join(','), jobs.length, docs.map((d) => d.status).join(',')]);
+  }, [running.map((j) => j.id).join(','), jobs.length, docs.map((d) => d.status).join(','), offline]);
 
   // The list answers "what should I do now", so it groups by state, not by
   // folder — Needs you first, Not applicable last and collapsed: those were
@@ -886,6 +894,10 @@ function DocumentsTab({
     // `dependent` is the exception: it is news, not a job, so the document
     // stays where it is.
     if (d.status === 'uninitialized' && job?.status === 'failed' && !paused) return 'needs';
+    // A document the agent is rewriting is not waiting on prime, whatever it
+    // said before the run started: a revision in flight read as "Needs you"
+    // while the badge next to it said "writing…".
+    if (job?.status === 'running' && d.status !== 'approved') return 'progress';
     if (d.revisionRequests.length > 0) return 'needs';
     if (d.status === 'draft') return 'needs';
     if (d.status === 'uninitialized' && (job?.status === 'running' || (paused && job?.status === 'stopped'))) {

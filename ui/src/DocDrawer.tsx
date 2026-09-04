@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { Drawer } from './Drawer';
 import { parseInline, parseMarkdown, type MdToken } from './markdown';
 import { api, type DocInfo, type Project } from './api';
@@ -39,11 +39,13 @@ export function DocDrawer({
   const [explains, setExplains] = useState<Explain[]>([]);
   const [busy, setBusy] = useState(false);
   const [proposed, setProposed] = useState(false); // the editor holds a draft the engine wrote
+  const [rawEdit, setRawEdit] = useState(false); // …and you asked to type in it rather than read it
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
     setEditing(false);
     setProposed(false);
+    setRawEdit(false);
     setSelected(null);
     setNotes([]);
     setExplains([]);
@@ -109,7 +111,13 @@ export function DocDrawer({
             : null;
       }
       if (section === 'ask') asks.add(t.index);
-      if (section === 'demand') demands.add(t.index);
+      // A demand that has been settled is history, not debt: the sentence stays
+      // in the document but stops being painted, so only what still stands is red.
+      // Red marks a demand that still stands: a ticked box is history, and the
+      // line under it is the record of what closed it.
+      if (section === 'demand' && /^(?:\[ \]\s*)?`[A-Za-z][\w./-]*\.md`/.test(t.text.trim())) {
+        demands.add(t.index);
+      }
     }
     return [asks, demands] as const;
   }, [tokens]);
@@ -188,10 +196,13 @@ export function DocDrawer({
 
   const saveEdit = () =>
     act(async () => {
-      await api.saveDoc(project.id, doc.rel, draft);
+      // A saved proposal answers the demands that produced it — otherwise the
+      // document keeps asking for a change it already carries.
+      await api.saveDoc(project.id, doc.rel, draft, proposed);
       setContent(draft);
       setEditing(false);
       setProposed(false);
+      setRawEdit(false);
     });
 
   // The engine drafts the change another document asked for. It lands in the
@@ -242,7 +253,7 @@ export function DocDrawer({
               <button
                 className="btn btn-secondary"
                 disabled={busy}
-                onClick={() => { setEditing(false); setDraft(content); setProposed(false); }}
+                onClick={() => { setEditing(false); setDraft(content); setProposed(false); setRawEdit(false); }}
               >
                 Discard
               </button>
@@ -340,7 +351,11 @@ export function DocDrawer({
                 read it, change what you want, then Save and approve.
               </div>
             )}
-            <textarea className="kx-editor mono" value={draft} onChange={(e) => setDraft(e.target.value)} />
+            {proposed && !rawEdit ? (
+              <ProposalDiff before={content} after={draft} onEdit={() => setRawEdit(true)} />
+            ) : (
+              <textarea className="kx-editor mono" value={draft} onChange={(e) => setDraft(e.target.value)} />
+            )}
           </>
         ) : (
           <div className="kx-doc">
@@ -564,55 +579,51 @@ function RequestBar({
     }
   };
 
+  // A demand you have answered leaves at once — it lingered with a "settled"
+  // hint until the next refresh, which reads as "still waiting on you".
+  const live = items.map((it, i) => ({ it, i })).filter(({ it }) => !settled.has(keyOf(it)));
+  if (live.length === 0 && !err) return null;
+
   return (
     <div className="kx-doc-changebar">
       <div className="kx-changebar-head">{head}</div>
       {err && <div className="kx-error">{err}</div>}
       <ul className="kx-changebar-list">
-        {items.map((it, i) => {
-          const done = settled.has(keyOf(it));
+        {live.map(({ it, i }) => {
           const talk = chat.filter((c) => c.i === i);
           return (
             <li key={i}>
               <span className="mono">{it.label.replace(/\.md$/, '').replace(/^foundation\//, '')}</span> —{' '}
               {it.reason}
-              {done ? (
-                <div className="kx-changebar-actions">
-                  <span className="kx-cmd-hint">Settled — this list refreshes in a moment.</span>
-                </div>
-              ) : (
-                <div className="kx-changebar-actions">
-                  {it.canApply ? (
-                <>
-                  <button className="btn btn-primary" disabled={busy} onClick={() => decide(i, 'apply')}>
-                    Apply
-                  </button>
-                  <button className="btn btn-secondary" disabled={busy} onClick={() => decide(i, 'dismiss')}>
+              <div className="kx-changebar-actions">
+                  {it.canApply && (
+                    <button className="btn btn-primary" disabled={busy} onClick={() => decide(i, 'apply')}>
+                      Apply
+                    </button>
+                  )}
+                  <button className="btn btn-link-primary" disabled={busy} onClick={() => decide(i, 'dismiss')}>
                     Dismiss
                   </button>
                   <button
-                    className="btn btn-link-primary"
+                    className="btn btn-secondary"
                     disabled={busy}
                     onClick={() => setNoting(noting === i ? null : i)}
                   >
                     Add note
                   </button>
-                </>
-              ) : (
-                <>
-                  <button className="btn btn-secondary" disabled={busy} onClick={() => decide(i, 'dismiss')}>
-                    Dismiss
+                  {!it.canApply && (
+                    <span className="kx-cmd-hint">No agent writes that one — open it to draft the change.</span>
+                  )}
+                  {extra}
+                  <button
+                    className="btn btn-link-primary"
+                    disabled={busy}
+                    onClick={() => setAsking(asking === i ? null : i)}
+                  >
+                    Ask
                   </button>
-                  <span className="kx-cmd-hint">No agent writes that one — open it to draft the change.</span>
-                </>
-              )}
-              <button className="btn btn-link-primary" disabled={busy} onClick={() => setAsking(asking === i ? null : i)}>
-                Ask
-              </button>
-              {extra}
-            </div>
-              )}
-              {(talk.length > 0 || asking === i || noting === i) && !done && (
+                </div>
+              {(talk.length > 0 || asking === i || noting === i) && (
                 <div className="kx-thread">
                   {talk.map((c, k) => (
                     <div key={k} className="kx-explain">
@@ -622,7 +633,7 @@ function RequestBar({
                         {it.from.replace(/^foundation\//, '').replace(/\.md$/, '')}
                       </span>
                       <span className={`kx-explain-a${c.a === null ? ' kx-running' : ''}`}>
-                        {c.a === null ? 'writing an answer…' : c.a}
+                        {c.a === null ? 'writing an answer…' : <AnswerText text={c.a} />}
                       </span>
                     </div>
                   ))}
@@ -748,10 +759,27 @@ function DocBlock({
       </pre>
     );
   }
+  // `- [ ] …` / `- [x] …` is a checklist item, and the brackets were reaching the
+  // reader as punctuation. The box is drawn, and it is the state: a settled
+  // revision request and a met acceptance criterion both read at a glance.
+  const task = token.kind === 'bullet' ? token.text.match(/^\[([ xX])\]\s*(.*)$/s) : null;
   return (
-    <div className={cls} onClick={onSelect}>
+    <div
+      className={`${cls}${task ? ' kx-task' : ''}`}
+      style={token.depth ? { marginLeft: token.depth * 18 } : undefined}
+      onClick={onSelect}
+    >
       {questionNo && <span className="kx-qno mono">#{questionNo}</span>}
-      <Inline text={token.text} />
+      {task ? (
+        <>
+          <input type="checkbox" className="kx-task-box" checked={task[1] !== ' '} readOnly tabIndex={-1} />
+          <span className="kx-task-text">
+            <Inline text={task[2] ?? ''} />
+          </span>
+        </>
+      ) : (
+        <Inline text={token.text} />
+      )}
     </div>
   );
 }
@@ -787,11 +815,101 @@ function Mermaid({ code }: { code: string }) {
   return <div className="kx-mermaid-svg" dangerouslySetInnerHTML={{ __html: svg }} />;
 }
 
+// The agent hands back the WHOLE document, so "what actually changed" was left
+// to the reader's eye. These drafts touch a line or two; a line LCS finds them.
+function lineDiff(a: string, b: string): { sign: ' ' | '-' | '+'; text: string }[] {
+  const x = a.split('\n');
+  const y = b.split('\n');
+  const n = x.length;
+  const m = y.length;
+  const lcs = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(0));
+  for (let i = n - 1; i >= 0; i--) {
+    for (let j = m - 1; j >= 0; j--) {
+      lcs[i]![j] = x[i] === y[j] ? lcs[i + 1]![j + 1]! + 1 : Math.max(lcs[i + 1]![j]!, lcs[i]![j + 1]!);
+    }
+  }
+  const out: { sign: ' ' | '-' | '+'; text: string }[] = [];
+  let i = 0;
+  let j = 0;
+  while (i < n && j < m) {
+    if (x[i] === y[j]) {
+      out.push({ sign: ' ', text: x[i]! });
+      i++;
+      j++;
+    } else if (lcs[i + 1]![j]! >= lcs[i]![j + 1]!) {
+      out.push({ sign: '-', text: x[i]! });
+      i++;
+    } else {
+      out.push({ sign: '+', text: y[j]! });
+      j++;
+    }
+  }
+  while (i < n) out.push({ sign: '-', text: x[i++]! });
+  while (j < m) out.push({ sign: '+', text: y[j++]! });
+  return out;
+}
+
+// The draft IS the editor — reading it in one box and its changes in another
+// meant holding two documents in your head. So the editor shows the whole file
+// with the changed lines marked, and hands over to the plain textarea the
+// moment you want to type.
+function ProposalDiff({
+  before,
+  after,
+  onEdit,
+}: {
+  before: string;
+  after: string;
+  onEdit: () => void;
+}) {
+  const lines = useMemo(() => lineDiff(before, after), [before, after]);
+  const changed = lines.filter((l) => l.sign !== ' ' && l.text.trim() !== '').length;
+  return (
+    <>
+      <div className="kx-diff-bar">
+        <span className="kx-cmd-hint">
+          {changed === 0 ? 'The draft matches the document — nothing changed.' : `${changed} line${changed === 1 ? '' : 's'} changed`}
+        </span>
+        <button className="btn btn-secondary" onClick={onEdit}>
+          Edit text
+        </button>
+      </div>
+      <div className="kx-diff mono" onDoubleClick={onEdit}>
+        {lines.map((l, i) => (
+          <div
+            key={i}
+            className={l.sign === '+' ? 'kx-diff-add' : l.sign === '-' ? 'kx-diff-del' : 'kx-diff-same'}
+          >
+            <span className="kx-diff-sign">{l.sign === ' ' ? '' : l.sign}</span>
+            {l.text}
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
 // Backticks inside a bold span aren't caught by parseInline (its regex is
 // flat), so bold values get one more code-splitting pass here.
 function CodeBits({ text }: { text: string }) {
   const parts = text.split(/`([^`]+)`/);
   return <>{parts.map((p, i) => (i % 2 ? <code key={i}>{p}</code> : p))}</>;
+}
+
+// An agent answer is markdown: bullets and **bold** were reaching the reader as
+// literal asterisks. `.kx-explain-a` keeps `pre-wrap`, so line breaks survive —
+// each line only needs its inline spans resolved.
+function AnswerText({ text }: { text: string }) {
+  return (
+    <>
+      {text.split('\n').map((line, i) => (
+        <Fragment key={i}>
+          {i > 0 && '\n'}
+          <Inline text={line} />
+        </Fragment>
+      ))}
+    </>
+  );
 }
 
 function Inline({ text }: { text: string }) {
@@ -834,7 +952,13 @@ function LineThread({
   onNote: (text: string) => void;
 }) {
   const [text, setText] = useState('');
+  const box = useRef<HTMLDivElement>(null);
   const waiting = thread.some((x) => x.answer === null);
+  // A thread opened on a line near the bottom of the drawer unfolded below the
+  // fold — the reader saw a panel that had visibly done something, off-screen.
+  useEffect(() => {
+    if (active) box.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [active]);
   const send = (kind: 'ask' | 'note') => {
     const t = text.trim();
     if (!t) return;
@@ -850,19 +974,19 @@ function LineThread({
           <span className="kx-explain-q">{x.question}</span>
           <span className="kx-explain-who mono">{answerBy}</span>
           <span className={`kx-explain-a${x.answer === null ? ' kx-running' : ''}`}>
-            {x.answer === null ? 'writing an answer…' : x.answer}
+            {x.answer === null ? 'writing an answer…' : <AnswerText text={x.answer} />}
           </span>
         </div>
       ))}
       {(active || waiting) && (
-        <div className="kx-thread-input">
+        <div className="kx-thread-input" ref={box}>
           <textarea
             className="kx-input kx-thread-text"
             autoFocus={active}
             rows={1}
             placeholder={
               thread.length > 0
-                ? 'Follow-up question…  (Enter sends, Shift+Enter for a new line)'
+                ? 'Follow-up question, or a note…  (Enter sends, Shift+Enter for a new line)'
                 : 'Ask about this line, or write a note…  (Enter sends, Shift+Enter for a new line)'
             }
             value={text}
@@ -876,12 +1000,12 @@ function LineThread({
             }}
           />
           <div className="kx-thread-actions">
-            {/* Cevabı toplamak asıl iş; sormak ondan önce gelen bir adım. */}
+            {/* Sormak önce gelen adım, not bırakmak asıl iş — ve son buton sağda durur. */}
+            <button className="btn btn-link-primary" disabled={!text.trim()} onClick={() => send('ask')}>
+              Ask
+            </button>
             <button className="btn btn-primary" disabled={!text.trim()} onClick={() => send('note')}>
               Add note
-            </button>
-            <button className="btn btn-secondary" disabled={!text.trim()} onClick={() => send('ask')}>
-              Ask
             </button>
           </div>
         </div>

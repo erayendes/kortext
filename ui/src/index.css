@@ -684,7 +684,7 @@ body {
    a left-projecting shadow (-18px) bleeds back onto the viewport's right edge. */
 .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 464px; max-width: 94vw; background: var(--bg-elev); border-left: 1px solid var(--border-strong); z-index: 61; transform: translateX(100%); transition: transform 0.26s cubic-bezier(0.16, 1, 0.3, 1); display: flex; flex-direction: column; }
 .drawer.open { transform: translateX(0); box-shadow: -18px 0 50px rgba(0, 0, 0, 0.4); }
-.dr-head { height: 52px; flex-shrink: 0; display: flex; align-items: center; gap: 10px; padding: 0 18px; border-bottom: 1px solid var(--border); }
+.dr-head { min-height: 52px; flex-shrink: 0; display: flex; align-items: center; gap: 10px; padding: 0 18px; border-bottom: 1px solid var(--border); }
 .dr-x { margin-left: auto; color: var(--fg-faint); cursor: pointer; display: flex; }
 .dr-x:hover { color: var(--fg); }
 .dr-body { flex: 1; overflow-y: auto; padding: 20px 18px 28px; }
@@ -1517,7 +1517,7 @@ body {
 .kx-status-waiting { background: var(--bg-muted); color: var(--fg-secondary); }
 .kx-status-not-applicable { background: transparent; color: var(--fg-muted); padding-left: 0; padding-right: 0; }
 .kx-doc-changebar .kx-thread { margin-top: 8px; background: var(--bg-surface, transparent); }
-.kx-doc-dependbar { margin: 0 18px 8px; padding: 8px 12px; border-radius: var(--r-md); background: transparent; border: 1px solid var(--pink-border); color: var(--fg-secondary); font-size: var(--fs-ui); }
+.kx-doc-dependbar { margin: var(--sp-3) 18px 8px; padding: 8px 12px; border-radius: var(--r-md); background: transparent; border: 1px solid var(--pink-border); color: var(--fg-secondary); font-size: var(--fs-ui); }
 .kx-doc-dependbar .mono { color: var(--pink); }
 .kx-badge { font-family: var(--font-mono); font-size: var(--fs-micro); padding: 2px 7px; border-radius: 999px; border: 1px solid transparent; }
 .kx-badge-failed { background: var(--red-bg); color: var(--red); border-color: var(--red-border); }
@@ -1627,7 +1627,7 @@ body {
 .kx-explain-a { color: var(--fg-mid); white-space: pre-wrap; line-height: 1.5; }
 
 /* Sol biraz içeri — üstteki blok gibi kenara yapışmasın; sağ blokla aynı hizada kalır. */
-.kx-thread { margin: var(--sp-3) 8px var(--sp-4) 16px; display: flex; flex-direction: column; gap: var(--sp-3); }
+.kx-thread { margin: var(--sp-3) 8px var(--sp-4) 8px; display: flex; flex-direction: column; gap: var(--sp-3); }
 .kx-thread-input { display: flex; flex-direction: column; gap: var(--sp-3); }
 .kx-thread-actions { display: flex; gap: var(--sp-2); justify-content: flex-end; }
 .kx-thread-text { height: auto; min-height: var(--control-h); resize: vertical; font-family: inherit; padding: var(--sp-2) var(--sp-3); line-height: 1.5; }
@@ -1639,13 +1639,14 @@ body {
 /* A document with unanswered questions is not finished — the row says so, and
    the section itself is tinted so it is not one heading among many. */
 .kx-card-action { margin-left: auto; }
-.kx-doc-changebar { margin: 0 18px 8px; padding: 10px 12px; border-radius: var(--r-md); background: var(--pink-bg); border: 1px solid var(--pink-border); font-size: var(--fs-ui); display: flex; flex-direction: column; gap: 8px; }
+.kx-doc-changebar { margin: var(--sp-3) 18px 8px; padding: 10px 12px; border-radius: var(--r-md); background: var(--pink-bg); border: 1px solid var(--pink-border); font-size: var(--fs-ui); display: flex; flex-direction: column; gap: 8px; }
 .kx-changebar-head { color: var(--pink); font-weight: 600; }
 .kx-changebar-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 10px; }
 /* Each demand carries its own answer: one decision per line, not one for the pile. */
 .kx-changebar-list > li + li { padding-top: 10px; border-top: 1px solid var(--red-border); }
 .kx-changebar-actions { display: flex; gap: 6px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
 .kx-changebar-actions .kx-cmd-hint { margin-right: auto; }
+
 .kx-doc-askbar { margin: var(--sp-4) 18px 0; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-md); background: var(--amber-bg); border: 1px solid var(--amber-border); color: var(--amber); font-size: var(--fs-ui); }
 .kx-block.open-q { background: var(--amber-bg); }
 .kx-block.kx-h2.open-q { background: none; font-weight: 650; }
@@ -1681,3 +1682,19 @@ body {
 .kx-handshake-cards { display: flex; flex-direction: column; gap: 8px; }
 
 .kx-handshake-plan { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--bg); }
+
+/* What the agent's draft changed — the editor holds the whole file, this holds
+   only the lines that differ from what is on disk. */
+.kx-diff-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); margin: var(--sp-3) 0 var(--sp-2); }
+.kx-diff { min-height: 60vh; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--bg); overflow: auto; padding: 12px 0; font-size: var(--fs-ui); line-height: 1.6; }
+.kx-diff > div { display: flex; gap: var(--sp-2); padding: 0 12px; white-space: pre-wrap; min-height: 1.6em; }
+.kx-diff-sign { flex-shrink: 0; width: 1ch; opacity: 0.7; }
+.kx-diff-same { color: var(--fg); }
+.kx-diff-del { background: var(--red-bg); color: var(--red); }
+.kx-diff-add { background: var(--green-bg); color: var(--green); }
+
+/* `- [ ] …` renders as the box it means; the bullet dot would be a second marker. */
+.kx-task { display: flex; gap: var(--sp-2); align-items: baseline; padding-left: 20px; text-indent: 0; }
+.kx-task::before { content: none; }
+.kx-task-text { min-width: 0; }
+.kx-task-box { flex-shrink: 0; margin: 0; position: relative; top: 2px; accent-color: var(--fg-muted); pointer-events: none; }
