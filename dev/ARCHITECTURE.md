@@ -155,6 +155,13 @@ steps (unwritten, inputs settled, not running), starts at most **3 in parallel**
 running loop is woken rather than duplicated, so an approval does not wait for the next
 completion while the pool has room. `paused` only stops new steps; a running one finishes.
 
+**Stopping is two moves, in this order.** Pause, restart and cancel all set `paused` in the
+database *before* they abort the live runs. Aborting alone is not enough: the stopped steps
+settle, the loop wakes, finds the same documents still unwritten and starts them again — inside
+the very window the route is waiting through, leaving CLIs running for a project that is about
+to be wiped. Cancel aborts once more after the row is gone, when nothing can pause the loop any
+more.
+
 **One step (`runStep`).** Open a `jobs` row → build the prompt (the workflow step verbatim +
 persona body + any revision notes) → run the CLI (15 min) → validate: exit code, file actually
 written, frontmatter `draft` or `not-applicable`. Otherwise `failed`, with Retry in the panel.
@@ -198,8 +205,8 @@ No fs-watch — the panel polls (docs 3s, transfer 4s, handshake 5s).
 | `POST …/run-next` | nudge the chain by hand |
 | `GET …/readiness` | the gate's standing verdict + whether a check is out |
 | `POST …/pause` | pause / continue (continue kicks the chain) |
-| `POST …/restart` | wipe `.kortext/` + `.kopeng/`, re-scaffold, land paused |
-| `POST …/cancel` | remove what kortext wrote (`.kortext/`, `.kopeng/`, the `AGENTS.md` block, the `CLAUDE.md` pointer) + the row |
+| `POST …/restart` | pause, abort, wipe `.kortext/` + `.kopeng/`, re-scaffold, land paused |
+| `POST …/cancel` | pause, abort, then remove what kortext wrote (`.kortext/`, `.kopeng/`, the `AGENTS.md` block, the `CLAUDE.md` pointer) + the row |
 | `POST …/archive` | shelve — row and repo both stay |
 | `GET …/docs` | document list (+ idempotent self-heal scaffold) |
 | `GET \| PUT …/docs/content` | read · write as-is (`settleRequests` closes the demands) |
@@ -249,10 +256,10 @@ enforces that and the ordering.
 
 ## 9 · Verification
 
-`npm test` → `node:test`, **57 tests**, six files: `order` (a step cannot read a document
+`npm test` → `node:test`, **59 tests**, six files: `order` (a step cannot read a document
 written after it; personas match their step; skeletons keep both required sections) · `docs`
 (frontmatter, request parsing, open questions, ordering) · `runner` (producibility, prompt
-assembly, job lifecycle) · `readiness` (floor threshold, template recognition, source counting)
+assembly, job lifecycle, nothing starts after an abort) · `readiness` (floor threshold, template recognition, source counting)
 · `projects` (code derivation and collision, scaffold, contract block: install · refresh ·
 uninstall, archive/remove) · `highlight`.
 
