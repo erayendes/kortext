@@ -15,6 +15,7 @@ export type MdTokenKind =
   | 'h2'
   | 'h3'
   | 'quote'
+  | 'alert'
   | 'bullet'
   | 'ordered'
   | 'para'
@@ -22,12 +23,16 @@ export type MdTokenKind =
   | 'code'
   | 'blank';
 
+export type AlertKind = 'note' | 'tip' | 'important' | 'warning' | 'caution';
+
 export type MdToken = {
   kind: MdTokenKind;
   /** Raw text content (without the markdown prefix). Blank → ''. */
   text: string;
   /** For fenced code blocks: the fence's language tag (e.g. 'mermaid'). */
   lang?: string;
+  /** For GitHub alerts (`> [!NOTE]`): the alert's kind, lower-cased. */
+  alert?: AlertKind;
   /** For tables: parsed rows of cells (first row is the header). */
   table?: { header: string[]; rows: string[][] };
   /** Nesting level of a list item, from its leading indent (0 = top level). */
@@ -96,6 +101,27 @@ export function parseMarkdown(md: string): MdToken[] {
       }
       if (i < lines.length) i++; // skip closing fence
       out.push({ kind: 'code', text: code.join('\n'), lang, index: index++, selectable: true });
+      continue;
+    }
+
+    // GitHub alerts: a blockquote whose first line is `> [!NOTE]` and friends.
+    // The whole quote is one token — the marker is the block's kind, not a line
+    // of its text, and the reader annotates the callout rather than its parts.
+    const marker = line.match(/^>\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*$/i);
+    if (marker) {
+      i++;
+      const body: string[] = [];
+      while (i < lines.length && (lines[i] ?? '').startsWith('>')) {
+        body.push((lines[i] ?? '').replace(/^>\s?/, ''));
+        i++;
+      }
+      out.push({
+        kind: 'alert',
+        text: body.join('\n').trim(),
+        alert: marker[1]!.toLowerCase() as AlertKind,
+        index: index++,
+        selectable: true,
+      });
       continue;
     }
 

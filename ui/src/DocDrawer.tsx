@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { Drawer } from './Drawer';
-import { parseInline, parseMarkdown, type MdToken } from './markdown';
+import { highlight } from './highlight';
+import { parseInline, parseMarkdown, type AlertKind, type MdToken } from './markdown';
 import { api, type DocInfo, type Project } from './api';
 
 interface Note {
@@ -698,6 +699,67 @@ function RequestBar({
   );
 }
 
+// The block is there to be used somewhere else — a command, a schema, a path.
+// Selecting it by hand out of a scrolling panel is the one thing GitHub spares
+// the reader, so the button says it copied and goes back to itself.
+function CopyButton({ text }: { text: string }) {
+  const [done, setDone] = useState(false);
+  useEffect(() => {
+    if (!done) return;
+    const t = setTimeout(() => setDone(false), 1600);
+    return () => clearTimeout(t);
+  }, [done]);
+  return (
+    <button
+      className="kx-copy"
+      title={done ? 'Copied' : 'Copy'}
+      onClick={(e) => {
+        e.stopPropagation();
+        void navigator.clipboard.writeText(text).then(() => setDone(true)).catch(() => {});
+      }}
+    >
+      {done ? (
+        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+          <path d="M13.5 4.5l-7 7-4-4 1.1-1.1L6.5 9.3l5.9-5.9 1.1 1.1z" fill="currentColor" />
+        </svg>
+      ) : (
+        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+          <path
+            d="M5.5 1.5h7a1 1 0 011 1v7h-1.5V3H5.5V1.5zM3 4.5h6.5a1 1 0 011 1v7a1 1 0 01-1 1H3a1 1 0 01-1-1v-7a1 1 0 011-1zm.5 1.5v6h5.5V6H3.5z"
+            fill="currentColor"
+          />
+        </svg>
+      )}
+      <span className="kx-copy-label">{done ? 'Copied' : 'Copy'}</span>
+    </button>
+  );
+}
+
+const ALERT_LABEL: Record<AlertKind, string> = {
+  note: 'Note',
+  tip: 'Tip',
+  important: 'Important',
+  warning: 'Warning',
+  caution: 'Caution',
+};
+
+// One 16px glyph each, drawn rather than pulled from an icon package — five
+// paths are cheaper than a dependency, and they inherit the alert's colour.
+function AlertIcon({ kind }: { kind: AlertKind }) {
+  const d = {
+    note: 'M8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM7.25 7.25h1.5v4h-1.5v-4zM8 4.5a.9.9 0 110 1.8.9.9 0 010-1.8z',
+    tip: 'M8 1.5c-2.35 0-4 1.75-4 3.9 0 1.5.8 2.5 1.5 3.3.4.45.6.8.6 1.3v.5h3.8v-.5c0-.5.2-.85.6-1.3.7-.8 1.5-1.8 1.5-3.3 0-2.15-1.65-3.9-4-3.9zM6.1 12h3.8v1.1H6.1V12zm.6 2.1h2.6l-.6.9H7.3l-.6-.9z',
+    important: 'M8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM7.25 4.5h1.5v4.5h-1.5V4.5zM8 10.2a.9.9 0 110 1.8.9.9 0 010-1.8z',
+    warning: 'M8 1.6a.9.9 0 01.78.45l6 10.35A.9.9 0 0114 13.8H2a.9.9 0 01-.78-1.4l6-10.35A.9.9 0 018 1.6zm-.75 4.15v4h1.5v-4h-1.5zM8 10.9a.9.9 0 100 1.8.9.9 0 000-1.8z',
+    caution: 'M5.2 1.5h5.6L14.5 5.2v5.6L10.8 14.5H5.2L1.5 10.8V5.2L5.2 1.5zM7.25 4.5v4.5h1.5V4.5h-1.5zM8 10.2a.9.9 0 110 1.8.9.9 0 010-1.8z',
+  }[kind];
+  return (
+    <svg className="kx-alert-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+      <path d={d} fill="currentColor" />
+    </svg>
+  );
+}
+
 function DocBlock({
   token,
   selected,
@@ -745,6 +807,19 @@ function DocBlock({
       </div>
     );
   }
+  if (token.kind === 'alert' && token.alert) {
+    return (
+      <div className={`${cls} kx-alert kx-alert-${token.alert}`} onClick={onSelect}>
+        <div className="kx-alert-head">
+          <AlertIcon kind={token.alert} />
+          {ALERT_LABEL[token.alert]}
+        </div>
+        <div className="kx-alert-body">
+          <AnswerText text={token.text} />
+        </div>
+      </div>
+    );
+  }
   if (token.kind === 'code') {
     if (token.lang === 'mermaid') {
       return (
@@ -754,9 +829,20 @@ function DocBlock({
       );
     }
     return (
-      <pre className={cls} onClick={onSelect}>
-        {token.text}
-      </pre>
+      <div className={`${cls} kx-codewrap`} onClick={onSelect}>
+        <CopyButton text={token.text} />
+        <pre>
+          {highlight(token.text, token.lang).map((t, i) =>
+            t.kind ? (
+              <span key={i} className={`hl-${t.kind}`}>
+                {t.text}
+              </span>
+            ) : (
+              <Fragment key={i}>{t.text}</Fragment>
+            ),
+          )}
+        </pre>
+      </div>
     );
   }
   // `- [ ] …` / `- [x] …` is a checklist item, and the brackets were reaching the
@@ -1018,6 +1104,19 @@ function mergeWrappedLines(tokens: MdToken[]): MdToken[] {
   const out: MdToken[] = [];
   for (const t of tokens) {
     const prev = out[out.length - 1];
+    // A list item wrapped at 80 chars continued on an indented line, and the
+    // continuation broke out of the list to sit at the left margin. The indent
+    // is what says "still the item above" — an unindented line is a new block.
+    if (
+      prev &&
+      (prev.kind === 'bullet' || prev.kind === 'ordered') &&
+      t.kind === 'para' &&
+      /^\s/.test(t.text) &&
+      t.text.trim() !== ''
+    ) {
+      prev.text = `${prev.text} ${t.text.trim()}`;
+      continue;
+    }
     if (
       prev &&
       (t.kind === 'para' || t.kind === 'quote') &&
