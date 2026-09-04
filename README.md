@@ -114,10 +114,6 @@ Never `sudo npm install -g`. On `EACCES`:
 `npm config set prefix ~/.npm-global` and put `~/.npm-global/bin` on your `PATH`.
 </details>
 
-<p align="center">
-  <img src="docs/assets/panel-handshake.png" alt="Analysis complete — the handshake card with starter commands" width="880">
-</p>
-
 ## Quick start
 
 Requires **Node ≥ 22** and at least one agent CLI on your PATH
