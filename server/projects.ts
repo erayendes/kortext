@@ -42,7 +42,7 @@ export function scaffoldProject(
       copyFileSync(template, brief);
       forceStatus(brief, 'draft');
     } else {
-      writeFileSync(brief, '---\nstatus: draft\n---\n\n# BRD\n', 'utf8');
+      writeFileSync(brief, '---\nstatus: draft\n---\n\n# Brief\n', 'utf8');
     }
   }
 }

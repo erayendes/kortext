@@ -277,7 +277,7 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
   }
 
   // Dependency ordering: a document sits one step behind its deepest input
-  // (BRD → … → PFD). The graph is a diamond — nearly everything descends from
+  // (BRIEF → … → TEST). The graph is a diamond — nearly everything descends from
   // the PRD — so the memo has to be per-document and the cycle guard has to be
   // the path being walked, not every document already seen. Sharing one "seen"
   // set across sibling branches makes the second branch to reach a shared input
