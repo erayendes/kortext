@@ -95,7 +95,7 @@ The `.env` file is git-ignored. Copy it from `.env.example`.
 
 ## Revision Requests
 
-- [`TARGET.md` — what must change there and why. One line per document. Leave this section empty when nothing upstream needs to change]
+- [One line per document, in the form: - [ ] `TARGET.md` — what must change there and why. Leave the box unticked; kortext ticks it and records the outcome underneath when the demand is settled. Leave this section empty when nothing upstream needs to change]
 
 ## Open Questions for prime
 
