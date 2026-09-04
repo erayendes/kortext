@@ -12,21 +12,29 @@ Eray is a non-coder, communicates in Turkish, code / commits / comments in Engli
 
 ```
 "decisions güncelle" / "bu kararı kaydet"          → dev/DECISIONS.md
-"mimari değişti" / "yeni bileşen"                  → dev/pending-update/ARCHITECTURE.md
+"mimari değişti" / "yeni bileşen"                  → dev/ARCHITECTURE.md
 "tasarım güncelle" / "yeni UI / renk"              → dev/DESIGN.md
 "handover yaz" / oturum sonu / "devam notu"        → dev/HANDOVER.md
 "todo'ya ekle" / "sonraki iş"                      → dev/TODO.md
 "UAT senaryosu" / "kullanıcı testi"                → dev/UAT.md
-"wireframe / mockup / concept" (HTML)              → dev/concepts/
+"ürün konumlandırma / marka / persona"             → dev/PRODUCT.md
+"uçtan uca akış / simülasyon"                      → dev/SIMULATION.md
+Kullanıcının okuduğu her şey                       → docs/
 "Claude için kural / mapping / behavior"           → CLAUDE.md (bu dosya)
 Kod (feature / bug fix / refactor)                 → server/  ui/  bin/  test/
 Persona / workflow / template düzenleme            → agents/  workflows/  templates/
-Eski v3 kodu (salt referans, düzenleme YOK)        → archive/v3-engine/
+Eski v3 kodu ve tasarım turları (düzenleme YOK)    → archive/
 ```
 
-> **Doküman yeri (2026-06-17):** tüm geliştirici dokümanları `dev/`'da. Canlı: `dev/{DECISIONS,DESIGN,HANDOVER,TODO,UAT}.md`. Güncellenmeyi bekleyenler: `dev/pending-update/` (ARCHITECTURE, SETUP, USER-GUIDE, PRODUCT). Arşiv: `dev/{concepts,specs,superpowers}/`. `docs/` → Docusaurus public site için ayrıldı.
+> **Doküman yeri (2026-09-04):** okuyucusuna göre ayrıldı.
+> **`docs/`** = kullanıcının okuduğu: `README`, `CHANGELOG`, `SETUP`, `USER-GUIDE`. Docusaurus
+> sitesi buradan kurulacak.
+> **`dev/`** = geliştiricinin okuduğu, sekiz dosya: `ARCHITECTURE`, `DECISIONS`, `DESIGN`,
+> `HANDOVER`, `PRODUCT`, `SIMULATION`, `TODO`, `UAT`.
+> **`archive/`** = bir daha düzenlenmeyecek olan: `v3-engine/` (eski motor), `concepts/`
+> (v2–v6 wireframe ve mockup'lar), `specs/`, `superpowers/`.
 
-Detaylı mimari için [dev/pending-update/ARCHITECTURE.md](dev/pending-update/ARCHITECTURE.md), karar geçmişi için [dev/DECISIONS.md](dev/DECISIONS.md), aktif faz durumu için [dev/HANDOVER.md](dev/HANDOVER.md).
+Detaylı mimari için [dev/ARCHITECTURE.md](dev/ARCHITECTURE.md), karar geçmişi için [dev/DECISIONS.md](dev/DECISIONS.md), aktif faz durumu için [dev/HANDOVER.md](dev/HANDOVER.md).
 
 ## Working style — for Claude on code side
 

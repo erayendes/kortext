@@ -1,7 +1,7 @@
 # Kortext — Tasarım Sistemi
 
 > Panelin görsel dili. Hangi renk ne anlama gelir, hangi boy nerede kullanılır, bir düğme
-> ne zaman hangi biçimi alır. Canlı hâli: `dev/concepts/` altındaki tasarım sistemi dosyası.
+> ne zaman hangi biçimi alır. Turların görsel kaydı: `archive/concepts/`.
 >
 > **Açıklamalar Türkçe, token ve sınıf adları İngilizce.** Bir şeyin adı çevrilmez —
 > `--fs-body` her dilde `--fs-body`'dir.
