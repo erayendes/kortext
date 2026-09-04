@@ -1,6 +1,6 @@
 {
   "name": "kortext",
-  "version": "5.0.0",
+  "version": "3.1.0",
   "description": "Project brain for AI-driven development \u2014 brief to analysis docs, approvals, and reports. Passive: your own coding agent does the work.",
   "type": "module",
   "private": false,
