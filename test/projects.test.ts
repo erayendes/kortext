@@ -266,7 +266,9 @@ test('a project analysed under the old names comes up to one shelf and keeps its
   assert.match(read('ENGINEERING.md'), /the technical doc/);
   assert.match(read('STACK.md'), /the stack/, 'a document already on the shelf is untouched');
   assert.ok(!existsSync(join(repo, '.kortext', 'BRD.md')), 'the old name is gone');
-  // PFD had no place to go: it is left where it was rather than promoted.
-  assert.ok(!existsSync(join(repo, '.kortext', 'PFD.md')));
+  // The old shelf goes entirely: PFD is not promoted, and foundation/ does not
+  // survive holding it.
+  assert.ok(!existsSync(join(repo, '.kortext', 'PFD.md')), 'PFD is not promoted');
+  assert.ok(!existsSync(join(repo, '.kortext', 'foundation')), 'the old folder is gone');
   rmSync(work, { recursive: true, force: true });
 });

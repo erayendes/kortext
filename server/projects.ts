@@ -137,14 +137,16 @@ function migrateLegacyLayout(kx: string): void {
   if (existsSync(foundation)) {
     for (const f of readdirSync(foundation).filter((f) => f.endsWith('.md'))) {
       const to = LEGACY_NAMES.find(([from]) => from === f)?.[1] ?? f;
-      // PFD is gone: nothing read it, so it is left where it is rather than
-      // promoted into a shelf that has no place for it. That keeps foundation/
-      // on disk holding one orphan — deleting a document the human never asked
-      // to lose is worse than leaving a folder nothing reads.
-      if (f !== 'PFD.md' && !existsSync(join(kx, to)))
+      // PFD is not promoted: it was a summary of the other documents, nothing
+      // ever read it, and the shelf has no place for it.
+      if (f !== 'PFD.md' && !existsSync(join(kx, to))) {
         renameSync(join(foundation, f), join(kx, to));
+      }
     }
-    if (readdirSync(foundation).length === 0) rmSync(foundation, { recursive: true, force: true });
+    // One shelf means one shelf: the folder goes, PFD with it. Leaving a
+    // directory the panel never shows and no step reads is how a migration
+    // half-happens and confuses whoever opens the repo next.
+    rmSync(foundation, { recursive: true, force: true });
   }
   for (const [from, to] of LEGACY_NAMES) {
     if (existsSync(join(kx, from)) && !existsSync(join(kx, to))) {

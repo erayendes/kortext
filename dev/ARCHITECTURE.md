@@ -81,9 +81,9 @@ Workflows and personas are **not** copied into the repo — they go into the pro
 analysis, and afterwards the documents are the contract. `scaffoldProject` is idempotent and
 runs whenever the panel looks at a project, so anything missing comes back — and a project from
 the two-shelf era migrates on that same pass: its documents come up from `foundation/` under
-their current names, keeping their content. The one document that has no successor, `PFD.md`,
-stays where it lies, so a migrated project keeps a `foundation/` folder holding that single
-orphan. Deleting a document the human never asked to lose would be the worse trade.
+their current names, keeping their content, and the folder is then removed. `PFD.md` is not
+promoted — it summarised the others, nothing read it, and a migration that leaves half the old
+shape behind is not a migration.
 
 **The contract is a block, not a file.** A repo may already carry the user's own `AGENTS.md`,
 so `templates/AGENTS.md` goes in between `<!-- kortext:start -->` and `<!-- kortext:end -->`:
