@@ -9,7 +9,7 @@ When every document is settled, Kortext retires — the docs become the
 project's guideline and `AGENTS.md` hands your agent the contract.
 
 [![npm](https://img.shields.io/npm/v/kortext.svg)](https://www.npmjs.com/package/kortext)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](../LICENSE)
 
 Kortext holds no API key and calls no LLM API of its own — it spawns the
 agent CLI you already have installed and pay for, headlessly, inside your

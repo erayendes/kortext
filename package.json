@@ -1,7 +1,7 @@
 {
   "name": "kortext",
   "version": "3.1.0",
-  "description": "Project brain for AI-driven development \u2014 brief to analysis docs, approvals, and reports. Passive: your own coding agent does the work.",
+  "description": "Project brain for AI-driven development — brief to analysis docs, approvals, and reports. Passive: your own coding agent does the work.",
   "type": "module",
   "private": false,
   "bin": {
@@ -15,7 +15,7 @@
     "workflows/",
     "agents/",
     "LICENSE",
-    "CHANGELOG.md"
+    "docs/CHANGELOG.md"
   ],
   "repository": {
     "type": "git",
