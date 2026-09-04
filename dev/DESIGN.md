@@ -336,7 +336,7 @@ reader had to merge them in their head.
 - **Prose is in the brief's language** — whatever the human reading it speaks.
 - **Product copy is in the interface language** — every string the end user reads. It may differ
   from the document's language.
-- **A name is never translated.** `PRD.md` is `PRD.md` in every language.
+- **A name is never translated.** `PRODUCT.md` is `PRODUCT.md` in every language.
 
 ---
 

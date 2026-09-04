@@ -138,7 +138,7 @@ until then, on purpose.
 | `~/.kortext/kortext.db` | the project registry — one database, every project |
 | `~/.kortext/logs/` | raw output of every CLI run |
 | `<repo>/AGENTS.md` | the handover contract, inside a marked block |
-| `<repo>/.kortext/` | the documents, and `foundation/` for BRD · PRD · TRD · PFD |
+| `<repo>/.kortext/` | the documents — one folder, fifteen files, `BRIEF.md` first |
 
 The documents are plain markdown in your repository. Commit them: they are the project's
 memory, and the next agent that opens the repo reads them before it writes a line.

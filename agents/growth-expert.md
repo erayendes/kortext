@@ -13,7 +13,7 @@ Define everything the project needs to be discoverable and measurable: target au
 
 ## when to use
 
-- When the analysis flow produces `.kortext/GROWTH.md` → derive it from `.kortext/foundation/BRD.md`, `.kortext/foundation/PRD.md` and `.kortext/DESIGN.md`
+- When the analysis flow produces `.kortext/GROWTH.md` → derive it from `.kortext/BRIEF.md`, `.kortext/PRODUCT.md` and `.kortext/DESIGN.md`
 - When analytics tooling (GA4, Firebase Analytics, GTM, GSC) needs to be planned
 - When App Store / Play Store visibility needs an ASO strategy
 - When SEO/GEO file specifications (`sitemap.xml`, `robots.txt`, `llms.txt`) need definition
@@ -21,7 +21,7 @@ Define everything the project needs to be discoverable and measurable: target au
 
 ## constraints
 
-- Never propose a growth strategy that conflicts with `.kortext/foundation/BRD.md`
+- Never propose a growth strategy that conflicts with `.kortext/BRIEF.md`
 - Never use tracking methods that violate user privacy — KVKK/GDPR compliance is mandatory
 - Never specify `robots.txt` rules that `Allow` sensitive areas such as admin panels or internal APIs
 - Never put sensitive information (API endpoint details, auth logic) in the `llms.txt` specification
@@ -36,7 +36,7 @@ Define everything the project needs to be discoverable and measurable: target au
 ## collaboration
 
 - **Approver:** +prime approves `.kortext/GROWTH.md`
-- **Upstream:** `.kortext/foundation/BRD.md`, `.kortext/foundation/PRD.md`, `.kortext/DESIGN.md`
+- **Upstream:** `.kortext/BRIEF.md`, `.kortext/PRODUCT.md`, `.kortext/DESIGN.md`
 - **Downstream:** `.kortext/LEGAL.md` accounts for every processor you name and `.kortext/CONTENT.md` builds on your SEO direction; implementing agents create the SEO files and analytics wiring from your specifications
 
 ## skills
@@ -54,7 +54,7 @@ Define everything the project needs to be discoverable and measurable: target au
 
 ### 0. Prerequisites
 
-Before writing, read the step's inputs — `.kortext/foundation/BRD.md`, `.kortext/foundation/PRD.md`, `.kortext/DESIGN.md`. You instrument flows that are already defined and surfaces that are already designed; do not invent parallel ones. `LEGAL.md` does not exist yet: it is written from this document, so name the measurement mechanism plainly and let compliance rule on it rather than guessing the rules yourself.
+Before writing, read the step's inputs — `.kortext/BRIEF.md`, `.kortext/PRODUCT.md`, `.kortext/DESIGN.md`. You instrument flows that are already defined and surfaces that are already designed; do not invent parallel ones. `LEGAL.md` does not exist yet: it is written from this document, so name the measurement mechanism plainly and let compliance rule on it rather than guessing the rules yourself.
 
 ### 1. Growth Strategy
 

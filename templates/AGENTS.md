@@ -9,13 +9,14 @@
 
 Make your decisions by reading from here, not by guessing from the code:
 
-- **Root** (`.kortext/*.md`) — *the living core, your daily reference*:
-  `ARCHITECTURE` (the shape of the system) · `STACK` (technology + tools) · `STRUCTURE`
-  (standards + folders + terminology) · `API` · `DATABASE` · `SECURITY` · `DESIGN` ·
-  `TEST` · `LEGAL` · `GROWTH` · `CONTENT` · `ENVIRONMENT` — follow these when producing code and content.
-  A file marked `status: not-applicable` has been deliberately left empty for this project.
-- **`foundation/`** — *the frozen starting point*: `BRD` (brief), `PRD`, `TRD`, `PFD`. Read
-  them when you need context; do not change them at will.
+- **`.kortext/*.md`** — every document, in one place, in the order they were written:
+  `BRIEF` (why this exists) · `PRODUCT` (what it is) · `STACK` (technology + tools) ·
+  `STRUCTURE` (standards + folders + terminology) · `ARCHITECTURE` (the shape of the system) ·
+  `SECURITY` · `ENVIRONMENT` · `DATABASE` · `API` · `DESIGN` · `GROWTH` · `LEGAL` · `CONTENT` ·
+  `ENGINEERING` (the technical contract) · `TEST`. Follow them when producing code and content.
+  A file marked `status: not-applicable` was considered and deliberately left empty for this
+  project. `BRIEF` and `PRODUCT` are where the project came from — read them for context, and do
+  not change them at will.
 - **`.kopeng/`** (if present) — the task structure: Version → Epic → Task files. Task
   tracking is Kopeng's job; if it is set up, take your next piece of work from there and
   update its status there.

@@ -12,13 +12,12 @@ import {
 import { join } from 'node:path';
 import type { Project } from './db.js';
 
-// Live workspace inside a registered repo — sealed layout (DECISIONS §19):
-//   AGENTS.md            (repo root — the agent's entry contract)
-//   .kortext/*.md        (the living core: STACK, SECURITY, …, TODO)
-//   .kortext/foundation/ (frozen starting docs: BRD, PRD, TRD, PFD)
+// Live workspace inside a registered repo:
+//   AGENTS.md      (repo root — the agent's entry contract)
+//   .kortext/*.md  (every document, one flat shelf, in the order they are written)
 // Workflows and personas are NOT copied — kortext itself drives the engine
-// with them during Phase A; after the handshake the docs are the contract.
-export const BRIEF_REL = join('.kortext', 'foundation', 'BRD.md');
+// with them during the analysis; after the handshake the docs are the contract.
+export const BRIEF_REL = join('.kortext', 'BRIEF.md');
 
 export function scaffoldProject(
   repoPath: string,
@@ -26,20 +25,19 @@ export function scaffoldProject(
   opts: { skipBrief?: boolean } = {},
 ): void {
   const kx = join(repoPath, '.kortext');
+  mkdirSync(kx, { recursive: true });
   migrateLegacyLayout(kx);
-  mkdirSync(join(kx, 'foundation'), { recursive: true });
 
   const templates = join(pkgRoot, 'templates');
   installContract(repoPath, templates);
-  copyDirIfMissing(join(templates, 'core'), kx);
-  for (const doc of ['PRD.md', 'TRD.md', 'PFD.md']) {
-    copyIfMissing(join(templates, 'foundation', doc), join(kx, 'foundation', doc));
-  }
+  // The brief is handled below: a fresh one always starts as a draft, whatever
+  // the template says, so it never rides along with the bulk copy.
+  copyDirIfMissing(join(templates, 'docs'), kx, new Set(['BRIEF.md']));
 
   if (opts.skipBrief) return;
   const brief = join(repoPath, BRIEF_REL);
   if (!existsSync(brief)) {
-    const template = join(templates, 'foundation', 'BRD.md');
+    const template = join(templates, 'docs', 'BRIEF.md');
     if (existsSync(template)) {
       copyFileSync(template, brief);
       forceStatus(brief, 'draft');
@@ -124,10 +122,37 @@ export function uninstallContract(repoPath: string): void {
   removePointer(join(repoPath, 'CLAUDE.md'));
 }
 
-// One-time sweep for projects scaffolded before the flat layout: reference
-// docs move up to the root, memory/TODO + decisions survive, package-content
-// copies (workflows, agents, templates) disappear.
+// One-time sweep for projects scaffolded before today's layout: the documents
+// come up to one shelf and take their current names, package-content copies
+// disappear. A project analysed under the old names keeps its content — only
+// the file it lives in changes.
+const LEGACY_NAMES: Array<[string, string]> = [
+  ['BRD.md', 'BRIEF.md'],
+  ['PRD.md', 'PRODUCT.md'],
+  ['TRD.md', 'ENGINEERING.md'],
+];
+
 function migrateLegacyLayout(kx: string): void {
+  const foundation = join(kx, 'foundation');
+  if (existsSync(foundation)) {
+    for (const f of readdirSync(foundation).filter((f) => f.endsWith('.md'))) {
+      const to = LEGACY_NAMES.find(([from]) => from === f)?.[1] ?? f;
+      // PFD is gone: nothing read it, so it is left where it is rather than
+      // promoted into a shelf that no longer has a place for it.
+      if (f !== 'PFD.md' && !existsSync(join(kx, to)))
+        renameSync(join(foundation, f), join(kx, to));
+    }
+    if (readdirSync(foundation).length === 0) rmSync(foundation, { recursive: true, force: true });
+  }
+  for (const [from, to] of LEGACY_NAMES) {
+    if (existsSync(join(kx, from)) && !existsSync(join(kx, to))) {
+      renameSync(join(kx, from), join(kx, to));
+    }
+  }
+  migrateOlderLayout(kx);
+}
+
+function migrateOlderLayout(kx: string): void {
   const refs = join(kx, 'references');
   if (existsSync(refs)) {
     for (const f of readdirSync(refs).filter((f) => f.endsWith('.md'))) {
@@ -159,10 +184,12 @@ function copyIfMissing(from: string, to: string): void {
   if (existsSync(from) && !existsSync(to)) copyFileSync(from, to);
 }
 
-function copyDirIfMissing(fromDir: string, toDir: string): void {
+function copyDirIfMissing(fromDir: string, toDir: string, skip = new Set<string>()): void {
   if (!existsSync(fromDir)) return;
   for (const entry of readdirSync(fromDir, { withFileTypes: true })) {
-    if (entry.isFile()) copyIfMissing(join(fromDir, entry.name), join(toDir, entry.name));
+    if (entry.isFile() && !skip.has(entry.name)) {
+      copyIfMissing(join(fromDir, entry.name), join(toDir, entry.name));
+    }
   }
 }
 

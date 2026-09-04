@@ -166,7 +166,7 @@ export function countSourceFiles(root: string, limit: number): number {
 const MIN_SOURCE_FILES = 3;
 
 function briefPath(project: Project): string {
-  return join(project.repo_path, '.kortext', 'foundation', 'BRD.md');
+  return join(project.repo_path, '.kortext', 'BRIEF.md');
 }
 
 function cachePath(project: Project): string {
@@ -193,7 +193,7 @@ function buildJudgmentPrompt(project: Project): string {
     'You are the readiness gate of a Kortext analysis flow, running headless inside the project folder.',
     `Project: ${project.name}.`,
     '',
-    'Read ONLY this file: .kortext/foundation/BRD.md',
+    'Read ONLY this file: .kortext/BRIEF.md',
     '',
     'Decide ONE thing: does this brief say enough for an analysis team to write a product',
     'requirements document, a tech stack and a security model WITHOUT inventing the product?',

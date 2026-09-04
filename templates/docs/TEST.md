@@ -41,13 +41,13 @@ approver: +architect
 
 ## Compliance & Risk Gates
 
-> A gate here proves an obligation `LEGAL.md` states or a risk `TRD.md` registers.
+> A gate here proves an obligation `LEGAL.md` states or a risk `ENGINEERING.md` registers.
 > Each row names what fails the release, not what someone should remember to check.
 
 | Obligation / risk | Source | The gate that proves it |
 | --- | --- | --- |
 | [e.g., consent is captured before any tracking fires] | `LEGAL.md` | [the test that fails when a tag loads without consent] |
-| [e.g., the job queue survives a restart] | `TRD.md` | [the test that proves it] |
+| [e.g., the job queue survives a restart] | `ENGINEERING.md` | [the test that proves it] |
 
 ## Acceptance Criteria (Definition of Done)
 

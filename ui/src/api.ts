@@ -7,10 +7,7 @@ export interface Project {
   paused?: number;
   archived?: number;
   created_at: string;
-  docCounts?: {
-    core: { settled: number; total: number };
-    foundation: { settled: number; total: number };
-  };
+  docCounts?: { settled: number; total: number };
 }
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
@@ -25,7 +22,6 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
 
 export interface DocInfo {
   rel: string;
-  group: 'core' | 'foundation';
   name: string;
   status: string;
   author: string | null;

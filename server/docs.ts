@@ -4,7 +4,7 @@ import type Database from 'better-sqlite3';
 import type { Project } from './db.js';
 
 export interface DocStep {
-  output: string; // rel path like foundation/PRD.md
+  output: string; // the document this step writes, e.g. PRODUCT.md
   inputs: string[];
   author: string | null;
   approver: string | null;
@@ -12,7 +12,6 @@ export interface DocStep {
 
 export interface DocInfo {
   rel: string;
-  group: 'core' | 'foundation';
   name: string;
   status: string; // uninitialized | draft | approved | …
   author: string | null;
@@ -85,7 +84,7 @@ export function hasOpenQuestions(content: string): boolean {
 
 // Parses workflow step metadata: numbered steps carrying
 //   1. **+persona:** …
-//      - inputs: `.kortext/foundation/BRD.md`, …
+//      - inputs: `.kortext/BRIEF.md`, …
 //      - outputs: `.kortext/references/STACK.md`
 //      - approver: +prime
 // Returns one DocStep per output file.
@@ -207,24 +206,18 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
   const statuses = new Map<string, string>();
   const docs: DocInfo[] = [];
   const requests: Array<{ from: string; target: string; reason: string }> = [];
-  const collect = (
-    dir: string,
-    group: 'core' | 'foundation',
-    relPrefix: string,
-    skip: Set<string>,
-  ) => {
+  const collect = (dir: string, skip: Set<string>) => {
     if (!existsSync(dir)) return;
     for (const file of readdirSync(dir)
       .filter((f) => f.endsWith('.md') && !skip.has(f))
       .sort()) {
-      const rel = `${relPrefix}${file}`;
+      const rel = file;
       const body = readFileSync(join(dir, file), 'utf8');
       const fm = readFrontmatter(body);
       const status = fm.status ?? 'uninitialized';
       statuses.set(rel, status);
       docs.push({
         rel,
-        group,
         name: file.replace(/\.md$/, ''),
         status,
         author: fm.author ?? map.get(rel)?.author ?? null,
@@ -241,14 +234,8 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
       }
     }
   };
-  // Root = the living core. TODO.md belongs to the Plan tab, not Documents.
-  collect(join(project.repo_path, '.kortext'), 'core', '', new Set(['TODO.md']));
-  collect(
-    join(project.repo_path, '.kortext', 'foundation'),
-    'foundation',
-    'foundation/',
-    new Set(),
-  );
+  // One shelf. TODO.md is not a kortext document — a legacy project may carry one.
+  collect(join(project.repo_path, '.kortext'), new Set(['TODO.md']));
 
   // Each request lands in the inbox of the document it names. One a human has
   // already actioned is remembered outside the documents, so sending a file
@@ -258,9 +245,7 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
     // A document that was never written cannot be asked to change — the step
     // that writes it will read the requester as an input anyway.
     if (!target || target.status === 'uninitialized') continue;
-    // Key on the RESOLVED rel, which is what the deciding route writes. Keying
-    // on the raw name a document typed (`BRD.md`) meant a decision recorded
-    // against `foundation/BRD.md` never matched, and the demand stood forever.
+    // Key on the RESOLVED rel, which is what the deciding route writes.
     target.revisionRequests.push({ from: r.from, reason: r.reason });
     // The same demand, seen from the document that made it: deciding it there
     // saves opening the target just to answer a question you already read.
@@ -327,18 +312,17 @@ export function analysisComplete(
   const targets = [...map.keys()];
   if (targets.length === 0) return false;
   const settled = (s: string | undefined) => s === 'approved' || s === 'not-applicable';
-  // BRD gates the new-project flow even though no step produces it
-  if ((project.kind ?? 'new') === 'new' && !settled(byRel.get('foundation/BRD.md'))) return false;
+  // The brief gates the new-project flow even though no step produces it
+  if ((project.kind ?? 'new') === 'new' && !settled(byRel.get('BRIEF.md'))) return false;
   if (targets.some((rel) => docs.find((d) => d.rel === rel)?.openQuestions)) return false;
   if (docs.some((d) => d.revisionRequests.length > 0)) return false;
   return targets.every((rel) => settled(byRel.get(rel)));
 }
 
-// rel is relative to .kortext/: a root doc ("STACK.md"), or one under
-// foundation/. The pattern forbids traversal ("." never starts
-// a segment) and anything outside those three places.
+// rel names a document on the shelf ("STACK.md"). The pattern forbids traversal
+// ("." never starts the name) and anything outside .kortext/ itself.
 export function docPath(project: Project, rel: string): string {
-  if (!/^(?:foundation\/)?[A-Za-z][\w.-]*\.md$/.test(rel)) {
+  if (!/^[A-Za-z][\w.-]*\.md$/.test(rel)) {
     throw new Error(`bad doc path: ${rel}`);
   }
   return join(project.repo_path, '.kortext', rel);

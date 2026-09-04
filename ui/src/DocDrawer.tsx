@@ -300,9 +300,7 @@ export function DocDrawer({
       {doc.dependentOn.length > 0 && !editing && (
         <div className="kx-doc-dependbar">
           <span className="mono">
-            {doc.dependentOn
-              .map((d) => d.replace(/^foundation\//, '').replace(/\.md$/, ''))
-              .join(', ')}
+            {doc.dependentOn.map((d) => d.replace(/\.md$/, '')).join(', ')}
           </span>{' '}
           — an input of this document is moving. Nothing is wrong yet; when it settles, this one is
           read against it again and you are told if it has to change.
@@ -628,10 +626,7 @@ function RequestBar({
           const talk = chat.filter((c) => c.i === i);
           return (
             <li key={i}>
-              <span className="mono">
-                {it.label.replace(/\.md$/, '').replace(/^foundation\//, '')}
-              </span>{' '}
-              — {it.reason}
+              <span className="mono">{it.label.replace(/\.md$/, '')}</span> — {it.reason}
               <div className="kx-changebar-actions">
                 {it.canApply && (
                   <button
@@ -676,9 +671,7 @@ function RequestBar({
                     <div key={k} className="kx-explain">
                       <span className="kx-explain-who mono">prime</span>
                       <span className="kx-explain-q">{c.q}</span>
-                      <span className="kx-explain-who mono">
-                        {it.from.replace(/^foundation\//, '').replace(/\.md$/, '')}
-                      </span>
+                      <span className="kx-explain-who mono">{it.from.replace(/\.md$/, '')}</span>
                       <span className={`kx-explain-a${c.a === null ? ' kx-running' : ''}`}>
                         {c.a === null ? 'writing an answer…' : <AnswerText text={c.a} />}
                       </span>

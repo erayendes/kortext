@@ -75,15 +75,10 @@ export function App() {
       {p.docCounts && (
         <span
           className={`kx-card-counts mono${
-            p.docCounts.core.settled === p.docCounts.core.total &&
-            p.docCounts.foundation.settled === p.docCounts.foundation.total &&
-            p.docCounts.core.total > 0
-              ? ' done'
-              : ''
+            p.docCounts.total > 0 && p.docCounts.settled === p.docCounts.total ? ' done' : ''
           }`}
         >
-          core {p.docCounts.core.settled}/{p.docCounts.core.total} · foundation{' '}
-          {p.docCounts.foundation.settled}/{p.docCounts.foundation.total}
+          {p.docCounts.settled}/{p.docCounts.total} documents settled
         </span>
       )}
     </div>
@@ -117,8 +112,8 @@ export function App() {
           </div>
           {projects.length === 0 && !adding && (
             <div className="kx-empty">
-              No projects yet. Add one to start — a brief template (BRD) is scaffolded into the
-              repo, and your own coding agent takes it from there.
+              No projects yet. Add one to start — a brief template is scaffolded into the repo, and
+              your own coding agent takes it from there.
             </div>
           )}
           {adding && (
@@ -518,18 +513,18 @@ function AddProject({
       {kind === 'new' && (
         <div className="kx-brief">
           <div className="kx-brief-head">
-            <span className="kx-cmd-title">Brief (BRD)</span>
+            <span className="kx-cmd-title">Brief</span>
             <span className="kx-doc-spacer" />
             <button
               className="btn btn-link-primary"
-              title="Download a filled-in example BRD.md"
+              title="Download a filled-in example BRIEF.md"
               onClick={() => {
                 const url = URL.createObjectURL(
                   new Blob([BRIEF_EXAMPLE], { type: 'text/markdown' }),
                 );
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'BRD.md';
+                a.download = 'BRIEF.md';
                 a.click();
                 URL.revokeObjectURL(url);
                 setBriefMode('upload'); // download → edit → bring it back here
@@ -711,7 +706,7 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
           ← Projects
         </button>
         {running ? (
-          <span className="kx-nav-status kx-running">{status || 'Reading the BRD…'}</span>
+          <span className="kx-nav-status kx-running">{status || 'Reading the brief…'}</span>
         ) : paused && hasJobs ? (
           <span className="kx-nav-status">
             ⏸ Paused — running steps were stopped; nothing new starts.
@@ -1034,8 +1029,8 @@ function DocumentsTab({
         gate={gate}
         // An existing project has no brief to open — the evidence is its code.
         onOpenBrief={(() => {
-          const brd = docs.find((d) => d.rel === 'foundation/BRD.md');
-          return brd ? () => setOpen(brd) : null;
+          const brief = docs.find((d) => d.rel === 'BRIEF.md');
+          return brief ? () => setOpen(brief) : null;
         })()}
         onRecheck={() =>
           // run-next re-enters the chain, which re-runs the gate; a 409 just
@@ -1137,7 +1132,7 @@ function ReadinessCard({
   if (gate.checking) {
     return (
       <div className="kx-gate">
-        <h3>Reading the BRD…</h3>
+        <h3>Reading the brief…</h3>
         <p>Checking whether it says enough to analyse. Nothing is being written yet.</p>
       </div>
     );

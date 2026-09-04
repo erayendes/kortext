@@ -52,7 +52,7 @@ printf -- '---\\nstatus: %s\\nauthor: +mock\\n---\\n\\n# Mock doc\\n' "$status" 
 // tests need a brief that says something. Content, not status, is the point.
 function approveBrief(p: { repo_path: string }): void {
   writeFileSync(
-    docPath(p as never, 'foundation/BRD.md'),
+    docPath(p as never, 'BRIEF.md'),
     `---
 status: approved
 author: +prime
@@ -93,7 +93,7 @@ test('nextStep: first unblocked unwritten doc by dependency depth; BRD gate resp
   approveBrief(p);
   const step = nextStep(db, p, pkgRoot);
   assert.ok(step);
-  assert.equal(step.output, 'foundation/PRD.md'); // the brief unblocks exactly one step
+  assert.equal(step.output, 'PRODUCT.md'); // the brief unblocks exactly one step
   rmSync(work, { recursive: true, force: true });
 });
 
@@ -137,7 +137,7 @@ test('buildStepPrompt carries hard rules, inputs, persona and revision notes', (
     p,
     {
       output: 'LEGAL.md',
-      inputs: ['foundation/BRD.md'],
+      inputs: ['BRIEF.md'],
       author: '+compliance-expert',
       approver: '+prime',
     },
@@ -147,7 +147,7 @@ test('buildStepPrompt carries hard rules, inputs, persona and revision notes', (
   );
   assert.match(prompt, /Produce EXACTLY this file .*\.kortext\/LEGAL\.md/);
   assert.match(prompt, /status: draft, author: \+compliance-expert/);
-  assert.match(prompt, /\.kortext\/foundation\/BRD\.md/);
+  assert.match(prompt, /\.kortext\/BRIEF\.md/);
   assert.match(prompt, /persona body/);
   assert.match(prompt, /KVKK bölümünü genişlet/);
   assert.match(prompt, /NEVER set status to approved/);
@@ -171,15 +171,15 @@ test('advance: chains every unblocked step, pauses at approval gates, resumes af
     .filter((j) => j.status === 'done')
     .map((j) => j.doc_rel)
     .sort();
-  assert.deepEqual(drafts, ['foundation/PRD.md']);
+  assert.deepEqual(drafts, ['PRODUCT.md']);
 
-  setFrontmatterStatus(docPath(p, 'foundation/PRD.md'), 'approved');
+  setFrontmatterStatus(docPath(p, 'PRODUCT.md'), 'approved');
   await advance(db, p, engine, pkgRoot);
   const after = listJobs(db, p.id)
     .filter((j) => j.status === 'done')
     .map((j) => j.doc_rel)
     .sort();
-  assert.deepEqual(after, ['STACK.md', 'STRUCTURE.md', 'foundation/PRD.md']);
+  assert.deepEqual(after, ['PRODUCT.md', 'STACK.md', 'STRUCTURE.md']);
   // LEGAL is written against the design, so it is nowhere near ready yet
   assert.ok(!after.includes('LEGAL.md'), 'compliance waits for the technical documents');
   rmSync(work, { recursive: true, force: true });
@@ -193,7 +193,7 @@ test('existing project: no BRD scaffolded, chain starts from code-truth steps', 
     { name: 'Old App', repoPath: join(work, 'old'), kind: 'existing' },
     pkgRoot,
   );
-  assert.equal(existsSync(join(work, 'old', '.kortext', 'foundation', 'BRD.md')), false);
+  assert.equal(existsSync(join(work, 'old', '.kortext', '', 'BRIEF.md')), false);
   // the readiness gate wants code to read — an existing project with an empty
   // folder has no evidence, so give this one a real source tree
   mkdirSync(join(work, 'old', 'src'), { recursive: true });
@@ -221,7 +221,7 @@ test('advance runs independent steps in parallel (capped)', async () => {
   // The brief unblocks the PRD alone; the first fork is right after it, so
   // settle the PRD by hand and time only the fork.
   writeFileSync(
-    docPath(p, 'foundation/PRD.md'),
+    docPath(p, 'PRODUCT.md'),
     '---\nstatus: approved\nauthor: +mock\n---\n\n# Done\n',
     'utf8',
   );
@@ -316,7 +316,7 @@ test('a mid-run approval wakes the active chain and fills free pool slots', asyn
   const db = openDb(join(work, 'db.sqlite'));
   const p = createProject(db, { name: 'Wake', repoPath: join(work, 'wake') }, pkgRoot);
   approveBrief(p);
-  setFrontmatterStatus(docPath(p, 'foundation/PRD.md'), 'approved');
+  setFrontmatterStatus(docPath(p, 'PRODUCT.md'), 'approved');
   // pre-write DESIGN as draft so only the STACK step is producible at loop start
   writeFileSync(docPath(p, 'DESIGN.md'), '---\nstatus: draft\nauthor: +mock\n---\n\n# D\n');
   const slow = join(work, 'slow.sh');
@@ -476,17 +476,17 @@ test('the brief has no producing step: a revision refuses, loudly, and leaves th
   approveBrief(p);
   const engine = mockEngine(work, 'ok');
   const { reviseDoc } = await import('../server/runner.js');
-  const before = readFileSync(docPath(p, 'foundation/BRD.md'), 'utf8');
+  const before = readFileSync(docPath(p, 'BRIEF.md'), 'utf8');
 
-  const out = await reviseDoc(db, p, 'foundation/BRD.md', ['change this'], engine, pkgRoot);
+  const out = await reviseDoc(db, p, 'BRIEF.md', ['change this'], engine, pkgRoot);
   assert.equal(out.ok, false);
   // Callers fire and forget, so the refusal has to be visible somewhere.
-  const jobs = listJobs(db, p.id).filter((j) => j.doc_rel === 'foundation/BRD.md');
+  const jobs = listJobs(db, p.id).filter((j) => j.doc_rel === 'BRIEF.md');
   assert.equal(jobs.length, 1);
   assert.equal(jobs[0].status, 'failed');
   assert.match(jobs[0].error ?? '', /no producing step/);
   // And the brief itself is untouched — nothing wrote it, so nothing moved it.
-  assert.equal(readFileSync(docPath(p, 'foundation/BRD.md'), 'utf8'), before);
+  assert.equal(readFileSync(docPath(p, 'BRIEF.md'), 'utf8'), before);
   rmSync(work, { recursive: true, force: true });
 });
 
@@ -495,7 +495,7 @@ test('a proposed revision reaches the editor, never the document', async () => {
   const db = openDb(join(work, 'db.sqlite'));
   const p = createProject(db, { name: 'Propose', repoPath: join(work, 'propose') }, pkgRoot);
   approveBrief(p);
-  const before = readFileSync(docPath(p, 'foundation/BRD.md'), 'utf8');
+  const before = readFileSync(docPath(p, 'BRIEF.md'), 'utf8');
 
   const script = join(work, 'proposer.sh');
   writeFileSync(
@@ -509,15 +509,15 @@ printf -- '---\\nstatus: draft\\nauthor: +prime\\n---\\n\\n# Project Brief (BRD)
   const { proposeRevision } = await import('../server/runner.js');
   const out = await proposeRevision(
     p,
-    'foundation/BRD.md',
-    ['[foundation/PRD.md asks] say it the other way round'],
+    'BRIEF.md',
+    ['[PRODUCT.md asks] say it the other way round'],
     { id: 'proposer', binary: script, args: [], installHint: '' },
     pkgRoot,
   );
 
   assert.match(out.proposal, /revised/);
   // The document is the human's: the proposal is theirs to apply, or not.
-  assert.equal(readFileSync(docPath(p, 'foundation/BRD.md'), 'utf8'), before);
+  assert.equal(readFileSync(docPath(p, 'BRIEF.md'), 'utf8'), before);
   // And the scratch file does not linger as a document-shaped thing in .kortext.
   assert.equal(existsSync(join(p.repo_path, '.kortext', '.proposal.txt')), false);
   rmSync(work, { recursive: true, force: true });
@@ -530,7 +530,7 @@ test('an engine that proposes nothing is an error, not an empty document', async
   approveBrief(p);
   const { proposeRevision } = await import('../server/runner.js');
   await assert.rejects(
-    () => proposeRevision(p, 'foundation/BRD.md', ['change it'], mockEngine(work, 'noop'), pkgRoot),
+    () => proposeRevision(p, 'BRIEF.md', ['change it'], mockEngine(work, 'noop'), pkgRoot),
     /wrote no proposal/,
   );
   rmSync(work, { recursive: true, force: true });
@@ -551,25 +551,25 @@ test('a verdict becomes a demand in the document that caused it', async () => {
   appendRevisionRequest(
     p,
     'STACK.md',
-    'foundation/PRD.md',
+    'PRODUCT.md',
     'the runtime changed, the flow list must follow',
   );
   const stack = readFileSync(docPath(p, 'STACK.md'), 'utf8');
   const lines = stack.split('\n');
   const head = lines.findIndex((l) => l === '## Revision Requests');
   const next = lines.findIndex((l) => l === '## Open Questions for prime');
-  const at = lines.findIndex((l) => l.startsWith('- `PRD.md`'));
+  const at = lines.findIndex((l) => l.startsWith('- `PRODUCT.md`'));
   assert.ok(
     at > head && at < next,
     `the demand must sit inside the section (${at} vs ${head}..${next})`,
   );
-  assert.match(stack, /- `PRD\.md` — the runtime changed, the flow list must follow/);
+  assert.match(stack, /- `PRODUCT\.md` — the runtime changed, the flow list must follow/);
   // Frontmatter is untouched: writing a demand does not un-approve the writer.
   assert.match(stack, /status: approved/);
   // The panel reads it back as a demand on the PRD — which has to have been
   // written, or there is nothing to ask of it.
-  setFrontmatterStatus(docPath(p, 'foundation/PRD.md'), 'approved');
-  const prd = listDocs(db, p, pkgRoot).find((d) => d.rel === 'foundation/PRD.md')!;
+  setFrontmatterStatus(docPath(p, 'PRODUCT.md'), 'approved');
+  const prd = listDocs(db, p, pkgRoot).find((d) => d.rel === 'PRODUCT.md')!;
   assert.equal(prd.revisionRequests.length, 1);
   assert.equal(prd.revisionRequests[0].from, 'STACK.md');
 

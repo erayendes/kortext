@@ -6,7 +6,7 @@
 
 ## Inputs
 
-Approved documents: `foundation/PRD.md`, `foundation/TRD.md`, `.kortext/ARCHITECTURE.md`,
+Approved documents: `PRODUCT.md`, `ENGINEERING.md`, `.kortext/ARCHITECTURE.md`,
 `STACK.md`, `SECURITY.md`, `LEGAL.md`, `API.md`, `DATABASE.md`, `DESIGN.md`, `TEST.md`
 (skip the ones marked not-applicable).
 

@@ -56,13 +56,13 @@ opens the macOS chooser; other platforms take a typed path), an optional documen
 
 **Expect on disk:** `AGENTS.md` at the repo root carrying kortext's block between
 `<!-- kortext:start -->` and `<!-- kortext:end -->`, a `CLAUDE.md` pointer line if that file
-already existed, and `.kortext/` with 12 core skeletons plus `foundation/`.
+already existed, and `.kortext/` with fifteen document skeletons on one shelf.
 → [server/projects.ts](../server/projects.ts)
 
 **Expect on screen:** the project lands **paused**. Nothing runs until you press **Start**.
 
 - [ ] A hand-written `AGENTS.md` in that folder survived, with the block appended.
-- [ ] The card shows `core 0/12 · foundation 0/4`.
+- [ ] The card shows `0/15 documents settled`.
 - [ ] Adding the same folder twice is refused by name, and so is a duplicate code.
 - [ ] The CLI picked in the form is the one the steps run on, and a second project can be added
       on a different one without disturbing the first.
@@ -95,9 +95,9 @@ Steps run in dependency order, at most **three in parallel**, and every document
 `draft` written by its persona. A step whose inputs are not settled never runs.
 → [server/runner.ts](../server/runner.ts)
 
-The order for a new project: `PRD` · `STACK`+`STRUCTURE` · `ARCHITECTURE` · `SECURITY` ·
-`ENVIRONMENT` · `DATABASE` · `API` · `DESIGN` · `GROWTH` · `LEGAL` · `CONTENT` · `TRD` · `TEST`
-· `PFD`. An existing project starts from the code and ends at `PFD`.
+The order for a new project: `PRODUCT` · `STACK`+`STRUCTURE` · `ARCHITECTURE` · `SECURITY` ·
+`ENVIRONMENT` · `DATABASE` · `API` · `DESIGN` · `GROWTH` · `LEGAL` · `CONTENT` · `ENGINEERING` ·
+`TEST`. An existing project starts from the code and follows the same shelf.
 
 - [ ] Documents appear in dependency order, three at most in flight.
 - [ ] Approving one wakes the chain immediately — it does not wait for another step to finish.

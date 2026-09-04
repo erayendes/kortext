@@ -20,7 +20,7 @@ function tempDir(): string {
   return mkdtempSync(join(tmpdir(), 'kortext-test-'));
 }
 
-test('create new project scaffolds .kortext workspace with draft BRD', () => {
+test('create new project scaffolds .kortext workspace with a draft brief', () => {
   const work = tempDir();
   const db = openDb(join(work, 'db.sqlite'));
   const repo = join(work, 'acme');
@@ -79,7 +79,7 @@ Aktif kullanıcı başına haftalık yazılan görüşme notu; son 30 günde not
 
 Faturalama yok, telefon entegrasyonu yok, mobil uygulama yok.`;
 
-test('a brief written in the add form lands as the prime-approved BRD', () => {
+test('a brief written in the add form lands as the prime-approved brief', () => {
   const work = tempDir();
   const db = openDb(join(work, 'db.sqlite'));
   const repo = join(work, 'brf');
@@ -243,5 +243,30 @@ test('a project carries its own engine; a project without one falls back to the 
   // engineFor never returns an uninstalled CLI: with none installed on this
   // machine it falls through to the global resolution, which is also null.
   assert.equal(engineFor(db, { engine: 'nope' })?.id ?? null, selectedEngine(db)?.id ?? null);
+  rmSync(work, { recursive: true, force: true });
+});
+
+test('a project analysed under the old names comes up to one shelf and keeps its content', () => {
+  const work = tempDir();
+  const repo = join(work, 'legacy');
+  mkdirSync(join(repo, '.kortext', 'foundation'), { recursive: true });
+  const write = (rel: string, body: string) =>
+    writeFileSync(join(repo, '.kortext', rel), body, 'utf8');
+  write('foundation/BRD.md', '---\nstatus: approved\n---\n\nthe original brief\n');
+  write('foundation/PRD.md', '---\nstatus: approved\n---\n\nthe product doc\n');
+  write('foundation/TRD.md', '---\nstatus: draft\n---\n\nthe technical doc\n');
+  write('foundation/PFD.md', '---\nstatus: approved\n---\n\nthe summary nobody read\n');
+  write('STACK.md', '---\nstatus: approved\n---\n\nthe stack\n');
+
+  scaffoldProject(repo, pkgRoot, { skipBrief: true });
+
+  const read = (f: string) => readFileSync(join(repo, '.kortext', f), 'utf8');
+  assert.match(read('BRIEF.md'), /the original brief/);
+  assert.match(read('PRODUCT.md'), /the product doc/);
+  assert.match(read('ENGINEERING.md'), /the technical doc/);
+  assert.match(read('STACK.md'), /the stack/, 'a document already on the shelf is untouched');
+  assert.ok(!existsSync(join(repo, '.kortext', 'BRD.md')), 'the old name is gone');
+  // PFD had no place to go: it is left where it was rather than promoted.
+  assert.ok(!existsSync(join(repo, '.kortext', 'PFD.md')));
   rmSync(work, { recursive: true, force: true });
 });

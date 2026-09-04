@@ -45,52 +45,43 @@
 
 ## Product Discovery
 
-1. **+product-manager:** Produce `PRD.md`. Scope: existing features + user flows + roles/permissions + known gaps + any existing roadmap/issue list — all from the code and the traces in the repo.
+1. **+product-manager:** Produce `PRODUCT.md`. Scope: existing features + user flows + roles/permissions + known gaps + any existing roadmap/issue list — all from the code and the traces in the repo.
    - inputs: `.kortext/STACK.md`, `.kortext/STRUCTURE.md`, `.kortext/ARCHITECTURE.md`, `.kortext/DATABASE.md`, `.kortext/API.md`
-   - outputs: `.kortext/foundation/PRD.md`
+   - outputs: `.kortext/PRODUCT.md`
    - approver: +prime
 
 2. **+qa-engineer:** Produce `TEST.md`. Scope: test coverage + test types + CI test reports + untested areas. Document whether quality assurance is sufficient for the critical user flows.
-   - inputs: `.kortext/foundation/PRD.md`, `.kortext/STACK.md`, `.kortext/STRUCTURE.md`
+   - inputs: `.kortext/PRODUCT.md`, `.kortext/STACK.md`, `.kortext/STRUCTURE.md`
    - outputs: `.kortext/TEST.md`
    - approver: +prime
 
 3. **+designer:** Produce `DESIGN.md`. Extract the existing design language from the code: tokens/theme, components, layout patterns, accessibility state. Flag inconsistencies; set the rules future work must follow.
-   - inputs: `.kortext/foundation/PRD.md`, `.kortext/STACK.md`, `.kortext/STRUCTURE.md`
+   - inputs: `.kortext/PRODUCT.md`, `.kortext/STACK.md`, `.kortext/STRUCTURE.md`
    - outputs: `.kortext/DESIGN.md`
    - n/a when: the codebase renders no user interface — no views, no templates, no components, no styling.
    - approver: +prime
 
 4. **+growth-expert:** Produce `GROWTH.md`. Scope: current analytics/tracking state, SEO/ASO posture, activation and retention signals worth measuring; what to instrument next.
-   - inputs: `.kortext/foundation/PRD.md`, `.kortext/STACK.md`, `.kortext/DESIGN.md`
+   - inputs: `.kortext/PRODUCT.md`, `.kortext/STACK.md`, `.kortext/DESIGN.md`
    - outputs: `.kortext/GROWTH.md`
    - n/a when: the codebase serves no measurable surface and reaches no acquisition channel — an internal tool or a library.
    - approver: +prime
 
 5. **+compliance-expert:** Produce `LEGAL.md`. Scope: personal-data handling found in the code (KVKK/GDPR), license obligations of the dependency tree, terms/privacy needs, compliance gaps. Judge the codebase as it is: the hosting region from `ENVIRONMENT.md`, the third parties from `STACK.md` and `GROWTH.md`, the personal-data columns from `DATABASE.md`, the technical measures from `SECURITY.md`.
-   - inputs: `.kortext/foundation/PRD.md`, `.kortext/STACK.md`, `.kortext/SECURITY.md`, `.kortext/DATABASE.md`, `.kortext/ENVIRONMENT.md`, `.kortext/GROWTH.md`
+   - inputs: `.kortext/PRODUCT.md`, `.kortext/STACK.md`, `.kortext/SECURITY.md`, `.kortext/DATABASE.md`, `.kortext/ENVIRONMENT.md`, `.kortext/GROWTH.md`
    - outputs: `.kortext/LEGAL.md`
    - n/a when: the codebase touches no personal data, ships no third-party data flow and carries no licence obligation beyond permissive dependencies.
    - approver: +prime
 
 6. **+copywriter:** Produce `CONTENT.md`. Scope: existing UI copy, tone of voice, error/empty-state messages, localization state; the content rules future work must follow. The interface language is whatever the code already speaks — read the strings, do not assume; if the codebase carries an i18n setup, record the source language, the target languages and the state of each.
-   - inputs: `.kortext/foundation/PRD.md`, `.kortext/DESIGN.md`, `.kortext/GROWTH.md`, `.kortext/LEGAL.md`
+   - inputs: `.kortext/PRODUCT.md`, `.kortext/DESIGN.md`, `.kortext/GROWTH.md`, `.kortext/LEGAL.md`
    - outputs: `.kortext/CONTENT.md`
    - n/a when: no string in the codebase is read by a person: no interface copy, no messages, no emails.
    - approver: +prime
 
 ## Technical Debt and TRD
 
-1. **+architect:** Consolidate `TRD.md`. Scope: technical debt from the discovery outputs + architectural issues + security risks + test gaps + devops/release risks + improvement areas. For each debt item: impact, risk, dependencies, priority level.
-   - inputs: `.kortext/foundation/PRD.md`, `.kortext/STACK.md`, `.kortext/STRUCTURE.md`, `.kortext/ARCHITECTURE.md`, `.kortext/DATABASE.md`, `.kortext/SECURITY.md`, `.kortext/API.md`, `.kortext/ENVIRONMENT.md`, `.kortext/TEST.md`, `.kortext/LEGAL.md`
-   - outputs: `.kortext/foundation/TRD.md`
+1. **+architect:** Consolidate `ENGINEERING.md`. Scope: technical debt from the discovery outputs + architectural issues + security risks + test gaps + devops/release risks + improvement areas. For each debt item: impact, risk, dependencies, priority level.
+   - inputs: `.kortext/PRODUCT.md`, `.kortext/STACK.md`, `.kortext/STRUCTURE.md`, `.kortext/ARCHITECTURE.md`, `.kortext/DATABASE.md`, `.kortext/SECURITY.md`, `.kortext/API.md`, `.kortext/ENVIRONMENT.md`, `.kortext/TEST.md`, `.kortext/LEGAL.md`
+   - outputs: `.kortext/ENGINEERING.md`
    - approver: +prime
-
-## Consolidation
-
-1. **+operation-manager:** Consolidate `PFD.md`. From the discovery outputs: current-state summary + reference files + technical-debt list + open decisions + task headings to hand over to the planning flow.
-   - inputs: `.kortext/foundation/PRD.md`, `.kortext/foundation/TRD.md`, `.kortext/TEST.md`, `.kortext/DESIGN.md`, `.kortext/CONTENT.md`, `.kortext/LEGAL.md`, `.kortext/GROWTH.md`
-   - outputs: `.kortext/foundation/PFD.md`
-   - approver: +prime
-
-**Next flow:** `planning-pipeline`

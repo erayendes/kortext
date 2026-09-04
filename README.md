@@ -30,7 +30,7 @@ repo.
 
 1. **Add a project.** Pick the repo folder and the agent CLI it runs on — the
    choice belongs to the project, so two projects can sit on two different
-   CLIs. *New project* starts from a brief (BRD) you write or upload in the
+   CLIs. *New project* starts from a brief you write or upload in the
    form; *existing project* starts straight from the code. Kortext scaffolds
    `AGENTS.md` at the repo root and `.kortext/` with document skeletons.
 2. **Analysis.** Kortext runs your agent CLI step by step through a
@@ -132,10 +132,10 @@ Data lives in one global SQLite database at `~/.kortext/kortext.db`
 
 ```
 AGENTS.md                  the agent's entry contract (handover constitution)
-.kortext/
-  ARCHITECTURE.md STACK.md STRUCTURE.md API.md DATABASE.md SECURITY.md
-  DESIGN.md TEST.md LEGAL.md GROWTH.md CONTENT.md ENVIRONMENT.md
-  foundation/              frozen starting docs: BRD, PRD, TRD, PFD
+.kortext/                  every document, one shelf, in the order they are written
+  BRIEF.md PRODUCT.md STACK.md STRUCTURE.md ARCHITECTURE.md SECURITY.md
+  ENVIRONMENT.md DATABASE.md API.md DESIGN.md GROWTH.md LEGAL.md
+  CONTENT.md ENGINEERING.md TEST.md
 ```
 
 Frontmatter `status` is the source of truth:

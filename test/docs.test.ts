@@ -22,12 +22,12 @@ test('parseWorkflowSteps extracts inputs/outputs/author/approver per output', ()
   const steps = parseWorkflowSteps(
     readFileSync(join(pkgRoot, 'workflows', 'new-project-analysis.md'), 'utf8'),
   );
-  const prd = steps.find((s) => s.output === 'foundation/PRD.md');
+  const prd = steps.find((s) => s.output === 'PRODUCT.md');
   assert.ok(prd);
   assert.equal(prd.author, '+product-manager');
   // The PRD is written from the brief alone: measurement instruments it and
   // compliance judges it, so both come after.
-  assert.deepEqual(prd.inputs, ['foundation/BRD.md']);
+  assert.deepEqual(prd.inputs, ['BRIEF.md']);
   const legal = steps.find((s) => s.output === 'LEGAL.md');
   assert.ok(legal);
   assert.ok(legal.inputs.includes('ENVIRONMENT.md'), 'compliance needs the hosting region');
@@ -44,14 +44,13 @@ test('listDocs: dependency blocking follows approvals; regressed input warns dep
 
   let docs = listDocs(db, p, pkgRoot);
   const byRel = (rel: string) => docs.find((d) => d.rel === rel)!;
-  // BRD is draft and unblocked; PRD depends on BRD (not approved yet) → blocked
-  assert.equal(byRel('foundation/BRD.md').status, 'draft');
-  assert.equal(byRel('foundation/BRD.md').blocked, false);
-  assert.equal(byRel('foundation/PRD.md').blocked, true);
-  // BRD sorts before PRD (dependency depth)
+  // the brief is draft and unblocked; PRODUCT depends on it → blocked
+  assert.equal(byRel('BRIEF.md').status, 'draft');
+  assert.equal(byRel('BRIEF.md').blocked, false);
+  assert.equal(byRel('PRODUCT.md').blocked, true);
+  // the brief sorts before PRODUCT (dependency depth)
   assert.ok(
-    docs.findIndex((d) => d.rel === 'foundation/BRD.md') <
-      docs.findIndex((d) => d.rel === 'foundation/PRD.md'),
+    docs.findIndex((d) => d.rel === 'BRIEF.md') < docs.findIndex((d) => d.rel === 'PRODUCT.md'),
   );
   // The graph is a diamond: nearly everything descends from the PRD, so a
   // document must sort behind every input, not behind whichever branch was
@@ -65,22 +64,21 @@ test('listDocs: dependency blocking follows approvals; regressed input warns dep
     ['ENVIRONMENT.md', 'DATABASE.md'],
     ['DATABASE.md', 'API.md'],
     ['DESIGN.md', 'GROWTH.md'],
-    ['LEGAL.md', 'foundation/TRD.md'],
-    ['foundation/TRD.md', 'TEST.md'],
-    ['TEST.md', 'foundation/PFD.md'],
+    ['LEGAL.md', 'ENGINEERING.md'],
+    ['ENGINEERING.md', 'TEST.md'],
   ]) {
     assert.ok(at(before) < at(after), `${before} must sort before ${after}`);
   }
 
-  // approve BRD → PRD unblocks; LEGAL stays blocked far longer, because it is
+  // approve the brief → PRODUCT unblocks; LEGAL stays blocked far longer, because it is
   // written against the design rather than before it
-  setFrontmatterStatus(docPath(p, 'foundation/BRD.md'), 'approved');
+  setFrontmatterStatus(docPath(p, 'BRIEF.md'), 'approved');
   docs = listDocs(db, p, pkgRoot);
-  assert.equal(byRel('foundation/BRD.md').status, 'approved');
-  assert.equal(byRel('foundation/PRD.md').blocked, false);
+  assert.equal(byRel('BRIEF.md').status, 'approved');
+  assert.equal(byRel('PRODUCT.md').blocked, false);
   assert.equal(byRel('LEGAL.md').blocked, true);
 
-  setFrontmatterStatus(docPath(p, 'foundation/PRD.md'), 'approved');
+  setFrontmatterStatus(docPath(p, 'PRODUCT.md'), 'approved');
   docs = listDocs(db, p, pkgRoot);
   assert.equal(byRel('STACK.md').blocked, false);
   // measurement reads the surfaces design names, so GROWTH waits for DESIGN
@@ -89,9 +87,9 @@ test('listDocs: dependency blocking follows approvals; regressed input warns dep
 
   // Only an approved document is dependent: a draft one is about to be
   // rewritten anyway, so an input that moved under it is not news.
-  setFrontmatterStatus(docPath(p, 'foundation/BRD.md'), 'draft');
+  setFrontmatterStatus(docPath(p, 'BRIEF.md'), 'draft');
   docs = listDocs(db, p, pkgRoot);
-  assert.deepEqual(byRel('foundation/PRD.md').dependentOn, ['foundation/BRD.md']);
+  assert.deepEqual(byRel('PRODUCT.md').dependentOn, ['BRIEF.md']);
   // …and a document still in draft is not: STACK reads the same brief.
   assert.deepEqual(byRel('STACK.md').dependentOn, []);
 
@@ -127,8 +125,8 @@ test("the brief is prime's own document; every other one has a step that writes 
   const db = openDb(join(work, 'db.sqlite'));
   const p = createProject(db, { name: 'Own', repoPath: join(work, 'own') }, pkgRoot);
   const docs = listDocs(db, p, pkgRoot);
-  assert.equal(docs.find((d) => d.rel === 'foundation/BRD.md')!.hasProducingStep, false);
-  for (const d of docs.filter((x) => x.rel !== 'foundation/BRD.md')) {
+  assert.equal(docs.find((d) => d.rel === 'BRIEF.md')!.hasProducingStep, false);
+  for (const d of docs.filter((x) => x.rel !== 'BRIEF.md')) {
     assert.equal(d.hasProducingStep, true, d.rel);
   }
   rmSync(work, { recursive: true, force: true });
@@ -138,8 +136,8 @@ test('not-applicable input satisfies dependencies downstream', () => {
   const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
   const db = openDb(join(work, 'db.sqlite'));
   const p = createProject(db, { name: 'Acme', repoPath: join(work, 'acme') }, pkgRoot);
-  setFrontmatterStatus(docPath(p, 'foundation/BRD.md'), 'approved');
-  setFrontmatterStatus(docPath(p, 'foundation/PRD.md'), 'approved');
+  setFrontmatterStatus(docPath(p, 'BRIEF.md'), 'approved');
+  setFrontmatterStatus(docPath(p, 'PRODUCT.md'), 'approved');
   setFrontmatterStatus(docPath(p, 'DESIGN.md'), 'not-applicable');
   const docs = listDocs(db, p, pkgRoot);
   const growth = docs.find((d) => d.rel === 'GROWTH.md')!;
@@ -153,8 +151,8 @@ test('analysisComplete: only when every workflow-produced doc is settled', async
   const db = openDb(join(work, 'db.sqlite'));
   const p = createProject(db, { name: 'HS', repoPath: join(work, 'hs') }, pkgRoot);
   assert.equal(analysisComplete(db, p, pkgRoot), false);
-  // settle everything the map produces (+ BRD gate)
-  setFrontmatterStatus(docPath(p, 'foundation/BRD.md'), 'approved');
+  // settle everything the map produces (+ the brief gate)
+  setFrontmatterStatus(docPath(p, 'BRIEF.md'), 'approved');
   const { loadDocMap } = await import('../server/docs.js');
   for (const rel of loadDocMap(pkgRoot, 'new').keys()) {
     if (rel.endsWith('backlog.yaml') || rel === 'TODO.md') continue;
@@ -204,16 +202,16 @@ test('a revision request lands in the inbox of the document it names', () => {
   ]);
 
   writeFileSync(
-    docPath(p, 'foundation/TRD.md'),
+    docPath(p, 'ENGINEERING.md'),
     '---\nstatus: approved\n---\n\n## Revision Requests\n\n- `ENVIRONMENT.md` — logs must go\n',
     'utf8',
   );
   writeFileSync(docPath(p, 'ENVIRONMENT.md'), '---\nstatus: approved\n---\n\n# Env\n', 'utf8');
   const docs = listDocs(db, p, pkgRoot);
   const env = docs.find((d) => d.rel === 'ENVIRONMENT.md')!;
-  assert.deepEqual(env.revisionRequests, [{ from: 'foundation/TRD.md', reason: 'logs must go' }]);
+  assert.deepEqual(env.revisionRequests, [{ from: 'ENGINEERING.md', reason: 'logs must go' }]);
   // The same demand is decidable from the document that made it.
-  assert.deepEqual(docs.find((d) => d.rel === 'foundation/TRD.md')!.sentRequests, [
+  assert.deepEqual(docs.find((d) => d.rel === 'ENGINEERING.md')!.sentRequests, [
     { target: 'ENVIRONMENT.md', reason: 'logs must go', targetHasStep: true },
   ]);
 
@@ -221,7 +219,7 @@ test('a revision request lands in the inbox of the document it names', () => {
   assert.equal(analysisComplete(db, p, pkgRoot), false);
   markRequestHandled(
     p,
-    'foundation/TRD.md',
+    'ENGINEERING.md',
     'ENVIRONMENT.md',
     'logs must go',
     'dismissed by prime — no change made',
@@ -238,25 +236,25 @@ test('a demand on a foundation document is settled by the path it was decided on
   // Documents name their target the short way; the route records the rel.
   // Keying the two differently left foundation demands standing forever.
   writeFileSync(
-    docPath(p, 'foundation/PRD.md'),
-    '---\nstatus: approved\n---\n\n## Revision Requests\n\n- `BRD.md` — say it the other way round\n',
+    docPath(p, 'PRODUCT.md'),
+    '---\nstatus: approved\n---\n\n## Revision Requests\n\n- `BRIEF.md` — say it the other way round\n',
     'utf8',
   );
-  setFrontmatterStatus(docPath(p, 'foundation/BRD.md'), 'approved');
-  const brd = () => listDocs(db, p, pkgRoot).find((d) => d.rel === 'foundation/BRD.md')!;
+  setFrontmatterStatus(docPath(p, 'BRIEF.md'), 'approved');
+  const brd = () => listDocs(db, p, pkgRoot).find((d) => d.rel === 'BRIEF.md')!;
   assert.equal(brd().revisionRequests.length, 1);
   markRequestHandled(
     p,
-    'foundation/PRD.md',
-    'foundation/BRD.md',
+    'PRODUCT.md',
+    'BRIEF.md',
     'say it the other way round',
     'applied — the agent rewrote it',
   );
   assert.equal(brd().revisionRequests.length, 0);
   // The ticked box is what closes it, and the line under it says what closed
   // it — a dismissal and a rewrite must not leave the same record.
-  const prd = readFileSync(docPath(p, 'foundation/PRD.md'), 'utf8');
-  assert.match(prd, /^- \[x\] `BRD\.md` — say it the other way round$/m);
+  const prd = readFileSync(docPath(p, 'PRODUCT.md'), 'utf8');
+  assert.match(prd, /^- \[x\] `BRIEF\.md` — say it the other way round$/m);
   assert.match(prd, /^ {2}- applied — the agent rewrote it · \d{4}-\d{2}-\d{2}$/m);
   rmSync(work, { recursive: true, force: true });
 });

@@ -41,7 +41,7 @@ kortext (npm package, installed globally)
 │   ├─ Drawer.tsx · api.ts · markdown.ts · highlight.ts · index.css (see DESIGN.md)
 │
 └─ package content (embedded in prompts / scaffolded)
-    workflows/ 3 · templates/ AGENTS.md + core 12 + foundation 4 · agents/ 11 personas
+    workflows/ 3 · templates/ AGENTS.md + docs/ 15 skeletons · agents/ 10 personas
 ```
 
 One process, one port (default **3441**). In dev the panel runs on Vite :3442 and proxies
@@ -70,9 +70,8 @@ framework: `openDb` creates tables `IF NOT EXISTS` and adds missing columns with
 AGENTS.md          the handover contract, as a marked block
 CLAUDE.md          if it exists: a one-line pointer (the file is not kortext's)
 .kortext/
-├── STACK STRUCTURE ARCHITECTURE SECURITY ENVIRONMENT DATABASE
-│   API DESIGN GROWTH LEGAL CONTENT TEST  (.md)
-├── foundation/ BRD PRD TRD PFD
+├── BRIEF PRODUCT STACK STRUCTURE ARCHITECTURE SECURITY ENVIRONMENT
+│   DATABASE API DESIGN GROWTH LEGAL CONTENT ENGINEERING TEST  (.md)
 ├── .readiness.json                    the gate's standing verdict
 └── .proposal.txt · .recheck-*.json    scratch; read once, deleted
 .kopeng/           only after "Transfer to Kopeng"
@@ -109,12 +108,12 @@ because every agent that opens it must see what the panel sees.
 **The dependency graph** comes from `inputs:` / `outputs:` / `approver:` in `workflows/*.md`
 (`parseWorkflowSteps`). Per document, `listDocs` computes `blocked` (an input is not settled),
 `dependentOn` (approved, but an input is moving), `revisionRequests` / `sentRequests` (both ends
-of a demand) and `hasProducingStep` (the BRD has none — it is prime's own). Panel order is
+of a demand) and `hasProducingStep` (the brief has none — it is prime's own). Panel order is
 dependency depth (`1 + max(inputs)`), memoized, with the cycle guard on the path being walked
 so the diamond graph does not collapse into traversal order.
 
 `analysisComplete` = every mapped document `approved | not-applicable`, no open questions, no
-standing requests (plus a settled BRD on a new project).
+standing requests (plus a settled brief on a new project).
 
 ---
 
@@ -175,7 +174,7 @@ line, not prose · prose in the document's language, every name in English.
 | Run outside a step | What it does | What it writes |
 | --- | --- | --- |
 | `reviseDoc` | re-runs the producing step with notes | the document (back to `draft`) |
-| `proposeRevision` | drafts a change for a document no step owns (the BRD) | `.proposal.txt` — read once, deleted |
+| `proposeRevision` | drafts a change for a document no step owns (the brief) | `.proposal.txt` — read once, deleted |
 | `runRecheck` | judges an approved reader against an input that moved | a verdict JSON; the server writes the demand |
 | `explainDoc` | line-anchored Q&A with the author persona | nothing — the answer lives in the panel |
 
@@ -211,7 +210,7 @@ No fs-watch — the panel polls (docs 3s, transfer 4s, handshake 5s).
 | `GET …/docs` | document list (+ idempotent self-heal scaffold) |
 | `GET \| PUT …/docs/content` | read · write as-is (`settleRequests` closes the demands) |
 | `POST …/docs/approve` | `draft → approved`, kicks the chain, rechecks dependents |
-| `POST …/docs/propose` | returns a drafted revision for the BRD |
+| `POST …/docs/propose` | returns a drafted revision for the brief |
 | `POST …/docs/revise` | re-runs the producing step with notes (fire-and-forget, 202) |
 | `POST …/docs/decide-request` | apply/dismiss one demand — from either end |
 | `POST …/docs/explain` | line-anchored Q&A (synchronous, writes nothing) |
@@ -227,7 +226,7 @@ the answers are gone.
 
 ## 7 · Panel
 
-**Project list** (per-card core/foundation progress, archive group) → **project screen**
+**Project list** (per-card progress, archive group) → **project screen**
 (Start/Continue/Pause · Restart/Archive/Cancel · Documents · handshake card · TransferPanel when
 kopeng is installed) → **DocDrawer**: read (own markdown, mermaid and highlighting), select a
 line to talk to the persona, decide incoming and outgoing requests one by one, edit directly,
@@ -240,14 +239,13 @@ attention — open question, standing request, moving input). Visual language: [
 
 ## 8 · Package content
 
-- **`workflows/` (3)** — `new-project-analysis` (14 steps: PRD · STACK+STRUCTURE · ARCHITECTURE
-  · SECURITY · ENVIRONMENT · DATABASE · API · DESIGN · GROWTH · LEGAL · CONTENT · TRD · TEST ·
-  PFD) · `existing-project-analysis` (no brief, the code is the evidence; ends at PFD) ·
+- **`workflows/` (3)** — `new-project-analysis` (13 steps: PRODUCT · STACK+STRUCTURE ·
+  ARCHITECTURE · SECURITY · ENVIRONMENT · DATABASE · API · DESIGN · GROWTH · LEGAL · CONTENT ·
+  ENGINEERING · TEST) · `existing-project-analysis` (no brief, the code is the evidence) ·
   `planning-pipeline` (the Version → Epic → Task split contract).
-- **`templates/`** — `AGENTS.md` · `core/` 12 skeletons · `foundation/` BRD PRD TRD PFD.
-- **`agents/` (11)** — architect, compliance-expert, copywriter, db-admin, designer,
-  devops-engineer, growth-expert, operation-manager, product-manager, qa-engineer,
-  security-engineer.
+- **`templates/`** — `AGENTS.md` · `docs/` 15 skeletons, `BRIEF.md` among them.
+- **`agents/` (10)** — architect, compliance-expert, copywriter, db-admin, designer,
+  devops-engineer, growth-expert, product-manager, qa-engineer, security-engineer.
 
 Each persona's `Upstream:` line must match its step's `inputs:` exactly; `test/order.test.ts`
 enforces that and the ordering.

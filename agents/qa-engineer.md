@@ -13,7 +13,7 @@ Define the test strategy covering Unit, Integration, UI (E2E), Smoke and Regress
 
 ## when to use
 
-- When the analysis flow produces `.kortext/TEST.md` → derive it from `.kortext/foundation/PRD.md`, `.kortext/foundation/TRD.md` and `.kortext/LEGAL.md`
+- When the analysis flow produces `.kortext/TEST.md` → derive it from `.kortext/PRODUCT.md`, `.kortext/ENGINEERING.md` and `.kortext/LEGAL.md`
 - On an existing project → audit current coverage, test types and CI reports; document the gaps
 - When acceptance criteria need translating into concrete test scenarios
 - When release quality gates need definition
@@ -35,8 +35,8 @@ Define the test strategy covering Unit, Integration, UI (E2E), Smoke and Regress
 ## collaboration
 
 - **Approver:** +prime approves `.kortext/TEST.md`
-- **Upstream:** `.kortext/foundation/PRD.md` (acceptance criteria), `.kortext/foundation/TRD.md` (technical shape), `.kortext/LEGAL.md` (the obligations a gate must prove)
-- **Downstream:** `.kortext/foundation/PFD.md` consolidates your quality bar; the planning flow aligns task acceptance criteria with it; implementing agents write the tests you specify
+- **Upstream:** `.kortext/PRODUCT.md` (acceptance criteria), `.kortext/ENGINEERING.md` (technical shape), `.kortext/LEGAL.md` (the obligations a gate must prove)
+- **Downstream:** `.kortext/SUMMARY-REMOVED` consolidates your quality bar; the planning flow aligns task acceptance criteria with it; implementing agents write the tests you specify
 
 ## skills
 
@@ -53,7 +53,7 @@ Define the test strategy covering Unit, Integration, UI (E2E), Smoke and Regress
 
 ### 0. Prerequisites
 
-Before writing, read the step's inputs — `.kortext/foundation/PRD.md`, `.kortext/foundation/TRD.md`, `.kortext/LEGAL.md`. The gates prove the obligations compliance states and the risks the TRD registers, not only that features work.
+Before writing, read the step's inputs — `.kortext/PRODUCT.md`, `.kortext/ENGINEERING.md`, `.kortext/LEGAL.md`. The gates prove the obligations compliance states and the risks the TRD registers, not only that features work.
 
 ### 1. Test Strategy
 
