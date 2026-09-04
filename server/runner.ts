@@ -1,4 +1,5 @@
 import type Database from 'better-sqlite3';
+import { randomUUID } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -13,6 +14,7 @@ import {
   workflowNameFor,
   type DocStep,
 } from './docs.js';
+import { scaffoldProject } from './projects.js';
 import { ensureReadiness } from './readiness.js';
 
 export interface Job {
@@ -27,6 +29,7 @@ export interface Job {
 }
 
 const STEP_TIMEOUT_MS = 15 * 60 * 1000;
+const PLAN_TIMEOUT_MS = 30 * 60 * 1000;
 
 export function listJobs(db: Database.Database, projectId: number): Job[] {
   return db
@@ -200,15 +203,29 @@ export async function advance(
     active(); // already looping — just wake it to re-scan
     return;
   }
-  // The readiness gate. A project whose evidence says nothing must produce
-  // nothing: no step starts until there is a brief worth analysing, or code to
-  // read. For a new project the verdict is cached per brief version, so this
-  // costs one engine run per edit of the brief, not one per approval.
-  if (!(await ensureReadiness(project, engine)).ready) return;
   let wake = () => {};
   const arm = () => new Promise<void>((resolve) => (wake = resolve));
+  // Claim the loop BEFORE anything is awaited. The gate below suspends, and a
+  // second approval arriving during that suspension would find no active loop
+  // and start a pool of its own — two loops, twice the cap, twice the spend.
   advancing.set(project.id, () => wake());
   try {
+    // A document deleted from .kortext/ would otherwise block every step under
+    // it forever, silently: it has no status, so it never counts as settled.
+    // The scaffold puts the skeleton back, which the panel already does on its
+    // own polling; the chain must not depend on someone having it open.
+    try {
+      scaffoldProject(project.repo_path, pkgRoot, {
+        skipBrief: (project.kind ?? 'new') === 'existing',
+      });
+    } catch {
+      /* repo may be gone; the gate below reports it */
+    }
+    // The readiness gate. A project whose evidence says nothing must produce
+    // nothing: no step starts until there is a brief worth analysing, or code to
+    // read. For a new project the verdict is cached per brief version, so this
+    // costs one engine run per edit of the brief, not one per approval.
+    if (!(await ensureReadiness(project, engine)).ready) return;
     const inFlight = new Set<Promise<unknown>>();
     for (;;) {
       // Paused = don't start new steps; running ones finish and the loop exits.
@@ -352,10 +369,11 @@ async function runRecheck(
   const job = db
     .prepare("INSERT INTO jobs (project_id, doc_rel, kind) VALUES (?, ?, 'recheck') RETURNING *")
     .get(project.id, readerRel) as Job;
-  const settle = (status: 'done' | 'failed', error?: string) =>
+  const settle = (status: 'done' | 'failed' | 'stopped', error?: string) =>
     db
       .prepare("UPDATE jobs SET status = ?, error = ?, finished_at = datetime('now') WHERE id = ?")
       .run(status, error ?? null, job.id);
+  const run = trackRun(project.id);
   const verdictRel = `.kortext/.recheck-${readerRel.replace(/[^A-Za-z0-9]/g, '-')}.json`;
   const verdictPath = join(project.repo_path, verdictRel);
   rmSync(verdictPath, { force: true });
@@ -377,9 +395,14 @@ async function runRecheck(
       cwd: project.repo_path,
       stdin: prompt,
       logPath: join(homedir(), '.kortext', 'logs', `p${project.id}-recheck.log`),
-      signal: new AbortController().signal,
+      signal: run.ctrl.signal,
       timeoutMs: 5 * 60 * 1000,
     });
+    if (res.aborted) {
+      rmSync(verdictPath, { force: true });
+      settle('stopped', 'stopped by pause/restart/cancel');
+      return;
+    }
     if (res.exitCode !== 0 || !existsSync(verdictPath)) {
       settle('failed', `${engine.id} returned no verdict for ${readerRel}`);
       return;
@@ -396,6 +419,8 @@ async function runRecheck(
   } catch (err) {
     rmSync(verdictPath, { force: true });
     settle('failed', (err as Error).message);
+  } finally {
+    run.done();
   }
 }
 
@@ -416,7 +441,12 @@ export function recheckDependents(
     (d) =>
       d.status === 'approved' && d.inputs.includes(sourceRel) && !runningDoc(db, project.id, d.rel),
   );
-  for (const r of readers) void runRecheck(db, project, r.rel, sourceRel, engine);
+  // One at a time. MAX_PARALLEL governs the chain loop, not this fan-out, and a
+  // document eight others read would otherwise start eight CLIs in one tick.
+  void readers.reduce(
+    (chain, r) => chain.then(() => runRecheck(db, project, r.rel, sourceRel, engine)),
+    Promise.resolve(),
+  );
 }
 
 // A revision the human applies. The document nobody's step produces — the brief
@@ -431,9 +461,11 @@ export async function proposeRevision(
   engine: EngineSpec,
   pkgRoot: string,
 ): Promise<{ proposal: string }> {
-  const scratch = join(project.repo_path, '.kortext', '.proposal.txt');
+  // One file per call: two proposals in flight would otherwise overwrite each
+  // other and hand both callers whichever draft finished last.
   // ponytail: .txt, not .md — listDocs scans .kortext/*.md and would list it as a document
-  rmSync(scratch, { force: true });
+  const scratchRel = `.proposal-${randomUUID().slice(0, 8)}.txt`;
+  const scratch = join(project.repo_path, '.kortext', scratchRel);
   const author = loadDocMap(pkgRoot, project.kind ?? 'new').get(rel)?.author ?? '+agent';
   const prompt = [
     `Another document has asked .kortext/${rel} to change. Draft that change.`,
@@ -442,7 +474,7 @@ export async function proposeRevision(
       : []),
     '',
     'HARD RULES:',
-    `- Read .kortext/${rel}. Write the FULL revised document to .kortext/.proposal.txt — the whole file, frontmatter included, not a fragment and not a diff.`,
+    `- Read .kortext/${rel}. Write the FULL revised document to .kortext/${scratchRel} — the whole file, frontmatter included, not a fragment and not a diff.`,
     '- Touch NO other file. Do not modify the document itself; the human applies your draft.',
     '- Keep the frontmatter exactly as it is, including the status line.',
     '- Keep every section heading verbatim, and keep the document in its own language.',
@@ -527,8 +559,14 @@ export async function runPlanning(
       stdin: lines.join('\n'),
       logPath: join(homedir(), '.kortext', 'logs', `p${project.id}-plan.log`),
       signal: run.ctrl.signal,
-      timeoutMs: 30 * 60 * 1000,
+      timeoutMs: PLAN_TIMEOUT_MS,
     });
+    if (res.timedOut) {
+      return settle(
+        'failed',
+        `the split ran past ${PLAN_TIMEOUT_MS / 60000} minutes and was stopped`,
+      );
+    }
     if (res.aborted) return settle('stopped', 'stopped by pause/restart/cancel');
     if (res.exitCode !== 0) {
       return settle(
@@ -625,6 +663,13 @@ export async function runStep(
       signal: run.ctrl.signal,
       timeoutMs: STEP_TIMEOUT_MS,
     });
+    // A run killed by its own clock is not a run the human stopped.
+    if (res.timedOut) {
+      return settle(
+        'failed',
+        `${step.output} ran past ${STEP_TIMEOUT_MS / 60000} minutes and was stopped — retry, or narrow the brief`,
+      );
+    }
     if (res.aborted) return settle('stopped', 'stopped by pause/restart/cancel');
     const outPath = join(project.repo_path, '.kortext', step.output);
     if (res.exitCode !== 0) {

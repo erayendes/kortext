@@ -217,3 +217,30 @@ test('a project carries its own engine; a project without one falls back to the 
   assert.equal(engineFor(db, { engine: 'nope' })?.id ?? null, selectedEngine(db)?.id ?? null);
   rmSync(work, { recursive: true, force: true });
 });
+
+test('a save with no content is refused, not written over the document', async () => {
+  const work = tempDir();
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Guard', repoPath: join(work, 'guard') }, pkgRoot);
+  const { buildApp } = await import('../server/app.js');
+  const app = buildApp(db, pkgRoot, join(work, 'db.sqlite'));
+  const server = app.listen(0);
+  const port = (server.address() as { port: number }).port;
+  const doc = join(work, 'guard', '.kortext', 'STACK.md');
+  const before = readFileSync(doc, 'utf8');
+
+  const save = (body: unknown) =>
+    fetch(`http://127.0.0.1:${port}/api/projects/${p.id}/docs/content`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+  assert.equal((await save({ rel: 'STACK.md' })).status, 400, 'a missing body is refused');
+  assert.equal((await save({ rel: 'STACK.md', content: '   ' })).status, 400, 'so is whitespace');
+  assert.equal(readFileSync(doc, 'utf8'), before, 'the document is untouched');
+  assert.equal((await save({ rel: 'STACK.md', content: '# mine\n' })).status, 200);
+  assert.equal(readFileSync(doc, 'utf8'), '# mine\n');
+  server.close();
+  rmSync(work, { recursive: true, force: true });
+});

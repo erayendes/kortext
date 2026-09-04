@@ -156,7 +156,9 @@ A refused brief is demoted `approved → draft`: a document waiting on a human b
 steps (unwritten, inputs settled, not running), starts at most **3 in parallel**, then waits on
 `Promise.race` for either a completion or a wake. Approval routes call the same `advance`; a
 running loop is woken rather than duplicated, so an approval does not wait for the next
-completion while the pool has room. `paused` only stops new steps; a running one finishes.
+completion while the pool has room. `paused` only stops new steps; a running one finishes. The
+loop is claimed before the gate is awaited, so two approvals landing in the same second wake one
+chain rather than starting two pools.
 
 **Stopping is two moves, in this order.** Pause, restart and cancel all set `paused` in the
 database *before* they abort the live runs. Aborting alone is not enough: the stopped steps
@@ -183,8 +185,8 @@ line, not prose · prose in the document's language, every name in English.
 | `explainDoc` | line-anchored Q&A with the author persona | nothing — the answer lives in the panel |
 
 `recheckDependents` fires when a rewritten document is approved: every **approved** document
-that reads it is judged one by one. Silent on the first pass, when nothing downstream is
-approved yet.
+that reads it is judged **one at a time**, tracked like any other run, so a document eight others
+read does not start eight CLIs at once and pause can stop the fan-out.
 
 **Planning (`runPlanning`).** "Transfer to Kopeng": one long run (30 min) producing
 `.kopeng/project.yaml` + `versions/` + `epics/` + `tasks/`; missing `project.yaml` or zero tasks
@@ -258,7 +260,7 @@ enforces that and the ordering.
 
 ## 9 · Verification
 
-`npm test` → `node:test`, **60 tests**, six files: `order` (a step cannot read a document
+`npm test` → `node:test`, **62 tests**, six files: `order` (a step cannot read a document
 written after it; personas match their step; skeletons keep both required sections) · `docs`
 (frontmatter, request parsing, open questions, ordering) · `runner` (producibility, prompt
 assembly, job lifecycle, nothing starts after an abort) · `readiness` (floor threshold, template recognition, source counting)

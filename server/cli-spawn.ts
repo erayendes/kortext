@@ -43,6 +43,8 @@ export type SpawnCliResult = {
   stderrTail: string;
   /** True if AbortSignal triggered the kill. */
   aborted: boolean;
+  /** True when this run's own timeout killed it, rather than a caller's abort. */
+  timedOut: boolean;
 };
 
 export async function spawnCli(opts: SpawnCliOptions): Promise<SpawnCliResult> {
@@ -56,6 +58,7 @@ export async function spawnCli(opts: SpawnCliOptions): Promise<SpawnCliResult> {
       stdoutTail: '',
       stderrTail: '',
       aborted: true,
+      timedOut: false,
     };
   }
 
@@ -130,6 +133,7 @@ export async function spawnCli(opts: SpawnCliOptions): Promise<SpawnCliResult> {
   }
 
   let aborted = false;
+  let timedOut = false;
   let killTimer: NodeJS.Timeout | null = null;
   let timeoutTimer: NodeJS.Timeout | null = null;
 
@@ -142,6 +146,7 @@ export async function spawnCli(opts: SpawnCliOptions): Promise<SpawnCliResult> {
 
   if (opts.timeoutMs !== undefined) {
     timeoutTimer = setTimeout(() => {
+      timedOut = true; // the caller aborted nothing; this run outstayed its limit
       onAbort();
     }, opts.timeoutMs);
   }
@@ -161,6 +166,7 @@ export async function spawnCli(opts: SpawnCliOptions): Promise<SpawnCliResult> {
           stdoutTail: stdoutBuf,
           stderrTail: stderrBuf + `\n[spawn-error] ${err.message}`,
           aborted,
+          timedOut,
         });
       });
     });
@@ -173,6 +179,7 @@ export async function spawnCli(opts: SpawnCliOptions): Promise<SpawnCliResult> {
           stdoutTail: stdoutBuf,
           stderrTail: stderrBuf,
           aborted,
+          timedOut,
         });
       });
     });

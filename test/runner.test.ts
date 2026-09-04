@@ -501,8 +501,10 @@ test('a proposed revision reaches the editor, never the document', async () => {
   writeFileSync(
     script,
     `#!/bin/sh
-cat > /dev/null
-printf -- '---\\nstatus: draft\\nauthor: +prime\\n---\\n\\n# Project Brief (BRD)\\n\\nrevised\\n' > .kortext/.proposal.txt
+prompt=$(cat)
+# the scratch file is named in the prompt, one per call — write where told
+rel=$(printf '%s' "$prompt" | grep -o '\\.kortext/\\.proposal-[a-z0-9]*\\.txt' | head -1)
+printf -- '---\\nstatus: draft\\nauthor: +prime\\n---\\n\\n# Brief\\n\\nrevised\\n' > "$rel"
 `,
   );
   chmodSync(script, 0o755);
@@ -640,4 +642,62 @@ test('cancel takes its own logs back, and leaves every other project alone', asy
   assert.deepEqual(readdirSync(logs).sort(), ['p70-STACK.md.log', 'p8-plan.log']);
   removeRunLogs(999, join(work, 'nope')); // a directory that does not exist is not an error
   rmSync(work, { recursive: true, force: true });
+});
+
+test('two approvals landing together run one chain, not two pools', async () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Race', repoPath: join(work, 'race'), code: 'RCE' }, pkgRoot);
+  writeFileSync(
+    join(work, 'race', BRIEF_REL),
+    `---\nstatus: approved\n---\n\n${'A brief long enough to clear the floor. '.repeat(12)}\n`,
+    'utf8',
+  );
+  const slow = join(work, 'slow.sh');
+  writeFileSync(
+    slow,
+    `#!/bin/sh
+prompt=$(cat)
+case "$prompt" in
+  *readiness.json*) sleep 0.3; printf '{ "ready": true }\\n' > .kortext/.readiness.json; exit 0;;
+esac
+rel=$(printf '%s' "$prompt" | grep 'Produce EXACTLY' | sed 's/.*: \\.kortext\\///')
+sleep 0.4
+printf -- '---\\nstatus: draft\\nauthor: +mock\\n---\\n\\n# S\\n' > ".kortext/$rel"
+`,
+  );
+  chmodSync(slow, 0o755);
+  const engine = { id: 'slow', binary: slow, args: [], installHint: '' };
+  const { advance } = await import('../server/runner.js');
+
+  // Both callers arrive while the gate is still out — the second must find the
+  // loop already claimed rather than starting a pool of its own.
+  await Promise.all([advance(db, p, engine, pkgRoot), advance(db, p, engine, pkgRoot)]);
+  const perDoc = new Map<string, number>();
+  for (const j of listJobs(db, p.id)) perDoc.set(j.doc_rel, (perDoc.get(j.doc_rel) ?? 0) + 1);
+  for (const [rel, n] of perDoc) assert.equal(n, 1, `${rel} ran ${n} times, expected once`);
+  rmSync(work, { recursive: true, force: true });
+});
+
+test('a step killed by its own clock says so, and is not blamed on the human', async () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Slow', repoPath: join(work, 'slow'), code: 'SLW' }, pkgRoot);
+  const { spawnCli } = await import('../server/cli-spawn.js');
+  const sleeper = join(work, 'sleeper.sh');
+  writeFileSync(sleeper, '#!/bin/sh\ncat > /dev/null\nsleep 30\n');
+  chmodSync(sleeper, 0o755);
+  const res = await spawnCli({
+    binary: sleeper,
+    args: [],
+    cwd: work,
+    logPath: join(work, 'log.txt'),
+    signal: new AbortController().signal,
+    timeoutMs: 150,
+    sigkillDelayMs: 50,
+  });
+  assert.equal(res.timedOut, true, 'the run must report its own timeout');
+  assert.equal(res.aborted, true, 'a timeout still kills the process');
+  rmSync(work, { recursive: true, force: true });
+  assert.ok(p.id > 0);
 });

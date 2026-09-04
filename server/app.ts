@@ -21,7 +21,14 @@ import {
 import { pickDirectoryNative } from './pick-directory.js';
 import { spawnSync } from 'node:child_process';
 import { readdirSync } from 'node:fs';
-import { detectEngines, engineFor, selectedEngine, setSetting, ENGINES } from './engines.js';
+import {
+  detectEngines,
+  engineFor,
+  forgetDetectedEngines,
+  selectedEngine,
+  setSetting,
+  ENGINES,
+} from './engines.js';
 import {
   abortRuns,
   advance,
@@ -106,6 +113,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
 
   app.put('/api/engines', (req, res) => {
     const { id } = req.body ?? {};
+    forgetDetectedEngines(); // the user is looking at this list; read the disk again
     if (!ENGINES.some((e) => e.id === id)) return res.status(400).json({ error: 'unknown engine' });
     setSetting(db, 'engine', String(id));
     res.json({ selected: id });
@@ -289,8 +297,15 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     const project = projectOr404(req.params.id, res);
     if (!project) return;
     const { rel, content, settleRequests } = req.body ?? {};
+    // A save with no content is a client bug, not an instruction to empty an
+    // approved document: the frontmatter would go with the text, the document
+    // would read as unwritten, and the chain would spend a run replacing what
+    // the human had already approved.
+    if (typeof content !== 'string' || content.trim() === '') {
+      return res.status(400).json({ error: 'content is required' });
+    }
     try {
-      writeFileSync(docPath(project, String(rel)), String(content ?? ''), 'utf8');
+      writeFileSync(docPath(project, String(rel)), content, 'utf8');
       // Saving the agent's draft IS the answer to the demands that produced it.
       // Without this the change landed on disk and the request still stood, so
       // the document never left "Needs you" — the loop had no way to close.

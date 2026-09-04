@@ -36,11 +36,25 @@ export const ENGINES: EngineSpec[] = [
   },
 ];
 
+// `which` costs a blocking spawn per engine, and the panel asks for the verdict
+// every few seconds while a project screen is open. What it answers changes when
+// someone installs a CLI, so a short cache is free correctness.
+const DETECT_TTL_MS = 5000;
+let detected: { at: number; engines: Array<EngineSpec & { available: boolean }> } | null = null;
+
 export function detectEngines(): Array<EngineSpec & { available: boolean }> {
-  return ENGINES.map((e) => ({
+  if (detected && Date.now() - detected.at < DETECT_TTL_MS) return detected.engines;
+  const engines = ENGINES.map((e) => ({
     ...e,
     available: spawnSync('which', [e.binary], { stdio: 'ignore' }).status === 0,
   }));
+  detected = { at: Date.now(), engines };
+  return engines;
+}
+
+/** Forget the cache — the user just told us the installed set may have changed. */
+export function forgetDetectedEngines(): void {
+  detected = null;
 }
 
 export function getSetting(db: Database.Database, key: string): string | null {
