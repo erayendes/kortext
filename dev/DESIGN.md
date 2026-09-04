@@ -122,6 +122,24 @@ setin dışında bir durum rengi icat edilmez.
 --pink:#c02a72;   --pink-bg:#fdebf3;   --pink-border:#f6cede;    /* talep, hareketli girdi */
 ```
 
+#### Aynı palet, üç bağlam
+
+Bu altı renk arayüzde **üç ayrı dil** konuşur. Karışmazlar çünkü hiçbiri diğerinin yanında
+durmaz: durum satırın kenarında, uyarı belge gövdesinde, sözdizimi kod bloğunun içinde.
+
+| renk | satırda (durum) | gövdede (uyarı) | blokta (sözdizimi) |
+|---|---|---|---|
+| yeşil | approved | Tip | string |
+| amber | sıra sende, duraklatıldı | Warning | sayı |
+| mor | pending | Important | anahtar kelime |
+| mavi | yazılıyor | Note | JSON anahtarı |
+| kırmızı | failed | Caution | — |
+| pembe | talep, bağımlılık | — | — |
+
+Kural değişmedi: **yeni durum rengi icat edilmez.** Genişleyen şey, bir rengin nerede
+okunduğuna göre ne söylediği. Bir belge gövdesindeki amber `Warning` bir durum değildir;
+o satırın kendisi bir durum taşımıyor.
+
 ---
 
 ## 3 · Tipografi
@@ -408,7 +426,7 @@ Belgenin üstünde duran bilgi şeritleri. **Rengi, kimin sırada olduğunu söy
 
 Panel başlığı tek satır: **Kortext | project brain: [motor]**.
 
-Footer: solda **Kortext v5.0.0 by Milowda** ve **Kopeng — task board**, sağda tema anahtarı
+Footer: solda **Kortext v3.1.0 by Milowda** ve **Kopeng — task board**, sağda tema anahtarı
 (`.seg-sm`). Bir kez kurulup unutulan bir ayar her ekranda üstte durmaz.
 
 | bant | renk | anlamı |
@@ -436,13 +454,85 @@ Panelin render ettiği markdown. Aynı yedi boyu kullanır: gövde `--fs-body`, 
 
 İkisi aynı rengi paylaşırsa hangisinin sende olduğu kaybolur.
 
+Pembe yalnız **ayakta duran** talebe düşer. Kapanmış bir talep (`- [x]`) belgede kalır ama
+boyanmaz: o artık bir borç değil, ne olduğunun kaydıdır — altındaki satır neyin kapattığını
+söyler.
+
 Açık soru her zaman `#n` ile numaralanır (`.kx-qno`) — madde imi (`•`) o satırda basılmaz,
 ikisi aynı asılı girintiye düşüp üst üste binerdi. Not eklenince (`.noted`) amber zemin geri
 çekilir, yalnız sol çubuk kalır: zemin + çubuk üst üste amber-üstüne-amber kahverengiye
 kayardı.
 
-Alıntı (`>`) gri zemin kullanır, kenar çizgisi yok — seçim/not çubuğu (`box-shadow: inset 3px`)
-zaten sol kenarı işaretliyor, ikinci bir çizgi üst üste binerdi.
+### Alıntı
+
+Alıntı (`>`) zeminsizdir: sol kenarında gri bir çubuk taşır, GitHub'daki gibi. Çubuk `border`
+değil, **seçim/not çubuğuyla aynı mekanizma** (`box-shadow: inset 3px`) — böylece seçildiğinde
+mavi, not alındığında amber çubuk onun *yerine* geçer, yanına eklenmez. İki ayrı mekanizma
+kullanılsaydı yan yana iki şerit çıkardı; bu yüzden bir zamanlar çubuk hiç çizilmiyordu.
+
+Çubuk, bloğun kenarından değil **başlık sütunundan** başlar (`margin-left: 8px` — `.kx-block`'un
+kendi iç boşluğu kadar). Bir kural, hizalandığı metnin dışına taşarsa kenar boşluğu gibi okunur.
+
+### Uyarılar
+
+GitHub'ın `> [!NOTE]` sözdizimi. Beş tür, her biri kendi simgesi + etiketi + zemini ile; blok
+**tek parça** olarak ayrıştırılır, yani okuyucu uyarının tamamına soru sorar, bir satırına değil.
+
+| tür | renk |
+|---|---|
+| `NOTE` | mavi |
+| `TIP` | yeşil |
+| `IMPORTANT` | mor |
+| `WARNING` | amber |
+| `CAUTION` | kırmızı |
+
+Renkler §2'deki durum paletidir; anlamları bağlamdan gelir (§2 · *Aynı palet, üç bağlam*).
+Simgeler 16px gömülü SVG, harici paket yok — rengi bloktan miras alırlar.
+
+### Kod
+
+Satır içi `` `kod` `` cümlenin içinde bir jetondur: 0.9em, `--bg-inset` zemin, 4px köşe.
+İkinci bir yazı tipi gibi değil, aynı cümlenin bir parçası gibi okunmalı.
+
+Blok, çerçeveli bir panel ve sağ üstünde bir **Copy** düğmesi taşır; düğme hover'da belirir,
+basılınca ✓ *Copied* olur ve 1.6 sn sonra kendine döner. Bir kod bloğu okunmak için değil,
+başka bir yere götürülmek için oradadır.
+
+Sözdizimi renklendirmesi kendi yazdığımız boyayıcıdan gelir (`ui/src/highlight.ts`, bağımlılık
+yok). Altı jeton türü, §2 paletinden:
+
+| jeton | renk |
+|---|---|
+| anahtar kelime / komut | mor |
+| string | yeşil |
+| sayı | amber |
+| JSON anahtarı | mavi |
+| yorum | `--fg-faint`, italik |
+| bayrak (`--save-dev`) | `--fg-muted` |
+
+Tanımadığı dil ya da dilsiz blok **hiç boyanmaz** — klasör ağaçları ve çıktı dökümleri düz kalır.
+Boyayıcının tek katı kuralı: giren metin ile çıkan metin birebir aynıdır.
+
+### Listeler ve kutular
+
+Üst seviye madde dolu (`•`), iç içe olan içi boş (`◦`) işaret taşır; girinti kaynaktaki
+girintiden gelir. 80 karakterde sarılan bir maddenin devam satırı kendi maddesine katılır —
+listeden kopup sol kenara düşmez.
+
+`- [ ]` ve `- [x]` gerçek kutu olarak çizilir. Kutu **salt okunurdur**: işareti belgeyi yazan
+koyar, panel değil. Kabul kriteri de kapanmış bir revizyon talebi de aynı kutuyla okunur.
+
+### Başlıklar
+
+`H1` ve `H2` altlarında ince bir çizgi taşır (`--border`). Bölüm sınırı, boşluktan daha ucuz
+ve daha kesin okunur.
+
+### Öneri diff'i
+
+Ajanın taslağı ayrı bir kutuda değil, **editörün kendisinde** gösterilir: belgenin tamamı,
+değişen satırlar işaretli. Çıkan satır kırmızı (`--red-bg`), gelen satır yeşil (`--green-bg`),
+üstte kaç satırın değiştiği ve **Edit text** — düz metin editörüne geçiş. İki kutu iki belge
+demekti; okuyucu ikisini kafasında birleştirmek zorunda kalıyordu.
 
 ---
 
