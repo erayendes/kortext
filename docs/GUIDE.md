@@ -83,10 +83,14 @@ says. The one exception is `dependent`, which is news, not a task.
 
 ## Running, pausing, changing the engine
 
-The engine — `claude`, `codex` or `gemini` — belongs to the project. You pick it when you add
-the project, and the dropdown next to Start changes it later. That is the move when a quota runs
-out: switch, and the steps that start afterwards run on the other CLI. Whatever is running at
-that moment finishes on the old one.
+The engine — `claude`, `codex` or `gemini` — belongs to the project, not to Kortext. You pick it
+when you add the project, and the dropdown next to Start changes it later. That is the move when
+a quota runs out: switch, and the steps that start afterwards run on the other CLI. Whatever is
+running at that moment finishes on the old one.
+
+Two projects can sit on two different CLIs, and neither disturbs the other. If you uninstall the
+one a project was using, that project does not stop — it falls back to whichever CLI is still
+installed, and the dropdown shows you what it fell back to.
 
 - **Pause** stops new steps from starting; a running step is stopped too.
 - **Continue** picks the chain back up.
