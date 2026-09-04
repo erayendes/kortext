@@ -12,7 +12,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { openDb } from '../server/db.js';
-import { createProject } from '../server/projects.js';
+import { createProject, BRIEF_REL } from '../server/projects.js';
 import { setFrontmatterStatus, docPath, listDocs } from '../server/docs.js';
 import {
   abortRuns,
@@ -578,6 +578,51 @@ test('a verdict becomes a demand in the document that caused it', async () => {
   assert.match(
     readFileSync(docPath(p, 'DESIGN.md'), 'utf8'),
     /## Revision Requests\n\n- `CONTENT\.md` —/,
+  );
+  rmSync(work, { recursive: true, force: true });
+});
+
+test('aborting alone lets the chain restart what it just stopped; pausing first does not', async () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Stop', repoPath: join(work, 'stop'), code: 'STP' }, pkgRoot);
+  writeFileSync(
+    join(work, 'stop', BRIEF_REL),
+    `---\nstatus: approved\n---\n\n${'A brief long enough to clear the floor. '.repeat(12)}\n`,
+    'utf8',
+  );
+  const slow = join(work, 'slow.sh');
+  writeFileSync(
+    slow,
+    `#!/bin/sh
+prompt=$(cat)
+case "$prompt" in
+  *readiness.json*) printf '{ "ready": true }\\n' > .kortext/.readiness.json; exit 0;;
+esac
+rel=$(printf '%s' "$prompt" | grep 'Produce EXACTLY' | sed 's/.*: \\.kortext\\///')
+sleep 0.5
+printf -- '---\\nstatus: draft\\nauthor: +mock\\n---\\n\\n# S\\n' > ".kortext/$rel"
+`,
+  );
+  chmodSync(slow, 0o755);
+  const engine = { id: 'slow', binary: slow, args: [], installHint: '' };
+  const { advance, abortRuns } = await import('../server/runner.js');
+
+  // What cancel and restart do: pause the project, THEN abort. Without the pause
+  // the stopped steps settle, the loop wakes, sees the same documents unwritten
+  // and starts them again — inside the window the route is waiting through.
+  const loop = advance(db, p, engine, pkgRoot);
+  await new Promise((r) => setTimeout(r, 150));
+  db.prepare('UPDATE projects SET paused = 1 WHERE id = ?').run(p.id);
+  abortRuns(p.id);
+  await loop;
+
+  const started = listJobs(db, p.id).length;
+  await new Promise((r) => setTimeout(r, 300)); // the window a route would wait through
+  assert.equal(listJobs(db, p.id).length, started, 'no step may start after the abort');
+  assert.ok(
+    listJobs(db, p.id).every((j) => j.status !== 'running'),
+    'every job settles when the project is paused and the runs are aborted',
   );
   rmSync(work, { recursive: true, force: true });
 });

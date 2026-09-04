@@ -172,6 +172,9 @@ of the handshake. Without kopeng installed, the button is replaced by an install
 - [ ] Restart wipes and lands ready, not running.
 - [ ] Cancel leaves a hand-written `AGENTS.md` in place, minus the block.
 - [ ] Restart and Cancel both arm in place before they act.
+- [ ] **Cancel while a step is running leaves no CLI behind.** `pgrep -f "claude --print"`
+      (or your engine) must come back empty a few seconds later — the route pauses the project
+      before it aborts, so the chain cannot restart what it just stopped.
 
 ---
 

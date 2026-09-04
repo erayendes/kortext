@@ -219,6 +219,11 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     const project = projectOr404(req.params.id, res);
     if (!project) return;
     try {
+      // Pause FIRST. Aborting alone is not enough: the stopped steps settle, the
+      // chain loop wakes, sees the documents still unwritten and starts them
+      // again inside the very window we are waiting through — leaving CLIs
+      // running for a project that is about to be wiped.
+      db.prepare('UPDATE projects SET paused = 1 WHERE id = ?').run(project.id);
       abortRuns(project.id);
       // Give SIGTERM a moment so a dying CLI can't rewrite the wiped files.
       await new Promise((r) => setTimeout(r, 1500));
@@ -243,12 +248,17 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     const project = projectOr404(req.params.id, res);
     if (!project) return;
     try {
+      // Pause before aborting, for the reason restart gives above.
+      db.prepare('UPDATE projects SET paused = 1 WHERE id = ?').run(project.id);
       abortRuns(project.id);
       await new Promise((r) => setTimeout(r, 1500));
       rmSync(join(project.repo_path, '.kortext'), { recursive: true, force: true });
       rmSync(join(project.repo_path, '.kopeng'), { recursive: true, force: true });
       uninstallContract(project.repo_path);
       removeProject(db, project.id);
+      // The row is gone, so nothing can pause the loop any more; anything that
+      // slipped through between the abort and here is killed now.
+      abortRuns(project.id);
       res.json({ ok: true });
     } catch (err) {
       res.status(400).json({ error: (err as Error).message });
