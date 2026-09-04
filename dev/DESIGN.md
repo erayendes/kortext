@@ -275,9 +275,10 @@ The demand band shares its pink with the `change request` badge: you see the bad
 open the document and find the same pink. The dependency band is the `dependent` badge enlarged —
 hollow, framed.
 
-Panel header is one line: **Kortext | project brain**, and nothing else unless there is no
-agent CLI at all — the engine belongs to a project, so its control sits on the project screen,
-beside Start, at the same height as Start. Footer: **Kortext v3.1.0 by
+The panel header carries the wordmark and nothing else, unless there is no agent CLI at all —
+the engine belongs to a project, so its control sits on the project screen beside Start, at the
+same height as Start. A tagline in the chrome is a thing the reader learns once and then reads
+forever. Footer: **Kortext v3.1.0 by
 Milowda** and **Kopeng — task board** on the left, the theme switch (`.seg-sm`) on the right. A
 setting configured once does not sit at the top of every screen.
 

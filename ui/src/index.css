@@ -1139,10 +1139,6 @@ body {
   font-size: var(--fs-section);
   letter-spacing: -0.01em;
 }
-.kx-tagline {
-  font-size: var(--fs-ui);
-  color: var(--fg-faint);
-}
 .kx-main {
   max-width: 860px;
   width: 100%;
