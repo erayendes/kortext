@@ -28,9 +28,10 @@ Eski v3 kodu ve tasarım turları (düzenleme YOK)    → archive/
 > sitesi buradan kurulacak.
 > **`dev/`** = geliştiricinin okuduğu, dört dosya: `ARCHITECTURE`, `DESIGN`, `PRODUCT`,
 > `TEST`. Günlük tutmuyoruz: bir karar ait olduğu belgeye yazılır, açık iş GitHub issue'suna.
-> **`archive/`** = bir daha düzenlenmeyecek olan: `v3-engine/` (eski motor), `DECISIONS.md`
-> (karar günlüğü), `HANDOVER.md` (oturum devir notları), `TODO.md` (eski iş listesi),
-> `concepts/` (v2–v6 wireframe ve mockup'lar), `specs/`, `superpowers/`.
+> **`archive/`** = bir daha düzenlenmeyecek olan, artık **yalnız yerelde** (`.gitignore`'da):
+> `v3-engine/` (eski motor), `DECISIONS.md` (karar günlüğü), `HANDOVER.md` (oturum devir
+> notları), `TODO.md` (eski iş listesi), `CHANGELOG-v3.md`, `concepts/` (v2–v6 wireframe ve
+> mockup'lar), `specs/`, `superpowers/`.
 
 Detaylı mimari için [dev/ARCHITECTURE.md](dev/ARCHITECTURE.md).
 

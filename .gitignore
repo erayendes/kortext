@@ -10,6 +10,10 @@ coverage/
 .kortext/
 *.tgz
 
+# The archive stays on this machine: nothing reads it, nothing edits it, and a
+# clone should not carry 5 MB of a product that was replaced.
+archive/
+
 # Editor / IDE / AI tooling — local to each developer's machine
 .claude/
 .cursor/
