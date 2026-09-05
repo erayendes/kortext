@@ -64,18 +64,29 @@ export async function spawnCli(opts: SpawnCliOptions): Promise<SpawnCliResult> {
     };
   }
 
+  // EXPERIMENTAL on Windows, written from the documented behaviour and never
+  // run there: npm installs a global CLI as a `.cmd` shim, which spawn cannot
+  // execute without a shell, and a Windows process has no process group for a
+  // negative-pid kill to reach. Both differences are handled below. The shell
+  // is safe here only because nothing user-written reaches the command line:
+  // the binary and args come from the ENGINES table and the prompt goes in
+  // over stdin. Keep it that way.
+  const onWindows = process.platform === 'win32';
   const proc = spawn(opts.binary, opts.args, {
     cwd: opts.cwd,
     stdio: ['pipe', 'pipe', 'pipe'],
-    // shell: false is the default for spawn() — being explicit for reviewers
-    shell: false,
+    // false everywhere it can be — see the note above for why Windows cannot.
+    shell: onWindows,
     // Own process group so an abort can kill the whole tree — agent CLIs spawn
     // children that would otherwise keep the pipes (and our 'close') alive.
-    detached: true,
+    // Windows has no equivalent, and `detached` there only means "survives the
+    // parent", which is the opposite of what an abort wants.
+    detached: !onWindows,
   });
 
   const killTree = (sig: NodeJS.Signals) => {
     try {
+      if (onWindows) throw new Error('no process groups'); // straight to the fallback
       process.kill(-proc.pid!, sig); // negative pid = the process group
     } catch {
       try {

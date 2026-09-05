@@ -36,9 +36,22 @@ export const ENGINES: EngineSpec[] = [
   },
 ];
 
-// `which` costs a blocking spawn per engine, and the panel asks for the verdict
-// every few seconds while a project screen is open. What it answers changes when
-// someone installs a CLI, so a short cache is free correctness.
+/**
+ * Is this command on PATH? `which` does not exist on Windows — the shell
+ * builtin there is `where`, and asking for `which` returns ENOENT, which reads
+ * as "no CLI installed" and leaves the whole product inert.
+ *
+ * EXPERIMENTAL on Windows: written from the documented behaviour of `where` and
+ * of Node's spawn, never run on the platform.
+ */
+export function onPath(binary: string): boolean {
+  const lookup = process.platform === 'win32' ? 'where' : 'which';
+  return spawnSync(lookup, [binary], { stdio: 'ignore' }).status === 0;
+}
+
+// The lookup costs a blocking spawn per engine, and the panel asks for the
+// verdict every few seconds while a project screen is open. What it answers
+// changes when someone installs a CLI, so a short cache is free correctness.
 const DETECT_TTL_MS = 5000;
 let detected: { at: number; engines: Array<EngineSpec & { available: boolean }> } | null = null;
 
@@ -46,7 +59,7 @@ export function detectEngines(): Array<EngineSpec & { available: boolean }> {
   if (detected && Date.now() - detected.at < DETECT_TTL_MS) return detected.engines;
   const engines = ENGINES.map((e) => ({
     ...e,
-    available: spawnSync('which', [e.binary], { stdio: 'ignore' }).status === 0,
+    available: onPath(e.binary),
   }));
   detected = { at: Date.now(), engines };
   return engines;

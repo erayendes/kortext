@@ -19,12 +19,12 @@ import {
   setFrontmatterStatus,
 } from './docs.js';
 import { pickDirectoryNative } from './pick-directory.js';
-import { spawnSync } from 'node:child_process';
 import { readdirSync } from 'node:fs';
 import {
   detectEngines,
   engineFor,
   forgetDetectedEngines,
+  onPath,
   selectedEngine,
   setSetting,
   ENGINES,
@@ -636,7 +636,7 @@ ${body}`,
     }
     res.json({
       analysisComplete: analysisComplete(db, project, pkgRoot),
-      kopengInstalled: spawnSync('which', ['kopeng'], { stdio: 'ignore' }).status === 0,
+      kopengInstalled: onPath('kopeng'),
       transferred,
     });
   });

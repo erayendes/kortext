@@ -93,7 +93,13 @@ Juggling Node versions? `brew install fnm && fnm install 22 && fnm default 22`.
 </details>
 
 <details>
-<summary><b>Windows</b></summary>
+<summary><b>Windows</b> — experimental</summary>
+
+> **Windows support is experimental.** Kortext is developed and tested on macOS and Linux.
+> The Windows paths — finding your agent CLI with `where`, and running the `.cmd` shim npm
+> installs — are written from the documented behaviour but have not been run on Windows.
+> If something does not work, [open an issue](https://github.com/erayendes/kortext/issues);
+> it is a gap, not your setup.
 
 Install Node 22 from **nodejs.org** (the LTS labelled v22.x). On the *Tools for Native Modules*
 screen, tick **"Automatically install the necessary tools"** — Kortext's SQLite binding needs
