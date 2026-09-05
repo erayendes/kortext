@@ -159,7 +159,12 @@ export function deriveCode(name: string): string {
   const cleaned = name
     .toUpperCase()
     .replace(/[ÇĞİIÖŞÜ]/g, (c) => 'CGIIOSU'['ÇĞİIÖŞÜ'.indexOf(c)] ?? c)
-    .replace(/[^A-Z0-9]/g, '');
+    .replace(/[^A-Z0-9]/g, '')
+    // A code must start with a letter, and createProject refuses one that does
+    // not — so a name like "365 Tracker" used to fail on a code its author
+    // never typed. Drop the leading digits rather than hand back a code we
+    // are about to reject.
+    .replace(/^[0-9]+/, '');
   return (cleaned.slice(0, 5) || 'PROJ').padEnd(2, 'X');
 }
 

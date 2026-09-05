@@ -17,7 +17,9 @@ import { createProject, BRIEF_REL } from '../server/projects.js';
 import { setFrontmatterStatus, docPath, listDocs } from '../server/docs.js';
 import {
   abortRuns,
+  advance,
   buildStepPrompt,
+  proposeRevision,
   nextStep,
   recheckDependents,
   runStep,
@@ -759,5 +761,52 @@ test('pausing stops the recheck fan-out, it does not just stop the run in flight
   db.prepare('UPDATE projects SET paused = 1 WHERE id = ?').run(p.id);
   abortRuns(p.id);
   await new Promise((r) => setTimeout(r, 300));
+  rmSync(work, { recursive: true, force: true });
+});
+
+test('a draft the human asked for can be stopped, like every other run', async () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Stop', repoPath: join(work, 'stop') }, pkgRoot);
+
+  // Half a minute of CLI. If the run is not in the abort registry, the call
+  // below waits all of it; if it is, the abort lands in milliseconds.
+  const script = join(work, 'slow.sh');
+  writeFileSync(script, '#!/bin/sh\ncat > /dev/null\nsleep 30\n', 'utf8');
+  chmodSync(script, 0o755);
+  const engine = { id: 'slow', binary: script, args: [], installHint: '' };
+
+  const started = Date.now();
+  const call = proposeRevision(p, 'STACK.md', ['change it'], engine, pkgRoot);
+  await new Promise((r) => setTimeout(r, 400));
+  abortRuns(p.id);
+  await assert.rejects(call, /stopped/, 'an aborted draft says it was stopped');
+  assert.ok(Date.now() - started < 10_000, 'and it stops now, not when the CLI is done');
+  rmSync(work, { recursive: true, force: true });
+});
+
+test('a paused project does not spend a run on the readiness gate', async () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Gate', repoPath: join(work, 'gate') }, pkgRoot);
+
+  const witness = join(work, 'runs.txt');
+  const script = join(work, 'counting.sh');
+  writeFileSync(script, `#!/bin/sh\ncat > /dev/null\necho run >> ${witness}\nexit 0\n`, 'utf8');
+  chmodSync(script, 0o755);
+  const engine = { id: 'count', binary: script, args: [], installHint: '' };
+
+  // An approved brief is what makes the gate reach for the CLI at all.
+  writeFileSync(
+    join(work, 'gate', BRIEF_REL),
+    '---\nstatus: approved\n---\n\n' +
+      'A real product brief with enough substance to pass the floor. '.repeat(20),
+    'utf8',
+  );
+  db.prepare('UPDATE projects SET paused = 1 WHERE id = ?').run(p.id);
+
+  await advance(db, p, engine, pkgRoot);
+  const runs = existsSync(witness) ? readFileSync(witness, 'utf8').trim().split('\n').length : 0;
+  assert.equal(runs, 0, 'pause is read before the gate, not after it');
   rmSync(work, { recursive: true, force: true });
 });

@@ -210,6 +210,13 @@ export async function advance(
   // and start a pool of its own — two loops, twice the cap, twice the spend.
   advancing.set(project.id, () => wake());
   try {
+    // Before the gate, not after. The gate spawns a CLI, and its verdict is
+    // cached per brief version — so editing the brief while paused, which is
+    // the whole reason to pause, missed the cache and spent a run the loop
+    // below then refused to use. A row that is gone stops the loop too.
+    const before = db.prepare('SELECT paused FROM projects WHERE id = ?').get(project.id) as
+      { paused: number } | undefined;
+    if (!before || before.paused) return;
     // A document deleted from .kortext/ would otherwise block every step under
     // it forever, silently: it has no status, so it never counts as settled.
     // The scaffold puts the skeleton back, which the panel already does on its
@@ -315,15 +322,25 @@ export async function explainDoc(
     '',
     `QUESTION:\n${question}`,
   ].join('\n');
-  const res = await spawnCli({
-    binary: engine.binary,
-    args: engine.args,
-    cwd: project.repo_path,
-    stdin: prompt,
-    logPath: join(homedir(), '.kortext', 'logs', `p${project.id}-explain.log`),
-    signal: new AbortController().signal,
-    timeoutMs: 3 * 60 * 1000,
-  });
+  // Tracked like every other spawn. An untracked signal is one `abortRuns`
+  // cannot see, so pause, restart and cancel walked straight past this run —
+  // and cancel then wiped the directory it was still reading.
+  const run = trackRun(project.id);
+  let res;
+  try {
+    res = await spawnCli({
+      binary: engine.binary,
+      args: engine.args,
+      cwd: project.repo_path,
+      stdin: prompt,
+      logPath: join(homedir(), '.kortext', 'logs', `p${project.id}-explain.log`),
+      signal: run.ctrl.signal,
+      timeoutMs: 3 * 60 * 1000,
+    });
+  } finally {
+    run.done();
+  }
+  if (res.aborted) throw new Error('the question was stopped');
   if (res.exitCode !== 0) {
     throw new Error(
       `${engine.id} CLI failed: ${(res.stderrTail || res.stdoutTail).trim().slice(-300)}`,
@@ -506,15 +523,28 @@ export async function proposeRevision(
     'REQUESTS:',
     ...notes.map((n) => `- ${n}`),
   ].join('\n');
-  const res = await spawnCli({
-    binary: engine.binary,
-    args: engine.args,
-    cwd: project.repo_path,
-    stdin: prompt,
-    logPath: join(homedir(), '.kortext', 'logs', `p${project.id}-propose.log`),
-    signal: new AbortController().signal,
-    timeoutMs: 5 * 60 * 1000,
-  });
+  // Tracked, for the reason explainDoc gives above — and this one WRITES into
+  // `.kortext/`, so an untracked run outlived a cancel that had just deleted
+  // that directory and put a file back into it.
+  const run = trackRun(project.id);
+  let res;
+  try {
+    res = await spawnCli({
+      binary: engine.binary,
+      args: engine.args,
+      cwd: project.repo_path,
+      stdin: prompt,
+      logPath: join(homedir(), '.kortext', 'logs', `p${project.id}-propose.log`),
+      signal: run.ctrl.signal,
+      timeoutMs: 5 * 60 * 1000,
+    });
+  } finally {
+    run.done();
+  }
+  if (res.aborted) {
+    rmSync(scratch, { force: true });
+    throw new Error('the draft was stopped');
+  }
   if (res.exitCode !== 0) {
     throw new Error(
       `${engine.id} CLI failed: ${(res.stderrTail || res.stdoutTail).trim().slice(-300)}`,

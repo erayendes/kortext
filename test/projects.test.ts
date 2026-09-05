@@ -13,6 +13,7 @@ import {
   scaffoldProject,
   uninstallContract,
   BRIEF_REL,
+  deriveCode,
 } from '../server/projects.js';
 
 const pkgRoot = process.cwd();
@@ -325,4 +326,16 @@ test('a cross-site page cannot reach the API, and the vite proxy still can', asy
     server.close();
     rmSync(work, { recursive: true, force: true });
   }
+});
+
+test('a name that starts with a digit still yields a code the registry accepts', () => {
+  const work = tempDir();
+  const db = openDb(join(work, 'db.sqlite'));
+  // deriveCode used to keep the digits and hand back '365TR', which
+  // createProject then refused — over a code the author never typed.
+  const p = createProject(db, { name: '365 Tracker', repoPath: join(work, 'tracker') }, pkgRoot);
+  assert.match(p.code, /^[A-Z][A-Z0-9]{1,7}$/);
+  assert.equal(deriveCode('2048 Game'), 'GAME');
+  assert.equal(deriveCode('2048'), 'PROJ', 'a name with no letters still gets a code');
+  rmSync(work, { recursive: true, force: true });
 });
