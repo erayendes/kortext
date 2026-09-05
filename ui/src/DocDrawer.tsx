@@ -57,15 +57,26 @@ export function DocDrawer({
     setContent('');
     setDraft('');
     if (doc) {
-      const opened = doc.rel;
+      // The guard has to live outside the closure. Comparing `doc.rel` to a
+      // const taken from the same `doc` compares a value to itself: the drawer
+      // is one instance re-rendered, not remounted, so a load that resolves
+      // after the reader moved on still held the setters and wrote its text
+      // under the next document's name — and Save then sent that text to the
+      // file now open. The cleanup runs before the next effect starts.
+      let cancelled = false;
       api
         .docContent(project.id, doc.rel)
         .then((r) => {
-          if (opened !== doc.rel) return; // the reader moved on while this was in flight
+          if (cancelled) return;
           setContent(r.content);
           setDraft(r.content);
         })
-        .catch((e) => setErr(e.message));
+        .catch((e) => {
+          if (!cancelled) setErr(e.message);
+        });
+      return () => {
+        cancelled = true;
+      };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doc?.rel, project.id]);

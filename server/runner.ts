@@ -345,8 +345,7 @@ export function appendRevisionRequest(
 ): void {
   const path = docPath(project, sourceRel);
   const lines = readFileSync(path, 'utf8').split('\n');
-  const target = targetRel.replace(/^foundation\//, '');
-  const line = `- \`${target}\` — ${reason.replace(/\s+/g, ' ').trim()}`;
+  const line = `- \`${targetRel}\` — ${reason.replace(/\s+/g, ' ').trim()}`;
   const head = lines.findIndex((l) => /^#{1,6}\s+Revision Requests\s*$/i.test(l));
   if (head === -1) {
     // No section to file it under: give the document one rather than dropping
@@ -453,8 +452,22 @@ export function recheckDependents(
   );
   // One at a time. MAX_PARALLEL governs the chain loop, not this fan-out, and a
   // document eight others read would otherwise start eight CLIs in one tick.
+  //
+  // Sequential is not the same as stoppable. `runRecheck` settles an aborted run
+  // and resolves normally, so the chain moves on; each step then registers a
+  // fresh controller that the earlier `abortRuns` never saw. Pausing after the
+  // first reader used to stop that one and let the other seven run to the end,
+  // which is the spend Pause exists to prevent. So read the row between steps,
+  // as the chain loop in `advance` does — and stop when the project is gone,
+  // which is how Cancel arrives here.
   void readers.reduce(
-    (chain, r) => chain.then(() => runRecheck(db, project, r.rel, sourceRel, engine)),
+    (chain, r) =>
+      chain.then(() => {
+        const row = db.prepare('SELECT paused FROM projects WHERE id = ?').get(project.id) as
+          { paused: number } | undefined;
+        if (!row || row.paused) return;
+        return runRecheck(db, project, r.rel, sourceRel, engine);
+      }),
     Promise.resolve(),
   );
 }

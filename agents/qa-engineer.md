@@ -36,7 +36,7 @@ Define the test strategy covering Unit, Integration, UI (E2E), Smoke and Regress
 
 - **Approver:** +prime approves `.kortext/TEST.md`
 - **Upstream:** `.kortext/PRODUCT.md` (acceptance criteria), `.kortext/ENGINEERING.md` (technical shape), `.kortext/LEGAL.md` (the obligations a gate must prove)
-- **Downstream:** `.kortext/SUMMARY-REMOVED` consolidates your quality bar; the planning flow aligns task acceptance criteria with it; implementing agents write the tests you specify
+- **Downstream:** the planning flow aligns task acceptance criteria with your quality bar; implementing agents write the tests you specify
 
 ## skills
 

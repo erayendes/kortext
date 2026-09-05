@@ -497,18 +497,25 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     // The demand is ticked only when the rewrite has actually landed. Ticking it
     // first meant a failed run left the request settled against a document that
     // still held its old text, with nothing on screen saying so.
-    void reviseDoc(db, project, rel, notes, engine, pkgRoot).then((out) => {
-      if (!out.ok) return;
-      markRequestHandled(
-        project,
-        request.from,
-        rel,
-        request.reason,
-        said
-          ? `applied — the agent rewrote ${rel}; prime said: ${said}`
-          : `applied — the agent rewrote ${rel}`,
-      );
-    });
+    void reviseDoc(db, project, rel, notes, engine, pkgRoot)
+      .then((out) => {
+        if (!out.ok) return;
+        markRequestHandled(
+          project,
+          request.from,
+          rel,
+          request.reason,
+          said
+            ? `applied — the agent rewrote ${rel}; prime said: ${said}`
+            : `applied — the agent rewrote ${rel}`,
+        );
+      })
+      // The panel already has its 202, so nothing is waiting on this. Without a
+      // catch, a Cancel landing mid-flight — the row gone, or `.kortext/` wiped
+      // under the file this is about to tick — rejects into nobody's hands, and
+      // Node takes the whole server down with it. `explainDoc` below already
+      // ends the same way.
+      .catch((err) => console.error(`decide-request follow-up failed for ${rel}:`, err));
     res.status(202).json({ started: rel, notes: notes.length });
   });
 

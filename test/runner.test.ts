@@ -19,6 +19,7 @@ import {
   abortRuns,
   buildStepPrompt,
   nextStep,
+  recheckDependents,
   runStep,
   runningJob,
   listJobs,
@@ -193,7 +194,7 @@ test('existing project: no BRD scaffolded, chain starts from code-truth steps', 
     { name: 'Old App', repoPath: join(work, 'old'), kind: 'existing' },
     pkgRoot,
   );
-  assert.equal(existsSync(join(work, 'old', '.kortext', '', 'BRIEF.md')), false);
+  assert.equal(existsSync(join(work, 'old', '.kortext', 'BRIEF.md')), false);
   // the readiness gate wants code to read — an existing project with an empty
   // folder has no evidence, so give this one a real source tree
   mkdirSync(join(work, 'old', 'src'), { recursive: true });
@@ -721,5 +722,42 @@ test('a binary that vanished fails the run instead of killing the server', async
   assert.ok(res.exitCode !== 0, 'a missing binary is a failed run');
   assert.match(res.stderrTail, /spawn-error/);
   await new Promise((r) => setTimeout(r, 200)); // the second event lands here
+  rmSync(work, { recursive: true, force: true });
+});
+
+test('pausing stops the recheck fan-out, it does not just stop the run in flight', async () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Fan', repoPath: join(work, 'fan') }, pkgRoot);
+
+  // Twelve documents read PRODUCT.md. The fan-out runs them one at a time, and
+  // each step used to register a controller the earlier abort never saw — so a
+  // pause stopped the first and let the other eleven run to the end.
+  const witness = join(work, 'runs.txt');
+  const script = join(work, 'counting-engine.sh');
+  writeFileSync(script, `#!/bin/sh\ncat > /dev/null\necho run >> ${witness}\nexit 0\n`, 'utf8');
+  chmodSync(script, 0o755);
+  const engine = { id: 'count', binary: script, args: [], installHint: '' };
+
+  for (const d of listDocs(db, p, pkgRoot)) {
+    writeFileSync(docPath(p, d.rel), '---\nstatus: approved\n---\n\nbody\n', 'utf8');
+  }
+  const runs = () =>
+    existsSync(witness) ? readFileSync(witness, 'utf8').trim().split('\n').length : 0;
+
+  db.prepare('UPDATE projects SET paused = 1 WHERE id = ?').run(p.id);
+  recheckDependents(db, p, 'PRODUCT.md', engine, pkgRoot);
+  await new Promise((r) => setTimeout(r, 600));
+  assert.equal(runs(), 0, 'a paused project starts nothing');
+
+  // And the guard is not simply refusing everything: unpaused, the same call runs.
+  db.prepare('UPDATE projects SET paused = 0 WHERE id = ?').run(p.id);
+  recheckDependents(db, p, 'PRODUCT.md', engine, pkgRoot);
+  for (let i = 0; i < 40 && runs() === 0; i++) await new Promise((r) => setTimeout(r, 50));
+  assert.ok(runs() > 0, 'an unpaused project runs its readers');
+
+  db.prepare('UPDATE projects SET paused = 1 WHERE id = ?').run(p.id);
+  abortRuns(p.id);
+  await new Promise((r) => setTimeout(r, 300));
   rmSync(work, { recursive: true, force: true });
 });

@@ -36,7 +36,7 @@ Define the brand voice and the rules for all product copy — buttons, error mes
 
 - **Approver:** +prime approves `.kortext/CONTENT.md`
 - **Upstream:** `.kortext/PRODUCT.md`, `.kortext/DESIGN.md`, `.kortext/GROWTH.md`, `.kortext/LEGAL.md`
-- **Downstream:** `.kortext/SUMMARY-REMOVED` carries your rules forward; implementing agents take microcopy and tone from your document
+- **Downstream:** implementing agents take microcopy and tone from your document
 
 ## skills
 
