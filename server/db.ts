@@ -7,6 +7,19 @@ export function defaultDbPath(): string {
   return join(homedir(), '.kortext', 'kortext.db');
 }
 
+// Run logs belong to the database they describe, not to the home directory.
+// Keyed on nothing but the project id, one shared folder meant a second server
+// on its own `--db` wrote into the first one's logs — and cancelling ITS
+// project 1 deleted the other project 1's history. Beside the database, two
+// databases cannot collide. Set by `openDb`, so every entry point gets it.
+let logRoot = join(homedir(), '.kortext', 'logs');
+export function logRootDir(): string {
+  return logRoot;
+}
+export function logPathFor(name: string): string {
+  return join(logRoot, name);
+}
+
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS projects (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -38,6 +51,7 @@ CREATE TABLE IF NOT EXISTS jobs (
 
 export function openDb(path = defaultDbPath()): Database.Database {
   mkdirSync(dirname(path), { recursive: true });
+  logRoot = join(dirname(path), 'logs');
   const db = new Database(path);
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');

@@ -1,9 +1,8 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { spawnCli } from './cli-spawn.js';
-import type { Project } from './db.js';
+import { logPathFor, type Project } from './db.js';
 import { readFrontmatter, setFrontmatterStatus } from './docs.js';
 import type { EngineSpec } from './engines.js';
 
@@ -292,7 +291,7 @@ async function check(
   const cached = readReadiness(project);
   if (cached && cached.briefHash === briefHash && cached.stage === 'judgment') return cached;
 
-  const logPath = join(homedir(), '.kortext', 'logs', `p${project.id}-readiness.log`);
+  const logPath = logPathFor(`p${project.id}-readiness.log`);
   // The engine writes its verdict into the same file this module caches in, so
   // the old one has to go before the run: otherwise a CLI that fails and writes
   // nothing leaves the previous `ready: true` on disk, and the read below stamps

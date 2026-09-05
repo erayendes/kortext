@@ -1,9 +1,8 @@
 import type Database from 'better-sqlite3';
 import { randomUUID } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { join } from 'node:path';
-import type { Project } from './db.js';
+import { logPathFor, logRootDir, type Project } from './db.js';
 import { spawnCli } from './cli-spawn.js';
 import { ENGINES, type EngineSpec } from './engines.js';
 import {
@@ -358,7 +357,7 @@ export async function explainDoc(
       args: engine.args,
       cwd: project.repo_path,
       stdin: prompt,
-      logPath: join(homedir(), '.kortext', 'logs', `p${project.id}-explain.log`),
+      logPath: logPathFor(`p${project.id}-explain.log`),
       signal: run.ctrl.signal,
       timeoutMs: 3 * 60 * 1000,
     });
@@ -445,7 +444,7 @@ async function runRecheck(
       args: engine.args,
       cwd: project.repo_path,
       stdin: prompt,
-      logPath: join(homedir(), '.kortext', 'logs', `p${project.id}-recheck.log`),
+      logPath: logPathFor(`p${project.id}-recheck.log`),
       signal: run.ctrl.signal,
       timeoutMs: 5 * 60 * 1000,
     });
@@ -559,7 +558,7 @@ export async function proposeRevision(
       args: engine.args,
       cwd: project.repo_path,
       stdin: prompt,
-      logPath: join(homedir(), '.kortext', 'logs', `p${project.id}-propose.log`),
+      logPath: logPathFor(`p${project.id}-propose.log`),
       signal: run.ctrl.signal,
       timeoutMs: 5 * 60 * 1000,
     });
@@ -635,7 +634,7 @@ export async function runPlanning(
       args: engine.args,
       cwd: project.repo_path,
       stdin: lines.join('\n'),
-      logPath: join(homedir(), '.kortext', 'logs', `p${project.id}-plan.log`),
+      logPath: logPathFor(`p${project.id}-plan.log`),
       signal: run.ctrl.signal,
       timeoutMs: PLAN_TIMEOUT_MS,
     });
@@ -676,7 +675,7 @@ export async function runPlanning(
  * kortext's writing too: without this they outlive the project they belong to,
  * in a directory nothing ever cleans.
  */
-export function removeRunLogs(projectId: number, dir = join(homedir(), '.kortext', 'logs')): void {
+export function removeRunLogs(projectId: number, dir = logRootDir()): void {
   let entries: string[];
   try {
     entries = readdirSync(dir);
@@ -716,12 +715,7 @@ export async function runStep(
     personaBodyFor(pkgRoot, step),
     reviseNotes,
   );
-  const logPath = join(
-    homedir(),
-    '.kortext',
-    'logs',
-    `p${project.id}-${step.output.replace(/\//g, '_')}.log`,
-  );
+  const logPath = logPathFor(`p${project.id}-${step.output.replace(/\//g, '_')}.log`);
 
   const settle = (status: 'done' | 'failed' | 'stopped', error?: string): RunOutcome => {
     db.prepare(

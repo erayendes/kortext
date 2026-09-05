@@ -12,7 +12,7 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { openDb } from '../server/db.js';
+import { logPathFor, logRootDir, openDb } from '../server/db.js';
 import { createProject, BRIEF_REL } from '../server/projects.js';
 import { setFrontmatterStatus, docPath, listDocs } from '../server/docs.js';
 import {
@@ -20,6 +20,7 @@ import {
   advance,
   buildStepPrompt,
   proposeRevision,
+  removeRunLogs,
   reviseDoc,
   nextStep,
   recheckDependents,
@@ -910,5 +911,24 @@ test('a failed readiness run cannot inherit the previous brief’s approval', as
   const { ensureReadiness } = await import('../server/readiness.js');
   const out = await ensureReadiness(p, engine, new AbortController().signal);
   assert.equal(out.ready, false, 'a CLI that exited 1 judged nothing');
+  rmSync(work, { recursive: true, force: true });
+});
+
+test('run logs belong to the database they describe, not to the home directory', () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  openDb(join(work, 'db.sqlite'));
+
+  // One shared folder keyed on nothing but the project id meant a second
+  // server on its own --db wrote into the first one's logs, and cancelling
+  // ITS project 1 deleted the other project 1's history.
+  assert.equal(logRootDir(), join(work, 'logs'));
+  assert.equal(logPathFor('p1-plan.log'), join(work, 'logs', 'p1-plan.log'));
+
+  mkdirSync(join(work, 'logs'), { recursive: true });
+  writeFileSync(logPathFor('p1-plan.log'), 'mine', 'utf8');
+  writeFileSync(logPathFor('p2-plan.log'), 'someone else', 'utf8');
+  removeRunLogs(1);
+  assert.equal(existsSync(logPathFor('p1-plan.log')), false, "cancel takes its own project's logs");
+  assert.equal(existsSync(logPathFor('p2-plan.log')), true, 'and leaves every other alone');
   rmSync(work, { recursive: true, force: true });
 });
