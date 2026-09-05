@@ -241,7 +241,7 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
   // already actioned is remembered outside the documents, so sending a file
   // back does not leave the demand standing forever.
   for (const r of requests) {
-    const target = docs.find((d) => d.rel === r.target || d.rel.endsWith(`/${r.target}`));
+    const target = docs.find((d) => d.rel === r.target);
     // A document that was never written cannot be asked to change — the step
     // that writes it will read the requester as an input anyway.
     if (!target || target.status === 'uninitialized') continue;

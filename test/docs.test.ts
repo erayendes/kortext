@@ -229,12 +229,12 @@ test('a revision request lands in the inbox of the document it names', () => {
   rmSync(work, { recursive: true, force: true });
 });
 
-test('a demand on a foundation document is settled by the path it was decided on', () => {
+test('a demand is settled by the path it was decided on', () => {
   const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
   const db = openDb(join(work, 'db.sqlite'));
   const p = createProject(db, { name: 'Key', repoPath: join(work, 'key') }, pkgRoot);
   // Documents name their target the short way; the route records the rel.
-  // Keying the two differently left foundation demands standing forever.
+  // Keying the two differently left demands standing forever.
   writeFileSync(
     docPath(p, 'PRODUCT.md'),
     '---\nstatus: approved\n---\n\n## Revision Requests\n\n- `BRIEF.md` — say it the other way round\n',

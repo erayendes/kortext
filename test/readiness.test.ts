@@ -76,7 +76,7 @@ test('headings alone are not content, however many there are', () => {
 test('countSourceFiles ignores scaffolding and stops at the limit', () => {
   const work = mkdtempSync(join(tmpdir(), 'kortext-readiness-'));
   // a folder holding only kortext's own scaffolding is not a project
-  mkdirSync(join(work, '.kortext', ''), { recursive: true });
+  mkdirSync(join(work, '.kortext'), { recursive: true });
   writeFileSync(join(work, '.kortext', 'STACK.md'), 'x');
   writeFileSync(join(work, 'AGENTS.md'), 'x');
   assert.equal(countSourceFiles(work, 3), 0);
