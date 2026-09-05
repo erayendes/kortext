@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { request as httpRequest } from 'node:http';
 import { join } from 'node:path';
 import { openDb } from '../server/db.js';
 import { engineFor, selectedEngine } from '../server/engines.js';
@@ -272,4 +273,49 @@ test('a document being rewritten cannot be saved over, and an approved edit re-r
   assert.equal(readFileSync(doc, 'utf8'), before, 'the document is untouched');
   server.close();
   rmSync(work, { recursive: true, force: true });
+});
+
+test('a cross-site page cannot reach the API, and the vite proxy still can', async () => {
+  const work = tempDir();
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Origin', repoPath: join(work, 'origin') }, pkgRoot);
+  const { buildApp } = await import('../server/app.js');
+  const app = buildApp(db, pkgRoot, join(work, 'db.sqlite'));
+  const server = app.listen(0);
+  const port = (server.address() as { port: number }).port;
+  const kortext = join(work, 'origin', '.kortext');
+
+  // `fetch` drops a Host header (it is forbidden there, as in a browser), and a
+  // rebound name is exactly a request that carries someone else's — so this one
+  // goes out over node:http, which lets the header through.
+  const status = (path: string, headers: Record<string, string>): Promise<number> =>
+    new Promise((resolve, reject) => {
+      const req = httpRequest({ host: '127.0.0.1', port, path, method: 'POST', headers }, (res) => {
+        res.resume();
+        resolve(res.statusCode ?? 0);
+      });
+      req.on('error', reject);
+      req.end();
+    });
+
+  try {
+    // The shape that needs no body and no content type: a simple POST the
+    // browser sends without a preflight, which used to delete the analysis.
+    const cancel = `/api/projects/${p.id}/cancel`;
+    assert.equal(await status(cancel, { Origin: 'https://evil.example' }), 403, 'cross-site');
+    assert.ok(existsSync(kortext), 'the workspace survives the cross-site POST');
+    assert.equal(await status(cancel, { Host: 'kortext.evil.example' }), 403, 'rebound name');
+    assert.ok(existsSync(kortext), 'and survives the rebound host');
+
+    // The dev panel lives on another loopback port and proxies through here;
+    // refusing it would break `npm run dev:web` for everyone.
+    const dev = await fetch(`http://127.0.0.1:${port}/api/health`, {
+      headers: { Origin: 'http://localhost:3442' },
+    });
+    assert.equal(dev.status, 200, 'a loopback origin on another port is allowed');
+  } finally {
+    // A failed assertion above must not leave the listener holding the suite open.
+    server.close();
+    rmSync(work, { recursive: true, force: true });
+  }
 });

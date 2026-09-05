@@ -946,7 +946,12 @@ function Mermaid({ code }: { code: string }) {
     setFailed(false);
     import('mermaid')
       .then(async ({ default: mermaid }) => {
-        mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
+        // The fence comes from a document the agent wrote while reading the
+        // user's repository, and the rendered SVG goes in through
+        // dangerouslySetInnerHTML below. 'strict' is mermaid's default today —
+        // pinned here so a library upgrade cannot quietly hand that markup
+        // through unsanitised.
+        mermaid.initialize({ startOnLoad: false, theme: 'neutral', securityLevel: 'strict' });
         const { svg } = await mermaid.render(`kx-mmd-${mermaidId++}`, code);
         if (alive) setSvg(svg);
       })

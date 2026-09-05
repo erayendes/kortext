@@ -47,7 +47,11 @@ const DB_PATH = values.db ?? defaultDbPath();
 const db = openDb(DB_PATH);
 const app = buildApp(db, pkgRoot, DB_PATH);
 
-app.listen(PORT, () => {
+// Loopback only. Without a host, Node binds `*` — every interface — and the
+// panel's API answers anyone on the same Wi-Fi: the project list carries
+// absolute paths, /docs/content reads and rewrites the analysis, and /cancel
+// deletes it. Nothing here is authenticated, so the address is the boundary.
+app.listen(PORT, '127.0.0.1', () => {
   const url = `http://localhost:${PORT}`;
   console.log(`kortext panel: ${url}`);
   console.log(`db:            ${DB_PATH}`);

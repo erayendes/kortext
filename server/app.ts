@@ -51,6 +51,33 @@ import type { Project } from './db.js';
 export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string): express.Express {
   failStaleJobs(db);
   const app = express();
+
+  // Binding to loopback keeps the network out; it does not keep a web page out.
+  // A site the user is visiting can POST /api/projects/1/cancel with no body and
+  // no content type — a simple request, so the browser sends it without a
+  // preflight and the analysis is deleted. Ids are small integers, so guessing
+  // one is free. The same check refuses a rebound DNS name pointed at 127.0.0.1.
+  //
+  // Any loopback origin is allowed whatever its port: the vite dev server proxies
+  // from :3442, and code already running on this machine is not the threat.
+  const isLocal = (value: string | undefined): boolean => {
+    if (!value) return false;
+    const host = value.replace(/^\w+:\/\//, '').replace(/:\d+$/, '');
+    return host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || host === '::1';
+  };
+  app.use((req, res, next) => {
+    if (!isLocal(req.headers.host)) {
+      return res.status(403).json({ error: 'kortext answers on localhost only' });
+    }
+    // Same-origin fetches from the panel send no Origin on GET and the panel's
+    // own origin on the rest; a cross-site request always carries the attacker's.
+    const origin = req.headers.origin;
+    if (origin !== undefined && !isLocal(origin)) {
+      return res.status(403).json({ error: 'cross-origin requests are refused' });
+    }
+    next();
+  });
+
   app.use(express.json());
 
   const kickChain = (project: Project) => {
