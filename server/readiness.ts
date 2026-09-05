@@ -234,7 +234,7 @@ export function isChecking(projectId: number): boolean {
 export async function ensureReadiness(
   project: Project,
   engine: EngineSpec,
-  signal?: AbortSignal,
+  signal: AbortSignal,
 ): Promise<Readiness> {
   const running = inFlight.get(project.id);
   if (running) return running;
@@ -246,7 +246,7 @@ export async function ensureReadiness(
 async function check(
   project: Project,
   engine: EngineSpec,
-  signal?: AbortSignal,
+  signal: AbortSignal,
 ): Promise<Readiness> {
   const path = briefPath(project);
   const content = existsSync(path) ? readFileSync(path, 'utf8') : '';
@@ -300,7 +300,7 @@ async function check(
       cwd: project.repo_path,
       stdin: buildJudgmentPrompt(project),
       logPath,
-      signal: signal ?? new AbortController().signal,
+      signal,
       timeoutMs: JUDGMENT_TIMEOUT_MS,
     });
     if (res.aborted) {

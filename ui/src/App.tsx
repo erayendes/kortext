@@ -996,7 +996,7 @@ function DocumentsTab({
     // demand are both work for prime, wherever the document itself stands.
     // `dependent` is the exception: it is news, not a job, so the document
     // stays where it is.
-    if (d.status === 'uninitialized' && job?.status === 'failed' && !paused) return 'needs';
+    if (job?.status === 'failed' && !paused) return 'needs';
     // A document the agent is rewriting is not waiting on prime, whatever it
     // said before the run started: a revision in flight read as "Needs you"
     // while the badge next to it said "writing…".
@@ -1075,7 +1075,10 @@ function DocumentsTab({
               // 'stopped' is the user's own pause/restart — not a failure: its own
               // badge, no red row, no Retry; Continue picks the step up again.
               const stopped = job?.status === 'stopped' && d.status === 'uninitialized';
-              const failed = job?.status === 'failed' && d.status === 'uninitialized' && !paused;
+              // A revision that failed leaves the document at draft or approved, so
+              // gating this on `uninitialized` hid every failure of an existing
+              // document: no red row, no reason, no Retry.
+              const failed = job?.status === 'failed' && !paused;
               return (
                 <button
                   key={d.rel}
@@ -1112,7 +1115,7 @@ function DocumentsTab({
         project={project}
         doc={open}
         failedError={
-          open && open.status === 'uninitialized' && jobFor(open.rel)?.status === 'failed'
+          open && jobFor(open.rel)?.status === 'failed'
             ? (jobFor(open.rel)?.error ?? 'no reason recorded')
             : null
         }

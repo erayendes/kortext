@@ -139,7 +139,9 @@ step finishes on the old one. Prompt always arrives on **stdin**, cwd is the pro
 
 **Spawn (`cli-spawn.ts`).** Never a command string — `binary + args`, no shell, so prompt text
 can never be read as a shell metacharacter. Own process group so an abort kills the tree
-(SIGTERM → 5s → SIGKILL). Output goes to the log and to a 64 KiB rolling tail.
+(SIGTERM → 1s → SIGKILL, which has to land before restart and cancel wipe the directory). A
+failed spawn emits `error` **and** `close`; the first one settles the run and the second is
+ignored, because ending the log twice raised an unhandled stream error that killed the server. Output goes to the log and to a 64 KiB rolling tail.
 `isTransientCliFailure` / `isRecoverableCliFailure` separate retryable failures (429, quota,
 network, overload, exit-0-with-no-output) from deterministic ones.
 
@@ -214,7 +216,7 @@ No fs-watch — the panel polls (docs 3s, transfer 4s, handshake 5s).
 | `POST …/cancel` | pause, abort, then remove what kortext wrote (`.kortext/`, `.kopeng/`, the `AGENTS.md` block, the `CLAUDE.md` pointer, the project's logs) + the row |
 | `POST …/archive` | shelve — row and repo both stay |
 | `GET …/docs` | document list (+ idempotent self-heal scaffold) |
-| `GET \| PUT …/docs/content` | read · write as-is (`settleRequests` closes the demands) |
+| `GET \| PUT …/docs/content` | read · write as-is (refused while that document is being rewritten; an edit to an approved one rechecks its readers) |
 | `POST …/docs/approve` | `draft → approved`, kicks the chain, rechecks dependents |
 | `POST …/docs/propose` | returns a drafted revision for the brief |
 | `POST …/docs/revise` | re-runs the producing step with notes (fire-and-forget, 202) |
@@ -260,7 +262,7 @@ enforces that and the ordering.
 
 ## 9 · Verification
 
-`npm test` → `node:test`, **62 tests**, six files: `order` (a step cannot read a document
+`npm test` → `node:test`, **64 tests**, six files: `order` (a step cannot read a document
 written after it; personas match their step; skeletons keep both required sections) · `docs`
 (frontmatter, request parsing, open questions, ordering) · `runner` (producibility, prompt
 assembly, job lifecycle, nothing starts after an abort) · `readiness` (floor threshold, template recognition, source counting)

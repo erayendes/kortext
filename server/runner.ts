@@ -225,7 +225,15 @@ export async function advance(
     // nothing: no step starts until there is a brief worth analysing, or code to
     // read. For a new project the verdict is cached per brief version, so this
     // costs one engine run per edit of the brief, not one per approval.
-    if (!(await ensureReadiness(project, engine)).ready) return;
+    // Tracked like any other run: "Reading the brief…" is a CLI the user can stop.
+    const gate = trackRun(project.id);
+    let ready = false;
+    try {
+      ready = (await ensureReadiness(project, engine, gate.ctrl.signal)).ready;
+    } finally {
+      gate.done();
+    }
+    if (!ready) return;
     const inFlight = new Set<Promise<unknown>>();
     for (;;) {
       // Paused = don't start new steps; running ones finish and the loop exits.
@@ -374,7 +382,9 @@ async function runRecheck(
       .prepare("UPDATE jobs SET status = ?, error = ?, finished_at = datetime('now') WHERE id = ?")
       .run(status, error ?? null, job.id);
   const run = trackRun(project.id);
-  const verdictRel = `.kortext/.recheck-${readerRel.replace(/[^A-Za-z0-9]/g, '-')}.json`;
+  // Per run, not per reader: two sources re-judging the same document at once
+  // would otherwise read and delete each other's verdict.
+  const verdictRel = `.kortext/.recheck-${randomUUID().slice(0, 8)}.json`;
   const verdictPath = join(project.repo_path, verdictRel);
   rmSync(verdictPath, { force: true });
   const prompt = [

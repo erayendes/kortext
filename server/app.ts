@@ -220,8 +220,10 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       // running for a project that is about to be wiped.
       db.prepare('UPDATE projects SET paused = 1 WHERE id = ?').run(project.id);
       abortRuns(project.id);
-      // Give SIGTERM a moment so a dying CLI can't rewrite the wiped files.
-      await new Promise((r) => setTimeout(r, 1500));
+      // Long enough for the escalation in cli-spawn (SIGTERM, then SIGKILL after
+      // a second) to finish, so a CLI that ignores SIGTERM cannot write into the
+      // directory after it is wiped.
+      await new Promise((r) => setTimeout(r, 2500));
       rmSync(join(project.repo_path, '.kortext'), { recursive: true, force: true });
       rmSync(join(project.repo_path, '.kopeng'), { recursive: true, force: true });
       db.prepare('DELETE FROM jobs WHERE project_id = ?').run(project.id);
@@ -246,7 +248,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       // Pause before aborting, for the reason restart gives above.
       db.prepare('UPDATE projects SET paused = 1 WHERE id = ?').run(project.id);
       abortRuns(project.id);
-      await new Promise((r) => setTimeout(r, 1500));
+      await new Promise((r) => setTimeout(r, 2500)); // as restart: outlast the SIGKILL escalation
       rmSync(join(project.repo_path, '.kortext'), { recursive: true, force: true });
       rmSync(join(project.repo_path, '.kopeng'), { recursive: true, force: true });
       uninstallContract(project.repo_path);
@@ -304,7 +306,16 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     if (typeof content !== 'string' || content.trim() === '') {
       return res.status(400).json({ error: 'content is required' });
     }
+    // The agent is writing this file right now: its output would land on top of
+    // the save a minute later, silently. The revise route already refuses here.
+    if (runningDoc(db, project.id, String(rel))) {
+      return res
+        .status(409)
+        .json({ error: `${rel} is being rewritten — wait for it to land, then edit` });
+    }
     try {
+      const wasApproved =
+        listDocs(db, project, pkgRoot).find((d) => d.rel === String(rel))?.status === 'approved';
       writeFileSync(docPath(project, String(rel)), content, 'utf8');
       // Saving the agent's draft IS the answer to the demands that produced it.
       // Without this the change landed on disk and the request still stood, so
@@ -325,6 +336,14 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       // the brief is the whole way out of a closed gate, and a save that
       // changed nothing downstream is a no-op re-scan.
       kickChain(project);
+      // Editing an APPROVED document changes what its readers were written
+      // against, exactly as approving a rewritten one does — so it owes them
+      // the same re-reading. Without this the handshake can complete on
+      // documents that contradict the text they were derived from.
+      if (wasApproved) {
+        const engine = engineFor(db, project);
+        if (engine) recheckDependents(db, project, String(rel), engine, pkgRoot);
+      }
       res.json({ ok: true });
     } catch (err) {
       res.status(400).json({ error: (err as Error).message });
@@ -447,17 +466,22 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     }
     const notes = [`[${request.from} asks] ${request.reason}`];
     if (said) notes.push(`[prime decides] ${said}`);
-    markRequestHandled(
-      project,
-      request.from,
-      rel,
-      request.reason,
-      said
-        ? `applied — the agent rewrote ${rel}; prime said: ${said}`
-        : `applied — the agent rewrote ${rel}`,
-    );
     setFrontmatterStatus(docPath(project, rel), 'draft');
-    void reviseDoc(db, project, rel, notes, engine, pkgRoot);
+    // The demand is ticked only when the rewrite has actually landed. Ticking it
+    // first meant a failed run left the request settled against a document that
+    // still held its old text, with nothing on screen saying so.
+    void reviseDoc(db, project, rel, notes, engine, pkgRoot).then((out) => {
+      if (!out.ok) return;
+      markRequestHandled(
+        project,
+        request.from,
+        rel,
+        request.reason,
+        said
+          ? `applied — the agent rewrote ${rel}; prime said: ${said}`
+          : `applied — the agent rewrote ${rel}`,
+      );
+    });
     res.status(202).json({ started: rel, notes: notes.length });
   });
 

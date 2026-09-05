@@ -577,18 +577,16 @@ function RequestBar({
     if (!q) return;
     const it = items[i];
     const history = chat.filter((c) => c.i === i && c.a).map((c) => ({ q: c.q, a: c.a as string }));
-    setChat((cs) => [...cs, { i, q, a: null }]);
+    // The entry itself, not its wording: the same question asked on two demands
+    // would otherwise be answered once, into both threads.
+    const entry = { i, q, a: null as string | null };
+    setChat((cs) => [...cs, entry]);
     setQuestion('');
+    const fill = (a: string) => setChat((cs) => cs.map((c) => (c === entry ? { ...c, a } : c)));
     api
       .explainDoc(project.id, it.from, `[asks ${it.target}] ${it.reason}`, q, history)
-      .then((r) =>
-        setChat((cs) => cs.map((c) => (c.q === q && c.a === null ? { ...c, a: r.answer } : c))),
-      )
-      .catch((e) =>
-        setChat((cs) =>
-          cs.map((c) => (c.q === q && c.a === null ? { ...c, a: `— ${(e as Error).message}` } : c)),
-        ),
-      );
+      .then((r) => fill(r.answer))
+      .catch((e) => fill(`— ${(e as Error).message}`));
   };
 
   const keyOf = (it: { from: string; target: string; reason: string }) =>

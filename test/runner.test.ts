@@ -244,7 +244,11 @@ printf -- '---\\nstatus: draft\\nauthor: +mock\\n---\\n\\n# Mock\\n' > ".kortext
   const { ensureReadiness } = await import('../server/readiness.js');
   // Settle the readiness gate first — this measures the chain's parallelism,
   // not the one-off gate spawn that precedes it.
-  await ensureReadiness(p, { id: 'slow', binary: script, args: [], installHint: '' });
+  await ensureReadiness(
+    p,
+    { id: 'slow', binary: script, args: [], installHint: '' },
+    new AbortController().signal,
+  );
   const t0 = Date.now();
   await advance(db, p, { id: 'slow', binary: script, args: [], installHint: '' }, pkgRoot);
   const elapsed = Date.now() - t0;
@@ -700,4 +704,22 @@ test('a step killed by its own clock says so, and is not blamed on the human', a
   assert.equal(res.aborted, true, 'a timeout still kills the process');
   rmSync(work, { recursive: true, force: true });
   assert.ok(p.id > 0);
+});
+
+test('a binary that vanished fails the run instead of killing the server', async () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const { spawnCli } = await import('../server/cli-spawn.js');
+  // spawn emits BOTH 'error' and 'close' here; ending the log twice used to
+  // raise ERR_STREAM_WRITE_AFTER_END with no listener and take the process down.
+  const res = await spawnCli({
+    binary: join(work, 'no-such-binary'),
+    args: [],
+    cwd: work,
+    logPath: join(work, 'log.txt'),
+    signal: new AbortController().signal,
+  });
+  assert.ok(res.exitCode !== 0, 'a missing binary is a failed run');
+  assert.match(res.stderrTail, /spawn-error/);
+  await new Promise((r) => setTimeout(r, 200)); // the second event lands here
+  rmSync(work, { recursive: true, force: true });
 });

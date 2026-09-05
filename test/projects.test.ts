@@ -102,7 +102,11 @@ test('Initialize judges nothing: even a thin brief lands as written', async () =
   // The gate is what reads it, and a refusal sends it back to the human's desk
   // rather than leaving an approved brief next to "not enough to start".
   const { ensureReadiness } = await import('../server/readiness.js');
-  const verdict = await ensureReadiness(p, { id: 'x', binary: 'true', args: [], installHint: '' });
+  const verdict = await ensureReadiness(
+    p,
+    { id: 'x', binary: 'true', args: [], installHint: '' },
+    new AbortController().signal,
+  );
   assert.equal(verdict.ready, false);
   assert.equal(verdict.stage, 'floor');
   assert.match(readFileSync(join(repo, BRIEF_REL), 'utf8'), /status: draft/);
@@ -241,6 +245,31 @@ test('a save with no content is refused, not written over the document', async (
   assert.equal(readFileSync(doc, 'utf8'), before, 'the document is untouched');
   assert.equal((await save({ rel: 'STACK.md', content: '# mine\n' })).status, 200);
   assert.equal(readFileSync(doc, 'utf8'), '# mine\n');
+  server.close();
+  rmSync(work, { recursive: true, force: true });
+});
+
+test('a document being rewritten cannot be saved over, and an approved edit re-reads its readers', async () => {
+  const work = tempDir();
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Guard2', repoPath: join(work, 'guard2') }, pkgRoot);
+  const { buildApp } = await import('../server/app.js');
+  const app = buildApp(db, pkgRoot, join(work, 'db.sqlite'));
+  const server = app.listen(0);
+  const port = (server.address() as { port: number }).port;
+  const doc = join(work, 'guard2', '.kortext', 'STACK.md');
+  const before = readFileSync(doc, 'utf8');
+
+  db.prepare("INSERT INTO jobs (project_id, doc_rel, kind) VALUES (?, 'STACK.md', 'doc')").run(
+    p.id,
+  );
+  const res = await fetch(`http://127.0.0.1:${port}/api/projects/${p.id}/docs/content`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rel: 'STACK.md', content: '# mine\n' }),
+  });
+  assert.equal(res.status, 409, 'a rewrite in flight refuses the save');
+  assert.equal(readFileSync(doc, 'utf8'), before, 'the document is untouched');
   server.close();
   rmSync(work, { recursive: true, force: true });
 });

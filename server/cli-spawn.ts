@@ -48,7 +48,9 @@ export type SpawnCliResult = {
 };
 
 export async function spawnCli(opts: SpawnCliOptions): Promise<SpawnCliResult> {
-  const sigkillDelayMs = opts.sigkillDelayMs ?? 5000;
+  // Restart and cancel wipe the project's directories 1.5s after aborting, so
+  // a CLI that ignores SIGTERM has to be gone before that, not after.
+  const sigkillDelayMs = opts.sigkillDelayMs ?? 1000;
   const summaryCap = opts.summaryBufferBytes ?? 64 * 1024;
 
   if (opts.signal.aborted) {
@@ -157,30 +159,32 @@ export async function spawnCli(opts: SpawnCliOptions): Promise<SpawnCliResult> {
     // after await with a half-written file. macOS happens to flush fast
     // enough to hide it. Wait for 'finish' (or the end() callback) before
     // resolving so the file is durable when the caller reads it.
+    // A spawn that fails emits BOTH 'error' and 'close'. Ending the log twice
+    // means the second handler writes to a stream that is already ended, and an
+    // ERR_STREAM_WRITE_AFTER_END nobody listens for takes the process down —
+    // the whole server, because the CLI moved between detection and launch. So
+    // the first event wins and the second is ignored.
+    let settled = false;
+    const finish = (line: string, result: Omit<SpawnCliResult, 'aborted' | 'timedOut'>) => {
+      if (settled) return;
+      settled = true;
+      log.write(line);
+      log.end(() => resolveResult({ ...result, aborted, timedOut }));
+    };
     proc.on('error', (err) => {
-      log.write(`\n[spawn-error] ${err.message}\n`);
-      log.end(() => {
-        resolveResult({
-          exitCode: null,
-          signal: null,
-          stdoutTail: stdoutBuf,
-          stderrTail: stderrBuf + `\n[spawn-error] ${err.message}`,
-          aborted,
-          timedOut,
-        });
+      finish(`\n[spawn-error] ${err.message}\n`, {
+        exitCode: null,
+        signal: null,
+        stdoutTail: stdoutBuf,
+        stderrTail: stderrBuf + `\n[spawn-error] ${err.message}`,
       });
     });
     proc.on('close', (code, signal) => {
-      log.write(`\n# exit code=${code} signal=${signal} aborted=${aborted}\n`);
-      log.end(() => {
-        resolveResult({
-          exitCode: code,
-          signal,
-          stdoutTail: stdoutBuf,
-          stderrTail: stderrBuf,
-          aborted,
-          timedOut,
-        });
+      finish(`\n# exit code=${code} signal=${signal} aborted=${aborted}\n`, {
+        exitCode: code,
+        signal,
+        stdoutTail: stdoutBuf,
+        stderrTail: stderrBuf,
       });
     });
   });
