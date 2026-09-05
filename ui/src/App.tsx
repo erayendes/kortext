@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   api,
   type DocInfo,
@@ -662,7 +662,10 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
     if (paused) return togglePause(); // unpausing kicks the chain
     // Already unpaused but idle — the gate refused, or the last pass ended.
     // Re-enter the chain so the gate runs again and any freed step starts.
-    api.runNext(project.id).catch(() => {});
+    // The refusal carries the reason — no CLI installed, a step already
+    // running — and swallowing it left the button looking dead on the failure
+    // most likely to greet someone who has not installed an agent yet.
+    api.runNext(project.id).catch((e) => setErr((e as Error).message));
   };
 
   const togglePause = () =>
@@ -744,17 +747,10 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
               api.setProjectEngine(project.id, id).catch((e) => setErr((e as Error).message));
             }}
           />
-          {arming === 'restart' ? (
-            <>
-              <span className="kx-arm-warn">Wipe .kortext/ + .kopeng/ and start over?</span>
-              <button className="btn btn-danger" disabled={busy} onClick={doRestart}>
-                Yes, restart
-              </button>
-              <button className="btn btn-link-primary" onClick={() => setArming(null)}>
-                No
-              </button>
-            </>
-          ) : running ? (
+          {/* Restart is armed and confirmed in the danger zone below, which is
+              the only place that sets it. Asking here too painted the same
+              question twice and took Start/Pause away while it was up. */}
+          {running ? (
             <button className="btn btn-primary" disabled={busy} onClick={togglePause}>
               ⏸ Pause
             </button>
@@ -933,13 +929,23 @@ function DocumentsTab({
   // and a Pause button standing over a chain that had already finished.
   const [offline, setOffline] = useState(false);
 
+  // What is on screen now. Comparing `project.id` to a const taken from the
+  // same `project` compares a value to itself: the guard below read as passing
+  // whatever had happened. Nothing goes wrong today only because App renders
+  // this screen with `key={selected.id}`, so switching remounts — the check has
+  // to hold on its own, not on a key two components away.
+  const showing = useRef(project.id);
+  useEffect(() => {
+    showing.current = project.id;
+  });
+
   const refresh = () => {
     // Which project this asked about. A slow answer for the project you just
     // left must not paint its documents onto the one you opened.
     const asked = project.id;
     return Promise.all([api.listDocs(asked), api.jobs(asked), api.readiness(asked)])
       .then(([d, j, g]) => {
-        if (asked !== project.id) return;
+        if (asked !== showing.current) return;
         setDocs(d.docs);
         setJobs(j.jobs);
         setGate(g);
@@ -948,7 +954,7 @@ function DocumentsTab({
         setErr(null);
       })
       .catch((e) => {
-        if (asked !== project.id) return;
+        if (asked !== showing.current) return;
         setOffline(true);
         setErr(
           `${e.message} — the panel has lost the kortext server; this page may be out of date.`,
@@ -1094,10 +1100,24 @@ function DocumentsTab({
               // document: no red row, no reason, no Retry.
               const failed = job?.status === 'failed' && !paused;
               return (
-                <button
+                // A div, not a button — a failed row carries its own Retry
+                // control, and a button inside a button is not a thing. Retry
+                // was a span for that reason, which cost it its tab stop: the
+                // only way to press it was a mouse. Same shape as the project
+                // card, so the row keeps its keyboard behaviour and Retry gets
+                // one of its own.
+                <div
                   key={d.rel}
                   className={`kx-doc-row${failed ? ' failed' : ''}`}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => setOpen(d)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setOpen(d);
+                    }
+                  }}
                 >
                   <span className="kx-doc-name">{d.name}</span>
                   {d.author && (
@@ -1105,7 +1125,7 @@ function DocumentsTab({
                   )}
                   <span className="kx-doc-spacer" />
                   {failed && (
-                    <span
+                    <button
                       className="btn btn-secondary"
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1113,13 +1133,13 @@ function DocumentsTab({
                       }}
                     >
                       Retry
-                    </span>
+                    </button>
                   )}
                   <DocBadges doc={d} failed={failed} rechecking={rechecking} />
                   <span title={failed ? (job?.error ?? '') : ''}>
                     <StatusBadge doc={d} running={isRunning} stopped={stopped} />
                   </span>
-                </button>
+                </div>
               );
             })}
           </details>
