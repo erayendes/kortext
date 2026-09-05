@@ -51,11 +51,20 @@ const app = buildApp(db, pkgRoot, DB_PATH);
 // panel's API answers anyone on the same Wi-Fi: the project list carries
 // absolute paths, /docs/content reads and rewrites the analysis, and /cancel
 // deletes it. Nothing here is authenticated, so the address is the boundary.
+//
+// Both families, because a host argument binds exactly one address and the
+// browser is opened at `localhost` — which resolves to ::1 first on plenty of
+// machines. One listener on 127.0.0.1 would leave those looking at a refused
+// connection under a console line saying the panel is up. The second bind is
+// best-effort: a machine with IPv6 switched off refuses it, and that is fine.
 app.listen(PORT, '127.0.0.1', () => {
   const url = `http://localhost:${PORT}`;
   console.log(`kortext panel: ${url}`);
   console.log(`db:            ${DB_PATH}`);
   if (!values['no-open']) openBrowser(url);
+});
+app.listen(PORT, '::1').on('error', () => {
+  /* no IPv6 loopback on this machine; the IPv4 listener above is the panel */
 });
 
 function openBrowser(url: string): void {

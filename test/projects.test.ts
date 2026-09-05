@@ -306,6 +306,13 @@ test('a cross-site page cannot reach the API, and the vite proxy still can', asy
     assert.ok(existsSync(kortext), 'the workspace survives the cross-site POST');
     assert.equal(await status(cancel, { Host: 'kortext.evil.example' }), 403, 'rebound name');
     assert.ok(existsSync(kortext), 'and survives the rebound host');
+    // Hostnames are case-insensitive; refusing a capitalised one locks a
+    // legitimate client out of a server that is listening for it.
+    assert.notEqual(
+      await status('/api/health', { Host: 'LocalHost:1' }),
+      403,
+      'case is not identity',
+    );
 
     // The dev panel lives on another loopback port and proxies through here;
     // refusing it would break `npm run dev:web` for everyone.

@@ -43,6 +43,16 @@ export function DocDrawer({
   const [rawEdit, setRawEdit] = useState(false); // …and you asked to type in it rather than read it
   const [err, setErr] = useState<string | null>(null);
 
+  // Every async handler below outlives the document it was started on — the
+  // propose call runs an agent CLI, so minutes, not milliseconds — and the
+  // drawer is one instance re-rendered rather than remounted, so its setters
+  // stay live across the switch. This names whatever is on screen now, so a
+  // late answer can tell whether it is still wanted.
+  const showing = useRef<string | null>(null);
+  useEffect(() => {
+    showing.current = doc?.rel ?? null;
+  });
+
   useEffect(() => {
     setEditing(false);
     setProposed(false);
@@ -239,7 +249,13 @@ export function DocDrawer({
   // editor, unsaved: this document is the human's, so the last keystroke is too.
   const proposeFix = () =>
     act(async () => {
-      const { proposal } = await api.proposeRevision(project.id, doc.rel);
+      const rel = doc.rel;
+      const { proposal } = await api.proposeRevision(project.id, rel);
+      // The reader moved on while the CLI was drafting. Landing this now would
+      // put one document's proposal in another's editor, and Save sends the
+      // editor to the file that is open — with `proposed` set, which settles
+      // that file's demands against text written for somewhere else.
+      if (showing.current !== rel) return;
       setDraft(proposal);
       setProposed(true);
       setEditing(true);

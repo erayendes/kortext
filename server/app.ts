@@ -60,10 +60,18 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   //
   // Any loopback origin is allowed whatever its port: the vite dev server proxies
   // from :3442, and code already running on this machine is not the threat.
+  // Hostnames are case-insensitive, so the comparison has to be. The bare
+  // `::1` form is gone rather than fixed: the port strip below turns it into
+  // `:` before any comparison could see it, and RFC 7230 requires the bracketed
+  // form in a Host header anyway — `[::1]` has no trailing `:digits`, so it
+  // survives the strip untouched.
   const isLocal = (value: string | undefined): boolean => {
     if (!value) return false;
-    const host = value.replace(/^\w+:\/\//, '').replace(/:\d+$/, '');
-    return host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || host === '::1';
+    const host = value
+      .replace(/^\w+:\/\//, '')
+      .replace(/:\d+$/, '')
+      .toLowerCase();
+    return host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
   };
   app.use((req, res, next) => {
     if (!isLocal(req.headers.host)) {
