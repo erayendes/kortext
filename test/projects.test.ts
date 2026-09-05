@@ -339,3 +339,19 @@ test('a name that starts with a digit still yields a code the registry accepts',
   assert.equal(deriveCode('2048'), 'PROJ', 'a name with no letters still gets a code');
   rmSync(work, { recursive: true, force: true });
 });
+
+test('one folder is one project, however the path was typed', () => {
+  const work = tempDir();
+  const db = openDb(join(work, 'db.sqlite'));
+  const repo = join(work, 'shared');
+  createProject(db, { name: 'First', repoPath: repo }, pkgRoot);
+  // The same directory with a trailing separator used to pass the UNIQUE check
+  // and become a second row writing the same files — so a restart or a cancel
+  // on one wiped the other's documents.
+  assert.throws(
+    () => createProject(db, { name: 'Second', repoPath: `${repo}/` }, pkgRoot),
+    /already the project/,
+  );
+  assert.equal(listProjects(db).length, 1);
+  rmSync(work, { recursive: true, force: true });
+});

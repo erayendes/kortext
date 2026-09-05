@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { spawnCli } from './cli-spawn.js';
@@ -293,6 +293,11 @@ async function check(
   if (cached && cached.briefHash === briefHash && cached.stage === 'judgment') return cached;
 
   const logPath = join(homedir(), '.kortext', 'logs', `p${project.id}-readiness.log`);
+  // The engine writes its verdict into the same file this module caches in, so
+  // the old one has to go before the run: otherwise a CLI that fails and writes
+  // nothing leaves the previous `ready: true` on disk, and the read below stamps
+  // it with the NEW brief's hash — an approval the current brief never earned.
+  rmSync(cachePath(project), { force: true });
   try {
     const res = await spawnCli({
       binary: engine.binary,
@@ -306,8 +311,19 @@ async function check(
     if (res.aborted) {
       return { ready: false, stage: 'error', questions: [], briefHash, checkedAt };
     }
-    // The engine writes the verdict into the same file this module caches in,
-    // so re-read it and keep only the two fields it owns.
+    // A CLI that exits non-zero has not judged anything, whatever is on disk.
+    if (res.exitCode !== 0) {
+      return verdict({
+        ready: false,
+        stage: 'error',
+        questions: [
+          `The readiness check could not run (${engine.id} exited ${res.exitCode}).`,
+          'Press Start to run it again.',
+        ],
+      });
+    }
+    // Re-read what this run wrote — the file was removed above, so anything
+    // here came from the run that just finished.
     const written = readReadiness(project) as Partial<Readiness> | null;
     if (!written || typeof written.ready !== 'boolean') {
       return verdict({

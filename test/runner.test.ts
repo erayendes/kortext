@@ -20,6 +20,7 @@ import {
   advance,
   buildStepPrompt,
   proposeRevision,
+  reviseDoc,
   nextStep,
   recheckDependents,
   runStep,
@@ -808,5 +809,106 @@ test('a paused project does not spend a run on the readiness gate', async () => 
   await advance(db, p, engine, pkgRoot);
   const runs = existsSync(witness) ? readFileSync(witness, 'utf8').trim().split('\n').length : 0;
   assert.equal(runs, 0, 'pause is read before the gate, not after it');
+  rmSync(work, { recursive: true, force: true });
+});
+
+test('a step that always fails is tried three times, not forever', async () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Loop', repoPath: join(work, 'loop') }, pkgRoot);
+
+  // Opens the gate, then fails every analysis step — the deterministic failure
+  // (a bad model id, a rejected key) that used to spin until someone paused.
+  const script = join(work, 'always-fails.sh');
+  writeFileSync(
+    script,
+    `#!/bin/sh
+prompt=$(cat)
+case "$prompt" in
+  *readiness.json*) printf '{ "ready": true }\\n' > .kortext/.readiness.json; exit 0;;
+esac
+exit 1
+`,
+    'utf8',
+  );
+  chmodSync(script, 0o755);
+  const engine = { id: 'fail', binary: script, args: [], installHint: '' };
+  writeFileSync(
+    join(work, 'loop', BRIEF_REL),
+    '---\nstatus: approved\n---\n\n' +
+      'A real product brief with enough substance to pass the floor. '.repeat(20),
+    'utf8',
+  );
+  // Settle everything but one document, so the loop has exactly one step to
+  // pick and the test measures the cap rather than the whole workflow.
+  const target = 'PRODUCT.md';
+  for (const d of listDocs(db, p, pkgRoot)) {
+    if (d.rel === target || d.rel === 'BRIEF.md') continue;
+    writeFileSync(docPath(p, d.rel), '---\nstatus: approved\n---\n\nsettled\n', 'utf8');
+  }
+
+  await advance(db, p, engine, pkgRoot);
+
+  const tries = listJobs(db, p.id).filter((j) => j.doc_rel === target).length;
+  assert.ok(tries > 0, 'the step was actually attempted');
+  assert.equal(tries, 3, `${target} was attempted ${tries} times — the cap is 3`);
+  rmSync(work, { recursive: true, force: true });
+});
+
+test('a revision the agent did not make is a failure, not a success', async () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Noop', repoPath: join(work, 'noop') }, pkgRoot);
+
+  // Reads the prompt, changes nothing, exits 0. The document is already on disk
+  // — it is a rewrite — so existsSync proves nothing about whether it moved.
+  const script = join(work, 'noop.sh');
+  writeFileSync(script, '#!/bin/sh\ncat > /dev/null\nexit 0\n', 'utf8');
+  chmodSync(script, 0o755);
+  const engine = { id: 'noop', binary: script, args: [], installHint: '' };
+
+  const doc = docPath(p, 'STACK.md');
+  writeFileSync(doc, '---\nstatus: draft\n---\n\n# Stack\n\nthe original text\n', 'utf8');
+  const before = readFileSync(doc, 'utf8');
+
+  const out = await reviseDoc(db, p, 'STACK.md', ['change the database'], engine, pkgRoot);
+  assert.equal(out.ok, false, 'an untouched document is not a completed revision');
+  assert.match(out.error ?? '', /exactly as it was/);
+  assert.equal(readFileSync(doc, 'utf8'), before, 'and the document really is untouched');
+  rmSync(work, { recursive: true, force: true });
+});
+
+test('a failed readiness run cannot inherit the previous brief’s approval', async () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Stale', repoPath: join(work, 'stale') }, pkgRoot);
+
+  const script = join(work, 'broken.sh');
+  writeFileSync(script, '#!/bin/sh\ncat > /dev/null\nexit 1\n', 'utf8');
+  chmodSync(script, 0o755);
+  const engine = { id: 'broken', binary: script, args: [], installHint: '' };
+
+  // An approval the OLD brief earned, sitting where the gate caches its verdict.
+  writeFileSync(
+    join(work, 'stale', '.kortext', '.readiness.json'),
+    JSON.stringify({
+      ready: true,
+      stage: 'judgment',
+      questions: [],
+      briefHash: 'old',
+      checkedAt: '',
+    }),
+    'utf8',
+  );
+  writeFileSync(
+    join(work, 'stale', BRIEF_REL),
+    '---\nstatus: approved\n---\n\n' +
+      'A different brief, rewritten after that verdict was recorded. '.repeat(20),
+    'utf8',
+  );
+
+  const { ensureReadiness } = await import('../server/readiness.js');
+  const out = await ensureReadiness(p, engine, new AbortController().signal);
+  assert.equal(out.ready, false, 'a CLI that exited 1 judged nothing');
   rmSync(work, { recursive: true, force: true });
 });

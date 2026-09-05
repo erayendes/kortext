@@ -969,6 +969,20 @@ function DocumentsTab({
       .then(refresh)
       .catch((e) => setErr(e.message));
 
+  // Retry has to re-run the step that failed, and `run-next` only ever picks an
+  // UNWRITTEN document. A revision that fails leaves its document at draft or
+  // approved, so Retry on that row asked the server for the next producible step
+  // instead — starting something else, or answering "nothing to run". A document
+  // that still carries demands is retried by re-running them.
+  const retry = (doc: DocInfo) => {
+    const notes = doc.revisionRequests.map((r) => r.reason);
+    if (doc.status === 'uninitialized' || notes.length === 0) return runNext();
+    return api
+      .reviseDoc(project.id, doc.rel, notes)
+      .then(refresh)
+      .catch((e) => setErr(e.message));
+  };
+
   // Latest job per doc decides the row extras (spinner / red error).
   const jobFor = (rel: string) => jobs.find((j) => j.doc_rel === rel);
 
@@ -1095,7 +1109,7 @@ function DocumentsTab({
                       className="btn btn-secondary"
                       onClick={(e) => {
                         e.stopPropagation();
-                        runNext();
+                        void retry(d);
                       }}
                     >
                       Retry

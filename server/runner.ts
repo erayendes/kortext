@@ -5,7 +5,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { Project } from './db.js';
 import { spawnCli } from './cli-spawn.js';
-import type { EngineSpec } from './engines.js';
+import { ENGINES, type EngineSpec } from './engines.js';
 import {
   docPath,
   listDocs,
@@ -170,6 +170,8 @@ export interface RunOutcome {
 // wait for a completion when the pool has room).
 const advancing = new Map<number, () => void>();
 const MAX_PARALLEL = 3;
+// Tries per document within one chain loop, before the loop leaves it alone.
+const MAX_STEP_ATTEMPTS = 3;
 
 // Live spawn registry — pause/restart/cancel abort every running CLI for the
 // project (SIGTERM→SIGKILL via cli-spawn) instead of letting it finish and
@@ -242,6 +244,13 @@ export async function advance(
     }
     if (!ready) return;
     const inFlight = new Set<Promise<unknown>>();
+    // A failed step leaves its document uninitialized, which is exactly what
+    // makes it producible — so the loop picked it again, and again, with no
+    // limit and no wait: a step that fails deterministically (a bad model id, a
+    // rejected key) burns the quota until someone presses Pause. Three tries per
+    // document per loop. A human action — Start, Retry, an approval — enters a
+    // new loop with a fresh count, so giving up here is not giving up for good.
+    const attempts = new Map<string, number>();
     for (;;) {
       // Paused = don't start new steps; running ones finish and the loop exits.
       const paused = (
@@ -250,8 +259,24 @@ export async function advance(
       )?.paused;
       const room = paused ? 0 : MAX_PARALLEL - inFlight.size;
       if (room > 0) {
+        // Read per step, not once for the loop. The route that changes a
+        // project's CLI says only later steps see it — but the loop was handing
+        // every step the engine it started with, so the switch a user makes when
+        // a quota runs out did nothing until the whole chain finished.
+        //
+        // Only the project's OWN column, never the global fallback: resolving
+        // the engine afresh would ignore the one the caller handed in and reach
+        // for whatever is installed on the machine.
+        const picked = (
+          db.prepare('SELECT engine FROM projects WHERE id = ?').get(project.id) as
+            { engine: string } | undefined
+        )?.engine;
+        const current = (picked && ENGINES.find((e) => e.id === picked)) || engine;
         for (const step of producibleSteps(db, project, pkgRoot).slice(0, room)) {
-          const p = runStep(db, project, step, engine, pkgRoot).finally(() => inFlight.delete(p));
+          const tried = attempts.get(step.output) ?? 0;
+          if (tried >= MAX_STEP_ATTEMPTS) continue;
+          attempts.set(step.output, tried + 1);
+          const p = runStep(db, project, step, current, pkgRoot).finally(() => inFlight.delete(p));
           inFlight.add(p);
         }
       }
@@ -705,6 +730,14 @@ export async function runStep(
     return status === 'done' ? { ok: true } : { ok: false, error };
   };
 
+  const outPath = join(project.repo_path, '.kortext', step.output);
+  // What the document said before the run. A revision rewrites a file that is
+  // already there, so `existsSync` proves nothing about it: an agent that reads
+  // the notes, changes its mind and exits 0 leaves the old text behind, and the
+  // demand that asked for the change is then ticked as applied.
+  const before =
+    reviseNotes.length > 0 && existsSync(outPath) ? readFileSync(outPath, 'utf8') : null;
+
   const run = trackRun(project.id);
   try {
     const res = await spawnCli({
@@ -724,7 +757,6 @@ export async function runStep(
       );
     }
     if (res.aborted) return settle('stopped', 'stopped by pause/restart/cancel');
-    const outPath = join(project.repo_path, '.kortext', step.output);
     if (res.exitCode !== 0) {
       return settle(
         'failed',
@@ -734,7 +766,14 @@ export async function runStep(
     if (!existsSync(outPath)) {
       return settle('failed', `engine finished without producing ${step.output}`);
     }
-    const status = readFrontmatter(readFileSync(outPath, 'utf8')).status;
+    const written = readFileSync(outPath, 'utf8');
+    if (before !== null && written === before) {
+      return settle(
+        'failed',
+        `${engine.id} left ${step.output} exactly as it was — the change was not made`,
+      );
+    }
+    const status = readFrontmatter(written).status;
     if (status !== 'draft' && status !== 'not-applicable') {
       return settle('failed', `${step.output} written but status is '${status}' (expected draft)`);
     }

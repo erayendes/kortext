@@ -8,7 +8,7 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import type { Project } from './db.js';
 
 // Live workspace inside a registered repo:
@@ -182,7 +182,11 @@ export function createProject(
   pkgRoot: string,
 ): Project {
   const name = input.name.trim();
-  const repoPath = input.repoPath.trim();
+  // `repo_path` is UNIQUE, but only as text: /repo and /repo/ are two rows
+  // writing the same files, so a restart or a cancel on one wipes the other's
+  // documents. resolve() settles the separators, the trailing slash and a
+  // relative path into the one spelling the filesystem actually uses.
+  const repoPath = input.repoPath.trim() ? resolve(input.repoPath.trim()) : '';
   const kind = input.kind === 'existing' ? 'existing' : 'new';
   const code = (input.code ?? '').trim().toUpperCase() || deriveCode(name);
   if (!name) throw new Error('name is required');
