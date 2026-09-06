@@ -111,6 +111,39 @@ agent — CLI or app — and it begins by reading `AGENTS.md` and the `.kortext/
 From here Kortext is not in the loop. The documents are the contract, and your agent works
 against them.
 
+## Transfer to Kopeng — optional
+
+With `kopeng` on your `PATH`, the completion card gains **Transfer to Kopeng**: one long run
+splits the approved documents into versions, epics and tasks under `.kopeng/`, with ids that
+carry the project code (`ACME-E01`, `ACME-T001`). The panel shows the plan; **Approve plan** is
+the last signature. Without kopeng installed the card shows an install note instead, and nothing
+else changes — the handshake is complete either way.
+
+## The panel's own controls
+
+Kortext runs in the background: the terminal that started it can be closed, and the panel
+stays. What the panel says about itself lives in two strips.
+
+**The status bar**, at the bottom. A green dot means the server is answering; it turns red the
+moment the server is gone, and green again by itself when you start `kortext` once more. Next
+to it: the running version and the ⏻ button. Stopping takes two clicks — the first arms it and
+says so, the second stops the server. It refuses while a step is writing, so an analysis is
+never cut off mid-document; `kortext --stop` in a terminal follows the same rule. The credit on
+the right opens a short list of the other Milowda tools.
+
+**The update strip**, under the header, appears only when npm carries a newer version than the
+one running. **Update now** runs the install for you; while it runs every other call to the
+server is refused, and afterwards the strip says to quit kortext and start it again — the
+process on screen is still the old one. If the install fails, the strip says so and gives the
+command to run yourself.
+
+**Theme.** The button at the right of the header cycles auto → light → dark. Auto follows the
+operating system; the other two are remembered in this browser.
+
+**Also from Milowda.** The cards under the project list, and the one-line slide on a project
+screen, name the other Milowda tools. The × hides them for good in this browser; it asks once
+before it does, and hiding them on one screen hides them on both.
+
 ## When something goes wrong
 
 **A step failed.** The row says why, in the CLI's own words. The usual cause is an agent CLI that
@@ -137,6 +170,7 @@ until then, on purpose.
 | --- | --- |
 | `~/.kortext/kortext.db` | the project registry — one database, every project |
 | `~/.kortext/logs/` | raw output of every CLI run |
+| `~/.kortext/kortext.db.log` | what the background server prints |
 | `<repo>/AGENTS.md` | the handover contract, inside a marked block |
 | `<repo>/.kortext/` | the documents — one folder, fifteen files, `BRIEF.md` first |
 

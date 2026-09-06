@@ -28,6 +28,9 @@ Kortext.
   persona, revision requests between documents, and the handshake that ends the analysis.
 - **One process, one port.** Express and SQLite behind a React panel on `localhost:3441`; the
   registry is a single global database at `~/.kortext/kortext.db`.
+- **It runs in the background.** `kortext` starts the server detached and opens the panel; the
+  terminal can go. The status bar's ⏻ button, or `kortext --stop`, brings it down — never while
+  a step is writing. The same panel says when a newer version is on npm, and installs it.
 
 Requires Node 22 and one agent CLI on the `PATH`.
 

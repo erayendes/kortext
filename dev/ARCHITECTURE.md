@@ -27,18 +27,18 @@ kortext (npm package, installed globally)
 │   ├─ index.ts      131  entry, CLI flags (--port --db --no-open --no-detach --stop --help)
 │   ├─ daemon.ts      47  detached respawn + health probe (start/stop from the terminal)
 │   ├─ update.ts      68  npm registry check + self-update (the panel's update strip)
-│   ├─ db.ts          73  SQLite schema + column migration + Project type
-│   ├─ app.ts        509  every REST route + static panel
-│   ├─ projects.ts   262  registry, code derivation, scaffold, handover contract
-│   ├─ docs.ts       322  frontmatter, request parsing, dependency ordering
-│   ├─ runner.ts     598  chain, step run, revision, recheck, planning
-│   ├─ readiness.ts  309  the single gate ahead of the chain
-│   ├─ engines.ts     68  CLI detection + headless flags
-│   ├─ cli-spawn.ts  327  shell-free spawn, abort, logging, failure classification
+│   ├─ db.ts          77  SQLite schema + column migration + Project type
+│   ├─ app.ts        771  every REST route + static panel
+│   ├─ projects.ts   258  registry, code derivation, scaffold, handover contract
+│   ├─ docs.ts       346  frontmatter, request parsing, dependency ordering
+│   ├─ runner.ts     844  chain, step run, revision, recheck, planning
+│   ├─ readiness.ts  350  the single gate ahead of the chain
+│   ├─ engines.ts    111  CLI detection + headless flags
+│   ├─ cli-spawn.ts  349  shell-free spawn, abort, logging, failure classification
 │   └─ pick-directory.ts 40  macOS folder chooser (osascript)
 │
-├─ ui/ (React 19 + Vite 7 → ui/dist/, served by the same Express)
-│   ├─ App.tsx  project list · project screen · engine badge · theme · TransferPanel
+├─ ui/ (React 19 + Vite 8 → ui/dist/, served by the same Express)
+│   ├─ App.tsx  project list · project screen · engine badge · theme · update strip · status bar · Milowda strip · TransferPanel
 │   ├─ DocDrawer.tsx  read, line-anchored chat, requests, edit, approve
 │   ├─ Drawer.tsx · api.ts · markdown.ts · highlight.ts · index.css (see DESIGN.md)
 │
@@ -69,7 +69,7 @@ With `--db /path/name.sqlite`, logs live in `/path/name.sqlite.logs/`; sibling d
 | `jobs` | `project_id · doc_rel · kind (doc\|plan\|recheck) · status (running\|done\|failed\|stopped) · error · notes (JSON) · started_at · finished_at` |
 | `pending_rechecks` | `project_id · source_rel · reader_rel · generation` — durable work, unique per source/reader pair |
 
-`code` is the task-id prefix (`ACME-T001`), 2–8 chars, unique across projects. No migration
+`code` is the task-id prefix (`ACME-T001`), 2–8 letters A–Z, unique across projects. No migration
 framework: `openDb` creates tables `IF NOT EXISTS` and adds missing columns with `ALTER TABLE`.
 
 **Inside the repo** — the documents themselves, under the user's version control:
@@ -212,7 +212,7 @@ No fs-watch — the panel polls (docs 3s, transfer 4s, handshake 5s).
 | --- | --- |
 | `GET /api/health` | ok · db path · the version actually **running** (the status bar's dot polls it) |
 | `GET /api/version` | current · newest on npm · whether the update strip shows |
-| `POST /api/version/update` | run `npm install -g kortext@latest`; 409 while a step runs |
+| `POST /api/version/update` | run `npm install -g kortext@latest`; 409 while a step runs — and while it runs, every other route but `/health` answers 409, so nothing reads or writes under a package being replaced |
 | `POST /api/quit` | stop the server (⏻ button, `--stop`); 409 while a step runs |
 | `GET \| POST /api/projects` | list (with per-group progress) · add (born paused) |
 | `DELETE /api/projects/:id` | unregister only; files untouched |
@@ -252,12 +252,21 @@ kopeng is installed) → **DocDrawer**: read (own markdown, mermaid and highligh
 line to talk to the persona, decide incoming and outgoing requests one by one, edit directly,
 Approve. Destructive buttons arm in place — browsers silently suppress repeated `confirm()`.
 
-Two strips frame it. Under the header, the **update strip** appears only when npm carries a
-newer version and kortext runs from a global install. At the bottom, an application **status
-bar** (34px, never wrapping): the server dot — green while `/api/health` answers, red the
-moment it stops and green again on its own when it comes back — the version, the ⏻ button
-(two clicks, no `confirm()`), the restart command as a click-to-copy chip, and one cycling
-theme button (auto · light · dark).
+The chrome around it. The **header** carries the wordmark (one PNG per theme), the no-CLI
+warning when there is nothing on the `PATH`, and at the far right one cycling **theme** button
+(auto → light → dark, remembered in `localStorage`, no attribute meaning auto). Under it the
+**update strip** appears only when npm carries a newer version and kortext runs from a global
+install; **Update now** calls `/api/version/update`, and afterwards the strip says to quit and
+start again, because the process on screen is still the old one. At the bottom, an application
+**status bar** (34px, never wrapping): the server dot — green while `/api/health` answers, red
+the moment it stops and green again on its own when it comes back — the version, the ⏻ button
+(two clicks, no `confirm()`), the restart command as a click-to-copy chip once the server is
+down, and the Milowda credit, a popover that lists the other tools only when clicked.
+
+The **Milowda strip** names those tools once more where there is room: six cards under the
+project list, and on a project screen one full-width slide that advances every seven seconds
+and holds while the pointer is on it. Its × hides both for good (`localStorage`, two clicks —
+the second is not undoable from the panel, so it asks in red).
 
 The vocabulary splits in two: **status** (where the document is) and **badge** (what wants
 attention — open question, standing request, moving input). Visual language: [DESIGN.md](./DESIGN.md).
@@ -281,7 +290,8 @@ enforces that and the ordering.
 
 ## 9 · Verification
 
-`npm test` → `node:test`, **80 tests**, seven files: `release` (concurrent edits, approval, durable rechecks, retry, aliases and log isolation),
+`npm test` → `node:test`, **84 tests**, nine files: `daemon` (health probe, detached respawn) ·
+`update` (release order, the self-update lock) · `release` (concurrent edits, approval, durable rechecks, retry, aliases and log isolation),
 `order` (a step cannot read a document
 written after it; personas match their step; skeletons keep both required sections) · `docs`
 (frontmatter, request parsing, open questions, ordering) · `runner` (producibility, prompt

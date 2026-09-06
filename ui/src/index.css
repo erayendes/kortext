@@ -888,18 +888,6 @@ body {
   box-shadow: var(--shadow-xs);
 }
 
-/* Bir kez kurulup unutulan ayar için: yarı boy, hap biçimli. */
-.seg-sm {
-  padding: 1px;
-  border-radius: var(--r-pill);
-}
-.seg-sm button {
-  height: 16px;
-  padding: 0 8px;
-  font-size: var(--fs-micro);
-  border-radius: var(--r-pill);
-}
-
 /* ----- base: badges / pills (handoff) ----- */
 .badge {
   display: inline-flex;

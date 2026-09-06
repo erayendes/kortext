@@ -34,22 +34,44 @@ kortext
 ```
 
 **Expect:** two lines — `kortext panel: http://localhost:3441` and `db: ~/.kortext/kortext.db`
-— and the browser opening the panel. `--port` moves it, `--db` moves the database, `--no-open`
-keeps the browser shut. There are no subcommands: `kortext` is the whole CLI.
-→ [server/index.ts](../server/index.ts)
+— then the prompt comes back: the server has gone to the background, and the browser opens the
+panel. Closing the terminal changes nothing. `--port` moves it, `--db` moves the database,
+`--no-open` keeps the browser shut, `--no-detach` keeps the server in the terminal (Ctrl+C
+stops it), `--stop` brings a background server down, `--version` prints the version. What the
+background server prints goes to `~/.kortext/kortext.db.log`.
+→ [server/index.ts](../server/index.ts) · [server/daemon.ts](../server/daemon.ts)
 
-**Expect in the header:** `Kortext | project brain` — and, when no agent CLI is on the `PATH`
-at all, the warning that says so. The engine itself is not chosen here: it belongs to a project.
+**Expect in the header:** the wordmark, the theme button at the right — and, when no agent CLI
+is on the `PATH` at all, the warning that says so. The engine itself is not chosen here: it
+belongs to a project.
 → [server/engines.ts](../server/engines.ts)
 
-- [ ] The panel opens and the footer says `v3.1.0`.
+**Expect in the status bar:** a green dot, `kortext v3.1.0`, the ⏻ button, the Milowda credit.
+
+- [ ] The panel opens, the dot is green, the bar says `v3.1.0`.
 - [ ] With no CLI installed the header warns; with one installed it stays quiet.
+- [ ] A second `kortext` does not start a second server: it says `kortext is already running`
+      and opens the panel of the one that is.
+- [ ] ⏻ once arms it (*click again to stop*); twice stops it: the dot goes red and the bar
+      shows `kortext` as the command to start again. `kortext --stop` does the same from a
+      terminal.
+- [ ] While a step is writing, ⏻ and `--stop` both refuse — the analysis is never cut off
+      mid-document.
+- [ ] Start `kortext` again with the tab still open: the dot turns green by itself.
+- [ ] The theme button cycles auto → light → dark, and the choice survives a reload.
+- [ ] No update strip while the running version is the newest on npm, and never from a dev
+      checkout. Install an older version globally to see it; **Update now** ends with *quit
+      kortext and start it again*, and every other call is refused while it runs.
+- [ ] The Milowda credit opens a popover; a click elsewhere or Escape closes it.
+- [ ] The × on *Also from Milowda* asks once, then hides it for good — on the project list and
+      on the project screen both, and across reloads.
 
 ---
 
 ## 2 · Add a project
 
-**Add project** takes: name, code (2–8 chars, `ACME`), *New* or *Existing*, the folder (Browse
+**Add project** takes: name, code (2–8 letters, `ACME`; derived from the name when left
+empty, digits dropped — *365 Tracker* becomes `TRACK`), *New* or *Existing*, the folder (Browse
 opens the macOS chooser; other platforms take a typed path), an optional document language, the
 **agent CLI** (the dropdown beside Initialize — the choice is the project's, not the app's), and
 — for a new project — the brief, written in the form or uploaded.
@@ -101,7 +123,9 @@ The order for a new project: `PRODUCT` · `STACK`+`STRUCTURE` · `ARCHITECTURE` 
 
 - [ ] Documents appear in dependency order, three at most in flight.
 - [ ] Approving one wakes the chain immediately — it does not wait for another step to finish.
-- [ ] **Pause** stops new steps; a running one finishes. **Continue** picks it back up.
+- [ ] **Pause** stops new steps and kills the running one — `pgrep -f "claude --print"` (or
+      your engine) is empty a few seconds later, and the row says stopped, not failed.
+      **Continue** picks the chain back up; the stopped step is retried from the row.
 - [ ] Switching the CLI from the dropdown next to Start moves the steps that begin after it;
       the running one finishes on the old CLI.
 - [ ] A failed step stays visible with its reason and can be retried.
@@ -163,7 +187,7 @@ of the handshake. Without kopeng installed, the button is replaced by an install
 
 | action | what it touches |
 | --- | --- |
-| **Pause / Continue** | only whether new steps start |
+| **Pause / Continue** | Pause stops new steps and aborts the running one; Continue kicks the chain |
 | **Restart** | wipes `.kortext/` and `.kopeng/`, re-scaffolds, lands paused |
 | **Archive** | a shelf: the row and the repo both stay, the card folds away |
 | **Cancel** | removes what kortext wrote — `.kortext/`, `.kopeng/`, the `AGENTS.md` block, the `CLAUDE.md` pointer — and the registry row. Your own files survive |

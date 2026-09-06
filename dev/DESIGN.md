@@ -42,8 +42,9 @@ user's choice, override the OS and are remembered in `localStorage`. No other ap
 
 The dark values are written twice on purpose. Plain CSS has no block alias, and the alternative
 — a class a script adds on load — shows the wrong theme for one frame on every open. Repetition
-is the cheaper honesty. `data-theme` is written by one control (the footer's `.seg-sm`); no
-attribute means auto.
+is the cheaper honesty. `data-theme` is written by one control — the header's `.kx-theme`
+button, which cycles auto → light → dark and shows the state that is on; no attribute means
+auto.
 
 > Dark is not light run through a filter: surfaces lighten as they rise, borders stay quiet, and
 > a tinted background is a black with colour mixed in — not a lightened light-mode value.
@@ -202,9 +203,9 @@ plus a 3px `--accent-ring`.
 `appearance:none` kills it and the chevron comes back as an inline SVG that inherits the text
 colour. Button height, so a select and a button line up.
 
-**Segmented control.** For "which one is on", not "which was pressed". Full-size `.seg` is for a
-choice that changes how a screen works; `.seg-sm` (half height, pill) is for a preference set once
-and forgotten — the theme switch sits in the footer at that size.
+**Segmented control.** For "which one is on", not "which was pressed". `.seg` is for a choice
+that changes how a screen works. A preference set once (the theme) is not a segment: one icon
+button in the header, whose drawing says which state is on.
 
 **Two options are still a segment**: instead of an underlined tab pair, `.seg` keeps the control
 height and lifts the selected one out of its well. The brief's **Write | Upload** works this way.
@@ -275,12 +276,30 @@ The demand band shares its pink with the `change request` badge: you see the bad
 open the document and find the same pink. The dependency band is the `dependent` badge enlarged —
 hollow, framed.
 
-The panel header carries the wordmark and nothing else, unless there is no agent CLI at all —
-the engine belongs to a project, so its control sits on the project screen beside Start, at the
-same height as Start. A tagline in the chrome is a thing the reader learns once and then reads
-forever. Footer: **Kortext v3.1.0 by
-Milowda** and **Kopeng — task board** on the left, the theme switch (`.seg-sm`) on the right. A
-setting configured once does not sit at the top of every screen.
+**Header.** The wordmark — a PNG per theme, swapped by CSS, so the drawing is right on the
+first frame — and, at the far right, the theme button. Nothing else, unless there is no agent
+CLI at all: the engine belongs to a project, so its control sits on the project screen beside
+Start, at the same height as Start. A tagline in the chrome is a thing the reader learns once
+and then reads forever. The theme button is the one preference that survived, and it is an
+icon, not a control row: it takes no width a heading would.
+
+**Update strip** (`.kx-update`), under the header: present only when there is something to say
+— a newer version on npm. One sentence, one button, and after the install one sentence again
+(quit and start again). An error keeps the strip and adds the command to run by hand.
+
+**Status bar** (`.kx-statusbar`), 34px, never wrapping — an application's bar, not a web
+page's footer. Left to right: the server dot (`.kx-dot`, green up, red down, and the only thing
+said while all is well), `kortext` as a link to the repository, the running version in mono,
+the ⏻ button (`.kx-power`, armed state in red on the second click), a warning span that only
+carries words when the dot cannot say it (armed, error, stopped), and on the right the credit
+`milowda ♥ istanbul` — a button whose popover lists the other tools. Nothing in the bar is
+visible that is not true right now.
+
+**Milowda strip.** Six cards (`.kx-sib-card`) under the project list, the same grid as the
+projects; on the project screen one slide (`.kx-slider`) with dots, because six cards there
+would push the documents down. A GitHub mark says where a card goes; an unreleased tool says
+*in development* and links nowhere. The × arms first (`.kx-siblings-close-armed`) and hides
+for good on the second click.
 
 ---
 
