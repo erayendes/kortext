@@ -1,8 +1,10 @@
 name: Publish to NPM
 
+# A tag is the release. Pushing v3.1.0 runs the checks, publishes to npm and
+# opens the GitHub release; nothing else has to be clicked.
 on:
-  release:
-    types: [created]
+  push:
+    tags: ['v*']
   workflow_dispatch:
 
 jobs:
@@ -10,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
-      contents: read
+      contents: write # the release is created at the end of this job
       id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -19,6 +21,14 @@ jobs:
           node-version: '22'
           cache: 'npm'
           registry-url: 'https://registry.npmjs.org'
+      # npm refuses to unpublish, so a tag that disagrees with package.json has
+      # to stop here rather than one step before the registry.
+      - name: Tag matches package.json
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG="$(node -p 'require("./package.json").version')"
+          [ "$TAG" = "$PKG" ] || { echo "tag $GITHUB_REF_NAME != package.json $PKG"; exit 1; }
       - run: npm ci && npm --prefix ui ci
       - run: npm run format:check
       - run: npm run typecheck
@@ -31,3 +41,11 @@ jobs:
       # the rest of CI runs on.
       - run: npm install -g npm@11
       - run: npm publish --provenance --access public
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "Kortext $GITHUB_REF_NAME" \
+            --notes "See [the changelog](https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/docs/CHANGELOG.md)."
