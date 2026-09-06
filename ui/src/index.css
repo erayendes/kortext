@@ -1189,18 +1189,43 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  /* A status bar is one line high, always: it wraps nothing and grows with
+  /* A status bar is two lines high, always: it wraps nothing and grows with
      nothing. A message too long for the width is cut, not folded — by the
      message itself, since clipping the bar would swallow the popover above it. */
   white-space: nowrap;
   flex-shrink: 0;
-  height: 34px;
+  height: 52px;
   padding: 0 12px;
   margin-top: auto;
   border-top: 1px solid var(--border);
   background: var(--bg-subtle);
   font-size: var(--fs-label);
   color: var(--fg-muted);
+}
+/* Both lines belong to `kortext`: the server on top, the way to report it under
+   it, left-aligned in one column so the second line reads as part of the first. */
+.kx-statusbar-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.kx-statusbar-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+/* The second line keeps the first line's columns: the bug stands in the dot's
+   8px slot, the words start under `kortext`. The mark is drawn at 12px and
+   bleeds 2px each side, so it reads at 11px type without moving the text. */
+.kx-report {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.kx-report svg {
+  flex: none;
+  margin: 0 -2px;
 }
 .kx-made-trigger {
   display: inline-flex;

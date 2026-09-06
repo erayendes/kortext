@@ -288,13 +288,17 @@ icon, not a control row: it takes no width a heading would.
 — a newer version on npm. One sentence, one button, and after the install one sentence again
 (quit and start again). An error keeps the strip and adds the command to run by hand.
 
-**Status bar** (`.kx-statusbar`), 34px, never wrapping — an application's bar, not a web
-page's footer. Left to right: the server dot (`.kx-dot`, green up, red down, and the only thing
-said while all is well), `kortext` as a link to the repository, the running version in mono,
-the ⏻ button (`.kx-power`, armed state in red on the second click), a warning span that only
-carries words when the dot cannot say it (armed, error, stopped), and on the right the credit
-`milowda ♥ istanbul` — a button whose popover lists the other tools. Nothing in the bar is
-visible that is not true right now.
+**Status bar** (`.kx-statusbar`), 52px, never wrapping — an application's bar, not a web
+page's footer. On the left two stacked lines (`.kx-statusbar-lines`), one column under the
+product's own name. First line: the server dot (`.kx-dot`, green up, red down, and the only
+thing said while all is well), `kortext` as a link to the repository, the running version in
+mono, the ⏻ button (`.kx-power`, armed state in red on the second click), and a warning span
+that only carries words when the dot cannot say it (armed, error, stopped). Second line, in the
+first line's own columns — a bug mark in the dot's slot, the words starting under `kortext` and
+at the same 11px: `Something wrong? Report an issue`, a link to the GitHub bug template with the
+running version already filled in — under the thing that broke, never next to the credit. On the right, that
+credit: `milowda ♥ istanbul`, a button whose popover lists the other tools. Nothing in the bar
+is visible that is not true right now.
 
 **Milowda strip.** Six cards (`.kx-sib-card`) under the project list, the same grid as the
 projects; on the project screen one slide (`.kx-slider`) with dots, because six cards there

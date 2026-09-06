@@ -143,11 +143,19 @@ export function App() {
           {!adding && <Siblings />}
         </main>
       )}
-      {/* An application status bar, not a web page footer: one fixed-height strip
-          carrying what is true right now — the server, and the panel's own
-          controls. */}
+      {/* An application status bar, not a web page footer: two fixed lines under
+          the same name — what is true right now on the first, and on the second
+          the way to say that it is not. The credit sits opposite, so nothing in
+          the column below `kortext` belongs to the branding. */}
       <footer className="kx-statusbar">
-        <ServerStatus />
+        <span className="kx-statusbar-lines">
+          <span className="kx-statusbar-line">
+            <ServerStatus />
+          </span>
+          <span className="kx-statusbar-line">
+            <ReportIssue />
+          </span>
+        </span>
         <span className="kx-doc-spacer" />
         <MadeBy />
       </footer>
@@ -216,7 +224,7 @@ function ServerStatus() {
           target="_blank"
           rel="noreferrer"
         >
-          kortext
+          Kortext
         </a>{' '}
         <Version />
       </span>
@@ -292,6 +300,56 @@ function Version() {
       .catch(() => {});
   }, []);
   return version ? <span className="kx-version mono">v{version}</span> : null;
+}
+
+// Something went wrong and the user has nowhere to say so: the line under the
+// running version carries the way out — the same column as the thing that
+// broke, not the branding. It opens the bug template on GitHub with the
+// version already filled in — the one field a user has to go looking for, and the first thing triage
+// asks for. Not a chooser: a link that says "report an issue" is a bug report,
+// and the feature template is one click away on that page anyway.
+function ReportIssue() {
+  const [version, setVersion] = useState('');
+  useEffect(() => {
+    api
+      .health()
+      .then((h) => setVersion(h.version))
+      .catch(() => {});
+  }, []);
+
+  const href =
+    'https://github.com/erayendes/kortext/issues/new?template=bug_report.yml' +
+    (version ? `&version=${encodeURIComponent(version)}` : '');
+
+  return (
+    <a
+      className="kx-statusbar-link kx-report"
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      title="Open a bug report on GitHub"
+    >
+      <BugMark />
+      Something wrong? Report an issue
+    </a>
+  );
+}
+
+// A bug under the server dot: the second line keeps the first line's column, so
+// the icon stands where the light stands and the words start under `kortext`.
+function BugMark() {
+  return (
+    <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true" fill="none">
+      <ellipse cx="6" cy="7" rx="2.6" ry="3.2" stroke="currentColor" strokeWidth="1" />
+      <path d="M6 3.8V3M4.6 2.2 6 3.4l1.4-1.2" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
+      <path
+        d="M3.4 5.2 1.7 4.4M3.2 7.3H1.4M3.4 9.2l-1.6.9M8.6 5.2l1.7-.8M8.8 7.3h1.8M8.6 9.2l1.6.9"
+        stroke="currentColor"
+        strokeWidth="1"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
 }
 
 // §1 — Tema. Üç durum: auto işletim sistemini takip eder, light ve dark onu ezer
@@ -815,7 +873,7 @@ function UpdateStrip() {
   if (state === 'done') {
     return (
       <div className="kx-update">
-        Updated to {latest}. Quit kortext and start it again — this one is still running the old
+        Updated to {latest}. Quit Kortext and start it again — this one is still running the old
         version.
       </div>
     );
@@ -1653,7 +1711,7 @@ function DocumentsTab({
         if (asked !== showing.current) return;
         setOffline(true);
         setErr(
-          `${e.message} — the panel has lost the kortext server; this page may be out of date.`,
+          `${e.message} — the panel has lost the Kortext server; this page may be out of date.`,
         );
       });
   };
