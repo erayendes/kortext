@@ -1214,6 +1214,12 @@ body {
   font-size: var(--fs-label);
   color: var(--fg-muted);
 }
+.kx-made-by {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--fg-faint);
+}
 .kx-statusbar-link {
   color: var(--fg-faint);
   text-decoration: none;
@@ -2012,8 +2018,8 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 29px;
+  height: 29px;
   border: 0;
   border-radius: var(--r-md);
   background: none;

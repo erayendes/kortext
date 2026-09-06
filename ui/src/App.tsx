@@ -91,6 +91,7 @@ export function App() {
         <img className="kx-logo kx-logo-dark" src="/kortext-logo-dark.png" alt="" aria-hidden />
         <EngineBadge />
         <span className="kx-doc-spacer" />
+        <ThemeSwitch />
       </header>
       <UpdateStrip />
       {error && <div className="kx-error">{error}</div>}
@@ -145,15 +146,18 @@ export function App() {
       <footer className="kx-statusbar">
         <ServerStatus />
         <span className="kx-doc-spacer" />
-        <a
-          className="kx-statusbar-link"
-          href="https://milowda.com"
-          target="_blank"
-          rel="noreferrer"
-        >
-          milowda
-        </a>
-        <ThemeSwitch />
+        <span className="kx-made-by">
+          <a
+            className="kx-statusbar-link"
+            href="https://milowda.com"
+            target="_blank"
+            rel="noreferrer"
+          >
+            milowda
+          </a>
+          <Heart />
+          istanbul
+        </span>
       </footer>
     </div>
   );
@@ -214,7 +218,15 @@ function ServerStatus() {
     <>
       <span className={`kx-dot kx-dot-${down ? 'down' : 'up'}`} aria-hidden="true" />
       <span className="kx-status-name">
-        kortext <Version />
+        <a
+          className="kx-statusbar-link"
+          href="https://github.com/erayendes/kortext"
+          target="_blank"
+          rel="noreferrer"
+        >
+          kortext
+        </a>{' '}
+        <Version />
       </span>
       {!down && (
         <button
@@ -330,14 +342,33 @@ function ThemeSwitch() {
   );
 }
 
+// lucide heart (ISC), drawn as lucide draws it: an outline in the text colour.
+function Heart() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="12"
+      height="12"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-label="loves"
+    >
+      <path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5" />
+    </svg>
+  );
+}
+
 // The three lucide icons — eclipse, sun, moon — drawn inline rather than pulled
 // in as a dependency: three path strings against a whole icon package the panel
 // would otherwise not need. Paths are lucide 1.41.0 (ISC), unmodified.
 function ThemeIcon({ choice }: { choice: ThemeChoice }) {
   const box = {
     viewBox: '0 0 24 24',
-    width: 14,
-    height: 14,
+    width: 18,
+    height: 18,
     fill: 'none',
     stroke: 'currentColor',
     strokeWidth: 2,
