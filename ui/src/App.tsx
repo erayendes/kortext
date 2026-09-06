@@ -341,7 +341,12 @@ function BugMark() {
   return (
     <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true" fill="none">
       <ellipse cx="6" cy="7" rx="2.6" ry="3.2" stroke="currentColor" strokeWidth="1" />
-      <path d="M6 3.8V3M4.6 2.2 6 3.4l1.4-1.2" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
+      <path
+        d="M6 3.8V3M4.6 2.2 6 3.4l1.4-1.2"
+        stroke="currentColor"
+        strokeWidth="1"
+        strokeLinecap="round"
+      />
       <path
         d="M3.4 5.2 1.7 4.4M3.2 7.3H1.4M3.4 9.2l-1.6.9M8.6 5.2l1.7-.8M8.8 7.3h1.8M8.6 9.2l1.6.9"
         stroke="currentColor"
