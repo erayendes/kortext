@@ -388,18 +388,132 @@ const SIBLINGS: {
 // project in it never shows this again. Cards rather than a list, because the
 // screen they land on is a grid of cards and this is the same kind of thing —
 // something to go and look at, not a footnote.
+// The same strip, for a screen that has no room for six cards: one tool at a
+// time, full width, moving on by itself. Hiding it here hides it on the project
+// list too — the answer to "not interested" is one answer, not one per screen.
+function SiblingsSlider() {
+  const [hidden, setHidden] = useState(() => siblingsHidden());
+  const [arming, setArming] = useState(false);
+  const [at, setAt] = useState(0);
+  const [held, setHeld] = useState(false);
+
+  // Stops while the pointer is on it: text that moves out from under a reader
+  // is worse than no text.
+  useEffect(() => {
+    if (hidden || held) return;
+    const timer = setInterval(() => setAt((i) => (i + 1) % SIBLINGS.length), 7000);
+    return () => clearInterval(timer);
+  }, [hidden, held]);
+
+  useEffect(() => {
+    if (!arming) return;
+    const timer = setTimeout(() => setArming(false), 4000);
+    return () => clearTimeout(timer);
+  }, [arming]);
+
+  if (hidden) return null;
+  const s = SIBLINGS[at];
+  const body = (
+    <>
+      <span className="kx-slide-name">{s.name}</span>
+      <span className="kx-slide-what">{s.short}</span>
+      <span className="kx-doc-spacer" />
+      {s.url ? (
+        <span className="kx-sib-goes">
+          <GitHubMark />
+        </span>
+      ) : (
+        <span className="kx-sib-soon">in development</span>
+      )}
+    </>
+  );
+
+  return (
+    <div
+      className="kx-slider"
+      onMouseEnter={() => setHeld(true)}
+      onMouseLeave={() => setHeld(false)}
+    >
+      {s.url ? (
+        <a className="kx-slide" key={s.name} href={s.url} target="_blank" rel="noreferrer">
+          {body}
+        </a>
+      ) : (
+        <span className="kx-slide" key={s.name}>
+          {body}
+        </span>
+      )}
+      <span className="kx-slide-dots">
+        {SIBLINGS.map((o, i) => (
+          <button
+            key={o.name}
+            className={i === at ? 'kx-slide-dot kx-slide-dot-on' : 'kx-slide-dot'}
+            title={o.name}
+            aria-label={o.name}
+            onClick={() => setAt(i)}
+          />
+        ))}
+      </span>
+      {arming && <span className="kx-field-err">Hide this for good? Click again.</span>}
+      <button
+        className={arming ? 'kx-siblings-close kx-siblings-close-armed' : 'kx-siblings-close'}
+        title={arming ? 'Click again to hide it for good' : 'Hide this'}
+        aria-label="Hide this"
+        onClick={() => {
+          if (!arming) {
+            setArming(true);
+            return;
+          }
+          setHidden(true);
+          hideSiblings();
+        }}
+      >
+        <CloseMark />
+      </button>
+    </div>
+  );
+}
+
+// Dismissed for good, in this browser: a promotion that cannot be turned off is
+// an advertisement, and one that comes back tomorrow is worse. Two clicks, the
+// same as the server's power button — the second one is not undoable from the
+// panel, so the question is asked in red rather than in passing.
+function siblingsHidden(): boolean {
+  try {
+    return localStorage.getItem('kx-siblings') === 'hidden';
+  } catch {
+    return false;
+  }
+}
+function hideSiblings(): void {
+  try {
+    localStorage.setItem('kx-siblings', 'hidden');
+  } catch {
+    /* private mode — it stays hidden for this session */
+  }
+}
+
+function CloseMark() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="11"
+      height="11"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.4}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </svg>
+  );
+}
+
 function Siblings() {
-  // Dismissed for good, in this browser: a promotion that cannot be turned off
-  // is an advertisement, and one that comes back tomorrow is worse. Two clicks,
-  // the same as the server's power button — the second one is not undoable from
-  // the panel, so the question is asked in red rather than in passing.
-  const [hidden, setHidden] = useState(() => {
-    try {
-      return localStorage.getItem('kx-siblings') === 'hidden';
-    } catch {
-      return false;
-    }
-  });
+  const [hidden, setHidden] = useState(() => siblingsHidden());
   const [arming, setArming] = useState(false);
 
   useEffect(() => {
@@ -416,11 +530,7 @@ function Siblings() {
       return;
     }
     setHidden(true);
-    try {
-      localStorage.setItem('kx-siblings', 'hidden');
-    } catch {
-      /* private mode — it stays hidden for this session */
-    }
+    hideSiblings();
   };
 
   return (
@@ -437,20 +547,7 @@ function Siblings() {
           aria-label="Hide this"
           onClick={hide}
         >
-          <svg
-            viewBox="0 0 24 24"
-            width="11"
-            height="11"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2.4}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M18 6 6 18" />
-            <path d="m6 6 12 12" />
-          </svg>
+          <CloseMark />
         </button>
       </div>
       <div className="kx-grid">
@@ -1656,6 +1753,7 @@ function DocumentsTab({
         }
       />
       {err && <div className="kx-error">{err}</div>}
+      <SiblingsSlider />
       {groups.map((g) => {
         const items = sortFor(
           g.key,
