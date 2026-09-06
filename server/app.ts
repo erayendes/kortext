@@ -35,6 +35,7 @@ import {
   advance,
   explainDoc,
   failStaleJobs,
+  hasActiveRuns,
   listJobs,
   runStep,
   nextStep,
@@ -91,6 +92,17 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
 
   app.use(express.json());
 
+  let updating = false;
+  let resetting = 0;
+  // The whole package is replaced: block every API reader/writer, including
+  // polling's scaffold, until npm finishes. Health uses only boot-time data.
+  app.use('/api', (req, res, next) => {
+    if (updating && req.path !== '/health') {
+      return res.status(409).json({ error: 'kortext is updating — wait for it to finish' });
+    }
+    next();
+  });
+
   const kickChain = (project: Project) => {
     const engine = engineFor(db, project);
     if (engine) void advance(db, project, engine, pkgRoot);
@@ -111,6 +123,8 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   });
 
   const stepRunning = () =>
+    resetting > 0 ||
+    hasActiveRuns() ||
     !!db.prepare("SELECT 1 FROM jobs WHERE status = 'running' LIMIT 1").get();
 
   // Quit from the panel. The server outlives the terminal it was started from,
@@ -148,8 +162,13 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     if (stepRunning()) {
       return res.status(409).json({ error: 'a step is running — wait for it, then update' });
     }
-    const result = await selfUpdate();
-    res.status(result.ok ? 200 : 500).json(result);
+    updating = true;
+    try {
+      const result = await selfUpdate();
+      res.status(result.ok ? 200 : 500).json(result);
+    } finally {
+      updating = false;
+    }
   });
 
   app.get('/api/projects', (_req, res) => {
@@ -325,6 +344,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   app.post('/api/projects/:id/restart', async (req, res) => {
     const project = projectOr404(req.params.id, res);
     if (!project) return;
+    resetting++;
     try {
       // Pause FIRST. Aborting alone is not enough: the stopped steps settle, the
       // chain loop wakes, sees the documents still unwritten and starts them
@@ -347,6 +367,8 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       res.json({ ok: true });
     } catch (err) {
       res.status(400).json({ error: (err as Error).message });
+    } finally {
+      resetting--;
     }
   });
 
@@ -357,6 +379,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   app.post('/api/projects/:id/cancel', async (req, res) => {
     const project = projectOr404(req.params.id, res);
     if (!project) return;
+    resetting++;
     try {
       // Pause before aborting, for the reason restart gives above.
       db.prepare('UPDATE projects SET paused = 1 WHERE id = ?').run(project.id);
@@ -373,6 +396,8 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       res.json({ ok: true });
     } catch (err) {
       res.status(400).json({ error: (err as Error).message });
+    } finally {
+      resetting--;
     }
   });
 

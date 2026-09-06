@@ -178,6 +178,10 @@ const MAX_STEP_ATTEMPTS = 3;
 // project (SIGTERM→SIGKILL via cli-spawn) instead of letting it finish and
 // rewrite files that were just wiped.
 const liveRuns = new Map<number, Set<AbortController>>();
+export function hasActiveRuns(): boolean {
+  return advancing.size > 0 || liveRuns.size > 0;
+}
+
 function trackRun(projectId: number): { ctrl: AbortController; done: () => void } {
   const ctrl = new AbortController();
   let set = liveRuns.get(projectId);
