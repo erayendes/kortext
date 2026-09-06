@@ -40,6 +40,7 @@ export function DocDrawer({
   const [notes, setNotes] = useState<Note[]>([]);
   const [explains, setExplains] = useState<Explain[]>([]);
   const [busy, setBusy] = useState(false);
+  const [preview, setPreview] = useState(false); // DESIGN.md drawn, not read
   const [proposed, setProposed] = useState(false); // the editor holds a draft the engine wrote
   const [rawEdit, setRawEdit] = useState(false); // …and you asked to type in it rather than read it
   const [err, setErr] = useState<string | null>(null);
@@ -56,6 +57,7 @@ export function DocDrawer({
 
   useEffect(() => {
     setEditing(false);
+    setPreview(false);
     setProposed(false);
     setRawEdit(false);
     setSelected(null);
@@ -294,8 +296,24 @@ export function DocDrawer({
             </button>
           )}
           {!editing && doc.status !== 'uninitialized' && (
-            <button className="btn btn-secondary" disabled={busy} onClick={() => setEditing(true)}>
+            <button
+              className="btn btn-secondary"
+              disabled={busy}
+              onClick={() => {
+                setPreview(false);
+                setEditing(true);
+              }}
+            >
               Edit
+            </button>
+          )}
+          {/* Tokens read better drawn than tabulated — the page is rendered
+              from this same file, so it is never out of date. It sits in an
+              iframe: its palette is the project's, the panel's is the panel's,
+              and neither leaks into the other. */}
+          {!editing && doc.rel === 'DESIGN.md' && doc.status !== 'uninitialized' && (
+            <button className="btn btn-secondary" onClick={() => setPreview(!preview)}>
+              {preview ? 'Document' : 'Preview'}
             </button>
           )}
           {editing && (
@@ -322,7 +340,16 @@ export function DocDrawer({
           </button>
         </div>
       </div>
-      <div className="dr-body">
+      <div className={preview ? 'dr-body dr-body-preview' : 'dr-body'}>
+        {preview && (
+          // Its own document, so the project's tokens and the panel's stay
+          // apart: the page inside carries its own light/dark switch.
+          <iframe
+            className="kx-doc-preview"
+            title={`${doc.name} — design tokens`}
+            src={`/api/projects/${project.id}/docs/design-preview`}
+          />
+        )}
         {err && <div className="kx-error">{err}</div>}
         {failedError && !editing && (
           <div className="kx-doc-changebar">
@@ -458,7 +485,8 @@ export function DocDrawer({
           </div>
         )}
       </div>
-      {!editing && doc.status !== 'uninitialized' && (
+      {/* The footer asks about lines of the document; the preview has none. */}
+      {!editing && !preview && doc.status !== 'uninitialized' && (
         <div className="dr-foot">
           {notes.length > 0 ? (
             <div className="kx-notes">

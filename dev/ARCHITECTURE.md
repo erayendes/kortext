@@ -28,10 +28,11 @@ kortext (npm package, installed globally)
 │   ├─ daemon.ts      47  detached respawn + health probe (start/stop from the terminal)
 │   ├─ update.ts      68  npm registry check + self-update (the panel's update strip)
 │   ├─ db.ts          77  SQLite schema + column migration + Project type
-│   ├─ app.ts        771  every REST route + static panel
+│   ├─ app.ts        791  every REST route + static panel
 │   ├─ projects.ts   258  registry, code derivation, scaffold, handover contract
 │   ├─ docs.ts       346  frontmatter, request parsing, dependency ordering
-│   ├─ runner.ts     844  chain, step run, revision, recheck, planning
+│   ├─ runner.ts     848  chain, step run, revision, recheck, planning
+│   ├─ design-preview.ts 568  DESIGN.md tokens → .kortext/DESIGN.html (swatches, contrast, light/dark)
 │   ├─ readiness.ts  350  the single gate ahead of the chain
 │   ├─ engines.ts    111  CLI detection + headless flags
 │   ├─ cli-spawn.ts  349  shell-free spawn, abort, logging, failure classification

@@ -712,6 +712,28 @@ body {
   flex: none;
 }
 
+/* Bir buton link olabilir (DESIGN önizlemesi yeni sekmede açılır): altı çizili
+   metin gibi görünmesin, komşu butonlarla aynı kutu olsun. */
+a.btn {
+  text-decoration: none;
+}
+
+/* DESIGN önizlemesi çekmecenin içinde, kendi belgesi olarak: iframe'in içindeki
+   palet projenin, dışındaki panelin — ikisi birbirine karışmaz. */
+.dr-body-preview {
+  padding: 0;
+  overflow: hidden;
+}
+.dr-body-preview > *:not(.kx-doc-preview) {
+  display: none;
+}
+.kx-doc-preview {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
 /* Hover varyantındır: tabanda bir kural varyantınkini sessizce ezerdi. */
 .btn:hover {
   background: none;
