@@ -250,6 +250,7 @@ printf -- '---\\nstatus: draft\\nauthor: +mock\\n---\\n\\n# Mock\\n' > ".kortext
   // Settle the readiness gate first — this measures the chain's parallelism,
   // not the one-off gate spawn that precedes it.
   await ensureReadiness(
+    db,
     p,
     { id: 'slow', binary: script, args: [], installHint: '' },
     new AbortController().signal,
@@ -307,6 +308,7 @@ printf -- '---\\nstatus: draft\\nauthor: +mock\\n---\\n\\n# Revised\\n' > ".kort
   chmodSync(ans, 0o755);
   const before = readFileSync(docPath(p, 'LEGAL.md'), 'utf8');
   const r = await explainDoc(
+    db,
     p,
     'LEGAL.md',
     'seçili satır',
@@ -519,6 +521,7 @@ printf -- '---\\nstatus: draft\\nauthor: +prime\\n---\\n\\n# Brief\\n\\nrevised\
   chmodSync(script, 0o755);
   const { proposeRevision } = await import('../server/runner.js');
   const out = await proposeRevision(
+    db,
     p,
     'BRIEF.md',
     ['[PRODUCT.md asks] say it the other way round'],
@@ -541,7 +544,7 @@ test('an engine that proposes nothing is an error, not an empty document', async
   approveBrief(p);
   const { proposeRevision } = await import('../server/runner.js');
   await assert.rejects(
-    () => proposeRevision(p, 'BRIEF.md', ['change it'], mockEngine(work, 'noop'), pkgRoot),
+    () => proposeRevision(db, p, 'BRIEF.md', ['change it'], mockEngine(work, 'noop'), pkgRoot),
     /wrote no proposal/,
   );
   rmSync(work, { recursive: true, force: true });
@@ -779,7 +782,7 @@ test('a draft the human asked for can be stopped, like every other run', async (
   const engine = { id: 'slow', binary: script, args: [], installHint: '' };
 
   const started = Date.now();
-  const call = proposeRevision(p, 'STACK.md', ['change it'], engine, pkgRoot);
+  const call = proposeRevision(db, p, 'STACK.md', ['change it'], engine, pkgRoot);
   await new Promise((r) => setTimeout(r, 400));
   abortRuns(p.id);
   await assert.rejects(call, /stopped/, 'an aborted draft says it was stopped');
@@ -909,26 +912,30 @@ test('a failed readiness run cannot inherit the previous brief’s approval', as
   );
 
   const { ensureReadiness } = await import('../server/readiness.js');
-  const out = await ensureReadiness(p, engine, new AbortController().signal);
+  const out = await ensureReadiness(db, p, engine, new AbortController().signal);
   assert.equal(out.ready, false, 'a CLI that exited 1 judged nothing');
   rmSync(work, { recursive: true, force: true });
 });
 
 test('run logs belong to the database they describe, not to the home directory', () => {
   const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
-  openDb(join(work, 'db.sqlite'));
+  const db = openDb(join(work, 'db.sqlite'));
 
   // One shared folder keyed on nothing but the project id meant a second
   // server on its own --db wrote into the first one's logs, and cancelling
   // ITS project 1 deleted the other project 1's history.
-  assert.equal(logRootDir(), join(work, 'logs'));
-  assert.equal(logPathFor('p1-plan.log'), join(work, 'logs', 'p1-plan.log'));
+  assert.equal(logRootDir(db), join(work, 'db.sqlite.logs'));
+  assert.equal(logPathFor(db, 'p1-plan.log'), join(work, 'db.sqlite.logs', 'p1-plan.log'));
 
-  mkdirSync(join(work, 'logs'), { recursive: true });
-  writeFileSync(logPathFor('p1-plan.log'), 'mine', 'utf8');
-  writeFileSync(logPathFor('p2-plan.log'), 'someone else', 'utf8');
-  removeRunLogs(1);
-  assert.equal(existsSync(logPathFor('p1-plan.log')), false, "cancel takes its own project's logs");
-  assert.equal(existsSync(logPathFor('p2-plan.log')), true, 'and leaves every other alone');
+  mkdirSync(join(work, 'db.sqlite.logs'), { recursive: true });
+  writeFileSync(logPathFor(db, 'p1-plan.log'), 'mine', 'utf8');
+  writeFileSync(logPathFor(db, 'p2-plan.log'), 'someone else', 'utf8');
+  removeRunLogs(1, logRootDir(db));
+  assert.equal(
+    existsSync(logPathFor(db, 'p1-plan.log')),
+    false,
+    "cancel takes its own project's logs",
+  );
+  assert.equal(existsSync(logPathFor(db, 'p2-plan.log')), true, 'and leaves every other alone');
   rmSync(work, { recursive: true, force: true });
 });

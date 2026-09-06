@@ -2,13 +2,14 @@ import type Database from 'better-sqlite3';
 import { randomUUID } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { logPathFor, logRootDir, type Project } from './db.js';
+import { logPathFor, type Project } from './db.js';
 import { spawnCli } from './cli-spawn.js';
 import { ENGINES, type EngineSpec } from './engines.js';
 import {
   docPath,
   listDocs,
   loadDocMap,
+  markRequestHandled,
   readFrontmatter,
   workflowNameFor,
   type DocStep,
@@ -23,6 +24,7 @@ export interface Job {
   kind: string;
   status: 'running' | 'done' | 'failed' | 'stopped';
   error: string | null;
+  notes: string;
   started_at: string;
   finished_at: string | null;
 }
@@ -211,6 +213,8 @@ export async function advance(
   // and start a pool of its own — two loops, twice the cap, twice the spend.
   advancing.set(project.id, () => wake());
   try {
+    const checked = new Set<string>();
+    await drainRechecks(db, project, engine, pkgRoot, checked);
     // Before the gate, not after. The gate spawns a CLI, and its verdict is
     // cached per brief version — so editing the brief while paused, which is
     // the whole reason to pause, missed the cache and spent a run the loop
@@ -237,7 +241,7 @@ export async function advance(
     const gate = trackRun(project.id);
     let ready = false;
     try {
-      ready = (await ensureReadiness(project, engine, gate.ctrl.signal)).ready;
+      ready = (await ensureReadiness(db, project, engine, gate.ctrl.signal)).ready;
     } finally {
       gate.done();
     }
@@ -251,6 +255,7 @@ export async function advance(
     // new loop with a fresh count, so giving up here is not giving up for good.
     const attempts = new Map<string, number>();
     for (;;) {
+      await drainRechecks(db, project, engine, pkgRoot, checked);
       // Paused = don't start new steps; running ones finish and the loop exits.
       const paused = (
         db.prepare('SELECT paused FROM projects WHERE id = ?').get(project.id) as
@@ -323,6 +328,7 @@ export async function reviseDoc(
 // Line-anchored Q&A: the author persona answers about its own document.
 // Nothing is written anywhere — the answer lives only in the panel.
 export async function explainDoc(
+  db: Database.Database,
   project: Project,
   rel: string,
   excerpt: string,
@@ -357,7 +363,7 @@ export async function explainDoc(
       args: engine.args,
       cwd: project.repo_path,
       stdin: prompt,
-      logPath: logPathFor(`p${project.id}-explain.log`),
+      logPath: logPathFor(db, `p${project.id}-explain.log`),
       signal: run.ctrl.signal,
       timeoutMs: 3 * 60 * 1000,
     });
@@ -413,7 +419,7 @@ async function runRecheck(
   readerRel: string,
   sourceRel: string,
   engine: EngineSpec,
-): Promise<void> {
+): Promise<boolean> {
   const job = db
     .prepare("INSERT INTO jobs (project_id, doc_rel, kind) VALUES (?, ?, 'recheck') RETURNING *")
     .get(project.id, readerRel) as Job;
@@ -439,36 +445,53 @@ async function runRecheck(
     '- The reason is read by the human as a demand on the reader, so write it in the language of the documents.',
   ].join('\n');
   try {
+    const sourceBefore = readFileSync(docPath(project, sourceRel), 'utf8');
+    const readerBefore = readFileSync(docPath(project, readerRel), 'utf8');
     const res = await spawnCli({
       binary: engine.binary,
       args: engine.args,
       cwd: project.repo_path,
       stdin: prompt,
-      logPath: logPathFor(`p${project.id}-recheck.log`),
+      logPath: logPathFor(db, `p${project.id}-recheck.log`),
       signal: run.ctrl.signal,
       timeoutMs: 5 * 60 * 1000,
     });
     if (res.aborted) {
       rmSync(verdictPath, { force: true });
       settle('stopped', 'stopped by pause/restart/cancel');
-      return;
+      return false;
     }
     if (res.exitCode !== 0 || !existsSync(verdictPath)) {
       settle('failed', `${engine.id} returned no verdict for ${readerRel}`);
-      return;
+      return false;
     }
     const verdict = JSON.parse(readFileSync(verdictPath, 'utf8')) as {
       needsChange?: boolean;
       reason?: string;
     };
     rmSync(verdictPath, { force: true });
+    if (
+      typeof verdict.needsChange !== 'boolean' ||
+      (verdict.needsChange && (typeof verdict.reason !== 'string' || !verdict.reason.trim()))
+    ) {
+      throw new Error('the recheck returned an invalid verdict');
+    }
+    if (
+      readFileSync(docPath(project, sourceRel), 'utf8') !== sourceBefore ||
+      readFileSync(docPath(project, readerRel), 'utf8') !== readerBefore
+    ) {
+      settle('stopped', 'a document changed during the recheck — retry');
+      return false;
+    }
     if (verdict.needsChange && (verdict.reason ?? '').trim()) {
       appendRevisionRequest(project, sourceRel, readerRel, String(verdict.reason));
     }
     settle('done');
+    return true;
   } catch (err) {
     rmSync(verdictPath, { force: true });
     settle('failed', (err as Error).message);
+    return false;
   } finally {
     run.done();
   }
@@ -484,33 +507,56 @@ export function recheckDependents(
   db: Database.Database,
   project: Project,
   sourceRel: string,
-  engine: EngineSpec,
+  engine: EngineSpec | null,
   pkgRoot: string,
 ): void {
   const readers = listDocs(db, project, pkgRoot).filter(
-    (d) =>
-      d.status === 'approved' && d.inputs.includes(sourceRel) && !runningDoc(db, project.id, d.rel),
+    (d) => d.status === 'approved' && d.inputs.includes(sourceRel),
   );
-  // One at a time. MAX_PARALLEL governs the chain loop, not this fan-out, and a
-  // document eight others read would otherwise start eight CLIs in one tick.
-  //
-  // Sequential is not the same as stoppable. `runRecheck` settles an aborted run
-  // and resolves normally, so the chain moves on; each step then registers a
-  // fresh controller that the earlier `abortRuns` never saw. Pausing after the
-  // first reader used to stop that one and let the other seven run to the end,
-  // which is the spend Pause exists to prevent. So read the row between steps,
-  // as the chain loop in `advance` does — and stop when the project is gone,
-  // which is how Cancel arrives here.
-  void readers.reduce(
-    (chain, r) =>
-      chain.then(() => {
-        const row = db.prepare('SELECT paused FROM projects WHERE id = ?').get(project.id) as
-          { paused: number } | undefined;
-        if (!row || row.paused) return;
-        return runRecheck(db, project, r.rel, sourceRel, engine);
-      }),
-    Promise.resolve(),
-  );
+  const enqueue = db.prepare(`INSERT INTO pending_rechecks (project_id, source_rel, reader_rel)
+    VALUES (?, ?, ?) ON CONFLICT(project_id, source_rel, reader_rel)
+    DO UPDATE SET generation = generation + 1`);
+  db.transaction(() => {
+    for (const r of readers) enqueue.run(project.id, sourceRel, r.rel);
+  })();
+  if (engine) void advance(db, project, engine, pkgRoot);
+}
+
+// The queue survives pause and process restarts. Each generation is attempted
+// once per chain loop; a failed judgment stays pending for Continue/Retry.
+async function drainRechecks(
+  db: Database.Database,
+  project: Project,
+  engine: EngineSpec,
+  pkgRoot: string,
+  attempted: Set<string>,
+): Promise<void> {
+  const pending = db
+    .prepare('SELECT * FROM pending_rechecks WHERE project_id = ?')
+    .all(project.id) as { source_rel: string; reader_rel: string; generation: number }[];
+  for (const item of pending) {
+    const row = db.prepare('SELECT paused FROM projects WHERE id = ?').get(project.id) as
+      { paused: number } | undefined;
+    if (!row || row.paused) return;
+    const key = `${item.source_rel}:${item.reader_rel}:${item.generation}`;
+    if (
+      attempted.has(key) ||
+      runningDoc(db, project.id, item.reader_rel) ||
+      runningDoc(db, project.id, item.source_rel)
+    )
+      continue;
+    attempted.add(key);
+    const reader = listDocs(db, project, pkgRoot).find((d) => d.rel === item.reader_rel);
+    // A fresh draft needs human approval; it no longer claims to be settled.
+    const done =
+      reader?.status !== 'approved' ||
+      (await runRecheck(db, project, item.reader_rel, item.source_rel, engine));
+    if (done)
+      db.prepare(
+        `DELETE FROM pending_rechecks WHERE project_id = ?
+      AND source_rel = ? AND reader_rel = ? AND generation = ?`,
+      ).run(project.id, item.source_rel, item.reader_rel, item.generation);
+  }
 }
 
 // A revision the human applies. The document nobody's step produces — the brief
@@ -519,6 +565,7 @@ export function recheckDependents(
 // keeps: the proposal lands in a scratch file, is read once, and is deleted.
 // Applying it is the ordinary save the human already performs by hand.
 export async function proposeRevision(
+  db: Database.Database,
   project: Project,
   rel: string,
   notes: string[],
@@ -558,7 +605,7 @@ export async function proposeRevision(
       args: engine.args,
       cwd: project.repo_path,
       stdin: prompt,
-      logPath: logPathFor(`p${project.id}-propose.log`),
+      logPath: logPathFor(db, `p${project.id}-propose.log`),
       signal: run.ctrl.signal,
       timeoutMs: 5 * 60 * 1000,
     });
@@ -634,7 +681,7 @@ export async function runPlanning(
       args: engine.args,
       cwd: project.repo_path,
       stdin: lines.join('\n'),
-      logPath: logPathFor(`p${project.id}-plan.log`),
+      logPath: logPathFor(db, `p${project.id}-plan.log`),
       signal: run.ctrl.signal,
       timeoutMs: PLAN_TIMEOUT_MS,
     });
@@ -675,7 +722,7 @@ export async function runPlanning(
  * kortext's writing too: without this they outlive the project they belong to,
  * in a directory nothing ever cleans.
  */
-export function removeRunLogs(projectId: number, dir = logRootDir()): void {
+export function removeRunLogs(projectId: number, dir: string): void {
   let entries: string[];
   try {
     entries = readdirSync(dir);
@@ -705,8 +752,8 @@ export async function runStep(
   reviseNotes: string[] = [],
 ): Promise<RunOutcome> {
   const job = db
-    .prepare('INSERT INTO jobs (project_id, doc_rel) VALUES (?, ?) RETURNING *')
-    .get(project.id, step.output) as Job;
+    .prepare('INSERT INTO jobs (project_id, doc_rel, notes) VALUES (?, ?, ?) RETURNING *')
+    .get(project.id, step.output, JSON.stringify(reviseNotes)) as Job;
 
   const prompt = buildStepPrompt(
     project,
@@ -715,7 +762,7 @@ export async function runStep(
     personaBodyFor(pkgRoot, step),
     reviseNotes,
   );
-  const logPath = logPathFor(`p${project.id}-${step.output.replace(/\//g, '_')}.log`);
+  const logPath = logPathFor(db, `p${project.id}-${step.output.replace(/\//g, '_')}.log`);
 
   const settle = (status: 'done' | 'failed' | 'stopped', error?: string): RunOutcome => {
     db.prepare(
@@ -770,6 +817,19 @@ export async function runStep(
     const status = readFrontmatter(written).status;
     if (status !== 'draft' && status !== 'not-applicable') {
       return settle('failed', `${step.output} written but status is '${status}' (expected draft)`);
+    }
+    for (const request of listDocs(db, project, pkgRoot).find((d) => d.rel === step.output)
+      ?.revisionRequests ?? []) {
+      if (reviseNotes.includes(`[${request.from} asks] ${request.reason}`)) {
+        const decision = reviseNotes.find((note) => note.startsWith('[prime decides] '));
+        markRequestHandled(
+          project,
+          request.from,
+          step.output,
+          request.reason,
+          `applied — the agent rewrote ${step.output}${decision ? `; prime said: ${decision.slice('[prime decides] '.length)}` : ''}`,
+        );
+      }
     }
     return settle('done');
   } catch (err) {

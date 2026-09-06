@@ -1,7 +1,7 @@
 import express from 'express';
 import type Database from 'better-sqlite3';
 import { existsSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, sep } from 'node:path';
 import {
   createProject,
   listProjects,
@@ -13,6 +13,7 @@ import {
 import {
   analysisComplete,
   docPath,
+  docVersion,
   listDocs,
   loadDocMap,
   markRequestHandled,
@@ -35,6 +36,7 @@ import {
   explainDoc,
   failStaleJobs,
   listJobs,
+  runStep,
   nextStep,
   proposeRevision,
   removeRunLogs,
@@ -46,7 +48,8 @@ import {
 } from './runner.js';
 import { isChecking, readReadiness } from './readiness.js';
 import { readFileSync, writeFileSync } from 'node:fs';
-import type { Project } from './db.js';
+import { logRootDir, type Project } from './db.js';
+import { isNewer, latestVersion, selfUpdate } from './update.js';
 
 export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string): express.Express {
   failStaleJobs(db);
@@ -105,6 +108,48 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
 
   app.get('/api/health', (_req, res) => {
     res.json({ ok: true, db: dbPath, version });
+  });
+
+  const stepRunning = () =>
+    !!db.prepare("SELECT 1 FROM jobs WHERE status = 'running' LIMIT 1").get();
+
+  // Quit from the panel. The server outlives the terminal it was started from,
+  // so the browser is the only place left to stop it — and closing the tab must
+  // not do it, or a mis-click ends a running analysis. A step in flight is not
+  // interrupted: it would land as failed and its work would be gone.
+  app.post('/api/quit', (_req, res) => {
+    if (stepRunning()) {
+      return res.status(409).json({ error: 'a step is running — wait for it, then quit' });
+    }
+    res.json({ ok: true });
+    // Answer first: exiting inside the handler leaves the panel with a dead
+    // socket and no way to tell a clean stop from a crash.
+    setTimeout(() => process.exit(0), 100);
+  });
+
+  // A global npm install lives under node_modules; a dev checkout or a `npm link`
+  // does not. Updating that one would install a second copy over the checkout the
+  // developer is editing, so neither the strip nor the button is offered there.
+  const managed = pkgRoot.includes(`${sep}node_modules${sep}`);
+
+  app.get('/api/version', async (_req, res) => {
+    const latest = managed ? await latestVersion() : null;
+    res.json({ current: version, latest, stale: !!latest && isNewer(latest, version) });
+  });
+
+  // The update the user would otherwise type. The new code is on disk when npm
+  // returns, but this process is still the old one — the panel says so rather
+  // than restarting the server out from under a running analysis.
+  app.post('/api/version/update', async (_req, res) => {
+    if (!managed) return res.status(400).json({ error: 'not an npm install — update it yourself' });
+    // npm replaces dist/, agents/ and templates/ under a running process, and a
+    // step reads those while it works. Wait for the step rather than pull the
+    // files out from under it.
+    if (stepRunning()) {
+      return res.status(409).json({ error: 'a step is running — wait for it, then update' });
+    }
+    const result = await selfUpdate();
+    res.status(result.ok ? 200 : 500).json(result);
   });
 
   app.get('/api/projects', (_req, res) => {
@@ -188,6 +233,38 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     res.status(202).json({ started: step.output });
   });
 
+  app.post('/api/projects/:id/docs/retry', (req, res) => {
+    const project = projectOr404(req.params.id, res);
+    if (!project) return;
+    const rel = String(req.body?.rel ?? '');
+    const job = listJobs(db, project.id).find((j) => j.doc_rel === rel);
+    if (!job || !['failed', 'stopped'].includes(job.status)) {
+      return res.status(409).json({ error: 'no failed attempt to retry' });
+    }
+    if (project.paused || runningDoc(db, project.id, rel)) {
+      return res
+        .status(409)
+        .json({ error: 'Continue the project and wait for this document to finish' });
+    }
+    const engine = engineFor(db, project);
+    if (!engine) return res.status(409).json({ error: 'no agent CLI installed' });
+    if (job.kind === 'recheck') {
+      void advance(db, project, engine, pkgRoot);
+    } else {
+      const step = loadDocMap(pkgRoot, project.kind ?? 'new').get(rel);
+      const doc = listDocs(db, project, pkgRoot).find((d) => d.rel === rel);
+      if (!step || doc?.blocked)
+        return res.status(409).json({ error: 'document inputs are not settled' });
+      const notes = JSON.parse(job.notes) as string[];
+      if (notes.length) void reviseDoc(db, project, rel, notes, engine, pkgRoot);
+      else
+        void runStep(db, project, step, engine, pkgRoot).then((out) => {
+          if (out.ok) kickChain(project);
+        });
+    }
+    res.status(202).json({ started: rel });
+  });
+
   // The readiness gate's standing verdict. Null until the brief is approved and
   // the gate has run once; `checking` covers the minute the judgment is out.
   app.get('/api/projects/:id/readiness', (req, res) => {
@@ -262,6 +339,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       rmSync(join(project.repo_path, '.kortext'), { recursive: true, force: true });
       rmSync(join(project.repo_path, '.kopeng'), { recursive: true, force: true });
       db.prepare('DELETE FROM jobs WHERE project_id = ?').run(project.id);
+      db.prepare('DELETE FROM pending_rechecks WHERE project_id = ?').run(project.id);
       scaffoldProject(project.repo_path, pkgRoot, { skipBrief: project.kind === 'existing' });
       // Restart lands in the same ready state as a fresh Add: nothing runs
       // until the user presses Start.
@@ -287,7 +365,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       rmSync(join(project.repo_path, '.kortext'), { recursive: true, force: true });
       rmSync(join(project.repo_path, '.kopeng'), { recursive: true, force: true });
       uninstallContract(project.repo_path);
-      removeRunLogs(project.id);
+      removeRunLogs(project.id, logRootDir(db));
       removeProject(db, project.id);
       // The row is gone, so nothing can pause the loop any more; anything that
       // slipped through between the abort and here is killed now.
@@ -303,6 +381,28 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       Project | undefined;
     if (!p) res.status(404).json({ error: 'project not found' });
     return p;
+  };
+
+  // Both actions must apply to the exact text the person reviewed. A running
+  // writer is refused even if it has not changed the file yet.
+  const reviewedPath = (project: Project, req: express.Request, res: express.Response) => {
+    const { rel, expectedVersion } = req.body ?? {};
+    const path = docPath(project, String(rel));
+    if (runningDoc(db, project.id, String(rel))) {
+      res.status(409).json({ error: `${rel} is being rewritten — wait for it to land` });
+      return null;
+    }
+    if (typeof expectedVersion !== 'string') {
+      res.status(428).json({ error: 'Reload the document before saving or approving it' });
+      return null;
+    }
+    if (docVersion(readFileSync(path, 'utf8')) !== expectedVersion) {
+      res.status(409).json({
+        error: 'This document changed. Keep your edits, then reopen it to review the latest text.',
+      });
+      return null;
+    }
+    return path;
   };
 
   app.get('/api/projects/:id/docs', (req, res) => {
@@ -323,7 +423,8 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     if (!project) return;
     try {
       const rel = String(req.query.rel ?? '');
-      res.json({ rel, content: readFileSync(docPath(project, rel), 'utf8') });
+      const content = readFileSync(docPath(project, rel), 'utf8');
+      res.json({ rel, content, version: docVersion(content) });
     } catch (err) {
       res.status(400).json({ error: (err as Error).message });
     }
@@ -341,17 +442,12 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     if (typeof content !== 'string' || content.trim() === '') {
       return res.status(400).json({ error: 'content is required' });
     }
-    // The agent is writing this file right now: its output would land on top of
-    // the save a minute later, silently. The revise route already refuses here.
-    if (runningDoc(db, project.id, String(rel))) {
-      return res
-        .status(409)
-        .json({ error: `${rel} is being rewritten — wait for it to land, then edit` });
-    }
     try {
+      const path = reviewedPath(project, req, res);
+      if (!path) return;
       const wasApproved =
         listDocs(db, project, pkgRoot).find((d) => d.rel === String(rel))?.status === 'approved';
-      writeFileSync(docPath(project, String(rel)), content, 'utf8');
+      writeFileSync(path, content, 'utf8');
       // Saving the agent's draft IS the answer to the demands that produced it.
       // Without this the change landed on disk and the request still stood, so
       // the document never left "Needs you" — the loop had no way to close.
@@ -377,9 +473,10 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       // documents that contradict the text they were derived from.
       if (wasApproved) {
         const engine = engineFor(db, project);
-        if (engine) recheckDependents(db, project, String(rel), engine, pkgRoot);
+        recheckDependents(db, project, String(rel), engine, pkgRoot);
       }
-      res.json({ ok: true });
+      const saved = readFileSync(path, 'utf8');
+      res.json({ ok: true, content: saved, version: docVersion(saved) });
     } catch (err) {
       res.status(400).json({ error: (err as Error).message });
     }
@@ -391,13 +488,21 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     if (!project) return;
     const { rel } = req.body ?? {};
     try {
-      setFrontmatterStatus(docPath(project, String(rel)), 'approved');
+      const path = reviewedPath(project, req, res);
+      if (!path) return;
+      const doc = listDocs(db, project, pkgRoot).find((d) => d.rel === String(rel));
+      if (doc?.status !== 'draft' || doc.openQuestions) {
+        return res
+          .status(409)
+          .json({ error: 'Only a draft without open questions can be approved' });
+      }
+      setFrontmatterStatus(path, 'approved');
       kickChain(project);
       // Approving a document that was rewritten leaves every approved reader of
       // it standing on the old text. Judge each — silent on the first pass,
       // because nothing downstream is approved yet.
       const engine = engineFor(db, project);
-      if (engine) recheckDependents(db, project, String(rel), engine, pkgRoot);
+      recheckDependents(db, project, String(rel), engine, pkgRoot);
       res.json({ ok: true });
     } catch (err) {
       res.status(400).json({ error: (err as Error).message });
@@ -427,7 +532,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       return res.status(409).json({ error: `nothing is asking ${rel} to change` });
     }
     try {
-      const { proposal } = await proposeRevision(project, String(rel), notes, engine, pkgRoot);
+      const { proposal } = await proposeRevision(db, project, String(rel), notes, engine, pkgRoot);
       res.json({ proposal });
     } catch (err) {
       res.status(500).json({ error: (err as Error).message });
@@ -502,28 +607,10 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     const notes = [`[${request.from} asks] ${request.reason}`];
     if (said) notes.push(`[prime decides] ${said}`);
     setFrontmatterStatus(docPath(project, rel), 'draft');
-    // The demand is ticked only when the rewrite has actually landed. Ticking it
-    // first meant a failed run left the request settled against a document that
-    // still held its old text, with nothing on screen saying so.
-    void reviseDoc(db, project, rel, notes, engine, pkgRoot)
-      .then((out) => {
-        if (!out.ok) return;
-        markRequestHandled(
-          project,
-          request.from,
-          rel,
-          request.reason,
-          said
-            ? `applied — the agent rewrote ${rel}; prime said: ${said}`
-            : `applied — the agent rewrote ${rel}`,
-        );
-      })
-      // The panel already has its 202, so nothing is waiting on this. Without a
-      // catch, a Cancel landing mid-flight — the row gone, or `.kortext/` wiped
-      // under the file this is about to tick — rejects into nobody's hands, and
-      // Node takes the whole server down with it. `explainDoc` below already
-      // ends the same way.
-      .catch((err) => console.error(`decide-request follow-up failed for ${rel}:`, err));
+    // runStep settles the matching demand after a successful write, on retries too.
+    void reviseDoc(db, project, rel, notes, engine, pkgRoot).catch((err) =>
+      console.error(`decide-request follow-up failed for ${rel}:`, err),
+    );
     res.status(202).json({ started: rel, notes: notes.length });
   });
 
@@ -544,6 +631,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
         }))
       : [];
     explainDoc(
+      db,
       project,
       String(rel ?? ''),
       String(excerpt ?? ''),

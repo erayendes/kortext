@@ -1,3 +1,4 @@
+import { docVersion } from '../server/docs.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -105,6 +106,7 @@ test('Initialize judges nothing: even a thin brief lands as written', async () =
   // rather than leaving an approved brief next to "not enough to start".
   const { ensureReadiness } = await import('../server/readiness.js');
   const verdict = await ensureReadiness(
+    db,
     p,
     { id: 'x', binary: 'true', args: [], installHint: '' },
     new AbortController().signal,
@@ -142,12 +144,12 @@ test('re-adding a registered folder names the project instead of the constraint'
   const work = tempDir();
   const db = openDb(join(work, 'db.sqlite'));
   const repo = join(work, 'same');
-  createProject(db, { name: 'First', repoPath: repo }, pkgRoot);
+  const first = createProject(db, { name: 'First', repoPath: repo }, pkgRoot);
   assert.throws(
     () => createProject(db, { name: 'Second', repoPath: repo }, pkgRoot),
     /already the project "First"/,
   );
-  db.prepare('UPDATE projects SET archived = 1 WHERE repo_path = ?').run(repo);
+  db.prepare('UPDATE projects SET archived = 1 WHERE repo_path = ?').run(first.repo_path);
   assert.throws(
     () => createProject(db, { name: 'Second', repoPath: repo }, pkgRoot),
     /archived project "First" — unarchive it/,
@@ -245,7 +247,11 @@ test('a save with no content is refused, not written over the document', async (
   assert.equal((await save({ rel: 'STACK.md' })).status, 400, 'a missing body is refused');
   assert.equal((await save({ rel: 'STACK.md', content: '   ' })).status, 400, 'so is whitespace');
   assert.equal(readFileSync(doc, 'utf8'), before, 'the document is untouched');
-  assert.equal((await save({ rel: 'STACK.md', content: '# mine\n' })).status, 200);
+  assert.equal(
+    (await save({ rel: 'STACK.md', content: '# mine\n', expectedVersion: docVersion(before) }))
+      .status,
+    200,
+  );
   assert.equal(readFileSync(doc, 'utf8'), '# mine\n');
   server.close();
   rmSync(work, { recursive: true, force: true });
@@ -344,7 +350,7 @@ test('one folder is one project, however the path was typed', () => {
   const work = tempDir();
   const db = openDb(join(work, 'db.sqlite'));
   const repo = join(work, 'shared');
-  createProject(db, { name: 'First', repoPath: repo }, pkgRoot);
+  const first = createProject(db, { name: 'First', repoPath: repo }, pkgRoot);
   // The same directory with a trailing separator used to pass the UNIQUE check
   // and become a second row writing the same files — so a restart or a cancel
   // on one wiped the other's documents.

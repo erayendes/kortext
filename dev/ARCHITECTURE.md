@@ -21,10 +21,12 @@ Kortext never calls an LLM API, holds no key, writes no code.
 
 ```
 kortext (npm package, installed globally)
-├─ bin/kortext.js ──► dist/index.js — parseArgs, openDb, buildApp, listen, open browser
+├─ bin/kortext.js ──► dist/index.js — parseArgs, detach, openDb, buildApp, listen, open browser
 │
 ├─ server/ (Express 5 + better-sqlite3, TS ESM → dist/)
-│   ├─ index.ts       51  entry, CLI flags (--port --db --no-open --help)
+│   ├─ index.ts      131  entry, CLI flags (--port --db --no-open --no-detach --stop --help)
+│   ├─ daemon.ts      47  detached respawn + health probe (start/stop from the terminal)
+│   ├─ update.ts      68  npm registry check + self-update (the panel's update strip)
 │   ├─ db.ts          73  SQLite schema + column migration + Project type
 │   ├─ app.ts        509  every REST route + static panel
 │   ├─ projects.ts   262  registry, code derivation, scaffold, handover contract
@@ -44,7 +46,11 @@ kortext (npm package, installed globally)
     workflows/ 3 · templates/ AGENTS.md + docs/ 15 skeletons · agents/ 10 personas
 ```
 
-One process, one port (default **3441**). In dev the panel runs on Vite :3442 and proxies
+One process, one port (default **3441**), and it outlives the terminal: `kortext` respawns
+itself detached (`KORTEXT_CHILD=1`, stdio to `<db>.log`) and the parent exits, so closing the
+window leaves the panel up. `--no-detach` is the foreground mode `npm run dev` uses; `--stop`
+and the panel's ⏻ button are the two ways down, both refusing while a step runs. In dev the
+panel runs on Vite :3442 and proxies
 `/api` to 3441; in production `ui/dist` is served by Express, with SPA fallback for every
 non-`/api` path.
 
@@ -53,13 +59,15 @@ non-`/api` path.
 ## 3 · Where data lives
 
 **Global — `~/.kortext/`** (one per machine, shared by all projects):
-`kortext.db` (SQLite, WAL, `foreign_keys = ON`) and `logs/p<id>-<doc>.log` (raw CLI output).
+`kortext.db` (SQLite, WAL, `foreign_keys = ON`) and `kortext.db.logs/p<id>-<doc>.log` (raw CLI output).
+With `--db /path/name.sqlite`, logs live in `/path/name.sqlite.logs/`; sibling databases stay isolated.
 
 | Table | Columns |
 | --- | --- |
 | `projects` | `id · name · repo_path (UNIQUE) · kind (new\|existing) · code · paused · archived · doc_lang · engine · created_at` |
 | `settings` | `key/value` — today just the selected engine |
-| `jobs` | `project_id · doc_rel · kind (doc\|plan\|recheck) · status (running\|done\|failed\|stopped) · error · started_at · finished_at` |
+| `jobs` | `project_id · doc_rel · kind (doc\|plan\|recheck) · status (running\|done\|failed\|stopped) · error · notes (JSON) · started_at · finished_at` |
+| `pending_rechecks` | `project_id · source_rel · reader_rel · generation` — durable work, unique per source/reader pair |
 
 `code` is the task-id prefix (`ACME-T001`), 2–8 chars, unique across projects. No migration
 framework: `openDb` creates tables `IF NOT EXISTS` and adds missing columns with `ALTER TABLE`.
@@ -156,7 +164,7 @@ A refused brief is demoted `approved → draft`: a document waiting on a human b
 steps (unwritten, inputs settled, not running), starts at most **3 in parallel**, then waits on
 `Promise.race` for either a completion or a wake. Approval routes call the same `advance`; a
 running loop is woken rather than duplicated, so an approval does not wait for the next
-completion while the pool has room. `paused` only stops new steps; a running one finishes. The
+completion while the pool has room. Pause stops new steps and aborts active runs. The
 loop is claimed before the gate is awaited, so two approvals landing in the same second wake one
 chain rather than starting two pools.
 
@@ -170,7 +178,8 @@ more.
 **One step (`runStep`).** Open a `jobs` row → build the prompt (the workflow step verbatim +
 persona body + any revision notes) → run the CLI (15 min) → validate: exit code, file actually
 written, frontmatter `draft` or `not-applicable`. Otherwise `failed`, with Retry in the panel.
-A restart mid-step is settled at boot by `failStaleJobs`.
+A restart mid-step is settled at boot by `failStaleJobs`. Revision notes are stored with the job;
+Retry repeats that document and those notes, and settles matching demands only after success.
 
 **Standing prompt rules:** write that one file and nothing else · keep the skeleton's headings
 verbatim · never write `approved` · never assume what the inputs do not say — ask under
@@ -184,9 +193,10 @@ line, not prose · prose in the document's language, every name in English.
 | `runRecheck` | judges an approved reader against an input that moved | a verdict JSON; the server writes the demand |
 | `explainDoc` | line-anchored Q&A with the author persona | nothing — the answer lives in the panel |
 
-`recheckDependents` fires when a rewritten document is approved: every **approved** document
-that reads it is judged **one at a time**, tracked like any other run, so a document eight others
-read does not start eight CLIs at once and pause can stop the fan-out.
+`recheckDependents` queues every approved reader when its source is edited or approved.
+The chain drains `pending_rechecks` one at a time. Pause and server restarts retain unfinished
+checks; Continue/Retry resumes them. A newer source change increments the generation so an older
+verdict cannot clear it. Pending checks prevent analysis completion.
 
 **Planning (`runPlanning`).** "Transfer to Kopeng": one long run (30 min) producing
 `.kopeng/project.yaml` + `versions/` + `epics/` + `tasks/`; missing `project.yaml` or zero tasks
@@ -200,7 +210,10 @@ No fs-watch — the panel polls (docs 3s, transfer 4s, handshake 5s).
 
 | Route | Does |
 | --- | --- |
-| `GET /api/health` | ok · db path · the version actually **running** |
+| `GET /api/health` | ok · db path · the version actually **running** (the status bar's dot polls it) |
+| `GET /api/version` | current · newest on npm · whether the update strip shows |
+| `POST /api/version/update` | run `npm install -g kortext@latest`; 409 while a step runs |
+| `POST /api/quit` | stop the server (⏻ button, `--stop`); 409 while a step runs |
 | `GET \| POST /api/projects` | list (with per-group progress) · add (born paused) |
 | `DELETE /api/projects/:id` | unregister only; files untouched |
 | `GET \| PUT /api/engines` | detect the installed CLIs · the global fallback choice |
@@ -214,9 +227,10 @@ No fs-watch — the panel polls (docs 3s, transfer 4s, handshake 5s).
 | `POST …/cancel` | pause, abort, then remove what kortext wrote (`.kortext/`, `.kopeng/`, the `AGENTS.md` block, the `CLAUDE.md` pointer, the project's logs) + the row |
 | `POST …/archive` | shelve — row and repo both stay |
 | `GET …/docs` | document list (+ idempotent self-heal scaffold) |
-| `GET \| PUT …/docs/content` | read · write as-is (refused while that document is being rewritten; an edit to an approved one rechecks its readers) |
-| `POST …/docs/approve` | `draft → approved`, kicks the chain, rechecks dependents |
+| `GET \| PUT …/docs/content` | read content + SHA-256 version · write with `expectedVersion` (409 on conflict or active writer; approved edits queue reader checks) |
+| `POST …/docs/approve` | `draft → approved` with `expectedVersion`; refuses open questions, stale text and active writers; queues reader checks |
 | `POST …/docs/propose` | returns a drafted revision for the brief |
+| `POST …/docs/retry` | repeats the latest failed/stopped document job with its saved notes, or resumes pending rechecks |
 | `POST …/docs/revise` | re-runs the producing step with notes (fire-and-forget, 202) |
 | `POST …/docs/decide-request` | apply/dismiss one demand — from either end |
 | `POST …/docs/explain` | line-anchored Q&A (synchronous, writes nothing) |
@@ -237,6 +251,13 @@ the answers are gone.
 kopeng is installed) → **DocDrawer**: read (own markdown, mermaid and highlighting), select a
 line to talk to the persona, decide incoming and outgoing requests one by one, edit directly,
 Approve. Destructive buttons arm in place — browsers silently suppress repeated `confirm()`.
+
+Two strips frame it. Under the header, the **update strip** appears only when npm carries a
+newer version and kortext runs from a global install. At the bottom, an application **status
+bar** (34px, never wrapping): the server dot — green while `/api/health` answers, red the
+moment it stops and green again on its own when it comes back — the version, the ⏻ button
+(two clicks, no `confirm()`), the restart command as a click-to-copy chip, and one cycling
+theme button (auto · light · dark).
 
 The vocabulary splits in two: **status** (where the document is) and **badge** (what wants
 attention — open question, standing request, moving input). Visual language: [DESIGN.md](./DESIGN.md).
@@ -260,7 +281,8 @@ enforces that and the ordering.
 
 ## 9 · Verification
 
-`npm test` → `node:test`, **64 tests**, six files: `order` (a step cannot read a document
+`npm test` → `node:test`, **80 tests**, seven files: `release` (concurrent edits, approval, durable rechecks, retry, aliases and log isolation),
+`order` (a step cannot read a document
 written after it; personas match their step; skeletons keep both required sections) · `docs`
 (frontmatter, request parsing, open questions, ordering) · `runner` (producibility, prompt
 assembly, job lifecycle, nothing starts after an abort) · `readiness` (floor threshold, template recognition, source counting)

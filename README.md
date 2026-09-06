@@ -168,7 +168,30 @@ Kortext at a real project. The CLI is chosen per project, in the Add project for
 screen carries the same dropdown next to Start, so you can switch when a quota runs out. With
 none installed, the panel says so in its header.
 
+## Starting and stopping
+
+`kortext` starts the server in the background and opens the panel — the terminal window can be
+closed, the panel keeps running. Stop it with the ⏻ button in the panel's status bar; the same
+bar's dot is green while the server is up and red once it is gone. Run `kortext` again to start
+it.
+
+```sh
+kortext            # start in the background, open the panel
+kortext --stop     # stop the background server
+kortext --no-detach  # keep it in this terminal, Ctrl+C to stop
+```
+
+Neither the button nor `--stop` interrupts a running step: they refuse while one is in flight,
+so an analysis is never cut off mid-write.
+
+The background server writes what it prints to `~/.kortext/kortext.db.log`.
+
 ## Update and uninstall
+
+When a newer version is published, the panel says so in a strip under the header, with an
+**Update now** button that runs the install for you — the new version is live once you quit
+kortext and start it again. The button waits for a running step to finish rather than swap the
+files under it. By hand, or if the button reports an error:
 
 ```sh
 npm update -g kortext

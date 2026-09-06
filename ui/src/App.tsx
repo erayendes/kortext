@@ -91,6 +91,7 @@ export function App() {
         <EngineBadge />
         <span className="kx-doc-spacer" />
       </header>
+      <UpdateStrip />
       {error && <div className="kx-error">{error}</div>}
       {selected ? (
         <ProjectScreen
@@ -137,19 +138,141 @@ export function App() {
           )}
         </main>
       )}
-      <footer className="kx-footer">
-        <div className="kx-footer-row">
-          <span>
-            Kortext <Version /> by{' '}
-            <a href="https://milowda.com" target="_blank" rel="noreferrer">
-              Milowda
-            </a>
-          </span>
-          <span className="kx-doc-spacer" />
-          <ThemeSwitch />
-        </div>
+      {/* An application status bar, not a web page footer: one fixed-height strip
+          carrying what is true right now — the server, and the panel's own
+          controls. */}
+      <footer className="kx-statusbar">
+        <ServerStatus />
+        <span className="kx-doc-spacer" />
+        <a
+          className="kx-statusbar-link"
+          href="https://milowda.com"
+          target="_blank"
+          rel="noreferrer"
+        >
+          milowda
+        </a>
+        <ThemeSwitch />
       </footer>
     </div>
+  );
+}
+
+// The status bar: is the server up, and the one control that takes it down. It
+// keeps running after the terminal that started it is closed, so the panel is
+// the only way out that does not send the user back to a terminal — and it is a
+// button, never the tab closing, so a stray ⌘W cannot do it. Two clicks rather
+// than a browser confirm(): the dialog is suppressed in some embedded browsers,
+// and a button that silently does nothing is worse than one that asks in place.
+function ServerStatus() {
+  const [phase, setPhase] = useState<'up' | 'arming' | 'down'>('up');
+  const [err, setErr] = useState('');
+
+  // The server can go down on its own — killed in the terminal, crashed, machine
+  // asleep — and come back the same way. The poll never stops, so the light
+  // follows the server in both directions: an open tab recovers by itself when
+  // the user starts kortext again, instead of lying in red until a reload.
+  useEffect(() => {
+    const timer = setInterval(() => {
+      api.health().then(
+        () => setPhase((p) => (p === 'down' ? 'up' : p)),
+        () => setPhase('down'),
+      );
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (phase !== 'arming') return;
+    const timer = setTimeout(() => setPhase('up'), 4000);
+    return () => clearTimeout(timer);
+  }, [phase]);
+
+  const down = phase === 'down';
+  const stop = () => {
+    if (phase === 'up') {
+      setErr('');
+      setPhase('arming');
+      return;
+    }
+    api
+      .quit()
+      .then(() => setPhase('down'))
+      .catch((e) => {
+        setErr((e as Error).message);
+        setPhase('up');
+      });
+  };
+
+  // Idle says nothing: a green dot next to the name is the whole message. Words
+  // appear only when there is something the dot cannot say — the armed click,
+  // an error, or a server that is gone.
+  const warning = err || (phase === 'arming' ? 'click again to stop' : '');
+
+  return (
+    <>
+      <span className={`kx-dot kx-dot-${down ? 'down' : 'up'}`} aria-hidden="true" />
+      <span className="kx-status-name">
+        kortext <Version />
+      </span>
+      {!down && (
+        <button
+          className={phase === 'arming' ? 'kx-power kx-power-armed' : 'kx-power'}
+          onClick={stop}
+          title={phase === 'arming' ? 'Click again to stop the server' : 'Stop the server'}
+          aria-label="Stop the server"
+        >
+          <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
+            <path
+              d="M8 1.8v5.4"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              fill="none"
+            />
+            <path
+              d="M4.6 3.9a5 5 0 106.8 0"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              fill="none"
+            />
+          </svg>
+        </button>
+      )}
+      {down ? (
+        <span className="kx-status-warn">
+          stopped — type <CopyCommand command="kortext" /> in your terminal to start it again
+        </span>
+      ) : (
+        warning && <span className="kx-status-warn">{warning}</span>
+      )}
+    </>
+  );
+}
+
+// The command to type, as a thing to click rather than a thing to retype. The
+// clipboard call can be refused (an unfocused tab, a browser that withholds it),
+// so the command itself stays on screen either way.
+function CopyCommand({ command }: { command: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      className="kx-copy-cmd mono"
+      title="Copy"
+      onClick={() => {
+        void navigator.clipboard
+          .writeText(command)
+          .then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+          })
+          .catch(() => {});
+      }}
+    >
+      {command}
+      {copied && <span className="kx-copy-cmd-hint">✓</span>}
+    </button>
   );
 }
 
@@ -190,14 +313,64 @@ function ThemeSwitch() {
       /* private mode — the choice lasts the session */
     }
   }, [choice]);
+  // One button, not three: the status bar has room for a state, not a menu. It
+  // cycles auto → light → dark, and the icon says which one is on rather than
+  // which one a click would bring.
+  const next: Record<ThemeChoice, ThemeChoice> = { auto: 'light', light: 'dark', dark: 'auto' };
   return (
-    <span className="seg seg-sm kx-theme">
-      {(['auto', 'light', 'dark'] as ThemeChoice[]).map((t) => (
-        <button key={t} className={t === choice ? 'on' : ''} onClick={() => setChoice(t)}>
-          {t === 'auto' ? 'Auto' : t === 'light' ? 'Light' : 'Dark'}
-        </button>
-      ))}
-    </span>
+    <button
+      className="kx-theme"
+      onClick={() => setChoice(next[choice])}
+      title={`Theme: ${choice}`}
+      aria-label={`Theme: ${choice}`}
+    >
+      <ThemeIcon choice={choice} />
+    </button>
+  );
+}
+
+// The three lucide icons — eclipse, sun, moon — drawn inline rather than pulled
+// in as a dependency: three path strings against a whole icon package the panel
+// would otherwise not need. Paths are lucide 1.41.0 (ISC), unmodified.
+function ThemeIcon({ choice }: { choice: ThemeChoice }) {
+  const box = {
+    viewBox: '0 0 24 24',
+    width: 14,
+    height: 14,
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 2,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+    'aria-hidden': true,
+  };
+  if (choice === 'dark') {
+    return (
+      <svg {...box}>
+        <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" />
+      </svg>
+    );
+  }
+  if (choice === 'light') {
+    return (
+      <svg {...box}>
+        <circle cx="12" cy="12" r="4" />
+        <path d="M12 2v2" />
+        <path d="M12 20v2" />
+        <path d="m4.93 4.93 1.41 1.41" />
+        <path d="m17.66 17.66 1.41 1.41" />
+        <path d="M2 12h2" />
+        <path d="M20 12h2" />
+        <path d="m6.34 17.66-1.41 1.41" />
+        <path d="m19.07 4.93-1.41 1.41" />
+      </svg>
+    );
+  }
+  return (
+    <svg {...box}>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 2a7 7 0 1 0 10 10" />
+    </svg>
   );
 }
 
@@ -220,6 +393,59 @@ function EngineBadge() {
       No agent CLI found — required to produce documents. Install one:{' '}
       <code className="mono">{engines[0]?.installHint ?? ''}</code>
     </span>
+  );
+}
+
+// A new version on npm, and the one command that installs it — pressed here so
+// nobody has to leave the panel for it. Nothing renders until there is something
+// to say: no strip while up to date, offline, or running from a dev checkout.
+function UpdateStrip() {
+  const [latest, setLatest] = useState<string | null>(null);
+  const [state, setState] = useState<'idle' | 'running' | 'done'>('idle');
+  const [err, setErr] = useState('');
+
+  useEffect(() => {
+    api
+      .version()
+      .then((v) => setLatest(v.stale ? v.latest : null))
+      .catch(() => {}); // no server, no strip
+  }, []);
+
+  if (!latest) return null;
+  if (state === 'done') {
+    return (
+      <div className="kx-update">
+        Updated to {latest}. Quit kortext and start it again — this one is still running the old
+        version.
+      </div>
+    );
+  }
+  return (
+    <div className="kx-update">
+      <span>Version {latest} is out.</span>
+      <button
+        className="btn"
+        disabled={state === 'running'}
+        onClick={() => {
+          setErr('');
+          setState('running');
+          api
+            .selfUpdate()
+            .then(() => setState('done'))
+            .catch((e) => {
+              setErr((e as Error).message);
+              setState('idle');
+            });
+        }}
+      >
+        {state === 'running' ? 'Updating…' : 'Update now'}
+      </button>
+      {err && (
+        <span className="kx-update-err">
+          {err} — install it yourself: <code className="mono">npm install -g kortext</code>
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -947,6 +1173,9 @@ function DocumentsTab({
       .then(([d, j, g]) => {
         if (asked !== showing.current) return;
         setDocs(d.docs);
+        setOpen((current) =>
+          current ? (d.docs.find((doc) => doc.rel === current.rel) ?? null) : null,
+        );
         setJobs(j.jobs);
         setGate(g);
         onChecking?.(g.checking);
@@ -969,25 +1198,11 @@ function DocumentsTab({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project.id]);
 
-  const runNext = () =>
+  const retry = (doc: DocInfo) =>
     api
-      .runNext(project.id)
+      .retryDoc(project.id, doc.rel)
       .then(refresh)
       .catch((e) => setErr(e.message));
-
-  // Retry has to re-run the step that failed, and `run-next` only ever picks an
-  // UNWRITTEN document. A revision that fails leaves its document at draft or
-  // approved, so Retry on that row asked the server for the next producible step
-  // instead — starting something else, or answering "nothing to run". A document
-  // that still carries demands is retried by re-running them.
-  const retry = (doc: DocInfo) => {
-    const notes = doc.revisionRequests.map((r) => r.reason);
-    if (doc.status === 'uninitialized' || notes.length === 0) return runNext();
-    return api
-      .reviseDoc(project.id, doc.rel, notes)
-      .then(refresh)
-      .catch((e) => setErr(e.message));
-  };
 
   // Latest job per doc decides the row extras (spinner / red error).
   const jobFor = (rel: string) => jobs.find((j) => j.doc_rel === rel);
@@ -1113,7 +1328,7 @@ function DocumentsTab({
                   tabIndex={0}
                   onClick={() => setOpen(d)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
+                    if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
                       e.preventDefault();
                       setOpen(d);
                     }
@@ -1153,7 +1368,9 @@ function DocumentsTab({
             ? (jobFor(open.rel)?.error ?? 'no reason recorded')
             : null
         }
-        onRetry={runNext}
+        onRetry={() => {
+          if (open) void retry(open);
+        }}
         onClose={() => setOpen(null)}
         onChanged={refresh}
       />

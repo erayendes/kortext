@@ -89,6 +89,9 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ archived }),
     }),
+  version: () => req<{ current: string; latest: string | null; stale: boolean }>('/api/version'),
+  selfUpdate: () => req<{ ok: boolean; output: string }>('/api/version/update', { method: 'POST' }),
+  quit: () => req<{ ok: boolean }>('/api/quit', { method: 'POST' }),
   engines: () => req<{ engines: EngineInfo[]; selected: string | null }>('/api/engines'),
   selectEngine: (id: string) =>
     req<{ selected: string }>('/api/engines', { method: 'PUT', body: JSON.stringify({ id }) }),
@@ -114,14 +117,23 @@ export const api = {
     req<{ ok: boolean }>(`/api/projects/${projectId}/kopeng/approve`, { method: 'POST' }),
   listDocs: (projectId: number) => req<{ docs: DocInfo[] }>(`/api/projects/${projectId}/docs`),
   docContent: (projectId: number, rel: string) =>
-    req<{ content: string }>(
+    req<{ content: string; version: string }>(
       `/api/projects/${projectId}/docs/content?rel=${encodeURIComponent(rel)}`,
     ),
-  saveDoc: (projectId: number, rel: string, content: string, settleRequests = false) =>
-    req<{ ok: boolean }>(`/api/projects/${projectId}/docs/content`, {
-      method: 'PUT',
-      body: JSON.stringify({ rel, content, settleRequests }),
-    }),
+  saveDoc: (
+    projectId: number,
+    rel: string,
+    content: string,
+    expectedVersion: string,
+    settleRequests = false,
+  ) =>
+    req<{ ok: boolean; content: string; version: string }>(
+      `/api/projects/${projectId}/docs/content`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({ rel, content, expectedVersion, settleRequests }),
+      },
+    ),
   decideRequest: (
     projectId: number,
     body: {
@@ -149,6 +161,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ rel, notes }),
     }),
+  retryDoc: (projectId: number, rel: string) =>
+    req<{ started: string }>(`/api/projects/${projectId}/docs/retry`, {
+      method: 'POST',
+      body: JSON.stringify({ rel }),
+    }),
   explainDoc: (
     projectId: number,
     rel: string,
@@ -160,10 +177,10 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ rel, excerpt, question, history }),
     }),
-  approveDoc: (projectId: number, rel: string) =>
+  approveDoc: (projectId: number, rel: string, expectedVersion: string) =>
     req<{ ok: boolean }>(`/api/projects/${projectId}/docs/approve`, {
       method: 'POST',
-      body: JSON.stringify({ rel }),
+      body: JSON.stringify({ rel, expectedVersion }),
     }),
   createProject: (input: {
     name: string;

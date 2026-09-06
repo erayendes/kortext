@@ -5,10 +5,11 @@ import {
   mkdirSync,
   readFileSync,
   readdirSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import type { Project } from './db.js';
 
 // Live workspace inside a registered repo:
@@ -17,6 +18,14 @@ import type { Project } from './db.js';
 // Workflows and personas are NOT copied — kortext itself drives the engine
 // with them during the analysis; after the handshake the docs are the contract.
 export const BRIEF_REL = join('.kortext', 'BRIEF.md');
+
+// Resolve existing ancestors too, so a new folder below a symlink has one identity.
+function canonicalRepo(path: string): string {
+  const absolute = resolve(path);
+  return existsSync(absolute)
+    ? realpathSync.native(absolute)
+    : join(canonicalRepo(dirname(absolute)), basename(absolute));
+}
 
 export function scaffoldProject(
   repoPath: string,
@@ -182,11 +191,9 @@ export function createProject(
   pkgRoot: string,
 ): Project {
   const name = input.name.trim();
-  // `repo_path` is UNIQUE, but only as text: /repo and /repo/ are two rows
-  // writing the same files, so a restart or a cancel on one wipes the other's
-  // documents. resolve() settles the separators, the trailing slash and a
-  // relative path into the one spelling the filesystem actually uses.
-  const repoPath = input.repoPath.trim() ? resolve(input.repoPath.trim()) : '';
+  // Compare real filesystem identities, including older registry entries that
+  // stored an alias, before another project can own and reset these documents.
+  const repoPath = input.repoPath.trim() ? canonicalRepo(input.repoPath.trim()) : '';
   const kind = input.kind === 'existing' ? 'existing' : 'new';
   const code = (input.code ?? '').trim().toUpperCase() || deriveCode(name);
   if (!name) throw new Error('name is required');
@@ -201,9 +208,7 @@ export function createProject(
       `The code ${code} already belongs to "${codeTaken.name}" — task ids carry it, so two projects cannot share one. Pick another, or remove that project first.`,
     );
   }
-  const taken = db
-    .prepare('SELECT name, archived FROM projects WHERE repo_path = ?')
-    .get(repoPath) as { name: string; archived: number } | undefined;
+  const taken = listProjects(db).find((p) => canonicalRepo(p.repo_path) === repoPath);
   if (taken) {
     throw new Error(
       taken.archived

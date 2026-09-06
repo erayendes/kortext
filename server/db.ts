@@ -1,23 +1,18 @@
 import Database from 'better-sqlite3';
 import { mkdirSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 
 export function defaultDbPath(): string {
   return join(homedir(), '.kortext', 'kortext.db');
 }
 
-// Run logs belong to the database they describe, not to the home directory.
-// Keyed on nothing but the project id, one shared folder meant a second server
-// on its own `--db` wrote into the first one's logs — and cancelling ITS
-// project 1 deleted the other project 1's history. Beside the database, two
-// databases cannot collide. Set by `openDb`, so every entry point gets it.
-let logRoot = join(homedir(), '.kortext', 'logs');
-export function logRootDir(): string {
-  return logRoot;
+// The database filename is part of the namespace, including for sibling DBs.
+export function logRootDir(db: Database.Database): string {
+  return `${resolve(db.name)}.logs`;
 }
-export function logPathFor(name: string): string {
-  return join(logRoot, name);
+export function logPathFor(db: Database.Database, name: string): string {
+  return join(logRootDir(db), name);
 }
 
 const SCHEMA = `
@@ -47,15 +42,24 @@ CREATE TABLE IF NOT EXISTS jobs (
   started_at TEXT NOT NULL DEFAULT (datetime('now')),
   finished_at TEXT
 );
+CREATE TABLE IF NOT EXISTS pending_rechecks (
+  project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  source_rel TEXT NOT NULL,
+  reader_rel TEXT NOT NULL,
+  generation INTEGER NOT NULL DEFAULT 1,
+  PRIMARY KEY (project_id, source_rel, reader_rel)
+);
 `;
 
 export function openDb(path = defaultDbPath()): Database.Database {
   mkdirSync(dirname(path), { recursive: true });
-  logRoot = join(dirname(path), 'logs');
   const db = new Database(path);
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
   db.exec(SCHEMA);
+  if (!(db.pragma('table_info(jobs)') as { name: string }[]).some((c) => c.name === 'notes')) {
+    db.exec("ALTER TABLE jobs ADD COLUMN notes TEXT NOT NULL DEFAULT '[]'");
+  }
   return db;
 }
 

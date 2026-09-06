@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type Database from 'better-sqlite3';
@@ -306,6 +307,18 @@ export function analysisComplete(
   project: Project,
   pkgRoot: string,
 ): boolean {
+  if (db.prepare('SELECT 1 FROM pending_rechecks WHERE project_id = ? LIMIT 1').get(project.id)) {
+    return false;
+  }
+  if (
+    db
+      .prepare(
+        "SELECT 1 FROM jobs WHERE project_id = ? AND status = 'running' AND kind != 'plan' LIMIT 1",
+      )
+      .get(project.id)
+  ) {
+    return false;
+  }
   const map = loadDocMap(pkgRoot, project.kind ?? 'new');
   const docs = listDocs(db, project, pkgRoot);
   const byRel = new Map(docs.map((d) => [d.rel, d.status]));
@@ -326,4 +339,8 @@ export function docPath(project: Project, rel: string): string {
     throw new Error(`bad doc path: ${rel}`);
   }
   return join(project.repo_path, '.kortext', rel);
+}
+
+export function docVersion(content: string): string {
+  return createHash('sha256').update(content).digest('hex');
 }

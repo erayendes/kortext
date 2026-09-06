@@ -26,7 +26,7 @@
     "url": "https://github.com/erayendes/kortext/issues"
   },
   "scripts": {
-    "dev": "tsx watch --clear-screen=false server/index.ts --no-open",
+    "dev": "tsx watch --clear-screen=false server/index.ts --no-open --no-detach",
     "dev:web": "npm --prefix ui run dev",
     "build": "tsc -p tsconfig.json && npm --prefix ui run build",
     "typecheck": "tsc -p tsconfig.json --noEmit && npm --prefix ui run typecheck",

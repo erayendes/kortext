@@ -33,6 +33,7 @@ export function DocDrawer({
   onChanged: () => void;
 }) {
   const [content, setContent] = useState('');
+  const [version, setVersion] = useState('');
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   const [selected, setSelected] = useState<number | null>(null);
@@ -65,6 +66,7 @@ export function DocDrawer({
     // failed load rendered one document's body under another's name — and the
     // editor still held it, so Save wrote it into the file now open.
     setContent('');
+    setVersion('');
     setDraft('');
     if (doc) {
       // The guard has to live outside the closure. Comparing `doc.rel` to a
@@ -79,6 +81,7 @@ export function DocDrawer({
         .then((r) => {
           if (cancelled) return;
           setContent(r.content);
+          setVersion(r.version);
           setDraft(r.content);
         })
         .catch((e) => {
@@ -230,7 +233,7 @@ export function DocDrawer({
 
   const approve = () =>
     act(async () => {
-      await api.approveDoc(project.id, doc.rel);
+      await api.approveDoc(project.id, doc.rel, version);
       onClose();
     });
 
@@ -238,8 +241,10 @@ export function DocDrawer({
     act(async () => {
       // A saved proposal answers the demands that produced it — otherwise the
       // document keeps asking for a change it already carries.
-      await api.saveDoc(project.id, doc.rel, draft, proposed);
-      setContent(draft);
+      const saved = await api.saveDoc(project.id, doc.rel, draft, version, proposed);
+      setContent(saved.content);
+      setVersion(saved.version);
+      setDraft(saved.content);
       setEditing(false);
       setProposed(false);
       setRawEdit(false);
@@ -317,87 +322,87 @@ export function DocDrawer({
           </button>
         </div>
       </div>
-      {err && <div className="kx-error">{err}</div>}
-      {failedError && !editing && (
-        <div className="kx-doc-changebar">
-          <div className="kx-changebar-head">The last attempt to write this document failed.</div>
-          <div className="kx-cmd-hint">{failedError}</div>
-          {onRetry && (
-            <div className="kx-changebar-actions">
-              <button className="btn btn-primary" onClick={onRetry}>
-                Retry
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-      {doc.dependentOn.length > 0 && !editing && (
-        <div className="kx-doc-dependbar">
-          <span className="mono">
-            {doc.dependentOn.map((d) => d.replace(/\.md$/, '')).join(', ')}
-          </span>{' '}
-          — an input of this document is moving. Nothing is wrong yet; when it settles, this one is
-          read against it again and you are told if it has to change.
-        </div>
-      )}
-      {doc.revisionRequests.length > 0 && !editing && (
-        <RequestBar
-          project={project}
-          head={
-            doc.hasProducingStep
-              ? 'Another document has asked this one to change. Until it is settled, the analysis is not finished.'
-              : 'Another document has asked this one to change. This one is yours — draft the change with the agent or edit it yourself, then approve it again.'
-          }
-          extra={
-            doc.hasProducingStep ? null : (
-              <button className="btn btn-primary" disabled={busy} onClick={proposeFix}>
-                {busy ? 'Drafting…' : 'Draft the change'}
-              </button>
-            )
-          }
-          items={doc.revisionRequests.map((r) => ({
-            label: r.from,
-            from: r.from,
-            target: doc.rel,
-            reason: r.reason,
-            canApply: doc.hasProducingStep,
-          }))}
-          onDone={onChanged}
-        />
-      )}
-      {doc.sentRequests.length > 0 && !editing && (
-        <RequestBar
-          project={project}
-          head="This document has asked others to change. Settle each one here — the target keeps its “changes asked” mark until you do."
-          items={doc.sentRequests.map((r) => ({
-            label: r.target,
-            from: doc.rel,
-            target: r.target,
-            reason: r.reason,
-            canApply: r.targetHasStep,
-          }))}
-          onDone={onChanged}
-        />
-      )}
-      {doc.openQuestions && !editing && (
-        <div className="kx-doc-askbar">
-          {notes.length > 0 ? (
-            <>
-              {notes.length} answer{notes.length > 1 ? 's' : ''} ready — press{' '}
-              <strong>Request revision</strong> to send {notes.length > 1 ? 'them' : 'it'} back to{' '}
-              {(doc.author ?? 'the author').replace(/^\+/, '')}, who folds the answers in and drops
-              the questions they settle. Nothing is written until you do.
-            </>
-          ) : (
-            <>
-              This document is waiting on you. Click a question, type the answer, Add note — then
-              Request revision. Or edit the document yourself and remove the questions you are
-              content to leave open.
-            </>
-          )}
-        </div>
-      )}
       <div className="dr-body">
+        {err && <div className="kx-error">{err}</div>}
+        {failedError && !editing && (
+          <div className="kx-doc-changebar">
+            <div className="kx-changebar-head">The last attempt to write this document failed.</div>
+            <div className="kx-cmd-hint">{failedError}</div>
+            {onRetry && (
+              <div className="kx-changebar-actions">
+                <button className="btn btn-primary" onClick={onRetry}>
+                  Retry
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+        {doc.dependentOn.length > 0 && !editing && (
+          <div className="kx-doc-dependbar">
+            <span className="mono">
+              {doc.dependentOn.map((d) => d.replace(/\.md$/, '')).join(', ')}
+            </span>{' '}
+            — an input of this document is moving. Nothing is wrong yet; when it settles, this one
+            is read against it again and you are told if it has to change.
+          </div>
+        )}
+        {doc.revisionRequests.length > 0 && !editing && (
+          <RequestBar
+            project={project}
+            head={
+              doc.hasProducingStep
+                ? 'Another document has asked this one to change. Until it is settled, the analysis is not finished.'
+                : 'Another document has asked this one to change. This one is yours — draft the change with the agent or edit it yourself, then approve it again.'
+            }
+            extra={
+              doc.hasProducingStep ? null : (
+                <button className="btn btn-primary" disabled={busy} onClick={proposeFix}>
+                  {busy ? 'Drafting…' : 'Draft the change'}
+                </button>
+              )
+            }
+            items={doc.revisionRequests.map((r) => ({
+              label: r.from,
+              from: r.from,
+              target: doc.rel,
+              reason: r.reason,
+              canApply: doc.hasProducingStep,
+            }))}
+            onDone={onChanged}
+          />
+        )}
+        {doc.sentRequests.length > 0 && !editing && (
+          <RequestBar
+            project={project}
+            head="This document has asked others to change. Settle each one here — the target keeps its “changes asked” mark until you do."
+            items={doc.sentRequests.map((r) => ({
+              label: r.target,
+              from: doc.rel,
+              target: r.target,
+              reason: r.reason,
+              canApply: r.targetHasStep,
+            }))}
+            onDone={onChanged}
+          />
+        )}
+        {doc.openQuestions && !editing && (
+          <div className="kx-doc-askbar">
+            {notes.length > 0 ? (
+              <>
+                {notes.length} answer{notes.length > 1 ? 's' : ''} ready — press{' '}
+                <strong>Request revision</strong> to send {notes.length > 1 ? 'them' : 'it'} back to{' '}
+                {(doc.author ?? 'the author').replace(/^\+/, '')}, who folds the answers in and
+                drops the questions they settle. Nothing is written until you do.
+              </>
+            ) : (
+              <>
+                This document is waiting on you. Click a question, type the answer, Add note — then
+                Request revision. Or edit the document yourself and remove the questions you are
+                content to leave open.
+              </>
+            )}
+          </div>
+        )}
         {editing ? (
           <>
             {proposed && (
@@ -860,11 +865,23 @@ function DocBlock({
   questionNo?: number;
   onSelect: () => void;
 }) {
+  const activation = {
+    role: 'button',
+    tabIndex: 0,
+    'aria-pressed': selected,
+    onClick: onSelect,
+    onKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+        e.preventDefault();
+        onSelect();
+      }
+    },
+  };
   if (token.kind === 'blank') return <div className="kx-blank" />;
   const cls = `kx-block kx-${token.kind}${selected ? ' selected' : ''}${noted ? ' noted' : ''}${openQuestion ? ' open-q' : ''}${changeRequest ? ' req-q' : ''}${questionNo ? ' kx-numbered' : ''}`;
   if (token.kind === 'table' && token.table) {
     return (
-      <div className={cls} onClick={onSelect}>
+      <div className={cls} {...activation}>
         <table>
           <thead>
             <tr>
@@ -892,7 +909,7 @@ function DocBlock({
   }
   if (token.kind === 'alert' && token.alert) {
     return (
-      <div className={`${cls} kx-alert kx-alert-${token.alert}`} onClick={onSelect}>
+      <div className={`${cls} kx-alert kx-alert-${token.alert}`} {...activation}>
         <div className="kx-alert-head">
           <AlertIcon kind={token.alert} />
           {ALERT_LABEL[token.alert]}
@@ -906,13 +923,13 @@ function DocBlock({
   if (token.kind === 'code') {
     if (token.lang === 'mermaid') {
       return (
-        <div className={`${cls} kx-mermaid`} onClick={onSelect}>
+        <div className={`${cls} kx-mermaid`} {...activation}>
           <Mermaid code={token.text} />
         </div>
       );
     }
     return (
-      <div className={`${cls} kx-codewrap`} onClick={onSelect}>
+      <div className={`${cls} kx-codewrap`} {...activation}>
         <CopyButton text={token.text} />
         <pre>
           {highlight(token.text, token.lang).map((t, i) =>
@@ -936,7 +953,7 @@ function DocBlock({
     <div
       className={`${cls}${task ? ' kx-task' : ''}`}
       style={token.depth ? { marginLeft: token.depth * 18 } : undefined}
-      onClick={onSelect}
+      {...activation}
     >
       {questionNo && <span className="kx-qno mono">#{questionNo}</span>}
       {task ? (
