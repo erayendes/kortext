@@ -11,7 +11,7 @@ repository-code: "https://github.com/erayendes/kortext"
 url: "https://github.com/erayendes/kortext"
 license: MIT
 version: 3.1.0
-date-released: "2026-09-04"
+date-released: "2026-09-06"
 keywords:
   - ai
   - agent
