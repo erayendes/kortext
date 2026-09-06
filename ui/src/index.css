@@ -1134,10 +1134,31 @@ body {
   padding: 14px 22px;
   border-bottom: 1px solid var(--border);
 }
+/* The wordmark is a pencil-and-blueprint drawing in three inks: no colour token
+   paints it, and an invert filter drops the pale graphite to dark grey on a dark
+   ground. It ships as two drawings — one made for paper, one for the dark
+   panel — and CSS shows the one the theme calls for. */
 .kx-logo {
-  font-weight: 650;
-  font-size: var(--fs-section);
-  letter-spacing: -0.01em;
+  height: 20px;
+  width: auto;
+  display: block;
+}
+.kx-logo-dark {
+  display: none;
+}
+:root[data-theme='dark'] .kx-logo-light {
+  display: none;
+}
+:root[data-theme='dark'] .kx-logo-dark {
+  display: block;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .kx-logo-light {
+    display: none;
+  }
+  :root:not([data-theme='light']) .kx-logo-dark {
+    display: block;
+  }
 }
 .kx-main {
   max-width: 860px;
