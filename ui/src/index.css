@@ -1202,9 +1202,9 @@ body {
   align-items: center;
   gap: 10px;
   /* A status bar is one line high, always: it wraps nothing and grows with
-     nothing. A message too long for the width is cut, not folded. */
+     nothing. A message too long for the width is cut, not folded — by the
+     message itself, since clipping the bar would swallow the popover above it. */
   white-space: nowrap;
-  overflow: hidden;
   flex-shrink: 0;
   height: 34px;
   padding: 0 12px;
@@ -1214,13 +1214,74 @@ body {
   font-size: var(--fs-label);
   color: var(--fg-muted);
 }
+.kx-made-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--fg-faint);
+  cursor: pointer;
+}
+.kx-made-trigger:hover {
+  color: var(--fg-muted);
+}
 .kx-made-by {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 5px;
   color: var(--fg-faint);
 }
+.kx-made-pop {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 10px);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 260px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--bg);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  white-space: nowrap;
+  cursor: default;
+}
+.kx-made-pop-head {
+  color: var(--fg-faint);
+}
+.kx-made-pop-row {
+  display: flex;
+  gap: 10px;
+  color: inherit;
+  text-decoration: none;
+}
+.kx-made-pop-name {
+  min-width: 62px;
+  color: var(--fg);
+}
+.kx-made-pop-what {
+  color: var(--fg-muted);
+}
+.kx-made-pop-link {
+  margin-top: 2px;
+  color: var(--fg-faint);
+  text-decoration: none;
+}
+.kx-made-pop-link:hover {
+  color: var(--fg-muted);
+}
 .kx-statusbar-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
   color: var(--fg-faint);
   text-decoration: none;
 }
@@ -1244,6 +1305,7 @@ body {
 }
 .kx-status-warn {
   color: var(--red);
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -1368,6 +1430,70 @@ body {
   color: var(--fg-mid);
   font-size: var(--fs-body);
   text-align: center;
+}
+.kx-siblings {
+  margin-top: 34px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.kx-siblings-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: var(--fs-label);
+  color: var(--fg-faint);
+}
+.kx-sib-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 13px 15px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--bg-subtle);
+}
+.kx-sib-name {
+  font-size: var(--fs-ui);
+  color: var(--fg);
+}
+.kx-sib-what {
+  font-size: var(--fs-label);
+  color: var(--fg-muted);
+  white-space: normal;
+}
+.kx-sib-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 10px;
+}
+.kx-sib-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--fs-micro);
+  color: var(--fg-faint);
+}
+.kx-sib-goes {
+  display: inline-flex;
+  color: var(--fg-faint);
+}
+a.kx-sib-card:hover .kx-sib-goes {
+  color: var(--fg);
+}
+a.kx-sib-card {
+  text-decoration: none;
+}
+a.kx-sib-card:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-muted);
+}
+a.kx-made-pop-row:hover .kx-made-pop-name {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 .kx-error {
   margin: 10px 22px 0;

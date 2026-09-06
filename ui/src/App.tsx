@@ -113,10 +113,13 @@ export function App() {
             </button>
           </div>
           {projects.length === 0 && !adding && (
-            <div className="kx-empty">
-              No projects yet. Add one to start — a brief template is scaffolded into the repo, and
-              your own coding agent takes it from there.
-            </div>
+            <>
+              <div className="kx-empty">
+                No projects yet. Add one to start — a brief template is scaffolded into the repo,
+                and your own coding agent takes it from there.
+              </div>
+              <Siblings />
+            </>
           )}
           {adding && (
             <AddProject
@@ -146,18 +149,7 @@ export function App() {
       <footer className="kx-statusbar">
         <ServerStatus />
         <span className="kx-doc-spacer" />
-        <span className="kx-made-by">
-          <a
-            className="kx-statusbar-link"
-            href="https://milowda.com"
-            target="_blank"
-            rel="noreferrer"
-          >
-            milowda
-          </a>
-          <Heart />
-          istanbul
-        </span>
+        <MadeBy />
       </footer>
     </div>
   );
@@ -339,6 +331,199 @@ function ThemeSwitch() {
     >
       <ThemeIcon choice={choice} />
     </button>
+  );
+}
+
+// The other Milowda tools. `url` is the repository, and its absence is what
+// mogut's missing licence line means: not published yet, so nothing here claims
+// it is.
+// `short` is what the popover shows — a strip that has to stay one line per row.
+// `what` is the full pitch, for the cards on the empty screen where there is
+// room to say it properly. mogut has no public repository yet, so its link goes
+// to the studio page.
+const SIBLINGS: {
+  name: string;
+  short: string;
+  what: string;
+  url: string;
+}[] = [
+  {
+    name: 'Heimdall',
+    short: 'App Store Connect MCP',
+    what: "MCP server for the Apple App Store Connect API and App Store Server API (StoreKit 2). 890 tools across 13 profiles, generated from Apple's OpenAPI spec, plus one-call macros for worldwide pricing, submission readiness and metadata diffs, and confirm-before-write safety. Works with any MCP client.",
+    url: 'https://github.com/erayendes/app-store-connect-mcp',
+  },
+  {
+    name: 'Mogut',
+    short: 'App Store Growth MCP',
+    what: 'Read-only MCP server for Apple App Store ASO and growth intelligence: keyword research, competitor analysis, review mining, pricing, localization, and reports. Local-first, and compatible with Claude, Codex, Cursor, and any MCP client.',
+    url: 'https://milowda.com',
+  },
+  {
+    name: 'Oduncu',
+    short: 'Silent-executor skill for coding agents',
+    what: 'Silent-executor skill for coding agents. Give it a task, it says "yaparım...", works, says "tamam." Nothing in between — no explanation, no summary, no progress notes. One SKILL.md for Claude Code, Codex, Cursor, Gemini and the Agent Skills standard.',
+    url: 'https://github.com/erayendes/oduncu',
+  },
+  {
+    name: 'Mimir',
+    short: 'AI usage tracker',
+    what: 'AI tool usage limits tracker for your macOS menu bar — Claude, Codex & Antigravity.',
+    url: 'https://github.com/erayendes/mimir',
+  },
+  {
+    name: 'themeSwitcher',
+    short: 'Light/dark/auto theme switcher',
+    what: 'A lightweight, framework-agnostic light/dark/auto theme switcher component for any web project.',
+    url: 'https://github.com/erayendes/themeSwitcher',
+  },
+];
+
+// The other Milowda tools, on the one screen nobody sees twice: a panel with a
+// project in it never shows this again. Cards rather than a list, because the
+// screen they land on is a grid of cards and this is the same kind of thing —
+// something to go and look at, not a footnote.
+function Siblings() {
+  return (
+    <div className="kx-siblings">
+      <div className="kx-siblings-head">Also from Milowda</div>
+      <div className="kx-grid">
+        {SIBLINGS.map((s) => {
+          return (
+            <a className="kx-sib-card" key={s.name} href={s.url} target="_blank" rel="noreferrer">
+              <span className="kx-sib-name">{s.name}</span>
+              <span className="kx-sib-what">{s.what}</span>
+              <span className="kx-sib-foot">
+                <span className="kx-sib-tag">
+                  <Licence />
+                  MIT · free
+                </span>
+                {/* Where the card goes, said by its mark rather than by a word.
+                    mogut has no repository yet, so it gets the plain
+                    leaving-the-panel arrow instead of GitHub's. */}
+                <span className="kx-sib-goes">
+                  {s.url.includes('github.com') ? <GitHubMark /> : <ExternalLink />}
+                </span>
+              </span>
+            </a>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// The credit line, and the only place the other Milowda tools are named. A
+// popover rather than a row of links: nothing is visible until someone clicks
+// the name, so a panel opened a hundred times a day carries no advertisement.
+function MadeBy() {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLSpanElement>(null);
+
+  // Click anywhere else, or Escape: the popover is a glance, not a mode.
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: MouseEvent) => {
+      if (!box.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const key = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', away);
+    document.addEventListener('keydown', key);
+    return () => {
+      document.removeEventListener('mousedown', away);
+      document.removeEventListener('keydown', key);
+    };
+  }, [open]);
+
+  return (
+    <span className="kx-made-by" ref={box}>
+      {/* The whole credit is the handle, not the word `milowda` alone: at 11px a
+          single word is a hard target, and the heart and the city read as part
+          of the same thing anyway. */}
+      <button className="kx-made-trigger" onClick={() => setOpen(!open)}>
+        milowda <Heart /> istanbul
+      </button>
+      {open && (
+        <div className="kx-made-pop">
+          <div className="kx-made-pop-head">Also from Milowda</div>
+          {SIBLINGS.map((s) => (
+            <a
+              className="kx-made-pop-row"
+              key={s.name}
+              href={s.url}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <span className="kx-made-pop-name">{s.name}</span>
+              <span className="kx-made-pop-what">{s.short}</span>
+            </a>
+          ))}
+          <a
+            className="kx-made-pop-link"
+            href="https://milowda.com"
+            target="_blank"
+            rel="noreferrer"
+          >
+            milowda.com
+          </a>
+        </div>
+      )}
+    </span>
+  );
+}
+
+// GitHub's own mark, for the cards whose link lands in a repository.
+function GitHubMark() {
+  return (
+    <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true">
+      <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z" />
+    </svg>
+  );
+}
+
+// lucide external-link (ISC)
+function ExternalLink() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="13"
+      height="13"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M15 3h6v6" />
+      <path d="M10 14 21 3" />
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+    </svg>
+  );
+}
+
+// lucide scale (ISC) — the balance GitHub puts next to a licence.
+function Licence() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="12"
+      height="12"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 3v18" />
+      <path d="m19 8 3 8a5 5 0 0 1-6 0zV7" />
+      <path d="M3 7h1a17 17 0 0 0 8-2 17 17 0 0 0 8 2h1" />
+      <path d="m5 8 3 8a5 5 0 0 1-6 0zV7" />
+      <path d="M7 21h10" />
+    </svg>
   );
 }
 
