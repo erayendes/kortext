@@ -165,15 +165,13 @@ export function listProjects(db: Database.Database): Project[] {
 // 'new' → new-project-analysis, 'existing' → existing-project-analysis.
 // Derives ACME-style code from the name when none is given.
 export function deriveCode(name: string): string {
+  // A code is letters only — task ids read better for it, and a derived code can
+  // never be one createProject would refuse. "365 Tracker" becomes TRACK, not
+  // 365TR.
   const cleaned = name
     .toUpperCase()
     .replace(/[ÇĞİIÖŞÜ]/g, (c) => 'CGIIOSU'['ÇĞİIÖŞÜ'.indexOf(c)] ?? c)
-    .replace(/[^A-Z0-9]/g, '')
-    // A code must start with a letter, and createProject refuses one that does
-    // not — so a name like "365 Tracker" used to fail on a code its author
-    // never typed. Drop the leading digits rather than hand back a code we
-    // are about to reject.
-    .replace(/^[0-9]+/, '');
+    .replace(/[^A-Z]/g, '');
   return (cleaned.slice(0, 5) || 'PROJ').padEnd(2, 'X');
 }
 
@@ -198,8 +196,8 @@ export function createProject(
   const code = (input.code ?? '').trim().toUpperCase() || deriveCode(name);
   if (!name) throw new Error('name is required');
   if (!repoPath) throw new Error('repoPath is required');
-  if (!/^[A-Z][A-Z0-9]{1,7}$/.test(code)) {
-    throw new Error(`code must be 2-8 chars, A-Z then A-Z0-9 (got: ${code})`);
+  if (!/^[A-Z]{2,8}$/.test(code)) {
+    throw new Error(`code must be 2-8 letters, A-Z (got: ${code})`);
   }
   const codeTaken = db.prepare('SELECT name FROM projects WHERE code = ?').get(code) as
     { name: string } | undefined;

@@ -1439,9 +1439,29 @@ body {
 }
 .kx-siblings-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 10px;
   font-size: var(--fs-label);
+  color: var(--fg-faint);
+}
+.kx-siblings-close {
+  display: inline-flex;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--fg-faint);
+  opacity: 0.45;
+  cursor: pointer;
+}
+.kx-siblings-close:hover {
+  opacity: 1;
+}
+.kx-siblings-close-armed {
+  color: var(--red);
+  opacity: 1;
+}
+.kx-sib-soon {
+  font-size: var(--fs-micro);
   color: var(--fg-faint);
 }
 .kx-sib-card {
@@ -2218,6 +2238,27 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
 .kx-code-input {
   width: 130px;
   flex: none;
+}
+.kx-field {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.kx-code-field {
+  flex: none;
+}
+.kx-field .kx-input {
+  width: 100%;
+}
+.kx-field-err {
+  color: var(--red);
+  font-size: var(--fs-label);
+}
+.kx-input-bad,
+.kx-input-bad:focus {
+  border-color: var(--red);
 }
 
 /* R3 — explain bubbles + footer */

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   api,
   type DocInfo,
@@ -118,7 +118,6 @@ export function App() {
                 No projects yet. Add one to start — a brief template is scaffolded into the repo,
                 and your own coding agent takes it from there.
               </div>
-              <Siblings />
             </>
           )}
           {adding && (
@@ -141,6 +140,7 @@ export function App() {
               <div className="kx-grid">{archived.map(projectCard)}</div>
             </details>
           )}
+          {!adding && <Siblings />}
         </main>
       )}
       {/* An application status bar, not a web page footer: one fixed-height strip
@@ -338,14 +338,15 @@ function ThemeSwitch() {
 // mogut's missing licence line means: not published yet, so nothing here claims
 // it is.
 // `short` is what the popover shows — a strip that has to stay one line per row.
-// `what` is the full pitch, for the cards on the empty screen where there is
-// room to say it properly. mogut has no public repository yet, so its link goes
-// to the studio page.
+// `what` is the full pitch, for the cards below the project list where there is
+// room to say it properly. A missing `url` means the tool is not released: it
+// says so and links nowhere, rather than sending anyone to a page that cannot
+// hand them the thing.
 const SIBLINGS: {
   name: string;
   short: string;
   what: string;
-  url: string;
+  url?: string;
 }[] = [
   {
     name: 'Heimdall',
@@ -357,7 +358,11 @@ const SIBLINGS: {
     name: 'Mogut',
     short: 'App Store Growth MCP',
     what: 'Read-only MCP server for Apple App Store ASO and growth intelligence: keyword research, competitor analysis, review mining, pricing, localization, and reports. Local-first, and compatible with Claude, Codex, Cursor, and any MCP client.',
-    url: 'https://milowda.com',
+  },
+  {
+    name: 'Kopeng',
+    short: 'Local kanban for AI-driven development',
+    what: "Local kanban task tracking for AI-driven development. At a glance: what's done, what awaits approval, what's in flight, what's next. No ceremonies, just status.",
   },
   {
     name: 'Oduncu',
@@ -384,13 +389,74 @@ const SIBLINGS: {
 // screen they land on is a grid of cards and this is the same kind of thing —
 // something to go and look at, not a footnote.
 function Siblings() {
+  // Dismissed for good, in this browser: a promotion that cannot be turned off
+  // is an advertisement, and one that comes back tomorrow is worse. Two clicks,
+  // the same as the server's power button — the second one is not undoable from
+  // the panel, so the question is asked in red rather than in passing.
+  const [hidden, setHidden] = useState(() => {
+    try {
+      return localStorage.getItem('kx-siblings') === 'hidden';
+    } catch {
+      return false;
+    }
+  });
+  const [arming, setArming] = useState(false);
+
+  useEffect(() => {
+    if (!arming) return;
+    const timer = setTimeout(() => setArming(false), 4000);
+    return () => clearTimeout(timer);
+  }, [arming]);
+
+  if (hidden) return null;
+
+  const hide = () => {
+    if (!arming) {
+      setArming(true);
+      return;
+    }
+    setHidden(true);
+    try {
+      localStorage.setItem('kx-siblings', 'hidden');
+    } catch {
+      /* private mode — it stays hidden for this session */
+    }
+  };
+
   return (
     <div className="kx-siblings">
-      <div className="kx-siblings-head">Also from Milowda</div>
+      <div className="kx-siblings-head">
+        Also from Milowda
+        <span className="kx-doc-spacer" />
+        {/* The question stands next to the button that asked it, the way the
+            server's power button asks — not across the row where the heading is. */}
+        {arming && <span className="kx-field-err">Hide this for good? Click again.</span>}
+        <button
+          className={arming ? 'kx-siblings-close kx-siblings-close-armed' : 'kx-siblings-close'}
+          title={arming ? 'Click again to hide it for good' : 'Hide this'}
+          aria-label="Hide this"
+          onClick={hide}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width="11"
+            height="11"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2.4}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
+          </svg>
+        </button>
+      </div>
       <div className="kx-grid">
         {SIBLINGS.map((s) => {
-          return (
-            <a className="kx-sib-card" key={s.name} href={s.url} target="_blank" rel="noreferrer">
+          const body = (
+            <>
               <span className="kx-sib-name">{s.name}</span>
               <span className="kx-sib-what">{s.what}</span>
               <span className="kx-sib-foot">
@@ -398,14 +464,26 @@ function Siblings() {
                   <Licence />
                   MIT · free
                 </span>
-                {/* Where the card goes, said by its mark rather than by a word.
-                    mogut has no repository yet, so it gets the plain
-                    leaving-the-panel arrow instead of GitHub's. */}
-                <span className="kx-sib-goes">
-                  {s.url.includes('github.com') ? <GitHubMark /> : <ExternalLink />}
-                </span>
+                {/* Where the card goes, said by GitHub's mark; an unreleased one
+                    says that instead, since there is nowhere to send anyone. */}
+                {s.url ? (
+                  <span className="kx-sib-goes">
+                    <GitHubMark />
+                  </span>
+                ) : (
+                  <span className="kx-sib-soon">in development</span>
+                )}
               </span>
+            </>
+          );
+          return s.url ? (
+            <a className="kx-sib-card" key={s.name} href={s.url} target="_blank" rel="noreferrer">
+              {body}
             </a>
+          ) : (
+            <div className="kx-sib-card" key={s.name}>
+              {body}
+            </div>
           );
         })}
       </div>
@@ -448,18 +526,26 @@ function MadeBy() {
       {open && (
         <div className="kx-made-pop">
           <div className="kx-made-pop-head">Also from Milowda</div>
-          {SIBLINGS.map((s) => (
-            <a
-              className="kx-made-pop-row"
-              key={s.name}
-              href={s.url}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <span className="kx-made-pop-name">{s.name}</span>
-              <span className="kx-made-pop-what">{s.short}</span>
-            </a>
-          ))}
+          {SIBLINGS.map((s) =>
+            s.url ? (
+              <a
+                className="kx-made-pop-row"
+                key={s.name}
+                href={s.url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <span className="kx-made-pop-name">{s.name}</span>
+                <span className="kx-made-pop-what">{s.short}</span>
+              </a>
+            ) : (
+              <span className="kx-made-pop-row" key={s.name}>
+                <span className="kx-made-pop-name">{s.name}</span>
+                <span className="kx-made-pop-what">{s.short}</span>
+                <span className="kx-sib-soon">soon</span>
+              </span>
+            ),
+          )}
           <a
             className="kx-made-pop-link"
             href="https://milowda.com"
@@ -832,6 +918,26 @@ the last 30 days; weekly active users per team.
 No billing, no phone integration, no mobile app. The MVP customer list caps at 8 items per
 view. Nothing is shared between teams.`;
 
+// An input and the one line that says what is wrong with it. The message sits
+// under the field rather than at the foot of the form, where the reader has to
+// carry it back up.
+function Field({
+  err,
+  className,
+  children,
+}: {
+  err?: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <span className={className ? `kx-field ${className}` : 'kx-field'}>
+      {children}
+      {err && <span className="kx-field-err">{err}</span>}
+    </span>
+  );
+}
+
 function AddProject({
   onDone,
   onCancel,
@@ -848,6 +954,13 @@ function AddProject({
   const [briefMode, setBriefMode] = useState<'write' | 'upload'>('write');
   const [uploadName, setUploadName] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  // Every rule the panel can check is checked in one pass: a form that reports
+  // its problems one per press makes the user press it four times to learn four
+  // things. What only the server knows — a code or a folder already taken —
+  // still comes back from the server, and lands on the field it is about.
+  const [fieldErrs, setFieldErrs] = useState<{ name?: string; code?: string; repoPath?: string }>(
+    {},
+  );
   // The engine is asked for HERE, next to Initialize, rather than ranked for the
   // user: the three CLIs are equals, and only the person who installed them knows
   // which one they actually use. One installed CLI answers the question itself.
@@ -878,7 +991,24 @@ function AddProject({
     });
   };
 
+  const check = () => {
+    const found: { name?: string; code?: string; repoPath?: string } = {};
+    if (name.trim().length < 3) found.name = 'At least 3 characters.';
+    if (!/^[A-Z]{2,8}$/.test(code.trim())) found.code = '2–8 letters, no digits.';
+    // A relative path would be read against the server's working directory, not
+    // against whatever the user had in mind: ask for the whole thing.
+    if (!repoPath.trim()) found.repoPath = 'Pick the project folder.';
+    else if (!/^(\/|~\/|[A-Za-z]:[\\/])/.test(repoPath.trim())) {
+      found.repoPath = 'Give the full path — Browse fills it in.';
+    }
+    return found;
+  };
+
   const submit = async () => {
+    setErr(null);
+    const found = check();
+    setFieldErrs(found);
+    if (Object.keys(found).length > 0) return;
     try {
       const { project } = await api.createProject({
         engine: engine ?? undefined,
@@ -891,7 +1021,12 @@ function AddProject({
       });
       onDone(project, brief.trim().length > 0);
     } catch (e) {
-      setErr((e as Error).message);
+      // The server's own refusals name their subject: put each one under the
+      // field it belongs to, and keep the rest by the button.
+      const message = (e as Error).message;
+      if (/^The code /.test(message)) setFieldErrs({ code: message });
+      else if (/^This folder /.test(message)) setFieldErrs({ repoPath: message });
+      else setErr(message);
     }
   };
 
@@ -917,26 +1052,41 @@ function AddProject({
           : 'Existing codebase: the engine documents the current state via existing-project-analysis.'}
       </span>
       <div className="kx-form-row">
-        <input
-          className="kx-input kx-path"
-          placeholder="Project name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <input
-          className="kx-input mono kx-code-input"
-          placeholder="Code (ACME)"
-          value={code}
-          onChange={(e) => setCode(e.target.value.toUpperCase())}
-        />
+        <Field err={fieldErrs.name}>
+          <input
+            className={fieldErrs.name ? 'kx-input kx-input-bad' : 'kx-input'}
+            placeholder="Project name"
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value);
+              setFieldErrs((f) => ({ ...f, name: undefined }));
+            }}
+          />
+        </Field>
+        <Field err={fieldErrs.code} className="kx-code-field">
+          <input
+            className={`kx-input mono kx-code-input${fieldErrs.code ? ' kx-input-bad' : ''}`}
+            placeholder="Code (ACME)"
+            value={code}
+            onChange={(e) => {
+              setCode(e.target.value.toUpperCase());
+              setFieldErrs((f) => ({ ...f, code: undefined }));
+            }}
+          />
+        </Field>
       </div>
       <div className="kx-form-row">
-        <input
-          className="kx-input mono kx-path"
-          placeholder="Project folder (pick with Browse)"
-          value={repoPath}
-          onChange={(e) => setRepoPath(e.target.value)}
-        />
+        <Field err={fieldErrs.repoPath}>
+          <input
+            className={`kx-input mono${fieldErrs.repoPath ? ' kx-input-bad' : ''}`}
+            placeholder="Project folder (pick with Browse)"
+            value={repoPath}
+            onChange={(e) => {
+              setRepoPath(e.target.value);
+              setFieldErrs((f) => ({ ...f, repoPath: undefined }));
+            }}
+          />
+        </Field>
         <button className="btn btn-secondary" onClick={browse}>
           Browse…
         </button>
@@ -1041,7 +1191,6 @@ function AddProject({
           </span>
         </div>
       )}
-      {err && <div className="kx-error">{err}</div>}
       {engines.length === 0 && (
         <span className="kx-cmd-hint">
           No agent CLI found on your PATH. Install one — claude, codex or gemini — and pick it here;
@@ -1056,6 +1205,7 @@ function AddProject({
         <button className="btn btn-link-primary" onClick={onCancel}>
           Cancel
         </button>
+        {err && <span className="kx-field-err">{err}</span>}
       </div>
     </div>
   );

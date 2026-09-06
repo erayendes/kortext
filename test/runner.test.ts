@@ -399,7 +399,7 @@ printf -- '---\\nid: PLN-T001\\nassignee: ai\\nblocked_by: []\\n---\\n\\n## Desc
   chmodSync(bad, 0o755);
   const p2 = createProject(
     db,
-    { name: 'Plan2', repoPath: join(work, 'plan2'), code: 'PL2' },
+    { name: 'Plan2', repoPath: join(work, 'plan2'), code: 'PLB' },
     pkgRoot,
   );
   const fail = await runPlanning(

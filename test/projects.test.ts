@@ -340,9 +340,10 @@ test('a name that starts with a digit still yields a code the registry accepts',
   // deriveCode used to keep the digits and hand back '365TR', which
   // createProject then refused — over a code the author never typed.
   const p = createProject(db, { name: '365 Tracker', repoPath: join(work, 'tracker') }, pkgRoot);
-  assert.match(p.code, /^[A-Z][A-Z0-9]{1,7}$/);
+  assert.match(p.code, /^[A-Z]{2,8}$/);
   assert.equal(deriveCode('2048 Game'), 'GAME');
   assert.equal(deriveCode('2048'), 'PROJ', 'a name with no letters still gets a code');
+  assert.equal(deriveCode('A1 Tools'), 'ATOOL', 'digits inside the name are dropped too');
   rmSync(work, { recursive: true, force: true });
 });
 
