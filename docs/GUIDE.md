@@ -7,9 +7,9 @@ The panel, explained. Installation and the five-step overview are in the
 
 ## The mental model
 
-Kortext writes nothing itself. It runs **your** agent CLI, one step at a time, inside your repo,
-and each step produces exactly one document. You are the only approver: a document nobody
-approved is never used as the ground for the next one.
+Kortext runs **your** agent CLI inside your repo. Each analysis run produces one document,
+with up to three documents being written in parallel per project when their inputs are settled.
+You approve the drafts; a document marked `n/a` also satisfies dependencies.
 
 Three things follow from that.
 
@@ -26,12 +26,15 @@ Three things follow from that.
 
 ## Starting: the gate
 
-Press **Start** and Kortext reads your evidence before it spends anything.
+Press **Start** and Kortext checks your evidence before producing analysis documents. The initial
+content check is local. For a new project that passes it, the brief is then judged by your agent
+CLI; that call consumes the CLI's quota or billing and is cached for the same brief.
 
 A **new project** is judged on its brief. If the brief does not say what you are building, who
 it is for, which language the product speaks, how you will know it worked, and what is out of
-scope, the analysis does not begin — you get those questions back, in the language you wrote in,
-and the brief moves to **Needs you**. Answer them in the brief, approve it again, press Start.
+scope, the analysis does not begin — you get questions back and the brief moves to **Needs you**.
+The local check uses fixed English questions; the CLI is asked to use the brief's language.
+Answer them in the brief, approve it again, and press Start if the project is paused.
 
 An **existing project** is judged on its code: a folder with almost nothing in it has nothing to
 analyse.
@@ -55,7 +58,10 @@ passage. Nothing is saved: this is for understanding what you are approving, not
 is rewritten with them. A note left on one of the document's own open questions is read as the
 answer to it: the question disappears and the fact it established becomes part of the text.
 
-**Edit** — write the file yourself. Saving it settles whatever the drawer was asking about.
+**Edit** — write the file yourself. A normal save updates the text; it does not automatically
+close change requests or clear open questions. Resolve the questions in the text and handle
+standing requests separately. When you use **Propose** to draft a requested change to the brief,
+saving that proposal also closes the incoming requests it answers.
 
 **Open questions** — amber, numbered. The document is asking *you* something, and it cannot be
 approved until you answer.
@@ -94,11 +100,14 @@ installed, and the dropdown shows you what it fell back to.
 
 - **Pause** stops new steps from starting; a running step is stopped too.
 - **Continue** picks the chain back up.
-- **Restart** wipes `.kortext/` and starts the analysis over, from the same brief.
+- **Restart** clears the analysis documents and readiness result, preserving `BRIEF.md`
+  exactly as it is, including its approval status. The project lands paused; press **Start**
+  when ready. `.kopeng/` is independent and stays untouched.
 - **Archive** puts a finished project on a shelf. The row stays, the repo is untouched.
-- **Cancel** removes what Kortext wrote — `.kortext/`, its block in `AGENTS.md`, its pointer
-  line in `CLAUDE.md`, and the project's logs — and unregisters the project. Anything you wrote
-  yourself stays.
+- **Cancel** removes Kortext's analysis — the entire `.kortext/` folder, including your brief
+  and any manual edits inside it — its block in `AGENTS.md`, its pointer line in `CLAUDE.md`,
+  and the project's logs, then unregisters the project. `.kopeng/` and other project files stay;
+  your own content in `AGENTS.md` and `CLAUDE.md` stays too. It does not uninstall either tool.
 
 ## The handshake
 
@@ -152,15 +161,17 @@ is installed but not signed in — run it once on its own in a terminal, then Re
 **The header says no agent CLI was found.** None of `claude`, `codex`, `gemini` is on your
 `PATH`. Install one (see the [README](../README.md)) and reload.
 
-**A step has been running for a long time.** Steps take minutes; a stuck one is stopped at
-fifteen. The raw output of every run is in `~/.kortext/logs/`, one file per document.
+**A step has been running for a long time.** Analysis steps take minutes; a stuck one is stopped
+at fifteen. The optional Kopeng planning run has a thirty-minute limit. Raw CLI output is in
+`~/.kortext/kortext.db.logs/` by default; with a custom `--db`, it is in `<db-path>.logs/`.
 
 **Kortext restarted while a step was running.** That step is marked failed with "kortext
 restarted mid-step — retry", which is exactly what to do.
 
-**A document will not leave "Needs you".** It is carrying an open question or an unanswered
-demand. Both are shown in the drawer, and both need a decision from you — approving is blocked
-until then, on purpose.
+**A document will not leave "Needs you".** Check for a failed run, an open question or a standing
+change request. Open questions block approval. A change request alone does not block approval,
+but approving does not close it: the document still needs attention, and analysis cannot finish
+until the request is handled.
 
 **Your changes on disk do not show.** The panel polls every few seconds; give it a moment.
 
@@ -169,10 +180,13 @@ until then, on purpose.
 | | |
 | --- | --- |
 | `~/.kortext/kortext.db` | the project registry — one database, every project |
-| `~/.kortext/logs/` | raw output of every CLI run |
+| `~/.kortext/kortext.db.logs/` | raw output of every CLI run |
 | `~/.kortext/kortext.db.log` | what the background server prints |
 | `<repo>/AGENTS.md` | the handover contract, inside a marked block |
-| `<repo>/.kortext/` | the documents — one folder, fifteen files, `BRIEF.md` first |
+| `<repo>/.kortext/` | fourteen analysis documents; a new project also has `BRIEF.md`, for fifteen total |
+
+With `--db /path/name.sqlite`, the registry is `/path/name.sqlite`, CLI logs are in
+`/path/name.sqlite.logs/`, and the background server writes `/path/name.sqlite.log`.
 
 The documents are plain markdown in your repository. Commit them: they are the project's
 memory, and the next agent that opens the repo reads them before it writes a line.

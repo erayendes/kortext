@@ -11,7 +11,8 @@ The first public release.
 
 Kortext turns a brief, or an existing codebase, into an approved analysis foundation. It drives
 the agent CLI you already have — `claude`, `codex` or `gemini` — headlessly, inside your own
-repository, one document at a time and in dependency order. Each document lands as a draft; you
+repository, one document per analysis run, with up to three runs in parallel per project when
+dependencies allow. Each applicable document lands as a draft; you
 approve it, ask its author about a line, or send it back with notes, and the chain moves on your
 approvals. When every document is settled, Kortext retires: the documents become the project's
 contract, `AGENTS.md` hands your agent the terms, and the code is written by your agent, not by
@@ -22,8 +23,8 @@ Kortext.
 - **Nothing is written from nothing.** A gate reads the brief before the first step runs: a brief
   that does not say what is being built, for whom, in which language, or what is out of scope
   comes back with those questions instead of producing invented documents.
-- **The documents are yours.** They live in your repository as plain markdown under `.kortext/`,
-  with `foundation/` for the BRD, PRD, TRD and PFD. Frontmatter `status` is the source of truth.
+- **The documents are yours.** Fourteen analysis documents live directly under `.kortext/` as
+  plain markdown; new projects also have `BRIEF.md`. Frontmatter `status` is the source of truth.
 - **The panel is the whole surface.** Approvals, line-anchored questions to the authoring
   persona, revision requests between documents, and the handshake that ends the analysis.
 - **One process, one port.** Express and SQLite behind a React panel on `localhost:3441`; the

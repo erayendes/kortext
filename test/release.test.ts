@@ -113,6 +113,74 @@ process.stdin.on('end', async () => {
   return { work, db, p, request, engine };
 }
 
+test('restart preserves the brief verbatim and Kopeng, clears analysis and stays paused', async (t) => {
+  const { db, p, request } = await fixture(t);
+  const brief = docPath(p, 'BRIEF.md');
+  const product = docPath(p, 'PRODUCT.md');
+  const kopeng = join(p.repo_path, '.kopeng', 'tasks');
+  mkdirSync(kopeng, { recursive: true });
+  writeFileSync(join(kopeng, 'KEEP.md'), 'Independent Kopeng work');
+  for (const status of ['draft', 'approved', null]) {
+    const original = `---\nstatus: ${status}\n---\n\n# Brief\nİlk fikrim — keep every byte.\n`;
+    db.prepare('UPDATE projects SET kind = ?, paused = 0 WHERE id = ?').run(
+      status ? 'new' : 'existing',
+      p.id,
+    );
+    if (status) writeFileSync(brief, original);
+    else rmSync(brief);
+    writeFileSync(product, '---\nstatus: approved\n---\nOld analysis');
+    writeFileSync(join(p.repo_path, '.kortext', '.readiness.json'), '{"ready":true}');
+    db.prepare(
+      "INSERT INTO jobs (project_id, doc_rel, status) VALUES (?, 'PRODUCT.md', 'done')",
+    ).run(p.id);
+    db.prepare(
+      "INSERT INTO pending_rechecks (project_id, source_rel, reader_rel) VALUES (?, 'PRODUCT.md', 'STACK.md')",
+    ).run(p.id);
+
+    const response = await request('restart', {});
+    assert.equal(response.status, 200, await response.text());
+    if (status) assert.equal(readFileSync(brief, 'utf8'), original);
+    else assert.equal(existsSync(brief), false, 'existing projects do not gain a brief');
+    assert.equal(readFileSync(join(kopeng, 'KEEP.md'), 'utf8'), 'Independent Kopeng work');
+    assert.doesNotMatch(readFileSync(product, 'utf8'), /Old analysis/);
+    assert.equal(existsSync(join(p.repo_path, '.kortext', '.readiness.json')), false);
+    assert.equal(listJobs(db, p.id).length, 0);
+    assert.equal(db.prepare('SELECT 1 FROM pending_rechecks').get(), undefined);
+    assert.equal(
+      (db.prepare('SELECT paused FROM projects WHERE id = ?').get(p.id) as { paused: number })
+        .paused,
+      1,
+    );
+  }
+});
+
+test('cancel removes Kortext only and preserves Kopeng and user-owned project files', async (t) => {
+  const { db, p, request } = await fixture(t);
+  const kopeng = join(p.repo_path, '.kopeng', 'tasks');
+  mkdirSync(kopeng, { recursive: true });
+  writeFileSync(join(kopeng, 'KEEP.md'), 'Independent task');
+  const agents = join(p.repo_path, 'AGENTS.md');
+  writeFileSync(agents, '# My rules\n\n' + readFileSync(agents, 'utf8'));
+  writeFileSync(
+    join(p.repo_path, 'CLAUDE.md'),
+    '# My instructions\n<!-- kortext --> Read AGENTS.md and the .kortext/ docs before any work.\n',
+  );
+  writeFileSync(join(p.repo_path, 'app.txt'), 'My source');
+  const log = logPathFor(db, `p${p.id}-PRODUCT.md.log`);
+  mkdirSync(logRootDir(db), { recursive: true });
+  writeFileSync(log, 'Kortext run');
+
+  const response = await request('cancel', {});
+  assert.equal(response.status, 200, await response.text());
+  assert.equal(existsSync(join(p.repo_path, '.kortext')), false);
+  assert.equal(existsSync(log), false);
+  assert.equal(db.prepare('SELECT 1 FROM projects WHERE id = ?').get(p.id), undefined);
+  assert.equal(readFileSync(join(kopeng, 'KEEP.md'), 'utf8'), 'Independent task');
+  assert.equal(readFileSync(agents, 'utf8'), '# My rules\n');
+  assert.equal(readFileSync(join(p.repo_path, 'CLAUDE.md'), 'utf8'), '# My instructions\n');
+  assert.equal(readFileSync(join(p.repo_path, 'app.txt'), 'utf8'), 'My source');
+});
+
 test('approval and saving reject stale text and a writer in flight', async (t) => {
   const { db, p, request } = await fixture(t);
   const path = docPath(p, 'PRODUCT.md');

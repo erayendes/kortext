@@ -78,13 +78,15 @@ opens the macOS chooser; other platforms take a typed path), an optional documen
 
 **Expect on disk:** `AGENTS.md` at the repo root carrying kortext's block between
 `<!-- kortext:start -->` and `<!-- kortext:end -->`, a `CLAUDE.md` pointer line if that file
-already existed, and `.kortext/` with fifteen document skeletons on one shelf.
+already existed, and `.kortext/` with fourteen analysis skeletons. A new project also has
+`BRIEF.md`; a submitted brief starts approved, while an empty brief starts as a draft.
 → [server/projects.ts](../server/projects.ts)
 
 **Expect on screen:** the project lands **paused**. Nothing runs until you press **Start**.
 
 - [ ] A hand-written `AGENTS.md` in that folder survived, with the block appended.
-- [ ] The card shows `0/15 documents settled`.
+- [ ] In a fresh folder, a new project with a submitted brief shows `1/15` settled; with an
+      empty brief it shows `0/15`. An existing project without a brief shows `0/14`.
 - [ ] Adding the same folder twice is refused by name, and so is a duplicate code.
 - [ ] The CLI picked in the form is the one the steps run on, and a second project can be added
       on a different one without disturbing the first.
@@ -129,7 +131,7 @@ The order for a new project: `PRODUCT` · `STACK`+`STRUCTURE` · `ARCHITECTURE` 
 - [ ] Switching the CLI from the dropdown next to Start moves the steps that begin after it;
       the running one finishes on the old CLI.
 - [ ] A failed step stays visible with its reason and can be retried.
-- [ ] The raw output is in `~/.kortext/logs/p<id>-<doc>.log`.
+- [ ] Raw CLI output is in `~/.kortext/kortext.db.logs/`, or `<db-path>.logs/` when using `--db`.
 
 ---
 
@@ -142,11 +144,14 @@ Open any document. Everything you can do to it is here:
 | **Approve** | `draft → approved`; the chain advances and every approved reader of it is re-judged |
 | select a line → **Ask** | the author persona answers, in the panel only — nothing is written |
 | **Add note** → revise | the producing step re-runs with your notes; the document returns as `draft` |
-| **Edit** | you write the file yourself; saving settles the demands that produced it |
+| **Edit** | saves your text; ordinary saves do not automatically close requests or remove open questions |
+| **Propose** → save | saving the proposed brief revision also settles its incoming requests |
 | a demand (`change request`) | **Apply** re-runs the author with it, **Dismiss** closes it with your reason — decidable from either end, the document that asked or the one asked |
 | `not-applicable` | the step judged the document irrelevant and said why; it satisfies dependencies like an approval |
 
 - [ ] Ask answers about the selected passage and writes nothing to disk.
+- [ ] An ordinary edit leaves incoming requests open; saving a proposed revision closes them.
+- [ ] Open questions block approval. A standing request alone does not, but it still blocks completion.
 - [ ] A revision request comes back as a rewritten draft, with the answered question **gone**
       from `## Open Questions for prime` rather than restated.
 - [ ] A demand ticked `- [x]` in the source document carries the outcome line beneath it.
@@ -188,12 +193,14 @@ of the handshake. Without kopeng installed, the button is replaced by an install
 | action | what it touches |
 | --- | --- |
 | **Pause / Continue** | Pause stops new steps and aborts the running one; Continue kicks the chain |
-| **Restart** | wipes `.kortext/` and `.kopeng/`, re-scaffolds, lands paused |
+| **Restart** | clears `.kortext/` except `BRIEF.md`, re-scaffolds, lands paused; preserves `.kopeng/` |
 | **Archive** | a shelf: the row and the repo both stay, the card folds away |
-| **Cancel** | removes what kortext wrote — `.kortext/`, `.kopeng/`, the `AGENTS.md` block, the `CLAUDE.md` pointer — and the registry row. Your own files survive |
+| **Cancel** | removes `.kortext/` including the brief and manual edits, the Kortext `AGENTS.md` block, `CLAUDE.md` pointer, project logs and registry row. Preserves `.kopeng/`, other project files and user content outside those contract entries |
 | **Delete** (list) | unregisters only; the repo is untouched |
 
-- [ ] Restart wipes and lands ready, not running.
+- [ ] Restart preserves the brief byte for byte, including draft/approved status, and lands paused.
+- [ ] Restart on an existing project does not create a brief.
+- [ ] Restart and Cancel both preserve existing `.kopeng/` tasks.
 - [ ] Cancel leaves a hand-written `AGENTS.md` in place, minus the block.
 - [ ] Restart and Cancel both arm in place before they act.
 - [ ] **Cancel while a step is running leaves no CLI behind.** `pgrep -f "claude --print"`

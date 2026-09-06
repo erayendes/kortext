@@ -1468,7 +1468,9 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
       <div className="kx-danger-zone">
         {arming === 'restart' ? (
           <>
-            <span className="kx-arm-warn">Wipe .kortext/ + .kopeng/ and start over?</span>
+            <span className="kx-arm-warn">
+              Reset analysis documents? Your brief and .kopeng/ stay. Press Start when ready.
+            </span>
             <button className="btn btn-link-danger" disabled={busy} onClick={doRestart}>
               Yes, restart
             </button>
@@ -1493,7 +1495,8 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
         ) : arming === 'cancel' ? (
           <>
             <span className="kx-arm-warn">
-              Delete .kortext/, .kopeng/ and kortext's AGENTS.md block, then remove the project?
+              Remove Kortext's analysis, including the brief and edits in .kortext/, its contract
+              entries, logs and project registration? .kopeng/ and other project files stay.
             </span>
             <button className="btn btn-link-danger" disabled={busy} onClick={doCancel}>
               Yes, remove

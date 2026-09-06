@@ -43,7 +43,7 @@ kortext (npm package, installed globally)
 │   ├─ Drawer.tsx · api.ts · markdown.ts · highlight.ts · index.css (see DESIGN.md)
 │
 └─ package content (embedded in prompts / scaffolded)
-    workflows/ 3 · templates/ AGENTS.md + docs/ 15 skeletons · agents/ 10 personas
+    workflows/ 3 · templates/ AGENTS.md + docs/ 15 skeletons (14 analysis + BRIEF) · agents/ 10 personas
 ```
 
 One process, one port (default **3441**), and it outlives the terminal: `kortext` respawns
@@ -223,8 +223,8 @@ No fs-watch — the panel polls (docs 3s, transfer 4s, handshake 5s).
 | `POST …/run-next` | nudge the chain by hand |
 | `GET …/readiness` | the gate's standing verdict + whether a check is out |
 | `POST …/pause` | pause / continue (continue kicks the chain) |
-| `POST …/restart` | pause, abort, wipe `.kortext/` + `.kopeng/`, re-scaffold, land paused |
-| `POST …/cancel` | pause, abort, then remove what kortext wrote (`.kortext/`, `.kopeng/`, the `AGENTS.md` block, the `CLAUDE.md` pointer, the project's logs) + the row |
+| `POST …/restart` | pause, abort, clear `.kortext/` except `BRIEF.md` (kept verbatim), re-scaffold, land paused; preserve `.kopeng/` |
+| `POST …/cancel` | pause, abort, remove all of `.kortext/` (including the brief and manual edits), the Kortext `AGENTS.md` block, `CLAUDE.md` pointer, project logs and registry row; preserve `.kopeng/` and other project files |
 | `POST …/archive` | shelve — row and repo both stay |
 | `GET …/docs` | document list (+ idempotent self-heal scaffold) |
 | `GET \| PUT …/docs/content` | read content + SHA-256 version · write with `expectedVersion` (409 on conflict or active writer; approved edits queue reader checks) |
@@ -275,7 +275,7 @@ attention — open question, standing request, moving input). Visual language: [
 
 ## 8 · Package content
 
-- **`workflows/` (3)** — `new-project-analysis` (13 steps: PRODUCT · STACK+STRUCTURE ·
+- **`workflows/` (3)** — `new-project-analysis` (13 workflow entries, expanded into 14 document runs: PRODUCT · STACK+STRUCTURE ·
   ARCHITECTURE · SECURITY · ENVIRONMENT · DATABASE · API · DESIGN · GROWTH · LEGAL · CONTENT ·
   ENGINEERING · TEST) · `existing-project-analysis` (no brief, the code is the evidence) ·
   `planning-pipeline` (the Version → Epic → Task split contract).
@@ -290,7 +290,7 @@ enforces that and the ordering.
 
 ## 9 · Verification
 
-`npm test` → `node:test`, **84 tests**, nine files: `daemon` (health probe, detached respawn) ·
+`npm test` → `node:test`, **86 tests**, nine files: `daemon` (health probe, detached respawn) ·
 `update` (release order, the self-update lock) · `release` (concurrent edits, approval, durable rechecks, retry, aliases and log isolation),
 `order` (a step cannot read a document
 written after it; personas match their step; skeletons keep both required sections) · `docs`

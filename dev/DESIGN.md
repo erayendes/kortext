@@ -66,7 +66,6 @@ auto.
 | `--bg-active` | `#ececef` | `#212126` | pressed, selected |
 | `--border` | `#eaeaec` | `#2a2a30` | default line |
 | `--border-strong` | `#dcdce0` | `#3a3a42` | control edge |
-| `--border-faint` | `#f0f0f2` | `#1f1f24` | divider |
 | `--border-hover` | `#c6c6cc` | `#3a3a40` | under the cursor |
 
 **Text** has four steps, importance falling: `--fg` `#18181b`/`#ededef` (read this) ·
@@ -160,8 +159,10 @@ question, and the gap says so.
 Two elevations, nothing between: `--shadow-xs` is *slightly off the page* (a control),
 `--shadow-lg` *above it* (drawer, popover). Dark keeps the same two, blacker.
 
-Motion is functional: `--speed` 130ms with `--ease` `cubic-bezier(0.2,0,0,1)`, plus one slow
-pulse (1.8s) for "alive". No other animation.
+Transitions use `--speed` 130ms with `--ease` `cubic-bezier(0.2,0,0,1)`. Current animations also
+include the 1.8s status ping, 1.4s activity pulse, 0.8s/0.9s spinners and 320ms slide entry.
+Reduced-motion handling currently disables slide entry only; coverage of the remaining
+animations is still incomplete. The accessibility target is recorded in [PRODUCT.md](./PRODUCT.md).
 
 ---
 
@@ -195,7 +196,7 @@ decision, then the question.
 
 ## 7 · Inputs
 
-`--control-h` 36px for **every** control; `--control-h-sm` 29px only in compressed contexts.
+`--control-h` is 36px for standard form controls. Compact controls use sizes in their own rules.
 `.input` takes `--fs-body` and a `--border-strong` edge, and on focus swaps to the accent border
 plus a 3px `--accent-ring`.
 
@@ -353,7 +354,8 @@ reader had to merge them in their head.
 
 - **Headings, code and names are always English.** Section headings are structure and other
   documents cite them by name; so are file names, commands, table columns, API paths, branches.
-- **Prose is in the brief's language** — whatever the human reading it speaks.
+- **Prose follows the chosen document language.** Without an explicit choice, use the brief's
+  language; for an existing project, use approved documents, then the README, then English.
 - **Product copy is in the interface language** — every string the end user reads. It may differ
   from the document's language.
 - **A name is never translated.** `PRODUCT.md` is `PRODUCT.md` in every language.
@@ -391,7 +393,7 @@ token through a fallback and is therefore correct as written.
 
 **Do** — build from tokens; leave one primary button per screen; put the destructive action at the
 bottom as a quiet link; show state and debt separately; set everything the machine owns in mono;
-keep light the default and check dark on every change.
+keep auto as the initial theme and check both light and dark on every change.
 
 **Don't** — invent a state colour (the set is closed); give a persona or category its own colour;
 use half-pixel sizes; put two button heights on one screen; carry a warning in colour alone; use

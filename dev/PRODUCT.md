@@ -75,6 +75,7 @@ no documents and asks instead — and it shows that as the correct outcome, not 
 
 ## Accessibility
 
-WCAG AA at minimum. Reduced-motion support is required — the one animation is the "alive" pulse,
-and it must be able to stop. Status indicators are colour-blind safe: colour never carries meaning
-alone, always alongside a label (`writing`, `approved`, `change request`).
+**Target: WCAG AA.** This is a product requirement, not a verified conformance claim; a complete
+accessibility audit has not been recorded. Reduced-motion support must cover activity pulses,
+spinners and transitions, and is currently incomplete. Status indicators must pair colour with
+a readable label (`writing`, `approved`, `change request`) rather than rely on colour alone.

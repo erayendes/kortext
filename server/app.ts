@@ -340,7 +340,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     res.json({ paused: !!paused });
   });
 
-  // Restart: wipe the produced files and re-run the analysis from scratch.
+  // Restart: reset analysis outputs, keeping the human's brief and independent Kopeng work.
   app.post('/api/projects/:id/restart', async (req, res) => {
     const project = projectOr404(req.params.id, res);
     if (!project) return;
@@ -356,8 +356,13 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       // a second) to finish, so a CLI that ignores SIGTERM cannot write into the
       // directory after it is wiped.
       await new Promise((r) => setTimeout(r, 2500));
-      rmSync(join(project.repo_path, '.kortext'), { recursive: true, force: true });
-      rmSync(join(project.repo_path, '.kopeng'), { recursive: true, force: true });
+      const kortext = join(project.repo_path, '.kortext');
+      if (existsSync(kortext)) {
+        // Leave the brief in place: deleting then restoring risks losing it on a crash.
+        for (const name of readdirSync(kortext)) {
+          if (name !== 'BRIEF.md') rmSync(join(kortext, name), { recursive: true, force: true });
+        }
+      }
       db.prepare('DELETE FROM jobs WHERE project_id = ?').run(project.id);
       db.prepare('DELETE FROM pending_rechecks WHERE project_id = ?').run(project.id);
       scaffoldProject(project.repo_path, pkgRoot, { skipBrief: project.kind === 'existing' });
@@ -373,9 +378,9 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   });
 
   // Cancel: the user is done with kortext for this project — remove every
-  // trace kortext wrote (.kortext/, .kopeng/, the AGENTS.md block and the
-  // CLAUDE.md pointer) and the registry row. A hand-written AGENTS.md or
-  // CLAUDE.md is the user's own file and survives.
+  // trace of its analysis (.kortext/, the AGENTS.md block and the CLAUDE.md
+  // pointer) and the registry row. Kopeng is independent and stays, as does
+  // the user's own content in AGENTS.md and CLAUDE.md.
   app.post('/api/projects/:id/cancel', async (req, res) => {
     const project = projectOr404(req.params.id, res);
     if (!project) return;
@@ -386,7 +391,6 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       abortRuns(project.id);
       await new Promise((r) => setTimeout(r, 2500)); // as restart: outlast the SIGKILL escalation
       rmSync(join(project.repo_path, '.kortext'), { recursive: true, force: true });
-      rmSync(join(project.repo_path, '.kopeng'), { recursive: true, force: true });
       uninstallContract(project.repo_path);
       removeRunLogs(project.id, logRootDir(db));
       removeProject(db, project.id);
