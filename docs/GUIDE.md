@@ -57,6 +57,18 @@ answer to it: the question disappears and the fact it established becomes part o
 
 **Edit** — write the file yourself. Saving it settles whatever the drawer was asking about.
 
+**Preview** — on `DESIGN.md` only, in the drawer itself: the button swaps the text for the page
+and back. The tokens the designer wrote — colors, type scale, spacing,
+radius, shadows — drawn as swatches, specimens and live buttons, with the WCAG contrast of each
+color measured against the surface it actually sits on. A Light · Dark · System switch sits at
+the top: it repaints the page, and where the document declares a dark palette (a `Dark` column,
+a `## Dark mode` table, or `-dark` tokens) the swatches, components and contrast grades switch
+with it. Where it does not, the page says so rather than implying the design has one. It is
+rendered from the document itself, so it can never say something the document does not. The page
+is its own document inside the drawer, so its palette and the panel's never mix — the panel can
+be dark while the design is read in light. It is also left in your repository as
+`.kortext/DESIGN.html`, which opens in any browser without the panel running.
+
 **Open questions** — amber, numbered. The document is asking *you* something, and it cannot be
 approved until you answer.
 
@@ -173,6 +185,7 @@ until then, on purpose.
 | `~/.kortext/kortext.db.log` | what the background server prints |
 | `<repo>/AGENTS.md` | the handover contract, inside a marked block |
 | `<repo>/.kortext/` | the documents — one folder, fifteen files, `BRIEF.md` first |
+| `<repo>/.kortext/DESIGN.html` | the design tokens drawn — regenerated from `DESIGN.md` |
 
 The documents are plain markdown in your repository. Commit them: they are the project's
 memory, and the next agent that opens the repo reads them before it writes a line.

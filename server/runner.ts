@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { logPathFor, type Project } from './db.js';
 import { spawnCli } from './cli-spawn.js';
 import { ENGINES, type EngineSpec } from './engines.js';
+import { writeDesignPreview } from './design-preview.js';
 import {
   docPath,
   listDocs,
@@ -819,6 +820,9 @@ export async function runStep(
       );
     }
     const status = readFrontmatter(written).status;
+    // The design document is the one whose value is visual — draw it as soon
+    // as it lands, so the human reviews swatches rather than hex codes.
+    if (step.output === 'DESIGN.md') writeDesignPreview(project);
     if (status !== 'draft' && status !== 'not-applicable') {
       return settle('failed', `${step.output} written but status is '${status}' (expected draft)`);
     }

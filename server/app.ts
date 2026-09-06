@@ -19,6 +19,7 @@ import {
   markRequestHandled,
   setFrontmatterStatus,
 } from './docs.js';
+import { renderDesignPreview, writeDesignPreview } from './design-preview.js';
 import { pickDirectoryNative } from './pick-directory.js';
 import { readdirSync } from 'node:fs';
 import {
@@ -473,6 +474,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       const wasApproved =
         listDocs(db, project, pkgRoot).find((d) => d.rel === String(rel))?.status === 'approved';
       writeFileSync(path, content, 'utf8');
+      writeDesignPreview(project);
       // Saving the agent's draft IS the answer to the demands that produced it.
       // Without this the change landed on disk and the request still stood, so
       // the document never left "Needs you" — the loop had no way to close.
@@ -507,6 +509,23 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     }
   });
 
+  // The tokens in DESIGN.md, drawn. Rendered fresh on every open so the page
+  // can never be staler than the document it reads.
+  app.get('/api/projects/:id/docs/design-preview', (req, res) => {
+    const project = projectOr404(req.params.id, res);
+    if (!project) return;
+    const path = join(project.repo_path, '.kortext', 'DESIGN.md');
+    if (!existsSync(path)) return res.status(404).json({ error: 'no DESIGN.md in this project' });
+    const html = renderDesignPreview(readFileSync(path, 'utf8'), project.name);
+    // Also left on disk, so the page is shareable without the panel running.
+    try {
+      writeDesignPreview(project);
+    } catch {
+      /* read-only repo still gets the page in the browser */
+    }
+    res.type('html').send(html);
+  });
+
   // Prime approval: draft → approved (frontmatter is the source of truth).
   app.post('/api/projects/:id/docs/approve', (req, res) => {
     const project = projectOr404(req.params.id, res);
@@ -522,6 +541,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
           .json({ error: 'Only a draft without open questions can be approved' });
       }
       setFrontmatterStatus(path, 'approved');
+      writeDesignPreview(project);
       kickChain(project);
       // Approving a document that was rewritten leaves every approved reader of
       // it standing on the old text. Judge each — silent on the first pass,
