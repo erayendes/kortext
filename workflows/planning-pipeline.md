@@ -6,8 +6,10 @@
 
 ## Inputs
 
-Approved documents: `PRODUCT.md`, `ENGINEERING.md`, `.kortext/ARCHITECTURE.md`,
-`STACK.md`, `SECURITY.md`, `LEGAL.md`, `API.md`, `DATABASE.md`, `DESIGN.md`, `TEST.md`
+Approved documents: `.kortext/PRODUCT.md`, `.kortext/ENGINEERING.md`,
+`.kortext/ARCHITECTURE.md`, `.kortext/STACK.md`, `.kortext/SECURITY.md`,
+`.kortext/DATABASE.md`, `.kortext/API.md`, `.kortext/DESIGN.md`, `.kortext/GROWTH.md`,
+`.kortext/LEGAL.md`, `.kortext/CONTENT.md`, `.kortext/TEST.md`
 (skip the ones marked not-applicable).
 
 ## Output — `.kopeng/` file layout (DRAFT contract; Kopeng conforms to this format)

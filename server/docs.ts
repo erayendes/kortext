@@ -122,7 +122,7 @@ export function parseWorkflowSteps(md: string): DocStep[] {
 
 // The dependency map follows the project's kind: a 'new' project reads
 // new-project-analysis, an 'existing' one existing-project-analysis
-// (planning steps apply to both).
+// (planning-pipeline.md declares no document steps of its own).
 export function workflowNameFor(kind: 'new' | 'existing'): string {
   return kind === 'existing' ? 'existing-project-analysis' : 'new-project-analysis';
 }
@@ -132,12 +132,12 @@ export function loadDocMap(
   kind: 'new' | 'existing' = 'new',
 ): Map<string, DocStep> {
   const map = new Map<string, DocStep>();
-  for (const wf of [`${workflowNameFor(kind)}.md`, 'planning-pipeline.md']) {
-    const p = join(pkgRoot, 'workflows', wf);
-    if (!existsSync(p)) continue;
-    for (const step of parseWorkflowSteps(readFileSync(p, 'utf8'))) {
-      if (!map.has(step.output)) map.set(step.output, step);
-    }
+  // ponytail: only the analysis workflow declares steps; planning-pipeline.md
+  // produces .kopeng/ files, which are not documents on the shelf.
+  const p = join(pkgRoot, 'workflows', `${workflowNameFor(kind)}.md`);
+  if (!existsSync(p)) return map;
+  for (const step of parseWorkflowSteps(readFileSync(p, 'utf8'))) {
+    if (!map.has(step.output)) map.set(step.output, step);
   }
   return map;
 }
