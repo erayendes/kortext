@@ -939,3 +939,63 @@ test('run logs belong to the database they describe, not to the home directory',
   assert.equal(existsSync(logPathFor(db, 'p2-plan.log')), true, 'and leaves every other alone');
   rmSync(work, { recursive: true, force: true });
 });
+
+test('Continue picks up a revision the pause stopped on an approved document', async () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Resume', repoPath: join(work, 'resume') }, pkgRoot);
+  approveBrief(p);
+  const engine = mockEngine(work, 'ok');
+  const { resumeStoppedRevisions } = await import('../server/runner.js');
+
+  // An approved document whose revision was aborted by Pause: the file is
+  // untouched, so nothing in the chain can see that work is owed.
+  writeFileSync(
+    docPath(p, 'PRODUCT.md'),
+    '---\nstatus: approved\nauthor: +mock\n---\n\n# Old text\n',
+    'utf8',
+  );
+  db.prepare(
+    "INSERT INTO jobs (project_id, doc_rel, status, notes, finished_at) VALUES (?, 'PRODUCT.md', 'stopped', ?, datetime('now'))",
+  ).run(p.id, JSON.stringify(['add the KVKK section']));
+
+  await resumeStoppedRevisions(db, p, engine, pkgRoot);
+  const jobs = listJobs(db, p.id).filter((j) => j.doc_rel === 'PRODUCT.md');
+  assert.equal(jobs[0].status, 'done', 'the stopped revision runs again');
+  assert.match(readFileSync(docPath(p, 'PRODUCT.md'), 'utf8'), /status: draft/);
+  rmSync(work, { recursive: true, force: true });
+});
+
+test('Continue picks up a Kopeng re-split the pause stopped, with its notes', async () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(
+    db,
+    { name: 'Split', repoPath: join(work, 'split'), code: 'SPL' },
+    pkgRoot,
+  );
+  // An engine that writes the plan the split is judged by, and keeps the prompt
+  // so the test can see which notes it was given.
+  const script = join(work, 'plan-engine.sh');
+  writeFileSync(
+    script,
+    '#!/bin/sh\ncat > prompt.txt\nmkdir -p .kopeng/tasks\nprintf "status: draft\\n" > .kopeng/project.yaml\nprintf "# SPL-1\\n" > .kopeng/tasks/SPL-1.md\n',
+  );
+  chmodSync(script, 0o755);
+  const engine = { id: 'plan-mock', binary: script, args: [], installHint: '' };
+  const { resumeStoppedRevisions } = await import('../server/runner.js');
+
+  // A re-split aborted by Pause: the previous .kopeng/ is untouched, so nothing
+  // downstream can tell the notes were never applied.
+  db.prepare(
+    "INSERT INTO jobs (project_id, doc_rel, kind, status, notes, finished_at) VALUES (?, '.kopeng/', 'plan', 'stopped', ?, datetime('now'))",
+  ).run(p.id, JSON.stringify(['split the billing epic in two']));
+
+  await resumeStoppedRevisions(db, p, engine, pkgRoot);
+  const jobs = listJobs(db, p.id).filter((j) => j.doc_rel === '.kopeng/');
+  assert.equal(jobs[0].status, 'done', 'the stopped split runs again');
+  assert.match(readFileSync(join(work, 'split', 'prompt.txt'), 'utf8'), /split the billing epic/);
+  // And the notes survive on the new row, so a second pause loses nothing either.
+  assert.deepEqual(JSON.parse(jobs[0].notes), ['split the billing epic in two']);
+  rmSync(work, { recursive: true, force: true });
+});

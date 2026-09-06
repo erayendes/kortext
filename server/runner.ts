@@ -330,6 +330,38 @@ export async function reviseDoc(
   return out;
 }
 
+// Pause aborts a revision without touching the files, so a document that was
+// approved or not-applicable when the notes were filed still reads as settled —
+// and a stopped re-split leaves the previous .kopeng/ plan in place, which reads
+// as done. Neither has anything for the chain to produce, so Continue walked
+// straight past the notes. Re-fire both from the notes on the job row.
+export async function resumeStoppedRevisions(
+  db: Database.Database,
+  project: Project,
+  engine: EngineSpec,
+  pkgRoot: string,
+): Promise<void> {
+  const stopped = db
+    .prepare(
+      `SELECT doc_rel, kind, notes FROM jobs
+         WHERE project_id = ? AND kind IN ('doc', 'plan') AND status = 'stopped'
+           AND id IN (SELECT MAX(id) FROM jobs WHERE project_id = ? GROUP BY doc_rel)`,
+    )
+    .all(project.id, project.id) as { doc_rel: string; kind: string; notes: string }[];
+  await Promise.all(
+    stopped.map((job) => {
+      const notes = JSON.parse(job.notes || '[]') as string[];
+      // No notes = a first write or a first split, which starts from scratch:
+      // the chain picks the document up on its own, and the split is the
+      // human's own button, not something to press again for them.
+      if (!notes.length) return null;
+      return job.kind === 'plan'
+        ? runPlanning(db, project, engine, pkgRoot, notes)
+        : reviseDoc(db, project, job.doc_rel, notes, engine, pkgRoot);
+    }),
+  );
+}
+
 // Line-anchored Q&A: the author persona answers about its own document.
 // Nothing is written anywhere — the answer lives only in the panel.
 export async function explainDoc(
@@ -645,11 +677,13 @@ export async function runPlanning(
   pkgRoot: string,
   reviseNotes: string[] = [],
 ): Promise<RunOutcome> {
+  // The notes go on the row, as for a document step: a split the pause stops
+  // is resumed from them, and without them the request is gone with the run.
   const job = db
     .prepare(
-      "INSERT INTO jobs (project_id, doc_rel, kind) VALUES (?, '.kopeng/', 'plan') RETURNING *",
+      "INSERT INTO jobs (project_id, doc_rel, kind, notes) VALUES (?, '.kopeng/', 'plan', ?) RETURNING *",
     )
-    .get(project.id) as Job;
+    .get(project.id, JSON.stringify(reviseNotes)) as Job;
   const workflow = readFileSync(join(pkgRoot, 'workflows', 'planning-pipeline.md'), 'utf8');
   const lines = [
     'You are executing the Kortext task-split flow, headless, inside the project folder.',

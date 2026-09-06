@@ -44,6 +44,7 @@ import {
   removeRunLogs,
   recheckDependents,
   reviseDoc,
+  resumeStoppedRevisions,
   runPlanning,
   runningDoc,
   runningJob,
@@ -337,7 +338,14 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     const paused = req.body?.paused ? 1 : 0;
     db.prepare('UPDATE projects SET paused = ? WHERE id = ?').run(paused, project.id);
     if (paused) abortRuns(project.id);
-    else kickChain({ ...project, paused: 0 });
+    else {
+      const resumed = { ...project, paused: 0 };
+      const engine = engineFor(db, resumed);
+      // A revision the pause stopped left the document at approved or
+      // not-applicable, where the chain cannot see it. Pick those up first.
+      if (engine) void resumeStoppedRevisions(db, resumed, engine, pkgRoot);
+      kickChain(resumed);
+    }
     res.json({ paused: !!paused });
   });
 

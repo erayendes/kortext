@@ -945,6 +945,9 @@ function EngineSelect({
 function TransferPanel({ project }: { project: Project }) {
   const [plan, setPlan] = useState<KopengPlan | null>(null);
   const [splitting, setSplitting] = useState(false);
+  // A re-split the pause stopped: the old plan is still on disk, so the panel
+  // said "Plan ready" and the note the human typed looked like it never landed.
+  const [stopped, setStopped] = useState(false);
   const [reviseText, setReviseText] = useState('');
   const [err, setErr] = useState<string | null>(null);
 
@@ -954,6 +957,7 @@ function TransferPanel({ project }: { project: Project }) {
         .then(([p, j]) => {
           setPlan(p);
           setSplitting(j.jobs.some((jb) => jb.doc_rel === '.kopeng/' && jb.status === 'running'));
+          setStopped(j.jobs.find((jb) => jb.doc_rel === '.kopeng/')?.status === 'stopped');
           const failed = j.jobs.find((jb) => jb.doc_rel === '.kopeng/' && jb.status === 'failed');
           setErr(failed && !p.exists ? failed.error : null);
         })
@@ -1007,6 +1011,11 @@ function TransferPanel({ project }: { project: Project }) {
           </span>
         ) : (
           <div className="kx-note-input">
+            {stopped && !!project.paused && (
+              <span className="kx-cmd-hint">
+                A re-split was stopped by the pause — Continue picks it up with your notes.
+              </span>
+            )}
             <input
               className="kx-input"
               placeholder="Revision note… (re-splits the plan with your notes)"
@@ -1763,12 +1772,10 @@ function DocumentsTab({
     if (job?.status === 'running' && d.status !== 'approved') return 'progress';
     if (d.revisionRequests.length > 0) return 'needs';
     if (d.status === 'draft') return 'needs';
-    if (
-      d.status === 'uninitialized' &&
-      (job?.status === 'running' || (paused && job?.status === 'stopped'))
-    ) {
-      return 'progress';
-    }
+    // A pause that stopped a revision owes the document a run whatever it says
+    // on disk — an approved one folded away under Approved read as finished.
+    if (paused && job?.status === 'stopped') return 'progress';
+    if (d.status === 'uninitialized' && job?.status === 'running') return 'progress';
     if (d.status === 'uninitialized') return 'next';
     if (d.status === 'approved') return 'approved';
     return 'na'; // considered and deliberately skipped
@@ -1835,7 +1842,10 @@ function DocumentsTab({
               const isRunning = job?.status === 'running' && !rechecking;
               // 'stopped' is the user's own pause/restart — not a failure: its own
               // badge, no red row, no Retry; Continue picks the step up again.
-              const stopped = job?.status === 'stopped' && d.status === 'uninitialized';
+              // Not gated on `uninitialized`: a revision stopped mid-run leaves
+              // the document at approved or not-applicable, and hiding the badge
+              // there made the pause look like the work had never been asked for.
+              const stopped = job?.status === 'stopped';
               // A revision that failed leaves the document at draft or approved, so
               // gating this on `uninitialized` hid every failure of an existing
               // document: no red row, no reason, no Retry.
