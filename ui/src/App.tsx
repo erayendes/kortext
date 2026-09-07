@@ -330,10 +330,10 @@ function SupportWork() {
   return (
     <a
       className="kx-statusbar-link kx-support"
-      href="https://github.com/sponsors/erayendes"
+      href="https://buymeacoffee.com/erayendes"
       target="_blank"
       rel="noreferrer"
-      title="Support Kortext on GitHub Sponsors"
+      title="Support Kortext"
     >
       <HandHeart />
       Like it? Support Kortext

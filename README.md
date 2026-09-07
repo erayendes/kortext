@@ -220,7 +220,7 @@ Issues and pull requests are welcome — see [CONTRIBUTING](.github/CONTRIBUTING
 [SUPPORT](.github/SUPPORT.md) and the [security policy](.github/SECURITY.md).
 
 Kortext is free and MIT-licensed. If it earns a place in your work,
-[sponsoring it](https://github.com/sponsors/erayendes) keeps it maintained.
+[sponsoring it](https://buymeacoffee.com/erayendes) keeps it maintained.
 
 ## Docs
 
