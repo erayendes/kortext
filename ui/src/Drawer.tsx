@@ -9,7 +9,7 @@ export type DrawerProps = {
   open: boolean;
   onClose: () => void;
   children: ReactNode;
-  /* Panel width in pixels. Default 464. */
+  /** Panel width in pixels. Default 464. */
   width?: number;
 };
 

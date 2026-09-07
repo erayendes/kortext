@@ -406,7 +406,7 @@ export function appendRevisionRequest(
   writeFileSync(path, lines.join('\n'), 'utf8');
 }
 
-/* The CLI judges the changed input; the server records any resulting revision request. */
+/** The CLI judges the changed input; the server records any resulting revision request. */
 async function runRecheck(
   db: Database.Database,
   project: Project,
@@ -491,7 +491,7 @@ async function runRecheck(
   }
 }
 
-/* Queue rechecks for approved readers when their source is edited or approved. */
+/** Queue rechecks for approved readers when their source is edited or approved. */
 export function recheckDependents(
   db: Database.Database,
   project: Project,
@@ -700,7 +700,7 @@ export async function runPlanning(
   }
 }
 
-/* Remove logs belonging to this project from the database-specific log directory. */
+/** Remove logs belonging to this project from the database-specific log directory. */
 export function removeRunLogs(projectId: number, dir: string): void {
   let entries: string[];
   try {

@@ -14,7 +14,7 @@ export async function serverUp(port: number): Promise<boolean> {
   }
 }
 
-/* Wait for the detached server health check, including initial SQLite startup. */
+/** Wait for the detached server health check, including initial SQLite startup. */
 export async function waitForServer(port: number, timeoutMs = 15000): Promise<boolean> {
   const deadline = Date.now() + timeoutMs;
   for (;;) {

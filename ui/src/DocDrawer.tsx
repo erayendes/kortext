@@ -277,7 +277,9 @@ export function DocDrawer({
               Edit
             </button>
           )}
-          {/* Isolate project preview styles from panel styles in an iframe. */}
+          {/* Tokens read better drawn than tabulated, and the page is rendered
+              from this same file so it is never out of date. The iframe keeps
+              the project's palette and the panel's from leaking into each other. */}
           {!editing && doc.rel === 'DESIGN.md' && doc.status !== 'uninitialized' && (
             <button className="btn btn-secondary" onClick={() => setPreview(!preview)}>
               {preview ? 'Document' : 'Preview'}
@@ -503,7 +505,7 @@ const STATUS_LABEL: Record<string, string> = {
   approved: 'approved',
 };
 
-/* Render document status separately from failure, request and dependency badges. */
+/** Render document status separately from failure, request and dependency badges. */
 export function statusOf(
   doc: DocInfo,
   opts: { running?: boolean; stopped?: boolean } = {},

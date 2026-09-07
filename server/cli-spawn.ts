@@ -16,7 +16,7 @@ export type SpawnCliOptions = {
   stdin?: string;
   logPath: string;
   signal: AbortSignal;
-  /* Delay between SIGTERM and SIGKILL when aborted. Default 1000ms. */
+  /** Delay between SIGTERM and SIGKILL when aborted. Default 1000ms. */
   sigkillDelayMs?: number;
   /** Soft timeout — kill after N ms regardless of signal. Default unset. */
   timeoutMs?: number;

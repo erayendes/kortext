@@ -20,7 +20,7 @@ export async function latestVersion(): Promise<string | null> {
   }
 }
 
-/* Compare the first three numeric version components, ignoring prerelease suffixes. */
+/** Compare the first three numeric version components, ignoring prerelease suffixes. */
 export function isNewer(latest: string, current: string): boolean {
   const parts = (v: string) =>
     v

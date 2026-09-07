@@ -143,6 +143,9 @@ export function App() {
         </main>
       )}
 
+      {/* A status bar, not a page footer: two lines under one name — what is true
+          right now, and the way to say that it is not. The credit sits opposite,
+          so nothing in this column reads as branding. */}
       <footer className="kx-statusbar">
         <span className="kx-statusbar-lines">
           <span className="kx-statusbar-line">
@@ -628,7 +631,9 @@ function MadeBy() {
 
   return (
     <span className="kx-made-by" ref={box}>
-      {/* Use the whole credit as the click target. */}
+      {/* The whole credit is the target, not the word `milowda` alone: at 11px
+          a single word is a hard hit, and the heart and the city read as part
+          of the same thing anyway. */}
       <button className="kx-made-trigger" onClick={() => setOpen(!open)}>
         milowda <Heart /> istanbul
       </button>
@@ -1454,6 +1459,9 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
         onPending={setPending}
         onChecking={setChecking}
       />
+      {/* Restart is armed and confirmed here and nowhere else. Asking on the
+          header too painted the same question twice and took Start/Pause
+          away while it was up. */}
       <div className="kx-danger-zone">
         {arming === 'restart' ? (
           <>
@@ -1566,7 +1574,9 @@ function HandshakeCard({ project }: { project: Project }) {
           it's between you and your client.
         </span>
       </div>
-      {/* Show transfer controls only when Kopeng is installed. */}
+      {/* Kopeng is not released, so nothing advertises it: whoever has the
+          binary sees the transfer panel, everyone else sees nothing rather
+          than an install command that 404s. */}
       {state.kopengInstalled && <TransferPanel project={project} />}
       <div className="kx-handshake-cards">
         <span className="kx-cmd-hint">

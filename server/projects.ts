@@ -118,7 +118,7 @@ function installContract(repoPath: string, templates: string): void {
   writePointer(join(repoPath, 'CLAUDE.md'));
 }
 
-/* Remove the Kortext contract block and CLAUDE.md pointer, preserving user content. */
+/** Remove the Kortext contract block and CLAUDE.md pointer, preserving user content. */
 export function uninstallContract(repoPath: string): void {
   removeContractBlock(join(repoPath, 'AGENTS.md'));
   removePointer(join(repoPath, 'CLAUDE.md'));

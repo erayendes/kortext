@@ -26,13 +26,13 @@ export interface DocInfo {
   openQuestions: boolean; // carries unanswered questions for prime
   /** A workflow step writes this document. The brief has none — it is prime's own. */
   hasProducingStep: boolean;
-  /* Open incoming revision requests. */
+  /** Open incoming revision requests. */
   revisionRequests: Array<{ from: string; reason: string }>;
-  /* Open outgoing revision requests, also actionable from this document. */
+  /** Open outgoing revision requests, also actionable from this document. */
   sentRequests: Array<{ target: string; reason: string; targetHasStep: boolean }>;
 }
 
-/* A revision request names a target file in backticks under Revision Requests. */
+/** A revision request names a target file in backticks under Revision Requests. */
 // `- [ ] \`TARGET.md\` — reason`. The checkbox is optional (older documents and
 // the templates write the bare form) and, when ticked, means the demand is
 // settled. The template's own bracket prompt is not a request.

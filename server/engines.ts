@@ -74,7 +74,7 @@ export function setSetting(db: Database.Database, key: string, value: string): v
   ).run(key, value);
 }
 
-/* Prefer the project CLI when installed; otherwise use the global selection or first available CLI. */
+/** Prefer the project CLI when installed; otherwise use the global selection or first available CLI. */
 export function engineFor(
   db: Database.Database,
   project: { engine?: string },
