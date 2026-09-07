@@ -10,6 +10,11 @@ interface Note {
   text: string;
 }
 
+// A, B, ... Z, AA — spreadsheet columns, so a long review never runs out of marks.
+function letter(n: number): string {
+  return n < 26 ? String.fromCharCode(65 + n) : letter(Math.floor(n / 26) - 1) + letter(n % 26);
+}
+
 // Ephemeral by design: answers live only in panel state, never in the file.
 interface Explain {
   line: number | null;
@@ -148,6 +153,19 @@ export function DocDrawer({
     }
     return n;
   }, [tokens]);
+
+  // A note marks its line, and the mark is what the footer row shows: a question
+  // keeps the number it already carries, any other line takes the next letter.
+  const lineLabel = useMemo(() => {
+    const m = new Map<number, string>();
+    let n = 0;
+    for (const note of notes) {
+      if (note.line === null || m.has(note.line)) continue;
+      const q = qNo.get(note.line);
+      m.set(note.line, q ? `#${q}` : `#${letter(n++)}`);
+    }
+    return m;
+  }, [notes, qNo]);
 
   if (!doc)
     return (
@@ -419,11 +437,12 @@ export function DocDrawer({
         ) : (
           <div className="kx-doc">
             {tokens.map((t) => (
-              <div key={t.index}>
+              <div key={t.index} id={`kx-line-${t.index}`}>
                 <DocBlock
                   token={t}
                   openQuestion={openQ.has(t.index)}
                   questionNo={qNo.get(t.index)}
+                  noteLabel={lineLabel.get(t.index)}
                   changeRequest={changeReq.has(t.index)}
                   selected={selected === t.index}
                   noted={notes.some((n) => n.line === t.index)}
@@ -460,7 +479,25 @@ export function DocDrawer({
             <div className="kx-notes">
               {notes.map((n, i) => (
                 <div key={i} className="kx-note">
-                  {n.excerpt && <span className="kx-note-exc mono">{n.excerpt}</span>}
+                  {n.line !== null && lineLabel.has(n.line) ? (
+                    <button
+                      className="kx-note-exc mono"
+                      title="Go to the line"
+                      onClick={() => {
+                        setSelected(null);
+                        // Instant, not smooth: the drawer is a transformed
+                        // ancestor, and Chrome's smooth path silently does
+                        // nothing inside one.
+                        document
+                          .getElementById(`kx-line-${n.line}`)
+                          ?.scrollIntoView({ block: 'center' });
+                      }}
+                    >
+                      {lineLabel.get(n.line)}
+                    </button>
+                  ) : (
+                    n.excerpt && <span className="kx-note-exc mono">{n.excerpt}</span>
+                  )}
                   <span className="kx-note-body">{n.text}</span>
                   <button
                     className="btn btn-x"
@@ -835,6 +872,7 @@ function DocBlock({
   openQuestion,
   changeRequest,
   questionNo,
+  noteLabel,
   onSelect,
 }: {
   token: MdToken;
@@ -843,6 +881,7 @@ function DocBlock({
   openQuestion?: boolean;
   changeRequest?: boolean;
   questionNo?: number;
+  noteLabel?: string;
   onSelect: () => void;
 }) {
   const activation = {
@@ -858,7 +897,7 @@ function DocBlock({
     },
   };
   if (token.kind === 'blank') return <div className="kx-blank" />;
-  const cls = `kx-block kx-${token.kind}${selected ? ' selected' : ''}${noted ? ' noted' : ''}${openQuestion ? ' open-q' : ''}${changeRequest ? ' req-q' : ''}${questionNo ? ' kx-numbered' : ''}`;
+  const cls = `kx-block kx-${token.kind}${selected ? ' selected' : ''}${noted ? ' noted' : ''}${openQuestion ? ' open-q' : ''}${changeRequest ? ' req-q' : ''}${questionNo || noteLabel ? ' kx-numbered' : ''}`;
   if (token.kind === 'table' && token.table) {
     return (
       <div className={cls} {...activation}>
@@ -933,7 +972,11 @@ function DocBlock({
       style={token.depth ? { marginLeft: token.depth * 18 } : undefined}
       {...activation}
     >
-      {questionNo && <span className="kx-qno mono">#{questionNo}</span>}
+      {questionNo ? (
+        <span className="kx-qno mono">#{questionNo}</span>
+      ) : noteLabel ? (
+        <span className="kx-qno mono">{noteLabel}</span>
+      ) : null}
       {task ? (
         <>
           <input

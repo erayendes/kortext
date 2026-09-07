@@ -2134,10 +2134,26 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   flex: 1;
   min-width: 0;
 }
+/* The mark, not an excerpt of the line: short enough to never squeeze the note
+   beside it, and a button when it can walk you back to the line it marks. */
 .kx-note-exc {
   font-size: var(--fs-label);
   color: var(--fg-muted);
   flex-shrink: 0;
+  max-width: 12ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+button.kx-note-exc {
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+button.kx-note-exc:hover {
+  color: var(--fg-base);
+  text-decoration: underline;
 }
 .kx-note-input {
   display: flex;
