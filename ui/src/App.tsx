@@ -86,8 +86,8 @@ export function App() {
   return (
     <div className="kx-shell">
       <header className="kx-header">
-        <img className="kx-logo kx-logo-light" src="/kortext-logo.png" alt="Kortext" />
-        <img className="kx-logo kx-logo-dark" src="/kortext-logo-dark.png" alt="" aria-hidden />
+        <img className="kx-logo kx-logo-light" src="/kortext-logo.svg" alt="Kortext" />
+        <img className="kx-logo kx-logo-dark" src="/kortext-logo-dark.svg" alt="" aria-hidden />
         <EngineBadge />
         <span className="kx-doc-spacer" />
         <ThemeSwitch />
