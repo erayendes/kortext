@@ -1184,13 +1184,19 @@ a.btn {
 .kx-statusbar-lines {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  /* 4px puts ~20.5px between the two line tops, a tenth more than they had. */
+  gap: 4px;
   min-width: 0;
 }
 .kx-statusbar-line {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+/* A line with nothing in it still holds a line's worth of height, which is what
+   keeps the credit column as tall as the status column beside it. */
+.kx-statusbar-line:empty {
+  min-height: 1lh;
 }
 /* Align the report icon with the status dot without shifting the text column. */
 .kx-report {
@@ -1222,6 +1228,15 @@ a.btn {
   align-items: center;
   gap: 5px;
   color: var(--fg-faint);
+}
+.kx-support {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--fg-faint);
+}
+.kx-support:hover {
+  color: var(--fg-muted);
 }
 .kx-made-pop {
   position: absolute;

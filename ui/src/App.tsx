@@ -153,10 +153,20 @@ export function App() {
           </span>
           <span className="kx-statusbar-line">
             <ReportIssue />
+            <span className="kx-danger-sep">·</span>
+            <SupportWork />
           </span>
         </span>
         <span className="kx-doc-spacer" />
-        <MadeBy />
+        {/* The credit belongs on the first line, level with the name opposite it.
+            Giving it the second row it does not use keeps both columns the same
+            height, so centring lands it there whatever the gap or type size. */}
+        <span className="kx-statusbar-lines">
+          <span className="kx-statusbar-line">
+            <MadeBy />
+          </span>
+          <span className="kx-statusbar-line" aria-hidden="true" />
+        </span>
       </footer>
     </div>
   );
@@ -312,6 +322,21 @@ function ReportIssue() {
     >
       <BugMark />
       Something wrong? Report an issue
+    </a>
+  );
+}
+
+function SupportWork() {
+  return (
+    <a
+      className="kx-statusbar-link kx-support"
+      href="https://github.com/sponsors/erayendes"
+      target="_blank"
+      rel="noreferrer"
+      title="Support Kortext on GitHub Sponsors"
+    >
+      <HandHeart />
+      Like it? Support Kortext
     </a>
   );
 }
@@ -742,6 +767,28 @@ function Heart() {
       aria-label="loves"
     >
       <path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5" />
+    </svg>
+  );
+}
+
+// lucide hand-heart (ISC), drawn like the heart above: an outline in the text colour.
+function HandHeart() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="12"
+      height="12"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M11 14h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 16" />
+      <path d="m7 20 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9" />
+      <path d="m2 15 6 6" />
+      <path d="M19.5 8.5c.7-.7 1.5-1.6 1.5-2.7A2.73 2.73 0 0 0 16 4a2.78 2.78 0 0 0-5 1.8c0 1.2.8 2 1.5 2.8L16 12Z" />
     </svg>
   );
 }
