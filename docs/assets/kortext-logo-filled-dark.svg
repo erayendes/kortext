@@ -11,7 +11,7 @@
   </g>
 
   <!-- Original reference geometry with light gray fill. -->
-  <g id="kor" fill="#cbd0d8" fill-rule="evenodd" stroke="#c2c8d2" stroke-width="2.15" stroke-linejoin="miter">
+  <g id="kor" fill="#9ca3af" fill-rule="evenodd" stroke="#9ca3af" stroke-width="2.15" stroke-linejoin="miter">
     <path id="k" d="M122 380H168V522L246 444H297L216 521L298 631H250L191 548L168 571V631H122Z"/>
     <path id="o" d="M401 442C345 442 306 482 306 537C306 595 345 634 401 634C459 634 497 594 497 537C497 482 458 442 401 442Z M401 477C366 477 344 501 344 537C344 574 367 599 401 599C436 599 460 574 460 537C460 501 437 477 401 477Z"/>
     <path id="r" d="M536 444H571V472C582 452 604 440 635 443V481C609 474 589 482 578 500C573 509 572 518 572 532V631H536Z"/>
