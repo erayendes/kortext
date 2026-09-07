@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="ui/public/kortext-logo-dark.svg">
-    <img src="ui/public/kortext-logo.svg" alt="Kortext" width="420">
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/kortext-logo-dark.svg">
+    <img src="docs/assets/kortext-logo-light.svg" alt="Kortext" width="420">
   </picture>
 </p>
 

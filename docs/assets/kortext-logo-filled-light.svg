@@ -1,7 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1536" height="1024" viewBox="0 0 1536 1024" role="img" aria-labelledby="title description">
+<svg xmlns="http://www.w3.org/2000/svg" width="1344" height="334" viewBox="86 340 1344 334" role="img" aria-labelledby="title description">
   <title id="title">kortext — filled version</title>
   <desc id="description">Kortext filled variant: light gray kor, blueprint blue te and left x component, dark final component. Original vector geometry preserved.</desc>
-  <rect width="1536" height="1024" fill="#fff"/>
+  
 
   <!-- Pencil construction marks traced from the reference. -->
   <g id="sketch-guides" fill="none" stroke="#656565" stroke-linecap="round">
