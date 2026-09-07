@@ -25,6 +25,7 @@
   "bugs": {
     "url": "https://github.com/erayendes/kortext/issues"
   },
+  "funding": "https://github.com/sponsors/erayendes",
   "scripts": {
     "dev": "tsx watch --clear-screen=false server/index.ts --no-open --no-detach",
     "dev:web": "npm --prefix ui run dev",

@@ -216,6 +216,9 @@ npm run build      # tsc → dist/ + vite → ui/dist/
 Issues and pull requests are welcome — see [CONTRIBUTING](.github/CONTRIBUTING.md),
 [SUPPORT](.github/SUPPORT.md) and the [security policy](.github/SECURITY.md).
 
+Kortext is free and MIT-licensed. If it earns a place in your work,
+[sponsoring it](https://github.com/sponsors/erayendes) keeps it maintained.
+
 ## Docs
 
 [Guide](docs/GUIDE.md) — the panel, explained · [Changelog](docs/CHANGELOG.md)
