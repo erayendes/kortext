@@ -7,16 +7,8 @@ import { logPathFor, type Project } from './db.js';
 import { readFrontmatter, setFrontmatterStatus } from './docs.js';
 import type { EngineSpec } from './engines.js';
 
-// One gate, at the head of the chain. Evidence that says nothing produces
-// documents that invent everything, so the whole flow — not each step — is
-// what refuses to start. What counts as evidence depends on the project: a new
-// one is judged on its brief, an existing one on whether there is code to read.
-//
-// A new project runs two stages: a countable floor (cheap, deterministic) and,
-// only if the floor passes, one engine judgment cached per brief version, so
-// approving a document does not re-spend it. An existing project runs the floor
-// alone — files on disk are evidence by their existence, and judging a codebase
-// is what the analysis itself is for.
+// Gate analysis on project evidence. New projects need a local content check and a CLI
+// judgment cached by brief version; existing projects require source files only.
 
 export interface Readiness {
   ready: boolean;
@@ -34,8 +26,7 @@ export interface Readiness {
 const CACHE_REL = join('.kortext', '.readiness.json');
 const JUDGMENT_TIMEOUT_MS = 5 * 60 * 1000;
 
-// The skeleton's own asks, kept in the order the template lists them. A floor
-// failure quotes these rather than inventing new questions.
+// Use the template questions in their original order when the local content check fails.
 const BRIEF_SECTIONS: Array<{ heading: RegExp; ask: string }> = [
   {
     heading: /vision|goal/i,
@@ -53,7 +44,7 @@ const BRIEF_SECTIONS: Array<{ heading: RegExp; ask: string }> = [
   { heading: /scope/i, ask: 'Future Scope & Out of Scope — what is deliberately not in it?' },
 ];
 
-// Below this many characters of real prose the brief is a name, not a brief.
+// Minimum non-placeholder prose length for the brief.
 const MIN_BODY_CHARS = 240;
 
 function stripFrontmatter(content: string): string {
@@ -71,15 +62,9 @@ function isSkeletonLine(line: string): boolean {
 }
 
 /**
- * Stage one. Counts what the brief actually says, ignoring the skeleton it was
- * poured into. Pure and un-gameable by an eager persona — a one-word brief
- * never reaches the judgment that would rationalize writing anyway.
- *
- * A brief may be written in any language, so the section names are only used
- * when the brief is visibly still in the scaffolded English template; a brief
- * with its own headings is measured on its prose alone and left to the
- * judgment stage. The floor's job is to catch an empty brief, not to enforce a
- * shape the product never promised.
+ * Check prose length after excluding headings and template placeholders.
+ * Require populated template sections only when most English template headings are present;
+ * briefs using other headings are assessed by prose length and the later CLI judgment.
  */
 export function assessBrief(content: string): { ok: boolean; questions: string[] } {
   const body = stripFrontmatter(content);
@@ -90,7 +75,6 @@ export function assessBrief(content: string): { ok: boolean; questions: string[]
     .trim();
   const allAsks = BRIEF_SECTIONS.map((s) => s.ask);
 
-  // Nothing was written: the whole template is still asking its own questions.
   if (prose.length < MIN_BODY_CHARS) return { ok: false, questions: allAsks };
 
   // Which of the template's sections are present, and which carry content.
@@ -107,10 +91,8 @@ export function assessBrief(content: string): { ok: boolean; questions: string[]
     if (current && !isSkeletonLine(line)) answered.add(current);
   }
 
-  // Template-shaped means nearly every section was recognized by name; only
-  // then can an empty one be named back to the writer. One or two accidental
-  // matches (a Turkish brief whose heading happens to say "Personalar") are
-  // not enough to claim the rest are missing.
+  // Require most template headings to match before reporting missing sections.
+  // This avoids treating incidental heading matches in other languages as an incomplete template.
   const templateShaped = present.size >= BRIEF_SECTIONS.length - 1;
   if (!templateShaped) return { ok: true, questions: [] };
 
@@ -138,9 +120,7 @@ const IGNORED_DIRS = new Set([
   'Pods',
 ]);
 
-// An existing project's evidence is its code. Counts real files, stopping as
-// soon as the floor is cleared — this walks a user's repo, so it never
-// enumerates more than it needs to answer the question.
+// Stop counting source files once the minimum evidence threshold is reached.
 export function countSourceFiles(root: string, limit: number): number {
   let seen = 0;
   const walk = (dir: string): void => {
@@ -162,7 +142,6 @@ export function countSourceFiles(root: string, limit: number): number {
   return seen;
 }
 
-// A folder holding a stray README is not a project to analyse.
 const MIN_SOURCE_FILES = 3;
 
 function briefPath(project: Project): string {
@@ -279,10 +258,7 @@ async function check(
     return { ready: false, stage: 'floor', questions: [], briefHash, checkedAt };
   }
 
-  // A refused brief is demoted from approved back to draft: the panel files it
-  // under Needs you, which is where a document waiting on a human belongs, and
-  // an approved brief sitting next to "not enough to start" claims two
-  // contradictory things. Re-approving it is what asks the gate again.
+  // Demote a refused brief to draft so it requires human review before another judgment.
   const refuse = (v: Omit<Readiness, 'briefHash' | 'checkedAt'>): Readiness => {
     setFrontmatterStatus(path, 'draft');
     return verdict(v);
@@ -295,10 +271,8 @@ async function check(
   if (cached && cached.briefHash === briefHash && cached.stage === 'judgment') return cached;
 
   const logPath = logPathFor(db, `p${project.id}-readiness.log`);
-  // The engine writes its verdict into the same file this module caches in, so
-  // the old one has to go before the run: otherwise a CLI that fails and writes
-  // nothing leaves the previous `ready: true` on disk, and the read below stamps
-  // it with the NEW brief's hash — an approval the current brief never earned.
+  // Delete the cached verdict before the CLI writes its replacement. Otherwise a failed run
+  // could reuse an old ready=true result under the new brief hash.
   rmSync(cachePath(project), { force: true });
   try {
     const res = await spawnCli({

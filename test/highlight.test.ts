@@ -2,9 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { highlight } from '../ui/src/highlight.js';
 
-// The tokenizer's contract, in one line: whatever it does to the colours, the
-// text that comes back out is the text that went in. A highlighter that drops
-// or duplicates a character is worse than none at all.
+// Highlighting must preserve every source character.
 const roundTrips = (code: string, lang?: string) =>
   assert.equal(
     highlight(code, lang)

@@ -93,7 +93,7 @@ test('nextStep: first unblocked unwritten doc by dependency depth; BRD gate resp
   const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
   const db = openDb(join(work, 'db.sqlite'));
   const p = createProject(db, { name: 'Acme', repoPath: join(work, 'acme') }, pkgRoot);
-  // BRD is draft (not approved) → everything downstream blocked → nothing to run
+  // A draft brief blocks all downstream analysis.
   assert.equal(nextStep(db, p, pkgRoot), null);
   approveBrief(p);
   const step = nextStep(db, p, pkgRoot);
@@ -123,7 +123,7 @@ test('runStep failure paths: no output file / wrong status → job failed with e
   approveBrief(p);
   const step = nextStep(db, p, pkgRoot)!;
 
-  // the skeleton already exists, so a lazy engine leaves status: uninitialized
+  // A no-op engine leaves the skeleton uninitialized.
   const noop = await runStep(db, p, step, mockEngine(work, 'noop'), pkgRoot);
   assert.equal(noop.ok, false);
   assert.match(noop.error!, /status is 'uninitialized'/);
@@ -166,12 +166,12 @@ test('advance: chains every unblocked step, pauses at approval gates, resumes af
   const engine = mockEngine(work, 'ok');
   const { advance } = await import('../server/runner.js');
 
-  await advance(db, p, engine, pkgRoot); // BRD not approved → nothing runs
+  await advance(db, p, engine, pkgRoot); // An unapproved brief blocks analysis
   assert.equal(listJobs(db, p.id).length, 0);
 
   approveBrief(p);
   await advance(db, p, engine, pkgRoot);
-  // The brief unblocks the PRD and nothing else
+  // Approving the brief unblocks PRODUCT.md only.
   const drafts = listJobs(db, p.id)
     .filter((j) => j.status === 'done')
     .map((j) => j.doc_rel)
@@ -223,8 +223,7 @@ test('advance runs independent steps in parallel (capped)', async () => {
   const db = openDb(join(work, 'db.sqlite'));
   const p = createProject(db, { name: 'Par', repoPath: join(work, 'par') }, pkgRoot);
   approveBrief(p);
-  // The brief unblocks the PRD alone; the first fork is right after it, so
-  // settle the PRD by hand and time only the fork.
+  // Approve PRODUCT.md before measuring the first parallel branches.
   writeFileSync(
     docPath(p, 'PRODUCT.md'),
     '---\nstatus: approved\nauthor: +mock\n---\n\n# Done\n',
@@ -580,8 +579,7 @@ test('a verdict becomes a demand in the document that caused it', async () => {
   assert.match(stack, /- `PRODUCT\.md` — the runtime changed, the flow list must follow/);
   // Frontmatter is untouched: writing a demand does not un-approve the writer.
   assert.match(stack, /status: approved/);
-  // The panel reads it back as a demand on the PRD — which has to have been
-  // written, or there is nothing to ask of it.
+  // Requests target written documents; initialize PRODUCT.md before checking the incoming request.
   setFrontmatterStatus(docPath(p, 'PRODUCT.md'), 'approved');
   const prd = listDocs(db, p, pkgRoot).find((d) => d.rel === 'PRODUCT.md')!;
   assert.equal(prd.revisionRequests.length, 1);

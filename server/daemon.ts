@@ -14,11 +14,7 @@ export async function serverUp(port: number): Promise<boolean> {
   }
 }
 
-/**
- * Poll until the background server answers. A first run pays for the SQLite
- * binding and the schema, so the wait is generous; the caller reports the log
- * file rather than a bare failure when it runs out.
- */
+/* Wait for the detached server health check, including initial SQLite startup. */
 export async function waitForServer(port: number, timeoutMs = 15000): Promise<boolean> {
   const deadline = Date.now() + timeoutMs;
   for (;;) {
@@ -29,11 +25,8 @@ export async function waitForServer(port: number, timeoutMs = 15000): Promise<bo
 }
 
 /**
- * Runs this entry file again as a process detached from the terminal: its own
- * process group, no inherited stdio, unref'd so the parent can exit. Closing
- * the window sends SIGHUP to the parent's group, which this child is no longer
- * in — that is the whole trick. Output goes to the log file because a detached
- * process writing to a closed terminal would take a signal for its trouble.
+ * Detach into a separate process group and redirect output to a log file.
+ * Unref the child so the parent can exit without stopping the server.
  */
 export function respawnDetached(entry: string, args: string[], logPath: string): void {
   mkdirSync(dirname(logPath), { recursive: true });

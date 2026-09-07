@@ -27,7 +27,7 @@ test('a newer release shows, an older or equal one does not', () => {
   assert.equal(isNewer('3.1.0', '3.2.0'), false);
   // Two digits sort as numbers, not as text: 3.10.0 is after 3.9.0.
   assert.equal(isNewer('3.9.0', '3.10.0'), false);
-  // A prerelease is not the release, and never nags anyone into installing it.
+  // A prerelease suffix does not compare as newer than the corresponding numeric version.
   assert.equal(isNewer('3.2.0-rc.1', '3.2.0'), false);
 });
 
@@ -171,7 +171,7 @@ const timer = setInterval(() => {
       release('claude');
       await waitFor(() => !hasActiveRuns());
 
-      // Restart is asleep between aborting runs and reading package templates.
+      // Restart waits between aborting runs and reading package templates.
       db.prepare('UPDATE projects SET paused = 0').run();
       const restart = request(route + '/restart');
       await waitFor(

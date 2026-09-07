@@ -1,14 +1,6 @@
 /**
- * A very small syntax highlighter for the code blocks these documents actually
- * carry: shell commands, JSON payloads, SQL schemas, the odd JS snippet and
- * folder trees. It is a tokenizer, not a parser — it colours what is obvious
- * and leaves the rest alone.
- *
- * Written rather than installed: highlight.js is ~35 KB before its language
- * packs, and would be carrying a hundred grammars to colour `cd` and a quoted
- * string. Anything it gets wrong here shows up as plain text, never as a
- * mangled block, because the tokens are returned as data and the renderer emits
- * real nodes.
+ * Tokenize supported code snippets for syntax highlighting.
+ * Return text tokens for React rendering; preserve all source characters and leave unknown languages plain.
  */
 
 export type HlKind = 'kw' | 'str' | 'num' | 'com' | 'flag' | 'key';
@@ -44,9 +36,7 @@ const JS_KEYWORDS =
 const SQL_KEYWORDS =
   'CREATE|TABLE|INDEX|VIEW|TRIGGER|IF|NOT|EXISTS|PRIMARY|KEY|FOREIGN|REFERENCES|UNIQUE|AUTOINCREMENT|INTEGER|TEXT|REAL|BLOB|NUMERIC|BOOLEAN|DEFAULT|NULL|SELECT|INSERT|INTO|VALUES|UPDATE|SET|DELETE|FROM|WHERE|JOIN|LEFT|INNER|ON|ORDER|GROUP|BY|LIMIT|OFFSET|AND|OR|AS|CASCADE|ON DELETE|ON UPDATE|BEGIN|COMMIT|PRAGMA';
 
-// Each language is a list of (kind, pattern) pairs. The alternation is built
-// from them so a group's position always names its kind — the earlier version
-// padded the list with empty groups, and an empty group matches everywhere.
+// Build alternation groups in rule order so each matched group identifies its token kind.
 type Rule = { kind: HlKind; src: string };
 
 const RULES: Record<Exclude<Lang, 'plain'>, { rules: Rule[]; flags: string }> = {

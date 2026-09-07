@@ -15,9 +15,7 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
     headers: { 'Content-Type': 'application/json' },
     ...init,
   });
-  // Parse defensively: a restarted server, a proxy error page or an empty body
-  // is not JSON, and parsing first would replace the real status with a syntax
-  // error — the one thing the server's JSON 404 exists to avoid.
+  // Preserve HTTP status errors when the response body is empty or not JSON.
   const text = await res.text();
   let body: unknown;
   try {

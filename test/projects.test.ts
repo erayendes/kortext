@@ -102,8 +102,7 @@ test('Initialize judges nothing: even a thin brief lands as written', async () =
   // Submitting your own brief is the approval; nothing has been read yet.
   assert.match(readFileSync(join(repo, BRIEF_REL), 'utf8'), /status: approved/);
 
-  // The gate is what reads it, and a refusal sends it back to the human's desk
-  // rather than leaving an approved brief next to "not enough to start".
+  // A failed readiness check demotes the submitted brief to draft.
   const { ensureReadiness } = await import('../server/readiness.js');
   const verdict = await ensureReadiness(
     db,
@@ -133,8 +132,7 @@ test('the documents language chosen in the form reaches the step prompt', async 
     '',
     null,
   );
-  // An existing project has no brief, so a stated language is the only thing
-  // standing between the reader and a document in the repository's language.
+  // An explicit document language must override the repository language for existing projects.
   assert.match(prompt, /write the PROSE in Türkçe/);
   assert.match(prompt, /ENGLISH ALWAYS/);
   rmSync(work, { recursive: true, force: true });
@@ -337,8 +335,7 @@ test('a cross-site page cannot reach the API, and the vite proxy still can', asy
 test('a name that starts with a digit still yields a code the registry accepts', () => {
   const work = tempDir();
   const db = openDb(join(work, 'db.sqlite'));
-  // deriveCode used to keep the digits and hand back '365TR', which
-  // createProject then refused — over a code the author never typed.
+  // Derived project codes must exclude digits to pass createProject validation.
   const p = createProject(db, { name: '365 Tracker', repoPath: join(work, 'tracker') }, pkgRoot);
   assert.match(p.code, /^[A-Z]{2,8}$/);
   assert.equal(deriveCode('2048 Game'), 'GAME');

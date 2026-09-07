@@ -37,8 +37,7 @@ export function scaffoldProject(
 
   const templates = join(pkgRoot, 'templates');
   installContract(repoPath, templates);
-  // The brief is handled below: a fresh one always starts as a draft, whatever
-  // the template says, so it never rides along with the bulk copy.
+  // Initialize the brief separately so an empty template always starts as draft.
   copyDirIfMissing(join(templates, 'docs'), kx, new Set(['BRIEF.md']));
 
   if (opts.skipBrief) return;
@@ -57,12 +56,8 @@ export function scaffoldProject(
 // ---------------------------------------------------------------------------
 // The handover contract
 // ---------------------------------------------------------------------------
-// A repo may already carry an AGENTS.md the user wrote themselves, so the
-// contract goes in as a MARKED BLOCK rather than a file: their text survives,
-// re-scaffolding refreshes only the block, and cancel takes back exactly what
-// kortext wrote. Claude Code reads CLAUDE.md rather than AGENTS.md, so when that
-// file exists it gets a one-line pointer — the contract itself stays in one
-// place, and two copies can never drift apart.
+// Keep the contract in a marked AGENTS.md block to preserve user content.
+// Add a pointer to an existing CLAUDE.md rather than duplicating the contract.
 const BLOCK_START = '<!-- kortext:start -->';
 const BLOCK_END = '<!-- kortext:end -->';
 const POINTER = '<!-- kortext --> Read AGENTS.md and the .kortext/ docs before any work.';
@@ -123,7 +118,7 @@ function installContract(repoPath: string, templates: string): void {
   writePointer(join(repoPath, 'CLAUDE.md'));
 }
 
-/** Cancel: give the repo back exactly as it was, minus kortext's own writing. */
+/* Remove the Kortext contract block and CLAUDE.md pointer, preserving user content. */
 export function uninstallContract(repoPath: string): void {
   removeContractBlock(join(repoPath, 'AGENTS.md'));
   removePointer(join(repoPath, 'CLAUDE.md'));
@@ -158,16 +153,9 @@ export function listProjects(db: Database.Database): Project[] {
   return db.prepare('SELECT * FROM projects ORDER BY created_at DESC').all() as Project[];
 }
 
-// The user picks the project folder themselves (Browse or typed path) —
-// kortext scaffolds INTO it, never invents a subfolder. mkdir is a no-op on
-// an existing folder and forgives a not-yet-created typed path.
-// kind decides which analysis workflow the project follows:
-// 'new' → new-project-analysis, 'existing' → existing-project-analysis.
-// Derives ACME-style code from the name when none is given.
+// Derive an uppercase project code from the name when no code is supplied.
 export function deriveCode(name: string): string {
-  // A code is letters only — task ids read better for it, and a derived code can
-  // never be one createProject would refuse. "365 Tracker" becomes TRACK, not
-  // 365TR.
+  // Strip digits so derived codes pass the same validation as user-supplied codes.
   const cleaned = name
     .toUpperCase()
     .replace(/[ÇĞİIÖŞÜ]/g, (c) => 'CGIIOSU'['ÇĞİIÖŞÜ'.indexOf(c)] ?? c)
@@ -219,9 +207,7 @@ export function createProject(
   scaffoldProject(repoPath, pkgRoot, { skipBrief: kind === 'existing' });
   const brief = input.brief?.trim();
   if (brief) {
-    // The prime wrote (or uploaded) this, so submitting it IS the approval —
-    // nothing is judged at Initialize. The gate reads it when the chain is
-    // first entered, and demotes it back to a draft if it cannot start.
+    // Treat a submitted brief as approved; readiness is checked on Start and may demote it to draft.
     writeFileSync(
       join(repoPath, BRIEF_REL),
       `---\nstatus: approved\nauthor: +prime\napprover: +prime\n---\n\n${brief}\n`,
@@ -243,8 +229,7 @@ export function createProject(
   return row;
 }
 
-// Out of the way, not gone: the row stays, the repo is untouched, and the
-// panel folds it into its own group.
+// Archive without deleting the registry row or project files.
 export function setArchived(db: Database.Database, id: number, archived: boolean): boolean {
   return (
     db.prepare('UPDATE projects SET archived = ? WHERE id = ?').run(archived ? 1 : 0, id).changes >

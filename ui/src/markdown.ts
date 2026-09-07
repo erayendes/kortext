@@ -1,13 +1,6 @@
 /**
- * Line-oriented markdown parser for the v6 document viewer.
- *
- * Unlike a normal markdown→HTML pass, the v6 "Revise" / "Clarify" flows need
- * every *block* to be an independently selectable element (you annotate
- * specific lines). So we tokenise into a flat list of blocks, each keeping the
- * source-line indexes it covers — `AnnotatableDoc` renders one element per
- * token and tracks selection by token index.
- *
- * Ported from `mdToHtml` / `mdLine` in docs/concepts/wireframe-v6-hifi.html.
+ * Parse Markdown into selectable blocks with source-line ranges.
+ * The document viewer uses token indices to anchor annotations and inline threads.
  */
 
 export type MdTokenKind =
@@ -62,12 +55,9 @@ function classifyLine(line: string): { kind: MdTokenKind; text: string; depth?: 
   if (line.startsWith('## ')) return { kind: 'h2', text: line.slice(3) };
   if (line.startsWith('# ')) return { kind: 'h1', text: line.slice(2) };
   if (line.startsWith('> ')) return { kind: 'quote', text: line.slice(2) };
-  // All three markdown bullet characters, and indented ones: a document that
-  // used `*` was rendering as paragraphs full of literal asterisks, which the
-  // wrapped-line merge then glued into a wall of text.
+  // Recognize all Markdown bullet markers, including indented items.
   const bullet = line.match(/^(\s*)[-*+] (.*)$/);
-  // The indent is the nesting: a sub-item under a request (what settled it) was
-  // rendering as its sibling, which reads as a second, unrelated demand.
+  // Preserve indentation as list nesting depth.
   if (bullet) return { kind: 'bullet', text: bullet[2], depth: Math.floor(bullet[1].length / 2) };
   // The marker stays in the text so the numbering survives; the kind exists so
   // the item is a block of its own rather than merged into the paragraph above.
@@ -88,9 +78,7 @@ export function parseMarkdown(md: string): MdToken[] {
   while (i < lines.length) {
     const line = lines[i] ?? '';
 
-    // Fenced code block: ``` … ``` → one `code` token holding the raw body.
-    // Without this the fence + body lines fall through to `para` and render as
-    // literal backticks (the bug seen in foundation docs with JSON snippets).
+    // Keep fenced code as one block with its language tag and raw body.
     if (line.trim().startsWith('```')) {
       const lang = line.trim().slice(3).trim().toLowerCase() || undefined;
       i++; // skip opening fence

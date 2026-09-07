@@ -1,9 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import type Database from 'better-sqlite3';
 
-// The engine is the user's own installed agent CLI — kortext drives it
-// headlessly during Phase A. Args are the battle-tested v3 sets (see
-// archive/v3-engine/server/engine/executors/*): prompt goes in over stdin for all.
+// Headless CLI commands; prompts are supplied through stdin.
 export interface EngineSpec {
   id: string;
   binary: string;
@@ -37,21 +35,15 @@ export const ENGINES: EngineSpec[] = [
 ];
 
 /**
- * Is this command on PATH? `which` does not exist on Windows — the shell
- * builtin there is `where`, and asking for `which` returns ENOENT, which reads
- * as "no CLI installed" and leaves the whole product inert.
- *
- * EXPERIMENTAL on Windows: written from the documented behaviour of `where` and
- * of Node's spawn, never run on the platform.
+ * Check PATH with which on POSIX and where on Windows.
+ * Windows support is experimental and has not been runtime-tested.
  */
 export function onPath(binary: string): boolean {
   const lookup = process.platform === 'win32' ? 'where' : 'which';
   return spawnSync(lookup, [binary], { stdio: 'ignore' }).status === 0;
 }
 
-// The lookup costs a blocking spawn per engine, and the panel asks for the
-// verdict every few seconds while a project screen is open. What it answers
-// changes when someone installs a CLI, so a short cache is free correctness.
+// Cache blocking PATH lookups briefly to avoid spawning a lookup on every panel poll.
 const DETECT_TTL_MS = 5000;
 let detected: { at: number; engines: Array<EngineSpec & { available: boolean }> } | null = null;
 
@@ -82,13 +74,7 @@ export function setSetting(db: Database.Database, key: string, value: string): v
   ).run(key, value);
 }
 
-/**
- * The engine a project runs on. Its own choice wins as long as that CLI is still
- * installed; otherwise anything installed is better than refusing to run — a
- * project whose CLI was uninstalled keeps working, and the panel's dropdown
- * shows what it actually fell back to. A project with no choice of its own
- * (added before the column existed) follows the global setting.
- */
+/* Prefer the project CLI when installed; otherwise use the global selection or first available CLI. */
 export function engineFor(
   db: Database.Database,
   project: { engine?: string },

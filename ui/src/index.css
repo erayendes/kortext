@@ -1,20 +1,7 @@
-/*
-  Kortext v6 — hi-fi design system (Linear-minimal).
-  Source of truth: development/concepts/wireframe-v6-hifi.html.
-  CSS variables drive everything; @theme inline maps them to Tailwind
-  utilities. Legacy v3 token names are aliased to v6 vars so not-yet-
-  rebuilt components keep rendering during the v6 migration.
-*/
-/*
-  Token system migrated to the kortext design-handoff spec
-  (development/design_handoff_kortext/design-references/styles/kortext.css).
-  Light-mode first, Vercel-neutral by default. Tweakable via <html> attributes:
-    data-theme   = light | dark      (light = default, no attribute needed)
-  Legacy v6 var names (--fg-mid, --card, --hover, --accent-hi…) are aliased to
-  the new tokens so not-yet-rebuilt screens keep rendering during migration.
-*/
+/* Panel styles and design tokens; see dev/DESIGN.md. */
+
 :root {
-  /* neutral ramp (cool-neutral, Geist-like) */
+  /* Neutral colors */
 
   --gray-300: #e0e0e4;
   --gray-400: #c6c6cc;
@@ -35,7 +22,7 @@
   --fg-muted: #76767f;
   --fg-faint: #a3a3ad;
 
-  /* accent (default = neutral / Vercel black) */
+  /* Primary action colors */
   --accent: #18181b;
   --accent-hover: #000000;
   --accent-fg: #ffffff;
@@ -62,7 +49,6 @@
   --pink-bg: #fdebf3;
   --pink-border: #f6cede;
 
-  /* agent identity hues (dots/badges only) — equal L/C, varied hue */
   /* radius */
   --r-sm: 4px;
   --r-md: 6px;
@@ -72,8 +58,7 @@
   /* control heights */
   --control-h: 36px;
 
-  /* §3 — yedi rol. Ölçek sayıyla değil görevle adlandırılır: --fs-13 bir sayı
-     söyler, --fs-body nereye ait olduğunu. */
+  /* Typography roles */
   --fs-title: 18px;
   --fs-section: 16px;
   --fs-heading: 14px;
@@ -81,14 +66,14 @@
   --fs-ui: 12px;
   --fs-label: 11px;
   --fs-micro: 10px;
-  /* §4 — altı adım, hepsi 4'ün katı. Aradaki değer yok. */
+  /* Spacing scale */
   --sp-1: 4px;
   --sp-2: 8px;
   --sp-3: 12px;
   --sp-4: 16px;
   --sp-5: 24px;
   --sp-6: 32px;
-  /* §2 — rampadan işine göre adlandırılmış iki gri */
+
   --border-hover: #c6c6cc;
 
   /* type */
@@ -103,7 +88,7 @@
   --speed: 130ms;
   --ease: cubic-bezier(0.2, 0, 0, 1);
 
-  /* ---- legacy v6 aliases → new tokens (keep old screens alive) ---- */
+  /* Shared surface aliases */
   --bg-elev: var(--bg);
   --panel: var(--bg-subtle);
   --card: var(--bg);
@@ -114,15 +99,10 @@
   --accent-soft: var(--accent-tint);
   --accent-line: var(--accent-tint-border);
   --col-bg: var(--bg-inset);
-
-  /* Layout */
 }
 
-/* ---------- accent variants ---------- */
 /* ---------- dark theme ---------- */
-/* §1 — Tema. Açık varsayılan; koyu ya senin seçiminle ya işletim sisteminle gelir.
-   Aynı blok iki kez yazılır: düz CSS'te blok takma adı yok, script'in taktığı bir
-   sınıf ise sayfa yüklenirken yanlış temayı gösterir — her açılışta bir flaş. */
+/* Repeat dark values for explicit and OS-selected themes to avoid a script-dependent theme flash. */
 :root[data-theme='dark'] {
   --border-hover: #3a3a40;
 
@@ -143,7 +123,7 @@
   --fg-muted: #6e6e77;
   --fg-faint: #54545c;
 
-  /* neutral accent in dark = near-white pill (Vercel dark) */
+  /* Dark-theme primary action colors */
   --accent: #ededef;
   --accent-hover: #cfcfd4;
   --accent-fg: #0a0a0b;
@@ -194,7 +174,7 @@
     --fg-muted: #6e6e77;
     --fg-faint: #54545c;
 
-    /* neutral accent in dark = near-white pill (Vercel dark) */
+    /* Dark-theme primary action colors */
     --accent: #ededef;
     --accent-hover: #cfcfd4;
     --accent-fg: #0a0a0b;
@@ -226,14 +206,7 @@
   }
 }
 
-/* ---------- density / radius ---------- */
-
 @theme inline {
-  /* handoff token surfaces → Tailwind utilities */
-  /* radius scale → rounded-* utilities */
-  /* legacy v6 surface aliases → handoff tokens */
-  /* Legacy v3 aliases → v6 vars (keep old components alive during migration) */
-
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
 }
@@ -369,7 +342,7 @@ body {
 }
 
 /* ---------- generic ---------- */
-/* NOTE: button styles are defined once, spec-canonically, further down (§5.1). */
+
 .pill {
   display: inline-flex;
   align-items: center;
@@ -411,7 +384,7 @@ body {
   }
 }
 
-/* staggered load */
+/* Loading spinner */
 
 @keyframes spin {
   to {
@@ -595,7 +568,7 @@ body {
   gap: 8px;
 }
 
-/* ---------- terminal ---------- */
+/* Monospace content */
 .term {
   position: fixed;
   right: 16px;
@@ -661,11 +634,7 @@ body {
   cursor: not-allowed;
 }
 
-/* Narrow-viewport safety net. The app is desktop-first (1280px+); full mobile
-   layout is a v3.2 item. This block just keeps the Project Initializing timeline
-   + slide-over from overlapping when the window is dragged below ~560px: the
-   row stops colliding its action buttons with the filename, and the drawer goes
-   full-width instead of a fixed 464px panel that overruns a small viewport. */
+/* Use the full viewport width for drawers on narrow screens. */
 @media (max-width: 560px) {
   .drawer {
     width: 100%;
@@ -674,10 +643,8 @@ body {
   }
 }
 
-/* ----- base: buttons (handoff) ----- */
-/* §6 — TEK BOY. Küçük boy 21 kullanımın 19'undaydı; neredeyse hep açık olan bir
-   modifier, modifier değildir. `.btn` her kontrolün taşıdığı TABAN: boyut, font,
-   odak halkası, pasif hâl. Tek başına kullanılmaz, üstüne hep bir varyant biner. */
+/* Buttons */
+/* Shared button sizing, typography, focus and disabled states; variants define appearance. */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -712,14 +679,12 @@ body {
   flex: none;
 }
 
-/* Bir buton link olabilir (DESIGN önizlemesi yeni sekmede açılır): altı çizili
-   metin gibi görünmesin, komşu butonlarla aynı kutu olsun. */
+/* Apply button layout to links used as actions. */
 a.btn {
   text-decoration: none;
 }
 
-/* DESIGN önizlemesi çekmecenin içinde, kendi belgesi olarak: iframe'in içindeki
-   palet projenin, dışındaki panelin — ikisi birbirine karışmaz. */
+/* Keep project preview styles isolated inside the iframe. */
 .dr-body-preview {
   padding: 0;
   overflow: hidden;
@@ -734,7 +699,7 @@ a.btn {
   display: block;
 }
 
-/* Hover varyantındır: tabanda bir kural varyantınkini sessizce ezerdi. */
+/* Define hover styling per variant to avoid base-rule overrides. */
 .btn:hover {
   background: none;
   border-color: transparent;
@@ -744,7 +709,7 @@ a.btn {
   pointer-events: none;
 }
 
-/* solid — kutusu hep orada */
+/* Solid buttons */
 .btn-primary {
   background: var(--accent);
   color: var(--accent-fg);
@@ -785,7 +750,7 @@ a.btn {
   border-color: var(--red);
 }
 
-/* link — duruşta kutusu yok, üstüne gelince solid ikizine dönüşür */
+/* Link buttons */
 .btn-link-primary,
 .btn-link-success,
 .btn-link-danger {
@@ -820,8 +785,7 @@ a.btn {
   color: var(--red);
 }
 
-/* tek istisna: 6px padding'li çipin içindeki ×. Aileyi taşır, boyunu taşımaz;
-   hover'ı yok çünkü nişan aldığın bir kontrol değil, okuduğun bir satırda durur. */
+/* Compact dismiss control for inline note chips. */
 .btn-x {
   height: auto;
   padding: 0 4px;
@@ -837,10 +801,7 @@ a.btn {
   color: var(--fg-secondary);
 }
 
-/* §7 — segmented control. Aralarından BİRİNİN seçili olduğu durumlar için:
-   üç düğme "hangisine basıldı?" diye sordurur, segment "hangisi açık" der. */
-/* §7 — select. Yerli ok tema tanımaz ve her platformda başka çizilir; kendi
-   chevron'umuzu currentColor ile gömüyoruz, böylece metin rengini miras alıyor. */
+/* Replace the native select arrow with a chevron that inherits the text color. */
 .select {
   height: var(--control-h);
   padding: 0 30px 0 12px;
@@ -910,7 +871,7 @@ a.btn {
   box-shadow: var(--shadow-xs);
 }
 
-/* ----- base: badges / pills (handoff) ----- */
+/* Badges */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -937,7 +898,7 @@ a.btn {
   }
 }
 
-/* ----- base: agent token (handoff) ----- */
+/* Agent label */
 .agent {
   display: inline-flex;
   align-items: center;
@@ -949,7 +910,7 @@ a.btn {
   white-space: nowrap;
 }
 
-/* ----- base: inputs (handoff) ----- */
+/* Inputs */
 .input {
   height: var(--control-h);
   width: 100%;
@@ -987,7 +948,7 @@ a.btn {
   margin: 0;
 }
 
-/* ===== App shell grid (handoff) ===== */
+/* Application layout */
 .app {
   display: grid;
   grid-template-columns: 248px 1fr;
@@ -1015,7 +976,7 @@ a.btn {
   flex-direction: column;
 }
 
-/* footer (handoff) */
+/* Footer */
 .footer {
   grid-column: 2;
   height: 30px;
@@ -1040,7 +1001,7 @@ a.btn {
   }
 }
 
-/* ===== Card / Panel + Progress (handoff base) ===== */
+/* Cards and progress */
 .card {
   background: var(--bg);
   border: 1px solid var(--border);
@@ -1107,7 +1068,7 @@ a.btn {
   height: auto;
 }
 
-/* ===== Doc reader (References / Memory / Foundation / Reports — handoff) ===== */
+/* Document reader */
 .reader {
   display: grid;
   grid-template-columns: 280px 1fr;
@@ -1129,7 +1090,7 @@ a.btn {
   }
 }
 
-/* ===== v1.0 shell (E1) — app chrome on top of the v6 token system ===== */
+/* Application header */
 .kx-shell {
   min-height: 100vh;
   background: var(--bg);
@@ -1144,10 +1105,7 @@ a.btn {
   padding: 14px 22px;
   border-bottom: 1px solid var(--border);
 }
-/* The wordmark is a pencil-and-blueprint drawing in three inks: no colour token
-   paints it, and an invert filter drops the pale graphite to dark grey on a dark
-   ground. It ships as two drawings — one made for paper, one for the dark
-   panel — and CSS shows the one the theme calls for. */
+/* Use separate wordmark images for light and dark themes. */
 .kx-logo {
   height: 20px;
   width: auto;
@@ -1211,9 +1169,7 @@ a.btn {
   display: flex;
   align-items: center;
   gap: 10px;
-  /* A status bar is two lines high, always: it wraps nothing and grows with
-     nothing. A message too long for the width is cut, not folded — by the
-     message itself, since clipping the bar would swallow the popover above it. */
+  /* Keep both status lines visible; clip long messages individually so the popover is not clipped. */
   white-space: nowrap;
   flex-shrink: 0;
   height: 52px;
@@ -1224,8 +1180,7 @@ a.btn {
   font-size: var(--fs-label);
   color: var(--fg-muted);
 }
-/* Both lines belong to `kortext`: the server on top, the way to report it under
-   it, left-aligned in one column so the second line reads as part of the first. */
+/* Align server status and the issue-report link in one column. */
 .kx-statusbar-lines {
   display: flex;
   flex-direction: column;
@@ -1237,9 +1192,7 @@ a.btn {
   align-items: center;
   gap: 10px;
 }
-/* The second line keeps the first line's columns: the bug stands in the dot's
-   8px slot, the words start under `kortext`. The mark is drawn at 12px and
-   bleeds 2px each side, so it reads at 11px type without moving the text. */
+/* Align the report icon with the status dot without shifting the text column. */
 .kx-report {
   display: inline-flex;
   align-items: center;
@@ -1513,8 +1466,7 @@ a.btn {
   min-width: 0;
   color: inherit;
   text-decoration: none;
-  /* Each turn arrives from the right rather than blinking in place: the movement
-     is what says a second tool exists behind this one. */
+  /* Animate carousel entry from the right. */
   animation: kx-slide-in 320ms ease;
 }
 @keyframes kx-slide-in {
@@ -1650,7 +1602,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   border-color: var(--accent);
 }
 
-/* E2 — connect tab + request queue */
+/* Project and document controls */
 .kx-badge {
   display: inline-flex;
   align-items: center;
@@ -1728,7 +1680,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   color: var(--fg-faint);
 }
 
-/* E3 — documents tab + doc drawer */
+/* Document list and drawer */
 .kx-docs {
   display: flex;
   flex-direction: column;
@@ -1804,8 +1756,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   flex: 1;
 }
 
-/* Badge heat map: amber = your move, green = settled, blue = the engine's move,
-   gray = passive, red = alarm, violet = out-of-cycle file. */
+/* Status colors: approved green, writing blue, pending violet, paused amber and failed red. */
 .kx-status {
   font-size: var(--fs-micro);
   font-weight: 600;
@@ -1833,7 +1784,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   color: var(--green);
 }
 
-/* Six states, one badge. What is OWED rides alongside as a kx-badge. */
+/* Render status separately from request and dependency badges. */
 /* n/a and waiting carry no pill — they are the quiet, no-action states. */
 .kx-status-waiting {
   background: var(--bg-muted);
@@ -1874,7 +1825,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   border-color: var(--red-border);
 }
 
-/* One family, two weights: a demand you answer, and news that one may be coming. */
+/* Distinguish requests from dependency notices. */
 .kx-badge-change {
   background: var(--pink-bg);
   color: var(--pink);
@@ -1960,7 +1911,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   cursor: pointer;
 }
 
-/* Soru numarası: not çipiyle aynı adı taşır, "#2" diye geri gelir. */
+/* Question numbers match their note labels. */
 .kx-qno {
   display: inline-block;
   min-width: 1.4em;
@@ -2002,9 +1953,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   margin: 6px 0 2px;
 }
 
-/* GitHub's quote is a bar, not a panel. Drawn as an inset shadow rather than a
-   border so the selection and note bars — which use the same edge and the same
-   mechanism — replace it instead of standing beside it. */
+/* Use an inset shadow so selection and note bars replace the quote bar instead of overlapping it. */
 .kx-quote {
   color: var(--fg-mid);
   margin-left: 8px;
@@ -2028,7 +1977,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   text-indent: -12px;
 }
 
-/* Numaralı soru: #n kendi işaretidir, madde imi ve asılı girinti ona çarpardı. */
+/* Suppress the bullet when a question number supplies the marker. */
 .kx-block.kx-numbered {
   padding-left: 8px;
   text-indent: 0;
@@ -2094,7 +2043,6 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   padding: 0;
 }
 
-/* A list is a list: the items breathe, and a wrapped line stays off the marker. */
 .kx-bullet + .kx-bullet,
 .kx-ordered + .kx-ordered {
   margin-top: 2px;
@@ -2145,7 +2093,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   resize: vertical;
 }
 
-/* Tutamağı tarayıcı çizer ve koyu temada beyaz bırakır. */
+/* Allow the browser resize handle to follow the theme. */
 .kx-editor::-webkit-resizer {
   background: var(--bg);
 }
@@ -2185,7 +2133,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   flex: 1;
 }
 
-/* E5 — plan tab */
+/* Plan summary */
 .kx-plan {
   display: flex;
   flex-direction: column;
@@ -2217,7 +2165,6 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   flex: none;
 }
 
-/* §4 — bir eylem ile bir seçim grubu arasında bir adım boşluk. */
 .kx-brief-head {
   gap: var(--sp-3);
 }
@@ -2256,7 +2203,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   cursor: pointer;
 }
 
-/* R1 — engine badge + step runner states */
+/* Engine and job status */
 .kx-theme {
   display: inline-flex;
   align-items: center;
@@ -2358,7 +2305,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   border-color: var(--red);
 }
 
-/* R3 — explain bubbles + footer */
+/* Inline Q&A */
 .kx-explain {
   display: flex;
   flex-direction: column;
@@ -2379,7 +2326,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   line-height: 1.5;
 }
 
-/* Sol biraz içeri — üstteki blok gibi kenara yapışmasın; sağ blokla aynı hizada kalır. */
+/* Align thread content with the selected block. */
 .kx-thread {
   margin: var(--sp-3) 8px var(--sp-4) 8px;
   display: flex;
@@ -2415,14 +2362,13 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   font-size: var(--fs-ui);
 }
 
-/* R4 — handshake completion card */
+/* Analysis completion */
 .kx-version {
   font-size: var(--fs-micro);
   color: var(--fg-muted);
 }
 
-/* A document with unanswered questions is not finished — the row says so, and
-   the section itself is tinted so it is not one heading among many. */
+/* Highlight unanswered question sections. */
 .kx-card-action {
   margin-left: auto;
 }
@@ -2449,7 +2395,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   gap: 10px;
 }
 
-/* Each demand carries its own answer: one decision per line, not one for the pile. */
+/* Render actions per revision request. */
 .kx-changebar-list > li + li {
   padding-top: 10px;
   border-top: 1px solid var(--red-border);
@@ -2485,8 +2431,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   background: var(--amber-bg);
 }
 
-/* A revision request is a demand on another document — the same red as the
-   "changes asked" pill that carries it, so the block and the row agree. */
+/* Match open revision-request highlighting to the request badge. */
 .kx-block.req-q {
   background: var(--red-bg);
 }
@@ -2498,14 +2443,13 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   background: var(--red-bg);
 }
 
-/* Answered: the fill was "you owe this" — the note bar already says "answered",
-   stacking both read as a muddy coffee brown. */
+/* Remove the question background once the note bar indicates an answer. */
 .kx-block.open-q.noted,
 .kx-block.req-q.noted {
   background: none;
 }
 
-/* Archived projects fold away — one summary line instead of a wall of cards. */
+/* Collapsed archived-project list */
 .kx-archive {
   margin: 18px 22px 0;
 }
@@ -2520,8 +2464,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   opacity: 0.72;
 }
 
-/* Readiness gate — the analysis refused to start; amber because it is the
-   human's turn, not a failure. */
+/* Readiness questions shown when analysis is blocked. */
 .kx-gate {
   display: flex;
   flex-direction: column;
@@ -2578,7 +2521,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   gap: 12px;
 }
 
-/* Same card as the starter commands, wearing the promo's colours. */
+/* Install card */
 .kx-handshake-cards {
   display: flex;
   flex-direction: column;
@@ -2595,8 +2538,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   background: var(--bg);
 }
 
-/* What the agent's draft changed — the editor holds the whole file, this holds
-   only the lines that differ from what is on disk. */
+/* Diff markers for the full-document proposal editor. */
 .kx-diff-bar {
   display: flex;
   align-items: center;
@@ -2706,8 +2648,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   --kx-alert-bg: var(--red-bg);
 }
 
-/* Our own highlighter's five kinds. Restrained on purpose: the block is read
-   for its content, not admired for its palette. */
+/* Syntax highlighting token styles */
 .hl-com {
   color: var(--fg-faint);
   font-style: italic;

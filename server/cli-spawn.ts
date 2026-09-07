@@ -4,17 +4,9 @@ import type { WriteStream } from 'node:fs';
 import { dirname } from 'node:path';
 
 /**
- * Low-level helper used by every CLI executor.
- *
- * Why a helper and not a base class:
- *   - The three executors (claude, codex, gemini) each own their prompt-assembly,
- *     output validation, and summary extraction — those stay in the executor file.
- *   - The boring-but-critical bits (shell-free spawn, SIGTERM→SIGKILL on abort,
- *     stdout/stderr captured to a log file) live here once so we don't drift.
- *
- * IMPORTANT: never pass a single command string. Always pass `binary + args`,
- * because `spawn(cmd, args)` does NOT invoke a shell, so step descriptions and
- * persona handles can never be interpreted as shell metacharacters.
+ * Spawn a CLI with cancellation, timeouts and output logging.
+ * Pass binary and arguments separately; POSIX runs without a shell.
+ * The Windows shell path requires trusted arguments and sends user prompts through stdin.
  */
 
 export type SpawnCliOptions = {
@@ -24,7 +16,7 @@ export type SpawnCliOptions = {
   stdin?: string;
   logPath: string;
   signal: AbortSignal;
-  /** Delay between SIGTERM and SIGKILL when aborted. Default 5000ms. */
+  /* Delay between SIGTERM and SIGKILL when aborted. Default 1000ms. */
   sigkillDelayMs?: number;
   /** Soft timeout — kill after N ms regardless of signal. Default unset. */
   timeoutMs?: number;
@@ -48,8 +40,7 @@ export type SpawnCliResult = {
 };
 
 export async function spawnCli(opts: SpawnCliOptions): Promise<SpawnCliResult> {
-  // Restart and cancel wipe the project's directories 1.5s after aborting, so
-  // a CLI that ignores SIGTERM has to be gone before that, not after.
+  // Keep escalation shorter than the restart/cancel delay before project files are removed.
   const sigkillDelayMs = opts.sigkillDelayMs ?? 1000;
   const summaryCap = opts.summaryBufferBytes ?? 64 * 1024;
 
@@ -64,23 +55,14 @@ export async function spawnCli(opts: SpawnCliOptions): Promise<SpawnCliResult> {
     };
   }
 
-  // EXPERIMENTAL on Windows, written from the documented behaviour and never
-  // run there: npm installs a global CLI as a `.cmd` shim, which spawn cannot
-  // execute without a shell, and a Windows process has no process group for a
-  // negative-pid kill to reach. Both differences are handled below. The shell
-  // is safe here only because nothing user-written reaches the command line:
-  // the binary and args come from the ENGINES table and the prompt goes in
-  // over stdin. Keep it that way.
+  // Windows support is experimental: .cmd shims require a shell and process-tree termination
+  // uses taskkill. Keep binary/arguments trusted and send user-written prompts through stdin.
   const onWindows = process.platform === 'win32';
   const proc = spawn(opts.binary, opts.args, {
     cwd: opts.cwd,
     stdio: ['pipe', 'pipe', 'pipe'],
-    // false everywhere it can be — see the note above for why Windows cannot.
     shell: onWindows,
-    // Own process group so an abort can kill the whole tree — agent CLIs spawn
-    // children that would otherwise keep the pipes (and our 'close') alive.
-    // Windows has no equivalent, and `detached` there only means "survives the
-    // parent", which is the opposite of what an abort wants.
+    // Use a POSIX process group to terminate descendants that could keep output pipes open.
     detached: !onWindows,
   });
 
@@ -97,17 +79,14 @@ export async function spawnCli(opts: SpawnCliOptions): Promise<SpawnCliResult> {
     }
   };
 
-  // Ensure the log directory exists. Fresh `kortext init` projects don't
-  // have `.kortext/logs/` yet — the first run would crash with ENOENT
-  // (uncaught error event on the WriteStream) before we got the chance to
-  // mark the run as failed.
+  // Create the log directory before opening the stream to prevent an unhandled ENOENT error.
   mkdirSync(dirname(opts.logPath), { recursive: true });
   const log: WriteStream = createWriteStream(opts.logPath, { flags: 'a' });
   log.write(
     `\n# kortext cli-executor — ${new Date().toISOString()}\n# binary: ${opts.binary}\n# args: ${JSON.stringify(opts.args)}\n# cwd: ${opts.cwd}\n\n`,
   );
 
-  // Rolling buffers so we don't OOM on chatty CLIs.
+  // Bound output buffers to limit memory use.
   let stdoutBuf = '';
   let stderrBuf = '';
   const appendCapped = (current: string, chunk: string): string => {
@@ -126,12 +105,7 @@ export async function spawnCli(opts: SpawnCliOptions): Promise<SpawnCliResult> {
     log.write(`[stderr] ${s}`);
   });
 
-  // Short-lived CLIs (e.g. `echo X; exit 0`) can close stdin before we
-  // finish writing the persona prompt, which surfaces as EPIPE on the
-  // parent. The prompt is best-effort — if the child didn't want to read
-  // it, we shouldn't crash the test/run with an unhandled error. macOS
-  // hides this race because the kernel keeps the pipe buffer alive
-  // briefly after exit; Linux closes immediately.
+  // A child can close stdin before the prompt is written; handle EPIPE without crashing the server.
   if (proc.stdin) {
     proc.stdin.on('error', (err) => {
       const code = (err as NodeJS.ErrnoException).code;
@@ -165,16 +139,8 @@ export async function spawnCli(opts: SpawnCliOptions): Promise<SpawnCliResult> {
   }
 
   const result = await new Promise<SpawnCliResult>((resolveResult) => {
-    // log.end() flushes asynchronously. On Linux that flush can outlast our
-    // promise resolution, leaving callers who readFileSync(logPath) right
-    // after await with a half-written file. macOS happens to flush fast
-    // enough to hide it. Wait for 'finish' (or the end() callback) before
-    // resolving so the file is durable when the caller reads it.
-    // A spawn that fails emits BOTH 'error' and 'close'. Ending the log twice
-    // means the second handler writes to a stream that is already ended, and an
-    // ERR_STREAM_WRITE_AFTER_END nobody listens for takes the process down —
-    // the whole server, because the CLI moved between detection and launch. So
-    // the first event wins and the second is ignored.
+    // Resolve after the log stream finishes so callers can read complete output.
+    // Spawn failures emit both error and close; settle once to avoid writes after the log has ended.
     let settled = false;
     const finish = (line: string, result: Omit<SpawnCliResult, 'aborted' | 'timedOut'>) => {
       if (settled) return;
@@ -217,15 +183,8 @@ export function tailLines(text: string, n: number): string {
 // ---------------------------------------------------------------------------
 
 /**
- * Markers in the CLI's stdout/stderr that signal a *transient* failure — a
- * network blip, a server-side overload, or a rate-limit — where re-running the
- * exact same step is likely to succeed. Headless agent CLIs on long
- * deep-research steps hit these routinely (the live UAT died on the first one
- * below), so a single blip must not fail the whole workflow run.
- *
- * Deliberately narrow: anything not listed (bad model id, missing binary,
- * auth rejection, declared-output-missing) is treated as deterministic and is
- * NOT retried — re-running it would just burn tokens to fail again.
+ * Known network, overload and quota markers used by the retry classifiers.
+ * Unmatched failures are not classified as transient.
  */
 const TRANSIENT_MARKERS: RegExp[] = [
   /socket connection (?:was )?closed/i,
@@ -241,9 +200,6 @@ const TRANSIENT_MARKERS: RegExp[] = [
   /rate.?limit/i,
   /\b429\b/,
   /\b5(?:00|02|03|04|29)\b/,
-  // Quota / resource-exhaustion shapes. UAT #10: antigravity (`agy`) returned
-  // `RESOURCE_EXHAUSTED (code 429): Individual quota reached` — a recoverable
-  // failure that should trigger fallback to the next executor, not a hard stop.
   /resource_exhausted/i,
   /\bquota\b/i,
 ];
@@ -266,18 +222,8 @@ export function isTransientCliFailure(
 }
 
 /**
- * The UAT #10 antigravity 429 shape: the CLI hit `RESOURCE_EXHAUSTED (code
- * 429)`, printed the quota error, and *still exited 0* with no real
- * deliverable. `isTransientCliFailure` deliberately ignores exit-0 results
- * (it's the success path), so it never catches this — yet the run produced
- * nothing useful and SHOULD fall over to the next executor.
- *
- * This predicate recognises the "exit-0 but the agent produced no meaningful
- * stdout" case. It is intentionally narrow: only an exit-0 run with an
- * effectively empty stdout tail counts. A genuinely empty-but-successful run
- * (agent wrote files, said nothing) is rare for chatty agent CLIs — and the
- * caller still validates declared file outputs separately, so a false positive
- * here only widens the recoverable set, never silently drops a good result.
+ * Detect a non-aborted, successful exit with no meaningful stdout.
+ * Callers must validate output files separately; a silent CLI may still have written them.
  */
 export function isEmptyOutputExitZero(
   res: Pick<SpawnCliResult, 'exitCode' | 'stdoutTail' | 'aborted'>,
@@ -288,17 +234,8 @@ export function isEmptyOutputExitZero(
 }
 
 /**
- * Unified "is this failure worth falling over to the next executor?" predicate,
- * used by the CLI executors and FallbackExecutor (UAT #10).
- *
- * Recoverable when ANY of:
- *   - it's a transient failure (network/overload/rate-limit/429/quota — non-zero
- *     exit with a known marker), OR
- *   - the CLI exited 0 but produced no meaningful stdout (the agy 429 shape), OR
- *   - the haystack matches a quota/429/rate-limit marker even on exit 0 (the CLI
- *     printed the quota error but didn't signal it through the exit code).
- *
- * Never recoverable when the run was aborted (honour the cancel).
+ * Classify transient failures, empty successful output and known error markers as recoverable.
+ * Aborted runs are never recoverable; this function does not perform retries or select a CLI.
  */
 export function isRecoverableCliFailure(
   res: Pick<SpawnCliResult, 'exitCode' | 'stdoutTail' | 'stderrTail' | 'aborted'>,
@@ -306,9 +243,7 @@ export function isRecoverableCliFailure(
   if (res.aborted) return false;
   if (isTransientCliFailure(res)) return true;
   if (isEmptyOutputExitZero(res)) return true;
-  // Exit-0 quota/429 that DID print a marker but produced (some) other noise:
-  // catch it even though isTransientCliFailure skips exit-0 and the stdout is
-  // not strictly empty.
+  // Also recognize error markers when the CLI exits successfully with nonempty stdout.
   const haystack = `${res.stdoutTail}\n${res.stderrTail}`;
   return TRANSIENT_MARKERS.some((re) => re.test(haystack));
 }

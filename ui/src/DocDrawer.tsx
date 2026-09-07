@@ -45,11 +45,7 @@ export function DocDrawer({
   const [rawEdit, setRawEdit] = useState(false); // …and you asked to type in it rather than read it
   const [err, setErr] = useState<string | null>(null);
 
-  // Every async handler below outlives the document it was started on — the
-  // propose call runs an agent CLI, so minutes, not milliseconds — and the
-  // drawer is one instance re-rendered rather than remounted, so its setters
-  // stay live across the switch. This names whatever is on screen now, so a
-  // late answer can tell whether it is still wanted.
+  // Track the visible document across async handlers; the drawer instance survives document changes.
   const showing = useRef<string | null>(null);
   useEffect(() => {
     showing.current = doc?.rel ?? null;
@@ -64,19 +60,12 @@ export function DocDrawer({
     setNotes([]);
     setExplains([]);
     setErr(null);
-    // The previous document's text goes with it. Keeping it meant a slow or
-    // failed load rendered one document's body under another's name — and the
-    // editor still held it, so Save wrote it into the file now open.
+    // Clear prior content before loading so stale text cannot be saved into the new document.
     setContent('');
     setVersion('');
     setDraft('');
     if (doc) {
-      // The guard has to live outside the closure. Comparing `doc.rel` to a
-      // const taken from the same `doc` compares a value to itself: the drawer
-      // is one instance re-rendered, not remounted, so a load that resolves
-      // after the reader moved on still held the setters and wrote its text
-      // under the next document's name — and Save then sent that text to the
-      // file now open. The cleanup runs before the next effect starts.
+      // Ignore results after effect cleanup; captured doc values alone cannot detect a later selection.
       let cancelled = false;
       api
         .docContent(project.id, doc.rel)
@@ -101,8 +90,7 @@ export function DocDrawer({
   // flowing block (the thread anchors at paragraph granularity).
   const tokens = useMemo(() => {
     const all = mergeWrappedLines(parseMarkdown(stripFrontmatter(content)));
-    // An Open Questions heading with nothing under it is structure, not
-    // content — showing it makes every document look like it wants something.
+    // Hide empty question sections.
     const dropEmpty = (tokens: typeof all, heading: RegExp) => {
       const start = tokens.findIndex(
         (t) => (t.kind === 'h1' || t.kind === 'h2' || t.kind === 'h3') && heading.test(t.text),
@@ -117,10 +105,7 @@ export function DocDrawer({
     return dropEmpty(dropEmpty(all, /open questions/i), /revision requests/i);
   }, [content]);
 
-  // Which blocks sit under the Open Questions heading — they are the ones the
-  // reader has to act on, so they get their own ground rather than blending in.
-  // Who answers on this machine — the thread says so rather than leaving the
-  // reply unattributed.
+  // Attribute inline answers to the selected project engine.
   const [answerBy, setAnswerBy] = useState('agent');
   useEffect(() => {
     api
@@ -129,9 +114,7 @@ export function DocDrawer({
       .catch(() => {});
   }, []);
 
-  // Two different debts, two different colours. A question is work for the
-  // reader of THIS document; a revision request is a demand on another one.
-  // Painting both amber made them look like the same job.
+  // Distinguish questions for this document from revision requests sent to another document.
   const [openQ, changeReq] = useMemo(() => {
     const asks = new Set<number>();
     const demands = new Set<number>();
@@ -145,10 +128,7 @@ export function DocDrawer({
             : null;
       }
       if (section === 'ask') asks.add(t.index);
-      // A demand that has been settled is history, not debt: the sentence stays
-      // in the document but stops being painted, so only what still stands is red.
-      // Red marks a demand that still stands: a ticked box is history, and the
-      // line under it is the record of what closed it.
+      // Highlight only open requests; keep settled requests visible as history.
       if (section === 'demand' && /^(?:\[ \]\s*)?`[A-Za-z][\w./-]*\.md`/.test(t.text.trim())) {
         demands.add(t.index);
       }
@@ -156,8 +136,7 @@ export function DocDrawer({
     return [asks, demands] as const;
   }, [tokens]);
 
-  // Her açık soru bir numara taşır: not çipi "#2: cevabım" diye okunur, alıntının
-  // ilk 80 karakteri diye değil.
+  // Use question numbers in note labels instead of truncated excerpts.
   const qNo = useMemo(() => {
     const n = new Map<number, number>();
     let inAsk = false;
@@ -203,8 +182,7 @@ export function DocDrawer({
       onClose();
     });
 
-  // Inline conversation under the selected line — multi-turn, in character,
-  // gone when the drawer closes.
+  // Keep multi-turn Q&A in drawer state only.
   const ask = (line: number, question: string) => {
     const token = tokens.find((t) => t.index === line);
     const history = explains
@@ -241,8 +219,7 @@ export function DocDrawer({
 
   const saveEdit = () =>
     act(async () => {
-      // A saved proposal answers the demands that produced it — otherwise the
-      // document keeps asking for a change it already carries.
+      // Saving a proposal also settles the requests it addresses.
       const saved = await api.saveDoc(project.id, doc.rel, draft, version, proposed);
       setContent(saved.content);
       setVersion(saved.version);
@@ -252,16 +229,12 @@ export function DocDrawer({
       setRawEdit(false);
     });
 
-  // The engine drafts the change another document asked for. It lands in the
-  // editor, unsaved: this document is the human's, so the last keystroke is too.
+  // Load the proposed revision into the editor; do not save it automatically.
   const proposeFix = () =>
     act(async () => {
       const rel = doc.rel;
       const { proposal } = await api.proposeRevision(project.id, rel);
-      // The reader moved on while the CLI was drafting. Landing this now would
-      // put one document's proposal in another's editor, and Save sends the
-      // editor to the file that is open — with `proposed` set, which settles
-      // that file's demands against text written for somewhere else.
+      // Ignore a proposal if the user has switched documents before it completes.
       if (showing.current !== rel) return;
       setDraft(proposal);
       setProposed(true);
@@ -281,11 +254,8 @@ export function DocDrawer({
           )}
         </div>
         <div className="dr-actions">
-          {/* Approve · Edit · Close — karar, düzenleme, çıkış. */}
           {!editing && doc.status === 'draft' && (
-            // A document that still asks something is not finished, and
-            // approving it would bury the question under a green badge. Answer
-            // it in the section — or delete the ones you are content to leave.
+            // Require open questions to be resolved before approval.
             <button
               className="btn btn-success"
               disabled={busy || doc.openQuestions}
@@ -307,10 +277,7 @@ export function DocDrawer({
               Edit
             </button>
           )}
-          {/* Tokens read better drawn than tabulated — the page is rendered
-              from this same file, so it is never out of date. It sits in an
-              iframe: its palette is the project's, the panel's is the panel's,
-              and neither leaks into the other. */}
+          {/* Isolate project preview styles from panel styles in an iframe. */}
           {!editing && doc.rel === 'DESIGN.md' && doc.status !== 'uninitialized' && (
             <button className="btn btn-secondary" onClick={() => setPreview(!preview)}>
               {preview ? 'Document' : 'Preview'}
@@ -342,8 +309,7 @@ export function DocDrawer({
       </div>
       <div className={preview ? 'dr-body dr-body-preview' : 'dr-body'}>
         {preview && (
-          // Its own document, so the project's tokens and the panel's stay
-          // apart: the page inside carries its own light/dark switch.
+          // The preview document has independent theme controls.
           <iframe
             className="kx-doc-preview"
             title={`${doc.name} — design tokens`}
@@ -530,28 +496,20 @@ export function DocDrawer({
   );
 }
 
-// One vocabulary for every doc state: waiting · writing… · paused · pending ·
-// approved · failed · n/a · log. `pending` is a document waiting on a human;
-// `waiting` is one whose inputs are not settled, so nothing can run yet.
+// Pending means written and awaiting approval; waiting means not yet written.
 const STATUS_LABEL: Record<string, string> = {
   draft: 'pending',
   'not-applicable': 'n/a',
   approved: 'approved',
 };
 
-/**
- * Where the document itself stands — one of six, always exactly one. What is
- * owed on top of it (a failed attempt, a demand, a moving input) is a badge,
- * because those ride alongside a state rather than replacing it.
- */
+/* Render document status separately from failure, request and dependency badges. */
 export function statusOf(
   doc: DocInfo,
   opts: { running?: boolean; stopped?: boolean } = {},
 ): { key: string; label: string } {
   if (opts.running) return { key: 'writing', label: 'writing…' };
   if (opts.stopped) return { key: 'paused', label: 'paused' };
-  // Unwritten docs all read 'waiting' — the group heading already says Next,
-  // so a separate 'next' pill only added noise.
   if (doc.status === 'uninitialized') return { key: 'waiting', label: 'waiting' };
   return { key: doc.status, label: STATUS_LABEL[doc.status] ?? doc.status };
 }
@@ -606,8 +564,7 @@ export function DocBadges({
   );
 }
 
-// One demand, listed from either end: the document it was made of, and the
-// document that made it. Same three answers in both places.
+// Use the same actions for incoming and outgoing revision requests.
 function RequestBar({
   project,
   head,
@@ -626,8 +583,7 @@ function RequestBar({
   const [settled, setSettled] = useState<Set<string>>(new Set());
   const [noting, setNoting] = useState<number | null>(null);
   const [note, setNote] = useState('');
-  // Asking about a demand is the same inline conversation as asking about a
-  // line: the author of the document that made it answers, nothing is kept.
+  // Direct Q&A to the author of the requesting document.
   const [asking, setAsking] = useState<number | null>(null);
   const [question, setQuestion] = useState('');
   const [chat, setChat] = useState<Array<{ i: number; q: string; a: string | null }>>([]);
@@ -637,8 +593,7 @@ function RequestBar({
     if (!q) return;
     const it = items[i];
     const history = chat.filter((c) => c.i === i && c.a).map((c) => ({ q: c.q, a: c.a as string }));
-    // The entry itself, not its wording: the same question asked on two demands
-    // would otherwise be answered once, into both threads.
+    // Key replies by request identity so identical questions on different requests stay separate.
     const entry = { i, q, a: null as string | null };
     setChat((cs) => [...cs, entry]);
     setQuestion('');
@@ -677,8 +632,7 @@ function RequestBar({
     }
   };
 
-  // A demand you have answered leaves at once — it lingered with a "settled"
-  // hint until the next refresh, which reads as "still waiting on you".
+  // Hide settled entries immediately, before the next poll.
   const live = items.map((it, i) => ({ it, i })).filter(({ it }) => !settled.has(keyOf(it)));
   if (live.length === 0 && !err) return null;
 
@@ -809,9 +763,6 @@ function RequestBar({
   );
 }
 
-// The block is there to be used somewhere else — a command, a schema, a path.
-// Selecting it by hand out of a scrolling panel is the one thing GitHub spares
-// the reader, so the button says it copied and goes back to itself.
 function CopyButton({ text }: { text: string }) {
   const [done, setDone] = useState(false);
   useEffect(() => {
@@ -856,8 +807,7 @@ const ALERT_LABEL: Record<AlertKind, string> = {
   caution: 'Caution',
 };
 
-// One 16px glyph each, drawn rather than pulled from an icon package — five
-// paths are cheaper than a dependency, and they inherit the alert's colour.
+// Inline alert icons inherit the alert color.
 function AlertIcon({ kind }: { kind: AlertKind }) {
   const d = {
     note: 'M8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM7.25 7.25h1.5v4h-1.5v-4zM8 4.5a.9.9 0 110 1.8.9.9 0 010-1.8z',
@@ -973,9 +923,7 @@ function DocBlock({
       </div>
     );
   }
-  // `- [ ] …` / `- [x] …` is a checklist item, and the brackets were reaching the
-  // reader as punctuation. The box is drawn, and it is the state: a settled
-  // revision request and a met acceptance criterion both read at a glance.
+  // Render checklist markers as read-only checkbox states.
   const task = token.kind === 'bullet' ? token.text.match(/^\[([ xX])\]\s*(.*)$/s) : null;
   return (
     <div
@@ -1004,9 +952,7 @@ function DocBlock({
   );
 }
 
-// Mermaid fences render as diagrams — the source never shows. The library is
-// lazy-loaded so docs without diagrams pay nothing; a diagram that fails to
-// parse falls back to the raw source block.
+// Lazy-load Mermaid for diagrams; fall back to source code when rendering fails.
 let mermaidId = 0;
 function Mermaid({ code }: { code: string }) {
   const [svg, setSvg] = useState<string | null>(null);
@@ -1018,11 +964,8 @@ function Mermaid({ code }: { code: string }) {
     setFailed(false);
     import('mermaid')
       .then(async ({ default: mermaid }) => {
-        // The fence comes from a document the agent wrote while reading the
-        // user's repository, and the rendered SVG goes in through
-        // dangerouslySetInnerHTML below. 'strict' is mermaid's default today —
-        // pinned here so a library upgrade cannot quietly hand that markup
-        // through unsanitised.
+        // Treat agent-written diagram text as untrusted. Require strict sanitization
+        // before inserting the generated SVG into the DOM.
         mermaid.initialize({ startOnLoad: false, theme: 'neutral', securityLevel: 'strict' });
         const { svg } = await mermaid.render(`kx-mmd-${mermaidId++}`, code);
         if (alive) setSvg(svg);
@@ -1040,8 +983,7 @@ function Mermaid({ code }: { code: string }) {
   return <div className="kx-mermaid-svg" dangerouslySetInnerHTML={{ __html: svg }} />;
 }
 
-// The agent hands back the WHOLE document, so "what actually changed" was left
-// to the reader's eye. These drafts touch a line or two; a line LCS finds them.
+// Use line-based LCS to mark changes in the complete proposed document.
 function lineDiff(a: string, b: string): { sign: ' ' | '-' | '+'; text: string }[] {
   const x = a.split('\n');
   const y = b.split('\n');
@@ -1075,10 +1017,7 @@ function lineDiff(a: string, b: string): { sign: ' ' | '-' | '+'; text: string }
   return out;
 }
 
-// The draft IS the editor — reading it in one box and its changes in another
-// meant holding two documents in your head. So the editor shows the whole file
-// with the changed lines marked, and hands over to the plain textarea the
-// moment you want to type.
+// Show the full proposal with diff markers; switch to a textarea for manual edits.
 function ProposalDiff({
   before,
   after,
@@ -1126,9 +1065,7 @@ function CodeBits({ text }: { text: string }) {
   return <>{parts.map((p, i) => (i % 2 ? <code key={i}>{p}</code> : p))}</>;
 }
 
-// An agent answer is markdown: bullets and **bold** were reaching the reader as
-// literal asterisks. `.kx-explain-a` keeps `pre-wrap`, so line breaks survive —
-// each line only needs its inline spans resolved.
+// Parse inline Markdown in answers; pre-wrap preserves their line breaks.
 function AnswerText({ text }: { text: string }) {
   return (
     <>
@@ -1166,8 +1103,7 @@ function Inline({ text }: { text: string }) {
   );
 }
 
-// The v3 AnnotatableDoc experience: an inline thread right under the selected
-// line — converse with the author (Ask, multi-turn) or drop a revision note.
+// Show inline Q&A and revision notes below the selected block.
 function LineThread({
   thread,
   active,
@@ -1184,8 +1120,7 @@ function LineThread({
   const [text, setText] = useState('');
   const box = useRef<HTMLDivElement>(null);
   const waiting = thread.some((x) => x.answer === null);
-  // A thread opened on a line near the bottom of the drawer unfolded below the
-  // fold — the reader saw a panel that had visibly done something, off-screen.
+  // Scroll newly opened threads into view, including those near the drawer bottom.
   useEffect(() => {
     if (active) box.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }, [active]);
@@ -1230,7 +1165,6 @@ function LineThread({
             }}
           />
           <div className="kx-thread-actions">
-            {/* Sormak önce gelen adım, not bırakmak asıl iş — ve son buton sağda durur. */}
             <button
               className="btn btn-link-primary"
               disabled={!text.trim()}
@@ -1256,9 +1190,7 @@ function mergeWrappedLines(tokens: MdToken[]): MdToken[] {
   const out: MdToken[] = [];
   for (const t of tokens) {
     const prev = out[out.length - 1];
-    // A list item wrapped at 80 chars continued on an indented line, and the
-    // continuation broke out of the list to sit at the left margin. The indent
-    // is what says "still the item above" — an unindented line is a new block.
+    // Merge indented continuation lines into the preceding list item.
     if (
       prev &&
       (prev.kind === 'bullet' || prev.kind === 'ordered') &&
@@ -1275,8 +1207,7 @@ function mergeWrappedLines(tokens: MdToken[]): MdToken[] {
       prev.kind === t.kind &&
       prev.text !== '' &&
       t.text !== '' &&
-      // A line that opens with a list marker is a new item, not a wrap of the
-      // one above — merging those is what produced the asterisk walls.
+      // A new list marker starts a separate item rather than continuing the previous one.
       !/^\s*([-*+]|\d+[.)]) /.test(t.text)
     ) {
       prev.text = `${prev.text} ${t.text}`;

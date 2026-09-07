@@ -163,13 +163,8 @@ export interface RunOutcome {
   error?: string;
 }
 
-// The chain: keep every currently-unblocked step running IN PARALLEL (capped)
-// until nothing is producible (waiting on approvals) or everything in flight
-// settles. Approval routes call this again, so the flow self-advances gate by
-// gate. One loop per project at a time; failed steps stay visible for Retry.
-// projectId → wake(): an approval that lands while the loop is parked in
-// Promise.race nudges it to re-scan immediately (a mid-run unlock must not
-// wait for a completion when the pool has room).
+// One chain loop per project, with capped parallel document runs.
+// Approvals wake the loop to fill available slots without waiting for a running step.
 const advancing = new Map<number, () => void>();
 const MAX_PARALLEL = 3;
 // Tries per document within one chain loop, before the loop leaves it alone.
@@ -213,24 +208,16 @@ export async function advance(
   }
   let wake = () => {};
   const arm = () => new Promise<void>((resolve) => (wake = resolve));
-  // Claim the loop BEFORE anything is awaited. The gate below suspends, and a
-  // second approval arriving during that suspension would find no active loop
-  // and start a pool of its own — two loops, twice the cap, twice the spend.
+  // Claim the loop before awaiting the gate so concurrent approvals cannot start duplicate pools.
   advancing.set(project.id, () => wake());
   try {
     const checked = new Set<string>();
     await drainRechecks(db, project, engine, pkgRoot, checked);
-    // Before the gate, not after. The gate spawns a CLI, and its verdict is
-    // cached per brief version — so editing the brief while paused, which is
-    // the whole reason to pause, missed the cache and spent a run the loop
-    // below then refused to use. A row that is gone stops the loop too.
+    // Check pause/removal before the readiness gate to avoid starting an unwanted CLI run.
     const before = db.prepare('SELECT paused FROM projects WHERE id = ?').get(project.id) as
       { paused: number } | undefined;
     if (!before || before.paused) return;
-    // A document deleted from .kortext/ would otherwise block every step under
-    // it forever, silently: it has no status, so it never counts as settled.
-    // The scaffold puts the skeleton back, which the panel already does on its
-    // own polling; the chain must not depend on someone having it open.
+    // Restore missing skeletons so the chain can recover without panel polling.
     try {
       scaffoldProject(project.repo_path, pkgRoot, {
         skipBrief: (project.kind ?? 'new') === 'existing',
@@ -238,11 +225,8 @@ export async function advance(
     } catch {
       /* repo may be gone; the gate below reports it */
     }
-    // The readiness gate. A project whose evidence says nothing must produce
-    // nothing: no step starts until there is a brief worth analysing, or code to
-    // read. For a new project the verdict is cached per brief version, so this
-    // costs one engine run per edit of the brief, not one per approval.
-    // Tracked like any other run: "Reading the brief…" is a CLI the user can stop.
+    // Require readiness before analysis; cache new-project judgments by brief version.
+    // Track the gate run so pause, restart and cancel can abort it.
     const gate = trackRun(project.id);
     let ready = false;
     try {
@@ -252,30 +236,20 @@ export async function advance(
     }
     if (!ready) return;
     const inFlight = new Set<Promise<unknown>>();
-    // A failed step leaves its document uninitialized, which is exactly what
-    // makes it producible — so the loop picked it again, and again, with no
-    // limit and no wait: a step that fails deterministically (a bad model id, a
-    // rejected key) burns the quota until someone presses Pause. Three tries per
-    // document per loop. A human action — Start, Retry, an approval — enters a
-    // new loop with a fresh count, so giving up here is not giving up for good.
+    // Cap attempts per document to prevent repeated failures from consuming unlimited quota.
+    // A new chain loop starts with a fresh count.
     const attempts = new Map<string, number>();
     for (;;) {
       await drainRechecks(db, project, engine, pkgRoot, checked);
-      // Paused = don't start new steps; running ones finish and the loop exits.
+      // Stop scheduling while paused; wait for in-flight promises to settle.
       const paused = (
         db.prepare('SELECT paused FROM projects WHERE id = ?').get(project.id) as
           { paused: number } | undefined
       )?.paused;
       const room = paused ? 0 : MAX_PARALLEL - inFlight.size;
       if (room > 0) {
-        // Read per step, not once for the loop. The route that changes a
-        // project's CLI says only later steps see it — but the loop was handing
-        // every step the engine it started with, so the switch a user makes when
-        // a quota runs out did nothing until the whole chain finished.
-        //
-        // Only the project's OWN column, never the global fallback: resolving
-        // the engine afresh would ignore the one the caller handed in and reach
-        // for whatever is installed on the machine.
+        // Read the project selection each scheduling pass so later steps use the selected CLI.
+        // If unset, retain the caller-provided engine rather than resolving a global fallback.
         const picked = (
           db.prepare('SELECT engine FROM projects WHERE id = ?').get(project.id) as
             { engine: string } | undefined
@@ -297,11 +271,7 @@ export async function advance(
   }
 }
 
-// Human asked for changes on a written doc: re-run its producing step with
-// the notes attached. The engine rewrites the file back to draft.
-// Callers fire this and forget it, so a refusal before `runStep` opens a job row
-// is a refusal nobody can see. Leave the row ourselves: the panel shows a failed
-// step, which is the truth, instead of a document that quietly never moved.
+// Record refusals as failed jobs because fire-and-forget callers cannot display a returned error.
 function refuse(db: Database.Database, project: Project, rel: string, error: string): RunOutcome {
   db.prepare(
     "INSERT INTO jobs (project_id, doc_rel, status, error, finished_at) VALUES (?, ?, 'failed', ?, datetime('now'))",
@@ -319,9 +289,7 @@ export async function reviseDoc(
 ): Promise<RunOutcome> {
   const step = loadDocMap(pkgRoot, project.kind ?? 'new').get(rel);
   if (!step) return refuse(db, project, rel, `no producing step for ${rel}`);
-  // Refusing while ANY step ran meant answering the second of two documents
-  // did nothing: the first revision was still writing, so the second was
-  // dropped and its questions stayed open. Only this document blocks itself.
+  // Reject concurrent writers to this document; other documents may be revised in parallel.
   if (runningDoc(db, project.id, rel)) {
     return refuse(db, project, rel, `${rel} is already being rewritten — wait for it to land`);
   }
@@ -330,11 +298,8 @@ export async function reviseDoc(
   return out;
 }
 
-// Pause aborts a revision without touching the files, so a document that was
-// approved or not-applicable when the notes were filed still reads as settled —
-// and a stopped re-split leaves the previous .kopeng/ plan in place, which reads
-// as done. Neither has anything for the chain to produce, so Continue walked
-// straight past the notes. Re-fire both from the notes on the job row.
+// Resume stopped revisions and plan revisions from their saved notes.
+// Their previous outputs may still appear settled, so normal producibility checks miss them.
 export async function resumeStoppedRevisions(
   db: Database.Database,
   project: Project,
@@ -351,9 +316,7 @@ export async function resumeStoppedRevisions(
   await Promise.all(
     stopped.map((job) => {
       const notes = JSON.parse(job.notes || '[]') as string[];
-      // No notes = a first write or a first split, which starts from scratch:
-      // the chain picks the document up on its own, and the split is the
-      // human's own button, not something to press again for them.
+      // Initial document writes are handled by the chain; initial planning remains user-triggered.
       if (!notes.length) return null;
       return job.kind === 'plan'
         ? runPlanning(db, project, engine, pkgRoot, notes)
@@ -363,7 +326,7 @@ export async function resumeStoppedRevisions(
 }
 
 // Line-anchored Q&A: the author persona answers about its own document.
-// Nothing is written anywhere — the answer lives only in the panel.
+// No document is modified; the answer is returned to the panel and CLI output is logged.
 export async function explainDoc(
   db: Database.Database,
   project: Project,
@@ -389,9 +352,7 @@ export async function explainDoc(
     '',
     `QUESTION:\n${question}`,
   ].join('\n');
-  // Tracked like every other spawn. An untracked signal is one `abortRuns`
-  // cannot see, so pause, restart and cancel walked straight past this run —
-  // and cancel then wiped the directory it was still reading.
+  // Track Q&A so pause, restart and cancel can abort it before deleting project files.
   const run = trackRun(project.id);
   let res;
   try {
@@ -432,8 +393,7 @@ export function appendRevisionRequest(
   const line = `- \`${targetRel}\` — ${reason.replace(/\s+/g, ' ').trim()}`;
   const head = lines.findIndex((l) => /^#{1,6}\s+Revision Requests\s*$/i.test(l));
   if (head === -1) {
-    // No section to file it under: give the document one rather than dropping
-    // a finding the panel would then never surface.
+    // Create the required section if the document does not already have it.
     lines.push('', '## Revision Requests', '', line);
   } else {
     let end = head + 1;
@@ -446,10 +406,7 @@ export function appendRevisionRequest(
   writeFileSync(path, lines.join('\n'), 'utf8');
 }
 
-/**
- * One reader, one moved input. The engine only judges — the server writes the
- * demand, so a verdict cannot arrive as prose nobody can act on.
- */
+/* The CLI judges the changed input; the server records any resulting revision request. */
 async function runRecheck(
   db: Database.Database,
   project: Project,
@@ -534,12 +491,7 @@ async function runRecheck(
   }
 }
 
-/**
- * A document was approved after being rewritten. Every approved document that
- * reads it was written against the old text, so each is judged against the new
- * one. On the first pass nothing downstream is approved yet, so this is silent
- * until a document is genuinely revised.
- */
+/* Queue rechecks for approved readers when their source is edited or approved. */
 export function recheckDependents(
   db: Database.Database,
   project: Project,
@@ -596,11 +548,8 @@ async function drainRechecks(
   }
 }
 
-// A revision the human applies. The document nobody's step produces — the brief
-// — cannot be sent back to an author, but the change another document asked for
-// is still concrete work. So the engine drafts it and writes NOTHING the human
-// keeps: the proposal lands in a scratch file, is read once, and is deleted.
-// Applying it is the ordinary save the human already performs by hand.
+// Draft a revision into a temporary text file, return it to the editor, then delete it.
+// The human must save the proposal before the document changes.
 export async function proposeRevision(
   db: Database.Database,
   project: Project,
@@ -631,9 +580,7 @@ export async function proposeRevision(
     'REQUESTS:',
     ...notes.map((n) => `- ${n}`),
   ].join('\n');
-  // Tracked, for the reason explainDoc gives above — and this one WRITES into
-  // `.kortext/`, so an untracked run outlived a cancel that had just deleted
-  // that directory and put a file back into it.
+  // Track proposals so cancellation cannot leave a CLI writing into removed project files.
   const run = trackRun(project.id);
   let res;
   try {
@@ -667,9 +614,7 @@ export async function proposeRevision(
   return { proposal };
 }
 
-// "Kopeng'e aktar" = split the work into Version → Epic → Task files under
-// .kopeng/ (the draft export contract kopeng will consume). One big engine
-// run, tracked as a 'plan' job; revise notes re-run it.
+// Export Version, Epic and Task files under .kopeng/ as one plan job; notes request a revision.
 export async function runPlanning(
   db: Database.Database,
   project: Project,
@@ -677,8 +622,7 @@ export async function runPlanning(
   pkgRoot: string,
   reviseNotes: string[] = [],
 ): Promise<RunOutcome> {
-  // The notes go on the row, as for a document step: a split the pause stops
-  // is resumed from them, and without them the request is gone with the run.
+  // Persist plan revision notes so Continue can resume an interrupted run.
   const job = db
     .prepare(
       "INSERT INTO jobs (project_id, doc_rel, kind, notes) VALUES (?, '.kopeng/', 'plan', ?) RETURNING *",
@@ -756,11 +700,7 @@ export async function runPlanning(
   }
 }
 
-/**
- * Cancel promises to take back everything kortext wrote, and the logs are
- * kortext's writing too: without this they outlive the project they belong to,
- * in a directory nothing ever cleans.
- */
+/* Remove logs belonging to this project from the database-specific log directory. */
 export function removeRunLogs(projectId: number, dir: string): void {
   let entries: string[];
   try {
@@ -780,8 +720,7 @@ export function failStaleJobs(db: Database.Database): void {
   ).run();
 }
 
-// Runs one step to completion and settles the job row. Sequential by design:
-// callers guard with runningJob() first.
+// Run one document step and record its outcome; callers prevent concurrent writes to the same document.
 export async function runStep(
   db: Database.Database,
   project: Project,
@@ -811,10 +750,7 @@ export async function runStep(
   };
 
   const outPath = join(project.repo_path, '.kortext', step.output);
-  // What the document said before the run. A revision rewrites a file that is
-  // already there, so `existsSync` proves nothing about it: an agent that reads
-  // the notes, changes its mind and exits 0 leaves the old text behind, and the
-  // demand that asked for the change is then ticked as applied.
+  // Compare contents as well as existence: a successful CLI exit may leave the prior document unchanged.
   const before =
     reviseNotes.length > 0 && existsSync(outPath) ? readFileSync(outPath, 'utf8') : null;
 
@@ -854,8 +790,7 @@ export async function runStep(
       );
     }
     const status = readFrontmatter(written).status;
-    // The design document is the one whose value is visual — draw it as soon
-    // as it lands, so the human reviews swatches rather than hex codes.
+    // Generate the design preview after a successful DESIGN.md write.
     if (step.output === 'DESIGN.md') writeDesignPreview(project);
     if (status !== 'draft' && status !== 'not-applicable') {
       return settle('failed', `${step.output} written but status is '${status}' (expected draft)`);

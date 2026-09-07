@@ -1,6 +1,4 @@
-// DESIGN.md says what the tokens are; this renders what they look like.
-// Deterministic — the page is only ever what the document already declares,
-// so a swatch that surprises you is a token you wrote, not one we invented.
+// Render a preview from the tokens declared in DESIGN.md without inventing missing values.
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Project } from './db.js';
@@ -37,8 +35,7 @@ export interface DesignTokens {
 const COLOR =
   /^(#[0-9a-f]{3,8}|rgba?\([^)]*\)|hsla?\([^)]*\)|oklch\([^)]*\)|oklab\([^)]*\)|color-mix\([^)]*\))$/i;
 const LENGTH = /^-?\d*\.?\d+(px|rem|em|%|vh|vw|ch)$/i;
-// Anything that reaches a style attribute has to survive this: the document is
-// written by an agent, so "value" is untrusted text, not a constant.
+// Validate agent-written values before placing them in style attributes.
 const CSS_SAFE = /^[#\w%.,()\-+\s/'"]*$/;
 
 const unwrap = (s: string) => s.trim().replace(/^`|`$/g, '').trim();
@@ -67,8 +64,7 @@ function cells(line: string): string[] {
 
 const isSeparator = (row: string[]) => row.every((c) => /^:?-{2,}:?$/.test(c));
 
-// The template writes a placeholder (`[VALUE]`, `[Family]`) wherever the
-// designer has not decided yet. A placeholder is not a token.
+// Ignore unresolved template placeholders.
 const decided = (v: string) => v !== '' && !/^\[.*\]$/.test(v);
 
 function bucket(tokens: DesignTokens, t: Token): void {
@@ -105,10 +101,7 @@ export function parseDesignTokens(md: string): DesignTokens {
   // value column, a heading that says dark, or a `-dark` suffix on the name.
   let darkColumn: number | null = null;
   let darkSection = false;
-  // A dark value restates a token that already exists — under a "Dark mode"
-  // heading it repeats the name, in a two-column table it sits beside it, and
-  // in a flat list it carries a `-dark` suffix. All three land on the same
-  // token, so one swatch shows both modes instead of two unrelated ones.
+  // Merge dark-mode declarations into the corresponding token, regardless of declaration format.
   const attach = (name: string, value: string, note: string, dark?: string) => {
     const base = name
       .replace(/-?dark-?/, '-')
@@ -196,8 +189,7 @@ export function parseDesignTokens(md: string): DesignTokens {
 }
 
 // --- contrast -------------------------------------------------------------
-// Only hex resolves to a number here. A token written as rgb()/oklch() gets no
-// ratio rather than a guessed one — a wrong AA badge is worse than none.
+// Calculate contrast only for hex colors; unsupported formats receive no ratio.
 function luminance(hex: string): number | null {
   const h = hex.replace('#', '');
   const full =

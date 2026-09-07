@@ -51,8 +51,7 @@ Data lives in a global SQLite database — one database, multiple projects.`);
 const PORT = Number(values.port ?? process.env.PORT ?? 3441);
 const DB_PATH = values.db ?? defaultDbPath();
 
-// The terminal's half of the panel's ⏻ button: same endpoint, same refusal
-// while a step is running, so neither way can end an analysis mid-write.
+// Use the panel shutdown endpoint so CLI and UI enforce the same busy check.
 if (values.stop) {
   const res = await fetch(`http://127.0.0.1:${PORT}/api/quit`, { method: 'POST' }).catch(
     () => null,
@@ -70,20 +69,15 @@ if (values.stop) {
   process.exit(0);
 }
 
-// Started from a terminal, kortext hands itself over to a detached copy and
-// exits: the window can then be closed without taking the panel down with it.
-// The copy re-enters this file with KORTEXT_CHILD set and runs the server.
-// `--no-detach` is the foreground mode the dev script (tsx watch) needs.
+// Detach with KORTEXT_CHILD set so closing the terminal leaves the server running.
+// Development uses --no-detach to keep the watcher in the foreground.
 if (!process.env.KORTEXT_CHILD && !values['no-detach']) {
   const url = `http://localhost:${PORT}`;
   const logPath = `${DB_PATH}.log`;
-  // Someone else may hold the port — a kortext already started, or another
-  // program. The first is not an error: point the browser at it and stop.
+  // Reuse an existing Kortext server on this port.
   const already = await serverUp(PORT);
   if (!already) {
-    // The child never opens the browser: the parent does, once it knows the
-    // panel actually answers. A browser opened at a port nothing is listening
-    // on is how "kortext is broken" reports start.
+    // Only the parent opens the browser, after the server passes its health check.
     respawnDetached(
       fileURLToPath(import.meta.url),
       [...process.argv.slice(2), '--no-open'],
@@ -103,16 +97,8 @@ if (!process.env.KORTEXT_CHILD && !values['no-detach']) {
 const db = openDb(DB_PATH);
 const app = buildApp(db, pkgRoot, DB_PATH);
 
-// Loopback only. Without a host, Node binds `*` — every interface — and the
-// panel's API answers anyone on the same Wi-Fi: the project list carries
-// absolute paths, /docs/content reads and rewrites the analysis, and /cancel
-// deletes it. Nothing here is authenticated, so the address is the boundary.
-//
-// Both families, because a host argument binds exactly one address and the
-// browser is opened at `localhost` — which resolves to ::1 first on plenty of
-// machines. One listener on 127.0.0.1 would leave those looking at a refused
-// connection under a console line saying the panel is up. The second bind is
-// best-effort: a machine with IPv6 switched off refuses it, and that is fine.
+// Bind only loopback addresses: the API exposes local paths and file mutations without authentication.
+// Listen on IPv4 and, where available, IPv6 because localhost can resolve to either.
 app.listen(PORT, '127.0.0.1', () => {
   const url = `http://localhost:${PORT}`;
   console.log(`kortext panel: ${url}`);

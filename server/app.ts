@@ -58,19 +58,9 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   failStaleJobs(db);
   const app = express();
 
-  // Binding to loopback keeps the network out; it does not keep a web page out.
-  // A site the user is visiting can POST /api/projects/1/cancel with no body and
-  // no content type — a simple request, so the browser sends it without a
-  // preflight and the analysis is deleted. Ids are small integers, so guessing
-  // one is free. The same check refuses a rebound DNS name pointed at 127.0.0.1.
-  //
-  // Any loopback origin is allowed whatever its port: the vite dev server proxies
-  // from :3442, and code already running on this machine is not the threat.
-  // Hostnames are case-insensitive, so the comparison has to be. The bare
-  // `::1` form is gone rather than fixed: the port strip below turns it into
-  // `:` before any comparison could see it, and RFC 7230 requires the bracketed
-  // form in a Host header anyway — `[::1]` has no trailing `:digits`, so it
-  // survives the strip untouched.
+  // Reject non-loopback Host/Origin values to prevent DNS rebinding and cross-site requests
+  // from reading or deleting project files. Simple POST requests do not require a preflight.
+  // Allow local development ports and normalize hostname case while preserving bracketed IPv6.
   const isLocal = (value: string | undefined): boolean => {
     if (!value) return false;
     const host = value
@@ -129,23 +119,17 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     hasActiveRuns() ||
     !!db.prepare("SELECT 1 FROM jobs WHERE status = 'running' LIMIT 1").get();
 
-  // Quit from the panel. The server outlives the terminal it was started from,
-  // so the browser is the only place left to stop it — and closing the tab must
-  // not do it, or a mis-click ends a running analysis. A step in flight is not
-  // interrupted: it would land as failed and its work would be gone.
+  // Refuse shutdown while work is active; closing the browser tab does not stop the server.
   app.post('/api/quit', (_req, res) => {
     if (stepRunning()) {
       return res.status(409).json({ error: 'a step is running — wait for it, then quit' });
     }
     res.json({ ok: true });
-    // Answer first: exiting inside the handler leaves the panel with a dead
-    // socket and no way to tell a clean stop from a crash.
+    // Flush the response before exiting so the client can confirm shutdown.
     setTimeout(() => process.exit(0), 100);
   });
 
-  // A global npm install lives under node_modules; a dev checkout or a `npm link`
-  // does not. Updating that one would install a second copy over the checkout the
-  // developer is editing, so neither the strip nor the button is offered there.
+  // Offer self-update only for package paths under node_modules, excluding normal dev checkouts.
   const managed = pkgRoot.includes(`${sep}node_modules${sep}`);
 
   app.get('/api/version', async (_req, res) => {
@@ -153,14 +137,10 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     res.json({ current: version, latest, stale: !!latest && isNewer(latest, version) });
   });
 
-  // The update the user would otherwise type. The new code is on disk when npm
-  // returns, but this process is still the old one — the panel says so rather
-  // than restarting the server out from under a running analysis.
+  // Installing replaces files on disk; the running process keeps its boot-time version until restarted.
   app.post('/api/version/update', async (_req, res) => {
     if (!managed) return res.status(400).json({ error: 'not an npm install — update it yourself' });
-    // npm replaces dist/, agents/ and templates/ under a running process, and a
-    // step reads those while it works. Wait for the step rather than pull the
-    // files out from under it.
+    // Wait for active work before npm replaces files read by the runner.
     if (stepRunning()) {
       return res.status(409).json({ error: 'a step is running — wait for it, then update' });
     }
@@ -174,8 +154,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   });
 
   app.get('/api/projects', (_req, res) => {
-    // Cards show one count (9/15) — settled the same way the group headers
-    // count it: approved | not-applicable.
+    // Count approved and not-applicable documents as settled.
     const projects = listProjects(db).map((p) => {
       const docCounts = { settled: 0, total: 0 };
       try {
@@ -237,8 +216,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     res.json({ jobs: listJobs(db, project.id), running: runningJob(db, project.id) ?? null });
   });
 
-  // Kick the next producible analysis step (fire-and-forget; the panel polls
-  // jobs + docs to watch it land). R2 turns approval into the trigger.
+  // Start the chain asynchronously; the panel polls jobs and documents for progress.
   app.post('/api/projects/:id/run-next', (req, res) => {
     const project = projectOr404(req.params.id, res);
     if (!project) return;
@@ -286,12 +264,11 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     res.status(202).json({ started: rel });
   });
 
-  // The readiness gate's standing verdict. Null until the brief is approved and
-  // the gate has run once; `checking` covers the minute the judgment is out.
+  // Return the latest readiness verdict and whether a check is active.
   app.get('/api/projects/:id/readiness', (req, res) => {
     const project = projectOr404(req.params.id, res);
     if (!project) return;
-    // No CLI, no analysis — say so here rather than letting Start do nothing.
+    // Expose a missing CLI as an actionable readiness error.
     if (!engineFor(db, project)) {
       return res.json({
         readiness: {
@@ -316,7 +293,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     void pickDirectoryNative().then((path) => res.json({ path }));
   });
 
-  // Archive is a shelf, not a bin: the row and the repo both stay.
+  // Archive without deleting the registry row or project files.
   app.post('/api/projects/:id/archive', (req, res) => {
     const project = projectOr404(req.params.id, res);
     if (!project) return;
@@ -330,8 +307,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     res.status(removed ? 200 : 404).json({ removed });
   });
 
-  // Pause = the automatic chain stops starting new steps (a running one
-  // finishes); continue flips it back and kicks the chain.
+  // Pause aborts active runs and stops scheduling; Continue resumes interrupted work and the chain.
   app.post('/api/projects/:id/pause', (req, res) => {
     const project = projectOr404(req.params.id, res);
     if (!project) return;
@@ -355,15 +331,10 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     if (!project) return;
     resetting++;
     try {
-      // Pause FIRST. Aborting alone is not enough: the stopped steps settle, the
-      // chain loop wakes, sees the documents still unwritten and starts them
-      // again inside the very window we are waiting through — leaving CLIs
-      // running for a project that is about to be wiped.
+      // Pause before aborting so the chain cannot schedule more steps while cleanup waits.
       db.prepare('UPDATE projects SET paused = 1 WHERE id = ?').run(project.id);
       abortRuns(project.id);
-      // Long enough for the escalation in cli-spawn (SIGTERM, then SIGKILL after
-      // a second) to finish, so a CLI that ignores SIGTERM cannot write into the
-      // directory after it is wiped.
+      // Wait longer than SIGTERM-to-SIGKILL escalation before deleting files the CLI may write.
       await new Promise((r) => setTimeout(r, 2500));
       const kortext = join(project.repo_path, '.kortext');
       if (existsSync(kortext)) {
@@ -403,8 +374,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       uninstallContract(project.repo_path);
       removeRunLogs(project.id, logRootDir(db));
       removeProject(db, project.id);
-      // The row is gone, so nothing can pause the loop any more; anything that
-      // slipped through between the abort and here is killed now.
+      // Abort any run registered during the cleanup delay.
       abortRuns(project.id);
       res.json({ ok: true });
     } catch (err) {
@@ -446,8 +416,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   app.get('/api/projects/:id/docs', (req, res) => {
     const project = projectOr404(req.params.id, res);
     if (!project) return;
-    // Self-heal: idempotent re-scaffold fills anything missing (AGENTS.md,
-    // workflows, skeletons) whenever the panel looks at a project.
+    // Restore missing document skeletons and refresh the contract block during polling.
     try {
       scaffoldProject(project.repo_path, pkgRoot, { skipBrief: project.kind === 'existing' });
     } catch {
@@ -473,10 +442,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     const project = projectOr404(req.params.id, res);
     if (!project) return;
     const { rel, content, settleRequests } = req.body ?? {};
-    // A save with no content is a client bug, not an instruction to empty an
-    // approved document: the frontmatter would go with the text, the document
-    // would read as unwritten, and the chain would spend a run replacing what
-    // the human had already approved.
+    // Reject empty saves to prevent accidental loss of document contents and approval state.
     if (typeof content !== 'string' || content.trim() === '') {
       return res.status(400).json({ error: 'content is required' });
     }
@@ -487,9 +453,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
         listDocs(db, project, pkgRoot).find((d) => d.rel === String(rel))?.status === 'approved';
       writeFileSync(path, content, 'utf8');
       writeDesignPreview(project);
-      // Saving the agent's draft IS the answer to the demands that produced it.
-      // Without this the change landed on disk and the request still stood, so
-      // the document never left "Needs you" — the loop had no way to close.
+      // Saving a requested proposal settles its incoming revision requests.
       if (settleRequests) {
         for (const r of listDocs(db, project, pkgRoot).find((d) => d.rel === String(rel))
           ?.revisionRequests ?? []) {
@@ -502,14 +466,9 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
           );
         }
       }
-      // An edit changes the evidence, so the chain has to look again — editing
-      // the brief is the whole way out of a closed gate, and a save that
-      // changed nothing downstream is a no-op re-scan.
+      // Re-evaluate readiness and producibility after edits.
       kickChain(project);
-      // Editing an APPROVED document changes what its readers were written
-      // against, exactly as approving a rewritten one does — so it owes them
-      // the same re-reading. Without this the handshake can complete on
-      // documents that contradict the text they were derived from.
+      // Recheck approved readers against the updated source document.
       if (wasApproved) {
         const engine = engineFor(db, project);
         recheckDependents(db, project, String(rel), engine, pkgRoot);
@@ -521,8 +480,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     }
   });
 
-  // The tokens in DESIGN.md, drawn. Rendered fresh on every open so the page
-  // can never be staler than the document it reads.
+  // Render the current DESIGN.md tokens on each preview request.
   app.get('/api/projects/:id/docs/design-preview', (req, res) => {
     const project = projectOr404(req.params.id, res);
     if (!project) return;
@@ -555,9 +513,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       setFrontmatterStatus(path, 'approved');
       writeDesignPreview(project);
       kickChain(project);
-      // Approving a document that was rewritten leaves every approved reader of
-      // it standing on the old text. Judge each — silent on the first pass,
-      // because nothing downstream is approved yet.
+      // Recheck already-approved readers; there are none on the initial pass.
       const engine = engineFor(db, project);
       recheckDependents(db, project, String(rel), engine, pkgRoot);
       res.json({ ok: true });
@@ -566,10 +522,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     }
   });
 
-  // Human asked for changes: re-run the producing step with the notes.
-  // The engine drafts the change another document demanded. The demands live in
-  // the documents themselves, so the panel sends only the file — reading which
-  // ones still stand is the server's job, not the caller's.
+  // Draft the incoming revision requests from the documents, rather than accepting notes from the client.
   app.post('/api/projects/:id/docs/propose', async (req, res) => {
     const project = projectOr404(req.params.id, res);
     if (!project) return;
@@ -610,9 +563,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     } catch (err) {
       return res.status(400).json({ error: (err as Error).message });
     }
-    // The call is fire-and-forget, so anything that would make it refuse has to
-    // be answered here — otherwise the panel reports success, clears the notes
-    // and the answers are gone.
+    // Validate before returning 202 so a rejected revision does not discard the client's notes.
     if (!loadDocMap(pkgRoot, project.kind ?? 'new').has(String(rel))) {
       return res.status(409).json({ error: `${rel} is prime's own document — edit it here` });
     }
@@ -623,9 +574,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     res.status(202).json({ started: rel });
   });
 
-  // One demand, one decision — taken from either end. The document that made
-  // the request shows it too, so answering a question in STACK.md and settling
-  // what STACK.md asked of the brief are the same sitting.
+  // Apply or dismiss a revision request from either its source or target document.
   app.post('/api/projects/:id/docs/decide-request', (req, res) => {
     const project = projectOr404(req.params.id, res);
     if (!project) return;
@@ -649,8 +598,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       );
       return res.json({ dismissed: 1 });
     }
-    // Applying means the document is rewritten, so it needs an author. The
-    // brief has none: it is prime's own, and its own drawer drafts the change.
+    // The brief has no producing step; it must be edited or revised through a proposal.
     if (!doc.hasProducingStep) {
       return res
         .status(409)
@@ -671,7 +619,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     res.status(202).json({ started: rel, notes: notes.length });
   });
 
-  // Line-anchored Q&A — synchronous, nothing persisted.
+  // Return line-anchored Q&A without modifying documents; CLI output is logged.
   app.post('/api/projects/:id/docs/explain', (req, res) => {
     const project = projectOr404(req.params.id, res);
     if (!project) return;
@@ -701,7 +649,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       .catch((err) => res.status(500).json({ error: (err as Error).message }));
   });
 
-  // "Kopeng'e aktar": split the work into .kopeng/ files (one big plan job).
+  // Export the completed analysis as a Kopeng plan.
   app.post('/api/projects/:id/transfer', (req, res) => {
     const project = projectOr404(req.params.id, res);
     if (!project) return;
@@ -786,8 +734,7 @@ ${body}`,
     });
   });
 
-  // A missing /api route used to reach the SPA fallback, and the panel reported
-  // "Unexpected token '<'" instead of the route it could not find.
+  // Return JSON for unknown API routes instead of serving the HTML application shell.
   app.use('/api', (req, res) =>
     res.status(404).json({ error: `no such endpoint: ${req.method} ${req.originalUrl}` }),
   );

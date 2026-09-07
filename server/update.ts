@@ -1,8 +1,6 @@
 import { spawn } from 'node:child_process';
 
-// The registry is the only outbound call kortext makes. It is a plain GET for a
-// version string, it is cached for the day, and a failure is silent: no network,
-// no strip, nothing in the panel to dismiss.
+// Cache registry version checks for six hours; failures hide the update notice.
 const LATEST_URL = 'https://registry.npmjs.org/kortext/latest';
 const CACHE_MS = 6 * 60 * 60 * 1000;
 
@@ -22,11 +20,7 @@ export async function latestVersion(): Promise<string | null> {
   }
 }
 
-/**
- * Release order on the numbers only. A prerelease (3.2.0-rc.1) compares as its
- * release, so it never reads as newer than the release it precedes — which is
- * the right answer for a strip that tells people to install it.
- */
+/* Compare the first three numeric version components, ignoring prerelease suffixes. */
 export function isNewer(latest: string, current: string): boolean {
   const parts = (v: string) =>
     v
@@ -39,12 +33,8 @@ export function isNewer(latest: string, current: string): boolean {
 }
 
 /**
- * The same `npm install -g` the README asks for, run for the user. The script
- * flag is the one from the install instructions: npm no longer runs install
- * scripts by default, and the SQLite binding is the one package that may need
- * its own. Windows installs npm as a `.cmd` shim, which spawn cannot execute
- * without a shell — the arguments are fixed strings, so nothing user-written
- * reaches it.
+ * Update the global package and allow the SQLite binding install script.
+ * Windows requires a shell for the npm .cmd shim; command arguments are fixed.
  */
 export function selfUpdate(): Promise<{ ok: boolean; output: string }> {
   return new Promise((resolve) => {

@@ -19,25 +19,20 @@ export interface DocInfo {
   inputs: string[];
   blocked: boolean; // an input is not approved yet
   /**
-   * Approved, but an input is moving: it carries an open demand of its own, or
-   * it fell out of approved. Nothing is wrong yet — when that input settles
-   * again, this document is re-read against it.
+   * Approved document whose input has an open request or is no longer settled.
+   * Recheck it after that input settles.
    */
   dependentOn: string[];
   openQuestions: boolean; // carries unanswered questions for prime
   /** A workflow step writes this document. The brief has none — it is prime's own. */
   hasProducingStep: boolean;
-  /** Changes other documents have asked of THIS one, still unactioned. */
+  /* Open incoming revision requests. */
   revisionRequests: Array<{ from: string; reason: string }>;
-  /** Changes THIS one has asked of others, still unactioned — decidable here too. */
+  /* Open outgoing revision requests, also actionable from this document. */
   sentRequests: Array<{ target: string; reason: string; targetHasStep: boolean }>;
 }
 
-/**
- * A document that finds a problem upstream writes one line under
- * `## Revision Requests`, naming the target file in backticks. Parsed so the
- * panel can offer the action — a demand in prose is one nobody can act on.
- */
+/* A revision request names a target file in backticks under Revision Requests. */
 // `- [ ] \`TARGET.md\` — reason`. The checkbox is optional (older documents and
 // the templates write the bare form) and, when ticked, means the demand is
 // settled. The template's own bracket prompt is not a request.
@@ -54,8 +49,7 @@ export function parseRevisionRequests(content: string): Array<{ target: string; 
     }
     if (!inSection) continue;
     const m = line.match(REQUEST_LINE);
-    // A ticked box is a demand that has been settled — the line under it says
-    // how. Both the panel and every agent reading the document see the same mark.
+    // Checked requests are settled and excluded from the pending list.
     if (m && (m[1] ?? '').trim().toLowerCase() !== 'x') {
       out.push({ target: m[2]!.replace(/^\.kortext\//, ''), reason: m[3]!.trim() });
     }
@@ -63,9 +57,7 @@ export function parseRevisionRequests(content: string): Array<{ target: string; 
   return out;
 }
 
-// Every written document keeps its questions under one heading, so "is anyone
-// waiting on the human?" is a scan rather than a judgement. A line that is
-// still the template's own bracket prompt does not count as a question.
+// Read questions only from the Open Questions section; ignore template placeholders.
 export function hasOpenQuestions(content: string): boolean {
   const lines = content.split('\n');
   let inSection = false;
@@ -132,8 +124,7 @@ export function loadDocMap(
   kind: 'new' | 'existing' = 'new',
 ): Map<string, DocStep> {
   const map = new Map<string, DocStep>();
-  // ponytail: only the analysis workflow declares steps; planning-pipeline.md
-  // produces .kopeng/ files, which are not documents on the shelf.
+  // Only analysis workflows declare document steps; planning produces separate .kopeng/ files.
   const p = join(pkgRoot, 'workflows', `${workflowNameFor(kind)}.md`);
   if (!existsSync(p)) return map;
   for (const step of parseWorkflowSteps(readFileSync(p, 'utf8'))) {
@@ -165,10 +156,7 @@ export function setFrontmatterStatus(path: string, status: string): void {
   }
 }
 
-// A settled demand is recorded where it was made. Keeping the outcome in a
-// side file meant the document still read as an open demand to every agent that
-// opened it — the panel knew it was closed and the model did not. So the line
-// itself carries the verdict, and the document is the only source of truth.
+// Record the outcome in the requesting document so the panel and CLI read the same state.
 export function markRequestHandled(
   project: Project,
   from: string,
@@ -194,8 +182,7 @@ export function markRequestHandled(
     if (m[2]!.replace(/^\.kortext\//, '') !== target.replace(/^.*\//, '') && m[2] !== target)
       continue;
     if ((m[3] ?? '').trim() !== reason.trim()) continue;
-    // The ticked box says it is closed; the line under it says what closed it,
-    // so "dismissed" and "the agent rewrote it" are not the same record.
+    // Keep both the settled marker and the outcome in the source document.
     lines.splice(i, 1, `- [x] \`${m[2]}\` — ${m[3]}`, `  - ${outcome} · ${day}`);
     writeFileSync(path, lines.join('\n'), 'utf8');
     return;
@@ -238,18 +225,13 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
   // One shelf: every .md in .kortext/ is a document of this project.
   collect(join(project.repo_path, '.kortext'));
 
-  // Each request lands in the inbox of the document it names. One a human has
-  // already actioned is remembered outside the documents, so sending a file
-  // back does not leave the demand standing forever.
+  // Attach each open request to its target and source documents.
   for (const r of requests) {
     const target = docs.find((d) => d.rel === r.target);
-    // A document that was never written cannot be asked to change — the step
-    // that writes it will read the requester as an input anyway.
+    // Only written documents can receive revision requests.
     if (!target || target.status === 'uninitialized') continue;
-    // Key on the RESOLVED rel, which is what the deciding route writes.
     target.revisionRequests.push({ from: r.from, reason: r.reason });
-    // The same demand, seen from the document that made it: deciding it there
-    // saves opening the target just to answer a question you already read.
+    // Expose the same request on the source document for either-end decisions.
     docs
       .find((d) => d.rel === r.from)
       ?.sentRequests.push({
@@ -265,10 +247,7 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
   const byRel = new Map(docs.map((d) => [d.rel, d]));
   for (const doc of docs) {
     doc.blocked = doc.inputs.some((i) => !settled(statuses.get(i)));
-    // Only an approved document can be dependent: an unwritten one has nothing
-    // to re-read, and one still in draft is about to be rewritten anyway. The
-    // input is "moving" either because someone asked it to change or because it
-    // fell out of approved — for the reader the two mean the same thing.
+    // Only approved readers need rechecking when an input becomes unsettled or receives a request.
     if (doc.status !== 'approved') continue;
     doc.dependentOn = doc.inputs.filter((i) => {
       const input = byRel.get(i);
@@ -277,12 +256,8 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
     });
   }
 
-  // Dependency ordering: a document sits one step behind its deepest input
-  // (BRIEF → … → TEST). The graph is a diamond — nearly everything descends from
-  // the PRD — so the memo has to be per-document and the cycle guard has to be
-  // the path being walked, not every document already seen. Sharing one "seen"
-  // set across sibling branches makes the second branch to reach a shared input
-  // score it 0, which collapses the order into traversal order.
+  // Sort by maximum dependency depth. Memoize per document, but keep cycle detection
+  // local to each traversal path so shared inputs in a diamond retain their depth.
   const memo = new Map<string, number>();
   const depth = (rel: string, path = new Set<string>()): number => {
     const done = memo.get(rel);

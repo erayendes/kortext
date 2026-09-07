@@ -25,8 +25,7 @@ test('parseWorkflowSteps extracts inputs/outputs/author/approver per output', ()
   const prd = steps.find((s) => s.output === 'PRODUCT.md');
   assert.ok(prd);
   assert.equal(prd.author, '+product-manager');
-  // The PRD is written from the brief alone: measurement instruments it and
-  // compliance judges it, so both come after.
+  // PRODUCT.md depends on the brief; growth and compliance documents depend on later analysis.
   assert.deepEqual(prd.inputs, ['BRIEF.md']);
   const legal = steps.find((s) => s.output === 'LEGAL.md');
   assert.ok(legal);
@@ -52,10 +51,8 @@ test('listDocs: dependency blocking follows approvals; regressed input warns dep
   assert.ok(
     docs.findIndex((d) => d.rel === 'BRIEF.md') < docs.findIndex((d) => d.rel === 'PRODUCT.md'),
   );
-  // The graph is a diamond: nearly everything descends from the PRD, so a
-  // document must sort behind every input, not behind whichever branch was
-  // walked first. STACK feeds ARCHITECTURE, SECURITY feeds ENVIRONMENT feeds
-  // DATABASE feeds API.
+  // Verify maximum dependency depth across shared inputs: STACK to ARCHITECTURE,
+  // then SECURITY to ENVIRONMENT to DATABASE to API.
   const at = (rel: string) => docs.findIndex((d) => d.rel === rel);
   for (const [before, after] of [
     ['STACK.md', 'ARCHITECTURE.md'],

@@ -11,7 +11,7 @@ import {
 } from './api';
 import { DocBadges, DocDrawer, StatusBadge } from './DocDrawer';
 
-// ponytail: last two segments read fine in a card; the full path lives in the tooltip
+// Show the final two path segments on the card; retain the full path in its tooltip.
 function shortPath(p: string) {
   const parts = p.split('/').filter(Boolean);
   return parts.length > 2 ? '…/' + parts.slice(-2).join('/') : p;
@@ -41,8 +41,7 @@ export function App() {
       .then(refresh)
       .catch((e) => setError(e.message));
 
-  // A div, not a button: an archived card carries its own Unarchive control,
-  // and a button inside a button is not a thing.
+  // Use a separate keyboard-accessible card target to avoid nesting the Unarchive button.
   const projectCard = (p: Project) => (
     <div
       key={p.id}
@@ -143,10 +142,7 @@ export function App() {
           {!adding && <Siblings />}
         </main>
       )}
-      {/* An application status bar, not a web page footer: two fixed lines under
-          the same name — what is true right now on the first, and on the second
-          the way to say that it is not. The credit sits opposite, so nothing in
-          the column below `kortext` belongs to the branding. */}
+
       <footer className="kx-statusbar">
         <span className="kx-statusbar-lines">
           <span className="kx-statusbar-line">
@@ -163,20 +159,12 @@ export function App() {
   );
 }
 
-// The status bar: is the server up, and the one control that takes it down. It
-// keeps running after the terminal that started it is closed, so the panel is
-// the only way out that does not send the user back to a terminal — and it is a
-// button, never the tab closing, so a stray ⌘W cannot do it. Two clicks rather
-// than a browser confirm(): the dialog is suppressed in some embedded browsers,
-// and a button that silently does nothing is worse than one that asks in place.
+// Confirm shutdown in place because some embedded browsers suppress native dialogs.
 function ServerStatus() {
   const [phase, setPhase] = useState<'up' | 'arming' | 'down'>('up');
   const [err, setErr] = useState('');
 
-  // The server can go down on its own — killed in the terminal, crashed, machine
-  // asleep — and come back the same way. The poll never stops, so the light
-  // follows the server in both directions: an open tab recovers by itself when
-  // the user starts kortext again, instead of lying in red until a reload.
+  // Keep polling after disconnects so an open panel recovers when the server restarts.
   useEffect(() => {
     const timer = setInterval(() => {
       api.health().then(
@@ -209,9 +197,7 @@ function ServerStatus() {
       });
   };
 
-  // Idle says nothing: a green dot next to the name is the whole message. Words
-  // appear only when there is something the dot cannot say — the armed click,
-  // an error, or a server that is gone.
+  // Show text only for confirmation, errors and disconnection; the dot indicates normal status.
   const warning = err || (phase === 'arming' ? 'click again to stop' : '');
 
   return (
@@ -264,9 +250,7 @@ function ServerStatus() {
   );
 }
 
-// The command to type, as a thing to click rather than a thing to retype. The
-// clipboard call can be refused (an unfocused tab, a browser that withholds it),
-// so the command itself stays on screen either way.
+// Keep the command visible if clipboard access is denied.
 function CopyCommand({ command }: { command: string }) {
   const [copied, setCopied] = useState(false);
   return (
@@ -289,8 +273,7 @@ function CopyCommand({ command }: { command: string }) {
   );
 }
 
-// The running build, not the installed one — after an upgrade the process did
-// not restart for, those differ and every fix looks missing.
+// Display the running version, which can differ from the installed version after an update.
 function Version() {
   const [version, setVersion] = useState('');
   useEffect(() => {
@@ -302,12 +285,7 @@ function Version() {
   return version ? <span className="kx-version mono">v{version}</span> : null;
 }
 
-// Something went wrong and the user has nowhere to say so: the line under the
-// running version carries the way out — the same column as the thing that
-// broke, not the branding. It opens the bug template on GitHub with the
-// version already filled in — the one field a user has to go looking for, and the first thing triage
-// asks for. Not a chooser: a link that says "report an issue" is a bug report,
-// and the feature template is one click away on that page anyway.
+// Prefill the GitHub bug-report template with the running version.
 function ReportIssue() {
   const [version, setVersion] = useState('');
   useEffect(() => {
@@ -335,8 +313,6 @@ function ReportIssue() {
   );
 }
 
-// A bug under the server dot: the second line keeps the first line's column, so
-// the icon stands where the light stands and the words start under `kortext`.
 function BugMark() {
   return (
     <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true" fill="none">
@@ -357,8 +333,7 @@ function BugMark() {
   );
 }
 
-// §1 — Tema. Üç durum: auto işletim sistemini takip eder, light ve dark onu ezer
-// ve hatırlanır. Nitelik yoksa auto demektir, ilk açılışın hâli budur.
+// No theme attribute means auto; explicit light/dark choices override the OS and are persisted.
 type ThemeChoice = 'auto' | 'light' | 'dark';
 
 function ThemeSwitch() {
@@ -381,9 +356,7 @@ function ThemeSwitch() {
       /* private mode — the choice lasts the session */
     }
   }, [choice]);
-  // One button, not three: the status bar has room for a state, not a menu. It
-  // cycles auto → light → dark, and the icon says which one is on rather than
-  // which one a click would bring.
+  // Cycle auto, light and dark; the icon displays the current setting.
   const next: Record<ThemeChoice, ThemeChoice> = { auto: 'light', light: 'dark', dark: 'auto' };
   return (
     <button
@@ -397,14 +370,8 @@ function ThemeSwitch() {
   );
 }
 
-// The other Milowda tools. `url` is the repository, and its absence is what
-// mogut's missing licence line means: not published yet, so nothing here claims
-// it is.
-// `short` is what the popover shows — a strip that has to stay one line per row.
-// `what` is the full pitch, for the cards below the project list where there is
-// room to say it properly. A missing `url` means the tool is not released: it
-// says so and links nowhere, rather than sending anyone to a page that cannot
-// hand them the thing.
+// Product links and descriptions. An absent URL marks an unreleased tool.
+// Use short descriptions in the popover and full descriptions on cards.
 const SIBLINGS: {
   name: string;
   short: string;
@@ -447,21 +414,14 @@ const SIBLINGS: {
   },
 ];
 
-// The other Milowda tools, on the one screen nobody sees twice: a panel with a
-// project in it never shows this again. Cards rather than a list, because the
-// screen they land on is a grid of cards and this is the same kind of thing —
-// something to go and look at, not a footnote.
-// The same strip, for a screen that has no room for six cards: one tool at a
-// time, full width, moving on by itself. Hiding it here hides it on the project
-// list too — the answer to "not interested" is one answer, not one per screen.
+// Show product cards on the project list and a shared, dismissible carousel on project screens.
 function SiblingsSlider() {
   const [hidden, setHidden] = useState(() => siblingsHidden());
   const [arming, setArming] = useState(false);
   const [at, setAt] = useState(0);
   const [held, setHeld] = useState(false);
 
-  // Stops while the pointer is on it: text that moves out from under a reader
-  // is worse than no text.
+  // Pause automatic transitions while the pointer is over the carousel.
   useEffect(() => {
     if (hidden || held) return;
     const timer = setInterval(() => setAt((i) => (i + 1) % SIBLINGS.length), 7000);
@@ -537,10 +497,7 @@ function SiblingsSlider() {
   );
 }
 
-// Dismissed for good, in this browser: a promotion that cannot be turned off is
-// an advertisement, and one that comes back tomorrow is worse. Two clicks, the
-// same as the server's power button — the second one is not undoable from the
-// panel, so the question is asked in red rather than in passing.
+// Persist dismissal across both layouts; require confirmation because the panel has no undo action.
 function siblingsHidden(): boolean {
   try {
     return localStorage.getItem('kx-siblings') === 'hidden';
@@ -601,8 +558,6 @@ function Siblings() {
       <div className="kx-siblings-head">
         Also from Milowda
         <span className="kx-doc-spacer" />
-        {/* The question stands next to the button that asked it, the way the
-            server's power button asks — not across the row where the heading is. */}
         {arming && <span className="kx-field-err">Hide this for good? Click again.</span>}
         <button
           className={arming ? 'kx-siblings-close kx-siblings-close-armed' : 'kx-siblings-close'}
@@ -624,8 +579,7 @@ function Siblings() {
                   <Licence />
                   MIT · free
                 </span>
-                {/* Where the card goes, said by GitHub's mark; an unreleased one
-                    says that instead, since there is nowhere to send anyone. */}
+
                 {s.url ? (
                   <span className="kx-sib-goes">
                     <GitHubMark />
@@ -651,14 +605,11 @@ function Siblings() {
   );
 }
 
-// The credit line, and the only place the other Milowda tools are named. A
-// popover rather than a row of links: nothing is visible until someone clicks
-// the name, so a panel opened a hundred times a day carries no advertisement.
+// Display product links in a popover opened from the credit button.
 function MadeBy() {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLSpanElement>(null);
 
-  // Click anywhere else, or Escape: the popover is a glance, not a mode.
   useEffect(() => {
     if (!open) return;
     const away = (e: MouseEvent) => {
@@ -677,9 +628,7 @@ function MadeBy() {
 
   return (
     <span className="kx-made-by" ref={box}>
-      {/* The whole credit is the handle, not the word `milowda` alone: at 11px a
-          single word is a hard target, and the heart and the city read as part
-          of the same thing anyway. */}
+      {/* Use the whole credit as the click target. */}
       <button className="kx-made-trigger" onClick={() => setOpen(!open)}>
         milowda <Heart /> istanbul
       </button>
@@ -792,9 +741,7 @@ function Heart() {
   );
 }
 
-// The three lucide icons — eclipse, sun, moon — drawn inline rather than pulled
-// in as a dependency: three path strings against a whole icon package the panel
-// would otherwise not need. Paths are lucide 1.41.0 (ISC), unmodified.
+// Lucide 1.41.0 eclipse, sun and moon icons (ISC); paths are unmodified.
 function ThemeIcon({ choice }: { choice: ThemeChoice }) {
   const box = {
     viewBox: '0 0 24 24',
@@ -837,9 +784,7 @@ function ThemeIcon({ choice }: { choice: ThemeChoice }) {
   );
 }
 
-// The engine belongs to a project, not to the app: each one is added with the
-// CLI it runs on and switches on its own screen. All the header owes anyone is
-// the warning that there is no CLI at all.
+// Show a global warning only when no CLI is available; engine selection is per project.
 function EngineBadge() {
   const [engines, setEngines] = useState<EngineInfo[]>([]);
 
@@ -859,9 +804,7 @@ function EngineBadge() {
   );
 }
 
-// A new version on npm, and the one command that installs it — pressed here so
-// nobody has to leave the panel for it. Nothing renders until there is something
-// to say: no strip while up to date, offline, or running from a dev checkout.
+// Show self-update controls only when a managed install has a newer version available.
 function UpdateStrip() {
   const [latest, setLatest] = useState<string | null>(null);
   const [state, setState] = useState<'idle' | 'running' | 'done'>('idle');
@@ -925,9 +868,7 @@ function EngineSelect({
   className?: string;
 }) {
   if (engines.length === 0) return null;
-  // A project whose CLI was uninstalled still carries its name; the server has
-  // already fallen back to something installed, so the control says so instead
-  // of rendering a value no option carries and going blank.
+  // Display the server-resolved fallback if the project's saved CLI is no longer installed.
   const shown = engines.some((e) => e.id === value) ? (value as string) : engines[0].id;
   return (
     <select
@@ -950,8 +891,7 @@ function EngineSelect({
 function TransferPanel({ project }: { project: Project }) {
   const [plan, setPlan] = useState<KopengPlan | null>(null);
   const [splitting, setSplitting] = useState(false);
-  // A re-split the pause stopped: the old plan is still on disk, so the panel
-  // said "Plan ready" and the note the human typed looked like it never landed.
+  // A stopped plan revision leaves the previous files intact; show its pending work instead of ready.
   const [stopped, setStopped] = useState(false);
   const [reviseText, setReviseText] = useState('');
   const [err, setErr] = useState<string | null>(null);
@@ -1057,8 +997,7 @@ function TransferPanel({ project }: { project: Project }) {
   );
 }
 
-// The docs follow the brief's language — the example is English, but a brief
-// written in any language yields documents in that language.
+// Provide an English example brief; the document language can be selected independently.
 const BRIEF_EXAMPLE = `# Acme CRM
 
 ## Product Vision & Goals
@@ -1087,9 +1026,6 @@ the last 30 days; weekly active users per team.
 No billing, no phone integration, no mobile app. The MVP customer list caps at 8 items per
 view. Nothing is shared between teams.`;
 
-// An input and the one line that says what is wrong with it. The message sits
-// under the field rather than at the foot of the form, where the reader has to
-// carry it back up.
 function Field({
   err,
   className,
@@ -1123,16 +1059,11 @@ function AddProject({
   const [briefMode, setBriefMode] = useState<'write' | 'upload'>('write');
   const [uploadName, setUploadName] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  // Every rule the panel can check is checked in one pass: a form that reports
-  // its problems one per press makes the user press it four times to learn four
-  // things. What only the server knows — a code or a folder already taken —
-  // still comes back from the server, and lands on the field it is about.
+  // Validate all local fields together; display server-only conflicts on the matching field.
   const [fieldErrs, setFieldErrs] = useState<{ name?: string; code?: string; repoPath?: string }>(
     {},
   );
-  // The engine is asked for HERE, next to Initialize, rather than ranked for the
-  // user: the three CLIs are equals, and only the person who installed them knows
-  // which one they actually use. One installed CLI answers the question itself.
+  // Use the only installed CLI by default; otherwise let the user choose per project.
   const [engines, setEngines] = useState<EngineInfo[]>([]);
   const [engine, setEngine] = useState<string | null>(null);
 
@@ -1164,8 +1095,7 @@ function AddProject({
     const found: { name?: string; code?: string; repoPath?: string } = {};
     if (name.trim().length < 3) found.name = 'At least 3 characters.';
     if (!/^[A-Z]{2,8}$/.test(code.trim())) found.code = '2–8 letters, no digits.';
-    // A relative path would be read against the server's working directory, not
-    // against whatever the user had in mind: ask for the whole thing.
+    // Require an absolute path because relative paths resolve against the server working directory.
     if (!repoPath.trim()) found.repoPath = 'Pick the project folder.';
     else if (!/^(\/|~\/|[A-Za-z]:[\\/])/.test(repoPath.trim())) {
       found.repoPath = 'Give the full path — Browse fills it in.';
@@ -1190,8 +1120,7 @@ function AddProject({
       });
       onDone(project, brief.trim().length > 0);
     } catch (e) {
-      // The server's own refusals name their subject: put each one under the
-      // field it belongs to, and keep the rest by the button.
+      // Associate server validation errors with their fields where possible.
       const message = (e as Error).message;
       if (/^The code /.test(message)) setFieldErrs({ code: message });
       else if (/^This folder /.test(message)) setFieldErrs({ repoPath: message });
@@ -1300,7 +1229,7 @@ function AddProject({
             >
               Example ↓
             </button>
-            {/* Write and Upload are one choice, so they are a segment, not two tabs. */}
+
             <span className="seg">
               <button
                 className={briefMode === 'write' ? 'on' : ''}
@@ -1380,9 +1309,7 @@ function AddProject({
   );
 }
 
-// One view: the analysis flow. When the handshake completes, the completion
-// card takes over the top — kortext's job is done, the client takes it from
-// there (vision §20).
+// Show the handover commands when the analysis is complete.
 function ProjectScreen({ project, onBack }: { project: Project; onBack: () => void }) {
   const [paused, setPaused] = useState(!!project.paused);
   const [status, setStatus] = useState('');
@@ -1390,13 +1317,10 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
   const [pending, setPending] = useState(true); // any document still unwritten
   const [checking, setChecking] = useState(false); // the gate is reading the brief
   const [err, setErr] = useState<string | null>(null);
-  // Two-step in-place confirmation — browsers silently suppress repeated
-  // native confirm() dialogs, which made Restart/Cancel look dead.
+  // Use in-place confirmation because embedded browsers may suppress native confirm dialogs.
   const [arming, setArming] = useState<'restart' | 'archive' | 'cancel' | null>(null);
   const [busy, setBusy] = useState(false);
-  // Switching engine mid-project is a quota move: the CLI you started on ran out,
-  // so the rest of the analysis continues on another. A running step finishes on
-  // the old one; everything that starts after this sees the new one.
+  // An engine change applies to subsequent steps; active steps keep their current CLI.
   const [engines, setEngines] = useState<EngineInfo[]>([]);
   const [engine, setEngine] = useState<string | null>(project.engine || null);
 
@@ -1422,11 +1346,8 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
 
   const start = () => {
     if (paused) return togglePause(); // unpausing kicks the chain
-    // Already unpaused but idle — the gate refused, or the last pass ended.
-    // Re-enter the chain so the gate runs again and any freed step starts.
-    // The refusal carries the reason — no CLI installed, a step already
-    // running — and swallowing it left the button looking dead on the failure
-    // most likely to greet someone who has not installed an agent yet.
+    // Re-enter an idle chain to retry readiness and schedule unlocked steps.
+    // Display errors such as a missing CLI rather than silently ignoring the request.
     api.runNext(project.id).catch((e) => setErr((e as Error).message));
   };
 
@@ -1509,17 +1430,13 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
               api.setProjectEngine(project.id, id).catch((e) => setErr((e as Error).message));
             }}
           />
-          {/* Restart is armed and confirmed in the danger zone below, which is
-              the only place that sets it. Asking here too painted the same
-              question twice and took Start/Pause away while it was up. */}
+
           {running ? (
             <button className="btn btn-primary" disabled={busy} onClick={togglePause}>
               ⏸ Pause
             </button>
           ) : (
-            // Nothing is running: whatever the paused flag says, the only move
-            // left is to start it. Offering Pause against a stopped chain — a
-            // closed gate, a queue waiting on approvals — reads as a lie.
+            // Offer Start when the chain is idle, even if the project is already unpaused.
             pending && (
               <button className="btn btn-primary" disabled={busy} onClick={start}>
                 {hasJobs ? '▶ Continue' : '▶ Start'}
@@ -1649,9 +1566,7 @@ function HandshakeCard({ project }: { project: Project }) {
           it's between you and your client.
         </span>
       </div>
-      {/* Kopeng is not released, so nothing advertises it: the transfer panel
-          appears for whoever has the binary, and everyone else sees nothing
-          rather than an install command that 404s. */}
+      {/* Show transfer controls only when Kopeng is installed. */}
       {state.kopengInstalled && <TransferPanel project={project} />}
       <div className="kx-handshake-cards">
         <span className="kx-cmd-hint">
@@ -1689,16 +1604,10 @@ function DocumentsTab({
     readiness: null,
     checking: false,
   });
-  // The panel cannot see the server. What it last knew is not what is true now,
-  // so it stops claiming a step is in flight — a dead server left "X writing…"
-  // and a Pause button standing over a chain that had already finished.
+  // Clear active-work indicators when disconnected; cached state cannot confirm a running step.
   const [offline, setOffline] = useState(false);
 
-  // What is on screen now. Comparing `project.id` to a const taken from the
-  // same `project` compares a value to itself: the guard below read as passing
-  // whatever had happened. Nothing goes wrong today only because App renders
-  // this screen with `key={selected.id}`, so switching remounts — the check has
-  // to hold on its own, not on a key two components away.
+  // Keep the current project ID outside request closures to reject responses for a previous project.
   const showing = useRef(project.id);
   useEffect(() => {
     showing.current = project.id;
@@ -1761,24 +1670,17 @@ function DocumentsTab({
     offline,
   ]);
 
-  // The list answers "what should I do now", so it groups by state, not by
-  // folder — Needs you first, Not applicable last and collapsed: those were
-  // considered and deliberately skipped, so they are the least interesting.
+  // Group by required action; completed and not-applicable groups are collapsed initially.
   const bucketOf = (d: DocInfo): 'needs' | 'progress' | 'next' | 'approved' | 'na' => {
     const job = jobFor(d.rel);
-    // A badge outranks the state for grouping — a failed attempt and an open
-    // demand are both work for prime, wherever the document itself stands.
-    // `dependent` is the exception: it is news, not a job, so the document
-    // stays where it is.
+    // Failures and open requests require attention regardless of status.
+    // A dependent-input badge alone does not change the group.
     if (job?.status === 'failed' && !paused) return 'needs';
-    // A document the agent is rewriting is not waiting on prime, whatever it
-    // said before the run started: a revision in flight read as "Needs you"
-    // while the badge next to it said "writing…".
+    // Group active revisions as in progress even when their previous text requires attention.
     if (job?.status === 'running' && d.status !== 'approved') return 'progress';
     if (d.revisionRequests.length > 0) return 'needs';
     if (d.status === 'draft') return 'needs';
-    // A pause that stopped a revision owes the document a run whatever it says
-    // on disk — an approved one folded away under Approved read as finished.
+    // A stopped revision still requires work even if the document on disk remains approved.
     if (paused && job?.status === 'stopped') return 'progress';
     if (d.status === 'uninitialized' && job?.status === 'running') return 'progress';
     if (d.status === 'uninitialized') return 'next';
@@ -1797,9 +1699,7 @@ function DocumentsTab({
     { key: 'approved', title: 'Approved', closed: true },
     { key: 'na', title: 'Not applicable', closed: true },
   ];
-  // Active buckets keep the dependency order listDocs produced (the order work
-  // actually happens in); finished ones read alphabetically — nothing is
-  // "next" there, so the name is the only useful key.
+  // Keep dependency order for active groups and alphabetic order for completed groups.
   const ordered = docs;
   const sortFor = (key: string, items: DocInfo[]) =>
     key === 'approved' || key === 'na'
@@ -1841,27 +1741,16 @@ function DocumentsTab({
             </summary>
             {items.map((d) => {
               const job = jobFor(d.rel);
-              // An approved document with a job running is being RE-READ, not
-              // written — it keeps its state and says so with the badge.
+              // Keep approval status while showing a running recheck separately.
               const rechecking = job?.status === 'running' && d.status === 'approved';
               const isRunning = job?.status === 'running' && !rechecking;
-              // 'stopped' is the user's own pause/restart — not a failure: its own
-              // badge, no red row, no Retry; Continue picks the step up again.
-              // Not gated on `uninitialized`: a revision stopped mid-run leaves
-              // the document at approved or not-applicable, and hiding the badge
-              // there made the pause look like the work had never been asked for.
+              // Show stopped jobs without failure styling, including revisions of previously settled documents.
+              // Continue resumes interrupted revisions.
               const stopped = job?.status === 'stopped';
-              // A revision that failed leaves the document at draft or approved, so
-              // gating this on `uninitialized` hid every failure of an existing
-              // document: no red row, no reason, no Retry.
+              // Show failed revisions even when the document already has content or approval.
               const failed = job?.status === 'failed' && !paused;
               return (
-                // A div, not a button — a failed row carries its own Retry
-                // control, and a button inside a button is not a thing. Retry
-                // was a span for that reason, which cost it its tab stop: the
-                // only way to press it was a mouse. Same shape as the project
-                // card, so the row keeps its keyboard behaviour and Retry gets
-                // one of its own.
+                // Use separate keyboard-accessible targets for the row and Retry; do not nest buttons.
                 <div
                   key={d.rel}
                   className={`kx-doc-row${failed ? ' failed' : ''}`}
@@ -1919,9 +1808,7 @@ function DocumentsTab({
   );
 }
 
-// The readiness gate, when it is closed. The analysis produces nothing from a
-// brief that says nothing, so the questions the brief must answer take the
-// place of the documents that would otherwise have been invented.
+// Display readiness questions when insufficient evidence blocks analysis.
 function ReadinessCard({
   gate,
   onOpenBrief,
@@ -1972,10 +1859,8 @@ function ReadinessCard({
           Open the brief
         </button>
       ) : (
-        // No brief to open: an existing project is judged on its code, and a
-        // missing CLI is fixed outside the panel. Both end in the same move —
-        // change the thing, ask again. The button reports that it ran, because
-        // a re-check that finds the same thing looks like a dead button.
+        // For existing projects or missing CLIs, retry after the external issue is resolved.
+        // Show feedback even when the verdict is unchanged.
         <button className="btn btn-primary" disabled={rechecking} onClick={recheck}>
           {rechecking ? 'Checking…' : 'Check again'}
         </button>
@@ -1984,8 +1869,7 @@ function ReadinessCard({
   );
 }
 
-// Clipboard API can be denied in embedded webviews; fall back to the
-// select-and-copy trick so the button never fails silently.
+// Fall back to select-and-copy when the Clipboard API is unavailable in an embedded browser.
 function copyText(text: string) {
   return navigator.clipboard.writeText(text).catch(() => {
     const ta = document.createElement('textarea');
@@ -1997,8 +1881,6 @@ function copyText(text: string) {
   });
 }
 
-// The whole card is the copy button — no truncated code peeking out of a
-// too-small box; the command wraps in full and one click grabs it.
 function CommandCard({ title, command }: { title: string; command: string }) {
   const [copied, setCopied] = useState(false);
   return (

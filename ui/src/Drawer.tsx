@@ -1,10 +1,6 @@
 /**
- * Drawer — right-side slide-over panel with a dimmed backdrop. General purpose:
- * item/epic detail (S3) and anything else that needs a contextual side panel.
- *
- * Maps to `.drawer-backdrop` / `.drawer` in wireframe-v6-hifi.html. The consumer
- * supplies the inner chrome (e.g. `.dr-head` / `.dr-body`). Closes on backdrop
- * click and Escape.
+ * Right-side panel with a dimmed backdrop. The caller supplies its contents.
+ * Close on backdrop click or Escape.
  */
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';
@@ -13,7 +9,7 @@ export type DrawerProps = {
   open: boolean;
   onClose: () => void;
   children: ReactNode;
-  /** Panel width in px (default 464, matching the item-detail drawer). */
+  /* Panel width in pixels. Default 464. */
   width?: number;
 };
 
