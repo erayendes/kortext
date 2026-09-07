@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="docs/assets/kortext_logo.png" alt="Kortext" width="420">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="ui/public/kortext-logo-dark.svg">
+    <img src="ui/public/kortext-logo.svg" alt="Kortext" width="420">
+  </picture>
 </p>
 
 <p align="center">
