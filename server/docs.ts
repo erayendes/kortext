@@ -86,7 +86,7 @@ export function hasOpenQuestions(content: string): boolean {
 // Parses workflow step metadata: numbered steps carrying
 //   1. **+persona:** …
 //      - inputs: `.kortext/BRIEF.md`, …
-//      - outputs: `.kortext/references/STACK.md`
+//      - outputs: `.kortext/STACK.md`
 //      - approver: +prime
 // Returns one DocStep per output file.
 export function parseWorkflowSteps(md: string): DocStep[] {
