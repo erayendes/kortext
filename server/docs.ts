@@ -32,29 +32,64 @@ export interface DocInfo {
   sentRequests: Array<{ target: string; reason: string; targetHasStep: boolean }>;
 }
 
-/** A revision request names a target file in backticks under Revision Requests. */
-// `- [ ] \`TARGET.md\` — reason`. The checkbox is optional (older documents and
-// the templates write the bare form) and, when ticked, means the demand is
-// settled. The template's own bracket prompt is not a request.
-const REQUEST_LINE = /^\s*[-*+]\s+(?:\[([ xX]?)\]\s*)?`([A-Za-z][\w./-]*\.md)`\s*[—:-]?\s*(.*)$/;
+/**
+ * A warning names something outside the document set — `.gitignore`, a CI file,
+ * a live endpoint. It uses the demand grammar but not the demand pattern: the
+ * subject is any backticked path, because insisting on `.md` is what made a real
+ * `.gitignore` finding vanish into prose nobody could act on.
+ */
+const MARKED_LINE = /^\s*[-*+]\s+(?:\[([ xX]?)\]\s*)?`([^`]+)`\s*[—:-]?\s*(.*)$/;
 
-export function parseRevisionRequests(content: string): Array<{ target: string; reason: string }> {
-  const out: Array<{ target: string; reason: string }> = [];
+/**
+ * One parser for the three sections that carry marked lists: Revision Requests,
+ * Conflicts and Warnings. `subject` narrows what counts as a subject — demands
+ * insist on a document, warnings take anything.
+ */
+export function parseMarkedList(
+  content: string,
+  heading: RegExp,
+  subject: RegExp,
+): Array<{ subject: string; reason: string }> {
+  const out: Array<{ subject: string; reason: string }> = [];
   let inSection = false;
   for (const line of content.split('\n')) {
-    const heading = line.match(/^#{1,6}\s+(.*)$/);
-    if (heading) {
-      inSection = /revision requests/i.test(heading[1]);
+    const h = line.match(/^#{1,6}\s+(.*)$/);
+    if (h) {
+      inSection = heading.test(h[1] ?? '');
       continue;
     }
     if (!inSection) continue;
-    const m = line.match(REQUEST_LINE);
-    // Checked requests are settled and excluded from the pending list.
-    if (m && (m[1] ?? '').trim().toLowerCase() !== 'x') {
-      out.push({ target: m[2]!.replace(/^\.kortext\//, ''), reason: m[3]!.trim() });
-    }
+    const m = line.match(MARKED_LINE);
+    // A ticked box is settled and excluded from the pending list.
+    if (!m || (m[1] ?? '').trim().toLowerCase() === 'x') continue;
+    const name = m[2]!.replace(/^\.kortext\//, '');
+    if (!subject.test(name)) continue;
+    out.push({ subject: name, reason: m[3]!.trim() });
   }
   return out;
+}
+
+const DOC_SUBJECT = /^[A-Za-z][\w./-]*\.md$/;
+const ANY_SUBJECT = /./;
+
+export function parseRevisionRequests(content: string): Array<{ target: string; reason: string }> {
+  return parseMarkedList(content, /revision requests/i, DOC_SUBJECT).map((r) => ({
+    target: r.subject,
+    reason: r.reason,
+  }));
+}
+
+/** Contradictions left standing because prime dismissed the demand that named them. */
+export function parseConflicts(content: string): Array<{ from: string; reason: string }> {
+  return parseMarkedList(content, /^conflicts$/i, ANY_SUBJECT).map((r) => ({
+    from: r.subject,
+    reason: r.reason,
+  }));
+}
+
+/** Findings about something the document set does not own. */
+export function parseWarnings(content: string): Array<{ subject: string; reason: string }> {
+  return parseMarkedList(content, /^warnings$/i, ANY_SUBJECT);
 }
 
 // Read questions only from the Open Questions section; ignore template placeholders.
@@ -73,6 +108,36 @@ export function hasOpenQuestions(content: string): boolean {
     return true;
   }
   return false;
+}
+
+/**
+ * Lines the agent was meant to replace and did not. A real test shipped an
+ * approved `DATABASE.md` still carrying `### Table: \`[table_name]\``, because the
+ * prompt told it to keep headings verbatim and the heading itself was a pattern.
+ *
+ * Bracketed prose is normal in a template (`[e.g., PostgreSQL]`), so a line only
+ * counts as unfilled when it survives verbatim from the shipped skeleton — plus
+ * any heading carrying a bracketed span, which is a pattern wherever it came from.
+ */
+export function unfilledPlaceholders(content: string, template: string | null): string[] {
+  const shipped = new Set(
+    (template ?? '')
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean),
+  );
+  const out: string[] = [];
+  for (const line of content.split('\n')) {
+    const t = line.trim();
+    if (!t || !/\[[^\]]+\]/.test(t)) continue;
+    if (/^#{1,6}\s/.test(t) || shipped.has(t)) out.push(t);
+  }
+  return out;
+}
+
+export function templateFor(pkgRoot: string, rel: string): string | null {
+  const p = join(pkgRoot, 'templates', 'docs', rel);
+  return existsSync(p) ? readFileSync(p, 'utf8') : null;
 }
 
 // Parses workflow step metadata: numbered steps carrying
@@ -156,7 +221,41 @@ export function setFrontmatterStatus(path: string, status: string): void {
   }
 }
 
-// Record the outcome in the requesting document so the panel and CLI read the same state.
+// Record the outcome in the document that carries the line, so the panel and the
+// next CLI read the same state.
+export function markListItemHandled(
+  project: Project,
+  rel: string,
+  heading: RegExp,
+  subject: string,
+  reason: string,
+  outcome: string,
+): void {
+  const path = docPath(project, rel);
+  if (!existsSync(path)) return;
+  const day = new Date().toISOString().slice(0, 10);
+  const lines = readFileSync(path, 'utf8').split('\n');
+  let inSection = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] ?? '';
+    const h = line.match(/^#{1,6}\s+(.*)$/);
+    if (h) {
+      inSection = heading.test(h[1] ?? '');
+      continue;
+    }
+    if (!inSection) continue;
+    const m = line.match(MARKED_LINE);
+    if (!m) continue;
+    if (m[2]!.replace(/^\.kortext\//, '') !== subject.replace(/^.*\//, '') && m[2] !== subject)
+      continue;
+    if ((m[3] ?? '').trim() !== reason.trim()) continue;
+    // Keep both the settled marker and the outcome in the document.
+    lines.splice(i, 1, `- [x] \`${m[2]}\` — ${m[3]}`, `  - ${outcome} · ${day}`);
+    writeFileSync(path, lines.join('\n'), 'utf8');
+    return;
+  }
+}
+
 export function markRequestHandled(
   project: Project,
   from: string,
@@ -164,29 +263,38 @@ export function markRequestHandled(
   reason: string,
   outcome: string,
 ): void {
-  const path = docPath(project, from);
+  markListItemHandled(project, from, /revision requests/i, target, reason, outcome);
+}
+
+/**
+ * Adds one marked line under `heading`, creating the section when the document
+ * does not carry it. Sections are made on demand rather than shipped in the
+ * fifteen templates, so an empty one never exists to be mistaken for work.
+ */
+export function appendListItem(
+  project: Project,
+  rel: string,
+  heading: string,
+  subject: string,
+  reason: string,
+  trailer?: string,
+): void {
+  const path = docPath(project, rel);
   if (!existsSync(path)) return;
-  const day = new Date().toISOString().slice(0, 10);
   const lines = readFileSync(path, 'utf8').split('\n');
-  let inSection = false;
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i] ?? '';
-    const heading = line.match(/^#{1,6}\s+(.*)$/);
-    if (heading) {
-      inSection = /revision requests/i.test(heading[1] ?? '');
-      continue;
-    }
-    if (!inSection) continue;
-    const m = line.match(REQUEST_LINE);
-    if (!m) continue;
-    if (m[2]!.replace(/^\.kortext\//, '') !== target.replace(/^.*\//, '') && m[2] !== target)
-      continue;
-    if ((m[3] ?? '').trim() !== reason.trim()) continue;
-    // Keep both the settled marker and the outcome in the source document.
-    lines.splice(i, 1, `- [x] \`${m[2]}\` — ${m[3]}`, `  - ${outcome} · ${day}`);
-    writeFileSync(path, lines.join('\n'), 'utf8');
-    return;
+  const item = `- [ ] \`${subject}\` — ${reason.replace(/\s+/g, ' ').trim()}`;
+  const block = trailer ? [item, `  - ${trailer}`] : [item];
+  const head = lines.findIndex((l) => new RegExp(`^#{1,6}\\s+${heading}\\s*$`, 'i').test(l));
+  if (head === -1) {
+    lines.push('', `## ${heading}`, '', ...block);
+  } else {
+    let end = head + 1;
+    while (end < lines.length && !/^#{1,6}\s/.test(lines[end] ?? '')) end++;
+    let at = end;
+    while (at > head + 1 && (lines[at - 1] ?? '').trim() === '') at--;
+    lines.splice(at, 0, ...block);
   }
+  writeFileSync(path, lines.join('\n'), 'utf8');
 }
 
 export function listDocs(db: Database.Database, project: Project, pkgRoot: string): DocInfo[] {

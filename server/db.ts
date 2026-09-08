@@ -42,6 +42,20 @@ CREATE TABLE IF NOT EXISTS jobs (
   started_at TEXT NOT NULL DEFAULT (datetime('now')),
   finished_at TEXT
 );
+-- What a document said before it was last written. Not document state — the
+-- current text still lives only on disk — but a write log, like the jobs table,
+-- so the panel can show what a revision replaced.
+CREATE TABLE IF NOT EXISTS doc_versions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  rel TEXT NOT NULL,
+  sha TEXT NOT NULL,
+  content TEXT NOT NULL,
+  source TEXT NOT NULL,               -- agent | prime | proposal | pre-existing
+  job_id INTEGER,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_doc_versions ON doc_versions(project_id, rel, id DESC);
 CREATE TABLE IF NOT EXISTS pending_rechecks (
   project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   source_rel TEXT NOT NULL,
