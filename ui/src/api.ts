@@ -171,7 +171,7 @@ export const api = {
     question: string,
     history: Array<{ q: string; a: string }>,
   ) =>
-    req<{ answer: string }>(`/api/projects/${projectId}/docs/explain`, {
+    req<{ answer: string; answeredBy: string }>(`/api/projects/${projectId}/docs/explain`, {
       method: 'POST',
       body: JSON.stringify({ rel, excerpt, question, history }),
     }),

@@ -110,14 +110,9 @@ export function DocDrawer({
     return dropEmpty(dropEmpty(all, /open questions/i), /revision requests/i);
   }, [content]);
 
-  // Attribute inline answers to the selected project engine.
+  // The answer names its own author. Asking the global engine setting instead
+  // signed codex's answers as claude whenever the project ran on the other one.
   const [answerBy, setAnswerBy] = useState('agent');
-  useEffect(() => {
-    api
-      .engines()
-      .then((r) => setAnswerBy(r.selected ?? r.engines.find((e) => e.available)?.id ?? 'agent'))
-      .catch(() => {});
-  }, []);
 
   // Distinguish questions for this document from revision requests sent to another document.
   const [openQ, changeReq] = useMemo(() => {
@@ -210,9 +205,10 @@ export function DocDrawer({
     setExplains((xs) => [...xs, entry]);
     api
       .explainDoc(project.id, doc.rel, token?.text ?? '', question, history)
-      .then((r) =>
-        setExplains((xs) => xs.map((x) => (x === entry ? { ...x, answer: r.answer } : x))),
-      )
+      .then((r) => {
+        setAnswerBy(r.answeredBy);
+        setExplains((xs) => xs.map((x) => (x === entry ? { ...x, answer: r.answer } : x)));
+      })
       .catch((e) =>
         setExplains((xs) =>
           xs.map((x) => (x === entry ? { ...x, answer: `Error: ${e.message}` } : x)),

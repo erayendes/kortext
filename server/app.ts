@@ -662,7 +662,9 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       engine,
       pkgRoot,
     )
-      .then((r) => res.json(r))
+      // The answer carries its author: the project's own CLI, which is not
+      // always the one the global setting names.
+      .then((r) => res.json({ ...r, answeredBy: engine.id }))
       .catch((err) => res.status(500).json({ error: (err as Error).message }));
   });
 
