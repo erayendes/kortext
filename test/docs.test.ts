@@ -14,6 +14,10 @@ import {
   hasOpenQuestions,
   parseRevisionRequests,
   markRequestHandled,
+  parseConflicts,
+  parseWarnings,
+  templateFor,
+  unfilledPlaceholders,
 } from '../server/docs.js';
 
 const pkgRoot = process.cwd();
@@ -254,4 +258,72 @@ test('a demand is settled by the path it was decided on', () => {
   assert.match(prd, /^- \[x\] `BRIEF\.md` — say it the other way round$/m);
   assert.match(prd, /^ {2}- applied — the agent rewrote it · \d{4}-\d{2}-\d{2}$/m);
   rmSync(work, { recursive: true, force: true });
+});
+
+test('a template line the agent never replaced is unfilled; prose in brackets is not', () => {
+  const template = templateFor(pkgRoot, 'DATABASE.md')!;
+  assert.ok(template.includes('[table_name]'), 'the shipped template still carries the pattern');
+
+  // What the real test produced: the skeleton kept, the pattern heading intact.
+  const left = unfilledPlaceholders(template, template);
+  assert.ok(left.some((l) => l.includes('[table_name]')));
+
+  // A document that answered every prompt keeps its own bracketed prose.
+  const written = [
+    '# Database Schema',
+    '',
+    '## Database Overview',
+    '',
+    '- **Database Engine:** PostgreSQL 16 [see docker-compose.yml]',
+    '',
+    '### Table: `invoices`',
+    '',
+    '- **Description:** one row per issued invoice',
+  ].join('\n');
+  assert.deepEqual(unfilledPlaceholders(written, template), []);
+
+  // A heading carrying a pattern is unfilled wherever it came from.
+  assert.deepEqual(unfilledPlaceholders('### [Surface name]\n', null), ['### [Surface name]']);
+});
+
+test('conflicts and warnings read as demands do, but a warning may name any path', () => {
+  const body = [
+    '# Security',
+    '',
+    '## Conflicts',
+    '',
+    '- [ ] `ENVIRONMENT.md` — the access-log lines must follow the no-logs decision',
+    '- [x] `LEGAL.md` — settled already',
+    '  - cleared by prime · 2026-09-08',
+    '',
+    '## Warnings',
+    '',
+    '- [ ] `.gitignore` — `.env` is tracked and holds live credentials',
+    '- [ ] `.github/workflows/release.yml` — the deploy step runs on every branch',
+    '',
+    '## Revision Requests',
+    '',
+    '- `TEST.md` — add the storage-limit case',
+  ].join('\n');
+
+  assert.deepEqual(parseConflicts(body), [
+    {
+      from: 'ENVIRONMENT.md',
+      reason: 'the access-log lines must follow the no-logs decision',
+    },
+  ]);
+
+  // The subject that used to be dropped for not ending in .md.
+  assert.deepEqual(parseWarnings(body), [
+    { subject: '.gitignore', reason: '`.env` is tracked and holds live credentials' },
+    {
+      subject: '.github/workflows/release.yml',
+      reason: 'the deploy step runs on every branch',
+    },
+  ]);
+
+  // A demand still insists on a document, and reads only its own section.
+  assert.deepEqual(parseRevisionRequests(body), [
+    { target: 'TEST.md', reason: 'add the storage-limit case' },
+  ]);
 });

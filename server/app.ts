@@ -18,6 +18,8 @@ import {
   loadDocMap,
   markRequestHandled,
   setFrontmatterStatus,
+  templateFor,
+  unfilledPlaceholders,
 } from './docs.js';
 import { renderDesignPreview, writeDesignPreview } from './design-preview.js';
 import { pickDirectoryNative } from './pick-directory.js';
@@ -500,7 +502,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   app.post('/api/projects/:id/docs/approve', (req, res) => {
     const project = projectOr404(req.params.id, res);
     if (!project) return;
-    const { rel } = req.body ?? {};
+    const { rel, force } = req.body ?? {};
     try {
       const path = reviewedPath(project, req, res);
       if (!path) return;
@@ -509,6 +511,21 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
         return res
           .status(409)
           .json({ error: 'Only a draft without open questions can be approved' });
+      }
+      // Template lines the agent never replaced. A real test approved a
+      // DATABASE.md still carrying `### Table: `[table_name]``, which then reads
+      // as an approved database design. Prime can still insist.
+      if (!force) {
+        const left = unfilledPlaceholders(
+          readFileSync(path, 'utf8'),
+          templateFor(pkgRoot, doc.rel),
+        );
+        if (left.length > 0) {
+          return res.status(409).json({
+            error: 'This document still carries template placeholders',
+            placeholders: left,
+          });
+        }
       }
       setFrontmatterStatus(path, 'approved');
       writeDesignPreview(project);

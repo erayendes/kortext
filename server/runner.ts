@@ -12,6 +12,8 @@ import {
   loadDocMap,
   markRequestHandled,
   readFrontmatter,
+  templateFor,
+  unfilledPlaceholders,
   workflowNameFor,
   type DocStep,
 } from './docs.js';
@@ -98,16 +100,29 @@ export function buildStepPrompt(
     `Project: ${project.name} (kind: ${project.kind ?? 'new'}).`,
     '',
     'FIRST DECIDE SCOPE, THEN WRITE:',
-    '- Read the step inputs first. They are the only evidence you have:',
-    ...step.inputs.map((i) => `    .kortext/${i}`),
-    "- Decide whether this document applies to THIS project, using the step's `n/a when` condition. If it is met, write the file with status: not-applicable and one line saying why, and stop. That is a complete, correct outcome — not a gap and not a failure.",
-    '- If it applies, write only what the inputs support. Where they are silent, say so and leave the question to prime; never fill a section by assuming what the product is probably like.',
+    // An existing project's first step has no document inputs at all. Telling it
+    // the inputs are the only evidence told it it had none, and it wrote the
+    // document without opening the repository it was standing in.
+    ...(step.inputs.length === 0
+      ? [
+          '- This step has NO document inputs. THE CODEBASE IN THIS FOLDER IS YOUR EVIDENCE. Read it before you write a line: source files, configuration, CI workflow files, migrations, the strings a user reads, package manifests. Record what is there. Absence of evidence is a finding, not a blank to fill.',
+        ]
+      : [
+          '- Read the step inputs first:',
+          ...step.inputs.map((i) => `    .kortext/${i}`),
+          project.kind === 'existing'
+            ? '- The codebase in this folder is evidence too, and it outranks the inputs where they disagree — the code is what the project actually does.'
+            : '- They are the only evidence you have.',
+        ]),
+    "- Decide whether this document applies to THIS project, using the step's `n/a when` condition. If it is met, write the file with status: not-applicable and one line saying why, and stop. That is a complete, correct outcome — not a gap and not a failure. Leave nothing but the title and that one line: a skeleton of empty headings reads to the next author as work waiting to be done.",
+    '- Write only what your evidence supports. Where it is silent, say so and leave the question to prime; never fill a section by assuming what the product is probably like.',
+    '- You may write something you did not find but believe the project should have. Every such line starts with `**Suggestion —**` and says why you are proposing it. A line without that marker is a fact you observed. Writing a suggestion as a fact misleads everyone who later uses this document as a contract — a target, a threshold and a schedule are facts only if the evidence carries them.',
     "- Every question you leave for the human goes under the document's `## Open Questions for prime` heading, one `- ` item each, and nowhere else. Leave that section empty when there is nothing to ask — an empty section is the signal that the document stands on its own.",
     '- When an ALREADY-WRITTEN document must change because of what you found, that is not prose: put one line under `## Revision Requests`, starting with the target file in backticks — `` - `ENVIRONMENT.md` — the access-log lines must follow the no-logs decision `` — and say what must change and why. The panel turns each line into an action the human can take; a demand written anywhere else in the document is a demand nobody can act on. Leave the section empty when nothing upstream needs to change.',
     '',
     'HARD RULES:',
     `- Produce EXACTLY this file and nothing else: .kortext/${step.output}`,
-    '- Fill the skeleton template already at that path: keep its section headings VERBATIM, replace the placeholder content under them.',
+    '- Fill the skeleton template already at that path. A heading that CONTAINS a bracketed span — `### [Module Name]`, ``### Table: `[table_name]` `` — is a pattern, not a heading: rename it to the real thing, repeat the whole block once per real item, and delete the block entirely when the project has none of them. Every other heading is fixed: keep it VERBATIM and replace the placeholder content under it.',
     `- Frontmatter must end up as: status: draft, author: ${step.author ?? '+agent'}${step.approver ? `, approver: ${step.approver}` : ''}.`,
     '- NEVER set status to approved — approval belongs to the human.',
     project.doc_lang
@@ -794,6 +809,17 @@ export async function runStep(
     if (step.output === 'DESIGN.md') writeDesignPreview(project);
     if (status !== 'draft' && status !== 'not-applicable') {
       return settle('failed', `${step.output} written but status is '${status}' (expected draft)`);
+    }
+    // A document that does not apply is a title and one line. Anything else is
+    // the skeleton left standing, which the next author reads as work waiting.
+    if (status === 'not-applicable') {
+      const left = unfilledPlaceholders(written, templateFor(pkgRoot, step.output));
+      if (left.length > 0) {
+        return settle(
+          'failed',
+          `${step.output} is not-applicable but still carries the skeleton — delete it, leaving the title and the one line saying why: ${left.slice(0, 3).join(' / ')}`,
+        );
+      }
     }
     for (const request of listDocs(db, project, pkgRoot).find((d) => d.rel === step.output)
       ?.revisionRequests ?? []) {

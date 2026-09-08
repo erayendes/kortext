@@ -181,6 +181,52 @@ test('cancel removes Kortext only and preserves Kopeng and user-owned project fi
   assert.equal(readFileSync(join(p.repo_path, 'app.txt'), 'utf8'), 'My source');
 });
 
+test('a document still wearing the template cannot be approved without insisting', async (t) => {
+  const { p, request } = await fixture(t);
+  const path = docPath(p, 'DATABASE.md');
+  // What the real test produced: the pattern heading kept, the body answered.
+  const written = [
+    '---',
+    'status: draft',
+    '---',
+    '',
+    '# Database Schema',
+    '',
+    '## Database Overview',
+    '',
+    'This project carries no persistence layer.',
+    '',
+    '### Table: `[table_name]`',
+    '',
+  ].join('\n');
+  writeFileSync(path, written);
+
+  const refused = await request('docs/approve', {
+    rel: 'DATABASE.md',
+    expectedVersion: docVersion(written),
+  });
+  assert.equal(refused.status, 409);
+  const said = (await refused.json()) as { placeholders?: string[] };
+  assert.ok(
+    said.placeholders?.some((l) => l.includes('[table_name]')),
+    'the refusal names the line to fill',
+  );
+  assert.match(readFileSync(path, 'utf8'), /status: draft/);
+
+  // Prime can still say it is fine.
+  assert.equal(
+    (
+      await request('docs/approve', {
+        rel: 'DATABASE.md',
+        expectedVersion: docVersion(written),
+        force: true,
+      })
+    ).status,
+    200,
+  );
+  assert.match(readFileSync(path, 'utf8'), /status: approved/);
+});
+
 test('approval and saving reject stale text and a writer in flight', async (t) => {
   const { db, p, request } = await fixture(t);
   const path = docPath(p, 'PRODUCT.md');
