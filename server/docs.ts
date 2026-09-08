@@ -30,6 +30,8 @@ export interface DocInfo {
   revisionRequests: Array<{ from: string; reason: string }>;
   /** Open outgoing revision requests, also actionable from this document. */
   sentRequests: Array<{ target: string; reason: string; targetHasStep: boolean }>;
+  /** Findings about something no document owns — a config file, a workflow, a key. */
+  warnings: Array<{ subject: string; reason: string }>;
 }
 
 /**
@@ -87,9 +89,20 @@ export function parseConflicts(content: string): Array<{ from: string; reason: s
   }));
 }
 
-/** Findings about something the document set does not own. */
+/**
+ * Findings about something the document set does not own.
+ *
+ * A demand aimed at a file that is not a document counts as one wherever it was
+ * written. An agent found `.env` tracked in git and filed it under Revision
+ * Requests against `.gitignore`; the demand parser wants a document, so the line
+ * became prose nobody could act on. It is a warning, and it is read as one.
+ */
 export function parseWarnings(content: string): Array<{ subject: string; reason: string }> {
-  return parseMarkedList(content, /^warnings$/i, ANY_SUBJECT);
+  const own = parseMarkedList(content, /^warnings$/i, ANY_SUBJECT);
+  const misfiled = parseMarkedList(content, /revision requests/i, ANY_SUBJECT).filter(
+    (r) => !DOC_SUBJECT.test(r.subject),
+  );
+  return [...own, ...misfiled];
 }
 
 // Read questions only from the Open Questions section; ignore template placeholders.
@@ -324,6 +337,7 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
         hasProducingStep: map.has(rel),
         revisionRequests: [],
         sentRequests: [],
+        warnings: status === 'uninitialized' ? [] : parseWarnings(body),
       });
       if (status !== 'uninitialized') {
         for (const r of parseRevisionRequests(body)) requests.push({ ...r, from: rel });

@@ -394,6 +394,9 @@ export function DocDrawer({
             onDone={onChanged}
           />
         )}
+        {doc.warnings.length > 0 && !editing && (
+          <WarningBar project={project} doc={doc} onDone={onChanged} />
+        )}
         {doc.openQuestions && !editing && (
           <div className="kx-doc-askbar">
             {notes.length > 0 ? (
@@ -793,6 +796,69 @@ function RequestBar({
             </li>
           );
         })}
+      </ul>
+    </div>
+  );
+}
+
+/**
+ * A finding about something no document owns. It cannot be applied — no agent
+ * writes `.gitignore` — so prime marks it done or lets it go, and either way the
+ * document records which.
+ */
+function WarningBar({
+  project,
+  doc,
+  onDone,
+}: {
+  project: Project;
+  doc: DocInfo;
+  onDone: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [settled, setSettled] = useState<Set<string>>(new Set());
+
+  const decide = (subject: string, reason: string, decision: 'done' | 'dismiss') => {
+    setBusy(true);
+    api
+      .clearWarning(project.id, { rel: doc.rel, subject, reason, decision })
+      .then(() => {
+        setSettled((s) => new Set(s).add(`${subject}: ${reason}`));
+        onDone();
+      })
+      .finally(() => setBusy(false));
+  };
+
+  const open = doc.warnings.filter((w) => !settled.has(`${w.subject}: ${w.reason}`));
+  if (open.length === 0) return null;
+  return (
+    <div className="kx-doc-warnbar">
+      <div className="kx-changebar-head">
+        This document found something outside the document set. Nothing here can be written for you
+        — do it yourself, then say so.
+      </div>
+      <ul className="kx-changebar-list">
+        {open.map((w) => (
+          <li key={`${w.subject}: ${w.reason}`}>
+            <span className="mono">{w.subject}</span> — {w.reason}
+            <div className="kx-changebar-actions">
+              <button
+                className="btn btn-primary"
+                disabled={busy}
+                onClick={() => decide(w.subject, w.reason, 'done')}
+              >
+                Done
+              </button>
+              <button
+                className="btn btn-link-primary"
+                disabled={busy}
+                onClick={() => decide(w.subject, w.reason, 'dismiss')}
+              >
+                Dismiss
+              </button>
+            </div>
+          </li>
+        ))}
       </ul>
     </div>
   );

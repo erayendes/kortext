@@ -304,6 +304,7 @@ test('conflicts and warnings read as demands do, but a warning may name any path
     '## Revision Requests',
     '',
     '- `TEST.md` — add the storage-limit case',
+    '- `deploy/nginx.conf` — the CSP allows every third-party origin',
   ].join('\n');
 
   assert.deepEqual(parseConflicts(body), [
@@ -313,13 +314,15 @@ test('conflicts and warnings read as demands do, but a warning may name any path
     },
   ]);
 
-  // The subject that used to be dropped for not ending in .md.
+  // The subjects that used to be dropped for not ending in .md — including the
+  // one an agent filed under Revision Requests, where it could never be acted on.
   assert.deepEqual(parseWarnings(body), [
     { subject: '.gitignore', reason: '`.env` is tracked and holds live credentials' },
     {
       subject: '.github/workflows/release.yml',
       reason: 'the deploy step runs on every branch',
     },
+    { subject: 'deploy/nginx.conf', reason: 'the CSP allows every third-party origin' },
   ]);
 
   // A demand still insists on a document, and reads only its own section.

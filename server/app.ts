@@ -16,6 +16,7 @@ import {
   docVersion,
   listDocs,
   loadDocMap,
+  markListItemHandled,
   markRequestHandled,
   setFrontmatterStatus,
   templateFor,
@@ -589,6 +590,30 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     }
     void reviseDoc(db, project, String(rel), notes.map(String), engine, pkgRoot);
     res.status(202).json({ started: rel });
+  });
+
+  // Settle a warning: prime acted on it, or judged it not worth acting on. The
+  // line may sit under Warnings or, for older documents, under Revision Requests
+  // where a demand was aimed at something that is not a document.
+  app.post('/api/projects/:id/docs/clear-warning', (req, res) => {
+    const project = projectOr404(req.params.id, res);
+    if (!project) return;
+    const { rel, subject, reason, decision } = req.body ?? {};
+    const doc = listDocs(db, project, pkgRoot).find((d) => d.rel === String(rel ?? ''));
+    if (!doc) return res.status(404).json({ error: `no such document: ${rel}` });
+    const warning = doc.warnings.find(
+      (w) => w.subject === String(subject ?? '') && w.reason === String(reason ?? ''),
+    );
+    if (!warning) return res.status(409).json({ error: 'that warning is already settled' });
+    markListItemHandled(
+      project,
+      doc.rel,
+      /^(warnings|revision requests)$/i,
+      warning.subject,
+      warning.reason,
+      decision === 'dismiss' ? 'dismissed by prime' : 'done by prime',
+    );
+    res.json({ ok: true });
   });
 
   // Apply or dismiss a revision request from either its source or target document.

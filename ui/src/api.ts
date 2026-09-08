@@ -41,6 +41,7 @@ export interface DocInfo {
   hasProducingStep: boolean;
   revisionRequests: Array<{ from: string; reason: string }>;
   sentRequests: Array<{ target: string; reason: string; targetHasStep: boolean }>;
+  warnings: Array<{ subject: string; reason: string }>;
 }
 
 export interface KopengPlan {
@@ -132,6 +133,14 @@ export const api = {
         body: JSON.stringify({ rel, content, expectedVersion, settleRequests }),
       },
     ),
+  clearWarning: (
+    projectId: number,
+    body: { rel: string; subject: string; reason: string; decision: 'done' | 'dismiss' },
+  ) =>
+    req<{ ok: boolean }>(`/api/projects/${projectId}/docs/clear-warning`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
   decideRequest: (
     projectId: number,
     body: {

@@ -2442,6 +2442,26 @@ button.kx-note-exc:hover {
   margin-right: auto;
 }
 
+/* A warning is the changebar in amber: same shape, but nothing here can be
+   applied for you — it is about a file no document owns. */
+.kx-doc-warnbar {
+  margin: var(--sp-3) 18px 8px;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  background: var(--amber-bg);
+  border: 1px solid var(--amber-border);
+  font-size: var(--fs-ui);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.kx-doc-warnbar .kx-changebar-head {
+  color: var(--amber);
+}
+.kx-doc-warnbar .kx-changebar-list > li + li {
+  border-top-color: var(--amber-border);
+}
+
 .kx-doc-askbar {
   margin: var(--sp-4) 18px 0;
   padding: var(--sp-2) var(--sp-3);
