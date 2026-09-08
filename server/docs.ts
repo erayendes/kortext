@@ -441,3 +441,60 @@ export function docPath(project: Project, rel: string): string {
 export function docVersion(content: string): string {
   return createHash('sha256').update(content).digest('hex');
 }
+
+/**
+ * Keeps what a document said, so a revision can be read as a change rather than
+ * as a new text. Only the two paths that rewrite the prose record: the agent's
+ * write and prime's save. Approving, ticking a demand and appending a recheck's
+ * line all touch one line the reader already strips.
+ *
+ * `priorText` bootstraps the chain: the first recorded write has no predecessor
+ * to compare against, so the bytes it replaced go in first.
+ */
+export function recordVersion(
+  db: Database.Database,
+  project: Project,
+  rel: string,
+  content: string,
+  source: 'agent' | 'prime' | 'proposal',
+  priorText: string | null,
+  jobId?: number,
+): void {
+  const insert = db.prepare(
+    'INSERT INTO doc_versions (project_id, rel, sha, content, source, job_id) VALUES (?, ?, ?, ?, ?, ?)',
+  );
+  const seen = db
+    .prepare('SELECT 1 FROM doc_versions WHERE project_id = ? AND rel = ? LIMIT 1')
+    .get(project.id, rel);
+  if (!seen && priorText !== null) {
+    insert.run(project.id, rel, docVersion(priorText), priorText, 'pre-existing', null);
+  }
+  insert.run(project.id, rel, docVersion(content), content, source, jobId ?? null);
+}
+
+export interface DocVersion {
+  id: number;
+  sha: string;
+  source: string;
+  created_at: string;
+}
+
+export function listVersions(db: Database.Database, project: Project, rel: string): DocVersion[] {
+  return db
+    .prepare(
+      'SELECT id, sha, source, created_at FROM doc_versions WHERE project_id = ? AND rel = ? ORDER BY id DESC',
+    )
+    .all(project.id, rel) as DocVersion[];
+}
+
+export function readVersion(
+  db: Database.Database,
+  project: Project,
+  id: number,
+): { content: string; rel: string } | null {
+  return (
+    (db
+      .prepare('SELECT content, rel FROM doc_versions WHERE id = ? AND project_id = ?')
+      .get(id, project.id) as { content: string; rel: string } | undefined) ?? null
+  );
+}

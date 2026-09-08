@@ -16,6 +16,9 @@ import {
   markRequestHandled,
   parseConflicts,
   parseWarnings,
+  listVersions,
+  readVersion,
+  recordVersion,
   templateFor,
   unfilledPlaceholders,
 } from '../server/docs.js';
@@ -329,4 +332,36 @@ test('conflicts and warnings read as demands do, but a warning may name any path
   assert.deepEqual(parseRevisionRequests(body), [
     { target: 'TEST.md', reason: 'add the storage-limit case' },
   ]);
+});
+
+test('the first recorded write brings the text it replaced with it', () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Acme', repoPath: join(work, 'acme') }, pkgRoot);
+  const skeleton = '---\nstatus: uninitialized\n---\n\n# Product\n';
+  const written = '---\nstatus: draft\n---\n\n# Product\n\nOne page, one visitor.\n';
+
+  // The chain has no predecessor to compare against, so the bytes it replaced
+  // go in underneath it.
+  recordVersion(db, p, 'PRODUCT.md', written, 'agent', skeleton, 7);
+  assert.deepEqual(
+    listVersions(db, p, 'PRODUCT.md').map((v) => v.source),
+    ['agent', 'pre-existing'],
+  );
+
+  // Every write after that is one row: the prior text is already the row below.
+  const revised = written.replace('One page', 'One page, five products');
+  recordVersion(db, p, 'PRODUCT.md', revised, 'prime', written);
+  assert.deepEqual(
+    listVersions(db, p, 'PRODUCT.md').map((v) => v.source),
+    ['prime', 'agent', 'pre-existing'],
+  );
+
+  const [latest, previous] = listVersions(db, p, 'PRODUCT.md');
+  assert.equal(readVersion(db, p, latest!.id)!.content, revised);
+  assert.equal(readVersion(db, p, previous!.id)!.content, written);
+
+  // Another project cannot read this one's history.
+  const other = createProject(db, { name: 'Other', repoPath: join(work, 'other') }, pkgRoot);
+  assert.equal(readVersion(db, other, latest!.id), null);
 });

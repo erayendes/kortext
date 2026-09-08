@@ -16,8 +16,11 @@ import {
   docVersion,
   listDocs,
   loadDocMap,
+  listVersions,
   markListItemHandled,
   markRequestHandled,
+  readVersion,
+  recordVersion,
   setFrontmatterStatus,
   templateFor,
   unfilledPlaceholders,
@@ -440,6 +443,23 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     }
   });
 
+  // What this document said before. Only writes that rewrote the prose are here.
+  app.get('/api/projects/:id/docs/history', (req, res) => {
+    const project = projectOr404(req.params.id, res);
+    if (!project) return;
+    const rel = String(req.query.rel ?? '');
+    if (!docPath(project, rel)) return res.status(400).json({ error: 'rel required' });
+    res.json({ versions: listVersions(db, project, rel) });
+  });
+
+  app.get('/api/projects/:id/docs/history/:versionId', (req, res) => {
+    const project = projectOr404(req.params.id, res);
+    if (!project) return;
+    const row = readVersion(db, project, Number(req.params.versionId));
+    if (!row) return res.status(404).json({ error: 'no such version' });
+    res.json(row);
+  });
+
   // Direct edit from the drawer — writes the file as-is.
   app.put('/api/projects/:id/docs/content', (req, res) => {
     const project = projectOr404(req.params.id, res);
@@ -454,7 +474,16 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       if (!path) return;
       const wasApproved =
         listDocs(db, project, pkgRoot).find((d) => d.rel === String(rel))?.status === 'approved';
+      const priorText = readFileSync(path, 'utf8');
       writeFileSync(path, content, 'utf8');
+      recordVersion(
+        db,
+        project,
+        String(rel),
+        content,
+        settleRequests ? 'proposal' : 'prime',
+        priorText,
+      );
       writeDesignPreview(project);
       // Saving a requested proposal settles its incoming revision requests.
       if (settleRequests) {

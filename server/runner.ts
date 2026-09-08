@@ -12,6 +12,7 @@ import {
   loadDocMap,
   markRequestHandled,
   readFrontmatter,
+  recordVersion,
   templateFor,
   unfilledPlaceholders,
   workflowNameFor,
@@ -766,9 +767,12 @@ export async function runStep(
   };
 
   const outPath = join(project.repo_path, '.kortext', step.output);
+  // What the document said going in. The history wants it on every write; the
+  // "nothing changed" guard below wants it only on a revision, where standing
+  // still is a failure — on a first write it is what the skeleton looked like.
+  const priorText = existsSync(outPath) ? readFileSync(outPath, 'utf8') : null;
   // Compare contents as well as existence: a successful CLI exit may leave the prior document unchanged.
-  const before =
-    reviseNotes.length > 0 && existsSync(outPath) ? readFileSync(outPath, 'utf8') : null;
+  const before = reviseNotes.length > 0 ? priorText : null;
 
   const run = trackRun(project.id);
   try {
@@ -822,6 +826,7 @@ export async function runStep(
         );
       }
     }
+    recordVersion(db, project, step.output, written, 'agent', priorText, job.id);
     for (const request of listDocs(db, project, pkgRoot).find((d) => d.rel === step.output)
       ?.revisionRequests ?? []) {
       if (reviseNotes.includes(`[${request.from} asks] ${request.reason}`)) {
