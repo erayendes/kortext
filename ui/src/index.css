@@ -2502,6 +2502,26 @@ button.kx-note-exc:hover {
   white-space: pre-wrap;
 }
 
+.kx-req-text {
+  cursor: pointer;
+}
+.kx-req-text:hover {
+  text-decoration: underline;
+  text-decoration-color: var(--border-strong);
+}
+.kx-req-note {
+  margin-top: 6px;
+  padding: 4px 8px;
+  border-radius: var(--r-sm);
+  background: var(--bg-muted);
+  color: var(--fg-secondary);
+  font-size: var(--fs-label);
+}
+.kx-req-note .mono {
+  color: var(--fg-faint);
+  margin-right: 6px;
+}
+
 .kx-req-check {
   margin-right: var(--sp-2);
   vertical-align: baseline;

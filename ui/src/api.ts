@@ -169,7 +169,7 @@ export const api = {
     projectId: number,
     body: {
       rel: string;
-      apply: Array<{ from: string; reason: string }>;
+      apply: Array<{ from: string; reason: string; instruction?: string }>;
       dismiss: Array<{ from: string; reason: string }>;
     },
   ) =>

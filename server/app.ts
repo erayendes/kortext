@@ -684,12 +684,13 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     if (!doc) return res.status(404).json({ error: `no such document: ${rel}` });
     const pick = (list: unknown) =>
       (Array.isArray(list) ? list : [])
-        .map((r: { from?: unknown; reason?: unknown }) =>
-          doc.revisionRequests.find(
+        .map((r: { from?: unknown; reason?: unknown; instruction?: unknown }) => {
+          const found = doc.revisionRequests.find(
             (x) => x.from === String(r.from ?? '') && x.reason === String(r.reason ?? ''),
-          ),
-        )
-        .filter((r): r is { from: string; reason: string } => !!r);
+          );
+          return found ? { ...found, instruction: String(r.instruction ?? '').trim() } : undefined;
+        })
+        .filter((r): r is { from: string; reason: string; instruction: string } => !!r);
     const applying = pick(apply);
     const dismissing = pick(dismiss);
     if (applying.length === 0 && dismissing.length === 0) {
@@ -717,7 +718,11 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       db,
       project,
       doc.rel,
-      applying.map((r) => `[${r.from} asks] ${r.reason}`),
+      applying.flatMap((r) =>
+        r.instruction
+          ? [`[${r.from} asks] ${r.reason}`, `[prime decides] ${r.instruction}`]
+          : [`[${r.from} asks] ${r.reason}`],
+      ),
       engine,
       pkgRoot,
     ).catch((err) => console.error(`settle-requests follow-up failed for ${doc.rel}:`, err));

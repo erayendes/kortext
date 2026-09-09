@@ -692,22 +692,18 @@ function RequestBar({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [settled, setSettled] = useState<Set<string>>(new Set());
-  const [noting, setNoting] = useState<number | null>(null);
-  const [note, setNote] = useState('');
-  // Direct Q&A to the author of the requesting document.
-  const [asking, setAsking] = useState<number | null>(null);
-  const [question, setQuestion] = useState('');
+  // A demand is a line like any other: click it, and the same thread opens
+  // underneath. One interaction for the whole drawer instead of two.
+  const [open, setOpen] = useState<number | null>(null);
+  const [notes, setNotes] = useState<Record<string, string>>({});
   const [chat, setChat] = useState<Array<{ i: number; q: string; a: string | null }>>([]);
 
-  const ask = (i: number) => {
-    const q = question.trim();
-    if (!q) return;
+  const ask = (i: number, q: string) => {
     const it = items[i];
     const history = chat.filter((c) => c.i === i && c.a).map((c) => ({ q: c.q, a: c.a as string }));
     // Key replies by request identity so identical questions on different requests stay separate.
     const entry = { i, q, a: null as string | null };
     setChat((cs) => [...cs, entry]);
-    setQuestion('');
     const fill = (a: string) => setChat((cs) => cs.map((c) => (c === entry ? { ...c, a } : c)));
     api
       .explainDoc(project.id, it.from, `[asks ${it.target}] ${it.reason}`, q, history)
@@ -722,20 +718,20 @@ function RequestBar({
   // ones separately would start a run and have the rest refused.
   const settleAll = async () => {
     if (!bulk) return;
-    const open = items.filter((it) => !settled.has(keyOf(it)));
+    const standing = items.filter((it) => !settled.has(keyOf(it)));
     setBusy(true);
     setErr(null);
     try {
       await api.settleRequests(project.id, {
         rel: bulk,
-        apply: open
+        apply: standing
           .filter((it) => ticked.has(keyOf(it)))
-          .map((it) => ({ from: it.from, reason: it.reason })),
-        dismiss: open
+          .map((it) => ({ from: it.from, reason: it.reason, instruction: notes[keyOf(it)] })),
+        dismiss: standing
           .filter((it) => !ticked.has(keyOf(it)))
           .map((it) => ({ from: it.from, reason: it.reason })),
       });
-      setSettled((s) => new Set([...s, ...open.map(keyOf)]));
+      setSettled((s) => new Set([...s, ...standing.map(keyOf)]));
       setTicked(new Set());
       onDone();
     } catch (e) {
@@ -760,8 +756,7 @@ function RequestBar({
       // The list only clears on the next refresh, so remember what was answered:
       // otherwise the buttons come back for a second press the server refuses.
       setSettled((s) => new Set(s).add(keyOf(it)));
-      setNoting(null);
-      setNote('');
+      setOpen(null);
       onDone();
     } catch (e) {
       setErr((e as Error).message);
@@ -798,9 +793,28 @@ function RequestBar({
                       return next;
                     })
                   }
+                  onClick={(e) => e.stopPropagation()}
                 />
               )}
-              <span className="mono">{it.label.replace(/\.md$/, '')}</span> — {it.reason}
+              {/* The demand reads like a line of the document, so it answers to
+                  the same click — the thread opens under it. */}
+              <span
+                className="kx-req-text"
+                role="button"
+                tabIndex={0}
+                onClick={() => {
+                  if ((window.getSelection()?.toString() ?? '').trim()) return;
+                  setOpen(open === i ? null : i);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setOpen(open === i ? null : i);
+                  }
+                }}
+              >
+                <span className="mono">{it.label.replace(/\.md$/, '')}</span> — {it.reason}
+              </span>
               <div className="kx-changebar-actions">
                 {!bulk && it.canApply && (
                   <button
@@ -822,96 +836,28 @@ function RequestBar({
                     Dismiss
                   </button>
                 )}
-                <button
-                  className="btn btn-secondary"
-                  disabled={busy}
-                  onClick={() => setNoting(noting === i ? null : i)}
-                >
-                  Add note
-                </button>
                 {!it.canApply && (
                   <span className="kx-cmd-hint">
                     No agent writes that one — open it to draft the change.
                   </span>
                 )}
                 {extra}
-                <button
-                  className="btn btn-link-primary"
-                  disabled={busy}
-                  onClick={() => setAsking(asking === i ? null : i)}
-                >
-                  Ask
-                </button>
               </div>
-              {(talk.length > 0 || asking === i || noting === i) && (
-                <div className="kx-thread">
-                  {talk.map((c, k) => (
-                    <div key={k} className="kx-explain">
-                      <span className="kx-explain-who mono">prime</span>
-                      <span className="kx-explain-q">{c.q}</span>
-                      <span className="kx-explain-who mono">{it.from.replace(/\.md$/, '')}</span>
-                      <span className={`kx-explain-a${c.a === null ? ' kx-running' : ''}`}>
-                        {c.a === null ? 'writing an answer…' : <AnswerText text={c.a} />}
-                      </span>
-                    </div>
-                  ))}
-                  {(asking === i || noting === i) && (
-                    <div className="kx-thread-input">
-                      <textarea
-                        className="kx-input kx-thread-text"
-                        autoFocus
-                        rows={1}
-                        placeholder={
-                          asking === i
-                            ? 'Ask about this demand…  (Enter sends, Shift+Enter for a new line)'
-                            : 'How it should be done instead — this rides along with the request…  (Enter sends, Shift+Enter for a new line)'
-                        }
-                        value={asking === i ? question : note}
-                        onChange={(e) =>
-                          asking === i ? setQuestion(e.target.value) : setNote(e.target.value)
-                        }
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            if (asking === i) ask(i);
-                            else if (note.trim()) void decide(i, 'apply', note.trim());
-                          }
-                          if (e.key === 'Escape') {
-                            setAsking(null);
-                            setNoting(null);
-                          }
-                        }}
-                      />
-                      <div className="kx-thread-actions">
-                        {asking === i ? (
-                          <button
-                            className="btn btn-primary"
-                            disabled={!question.trim()}
-                            onClick={() => ask(i)}
-                          >
-                            Ask
-                          </button>
-                        ) : (
-                          <button
-                            className="btn btn-primary"
-                            disabled={busy || !note.trim()}
-                            onClick={() => decide(i, 'apply', note.trim())}
-                          >
-                            Apply with this note
-                          </button>
-                        )}
-                        <button
-                          className="btn btn-secondary"
-                          onClick={() => {
-                            setAsking(null);
-                            setNoting(null);
-                          }}
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  )}
+              {(talk.length > 0 || open === i) && (
+                <LineThread
+                  thread={talk.map((c) => ({ line: null, question: c.q, answer: c.a }))}
+                  active={open === i}
+                  answerBy={it.from.replace(/\.md$/, '')}
+                  onAsk={(q) => ask(i, q)}
+                  onNote={(text) => {
+                    setNotes((n) => ({ ...n, [keyOf(it)]: text }));
+                    setOpen(null);
+                  }}
+                />
+              )}
+              {notes[keyOf(it)] && (
+                <div className="kx-req-note">
+                  <span className="mono">note</span> {notes[keyOf(it)]}
                 </div>
               )}
             </li>
@@ -1049,8 +995,8 @@ function WarningBar({
   return (
     <div className="kx-doc-warnbar">
       <div className="kx-changebar-head">
-        This document found something outside the document set. Nothing here can be written for you
-        — do it yourself, then say so.
+        Found in files no document owns. No agent writes these — handle it yourself, then mark it
+        done.
       </div>
       <ul className="kx-changebar-list">
         {open.map((w) => (
@@ -1058,7 +1004,7 @@ function WarningBar({
             <span className="mono">{w.subject}</span> — {w.reason}
             <div className="kx-changebar-actions">
               <button
-                className="btn btn-primary"
+                className="btn btn-link-primary"
                 disabled={busy}
                 onClick={() => decide(w.subject, w.reason, 'done')}
               >
