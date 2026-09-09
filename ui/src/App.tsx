@@ -1728,40 +1728,17 @@ function DocumentsTab({
   ]);
 
   // Group by required action; completed and not-applicable groups are collapsed initially.
-  const bucketOf = (d: DocInfo): 'needs' | 'progress' | 'next' | 'approved' | 'na' => {
-    const job = jobFor(d.rel);
-    // Failures and open requests require attention regardless of status.
-    // A dependent-input badge alone does not change the group.
-    if (job?.status === 'failed' && !paused) return 'needs';
-    // Group active revisions as in progress even when their previous text requires attention.
-    if (job?.status === 'running' && d.status !== 'approved') return 'progress';
-    if (d.revisionRequests.length > 0) return 'needs';
-    if (d.status === 'draft') return 'needs';
-    // A stopped revision still requires work even if the document on disk remains approved.
-    if (paused && job?.status === 'stopped') return 'progress';
-    if (d.status === 'uninitialized' && job?.status === 'running') return 'progress';
-    if (d.status === 'uninitialized') return 'next';
-    if (d.status === 'approved') return 'approved';
-    return 'na'; // considered and deliberately skipped
-  };
-
-  const groups: {
-    key: 'needs' | 'progress' | 'next' | 'approved' | 'na';
-    title: string;
-    closed?: boolean;
-  }[] = [
+  // Where each document belongs is decided by the server, which can see the
+  // queued rechecks and whether a run carried revision notes.
+  const groups: { key: DocInfo['section']; title: string; closed?: boolean }[] = [
     { key: 'needs', title: 'Needs you' },
-    { key: 'progress', title: 'In progress' },
-    { key: 'next', title: 'Next' },
-    { key: 'approved', title: 'Approved', closed: true },
-    { key: 'na', title: 'Not applicable', closed: true },
+    { key: 'doing', title: 'Doing' },
+    { key: 'todo', title: 'To do' },
+    { key: 'done', title: 'Done', closed: true },
   ];
-  // Keep dependency order for active groups and alphabetic order for completed groups.
-  const ordered = docs;
+  // Keep dependency order while work is live and alphabetic order once it is not.
   const sortFor = (key: string, items: DocInfo[]) =>
-    key === 'approved' || key === 'na'
-      ? [...items].sort((a, b) => a.name.localeCompare(b.name))
-      : items;
+    key === 'done' ? [...items].sort((a, b) => a.name.localeCompare(b.name)) : items;
 
   return (
     <div className="kx-docs">
@@ -1787,7 +1764,7 @@ function DocumentsTab({
       {groups.map((g) => {
         const items = sortFor(
           g.key,
-          ordered.filter((d) => bucketOf(d) === g.key),
+          docs.filter((d) => d.section === g.key),
         );
         if (items.length === 0) return null;
         return (
@@ -1798,14 +1775,7 @@ function DocumentsTab({
             </summary>
             {items.map((d) => {
               const job = jobFor(d.rel);
-              // Keep approval status while showing a running recheck separately.
-              const rechecking = job?.status === 'running' && d.status === 'approved';
-              const isRunning = job?.status === 'running' && !rechecking;
-              // Show stopped jobs without failure styling, including revisions of previously settled documents.
-              // Continue resumes interrupted revisions.
-              const stopped = job?.status === 'stopped';
-              // Show failed revisions even when the document already has content or approval.
-              const failed = job?.status === 'failed' && !paused;
+              const failed = d.detail === 'failed';
               return (
                 // Use separate keyboard-accessible targets for the row and Retry; do not nest buttons.
                 <div
@@ -1837,9 +1807,9 @@ function DocumentsTab({
                       Retry
                     </button>
                   )}
-                  <DocBadges doc={d} failed={failed} rechecking={rechecking} />
+                  <DocBadges doc={d} />
                   <span title={failed ? (job?.error ?? '') : ''}>
-                    <StatusBadge doc={d} running={isRunning} stopped={stopped} />
+                    <StatusBadge doc={d} />
                   </span>
                 </div>
               );

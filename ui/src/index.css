@@ -1834,6 +1834,28 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   border-radius: 999px;
   border: 1px solid transparent;
 }
+/* The word in brackets: which kind of waiting, writing or pausing. It carries
+   the urgency; the state word beside it stays quiet. */
+.kx-badge-approve,
+.kx-badge-answer {
+  color: var(--violet);
+  border-color: var(--violet-border);
+  background: var(--violet-bg);
+}
+.kx-badge-review {
+  color: var(--pink);
+  border-color: var(--pink-border);
+  background: var(--pink-bg);
+}
+.kx-badge-update {
+  color: var(--amber);
+  border-color: var(--amber-border);
+  background: var(--amber-bg);
+}
+.kx-badge-draft,
+.kx-badge-queue {
+  color: var(--fg-muted);
+}
 .kx-badge-failed {
   background: var(--red-bg);
   color: var(--red);

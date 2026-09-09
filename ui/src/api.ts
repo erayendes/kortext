@@ -42,6 +42,11 @@ export interface DocInfo {
   revisionRequests: Array<{ from: string; reason: string }>;
   sentRequests: Array<{ target: string; reason: string; targetHasStep: boolean }>;
   warnings: Array<{ subject: string; reason: string }>;
+  conflicts: Array<{ from: string; reason: string }>;
+  section: 'needs' | 'doing' | 'todo' | 'done';
+  state: 'waiting' | 'writing' | 'paused' | 'approved' | 'n/a';
+  detail: 'approve' | 'review' | 'answer' | 'queue' | 'update' | 'draft' | 'failed' | null;
+  pendingRecheck: boolean;
 }
 
 export interface KopengPlan {

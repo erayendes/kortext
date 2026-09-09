@@ -534,66 +534,53 @@ export function DocDrawer({
   );
 }
 
-// Pending means written and awaiting approval; waiting means not yet written.
-const STATUS_LABEL: Record<string, string> = {
-  draft: 'pending',
-  'not-applicable': 'n/a',
-  approved: 'approved',
-};
-
-/** Render document status separately from failure, request and dependency badges. */
-export function statusOf(
-  doc: DocInfo,
-  opts: { running?: boolean; stopped?: boolean } = {},
-): { key: string; label: string } {
-  if (opts.running) return { key: 'writing', label: 'writing…' };
-  if (opts.stopped) return { key: 'paused', label: 'paused' };
-  if (doc.status === 'uninitialized') return { key: 'waiting', label: 'waiting' };
-  return { key: doc.status, label: STATUS_LABEL[doc.status] ?? doc.status };
+/** The state word, as the server decided it. Presentation only. */
+export function statusOf(doc: DocInfo): { key: string; label: string } {
+  if (doc.state === 'writing') return { key: 'writing', label: 'writing…' };
+  if (doc.state === 'n/a') return { key: 'not-applicable', label: 'n/a' };
+  return { key: doc.state, label: doc.state };
 }
 
-export function StatusBadge({
-  doc,
-  running,
-  stopped,
-}: {
-  doc: DocInfo;
-  running?: boolean;
-  stopped?: boolean;
-}) {
-  const { key, label } = statusOf(doc, { running, stopped });
+export function StatusBadge({ doc }: { doc: DocInfo }) {
+  const { key, label } = statusOf(doc);
   return <span className={`kx-status kx-status-${key}`}>{label}</span>;
 }
 
+// Which kind of waiting, writing or pausing — the word in brackets before the state.
+const DETAIL_TITLE: Record<string, string> = {
+  approve: 'Written and waiting for your approval',
+  review: 'Another document has asked this one to change',
+  answer: 'Answer the open questions before approving',
+  queue: 'Not written yet',
+  update: 'Waiting to be read again against an input that moved',
+  draft: 'Being written for the first time',
+  failed: 'The run failed — retry it',
+};
+
 /** What is owed on this document, next to the state it is in. */
-export function DocBadges({
-  doc,
-  failed,
-  rechecking,
-}: {
-  doc: DocInfo;
-  failed?: boolean;
-  rechecking?: boolean;
-}) {
+export function DocBadges({ doc }: { doc: DocInfo }) {
   return (
     <>
-      {failed && <span className="kx-badge kx-badge-failed">failed</span>}
-      {doc.revisionRequests.length > 0 && (
+      {doc.detail && (
         <span
-          className="kx-badge kx-badge-change"
-          title={doc.revisionRequests.map((r) => `${r.from}: ${r.reason}`).join('\n')}
+          className={`kx-badge kx-badge-${doc.detail}`}
+          title={
+            doc.detail === 'review'
+              ? [
+                  ...doc.revisionRequests.map((r) => `${r.from}: ${r.reason}`),
+                  ...doc.conflicts.map((c) => `conflict with ${c.from}: ${c.reason}`),
+                  ...doc.warnings.map((w) => `${w.subject}: ${w.reason}`),
+                ].join('\n')
+              : (DETAIL_TITLE[doc.detail] ?? '')
+          }
         >
-          change request
+          ({doc.detail})
         </span>
       )}
-      {(doc.dependentOn.length > 0 || rechecking) && (
+      {doc.dependentOn.length > 0 && (
         <span
           className="kx-badge kx-badge-dependent"
-          title={
-            rechecking
-              ? 'Being read again against the input that changed'
-              : `Waiting on ${doc.dependentOn.join(', ')} to settle`
-          }
+          title={`Waiting on ${doc.dependentOn.join(', ')} to settle`}
         >
           dependent
         </span>
