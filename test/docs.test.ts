@@ -365,3 +365,75 @@ test('the first recorded write brings the text it replaced with it', () => {
   const other = createProject(db, { name: 'Other', repoPath: join(work, 'other') }, pkgRoot);
   assert.equal(readVersion(db, other, latest!.id), null);
 });
+
+test('every document is filed by one rule, and the first matching rule wins', () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Acme', repoPath: join(work, 'acme') }, pkgRoot);
+
+  const write = (rel: string, body: string) => writeFileSync(docPath(p, rel), body, 'utf8');
+  const job = (rel: string, status: string, kind = 'doc', notes = '[]') =>
+    db
+      .prepare('INSERT INTO jobs (project_id, doc_rel, kind, status, notes) VALUES (?,?,?,?,?)')
+      .run(p.id, rel, kind, status, notes);
+  const label = (rel: string) => {
+    const d = listDocs(db, p, pkgRoot).find((x) => x.rel === rel)!;
+    return `${d.section}/${d.state}${d.detail ? `:(${d.detail})` : ''}`;
+  };
+
+  // Untouched: the skeleton is queued.
+  assert.equal(label('PRODUCT.md'), 'todo/waiting:(queue)');
+
+  // Being written for the first time, then rewritten — the notes tell them apart.
+  job('PRODUCT.md', 'running');
+  assert.equal(label('PRODUCT.md'), 'doing/writing:(draft)');
+  job('PRODUCT.md', 'running', 'doc', '["[STACK.md asks] fix it"]');
+  assert.equal(label('PRODUCT.md'), 'doing/writing:(update)');
+
+  // Stopped mid-write keeps the same distinction.
+  job('PRODUCT.md', 'stopped');
+  assert.equal(label('PRODUCT.md'), 'doing/paused:(draft)');
+  job('PRODUCT.md', 'stopped', 'doc', '["[STACK.md asks] fix it"]');
+  assert.equal(label('PRODUCT.md'), 'doing/paused:(update)');
+
+  // A failed job is nobody's work in progress — it waits for a retry.
+  job('PRODUCT.md', 'failed');
+  assert.equal(label('PRODUCT.md'), 'needs/paused:(failed)');
+
+  // A draft with a question asks to be answered, not approved.
+  db.prepare('DELETE FROM jobs').run();
+  write(
+    'PRODUCT.md',
+    '---\nstatus: draft\n---\n\n# P\n\n## Open Questions for prime\n\n- Which currency?\n',
+  );
+  assert.equal(label('PRODUCT.md'), 'needs/waiting:(answer)');
+
+  write('PRODUCT.md', '---\nstatus: draft\n---\n\n# P\n');
+  assert.equal(label('PRODUCT.md'), 'needs/waiting:(approve)');
+
+  // A demand outranks the approval it is waiting on.
+  write(
+    'STACK.md',
+    '---\nstatus: approved\n---\n\n## Revision Requests\n\n- `PRODUCT.md` — redo\n',
+  );
+  assert.equal(label('PRODUCT.md'), 'needs/waiting:(review)');
+
+  // So does a warning, on a document with nothing else pending.
+  write('STACK.md', '---\nstatus: approved\n---\n\n## Warnings\n\n- `.gitignore` — .env tracked\n');
+  assert.equal(label('STACK.md'), 'needs/waiting:(review)');
+
+  // Approved and settled.
+  write('STACK.md', '---\nstatus: approved\n---\n\n# S\n');
+  assert.equal(label('STACK.md'), 'done/approved');
+  write('DATABASE.md', '---\nstatus: not-applicable\n---\n\n# D\n\nNo persistence layer.\n');
+  assert.equal(label('DATABASE.md'), 'done/n/a');
+
+  // An approved document waiting to be re-read is queued, not done — while the
+  // recheck runs as much as before it starts.
+  db.prepare(
+    'INSERT INTO pending_rechecks (project_id, source_rel, reader_rel) VALUES (?,?,?)',
+  ).run(p.id, 'PRODUCT.md', 'STACK.md');
+  assert.equal(label('STACK.md'), 'todo/waiting:(update)');
+  job('STACK.md', 'running', 'recheck');
+  assert.equal(label('STACK.md'), 'todo/waiting:(update)');
+});

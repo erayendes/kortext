@@ -32,6 +32,59 @@ export interface DocInfo {
   sentRequests: Array<{ target: string; reason: string; targetHasStep: boolean }>;
   /** Findings about something no document owns — a config file, a workflow, a key. */
   warnings: Array<{ subject: string; reason: string }>;
+  /** Contradictions left standing because prime dismissed the demand that named them. */
+  conflicts: Array<{ from: string; reason: string }>;
+  /** Which shelf the panel files this on. */
+  section: 'needs' | 'doing' | 'todo' | 'done';
+  /** The word after the name: what the document is doing, or waiting to do. */
+  state: 'waiting' | 'writing' | 'paused' | 'approved' | 'n/a';
+  /** The word in brackets: which kind of waiting, writing or pausing. */
+  detail: 'approve' | 'review' | 'answer' | 'queue' | 'update' | 'draft' | 'failed' | null;
+  /** A recheck is queued or running against this document. */
+  pendingRecheck: boolean;
+}
+
+interface LastJob {
+  kind: string;
+  status: string;
+  isUpdate: boolean;
+}
+
+/**
+ * Where a document sits and what it is waiting for. Five inputs decide it, and
+ * two of them — the queued rechecks and whether a run carries revision notes —
+ * live only in the database, so the answer is computed here rather than shipped
+ * raw for the panel to reassemble.
+ *
+ * Order matters: the first match wins.
+ */
+function fileDoc(doc: DocInfo, job: LastJob | null): Pick<DocInfo, 'section' | 'state' | 'detail'> {
+  const at = (section: DocInfo['section'], state: DocInfo['state'], detail: DocInfo['detail']) => ({
+    section,
+    state,
+    detail,
+  });
+
+  if (job?.kind === 'doc' && job.status === 'running') {
+    return at('doing', 'writing', job.isUpdate ? 'update' : 'draft');
+  }
+  if (job?.status === 'stopped') {
+    return at('doing', 'paused', job.isUpdate ? 'update' : 'draft');
+  }
+  // Nothing is doing anything with a failed job — it waits for prime to retry.
+  if (job?.status === 'failed') return at('needs', 'paused', 'failed');
+  if (doc.status === 'uninitialized') return at('todo', 'waiting', 'queue');
+  // A draft carrying demands is triaged before it can be approved.
+  if (doc.revisionRequests.length > 0) return at('needs', 'waiting', 'review');
+  if (doc.conflicts.length > 0 || doc.warnings.length > 0) return at('needs', 'waiting', 'review');
+  // A recheck is a reading, not a writing: the document waits either way.
+  if (doc.pendingRecheck) return at('todo', 'waiting', 'update');
+  // Approval is disabled while a question stands; say so rather than point at a
+  // greyed-out button.
+  if (doc.status === 'draft' && doc.openQuestions) return at('needs', 'waiting', 'answer');
+  if (doc.status === 'draft') return at('needs', 'waiting', 'approve');
+  if (doc.status === 'approved') return at('done', 'approved', null);
+  return at('done', 'n/a', null);
 }
 
 /**
@@ -338,6 +391,12 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
         revisionRequests: [],
         sentRequests: [],
         warnings: status === 'uninitialized' ? [] : parseWarnings(body),
+        conflicts: status === 'uninitialized' ? [] : parseConflicts(body),
+        // Filled once every document is known; nothing can be filed before then.
+        section: 'todo',
+        state: 'waiting',
+        detail: 'queue',
+        pendingRecheck: false,
       });
       if (status !== 'uninitialized') {
         for (const r of parseRevisionRequests(body)) requests.push({ ...r, from: rel });
@@ -392,6 +451,42 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
     memo.set(rel, d);
     return d;
   };
+  // The last job per document, and the rechecks queued against it. Both live in
+  // the database only; the runner cannot be imported here — it imports this file.
+  const jobs = new Map<string, LastJob>();
+  for (const row of db
+    .prepare(
+      `SELECT doc_rel, kind, status, notes FROM jobs
+        WHERE project_id = ? AND id IN (SELECT MAX(id) FROM jobs WHERE project_id = ? GROUP BY doc_rel)`,
+    )
+    .all(project.id, project.id) as Array<{
+    doc_rel: string;
+    kind: string;
+    status: string;
+    notes: string;
+  }>) {
+    let isUpdate = false;
+    try {
+      isUpdate = (JSON.parse(row.notes || '[]') as unknown[]).length > 0;
+    } catch {
+      isUpdate = false;
+    }
+    jobs.set(row.doc_rel, { kind: row.kind, status: row.status, isUpdate });
+  }
+  const rechecking = new Set(
+    (
+      db
+        .prepare('SELECT DISTINCT reader_rel FROM pending_rechecks WHERE project_id = ?')
+        .all(project.id) as Array<{ reader_rel: string }>
+    ).map((r) => r.reader_rel),
+  );
+  for (const doc of docs) {
+    const job = jobs.get(doc.rel) ?? null;
+    doc.pendingRecheck =
+      rechecking.has(doc.rel) || (job?.kind === 'recheck' && job.status === 'running');
+    Object.assign(doc, fileDoc(doc, job));
+  }
+
   docs.sort((a, b) => depth(a.rel) - depth(b.rel) || a.rel.localeCompare(b.rel));
   return docs;
 }
