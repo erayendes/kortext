@@ -1772,7 +1772,12 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
 }
 
 /* Status colors: approved green, writing blue, pending violet, paused amber and failed red. */
+/* Every state is the same pill, sized to the longest word it can carry, so a
+   column of them reads as one column rather than a ragged edge. */
 .kx-status {
+  display: inline-block;
+  min-width: 11ch;
+  text-align: center;
   font-size: var(--fs-micro);
   font-weight: 600;
   padding: 2px 8px;
@@ -1800,16 +1805,15 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
 }
 
 /* Render status separately from request and dependency badges. */
-/* n/a and waiting carry no pill — they are the quiet, no-action states. */
+/* waiting and n/a are the quiet, no-action states — a pill like the rest, in
+   the muted ground rather than a colour that asks for something. */
 .kx-status-waiting {
   background: var(--bg-muted);
   color: var(--fg-secondary);
 }
 .kx-status-not-applicable {
-  background: transparent;
+  background: var(--bg-muted);
   color: var(--fg-muted);
-  padding-left: 0;
-  padding-right: 0;
 }
 .kx-doc-changebar .kx-thread {
   margin-top: 8px;
