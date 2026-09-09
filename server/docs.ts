@@ -29,7 +29,13 @@ export interface DocInfo {
   /** Open incoming revision requests. */
   revisionRequests: Array<{ from: string; reason: string }>;
   /** Open outgoing revision requests, also actionable from this document. */
-  sentRequests: Array<{ target: string; reason: string; targetHasStep: boolean }>;
+  sentRequests: Array<{
+    target: string;
+    reason: string;
+    targetHasStep: boolean;
+    /** The target is being rewritten; a second revision would be refused. */
+    targetWriting: boolean;
+  }>;
   /** Findings about something no document owns — a config file, a workflow, a key. */
   warnings: Array<{ subject: string; reason: string }>;
   /** Contradictions left standing because prime dismissed the demand that named them. */
@@ -424,6 +430,7 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
         target: target.rel,
         reason: r.reason,
         targetHasStep: target.hasProducingStep,
+        targetWriting: false, // filled once every document has been filed
       });
   }
 
@@ -490,6 +497,14 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
     doc.pendingRecheck =
       rechecking.has(doc.rel) || (job?.kind === 'recheck' && job.status === 'running');
     Object.assign(doc, fileDoc(doc, job));
+  }
+
+  // A document is rewritten once. While one revision runs, the demands aimed at
+  // it cannot start another, and the panel greys their buttons rather than
+  // letting the press come back as an error.
+  const writing = new Set(docs.filter((d) => d.state === 'writing').map((d) => d.rel));
+  for (const doc of docs) {
+    for (const sent of doc.sentRequests) sent.targetWriting = writing.has(sent.target);
   }
 
   docs.sort((a, b) => depth(a.rel) - depth(b.rel) || a.rel.localeCompare(b.rel));

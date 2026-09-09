@@ -218,7 +218,13 @@ test('a revision request lands in the inbox of the document it names', () => {
   assert.deepEqual(env.revisionRequests, [{ from: 'ENGINEERING.md', reason: 'logs must go' }]);
   // The same demand is decidable from the document that made it.
   assert.deepEqual(docs.find((d) => d.rel === 'ENGINEERING.md')!.sentRequests, [
-    { target: 'ENVIRONMENT.md', reason: 'logs must go', targetHasStep: true },
+    {
+      target: 'ENVIRONMENT.md',
+      reason: 'logs must go',
+      targetHasStep: true,
+      // Nothing is rewriting it, so the demand can be decided now.
+      targetWriting: false,
+    },
   ]);
 
   // An open demand keeps the handshake from completing, and being actioned clears it.

@@ -442,6 +442,7 @@ export function DocDrawer({
               target: r.target,
               reason: r.reason,
               canApply: r.targetHasStep,
+              locked: r.targetWriting,
             }))}
             onDone={onChanged}
           />
@@ -670,7 +671,15 @@ function RequestBar({
 }: {
   project: Project;
   head: string;
-  items: Array<{ label: string; from: string; target: string; reason: string; canApply: boolean }>;
+  items: Array<{
+    label: string;
+    from: string;
+    target: string;
+    reason: string;
+    canApply: boolean;
+    /** The target is mid-rewrite; deciding now would only be refused. */
+    locked?: boolean;
+  }>;
   extra?: React.ReactNode;
   /** The document these all land on — set to settle them in one decision. */
   bulk?: string;
@@ -795,7 +804,8 @@ function RequestBar({
                 {!bulk && it.canApply && (
                   <button
                     className="btn btn-primary"
-                    disabled={busy}
+                    disabled={busy || it.locked}
+                    title={it.locked ? `${it.target} is being rewritten — wait for it to land` : ''}
                     onClick={() => decide(i, 'apply')}
                   >
                     Apply
@@ -804,7 +814,8 @@ function RequestBar({
                 {!bulk && (
                   <button
                     className="btn btn-link-primary"
-                    disabled={busy}
+                    disabled={busy || it.locked}
+                    title={it.locked ? `${it.target} is being rewritten — wait for it to land` : ''}
                     onClick={() => decide(i, 'dismiss')}
                   >
                     Dismiss

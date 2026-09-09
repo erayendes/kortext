@@ -40,7 +40,12 @@ export interface DocInfo {
   openQuestions: boolean;
   hasProducingStep: boolean;
   revisionRequests: Array<{ from: string; reason: string }>;
-  sentRequests: Array<{ target: string; reason: string; targetHasStep: boolean }>;
+  sentRequests: Array<{
+    target: string;
+    reason: string;
+    targetHasStep: boolean;
+    targetWriting: boolean;
+  }>;
   warnings: Array<{ subject: string; reason: string }>;
   conflicts: Array<{ from: string; reason: string }>;
   section: 'needs' | 'doing' | 'todo' | 'done';
