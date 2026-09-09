@@ -138,6 +138,12 @@ export const api = {
         body: JSON.stringify({ rel, content, expectedVersion, settleRequests }),
       },
     ),
+  docHistory: (projectId: number, rel: string) =>
+    req<{ versions: Array<{ id: number; sha: string; source: string; created_at: string }> }>(
+      `/api/projects/${projectId}/docs/history?rel=${encodeURIComponent(rel)}`,
+    ),
+  docVersionText: (projectId: number, versionId: number) =>
+    req<{ content: string; rel: string }>(`/api/projects/${projectId}/docs/history/${versionId}`),
   clearWarning: (
     projectId: number,
     body: { rel: string; subject: string; reason: string; decision: 'done' | 'dismiss' },

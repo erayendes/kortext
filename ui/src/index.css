@@ -2464,6 +2464,35 @@ button.kx-note-exc:hover {
   margin-right: auto;
 }
 
+/* What this write changed, in the document rather than in a separate view: the
+   new text carries a green rail, and what it replaced folds away beneath it. */
+.kx-block.kx-changed {
+  background: var(--green-bg);
+  box-shadow: inset 3px 0 0 var(--green);
+}
+.kx-removed {
+  margin: 2px 0 4px 8px;
+  font-size: var(--fs-label);
+}
+.kx-removed-toggle {
+  border: 0;
+  background: none;
+  padding: 0 4px;
+  cursor: pointer;
+  color: var(--red);
+}
+.kx-removed-toggle:hover {
+  text-decoration: underline;
+}
+.kx-removed-body {
+  margin-top: 2px;
+  padding: 4px 8px;
+  border-radius: var(--r-sm);
+  background: var(--red-bg);
+  color: var(--red);
+  white-space: pre-wrap;
+}
+
 .kx-req-check {
   margin-right: var(--sp-2);
   vertical-align: baseline;

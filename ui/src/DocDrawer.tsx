@@ -49,6 +49,9 @@ export function DocDrawer({
   const [proposed, setProposed] = useState(false); // the editor holds a draft the engine wrote
   const [rawEdit, setRawEdit] = useState(false); // …and you asked to type in it rather than read it
   const [err, setErr] = useState<string | null>(null);
+  // What the document said before it was last written, when the chain is intact.
+  const [previous, setPrevious] = useState<string | null>(null);
+  const [onlyChanges, setOnlyChanges] = useState(false);
 
   // Track the visible document across async handlers; the drawer instance survives document changes.
   const showing = useRef<string | null>(null);
@@ -69,6 +72,8 @@ export function DocDrawer({
     setContent('');
     setVersion('');
     setDraft('');
+    setPrevious(null);
+    setOnlyChanges(false);
     if (doc) {
       // Ignore results after effect cleanup; captured doc values alone cannot detect a later selection.
       let cancelled = false;
@@ -79,6 +84,18 @@ export function DocDrawer({
           setContent(r.content);
           setVersion(r.version);
           setDraft(r.content);
+          // Only diff against a recorded write. Approving, ticking a demand and
+          // appending a recheck's line all edit the file without recording, so a
+          // stale head would make the previous row the wrong baseline.
+          void api
+            .docHistory(project.id, doc.rel)
+            .then(async (h) => {
+              const [head, prior] = h.versions;
+              if (cancelled || !head || !prior || head.sha !== r.version) return;
+              const text = await api.docVersionText(project.id, prior.id);
+              if (!cancelled) setPrevious(text.content);
+            })
+            .catch(() => {});
         })
         .catch((e) => {
           if (!cancelled) setErr(e.message);
@@ -148,6 +165,40 @@ export function DocDrawer({
     }
     return n;
   }, [tokens]);
+
+  /**
+   * What this write changed, compared block by block rather than line by line.
+   *
+   * The engine hard-wraps prose, so a rewrite re-wraps it; comparing raw lines
+   * paints a whole paragraph green for one changed word. Tokens survive that,
+   * and the maps are keyed by `token.index` — the same identity the notes, the
+   * question numbers and the scroll anchors use — so nothing that points at a
+   * line has to know a diff exists.
+   */
+  const [changed, replaced] = useMemo(() => {
+    const none: [Set<number>, Map<number, MdToken[]>] = [new Set(), new Map()];
+    if (previous === null) return none;
+    const before = mergeWrappedLines(parseMarkdown(stripFrontmatter(previous)));
+    const after = mergeWrappedLines(parseMarkdown(stripFrontmatter(content)));
+    const marks = new Set<number>();
+    const gone = new Map<number, MdToken[]>();
+    let pending: MdToken[] = [];
+    for (const d of lcsDiff(before, after, (t) => `${t.kind}\u0000${t.text}`)) {
+      if (d.sign === '-') {
+        if (d.item.kind !== 'blank') pending.push(d.item);
+        continue;
+      }
+      if (d.sign === '+' && d.item.kind !== 'blank') marks.add(d.item.index);
+      // Removed blocks belong to whatever survived them.
+      if (pending.length > 0 && d.item.kind !== 'blank') {
+        gone.set(d.item.index, pending);
+        pending = [];
+      }
+    }
+    return [marks, gone] as [Set<number>, Map<number, MdToken[]>];
+  }, [previous, content]);
+
+  const changedCount = tokens.filter((t) => changed.has(t.index) || replaced.has(t.index)).length;
 
   // A note marks its line, and the mark is what the footer row shows: a question
   // keeps the number it already carries, any other line takes the next letter.
@@ -439,39 +490,54 @@ export function DocDrawer({
           </>
         ) : (
           <div className="kx-doc">
-            {tokens.map((t) => (
-              <div key={t.index} id={`kx-line-${t.index}`}>
-                <DocBlock
-                  token={t}
-                  openQuestion={openQ.has(t.index)}
-                  questionNo={qNo.get(t.index)}
-                  noteLabel={lineLabel.get(t.index)}
-                  changeRequest={changeReq.has(t.index)}
-                  selected={selected === t.index}
-                  noted={notes.some((n) => n.line === t.index)}
-                  onSelect={() => {
-                    // Let the user select text: a click that ends a selection
-                    // must not toggle the thread.
-                    if ((window.getSelection()?.toString() ?? '').trim()) return;
-                    if (doc.status === 'uninitialized') return;
-                    setSelected(selected === t.index ? null : t.index);
-                  }}
-                />
-                {(selected === t.index || explains.some((x) => x.line === t.index)) &&
-                  doc.status !== 'uninitialized' && (
-                    <LineThread
-                      thread={explains.filter((x) => x.line === t.index)}
-                      active={selected === t.index}
-                      answerBy={answerBy}
-                      onAsk={(q) => ask(t.index, q)}
-                      onNote={(text) => {
-                        addLineNote(t.index, text);
-                        setSelected(null);
-                      }}
-                    />
-                  )}
+            {changedCount > 0 && (
+              <div className="kx-diff-bar">
+                <span>
+                  {changedCount} of {tokens.filter((t) => t.kind !== 'blank').length} blocks changed
+                  since it was last written
+                </span>
+                <button className="btn btn-secondary" onClick={() => setOnlyChanges(!onlyChanges)}>
+                  {onlyChanges ? 'Show the whole document' : 'Show only what changed'}
+                </button>
               </div>
-            ))}
+            )}
+            {tokens
+              .filter((t) => !onlyChanges || changed.has(t.index) || replaced.has(t.index))
+              .map((t) => (
+                <div key={t.index} id={`kx-line-${t.index}`}>
+                  <DocBlock
+                    token={t}
+                    changed={changed.has(t.index)}
+                    openQuestion={openQ.has(t.index)}
+                    questionNo={qNo.get(t.index)}
+                    noteLabel={lineLabel.get(t.index)}
+                    changeRequest={changeReq.has(t.index)}
+                    selected={selected === t.index}
+                    noted={notes.some((n) => n.line === t.index)}
+                    onSelect={() => {
+                      // Let the user select text: a click that ends a selection
+                      // must not toggle the thread.
+                      if ((window.getSelection()?.toString() ?? '').trim()) return;
+                      if (doc.status === 'uninitialized') return;
+                      setSelected(selected === t.index ? null : t.index);
+                    }}
+                  />
+                  {(selected === t.index || explains.some((x) => x.line === t.index)) &&
+                    doc.status !== 'uninitialized' && (
+                      <LineThread
+                        thread={explains.filter((x) => x.line === t.index)}
+                        active={selected === t.index}
+                        answerBy={answerBy}
+                        onAsk={(q) => ask(t.index, q)}
+                        onNote={(text) => {
+                          addLineNote(t.index, text);
+                          setSelected(null);
+                        }}
+                      />
+                    )}
+                  {replaced.has(t.index) && <RemovedToggle tokens={replaced.get(t.index)!} />}
+                </div>
+              ))}
           </div>
         )}
       </div>
@@ -1001,6 +1067,36 @@ function WarningBar({
   );
 }
 
+/**
+ * The text this block replaced, folded away. A sibling of the block rather than
+ * a child: the block's wrapper is itself a click target, and a button nested in
+ * it would open the line's thread on the way past.
+ */
+function RemovedToggle({ tokens }: { tokens: MdToken[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="kx-removed">
+      <button
+        className="kx-removed-toggle mono"
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen(!open);
+        }}
+        title={open ? 'Hide what this replaced' : 'Show what this replaced'}
+      >
+        [{open ? '−' : '+'}]
+      </button>
+      {open && (
+        <div className="kx-removed-body">
+          {tokens.map((t, i) => (
+            <div key={i}>{t.text}</div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function CopyButton({ text }: { text: string }) {
   const [done, setDone] = useState(false);
   useEffect(() => {
@@ -1072,6 +1168,7 @@ function DocBlock({
   changeRequest,
   questionNo,
   noteLabel,
+  changed,
   onSelect,
 }: {
   token: MdToken;
@@ -1081,6 +1178,7 @@ function DocBlock({
   changeRequest?: boolean;
   questionNo?: number;
   noteLabel?: string;
+  changed?: boolean;
   onSelect: () => void;
 }) {
   const activation = {
@@ -1096,7 +1194,7 @@ function DocBlock({
     },
   };
   if (token.kind === 'blank') return <div className="kx-blank" />;
-  const cls = `kx-block kx-${token.kind}${selected ? ' selected' : ''}${noted ? ' noted' : ''}${openQuestion ? ' open-q' : ''}${changeRequest ? ' req-q' : ''}${questionNo || noteLabel ? ' kx-numbered' : ''}`;
+  const cls = `kx-block kx-${token.kind}${selected ? ' selected' : ''}${noted ? ' noted' : ''}${openQuestion ? ' open-q' : ''}${changeRequest ? ' req-q' : ''}${questionNo || noteLabel ? ' kx-numbered' : ''}${changed ? ' kx-changed' : ''}`;
   if (token.kind === 'table' && token.table) {
     return (
       <div className={cls} {...activation}>
@@ -1228,37 +1326,45 @@ function Mermaid({ code }: { code: string }) {
 }
 
 // Use line-based LCS to mark changes in the complete proposed document.
-function lineDiff(a: string, b: string): { sign: ' ' | '-' | '+'; text: string }[] {
-  const x = a.split('\n');
-  const y = b.split('\n');
+/** Longest common subsequence over anything with a comparable key. */
+function lcsDiff<T>(x: T[], y: T[], key: (t: T) => string): { sign: ' ' | '-' | '+'; item: T }[] {
+  const kx = x.map(key);
+  const ky = y.map(key);
   const n = x.length;
   const m = y.length;
   const lcs = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(0));
   for (let i = n - 1; i >= 0; i--) {
     for (let j = m - 1; j >= 0; j--) {
       lcs[i]![j] =
-        x[i] === y[j] ? lcs[i + 1]![j + 1]! + 1 : Math.max(lcs[i + 1]![j]!, lcs[i]![j + 1]!);
+        kx[i] === ky[j] ? lcs[i + 1]![j + 1]! + 1 : Math.max(lcs[i + 1]![j]!, lcs[i]![j + 1]!);
     }
   }
-  const out: { sign: ' ' | '-' | '+'; text: string }[] = [];
+  const out: { sign: ' ' | '-' | '+'; item: T }[] = [];
   let i = 0;
   let j = 0;
   while (i < n && j < m) {
-    if (x[i] === y[j]) {
-      out.push({ sign: ' ', text: x[i]! });
+    if (kx[i] === ky[j]) {
+      out.push({ sign: ' ', item: x[i]! });
       i++;
       j++;
     } else if (lcs[i + 1]![j]! >= lcs[i]![j + 1]!) {
-      out.push({ sign: '-', text: x[i]! });
+      out.push({ sign: '-', item: x[i]! });
       i++;
     } else {
-      out.push({ sign: '+', text: y[j]! });
+      out.push({ sign: '+', item: y[j]! });
       j++;
     }
   }
-  while (i < n) out.push({ sign: '-', text: x[i++]! });
-  while (j < m) out.push({ sign: '+', text: y[j++]! });
+  while (i < n) out.push({ sign: '-', item: x[i++]! });
+  while (j < m) out.push({ sign: '+', item: y[j++]! });
   return out;
+}
+
+function lineDiff(a: string, b: string): { sign: ' ' | '-' | '+'; text: string }[] {
+  return lcsDiff(a.split('\n'), b.split('\n'), (t) => t).map((d) => ({
+    sign: d.sign,
+    text: d.item,
+  }));
 }
 
 // Show the full proposal with diff markers; switch to a textarea for manual edits.
