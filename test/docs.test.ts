@@ -14,6 +14,8 @@ import {
   hasOpenQuestions,
   parseRevisionRequests,
   markRequestHandled,
+  markListItemHandled,
+  appendListItem,
   parseConflicts,
   parseWarnings,
   listVersions,
@@ -436,4 +438,38 @@ test('every document is filed by one rule, and the first matching rule wins', ()
   assert.equal(label('STACK.md'), 'todo/waiting:(update)');
   job('STACK.md', 'running', 'recheck');
   assert.equal(label('STACK.md'), 'todo/waiting:(update)');
+});
+
+test('a dismissed demand leaves the contradiction where the next writer reads it', () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Acme', repoPath: join(work, 'acme') }, pkgRoot);
+
+  const reason = 'the access-log lines must follow the no-logs decision';
+  writeFileSync(docPath(p, 'ENVIRONMENT.md'), '---\nstatus: approved\n---\n\n# Env\n', 'utf8');
+  writeFileSync(
+    docPath(p, 'SECURITY.md'),
+    `---\nstatus: approved\n---\n\n## Revision Requests\n\n- \`ENVIRONMENT.md\` — ${reason}\n`,
+    'utf8',
+  );
+
+  // What the dismiss route does: settle the asking, then record what the asking
+  // was about in the document that still disagrees.
+  markRequestHandled(p, 'SECURITY.md', 'ENVIRONMENT.md', reason, 'dismissed by prime — kept');
+  appendListItem(p, 'ENVIRONMENT.md', 'Conflicts', 'SECURITY.md', reason, 'dismissed 2026-09-09');
+
+  const env = listDocs(db, p, pkgRoot).find((d) => d.rel === 'ENVIRONMENT.md')!;
+  assert.deepEqual(env.conflicts, [{ from: 'SECURITY.md', reason }]);
+  assert.equal(env.section, 'needs');
+  assert.equal(env.detail, 'review');
+  assert.equal(analysisComplete(db, p, pkgRoot), false, 'the set disagrees with itself');
+
+  // Settling it writes the outcome under the reason, not over it.
+  markListItemHandled(p, 'ENVIRONMENT.md', /^conflicts$/i, 'SECURITY.md', reason, 'cleared');
+  const body = readFileSync(docPath(p, 'ENVIRONMENT.md'), 'utf8');
+  assert.ok(
+    body.indexOf('dismissed 2026-09-09') < body.indexOf('cleared'),
+    'the item reads in the order it happened',
+  );
+  assert.deepEqual(listDocs(db, p, pkgRoot).find((d) => d.rel === 'ENVIRONMENT.md')!.conflicts, []);
 });

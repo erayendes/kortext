@@ -12,6 +12,7 @@ import {
 } from './projects.js';
 import {
   analysisComplete,
+  appendListItem,
   docPath,
   docVersion,
   listDocs,
@@ -645,6 +646,29 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     res.json({ ok: true });
   });
 
+  // Clear a conflict: prime looked again and settled it, one way or the other.
+  app.post('/api/projects/:id/docs/clear-conflict', (req, res) => {
+    const project = projectOr404(req.params.id, res);
+    if (!project) return;
+    const { rel, from, reason, said } = req.body ?? {};
+    const doc = listDocs(db, project, pkgRoot).find((d) => d.rel === String(rel ?? ''));
+    if (!doc) return res.status(404).json({ error: `no such document: ${rel}` });
+    const conflict = doc.conflicts.find(
+      (c) => c.from === String(from ?? '') && c.reason === String(reason ?? ''),
+    );
+    if (!conflict) return res.status(409).json({ error: 'that conflict is already settled' });
+    const note = String(said ?? '').trim();
+    markListItemHandled(
+      project,
+      doc.rel,
+      /^conflicts$/i,
+      conflict.from,
+      conflict.reason,
+      note ? `cleared by prime — ${note}` : 'cleared by prime',
+    );
+    res.json({ ok: true });
+  });
+
   // Apply or dismiss a revision request from either its source or target document.
   app.post('/api/projects/:id/docs/decide-request', (req, res) => {
     const project = projectOr404(req.params.id, res);
@@ -666,6 +690,18 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
         rel,
         request.reason,
         said ? `dismissed by prime — ${said}` : 'dismissed by prime — no change made',
+      );
+      // The demand said this document contradicts another. Dismissing it does
+      // not settle the contradiction — it leaves it standing, in a document the
+      // next agent will rewrite from. So it is written down where that agent
+      // reads, rather than ticked away in the one that asked.
+      appendListItem(
+        project,
+        rel,
+        'Conflicts',
+        request.from,
+        request.reason,
+        `dismissed ${new Date().toISOString().slice(0, 10)}${said ? ` · prime: ${said}` : ''}`,
       );
       return res.json({ dismissed: 1 });
     }

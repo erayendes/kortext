@@ -315,8 +315,13 @@ export function markListItemHandled(
     if (m[2]!.replace(/^\.kortext\//, '') !== subject.replace(/^.*\//, '') && m[2] !== subject)
       continue;
     if ((m[3] ?? '').trim() !== reason.trim()) continue;
-    // Keep both the settled marker and the outcome in the document.
-    lines.splice(i, 1, `- [x] \`${m[2]}\` — ${m[3]}`, `  - ${outcome} · ${day}`);
+    // Keep both the settled marker and the outcome in the document. A line may
+    // already carry a trailer saying how it came to be; the outcome goes after
+    // it, so the item reads in the order it happened.
+    let end = i + 1;
+    while (end < lines.length && /^\s+- /.test(lines[end] ?? '')) end++;
+    lines.splice(end, 0, `  - ${outcome} · ${day}`);
+    lines[i] = `- [x] \`${m[2]}\` — ${m[3]}`;
     writeFileSync(path, lines.join('\n'), 'utf8');
     return;
   }
@@ -521,6 +526,10 @@ export function analysisComplete(
   if ((project.kind ?? 'new') === 'new' && !settled(byRel.get('BRIEF.md'))) return false;
   if (targets.some((rel) => docs.find((d) => d.rel === rel)?.openQuestions)) return false;
   if (docs.some((d) => d.revisionRequests.length > 0)) return false;
+  // A standing conflict means the set contradicts itself. A warning is a finding
+  // about the codebase — real repositories always have some, and blocking on
+  // those would make the handshake unreachable.
+  if (docs.some((d) => d.conflicts.length > 0)) return false;
   return targets.every((rel) => settled(byRel.get(rel)));
 }
 

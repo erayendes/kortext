@@ -2464,6 +2464,23 @@ button.kx-note-exc:hover {
   margin-right: auto;
 }
 
+/* A conflict is the changebar in red: the document set disagrees with itself,
+   and the handshake waits until it does not. */
+.kx-doc-conflictbar {
+  margin: var(--sp-3) 18px 8px;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  background: var(--red-bg);
+  border: 1px solid var(--red-border);
+  font-size: var(--fs-ui);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.kx-doc-conflictbar .kx-changebar-head {
+  color: var(--red);
+}
+
 /* A warning is the changebar in amber: same shape, but nothing here can be
    applied for you — it is about a file no document owns. */
 .kx-doc-warnbar {

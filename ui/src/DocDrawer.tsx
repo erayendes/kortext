@@ -394,6 +394,9 @@ export function DocDrawer({
             onDone={onChanged}
           />
         )}
+        {doc.conflicts.length > 0 && !editing && (
+          <ConflictBar project={project} doc={doc} onDone={onChanged} />
+        )}
         {doc.warnings.length > 0 && !editing && (
           <WarningBar project={project} doc={doc} onDone={onChanged} />
         )}
@@ -778,6 +781,86 @@ function RequestBar({
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+/**
+ * What a dismissed demand left behind. The demand said this document
+ * contradicts another; dismissing it settled the asking, not the contradiction.
+ * It stays here because the next agent to rewrite this document reads here.
+ */
+function ConflictBar({
+  project,
+  doc,
+  onDone,
+}: {
+  project: Project;
+  doc: DocInfo;
+  onDone: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [cleared, setCleared] = useState<Set<string>>(new Set());
+  const [saying, setSaying] = useState<string | null>(null);
+  const [said, setSaid] = useState('');
+
+  const clear = (from: string, reason: string) => {
+    setBusy(true);
+    api
+      .clearConflict(project.id, { rel: doc.rel, from, reason, said })
+      .then(() => {
+        setCleared((c) => new Set(c).add(`${from}: ${reason}`));
+        setSaying(null);
+        setSaid('');
+        onDone();
+      })
+      .finally(() => setBusy(false));
+  };
+
+  const open = doc.conflicts.filter((c) => !cleared.has(`${c.from}: ${c.reason}`));
+  if (open.length === 0) return null;
+  return (
+    <div className="kx-doc-conflictbar">
+      <div className="kx-changebar-head">
+        This document was asked to change and the ask was dismissed. What it was asked about still
+        disagrees with the document that asked.
+      </div>
+      <ul className="kx-changebar-list">
+        {open.map((c) => {
+          const key = `${c.from}: ${c.reason}`;
+          return (
+            <li key={key}>
+              <span className="mono">{c.from.replace(/\.md$/, '')}</span> — {c.reason}
+              <div className="kx-changebar-actions">
+                <button
+                  className="btn btn-primary"
+                  disabled={busy}
+                  onClick={() => (saying === key ? clear(c.from, c.reason) : setSaying(key))}
+                >
+                  {saying === key ? 'Clear it' : 'Settle'}
+                </button>
+                {saying === key && (
+                  <button className="btn btn-link-primary" onClick={() => setSaying(null)}>
+                    Cancel
+                  </button>
+                )}
+              </div>
+              {saying === key && (
+                <div className="kx-thread-input">
+                  <textarea
+                    className="kx-input kx-thread-text"
+                    rows={2}
+                    autoFocus
+                    placeholder="Why is this settled? (optional — it is written into the document)"
+                    value={said}
+                    onChange={(e) => setSaid(e.target.value)}
+                  />
                 </div>
               )}
             </li>

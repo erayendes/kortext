@@ -146,6 +146,14 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
+  clearConflict: (
+    projectId: number,
+    body: { rel: string; from: string; reason: string; said?: string },
+  ) =>
+    req<{ ok: boolean }>(`/api/projects/${projectId}/docs/clear-conflict`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
   decideRequest: (
     projectId: number,
     body: {
