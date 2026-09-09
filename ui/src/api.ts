@@ -154,6 +154,18 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
+  settleRequests: (
+    projectId: number,
+    body: {
+      rel: string;
+      apply: Array<{ from: string; reason: string }>;
+      dismiss: Array<{ from: string; reason: string }>;
+    },
+  ) =>
+    req<{ applied: number; dismissed: number }>(`/api/projects/${projectId}/docs/settle-requests`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
   decideRequest: (
     projectId: number,
     body: {

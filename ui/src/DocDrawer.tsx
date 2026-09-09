@@ -377,6 +377,7 @@ export function DocDrawer({
               reason: r.reason,
               canApply: doc.hasProducingStep,
             }))}
+            bulk={doc.hasProducingStep ? doc.rel : undefined}
             onDone={onChanged}
           />
         )}
@@ -598,14 +599,20 @@ function RequestBar({
   head,
   items,
   extra,
+  bulk,
   onDone,
 }: {
   project: Project;
   head: string;
   items: Array<{ label: string; from: string; target: string; reason: string; canApply: boolean }>;
   extra?: React.ReactNode;
+  /** The document these all land on — set to settle them in one decision. */
+  bulk?: string;
   onDone: () => void;
 }) {
+  // Prime ticks what they accept; the rest are dismissed by the same press, and
+  // the button says so before it is pressed.
+  const [ticked, setTicked] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [settled, setSettled] = useState<Set<string>>(new Set());
@@ -634,6 +641,33 @@ function RequestBar({
 
   const keyOf = (it: { from: string; target: string; reason: string }) =>
     `${it.from}→${it.target}: ${it.reason}`;
+
+  // One press, one rewrite: a document is written once, so applying the ticked
+  // ones separately would start a run and have the rest refused.
+  const settleAll = async () => {
+    if (!bulk) return;
+    const open = items.filter((it) => !settled.has(keyOf(it)));
+    setBusy(true);
+    setErr(null);
+    try {
+      await api.settleRequests(project.id, {
+        rel: bulk,
+        apply: open
+          .filter((it) => ticked.has(keyOf(it)))
+          .map((it) => ({ from: it.from, reason: it.reason })),
+        dismiss: open
+          .filter((it) => !ticked.has(keyOf(it)))
+          .map((it) => ({ from: it.from, reason: it.reason })),
+      });
+      setSettled((s) => new Set([...s, ...open.map(keyOf)]));
+      setTicked(new Set());
+      onDone();
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const decide = async (i: number, decision: 'apply' | 'dismiss', instruction?: string) => {
     const it = items[i];
@@ -673,9 +707,26 @@ function RequestBar({
           const talk = chat.filter((c) => c.i === i);
           return (
             <li key={i}>
+              {bulk && (
+                <input
+                  type="checkbox"
+                  className="kx-req-check"
+                  checked={ticked.has(keyOf(it))}
+                  disabled={busy}
+                  aria-label={`Apply the change ${it.label} asked for`}
+                  onChange={(e) =>
+                    setTicked((t) => {
+                      const next = new Set(t);
+                      if (e.target.checked) next.add(keyOf(it));
+                      else next.delete(keyOf(it));
+                      return next;
+                    })
+                  }
+                />
+              )}
               <span className="mono">{it.label.replace(/\.md$/, '')}</span> — {it.reason}
               <div className="kx-changebar-actions">
-                {it.canApply && (
+                {!bulk && it.canApply && (
                   <button
                     className="btn btn-primary"
                     disabled={busy}
@@ -684,13 +735,15 @@ function RequestBar({
                     Apply
                   </button>
                 )}
-                <button
-                  className="btn btn-link-primary"
-                  disabled={busy}
-                  onClick={() => decide(i, 'dismiss')}
-                >
-                  Dismiss
-                </button>
+                {!bulk && (
+                  <button
+                    className="btn btn-link-primary"
+                    disabled={busy}
+                    onClick={() => decide(i, 'dismiss')}
+                  >
+                    Dismiss
+                  </button>
+                )}
                 <button
                   className="btn btn-secondary"
                   disabled={busy}
@@ -787,6 +840,20 @@ function RequestBar({
           );
         })}
       </ul>
+      {bulk && (
+        <div className="kx-changebar-actions">
+          <button
+            className="btn btn-primary"
+            disabled={busy}
+            onClick={() => settleAll()}
+            title="Ticked ones are applied in one rewrite; the rest are dismissed, and each dismissal leaves a conflict on this document"
+          >
+            Apply {live.filter(({ it }) => ticked.has(keyOf(it))).length} · dismiss{' '}
+            {live.filter(({ it }) => !ticked.has(keyOf(it))).length}
+          </button>
+          {extra}
+        </div>
+      )}
     </div>
   );
 }

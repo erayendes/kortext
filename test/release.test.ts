@@ -181,6 +181,48 @@ test('cancel removes Kortext only and preserves Kopeng and user-owned project fi
   assert.equal(readFileSync(join(p.repo_path, 'app.txt'), 'utf8'), 'My source');
 });
 
+test('one press settles every demand: the ticked ones share a rewrite, the rest leave conflicts', async (t) => {
+  const { p, request } = await fixture(t);
+  writeFileSync(
+    docPath(p, 'STACK.md'),
+    '---\nstatus: approved\n---\n\n## Revision Requests\n\n- `PRODUCT.md` — fix the Plausible line\n',
+  );
+  writeFileSync(
+    docPath(p, 'SECURITY.md'),
+    '---\nstatus: approved\n---\n\n## Revision Requests\n\n- `PRODUCT.md` — list the personal data\n',
+  );
+  writeFileSync(docPath(p, 'PRODUCT.md'), '---\nstatus: approved\n---\n\n# Product\n');
+
+  const res = await request('docs/settle-requests', {
+    rel: 'PRODUCT.md',
+    apply: [{ from: 'STACK.md', reason: 'fix the Plausible line' }],
+    dismiss: [{ from: 'SECURITY.md', reason: 'list the personal data' }],
+  });
+  assert.equal(res.status, 202);
+  assert.deepEqual(await res.json(), { applied: 1, dismissed: 1 });
+
+  // The asking is settled in the document that asked…
+  assert.match(readFileSync(docPath(p, 'SECURITY.md'), 'utf8'), /- \[x\] `PRODUCT.md`/);
+  // …and what it was asking about is recorded where the next writer reads.
+  const product = readFileSync(docPath(p, 'PRODUCT.md'), 'utf8');
+  assert.match(product, /## Conflicts/);
+  assert.match(product, /`SECURITY.md` — list the personal data/);
+  // The applied one is a single revision, not one run per demand.
+  assert.match(product, /status: draft/);
+
+  // Nothing is left to settle twice.
+  assert.equal(
+    (
+      await request('docs/settle-requests', {
+        rel: 'PRODUCT.md',
+        apply: [],
+        dismiss: [{ from: 'SECURITY.md', reason: 'list the personal data' }],
+      })
+    ).status,
+    409,
+  );
+});
+
 test('a document still wearing the template cannot be approved without insisting', async (t) => {
   const { p, request } = await fixture(t);
   const path = docPath(p, 'DATABASE.md');

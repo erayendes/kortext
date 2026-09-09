@@ -2464,6 +2464,12 @@ button.kx-note-exc:hover {
   margin-right: auto;
 }
 
+.kx-req-check {
+  margin-right: var(--sp-2);
+  vertical-align: baseline;
+  accent-color: var(--accent);
+}
+
 /* A conflict is the changebar in red: the document set disagrees with itself,
    and the handshake waits until it does not. */
 .kx-doc-conflictbar {
