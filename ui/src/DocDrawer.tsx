@@ -646,7 +646,7 @@ export function DocBadges({ doc }: { doc: DocInfo }) {
               : (DETAIL_TITLE[doc.detail] ?? '')
           }
         >
-          ({doc.detail})
+          {doc.detail}
         </span>
       )}
       {doc.dependentOn.length > 0 && (

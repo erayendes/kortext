@@ -1852,9 +1852,14 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   border-color: var(--amber-border);
   background: var(--amber-bg);
 }
+/* The quiet two. `.kx-badge` is declared twice and the earlier one paints a
+   solid accent, so a badge that sets only its text colour comes out as the
+   loudest pill on the row — the opposite of what these two mean. */
 .kx-badge-draft,
 .kx-badge-queue {
   color: var(--fg-muted);
+  background: var(--bg-muted);
+  border-color: var(--border);
 }
 .kx-badge-failed {
   background: var(--red-bg);
