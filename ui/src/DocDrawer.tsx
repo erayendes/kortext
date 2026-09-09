@@ -129,7 +129,8 @@ export function DocDrawer({
 
   // The answer names its own author. Asking the global engine setting instead
   // signed codex's answers as claude whenever the project ran on the other one.
-  const [answerBy, setAnswerBy] = useState('agent');
+  // The project's own engine is the right guess while the answer is still coming.
+  const [answerBy, setAnswerBy] = useState(project.engine ?? 'agent');
 
   // Distinguish questions for this document from revision requests sent to another document.
   const [openQ, changeReq] = useMemo(() => {
