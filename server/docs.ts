@@ -26,16 +26,12 @@ export interface DocInfo {
   openQuestions: boolean; // carries unanswered questions for prime
   /** A workflow step writes this document. The brief has none — it is prime's own. */
   hasProducingStep: boolean;
-  /** Open incoming revision requests. */
+  /**
+   * Change requests arriving from other approved documents. The receiving
+   * document is the only place they are decided — prime reads the request
+   * beside the text it is about.
+   */
   revisionRequests: Array<{ from: string; reason: string }>;
-  /** Open outgoing revision requests, also actionable from this document. */
-  sentRequests: Array<{
-    target: string;
-    reason: string;
-    targetHasStep: boolean;
-    /** The target is being rewritten; a second revision would be refused. */
-    targetWriting: boolean;
-  }>;
   /**
    * Findings about something no document owns — a config file, a workflow, a
    * key. A record the next writer reads, not a decision owed: no buttons, no
@@ -443,7 +439,6 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
         openQuestions: status !== 'uninitialized' && hasOpenQuestions(body),
         hasProducingStep: map.has(rel),
         revisionRequests: [],
-        sentRequests: [],
         warnings: status === 'uninitialized' ? [] : parseWarnings(body),
         conflicts: status === 'uninitialized' ? [] : parseConflicts(body),
         // Filled once every document is known; nothing can be filed before then.
@@ -452,7 +447,11 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
         detail: 'queue',
         pendingRecheck: false,
       });
-      if (status !== 'uninitialized') {
+      // A change request leaves its document only when prime approves that
+      // document. Prime may edit the draft and delete the reason, so sending it
+      // earlier is premature — they see it in the body under `## Change
+      // Requests` before approving, which is the whole warning it needs.
+      if (status === 'approved') {
         for (const r of parseRevisionRequests(body)) requests.push({ ...r, from: rel });
       }
     }
@@ -466,15 +465,6 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
     // Only written documents can receive revision requests.
     if (!target || target.status === 'uninitialized') continue;
     target.revisionRequests.push({ from: r.from, reason: r.reason });
-    // Expose the same request on the source document for either-end decisions.
-    docs
-      .find((d) => d.rel === r.from)
-      ?.sentRequests.push({
-        target: target.rel,
-        reason: r.reason,
-        targetHasStep: target.hasProducingStep,
-        targetWriting: false, // filled once every document has been filed
-      });
   }
 
   // 'not-applicable' satisfies a dependency: the doc was considered and
@@ -540,14 +530,6 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
     doc.pendingRecheck =
       rechecking.has(doc.rel) || (job?.kind === 'recheck' && job.status === 'running');
     Object.assign(doc, fileDoc(doc, job));
-  }
-
-  // A document is rewritten once. While one revision runs, the demands aimed at
-  // it cannot start another, and the panel greys their buttons rather than
-  // letting the press come back as an error.
-  const writing = new Set(docs.filter((d) => d.state === 'writing').map((d) => d.rel));
-  for (const doc of docs) {
-    for (const sent of doc.sentRequests) sent.targetWriting = writing.has(sent.target);
   }
 
   docs.sort((a, b) => depth(a.rel) - depth(b.rel) || a.rel.localeCompare(b.rel));

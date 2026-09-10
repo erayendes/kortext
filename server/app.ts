@@ -630,38 +630,59 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
    */
 
   /**
-   * Settle every demand standing against one document in a single decision.
+   * Settle everything owed on one document in a single decision.
    *
-   * The applied ones go into ONE revision — a document is rewritten once, so
-   * sending them separately would start a run and have the rest refused. The
-   * rest are dismissed, and each dismissal leaves its conflict behind.
+   * Prime's answers to the questions, the change requests they accepted and the
+   * ones they denied all arrive together, because they all rewrite the same
+   * document and a document is rewritten once. Sent separately, the first press
+   * would start a run and the rest would come back refused.
+   *
+   * A denied request leaves its conflict behind: the asking is settled, the
+   * contradiction is not, and the next agent to rewrite this document reads it
+   * here rather than in the document that asked.
    */
   app.post('/api/projects/:id/docs/settle-requests', (req, res) => {
     const project = projectOr404(req.params.id, res);
     if (!project) return;
-    const { rel, apply, dismiss } = req.body ?? {};
+    const { rel, apply, deny, answers } = req.body ?? {};
     const doc = listDocs(db, project, pkgRoot).find((d) => d.rel === String(rel ?? ''));
     if (!doc) return res.status(404).json({ error: `no such document: ${rel}` });
     const pick = (list: unknown) =>
       (Array.isArray(list) ? list : [])
-        .map((r: { from?: unknown; reason?: unknown; instruction?: unknown }) => {
+        .map((r: { from?: unknown; reason?: unknown; note?: unknown }) => {
           const found = doc.revisionRequests.find(
             (x) => x.from === String(r.from ?? '') && x.reason === String(r.reason ?? ''),
           );
-          return found ? { ...found, instruction: String(r.instruction ?? '').trim() } : undefined;
+          return found ? { ...found, note: String(r.note ?? '').trim() } : undefined;
         })
-        .filter((r): r is { from: string; reason: string; instruction: string } => !!r);
+        .filter((r): r is { from: string; reason: string; note: string } => !!r);
     const applying = pick(apply);
-    const dismissing = pick(dismiss);
-    if (applying.length === 0 && dismissing.length === 0) {
-      return res.status(409).json({ error: 'those requests are already settled' });
+    const denying = pick(deny);
+    const said = (Array.isArray(answers) ? answers : []).map(String).filter((a) => a.trim());
+    if (applying.length === 0 && denying.length === 0 && said.length === 0) {
+      return res.status(409).json({ error: 'there is nothing left to settle here' });
     }
     const day = new Date().toISOString().slice(0, 10);
-    for (const r of dismissing) {
-      markRequestHandled(project, r.from, doc.rel, r.reason, 'dismissed by prime — no change made');
-      appendListItem(project, doc.rel, 'Conflicts', r.from, r.reason, `dismissed ${day}`);
+    for (const r of denying) {
+      markRequestHandled(
+        project,
+        r.from,
+        doc.rel,
+        r.reason,
+        r.note ? `denied by prime — ${r.note}` : 'denied by prime — no change made',
+      );
+      appendListItem(
+        project,
+        doc.rel,
+        'Conflicts',
+        r.from,
+        r.reason,
+        `denied ${day}${r.note ? ` · prime: ${r.note}` : ''}`,
+      );
     }
-    if (applying.length === 0) return res.json({ applied: 0, dismissed: dismissing.length });
+    // Denials alone change nothing in the text; there is nothing to rewrite.
+    if (applying.length === 0 && said.length === 0)
+      return res.json({ applied: 0, denied: denying.length });
 
     if (!doc.hasProducingStep) {
       return res
@@ -678,72 +699,20 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       db,
       project,
       doc.rel,
-      applying.flatMap((r) =>
-        r.instruction
-          ? [`[${r.from} asks] ${r.reason}`, `[prime decides] ${r.instruction}`]
-          : [`[${r.from} asks] ${r.reason}`],
-      ),
+      [
+        ...said,
+        ...applying.flatMap((r) =>
+          r.note
+            ? [`[${r.from} asks] ${r.reason}`, `[prime decides] ${r.note}`]
+            : [`[${r.from} asks] ${r.reason}`],
+        ),
+      ],
       engine,
       pkgRoot,
     ).catch((err) => console.error(`settle-requests follow-up failed for ${doc.rel}:`, err));
-    res.status(202).json({ applied: applying.length, dismissed: dismissing.length });
-  });
-
-  // Apply or dismiss a revision request from either its source or target document.
-  app.post('/api/projects/:id/docs/decide-request', (req, res) => {
-    const project = projectOr404(req.params.id, res);
-    if (!project) return;
-    const { target, from, reason, decision, instruction } = req.body ?? {};
-    const rel = String(target ?? '');
-    const doc = listDocs(db, project, pkgRoot).find((d) => d.rel === rel);
-    if (!doc) return res.status(404).json({ error: `no such document: ${rel}` });
-    const request = doc.revisionRequests.find(
-      (r) => r.from === String(from ?? '') && r.reason === String(reason ?? ''),
-    );
-    if (!request) return res.status(409).json({ error: 'that request is already settled' });
-
-    const said = String(instruction ?? '').trim();
-    if (decision === 'dismiss') {
-      markRequestHandled(
-        project,
-        request.from,
-        rel,
-        request.reason,
-        said ? `dismissed by prime — ${said}` : 'dismissed by prime — no change made',
-      );
-      // The demand said this document contradicts another. Dismissing it does
-      // not settle the contradiction — it leaves it standing, in a document the
-      // next agent will rewrite from. So it is written down where that agent
-      // reads, rather than ticked away in the one that asked.
-      appendListItem(
-        project,
-        rel,
-        'Conflicts',
-        request.from,
-        request.reason,
-        `dismissed ${new Date().toISOString().slice(0, 10)}${said ? ` · prime: ${said}` : ''}`,
-      );
-      return res.json({ dismissed: 1 });
-    }
-    // The brief has no producing step; it must be edited or revised through a proposal.
-    if (!doc.hasProducingStep) {
-      return res
-        .status(409)
-        .json({ error: `${rel} is prime's own document — open it and draft the change there` });
-    }
-    const engine = engineFor(db, project);
-    if (!engine) return res.status(409).json({ error: 'no agent CLI installed' });
-    if (runningDoc(db, project.id, rel)) {
-      return res.status(409).json({ error: `${rel} is being rewritten — wait for it to land` });
-    }
-    const notes = [`[${request.from} asks] ${request.reason}`];
-    if (said) notes.push(`[prime decides] ${said}`);
-    setFrontmatterStatus(docPath(project, rel), 'draft');
-    // runStep settles the matching demand after a successful write, on retries too.
-    void reviseDoc(db, project, rel, notes, engine, pkgRoot).catch((err) =>
-      console.error(`decide-request follow-up failed for ${rel}:`, err),
-    );
-    res.status(202).json({ started: rel, notes: notes.length });
+    res
+      .status(202)
+      .json({ applied: applying.length, denied: denying.length, answered: said.length });
   });
 
   // Return line-anchored Q&A without modifying documents; CLI output is logged.

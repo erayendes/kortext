@@ -181,7 +181,7 @@ test('cancel removes Kortext only and preserves Kopeng and user-owned project fi
   assert.equal(readFileSync(join(p.repo_path, 'app.txt'), 'utf8'), 'My source');
 });
 
-test('one press settles every demand: the ticked ones share a rewrite, the rest leave conflicts', async (t) => {
+test('one press settles the whole list: the accepted share a rewrite, the denied leave conflicts', async (t) => {
   const { p, request } = await fixture(t);
   writeFileSync(
     docPath(p, 'STACK.md'),
@@ -196,10 +196,10 @@ test('one press settles every demand: the ticked ones share a rewrite, the rest 
   const res = await request('docs/settle-requests', {
     rel: 'PRODUCT.md',
     apply: [{ from: 'STACK.md', reason: 'fix the Plausible line' }],
-    dismiss: [{ from: 'SECURITY.md', reason: 'list the personal data' }],
+    deny: [{ from: 'SECURITY.md', reason: 'list the personal data' }],
   });
   assert.equal(res.status, 202);
-  assert.deepEqual(await res.json(), { applied: 1, dismissed: 1 });
+  assert.deepEqual(await res.json(), { applied: 1, denied: 1, answered: 0 });
 
   // The asking is settled in the document that asked…
   assert.match(readFileSync(docPath(p, 'SECURITY.md'), 'utf8'), /- \[x\] `PRODUCT.md`/);
@@ -216,7 +216,7 @@ test('one press settles every demand: the ticked ones share a rewrite, the rest 
       await request('docs/settle-requests', {
         rel: 'PRODUCT.md',
         apply: [],
-        dismiss: [{ from: 'SECURITY.md', reason: 'list the personal data' }],
+        deny: [{ from: 'SECURITY.md', reason: 'list the personal data' }],
       })
     ).status,
     409,

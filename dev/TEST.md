@@ -104,7 +104,7 @@ already existed, and `.kortext/` with fourteen analysis skeletons. A new project
 | existing | the code: at least 3 source files that are not `node_modules`, `dist`, `.git`… |
 
 **Expect when the brief is thin:** a blue band with up to six questions, and the brief demoted
-from `approved` back to `draft` — it moves to **Needs you**, which is where a document waiting
+from `approved` back to `draft` — it moves to **Action needed**, which is where a document waiting
 on a human belongs. Editing the brief and approving it again re-asks the gate.
 
 - [ ] A one-line brief produces questions, not documents.

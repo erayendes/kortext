@@ -189,8 +189,9 @@ because a rule there would quietly beat the variant's.
 | `.btn-link-danger` | destructive and quiet — the danger zone |
 | `.btn-x` | the × inside a chip. Carries the family, not the height; no hover, because it sits in a line you read, not a control you aim at |
 
-Action order under a demand: `Apply · Dismiss · Add note · Ask` — decision, then addition to the
-decision, then the question.
+Action order in the Action Needed list: the tick that accepts, then `Say why`, then the thread
+(Ask · Add note) under the row — decision, then addition to the decision, then the question. The
+button that sends them all sits under the whole list, not under a group.
 
 ---
 
@@ -240,7 +241,7 @@ The heart of the system. A document is in **exactly one** state — where it is.
 **A badge beats the state.** Anything carrying `failed` or `change request` moves to **Needs
 you** whatever its state. The exception is `dependent`: news, not work, so it stays put.
 
-Groups: `Needs you` → `In progress` → `Next` → `Approved` → `Not applicable`. The last two are
+Groups: `Action needed` → `In progress` → `Next` → `Approved` → `Not applicable`. The last two are
 collapsed by default — one is finished, the other deliberately skipped.
 
 ---

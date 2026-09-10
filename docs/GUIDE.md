@@ -32,7 +32,7 @@ CLI; that call consumes the CLI's quota or billing and is cached for the same br
 
 A **new project** is judged on its brief. If the brief does not say what you are building, who
 it is for, which language the product speaks, how you will know it worked, and what is out of
-scope, the analysis does not begin — you get questions back and the brief moves to **Needs you**.
+scope, the analysis does not begin — you get questions back and the brief moves to **Action needed**.
 The local check uses fixed English questions; the CLI is asked to use the brief's language.
 Answer them in the brief, approve it again, and press Start if the project is paused.
 
@@ -75,17 +75,28 @@ is its own document inside the drawer, so its palette and the panel's never mix 
 be dark while the design is read in light. It is also left in your repository as
 `.kortext/DESIGN.html`, which opens in any browser without the panel running.
 
-**Open questions** — amber, numbered. The document is asking *you* something, and it cannot be
-approved until you answer.
+**Action Needed** — pink, at the top of the document. Everything owed on this document, in two
+groups and under one button.
 
-**Change requests** — pink. Another document found a problem in this one: `ENVIRONMENT` says the
-access-log lines contradict the no-logs decision, say. Two moves: **Apply** (the author rewrites
-the document with that demand) or **Dismiss** with your reason. Both are recorded inside the
-document that raised it, ticked, with the outcome written underneath — so the record lives where
-the demand was made, and every agent that opens the file later sees it.
+*Clarify* — the questions the document is asking *you*. Click one, answer it, Add note. It cannot
+be approved until they are answered.
 
-You can settle a demand from either end: from the document that received it, or from the one
-that sent it.
+*Revisions* — change requests another document made about this one: `ENVIRONMENT` says the
+access-log lines contradict the no-logs decision, say. Tick the ones you accept; the rest are
+denied, and you may say why. Ask the document that made the request if the reason is unclear.
+
+One button sends the lot. Both groups rewrite this document, and a document is rewritten once —
+so your answers and the changes you accepted go into a single rewrite, which is also how the
+author sees them: together. Every request is settled inside the document that raised it, ticked,
+with the outcome written underneath, so the record lives where the request was made.
+
+A change request does not leave its own document until you approve that document. You see it in
+the body under `## Change Requests` first — if you disagree, edit the draft and delete it.
+
+**Conflicts and findings** — what a denied request left standing, and problems in files no
+document owns. Both are written into the document and neither asks anything of you: the
+contradiction is handed to the build phase, where there is finally enough information to settle
+it and where you are present anyway.
 
 **Dependent** — hollow pink. This document is approved, but something it reads is moving. Not
 work for you; when that input settles, this one is re-read against it and you are told only if
@@ -93,10 +104,10 @@ something actually broke.
 
 ## The groups
 
-`Needs you` · `In progress` · `Next` · `Approved` · `Not applicable`. The last two are collapsed
+`Action needed` · `In progress` · `Next` · `Approved` · `Not applicable`. The last two are collapsed
 — one is finished, the other was deliberately skipped.
 
-Anything carrying a failure or an open demand climbs to **Needs you** no matter what its status
+Anything carrying a failure or an open demand climbs to **Action needed** no matter what its status
 says. The one exception is `dependent`, which is news, not a task.
 
 ## Running, pausing, changing the engine
@@ -180,7 +191,7 @@ at fifteen. The optional Kopeng planning run has a thirty-minute limit. Raw CLI 
 **Kortext restarted while a step was running.** That step is marked failed with "kortext
 restarted mid-step — retry", which is exactly what to do.
 
-**A document will not leave "Needs you".** Check for a failed run, an open question or a standing
+**A document will not leave "Action needed".** Check for a failed run, an open question or a standing
 change request. Open questions block approval. A change request alone does not block approval,
 but approving does not close it: the document still needs attention, and analysis cannot finish
 until the request is handled.

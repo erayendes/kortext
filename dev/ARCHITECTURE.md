@@ -110,11 +110,17 @@ The file is the source of truth — no document state is kept in the database.
 **`status`:** `uninitialized` → `draft` (engine wrote it) → `approved` (prime). Side exits:
 `not-applicable` (the step judged it irrelevant; satisfies a dependency like `approved`), `log`.
 
-**Two sections are machine-read.** `## Questions for Prime` — non-empty means the
-document is waiting on a human. `## Change Requests` — `` - `TARGET.md` — reason `` lines,
-each landing in the named document's inbox as an action in the panel. A settled one is ticked
-`- [x]` with the outcome beneath it: the record stays inside the document that made the demand,
-because every agent that opens it must see what the panel sees.
+**Four sections are machine-read, two of them as work.** `## Questions for Prime` — non-empty
+means the document is waiting on a human. `## Change Requests` — `` - `TARGET.md` — reason ``
+lines, which leave this document only once prime approves it, and then land in the named
+document's Action Needed list. Both are groups of that one list, and one button settles them
+together, because both rewrite the receiving document and a document is rewritten once. A settled
+line is ticked `- [x]` with the outcome beneath it: the record stays inside the document that
+made the request, because every agent that opens it must see what the panel saw.
+
+`## Conflicts` and `## Findings` are read but carry no work — a denied request's contradiction,
+and a problem in a file no document owns. They are records for the next writer, they show no
+buttons, and neither gates the handshake. Deciding them was asking prime twice.
 
 **The dependency graph** comes from `inputs:` / `outputs:` / `approver:` in `workflows/*.md`
 (`parseWorkflowSteps`). Per document, `listDocs` computes `blocked` (an input is not settled),
@@ -159,7 +165,7 @@ one engine **judgment**, cached per brief hash: one run per edit of the brief, n
 *Existing project:* no brief; the code is the evidence — at least 3 source files
 (`node_modules`, `dist`, `.git` and friends excluded), recounted every time.
 A refused brief is demoted `approved → draft`: a document waiting on a human belongs under
-"Needs you", not sitting approved next to "I cannot start".
+"Action needed", not sitting approved next to "I cannot start".
 
 **The chain (`runner.ts:advance`).** One loop per project. Each turn it takes the producible
 steps (unwritten, inputs settled, not running), starts at most **3 in parallel**, then waits on
@@ -233,13 +239,13 @@ No fs-watch — the panel polls (docs 3s, transfer 4s, handshake 5s).
 | `POST …/docs/propose` | returns a drafted revision for the brief |
 | `POST …/docs/retry` | repeats the latest failed/stopped document job with its saved notes, or resumes pending rechecks |
 | `POST …/docs/revise` | re-runs the producing step with notes (fire-and-forget, 202) |
-| `POST …/docs/decide-request` | apply/dismiss one demand — from either end |
+| `POST …/docs/settle-requests` | one press: the answers, the accepted requests and the denials of one document, in one rewrite |
 | `POST …/docs/explain` | line-anchored Q&A (synchronous, writes nothing) |
 | `POST …/transfer` · `GET \| POST …/kopeng[/approve]` | split the work · plan summary · approve |
 | `GET …/handshake` | analysis done? kopeng installed? already transferred? |
 
 An unknown `/api` path returns JSON 404 rather than falling through to the SPA (which surfaced
-as `Unexpected token '<'`). Anything a fire-and-forget route (`revise`, `decide-request`) could
+as `Unexpected token '<'`). Anything a fire-and-forget route (`revise`, `settle-requests`) could
 refuse is answered **at call time** — otherwise the panel reports success, clears the notes and
 the answers are gone.
 

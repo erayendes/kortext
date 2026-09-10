@@ -221,17 +221,9 @@ test('a revision request lands in the inbox of the document it names', () => {
   writeFileSync(docPath(p, 'ENVIRONMENT.md'), '---\nstatus: approved\n---\n\n# Env\n', 'utf8');
   const docs = listDocs(db, p, pkgRoot);
   const env = docs.find((d) => d.rel === 'ENVIRONMENT.md')!;
+  // The receiving document is the only place it appears, and the only place it
+  // is decided.
   assert.deepEqual(env.revisionRequests, [{ from: 'ENGINEERING.md', reason: 'logs must go' }]);
-  // The same demand is decidable from the document that made it.
-  assert.deepEqual(docs.find((d) => d.rel === 'ENGINEERING.md')!.sentRequests, [
-    {
-      target: 'ENVIRONMENT.md',
-      reason: 'logs must go',
-      targetHasStep: true,
-      // Nothing is rewriting it, so the demand can be decided now.
-      targetWriting: false,
-    },
-  ]);
 
   // An open demand keeps the handshake from completing, and being actioned clears it.
   assert.equal(analysisComplete(db, p, pkgRoot), false);
@@ -454,6 +446,25 @@ test('every document is filed by one rule, and the first matching rule wins', ()
   assert.equal(label('STACK.md'), 'todo/waiting:(recheck)');
   job('STACK.md', 'running', 'recheck');
   assert.equal(label('STACK.md'), 'todo/waiting:(recheck)');
+});
+
+test('a change request does not leave its document until prime approves it', () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Sent', repoPath: join(work, 'sent') }, pkgRoot);
+
+  writeFileSync(docPath(p, 'ENVIRONMENT.md'), '---\nstatus: approved\n---\n\n# Env\n', 'utf8');
+  const body = '## Change Requests\n\n- `ENVIRONMENT.md` — the logs must go\n';
+  writeFileSync(docPath(p, 'SECURITY.md'), `---\nstatus: draft\n---\n\n${body}`, 'utf8');
+
+  // Prime may still edit the draft and delete the reason, so it has not been
+  // asked for yet — it waits in the body where prime reads it before approving.
+  const inbox = (rel: string) =>
+    listDocs(db, p, pkgRoot).find((d) => d.rel === rel)!.revisionRequests;
+  assert.deepEqual(inbox('ENVIRONMENT.md'), []);
+
+  setFrontmatterStatus(docPath(p, 'SECURITY.md'), 'approved');
+  assert.deepEqual(inbox('ENVIRONMENT.md'), [{ from: 'SECURITY.md', reason: 'the logs must go' }]);
 });
 
 test('a denied change request leaves a record, not another decision', () => {

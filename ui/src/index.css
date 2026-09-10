@@ -2462,6 +2462,24 @@ button.kx-note-exc:hover {
   padding-top: 10px;
   border-top: 1px solid var(--red-border);
 }
+/* Two groups in one list. The label separates them without a second box —
+   the point of the pass is fewer boxes, not more. */
+.kx-changebar-group {
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-secondary);
+}
+.kx-changebar-group + .kx-changebar-list {
+  margin-top: -4px;
+}
+/* What the button will do with this row, before it is pressed. */
+.kx-req-state {
+  margin-left: 6px;
+  font-size: var(--fs-micro);
+  color: var(--fg-muted);
+}
 .kx-changebar-actions {
   display: flex;
   gap: 6px;

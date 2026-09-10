@@ -160,18 +160,25 @@ export function DocDrawer({
     return [asks, demands] as const;
   }, [tokens]);
 
+  // The questions themselves, in the order the body numbers them. The panel
+  // lists them; the body still shows them where they were written.
+  const questions = useMemo(
+    () =>
+      tokens
+        .filter((t) => t.kind === 'bullet' && openQ.has(t.index) && t.text.trim())
+        .map((t, i) => ({
+          index: t.index,
+          no: i + 1,
+          text: t.text.trim().replace(/^[-*+]\s*/, ''),
+        })),
+    [tokens, openQ],
+  );
+
+  // Anything owed on this document goes into one list under one button.
+  const actionNeeded = doc !== null && (doc.revisionRequests.length > 0 || questions.length > 0);
+
   // Use question numbers in note labels instead of truncated excerpts.
-  const qNo = useMemo(() => {
-    const n = new Map<number, number>();
-    let inAsk = false;
-    let i = 0;
-    for (const t of tokens) {
-      if (t.kind === 'h1' || t.kind === 'h2' || t.kind === 'h3')
-        inAsk = QUESTIONS.test(t.text.trim());
-      if (inAsk && t.kind === 'bullet' && t.text.trim()) n.set(t.index, ++i);
-    }
-    return n;
-  }, [tokens]);
+  const qNo = useMemo(() => new Map(questions.map((q) => [q.index, q.no])), [questions]);
 
   /**
    * What this write changed, compared block by block rather than line by line.
@@ -413,14 +420,16 @@ export function DocDrawer({
             is read against it again and you are told if it has to change.
           </div>
         )}
-        {doc.revisionRequests.length > 0 && !editing && (
-          <RequestBar
+        {actionNeeded && !editing && (
+          <ActionNeeded
             project={project}
-            head={
-              doc.hasProducingStep
-                ? 'Another document has asked this one to change. Until it is settled, the analysis is not finished.'
-                : 'Another document has asked this one to change. This one is yours — draft the change with the agent or edit it yourself, then approve it again.'
-            }
+            doc={doc}
+            questions={questions}
+            answers={notes}
+            explains={explains}
+            answerBy={answerBy}
+            onAsk={ask}
+            onNote={addLineNote}
             extra={
               doc.hasProducingStep ? null : (
                 <button className="btn btn-primary" disabled={busy} onClick={proposeFix}>
@@ -428,49 +437,11 @@ export function DocDrawer({
                 </button>
               )
             }
-            items={doc.revisionRequests.map((r) => ({
-              label: r.from,
-              from: r.from,
-              target: doc.rel,
-              reason: r.reason,
-              canApply: doc.hasProducingStep,
-            }))}
-            bulk={doc.hasProducingStep ? doc.rel : undefined}
-            onDone={onChanged}
+            onApplied={() => {
+              setNotes([]);
+              onChanged();
+            }}
           />
-        )}
-        {doc.sentRequests.length > 0 && !editing && (
-          <RequestBar
-            project={project}
-            head="This document has asked others to change. Settle each one here — the target keeps its “changes asked” mark until you do."
-            items={doc.sentRequests.map((r) => ({
-              label: r.target,
-              from: doc.rel,
-              target: r.target,
-              reason: r.reason,
-              canApply: r.targetHasStep,
-              locked: r.targetWriting,
-            }))}
-            onDone={onChanged}
-          />
-        )}
-        {doc.openQuestions && !editing && (
-          <div className="kx-doc-askbar">
-            {notes.length > 0 ? (
-              <>
-                {notes.length} answer{notes.length > 1 ? 's' : ''} ready — press{' '}
-                <strong>Request revision</strong> to send {notes.length > 1 ? 'them' : 'it'} back to{' '}
-                {(doc.author ?? 'the author').replace(/^\+/, '')}, who folds the answers in and
-                drops the questions they settle. Nothing is written until you do.
-              </>
-            ) : (
-              <>
-                This document is waiting on you. Click a question, type the answer, Add note — then
-                Request revision. Or edit the document yourself and remove the questions you are
-                content to leave open.
-              </>
-            )}
-          </div>
         )}
         {editing ? (
           <>
@@ -585,8 +556,19 @@ export function DocDrawer({
               note).
             </span>
           )}
+          {/* One button at a time: when the Action Needed list is up, its Apply
+              carries these notes too, and a second button here would start a
+              rewrite the first one has already claimed. */}
           <div className="kx-note-input">
-            {doc.hasProducingStep ? (
+            {!doc.hasProducingStep ? (
+              <span className="kx-cmd-hint">
+                No agent writes this document — use Edit to change it yourself.
+              </span>
+            ) : actionNeeded ? (
+              <span className="kx-cmd-hint">
+                These go up with the Action Needed list, in one rewrite.
+              </span>
+            ) : (
               <button
                 className="btn btn-primary"
                 disabled={busy || notes.length === 0}
@@ -594,10 +576,6 @@ export function DocDrawer({
               >
                 Request revision{notes.length > 0 ? ` (${notes.length})` : ''}
               </button>
-            ) : (
-              <span className="kx-cmd-hint">
-                No agent writes this document — use Edit to change it yourself.
-              </span>
             )}
           </div>
         </div>
@@ -659,79 +637,90 @@ export function DocBadges({ doc }: { doc: DocInfo }) {
   );
 }
 
-// Use the same actions for incoming and outgoing revision requests.
-function RequestBar({
+/**
+ * Everything owed on this document, in one list under one button.
+ *
+ * Two groups, because they read differently — questions the agent left for
+ * prime, and change requests arriving from other documents. One Apply, because
+ * both rewrite THIS document and a document is rewritten once: two presses
+ * would start a run and have the second come back refused. The single commit is
+ * also the better thing, not just the possible one — the agent sees the answers
+ * and the accepted changes at the same time.
+ */
+function ActionNeeded({
   project,
-  head,
-  items,
+  doc,
+  questions,
+  answers,
+  explains,
+  answerBy,
+  onAsk,
+  onNote,
   extra,
-  bulk,
-  onDone,
+  onApplied,
 }: {
   project: Project;
-  head: string;
-  items: Array<{
-    label: string;
-    from: string;
-    target: string;
-    reason: string;
-    canApply: boolean;
-    /** The target is mid-rewrite; deciding now would only be refused. */
-    locked?: boolean;
-  }>;
+  doc: DocInfo;
+  /** The bullets under the questions heading, numbered as the body numbers them. */
+  questions: Array<{ index: number; no: number; text: string }>;
+  /** Notes prime has collected — the answers, and anything said about a line. */
+  answers: Note[];
+  explains: Explain[];
+  answerBy: string;
+  onAsk: (line: number, question: string) => void;
+  onNote: (line: number, text: string) => void;
+  /** Draft the change yourself, when no agent writes this document. */
   extra?: React.ReactNode;
-  /** The document these all land on — set to settle them in one decision. */
-  bulk?: string;
-  onDone: () => void;
+  onApplied: () => void;
 }) {
-  // Prime ticks what they accept; the rest are dismissed by the same press, and
-  // the button says so before it is pressed.
-  const [ticked, setTicked] = useState<Set<string>>(new Set());
+  const keyOf = (r: { from: string; reason: string }) => `${r.from}: ${r.reason}`;
+  const [accepted, setAccepted] = useState<Set<string>>(new Set());
+  const [denials, setDenials] = useState<Record<string, string>>({});
+  const [denying, setDenying] = useState<string | null>(null);
+  const [open, setOpen] = useState<string | null>(null);
+  const [chat, setChat] = useState<Array<{ key: string; q: string; a: string | null }>>([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [settled, setSettled] = useState<Set<string>>(new Set());
-  // A demand is a line like any other: click it, and the same thread opens
-  // underneath. One interaction for the whole drawer instead of two.
-  const [open, setOpen] = useState<number | null>(null);
-  const [notes, setNotes] = useState<Record<string, string>>({});
-  const [chat, setChat] = useState<Array<{ i: number; q: string; a: string | null }>>([]);
+  const [settled, setSettled] = useState(false);
 
-  const ask = (i: number, q: string) => {
-    const it = items[i];
-    const history = chat.filter((c) => c.i === i && c.a).map((c) => ({ q: c.q, a: c.a as string }));
-    // Key replies by request identity so identical questions on different requests stay separate.
-    const entry = { i, q, a: null as string | null };
+  // Ask the document that made the request, in its own voice.
+  const askFrom = (r: { from: string; reason: string }, q: string) => {
+    const key = keyOf(r);
+    const history = chat.filter((c) => c.key === key && c.a).map((c) => ({ q: c.q, a: c.a! }));
+    const entry = { key, q, a: null as string | null };
     setChat((cs) => [...cs, entry]);
     const fill = (a: string) => setChat((cs) => cs.map((c) => (c === entry ? { ...c, a } : c)));
     api
-      .explainDoc(project.id, it.from, `[asks ${it.target}] ${it.reason}`, q, history)
-      .then((r) => fill(r.answer))
+      .explainDoc(project.id, r.from, `[asks ${doc.rel}] ${r.reason}`, q, history)
+      .then((res) => fill(res.answer))
       .catch((e) => fill(`— ${(e as Error).message}`));
   };
 
-  const keyOf = (it: { from: string; target: string; reason: string }) =>
-    `${it.from}→${it.target}: ${it.reason}`;
+  const requests = settled ? [] : doc.revisionRequests;
+  const accepting = requests.filter((r) => accepted.has(keyOf(r)));
+  const denied = requests.filter((r) => !accepted.has(keyOf(r)));
+  const written = doc.hasProducingStep;
+  // Denials change no text, so they can be settled on a document no agent writes.
+  const startsRun = written && (accepting.length > 0 || answers.length > 0);
 
-  // One press, one rewrite: a document is written once, so applying the ticked
-  // ones separately would start a run and have the rest refused.
-  const settleAll = async () => {
-    if (!bulk) return;
-    const standing = items.filter((it) => !settled.has(keyOf(it)));
+  const apply = async () => {
     setBusy(true);
     setErr(null);
     try {
       await api.settleRequests(project.id, {
-        rel: bulk,
-        apply: standing
-          .filter((it) => ticked.has(keyOf(it)))
-          .map((it) => ({ from: it.from, reason: it.reason, instruction: notes[keyOf(it)] })),
-        dismiss: standing
-          .filter((it) => !ticked.has(keyOf(it)))
-          .map((it) => ({ from: it.from, reason: it.reason })),
+        rel: doc.rel,
+        apply: written
+          ? accepting.map((r) => ({ from: r.from, reason: r.reason, note: denials[keyOf(r)] }))
+          : [],
+        deny: denied.map((r) => ({ from: r.from, reason: r.reason, note: denials[keyOf(r)] })),
+        answers: startsRun
+          ? answers.map((n) => (n.excerpt ? `[${n.excerpt}] ${n.text}` : n.text))
+          : [],
       });
-      setSettled((s) => new Set([...s, ...standing.map(keyOf)]));
-      setTicked(new Set());
-      onDone();
+      // The list only clears on the next refresh; hide it now so the button
+      // cannot be pressed a second time for a press the server would refuse.
+      setSettled(true);
+      onApplied();
     } catch (e) {
       setErr((e as Error).message);
     } finally {
@@ -739,143 +728,184 @@ function RequestBar({
     }
   };
 
-  const decide = async (i: number, decision: 'apply' | 'dismiss', instruction?: string) => {
-    const it = items[i];
-    setBusy(true);
-    setErr(null);
-    try {
-      await api.decideRequest(project.id, {
-        from: it.from,
-        target: it.target,
-        reason: it.reason,
-        decision,
-        instruction,
-      });
-      // The list only clears on the next refresh, so remember what was answered:
-      // otherwise the buttons come back for a second press the server refuses.
-      setSettled((s) => new Set(s).add(keyOf(it)));
-      setOpen(null);
-      onDone();
-    } catch (e) {
-      setErr((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  };
+  const label = [
+    accepting.length > 0 && written ? `apply ${accepting.length}` : null,
+    denied.length > 0 ? `deny ${denied.length}` : null,
+    answers.length > 0 && written ? `answer ${answers.length}` : null,
+  ].filter(Boolean);
 
-  // Hide settled entries immediately, before the next poll.
-  const live = items.map((it, i) => ({ it, i })).filter(({ it }) => !settled.has(keyOf(it)));
-  if (live.length === 0 && !err) return null;
-
+  if (requests.length === 0 && questions.length === 0) return null;
   return (
     <div className="kx-doc-changebar">
-      <div className="kx-changebar-head">{head}</div>
+      <div className="kx-changebar-head">
+        Action Needed — nothing here is written until you press the button below, and it all goes
+        into one rewrite.
+      </div>
       {err && <div className="kx-error">{err}</div>}
-      <ul className="kx-changebar-list">
-        {live.map(({ it, i }) => {
-          const talk = chat.filter((c) => c.i === i);
-          return (
-            <li key={i}>
-              {bulk && (
-                <input
-                  type="checkbox"
-                  className="kx-req-check"
-                  checked={ticked.has(keyOf(it))}
-                  disabled={busy}
-                  aria-label={`Apply the change ${it.label} asked for`}
-                  onChange={(e) =>
-                    setTicked((t) => {
-                      const next = new Set(t);
-                      if (e.target.checked) next.add(keyOf(it));
-                      else next.delete(keyOf(it));
-                      return next;
-                    })
-                  }
-                  onClick={(e) => e.stopPropagation()}
-                />
-              )}
-              {/* The demand reads like a line of the document, so it answers to
-                  the same click — the thread opens under it. */}
-              <span
-                className="kx-req-text"
-                role="button"
-                tabIndex={0}
-                onClick={() => {
-                  if ((window.getSelection()?.toString() ?? '').trim()) return;
-                  setOpen(open === i ? null : i);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    setOpen(open === i ? null : i);
-                  }
-                }}
-              >
-                <span className="mono">{it.label.replace(/\.md$/, '')}</span> — {it.reason}
-              </span>
-              <div className="kx-changebar-actions">
-                {!bulk && it.canApply && (
-                  <button
-                    className="btn btn-primary"
-                    disabled={busy || it.locked}
-                    title={it.locked ? `${it.target} is being rewritten — wait for it to land` : ''}
-                    onClick={() => decide(i, 'apply')}
+
+      {questions.length > 0 && (
+        <>
+          <div className="kx-changebar-group">Clarify</div>
+          <ul className="kx-changebar-list">
+            {questions.map((q) => {
+              const note = answers.find((n) => n.line === q.index);
+              const thread = explains.filter((x) => x.line === q.index);
+              const key = `q${q.index}`;
+              return (
+                <li key={key}>
+                  <span
+                    className="kx-req-text"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => {
+                      if ((window.getSelection()?.toString() ?? '').trim()) return;
+                      setOpen(open === key ? null : key);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setOpen(open === key ? null : key);
+                      }
+                    }}
                   >
-                    Apply
-                  </button>
-                )}
-                {!bulk && (
+                    <span className="mono">Q{q.no}</span> — {q.text}
+                  </span>
+                  {note && <span className="kx-req-state mono">added</span>}
+                  {(thread.length > 0 || open === key) && (
+                    <LineThread
+                      thread={thread}
+                      active={open === key}
+                      answerBy={answerBy}
+                      onAsk={(text) => onAsk(q.index, text)}
+                      onNote={(text) => {
+                        onNote(q.index, text);
+                        setOpen(null);
+                      }}
+                    />
+                  )}
+                  {note && (
+                    <div className="kx-req-note">
+                      <span className="mono">answer</span> {note.text}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      )}
+
+      {requests.length > 0 && (
+        <>
+          <div className="kx-changebar-group">Revisions</div>
+          <ul className="kx-changebar-list">
+            {requests.map((r) => {
+              const key = keyOf(r);
+              const talk = chat.filter((c) => c.key === key);
+              return (
+                <li key={key}>
+                  <input
+                    type="checkbox"
+                    className="kx-req-check"
+                    checked={accepted.has(key)}
+                    disabled={busy || !written}
+                    aria-label={`Accept the change ${r.from} asked for`}
+                    title={written ? '' : 'No agent writes this one — open it to draft the change'}
+                    onChange={(e) =>
+                      setAccepted((a) => {
+                        const next = new Set(a);
+                        if (e.target.checked) next.add(key);
+                        else next.delete(key);
+                        return next;
+                      })
+                    }
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  {/* The request reads like a line of the document, so it answers
+                      to the same click — the thread opens under it. */}
+                  <span
+                    className="kx-req-text"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => {
+                      if ((window.getSelection()?.toString() ?? '').trim()) return;
+                      setOpen(open === key ? null : key);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setOpen(open === key ? null : key);
+                      }
+                    }}
+                  >
+                    <span className="mono">{r.from.replace(/\.md$/, '')}</span> — {r.reason}
+                  </span>
+                  <span className="kx-req-state mono">
+                    {accepted.has(key) ? 'accepted' : 'denied'}
+                  </span>
                   <button
                     className="btn btn-link-primary"
-                    disabled={busy || it.locked}
-                    title={it.locked ? `${it.target} is being rewritten — wait for it to land` : ''}
-                    onClick={() => decide(i, 'dismiss')}
+                    disabled={busy}
+                    onClick={() => setDenying(denying === key ? null : key)}
                   >
-                    Dismiss
+                    {denials[key] ? 'Edit reason' : 'Say why'}
                   </button>
-                )}
-                {!it.canApply && (
-                  <span className="kx-cmd-hint">
-                    No agent writes that one — open it to draft the change.
-                  </span>
-                )}
-                {extra}
-              </div>
-              {(talk.length > 0 || open === i) && (
-                <LineThread
-                  thread={talk.map((c) => ({ line: null, question: c.q, answer: c.a }))}
-                  active={open === i}
-                  answerBy={it.from.replace(/\.md$/, '')}
-                  onAsk={(q) => ask(i, q)}
-                  onNote={(text) => {
-                    setNotes((n) => ({ ...n, [keyOf(it)]: text }));
-                    setOpen(null);
-                  }}
-                />
-              )}
-              {notes[keyOf(it)] && (
-                <div className="kx-req-note">
-                  <span className="mono">note</span> {notes[keyOf(it)]}
-                </div>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-      {bulk && (
-        <div className="kx-changebar-actions">
-          <button
-            className="btn btn-primary"
-            disabled={busy}
-            onClick={() => settleAll()}
-            title="Ticked ones are applied in one rewrite; the rest are dismissed, and each dismissal leaves a conflict on this document"
-          >
-            Apply {live.filter(({ it }) => ticked.has(keyOf(it))).length} · dismiss{' '}
-            {live.filter(({ it }) => !ticked.has(keyOf(it))).length}
-          </button>
-          {extra}
-        </div>
+                  {denying === key && (
+                    <div className="kx-thread-input">
+                      <textarea
+                        className="kx-input kx-thread-text"
+                        rows={2}
+                        autoFocus
+                        placeholder="Optional — written into the document beside the outcome"
+                        value={denials[key] ?? ''}
+                        onChange={(e) => setDenials((d) => ({ ...d, [key]: e.target.value }))}
+                      />
+                    </div>
+                  )}
+                  {(talk.length > 0 || open === key) && (
+                    <LineThread
+                      thread={talk.map((c) => ({ line: null, question: c.q, answer: c.a }))}
+                      active={open === key}
+                      answerBy={r.from.replace(/\.md$/, '')}
+                      onAsk={(q) => askFrom(r, q)}
+                      onNote={(text) => {
+                        setDenials((d) => ({ ...d, [key]: text }));
+                        setOpen(null);
+                      }}
+                    />
+                  )}
+                  {denials[key] && (
+                    <div className="kx-req-note">
+                      <span className="mono">note</span> {denials[key]}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </>
       )}
+
+      {/* One button for the whole list, saying what it starts. */}
+      <div className="kx-changebar-actions">
+        <button
+          className="btn btn-primary"
+          disabled={busy || label.length === 0}
+          onClick={() => void apply()}
+          title={
+            startsRun
+              ? 'One rewrite carries the answers and the accepted changes together'
+              : 'Denials are recorded as conflicts; nothing is rewritten'
+          }
+        >
+          {busy
+            ? 'Sending…'
+            : label.length > 0
+              ? label.join(' · ').replace(/^./, (c) => c.toUpperCase())
+              : 'Nothing to send'}
+        </button>
+        {extra}
+      </div>
     </div>
   );
 }

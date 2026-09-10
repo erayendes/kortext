@@ -40,12 +40,6 @@ export interface DocInfo {
   openQuestions: boolean;
   hasProducingStep: boolean;
   revisionRequests: Array<{ from: string; reason: string }>;
-  sentRequests: Array<{
-    target: string;
-    reason: string;
-    targetHasStep: boolean;
-    targetWriting: boolean;
-  }>;
   warnings: Array<{ subject: string; reason: string }>;
   conflicts: Array<{ from: string; reason: string }>;
   section: 'needs' | 'doing' | 'todo' | 'done';
@@ -153,30 +147,14 @@ export const api = {
     projectId: number,
     body: {
       rel: string;
-      apply: Array<{ from: string; reason: string; instruction?: string }>;
-      dismiss: Array<{ from: string; reason: string }>;
+      apply: Array<{ from: string; reason: string; note?: string }>;
+      deny: Array<{ from: string; reason: string; note?: string }>;
+      answers: string[];
     },
   ) =>
-    req<{ applied: number; dismissed: number }>(`/api/projects/${projectId}/docs/settle-requests`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-  decideRequest: (
-    projectId: number,
-    body: {
-      from: string;
-      target: string;
-      reason: string;
-      decision: 'apply' | 'dismiss';
-      instruction?: string;
-    },
-  ) =>
-    req<{ started?: string; dismissed?: number }>(
-      `/api/projects/${projectId}/docs/decide-request`,
-      {
-        method: 'POST',
-        body: JSON.stringify(body),
-      },
+    req<{ applied: number; denied: number; answered?: number }>(
+      `/api/projects/${projectId}/docs/settle-requests`,
+      { method: 'POST', body: JSON.stringify(body) },
     ),
   proposeRevision: (projectId: number, rel: string) =>
     req<{ proposal: string }>(`/api/projects/${projectId}/docs/propose`, {

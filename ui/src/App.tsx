@@ -1731,7 +1731,7 @@ function DocumentsTab({
   // Where each document belongs is decided by the server, which can see the
   // queued rechecks and whether a run carried revision notes.
   const groups: { key: DocInfo['section']; title: string; closed?: boolean }[] = [
-    { key: 'needs', title: 'Needs you' },
+    { key: 'needs', title: 'Action needed' },
     { key: 'doing', title: 'Doing' },
     { key: 'todo', title: 'To do' },
     { key: 'done', title: 'Done', closed: true },
