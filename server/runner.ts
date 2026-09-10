@@ -96,6 +96,8 @@ export function buildStepPrompt(
   workflowStepText: string,
   personaBody: string | null,
   reviseNotes: string[] = [],
+  /** Change requests other documents made about this one before it existed. */
+  waiting: Array<{ from: string; reason: string }> = [],
 ): string {
   const lines = [
     'You are executing ONE step of a Kortext analysis flow, headless, inside the project folder.',
@@ -122,12 +124,14 @@ export function buildStepPrompt(
     "- Every question you leave for the human goes under the document's `## Questions for Prime` heading, one `- ` item each, and nowhere else. Leave that section empty when there is nothing to ask — an empty section is the signal that the document stands on its own.",
     '- A finding about something no document owns — a config file, a workflow, a tracked secret, a live endpoint — goes under `## Findings` in THIS document, one line each, starting with the path in backticks: `` - `.gitignore` — `.env` is tracked and holds live credentials ``. Do not aim a revision request at it: a demand can only ask a document to change, and one aimed anywhere else is a finding nobody can act on.',
     '- When an ALREADY-WRITTEN document must change because of what you found, that is not prose: put one line under `## Change Requests`, starting with the target file in backticks — `` - `ENVIRONMENT.md` — the access-log lines must follow the no-logs decision `` — and say what must change and why. The panel turns each line into an action the human can take; a demand written anywhere else in the document is a demand nobody can act on. Leave the section empty when nothing upstream needs to change.',
+    '- Before you write one, read the ticked lines already in this document. A `- [x]` line with an outcome under it is a request the human has ALREADY decided. Do not raise it again. Raise it a second time only if your evidence has actually changed since — and then the new line must say what changed, in so many words. Repeating a settled request with a fresh wording is how a document set argues with itself forever.',
     '',
     'HARD RULES:',
     `- Produce EXACTLY this file and nothing else: .kortext/${step.output}`,
     '- Fill the skeleton template already at that path. A heading that CONTAINS a bracketed span — `### [Module Name]`, ``### Table: `[table_name]` `` — is a pattern, not a heading: rename it to the real thing, repeat the whole block once per real item, and delete the block entirely when the project has none of them. Every other heading is fixed: keep it VERBATIM and replace the placeholder content under it.',
     `- Frontmatter must end up as: status: draft, author: ${step.author ?? '+agent'}${step.approver ? `, approver: ${step.approver}` : ''}.`,
     '- NEVER set status to approved — approval belongs to the human.',
+    '- Ticked lines are load-bearing: a `- [x]` line and the indented outcome line beneath it record a decision the human made. Reproduce them EXACTLY — same text, same tick, same outcome, same place — no matter how much of the document you rewrite. They are the only reason the next author does not re-open a settled question; drop one and the decision is gone with it.',
     project.doc_lang
       ? `- Document language: write the PROSE in ${project.doc_lang}. This is prime's stated choice — it overrides the language of the inputs, the repository and the README.`
       : '- Document language: write the PROSE in the language of .kortext/BRIEF.md; if there is no brief (existing project), match the language of the already-approved .kortext documents, else the language of the repo README; default to English.',
@@ -137,6 +141,19 @@ export function buildStepPrompt(
     'STEP DEFINITION (from the workflow):',
     workflowStepText.trim(),
   ];
+  if (waiting.length > 0) {
+    lines.push(
+      '',
+      'CHANGE REQUESTS ALREADY WAITING FOR THIS DOCUMENT — other documents asked for these while',
+      'this one did not exist yet, so nobody could decide them. They are yours to satisfy in this',
+      'first write: write the document so each is already true, in the section where it belongs.',
+      'Do not quote them and do not answer them as prose. If your evidence contradicts one, follow',
+      'your evidence and put a line under `## Change Requests` aimed back at the document that',
+      'asked, saying why it cannot be as asked.',
+      '',
+      ...waiting.map((r) => `- [${r.from} asks] ${r.reason}`),
+    );
+  }
   if (personaBody) {
     lines.push('', 'AUTHOR PERSONA PERSPECTIVE:', personaBody.trim());
   }
@@ -144,7 +161,8 @@ export function buildStepPrompt(
     lines.push(
       '',
       'REVISION REQUEST — the human reviewed the current draft and asks for changes.',
-      'Rewrite the document addressing EVERY note below (keep what was not objected to).',
+      'Rewrite the document addressing EVERY note below (keep what was not objected to), and carry',
+      'every ticked `- [x]` line and its outcome across unchanged.',
       'A note is written in `[the line it was left on] the note`. When that line is one of your own',
       'open questions, the note IS the answer: fold it into the document as a settled fact, in the',
       'section where it belongs, and DELETE that question from `## Questions for Prime`. An',
@@ -754,12 +772,20 @@ export async function runStep(
     .prepare('INSERT INTO jobs (project_id, doc_rel, notes) VALUES (?, ?, ?) RETURNING *')
     .get(project.id, step.output, JSON.stringify(reviseNotes)) as Job;
 
+  // A first write inherits every change request aimed at this document while it
+  // did not exist. On a revision they already arrived as notes.
+  const waiting =
+    reviseNotes.length > 0
+      ? []
+      : (listDocs(db, project, pkgRoot).find((d) => d.rel === step.output)?.revisionRequests ?? []);
+
   const prompt = buildStepPrompt(
     project,
     step,
     stepTextFor(pkgRoot, project, step.output),
     personaBodyFor(pkgRoot, step),
     reviseNotes,
+    waiting,
   );
   const logPath = logPathFor(db, `p${project.id}-${step.output.replace(/\//g, '_')}.log`);
 
@@ -831,6 +857,8 @@ export async function runStep(
       }
     }
     recordVersion(db, project, step.output, written, 'agent', priorText, job.id);
+    // The requests this run answered are settled in the document that made
+    // them: the ones prime chose, and the ones the first write inherited.
     for (const request of listDocs(db, project, pkgRoot).find((d) => d.rel === step.output)
       ?.revisionRequests ?? []) {
       if (reviseNotes.includes(`[${request.from} asks] ${request.reason}`)) {
@@ -841,6 +869,14 @@ export async function runStep(
           step.output,
           request.reason,
           `applied — the agent rewrote ${step.output}${decision ? `; prime said: ${decision.slice('[prime decides] '.length)}` : ''}`,
+        );
+      } else if (waiting.some((w) => w.from === request.from && w.reason === request.reason)) {
+        markRequestHandled(
+          project,
+          request.from,
+          step.output,
+          request.reason,
+          `folded into the first draft of ${step.output}`,
         );
       }
     }

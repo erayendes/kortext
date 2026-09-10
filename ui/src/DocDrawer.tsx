@@ -175,7 +175,10 @@ export function DocDrawer({
   );
 
   // Anything owed on this document goes into one list under one button.
-  const actionNeeded = doc !== null && (doc.revisionRequests.length > 0 || questions.length > 0);
+  const actionNeeded =
+    doc !== null &&
+    doc.status !== 'uninitialized' &&
+    (doc.revisionRequests.length > 0 || questions.length > 0);
 
   // Use question numbers in note labels instead of truncated excerpts.
   const qNo = useMemo(() => new Map(questions.map((q) => [q.index, q.no])), [questions]);

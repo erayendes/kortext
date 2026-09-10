@@ -29,7 +29,8 @@ export interface DocInfo {
   /**
    * Change requests arriving from other approved documents. The receiving
    * document is the only place they are decided — prime reads the request
-   * beside the text it is about.
+   * beside the text it is about. On a document nobody has written yet these
+   * are not prime's to decide: they go into its first write.
    */
   revisionRequests: Array<{ from: string; reason: string }>;
   /**
@@ -459,11 +460,14 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
   // One shelf: every .md in .kortext/ is a document of this project.
   collect(join(project.repo_path, '.kortext'));
 
-  // Attach each open request to its target and source documents.
+  // Attach each open request to the document it names — including one nobody
+  // has written yet. Under the lighter model a request is decided only in the
+  // receiving document, so dropping it while that document is unwritten leaves
+  // it with nowhere at all to be decided; it is handed to the first write
+  // instead (`buildStepPrompt`).
   for (const r of requests) {
     const target = docs.find((d) => d.rel === r.target);
-    // Only written documents can receive revision requests.
-    if (!target || target.status === 'uninitialized') continue;
+    if (!target) continue;
     target.revisionRequests.push({ from: r.from, reason: r.reason });
   }
 

@@ -193,6 +193,17 @@ verbatim · never write `approved` · never assume what the inputs do not say �
 `## Questions for Prime` · a change another document needs is a `## Change Requests`
 line, not prose · prose in the document's language, every name in English.
 
+Two of them guard the record rather than the prose. **Ticked lines are load-bearing:** a `- [x]`
+line and its outcome trailer must be reproduced exactly, wherever the rewrite goes — they are the
+only thing that stops a settled question from being re-opened, and nothing but the prompt protects
+them. **The loop brake:** a ticked line is a decision prime already made, so the same request is
+not raised again unless the evidence changed, and the new line has to say what changed.
+
+**A change request aimed at a document nobody has written yet** is not dropped and is not prime's
+to decide — there is nothing to decide it against. `listDocs` still attaches it to the unwritten
+target, the panel does not show it there, and `buildStepPrompt` hands it to that document's first
+write. A successful write settles it in the document that asked, as `folded into the first draft`.
+
 | Run outside a step | What it does | What it writes |
 | --- | --- | --- |
 | `reviseDoc` | re-runs the producing step with notes | the document (back to `draft`) |

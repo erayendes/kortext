@@ -159,6 +159,58 @@ test('buildStepPrompt carries hard rules, inputs, persona and revision notes', (
   rmSync(work, { recursive: true, force: true });
 });
 
+test('a change request aimed at an unwritten document is handed to its first write', async () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Acme', repoPath: join(work, 'acme') }, pkgRoot);
+
+  const reason = 'the access-log lines must follow the no-logs decision';
+  writeFileSync(
+    docPath(p, 'SECURITY.md'),
+    `---\nstatus: approved\n---\n\n## Change Requests\n\n- \`ENVIRONMENT.md\` — ${reason}\n`,
+    'utf8',
+  );
+
+  // Nothing has written ENVIRONMENT.md yet, so nobody can decide the request —
+  // it goes into the prompt of the run that writes the document.
+  const step = { output: 'ENVIRONMENT.md', inputs: [], author: '+devops-engineer', approver: null };
+  const prompt = buildStepPrompt(
+    p,
+    step,
+    'step text',
+    null,
+    [],
+    listDocs(db, p, pkgRoot).find((d) => d.rel === 'ENVIRONMENT.md')!.revisionRequests,
+  );
+  assert.match(prompt, /CHANGE REQUESTS ALREADY WAITING FOR THIS DOCUMENT/);
+  assert.match(prompt, /\[SECURITY\.md asks\] the access-log lines/);
+
+  // …and once it is written, the asking is settled where it was made.
+  const res = await runStep(db, p, step, mockEngine(work, 'ok'), pkgRoot);
+  assert.equal(res.ok, true, res.error);
+  const security = readFileSync(docPath(p, 'SECURITY.md'), 'utf8');
+  assert.match(security, /^- \[x\] `ENVIRONMENT\.md`/m);
+  assert.match(security, /folded into the first draft of ENVIRONMENT\.md/);
+  rmSync(work, { recursive: true, force: true });
+});
+
+test('the prompt keeps the settled record and brakes the loop that would re-raise it', () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Acme', repoPath: join(work, 'acme') }, pkgRoot);
+  const step = { output: 'STACK.md', inputs: ['PRODUCT.md'], author: '+architect', approver: null };
+
+  // A ticked line and its outcome are the whole durable record of a decision.
+  // Nothing else in the system protects them, so the prompt has to.
+  const first = buildStepPrompt(p, step, 'step text', null);
+  assert.match(first, /Ticked lines are load-bearing/);
+  assert.match(first, /Do not raise it again/);
+
+  const again = buildStepPrompt(p, step, 'step text', null, ['fix the Plausible line']);
+  assert.match(again, /carry\n?every ticked `- \[x\]` line and its outcome across unchanged/);
+  rmSync(work, { recursive: true, force: true });
+});
+
 test('advance: chains every unblocked step, pauses at approval gates, resumes after approve', async () => {
   const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
   const db = openDb(join(work, 'db.sqlite'));
