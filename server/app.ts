@@ -13,8 +13,10 @@ import {
 import {
   analysisComplete,
   appendListItem,
+  CHANGE_REQUESTS,
   docPath,
   docVersion,
+  FINDINGS,
   listDocs,
   loadDocMap,
   listVersions,
@@ -622,8 +624,8 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     res.status(202).json({ started: rel });
   });
 
-  // Settle a warning: prime acted on it, or judged it not worth acting on. The
-  // line may sit under Warnings or, for older documents, under Revision Requests
+  // Settle a finding: prime acted on it, or judged it not worth acting on. The
+  // line may sit under Findings or, for older documents, under Change Requests
   // where a demand was aimed at something that is not a document.
   app.post('/api/projects/:id/docs/clear-warning', (req, res) => {
     const project = projectOr404(req.params.id, res);
@@ -638,7 +640,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     markListItemHandled(
       project,
       doc.rel,
-      /^(warnings|revision requests)$/i,
+      new RegExp(`${FINDINGS.source}|${CHANGE_REQUESTS.source}`, 'i'),
       warning.subject,
       warning.reason,
       decision === 'dismiss' ? 'dismissed by prime' : 'done by prime',

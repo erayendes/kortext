@@ -590,7 +590,7 @@ test('a verdict becomes a demand in the document that caused it', async () => {
   appendRevisionRequest(p, 'DESIGN.md', 'CONTENT.md', 'the empty state lost its slot');
   assert.match(
     readFileSync(docPath(p, 'DESIGN.md'), 'utf8'),
-    /## Revision Requests\n\n- `CONTENT\.md` —/,
+    /## Change Requests\n\n- `CONTENT\.md` —/,
   );
   rmSync(work, { recursive: true, force: true });
 });

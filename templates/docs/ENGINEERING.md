@@ -57,10 +57,10 @@ approver: +prime
 
 - [High-level implementation steps — fine-grained detail is worked out per task]
 
-## Revision Requests
+## Change Requests
 
 - [One line per document, in the form: - [ ] `TARGET.md` — what must change there and why. Leave the box unticked; kortext ticks it and records the outcome underneath when the demand is settled. Leave this section empty when nothing upstream needs to change]
 
-## Open Questions for prime
+## Questions for Prime
 
 - [Open questions awaiting a decision — escalated to `prime` or the relevant gate]

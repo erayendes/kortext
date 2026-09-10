@@ -4,6 +4,11 @@ import { highlight } from './highlight';
 import { parseInline, parseMarkdown, type AlertKind, type MdToken } from './markdown';
 import { api, type DocInfo, type Project } from './api';
 
+// The two headings the drawer looks for, each accepting the name it used to
+// carry: documents written before the rename are still on disk.
+const QUESTIONS = /^(open )?questions( for prime)?$/i;
+const CHANGE_REQUESTS = /^(change|revision) requests$/i;
+
 interface Note {
   line: number | null;
   excerpt: string;
@@ -115,7 +120,8 @@ export function DocDrawer({
     // Hide empty question sections.
     const dropEmpty = (tokens: typeof all, heading: RegExp) => {
       const start = tokens.findIndex(
-        (t) => (t.kind === 'h1' || t.kind === 'h2' || t.kind === 'h3') && heading.test(t.text),
+        (t) =>
+          (t.kind === 'h1' || t.kind === 'h2' || t.kind === 'h3') && heading.test(t.text.trim()),
       );
       if (start === -1) return tokens;
       const after = tokens.slice(start + 1);
@@ -124,7 +130,7 @@ export function DocDrawer({
       const used = body.some((t) => t.kind !== 'blank' && !/^\[.*\]$/.test(t.text.trim()));
       return used ? tokens : [...tokens.slice(0, start), ...(end === -1 ? [] : after.slice(end))];
     };
-    return dropEmpty(dropEmpty(all, /open questions/i), /revision requests/i);
+    return dropEmpty(dropEmpty(all, QUESTIONS), CHANGE_REQUESTS);
   }, [content]);
 
   // The answer names its own author. Asking the global engine setting instead
@@ -132,16 +138,16 @@ export function DocDrawer({
   // The project's own engine is the right guess while the answer is still coming.
   const [answerBy, setAnswerBy] = useState(project.engine ?? 'agent');
 
-  // Distinguish questions for this document from revision requests sent to another document.
+  // Distinguish questions for this document from change requests sent to another document.
   const [openQ, changeReq] = useMemo(() => {
     const asks = new Set<number>();
     const demands = new Set<number>();
     let section: 'ask' | 'demand' | null = null;
     for (const t of tokens) {
       if (t.kind === 'h1' || t.kind === 'h2' || t.kind === 'h3') {
-        section = /open questions/i.test(t.text)
+        section = QUESTIONS.test(t.text.trim())
           ? 'ask'
-          : /revision requests/i.test(t.text)
+          : CHANGE_REQUESTS.test(t.text.trim())
             ? 'demand'
             : null;
       }
@@ -161,7 +167,7 @@ export function DocDrawer({
     let i = 0;
     for (const t of tokens) {
       if (t.kind === 'h1' || t.kind === 'h2' || t.kind === 'h3')
-        inAsk = /open questions/i.test(t.text);
+        inAsk = QUESTIONS.test(t.text.trim());
       if (inAsk && t.kind === 'bullet' && t.text.trim()) n.set(t.index, ++i);
     }
     return n;

@@ -35,10 +35,10 @@ All events must follow a naming convention like the examples below (e.g., `Objec
 
 - [A/B test plans, funnel stages (Acquisition, Activation, Retention...)]
 
-## Revision Requests
+## Change Requests
 
 - [One line per document, in the form: - [ ] `TARGET.md` — what must change there and why. Leave the box unticked; kortext ticks it and records the outcome underneath when the demand is settled. Leave this section empty when nothing upstream needs to change]
 
-## Open Questions for prime
+## Questions for Prime
 
 - [Anything prime must answer before this document can be relied on — leave this section empty when there is nothing]

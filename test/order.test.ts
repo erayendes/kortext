@@ -43,7 +43,7 @@ test('personas declare the same upstream the workflow gives them', () => {
 test('every workflow-produced skeleton carries the two mechanism sections', () => {
   for (const step of workflow('new-project-analysis')) {
     const skeleton = readFileSync(join(pkgRoot, 'templates', 'docs', step.output), 'utf8');
-    assert.match(skeleton, /^## Revision Requests$/m, step.output);
-    assert.match(skeleton, /^## Open Questions for prime$/m, step.output);
+    assert.match(skeleton, /^## Change Requests$/m, step.output);
+    assert.match(skeleton, /^## Questions for Prime$/m, step.output);
   }
 });

@@ -124,9 +124,9 @@ function foldWrapped(lines: string[], i: number, first: string): [string, number
 }
 
 /**
- * One parser for the three sections that carry marked lists: Revision Requests,
- * Conflicts and Warnings. `subject` narrows what counts as a subject — demands
- * insist on a document, warnings take anything.
+ * One parser for the three sections that carry marked lists: Change Requests,
+ * Conflicts and Findings. `subject` narrows what counts as a subject — change
+ * requests insist on a document, findings take anything.
  */
 export function parseMarkedList(
   content: string,
@@ -160,8 +160,17 @@ export function parseMarkedList(
 const DOC_SUBJECT = /^[A-Za-z][\w./-]*\.md$/;
 const ANY_SUBJECT = /./;
 
+/**
+ * The three headings, each accepting the name it used to carry. Documents
+ * written before the rename are still on disk, and a parser that stopped
+ * reading them would drop demands nobody would ever see again.
+ */
+export const CHANGE_REQUESTS = /^(change|revision) requests$/i;
+export const FINDINGS = /^(findings|warnings)$/i;
+export const QUESTIONS = /^(open )?questions( for prime)?$/i;
+
 export function parseRevisionRequests(content: string): Array<{ target: string; reason: string }> {
-  return parseMarkedList(content, /revision requests/i, DOC_SUBJECT).map((r) => ({
+  return parseMarkedList(content, CHANGE_REQUESTS, DOC_SUBJECT).map((r) => ({
     target: r.subject,
     reason: r.reason,
   }));
@@ -179,26 +188,26 @@ export function parseConflicts(content: string): Array<{ from: string; reason: s
  * Findings about something the document set does not own.
  *
  * A demand aimed at a file that is not a document counts as one wherever it was
- * written. An agent found `.env` tracked in git and filed it under Revision
+ * written. An agent found `.env` tracked in git and filed it under Change
  * Requests against `.gitignore`; the demand parser wants a document, so the line
- * became prose nobody could act on. It is a warning, and it is read as one.
+ * became prose nobody could act on. It is a finding, and it is read as one.
  */
 export function parseWarnings(content: string): Array<{ subject: string; reason: string }> {
-  const own = parseMarkedList(content, /^warnings$/i, ANY_SUBJECT);
-  const misfiled = parseMarkedList(content, /revision requests/i, ANY_SUBJECT).filter(
+  const own = parseMarkedList(content, FINDINGS, ANY_SUBJECT);
+  const misfiled = parseMarkedList(content, CHANGE_REQUESTS, ANY_SUBJECT).filter(
     (r) => !DOC_SUBJECT.test(r.subject),
   );
   return [...own, ...misfiled];
 }
 
-// Read questions only from the Open Questions section; ignore template placeholders.
+// Read questions only from the questions section; ignore template placeholders.
 export function hasOpenQuestions(content: string): boolean {
   const lines = content.split('\n');
   let inSection = false;
   for (const line of lines) {
     const heading = line.match(/^#{1,6}\s+(.*)$/);
     if (heading) {
-      inSection = /open questions/i.test(heading[1]);
+      inSection = QUESTIONS.test((heading[1] ?? '').trim());
       continue;
     }
     if (!inSection) continue;
@@ -369,7 +378,7 @@ export function markRequestHandled(
   reason: string,
   outcome: string,
 ): void {
-  markListItemHandled(project, from, /revision requests/i, target, reason, outcome);
+  markListItemHandled(project, from, CHANGE_REQUESTS, target, reason, outcome);
 }
 
 /**

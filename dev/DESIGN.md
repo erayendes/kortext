@@ -313,8 +313,8 @@ for good on the second click.
 The markdown the panel renders, on the same seven sizes: body `--fs-body`, headings
 `--fs-title` / `--fs-section` / `--fs-heading`.
 
-Two kinds of debt, two colours — **amber** `.open-q` (`## Open Questions for prime`, yours to
-answer) and **pink** `.req-q` (`## Revision Requests`, a demand written to another document).
+Two kinds of debt, two colours — **amber** `.open-q` (`## Questions for Prime`, yours to
+answer) and **pink** `.req-q` (`## Change Requests`, a demand written to another document).
 Share one colour and you lose which is yours. Pink lands only on a **standing** demand: a closed
 one (`- [x]`) stays in the document unpainted — it is no longer a debt but the record of one.
 

@@ -153,7 +153,7 @@ Open any document. Everything you can do to it is here:
 - [ ] An ordinary edit leaves incoming requests open; saving a proposed revision closes them.
 - [ ] Open questions block approval. A standing request alone does not, but it still blocks completion.
 - [ ] A revision request comes back as a rewritten draft, with the answered question **gone**
-      from `## Open Questions for prime` rather than restated.
+      from `## Questions for Prime` rather than restated.
 - [ ] A demand ticked `- [x]` in the source document carries the outcome line beneath it.
 - [ ] The brief has no producing step, so **Propose** drafts the change and you apply it.
 - [ ] Approving a rewritten document raises demands on the approved documents that read it —

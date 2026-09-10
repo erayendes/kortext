@@ -7,6 +7,7 @@ import { spawnCli } from './cli-spawn.js';
 import { ENGINES, type EngineSpec } from './engines.js';
 import { writeDesignPreview } from './design-preview.js';
 import {
+  CHANGE_REQUESTS,
   docPath,
   listDocs,
   loadDocMap,
@@ -118,9 +119,9 @@ export function buildStepPrompt(
     "- Decide whether this document applies to THIS project, using the step's `n/a when` condition. If it is met, write the file with status: not-applicable and one line saying why, and stop. That is a complete, correct outcome — not a gap and not a failure. Leave nothing but the title and that one line: a skeleton of empty headings reads to the next author as work waiting to be done.",
     '- Write only what your evidence supports. Where it is silent, say so and leave the question to prime; never fill a section by assuming what the product is probably like.',
     '- You may write something you did not find but believe the project should have. Every such line starts with `**Suggestion —**` and says why you are proposing it. A line without that marker is a fact you observed. Writing a suggestion as a fact misleads everyone who later uses this document as a contract — a target, a threshold and a schedule are facts only if the evidence carries them.',
-    "- Every question you leave for the human goes under the document's `## Open Questions for prime` heading, one `- ` item each, and nowhere else. Leave that section empty when there is nothing to ask — an empty section is the signal that the document stands on its own.",
-    '- A finding about something no document owns — a config file, a workflow, a tracked secret, a live endpoint — goes under `## Warnings` in THIS document, one line each, starting with the path in backticks: `` - `.gitignore` — `.env` is tracked and holds live credentials ``. Do not aim a revision request at it: a demand can only ask a document to change, and one aimed anywhere else is a finding nobody can act on.',
-    '- When an ALREADY-WRITTEN document must change because of what you found, that is not prose: put one line under `## Revision Requests`, starting with the target file in backticks — `` - `ENVIRONMENT.md` — the access-log lines must follow the no-logs decision `` — and say what must change and why. The panel turns each line into an action the human can take; a demand written anywhere else in the document is a demand nobody can act on. Leave the section empty when nothing upstream needs to change.',
+    "- Every question you leave for the human goes under the document's `## Questions for Prime` heading, one `- ` item each, and nowhere else. Leave that section empty when there is nothing to ask — an empty section is the signal that the document stands on its own.",
+    '- A finding about something no document owns — a config file, a workflow, a tracked secret, a live endpoint — goes under `## Findings` in THIS document, one line each, starting with the path in backticks: `` - `.gitignore` — `.env` is tracked and holds live credentials ``. Do not aim a revision request at it: a demand can only ask a document to change, and one aimed anywhere else is a finding nobody can act on.',
+    '- When an ALREADY-WRITTEN document must change because of what you found, that is not prose: put one line under `## Change Requests`, starting with the target file in backticks — `` - `ENVIRONMENT.md` — the access-log lines must follow the no-logs decision `` — and say what must change and why. The panel turns each line into an action the human can take; a demand written anywhere else in the document is a demand nobody can act on. Leave the section empty when nothing upstream needs to change.',
     '',
     'HARD RULES:',
     `- Produce EXACTLY this file and nothing else: .kortext/${step.output}`,
@@ -146,7 +147,7 @@ export function buildStepPrompt(
       'Rewrite the document addressing EVERY note below (keep what was not objected to).',
       'A note is written in `[the line it was left on] the note`. When that line is one of your own',
       'open questions, the note IS the answer: fold it into the document as a settled fact, in the',
-      'section where it belongs, and DELETE that question from `## Open Questions for prime`. An',
+      'section where it belongs, and DELETE that question from `## Questions for Prime`. An',
       'answered question is not restated, not moved, and not kept "for reference" — it is gone, and',
       'the fact it established is now part of the document. Keep only the questions still unanswered;',
       'if none remain, leave the section empty.',
@@ -398,7 +399,7 @@ export async function explainDoc(
 // Re-reading a document against an input that moved
 // ---------------------------------------------------------------------------
 
-/** Appends one demand under the source's `## Revision Requests` heading. */
+/** Appends one demand under the source's `## Change Requests` heading. */
 export function appendRevisionRequest(
   project: Project,
   sourceRel: string,
@@ -408,10 +409,13 @@ export function appendRevisionRequest(
   const path = docPath(project, sourceRel);
   const lines = readFileSync(path, 'utf8').split('\n');
   const line = `- \`${targetRel}\` — ${reason.replace(/\s+/g, ' ').trim()}`;
-  const head = lines.findIndex((l) => /^#{1,6}\s+Revision Requests\s*$/i.test(l));
+  const head = lines.findIndex((l) => {
+    const m = l.match(/^#{1,6}\s+(.*?)\s*$/);
+    return !!m && CHANGE_REQUESTS.test(m[1]!);
+  });
   if (head === -1) {
     // Create the required section if the document does not already have it.
-    lines.push('', '## Revision Requests', '', line);
+    lines.push('', '## Change Requests', '', line);
   } else {
     let end = head + 1;
     while (end < lines.length && !/^#{1,6}\s/.test(lines[end])) end++;

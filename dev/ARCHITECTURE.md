@@ -110,8 +110,8 @@ The file is the source of truth — no document state is kept in the database.
 **`status`:** `uninitialized` → `draft` (engine wrote it) → `approved` (prime). Side exits:
 `not-applicable` (the step judged it irrelevant; satisfies a dependency like `approved`), `log`.
 
-**Two sections are machine-read.** `## Open Questions for prime` — non-empty means the
-document is waiting on a human. `## Revision Requests` — `` - `TARGET.md` — reason `` lines,
+**Two sections are machine-read.** `## Questions for Prime` — non-empty means the
+document is waiting on a human. `## Change Requests` — `` - `TARGET.md` — reason `` lines,
 each landing in the named document's inbox as an action in the panel. A settled one is ticked
 `- [x]` with the outcome beneath it: the record stays inside the document that made the demand,
 because every agent that opens it must see what the panel sees.
@@ -184,7 +184,7 @@ Retry repeats that document and those notes, and settles matching demands only a
 
 **Standing prompt rules:** write that one file and nothing else · keep the skeleton's headings
 verbatim · never write `approved` · never assume what the inputs do not say — ask under
-`## Open Questions for prime` · a change another document needs is a `## Revision Requests`
+`## Questions for Prime` · a change another document needs is a `## Change Requests`
 line, not prose · prose in the document's language, every name in English.
 
 | Run outside a step | What it does | What it writes |
