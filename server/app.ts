@@ -16,11 +16,9 @@ import {
   CHANGE_REQUESTS,
   docPath,
   docVersion,
-  FINDINGS,
   listDocs,
   loadDocMap,
   listVersions,
-  markListItemHandled,
   markRequestHandled,
   readVersion,
   recordVersion,
@@ -624,52 +622,12 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     res.status(202).json({ started: rel });
   });
 
-  // Settle a finding: prime acted on it, or judged it not worth acting on. The
-  // line may sit under Findings or, for older documents, under Change Requests
-  // where a demand was aimed at something that is not a document.
-  app.post('/api/projects/:id/docs/clear-warning', (req, res) => {
-    const project = projectOr404(req.params.id, res);
-    if (!project) return;
-    const { rel, subject, reason, decision } = req.body ?? {};
-    const doc = listDocs(db, project, pkgRoot).find((d) => d.rel === String(rel ?? ''));
-    if (!doc) return res.status(404).json({ error: `no such document: ${rel}` });
-    const warning = doc.warnings.find(
-      (w) => w.subject === String(subject ?? '') && w.reason === String(reason ?? ''),
-    );
-    if (!warning) return res.status(409).json({ error: 'that warning is already settled' });
-    markListItemHandled(
-      project,
-      doc.rel,
-      new RegExp(`${FINDINGS.source}|${CHANGE_REQUESTS.source}`, 'i'),
-      warning.subject,
-      warning.reason,
-      decision === 'dismiss' ? 'dismissed by prime' : 'done by prime',
-    );
-    res.json({ ok: true });
-  });
-
-  // Clear a conflict: prime looked again and settled it, one way or the other.
-  app.post('/api/projects/:id/docs/clear-conflict', (req, res) => {
-    const project = projectOr404(req.params.id, res);
-    if (!project) return;
-    const { rel, from, reason, said } = req.body ?? {};
-    const doc = listDocs(db, project, pkgRoot).find((d) => d.rel === String(rel ?? ''));
-    if (!doc) return res.status(404).json({ error: `no such document: ${rel}` });
-    const conflict = doc.conflicts.find(
-      (c) => c.from === String(from ?? '') && c.reason === String(reason ?? ''),
-    );
-    if (!conflict) return res.status(409).json({ error: 'that conflict is already settled' });
-    const note = String(said ?? '').trim();
-    markListItemHandled(
-      project,
-      doc.rel,
-      /^conflicts$/i,
-      conflict.from,
-      conflict.reason,
-      note ? `cleared by prime — ${note}` : 'cleared by prime',
-    );
-    res.json({ ok: true });
-  });
+  /*
+   * There is no route to settle a finding or a conflict. Both are records the
+   * next writer reads, not decisions owed to prime — a conflict was already
+   * decided when the change request was denied, and a finding names a file no
+   * document owns. Settling them was asking prime twice.
+   */
 
   /**
    * Settle every demand standing against one document in a single decision.

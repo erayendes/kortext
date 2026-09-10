@@ -36,9 +36,17 @@ export interface DocInfo {
     /** The target is being rewritten; a second revision would be refused. */
     targetWriting: boolean;
   }>;
-  /** Findings about something no document owns — a config file, a workflow, a key. */
+  /**
+   * Findings about something no document owns — a config file, a workflow, a
+   * key. A record the next writer reads, not a decision owed: no buttons, no
+   * Action Needed row, no gate on the handshake.
+   */
   warnings: Array<{ subject: string; reason: string }>;
-  /** Contradictions left standing because prime dismissed the demand that named them. */
+  /**
+   * Contradictions left standing because prime denied the change request that
+   * named them. A record, like a finding — prime already decided when denying,
+   * and asking them to settle the result would be asking twice.
+   */
   conflicts: Array<{ from: string; reason: string }>;
   /** Which shelf the panel files this on. */
   section: 'needs' | 'doing' | 'todo' | 'done';
@@ -81,12 +89,9 @@ function fileDoc(doc: DocInfo, job: LastJob | null): Pick<DocInfo, 'section' | '
   if (doc.status === 'uninitialized') return at('todo', 'waiting', 'queue');
   // Every open Action Needed item blocks approval, so one case covers them all:
   // questions left for prime and change requests arriving from other documents.
-  if (
-    doc.revisionRequests.length > 0 ||
-    doc.conflicts.length > 0 ||
-    doc.warnings.length > 0 ||
-    (doc.status === 'draft' && doc.openQuestions)
-  )
+  // Conflicts and findings are not among them — they are records written into
+  // the document, not decisions owed.
+  if (doc.revisionRequests.length > 0 || (doc.status === 'draft' && doc.openQuestions))
     return at('needs', 'waiting', 'review');
   // A recheck is a reading, not a writing: the document waits either way.
   if (doc.pendingRecheck) return at('todo', 'waiting', 'recheck');
@@ -331,7 +336,7 @@ export function setFrontmatterStatus(path: string, status: string): void {
 
 // Record the outcome in the document that carries the line, so the panel and the
 // next CLI read the same state.
-export function markListItemHandled(
+function markListItemHandled(
   project: Project,
   rel: string,
   heading: RegExp,
@@ -579,10 +584,10 @@ export function analysisComplete(
   if ((project.kind ?? 'new') === 'new' && !settled(byRel.get('BRIEF.md'))) return false;
   if (targets.some((rel) => docs.find((d) => d.rel === rel)?.openQuestions)) return false;
   if (docs.some((d) => d.revisionRequests.length > 0)) return false;
-  // A standing conflict means the set contradicts itself. A warning is a finding
-  // about the codebase — real repositories always have some, and blocking on
-  // those would make the handshake unreachable.
-  if (docs.some((d) => d.conflicts.length > 0)) return false;
+  // Conflicts and findings do not gate the handshake. A conflict is not a
+  // decision prime avoided; it is one deferred to the moment there is enough
+  // information — the build phase, where prime is present anyway. It is handed
+  // over, not settled here.
   return targets.every((rel) => settled(byRel.get(rel)));
 }
 

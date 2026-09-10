@@ -14,7 +14,6 @@ import {
   hasOpenQuestions,
   parseRevisionRequests,
   markRequestHandled,
-  markListItemHandled,
   appendListItem,
   parseConflicts,
   parseWarnings,
@@ -164,6 +163,13 @@ test('analysisComplete: only when every workflow-produced doc is settled', async
     if (rel.endsWith('backlog.yaml') || rel === 'TODO.md') continue;
     setFrontmatterStatus(docPath(p, rel), rel === 'GROWTH.md' ? 'not-applicable' : 'approved');
   }
+  assert.equal(analysisComplete(db, p, pkgRoot), true);
+
+  // A conflict and a finding are records handed to the build phase, not
+  // decisions owed — neither one holds the handshake back.
+  const { appendListItem: append } = await import('../server/docs.js');
+  append(p, 'ENVIRONMENT.md', 'Conflicts', 'SECURITY.md', 'the access log stays', 'denied');
+  append(p, 'ENVIRONMENT.md', 'Findings', '.gitignore', '.env is tracked', 'found');
   assert.equal(analysisComplete(db, p, pkgRoot), true);
   rmSync(work, { recursive: true, force: true });
 });
@@ -429,9 +435,10 @@ test('every document is filed by one rule, and the first matching rule wins', ()
   );
   assert.equal(label('PRODUCT.md'), 'needs/waiting:(review)');
 
-  // So does a warning, on a document with nothing else pending.
-  write('STACK.md', '---\nstatus: approved\n---\n\n## Warnings\n\n- `.gitignore` — .env tracked\n');
-  assert.equal(label('STACK.md'), 'needs/waiting:(review)');
+  // A finding does not. It is a record the next writer reads, not a decision
+  // owed — the document stays where it was.
+  write('STACK.md', '---\nstatus: approved\n---\n\n## Findings\n\n- `.gitignore` — .env tracked\n');
+  assert.equal(label('STACK.md'), 'done/approved');
 
   // Approved and settled.
   write('STACK.md', '---\nstatus: approved\n---\n\n# S\n');
@@ -449,7 +456,7 @@ test('every document is filed by one rule, and the first matching rule wins', ()
   assert.equal(label('STACK.md'), 'todo/waiting:(recheck)');
 });
 
-test('a dismissed demand leaves the contradiction where the next writer reads it', () => {
+test('a denied change request leaves a record, not another decision', () => {
   const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
   const db = openDb(join(work, 'db.sqlite'));
   const p = createProject(db, { name: 'Acme', repoPath: join(work, 'acme') }, pkgRoot);
@@ -458,29 +465,27 @@ test('a dismissed demand leaves the contradiction where the next writer reads it
   writeFileSync(docPath(p, 'ENVIRONMENT.md'), '---\nstatus: approved\n---\n\n# Env\n', 'utf8');
   writeFileSync(
     docPath(p, 'SECURITY.md'),
-    `---\nstatus: approved\n---\n\n## Revision Requests\n\n- \`ENVIRONMENT.md\` — ${reason}\n`,
+    `---\nstatus: approved\n---\n\n## Change Requests\n\n- \`ENVIRONMENT.md\` — ${reason}\n`,
     'utf8',
   );
 
-  // What the dismiss route does: settle the asking, then record what the asking
-  // was about in the document that still disagrees.
-  markRequestHandled(p, 'SECURITY.md', 'ENVIRONMENT.md', reason, 'dismissed by prime — kept');
-  appendListItem(p, 'ENVIRONMENT.md', 'Conflicts', 'SECURITY.md', reason, 'dismissed 2026-09-09');
+  // What denying does: settle the asking, then record what the asking was about
+  // in the document that still disagrees.
+  markRequestHandled(p, 'SECURITY.md', 'ENVIRONMENT.md', reason, 'denied by prime — kept');
+  appendListItem(p, 'ENVIRONMENT.md', 'Conflicts', 'SECURITY.md', reason, 'denied 2026-09-09');
 
   const env = listDocs(db, p, pkgRoot).find((d) => d.rel === 'ENVIRONMENT.md')!;
   assert.deepEqual(env.conflicts, [{ from: 'SECURITY.md', reason }]);
-  assert.equal(env.section, 'needs');
-  assert.equal(env.detail, 'review');
-  assert.equal(analysisComplete(db, p, pkgRoot), false, 'the set disagrees with itself');
+  // Prime decided when they denied it. Asking them to settle the conflict too
+  // would be asking twice, so the document goes nowhere near Action Needed.
+  assert.equal(env.section, 'done');
+  assert.equal(env.detail, null);
 
-  // Settling it writes the outcome under the reason, not over it.
-  markListItemHandled(p, 'ENVIRONMENT.md', /^conflicts$/i, 'SECURITY.md', reason, 'cleared');
-  const body = readFileSync(docPath(p, 'ENVIRONMENT.md'), 'utf8');
-  assert.ok(
-    body.indexOf('dismissed 2026-09-09') < body.indexOf('cleared'),
-    'the item reads in the order it happened',
-  );
-  assert.deepEqual(listDocs(db, p, pkgRoot).find((d) => d.rel === 'ENVIRONMENT.md')!.conflicts, []);
+  // The record survives a settled outcome trailer above it — the line reads in
+  // the order it happened, and the whole item stays in the file.
+  const body = readFileSync(docPath(p, 'SECURITY.md'), 'utf8');
+  assert.match(body, /^- \[x\] `ENVIRONMENT\.md`/m);
+  assert.match(body, /denied by prime — kept/);
 });
 
 test('a demand that wraps over two lines is read whole, and its outcome lands after it', () => {

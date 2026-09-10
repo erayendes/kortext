@@ -149,22 +149,6 @@ export const api = {
     ),
   docVersionText: (projectId: number, versionId: number) =>
     req<{ content: string; rel: string }>(`/api/projects/${projectId}/docs/history/${versionId}`),
-  clearWarning: (
-    projectId: number,
-    body: { rel: string; subject: string; reason: string; decision: 'done' | 'dismiss' },
-  ) =>
-    req<{ ok: boolean }>(`/api/projects/${projectId}/docs/clear-warning`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-  clearConflict: (
-    projectId: number,
-    body: { rel: string; from: string; reason: string; said?: string },
-  ) =>
-    req<{ ok: boolean }>(`/api/projects/${projectId}/docs/clear-conflict`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
   settleRequests: (
     projectId: number,
     body: {
