@@ -49,8 +49,8 @@ export interface DocInfo {
   warnings: Array<{ subject: string; reason: string }>;
   conflicts: Array<{ from: string; reason: string }>;
   section: 'needs' | 'doing' | 'todo' | 'done';
-  state: 'waiting' | 'writing' | 'paused' | 'approved' | 'n/a';
-  detail: 'approve' | 'review' | 'answer' | 'queue' | 'update' | 'draft' | 'failed' | null;
+  state: 'waiting' | 'writing' | 'paused' | 'failed' | 'approved' | 'n/a';
+  detail: 'approve' | 'review' | 'queue' | 'recheck' | 'draft' | 'revision' | null;
   pendingRecheck: boolean;
 }
 

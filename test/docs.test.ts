@@ -396,25 +396,28 @@ test('every document is filed by one rule, and the first matching rule wins', ()
   job('PRODUCT.md', 'running');
   assert.equal(label('PRODUCT.md'), 'doing/writing:(draft)');
   job('PRODUCT.md', 'running', 'doc', '["[STACK.md asks] fix it"]');
-  assert.equal(label('PRODUCT.md'), 'doing/writing:(update)');
+  assert.equal(label('PRODUCT.md'), 'doing/writing:(revision)');
 
   // Stopped mid-write keeps the same distinction.
   job('PRODUCT.md', 'stopped');
   assert.equal(label('PRODUCT.md'), 'doing/paused:(draft)');
   job('PRODUCT.md', 'stopped', 'doc', '["[STACK.md asks] fix it"]');
-  assert.equal(label('PRODUCT.md'), 'doing/paused:(update)');
+  assert.equal(label('PRODUCT.md'), 'doing/paused:(revision)');
 
-  // A failed job is nobody's work in progress — it waits for a retry.
+  // A failed job is nobody's work in progress — it waits for a retry. It is its
+  // own state, so `paused` keeps one meaning: prime stopped it.
   job('PRODUCT.md', 'failed');
-  assert.equal(label('PRODUCT.md'), 'needs/paused:(failed)');
+  assert.equal(label('PRODUCT.md'), 'needs/failed:(draft)');
+  job('PRODUCT.md', 'failed', 'doc', '["[STACK.md asks] fix it"]');
+  assert.equal(label('PRODUCT.md'), 'needs/failed:(revision)');
 
-  // A draft with a question asks to be answered, not approved.
+  // A question is an Action Needed item like any other, so it reads as review.
   db.prepare('DELETE FROM jobs').run();
   write(
     'PRODUCT.md',
     '---\nstatus: draft\n---\n\n# P\n\n## Open Questions for prime\n\n- Which currency?\n',
   );
-  assert.equal(label('PRODUCT.md'), 'needs/waiting:(answer)');
+  assert.equal(label('PRODUCT.md'), 'needs/waiting:(review)');
 
   write('PRODUCT.md', '---\nstatus: draft\n---\n\n# P\n');
   assert.equal(label('PRODUCT.md'), 'needs/waiting:(approve)');
@@ -441,9 +444,9 @@ test('every document is filed by one rule, and the first matching rule wins', ()
   db.prepare(
     'INSERT INTO pending_rechecks (project_id, source_rel, reader_rel) VALUES (?,?,?)',
   ).run(p.id, 'PRODUCT.md', 'STACK.md');
-  assert.equal(label('STACK.md'), 'todo/waiting:(update)');
+  assert.equal(label('STACK.md'), 'todo/waiting:(recheck)');
   job('STACK.md', 'running', 'recheck');
-  assert.equal(label('STACK.md'), 'todo/waiting:(update)');
+  assert.equal(label('STACK.md'), 'todo/waiting:(recheck)');
 });
 
 test('a dismissed demand leaves the contradiction where the next writer reads it', () => {

@@ -1775,7 +1775,7 @@ function DocumentsTab({
             </summary>
             {items.map((d) => {
               const job = jobFor(d.rel);
-              const failed = d.detail === 'failed';
+              const failed = d.state === 'failed';
               return (
                 // Use separate keyboard-accessible targets for the row and Retry; do not nest buttons.
                 <div

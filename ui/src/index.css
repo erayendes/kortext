@@ -1803,6 +1803,12 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   background: var(--green-bg);
   color: var(--green);
 }
+/* A run that errored. `paused` is prime's own stop and stays amber; this is red
+   because it asks for a Retry. */
+.kx-status-failed {
+  background: var(--red-bg);
+  color: var(--red);
+}
 
 /* Render status separately from request and dependency badges. */
 /* waiting and n/a are the quiet, no-action states — a pill like the rest, in
@@ -1840,8 +1846,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
 }
 /* The word in brackets: which kind of waiting, writing or pausing. It carries
    the urgency; the state word beside it stays quiet. */
-.kx-badge-approve,
-.kx-badge-answer {
+.kx-badge-approve {
   color: var(--violet);
   border-color: var(--violet-border);
   background: var(--violet-bg);
@@ -1851,7 +1856,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   border-color: var(--pink-border);
   background: var(--pink-bg);
 }
-.kx-badge-update {
+.kx-badge-recheck {
   color: var(--amber);
   border-color: var(--amber-border);
   background: var(--amber-bg);
@@ -1860,17 +1865,12 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
    solid accent, so a badge that sets only its text colour comes out as the
    loudest pill on the row — the opposite of what these two mean. */
 .kx-badge-draft,
+.kx-badge-revision,
 .kx-badge-queue {
   color: var(--fg-muted);
   background: var(--bg-muted);
   border-color: var(--border);
 }
-.kx-badge-failed {
-  background: var(--red-bg);
-  color: var(--red);
-  border-color: var(--red-border);
-}
-
 /* Distinguish requests from dependency notices. */
 .kx-badge-change {
   background: var(--pink-bg);

@@ -620,13 +620,12 @@ export function StatusBadge({ doc }: { doc: DocInfo }) {
 
 // Which kind of waiting, writing or pausing — the word in brackets before the state.
 const DETAIL_TITLE: Record<string, string> = {
-  approve: 'Written and waiting for your approval',
-  review: 'Another document has asked this one to change',
-  answer: 'Answer the open questions before approving',
+  approve: 'Nothing open — approve it',
+  review: 'Action Needed items stand on this document',
   queue: 'Not written yet',
-  update: 'Waiting to be read again against an input that moved',
-  draft: 'Being written for the first time',
-  failed: 'The run failed — retry it',
+  recheck: 'Waiting to be read again against an input that moved',
+  draft: 'The first draft',
+  revision: 'A rewrite of what already stands',
 };
 
 /** What is owed on this document, next to the state it is in. */
@@ -639,6 +638,7 @@ export function DocBadges({ doc }: { doc: DocInfo }) {
           title={
             doc.detail === 'review'
               ? [
+                  ...(doc.openQuestions ? ['questions are waiting for you'] : []),
                   ...doc.revisionRequests.map((r) => `${r.from}: ${r.reason}`),
                   ...doc.conflicts.map((c) => `conflict with ${c.from}: ${c.reason}`),
                   ...doc.warnings.map((w) => `${w.subject}: ${w.reason}`),

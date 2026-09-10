@@ -43,9 +43,9 @@ export interface DocInfo {
   /** Which shelf the panel files this on. */
   section: 'needs' | 'doing' | 'todo' | 'done';
   /** The word after the name: what the document is doing, or waiting to do. */
-  state: 'waiting' | 'writing' | 'paused' | 'approved' | 'n/a';
-  /** The word in brackets: which kind of waiting, writing or pausing. */
-  detail: 'approve' | 'review' | 'answer' | 'queue' | 'update' | 'draft' | 'failed' | null;
+  state: 'waiting' | 'writing' | 'paused' | 'failed' | 'approved' | 'n/a';
+  /** The word in brackets: which kind of waiting, writing, pausing or failing. */
+  detail: 'approve' | 'review' | 'queue' | 'recheck' | 'draft' | 'revision' | null;
   /** A recheck is queued or running against this document. */
   pendingRecheck: boolean;
 }
@@ -71,23 +71,25 @@ function fileDoc(doc: DocInfo, job: LastJob | null): Pick<DocInfo, 'section' | '
     detail,
   });
 
-  if (job?.kind === 'doc' && job.status === 'running') {
-    return at('doing', 'writing', job.isUpdate ? 'update' : 'draft');
-  }
-  if (job?.status === 'stopped') {
-    return at('doing', 'paused', job.isUpdate ? 'update' : 'draft');
-  }
-  // Nothing is doing anything with a failed job — it waits for prime to retry.
-  if (job?.status === 'failed') return at('needs', 'paused', 'failed');
+  // What a run is writing: the first draft, or a revision of what stands.
+  const pass = job?.isUpdate ? 'revision' : 'draft';
+  if (job?.kind === 'doc' && job.status === 'running') return at('doing', 'writing', pass);
+  // `paused` means one thing: prime stopped it. A run that errored is `failed`,
+  // and the two share no button — Continue against Retry.
+  if (job?.status === 'stopped') return at('doing', 'paused', pass);
+  if (job?.status === 'failed') return at('needs', 'failed', pass);
   if (doc.status === 'uninitialized') return at('todo', 'waiting', 'queue');
-  // A draft carrying demands is triaged before it can be approved.
-  if (doc.revisionRequests.length > 0) return at('needs', 'waiting', 'review');
-  if (doc.conflicts.length > 0 || doc.warnings.length > 0) return at('needs', 'waiting', 'review');
+  // Every open Action Needed item blocks approval, so one case covers them all:
+  // questions left for prime and change requests arriving from other documents.
+  if (
+    doc.revisionRequests.length > 0 ||
+    doc.conflicts.length > 0 ||
+    doc.warnings.length > 0 ||
+    (doc.status === 'draft' && doc.openQuestions)
+  )
+    return at('needs', 'waiting', 'review');
   // A recheck is a reading, not a writing: the document waits either way.
-  if (doc.pendingRecheck) return at('todo', 'waiting', 'update');
-  // Approval is disabled while a question stands; say so rather than point at a
-  // greyed-out button.
-  if (doc.status === 'draft' && doc.openQuestions) return at('needs', 'waiting', 'answer');
+  if (doc.pendingRecheck) return at('todo', 'waiting', 'recheck');
   if (doc.status === 'draft') return at('needs', 'waiting', 'approve');
   if (doc.status === 'approved') return at('done', 'approved', null);
   return at('done', 'n/a', null);
