@@ -479,3 +479,34 @@ test('a dismissed demand leaves the contradiction where the next writer reads it
   );
   assert.deepEqual(listDocs(db, p, pkgRoot).find((d) => d.rel === 'ENVIRONMENT.md')!.conflicts, []);
 });
+
+test('a demand that wraps over two lines is read whole, and its outcome lands after it', () => {
+  const body = `# SECURITY
+
+## Revision Requests
+
+- [ ] \`STACK.md\` — "veriler şifreli saklanır" ifadesi kodla çelişiyor;
+      SQLite dosyası düz. Ya ifade düzeltilmeli ya şifreleme eklenmeli.
+- [ ] \`API.md\` — tek satır, sarmalanmamış.
+`;
+  const reason =
+    '"veriler şifreli saklanır" ifadesi kodla çelişiyor; SQLite dosyası düz. Ya ifade düzeltilmeli ya şifreleme eklenmeli.';
+  assert.deepEqual(parseRevisionRequests(body), [
+    { target: 'STACK.md', reason },
+    { target: 'API.md', reason: 'tek satır, sarmalanmamış.' },
+  ]);
+
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Acme', repoPath: join(work, 'acme') }, pkgRoot);
+  writeFileSync(join(p.repo_path, '.kortext', 'SECURITY.md'), body, 'utf8');
+  markRequestHandled(p, 'SECURITY.md', 'STACK.md', reason, 'applied by prime');
+  const after = readFileSync(join(p.repo_path, '.kortext', 'SECURITY.md'), 'utf8').split('\n');
+  const box = after.findIndex((l) => l.includes('STACK.md'));
+  assert.match(after[box]!, /^- \[x\]/);
+  assert.match(after[box + 1]!, /SQLite dosyası düz/); // the wrapped rest stays put
+  assert.match(after[box + 2]!, /applied by prime/); // the outcome goes after it
+  assert.deepEqual(parseRevisionRequests(after.join('\n')), [
+    { target: 'API.md', reason: 'tek satır, sarmalanmamış.' },
+  ]);
+});

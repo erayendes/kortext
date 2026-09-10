@@ -101,6 +101,26 @@ function fileDoc(doc: DocInfo, job: LastJob | null): Pick<DocInfo, 'section' | '
  */
 const MARKED_LINE = /^\s*[-*+]\s+(?:\[([ xX]?)\]\s*)?`([^`]+)`\s*[—:-]?\s*(.*)$/;
 
+/** An outcome trailer: indented and a list item of its own. */
+const TRAILER = /^\s+[-*+] /;
+
+/**
+ * A demand is one item, but an agent may wrap it over several lines. The
+ * indented lines that follow are the rest of the sentence unless they are
+ * list items themselves, which is what an outcome trailer looks like.
+ * Returns the whole reason and the index the item ends at.
+ */
+function foldWrapped(lines: string[], i: number, first: string): [string, number] {
+  let reason = first.trim();
+  let j = i + 1;
+  for (; j < lines.length; j++) {
+    const line = lines[j] ?? '';
+    if (!/^\s+\S/.test(line) || TRAILER.test(line)) break;
+    reason = `${reason} ${line.trim()}`.trim();
+  }
+  return [reason, j];
+}
+
 /**
  * One parser for the three sections that carry marked lists: Revision Requests,
  * Conflicts and Warnings. `subject` narrows what counts as a subject — demands
@@ -112,8 +132,10 @@ export function parseMarkedList(
   subject: RegExp,
 ): Array<{ subject: string; reason: string }> {
   const out: Array<{ subject: string; reason: string }> = [];
+  const lines = content.split('\n');
   let inSection = false;
-  for (const line of content.split('\n')) {
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] ?? '';
     const h = line.match(/^#{1,6}\s+(.*)$/);
     if (h) {
       inSection = heading.test(h[1] ?? '');
@@ -121,11 +143,14 @@ export function parseMarkedList(
     }
     if (!inSection) continue;
     const m = line.match(MARKED_LINE);
+    if (!m) continue;
+    const [reason, next] = foldWrapped(lines, i, m[3] ?? '');
+    i = next - 1;
     // A ticked box is settled and excluded from the pending list.
-    if (!m || (m[1] ?? '').trim().toLowerCase() === 'x') continue;
+    if ((m[1] ?? '').trim().toLowerCase() === 'x') continue;
     const name = m[2]!.replace(/^\.kortext\//, '');
     if (!subject.test(name)) continue;
-    out.push({ subject: name, reason: m[3]!.trim() });
+    out.push({ subject: name, reason });
   }
   return out;
 }
@@ -320,12 +345,14 @@ export function markListItemHandled(
     if (!m) continue;
     if (m[2]!.replace(/^\.kortext\//, '') !== subject.replace(/^.*\//, '') && m[2] !== subject)
       continue;
-    if ((m[3] ?? '').trim() !== reason.trim()) continue;
+    const [full, afterWrap] = foldWrapped(lines, i, m[3] ?? '');
+    if (full !== reason.trim()) continue;
     // Keep both the settled marker and the outcome in the document. A line may
     // already carry a trailer saying how it came to be; the outcome goes after
-    // it, so the item reads in the order it happened.
-    let end = i + 1;
-    while (end < lines.length && /^\s+- /.test(lines[end] ?? '')) end++;
+    // it, so the item reads in the order it happened. The wrapped rest of the
+    // demand stays where it is — it belongs to the demand, not to the outcome.
+    let end = afterWrap;
+    while (end < lines.length && TRAILER.test(lines[end] ?? '')) end++;
     lines.splice(end, 0, `  - ${outcome} · ${day}`);
     lines[i] = `- [x] \`${m[2]}\` — ${m[3]}`;
     writeFileSync(path, lines.join('\n'), 'utf8');
