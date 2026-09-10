@@ -193,17 +193,19 @@ export function DocDrawer({
   }, [tokens]);
 
   // The questions themselves, in the order the body numbers them. The panel
-  // lists them; the body still shows them where they were written.
+  // lists them; the body still shows them where they were written. Only a draft
+  // asks them — the server files an approved document as settled, and a list
+  // asking for answers there would contradict the shelf it sits on.
   const questions = useMemo(
     () =>
-      tokens
+      (doc?.status === 'draft' ? tokens : [])
         .filter((t) => t.kind === 'bullet' && openQ.has(t.index) && t.text.trim())
         .map((t, i) => ({
           index: t.index,
           no: i + 1,
           text: t.text.trim().replace(/^[-*+]\s*/, ''),
         })),
-    [tokens, openQ],
+    [tokens, openQ, doc?.status],
   );
 
   // Anything owed on this document goes into one list under one button.
