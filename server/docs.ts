@@ -623,16 +623,30 @@ export function recordVersion(
 export interface DocVersion {
   id: number;
   sha: string;
+  /**
+   * The same hash over the body alone. Approving rewrites `status:` and nothing
+   * else, so two versions can differ as files and be the same document — and a
+   * diff against the earlier of those two shows nothing changed, which is the
+   * one thing the diff must never say when something did.
+   */
+  bodySha: string;
   source: string;
   created_at: string;
 }
 
+/** Everything above and including the closing `---` of the frontmatter. */
+function stripFrontmatter(content: string): string {
+  return content.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '');
+}
+
 export function listVersions(db: Database.Database, project: Project, rel: string): DocVersion[] {
-  return db
-    .prepare(
-      'SELECT id, sha, source, created_at FROM doc_versions WHERE project_id = ? AND rel = ? ORDER BY id DESC',
-    )
-    .all(project.id, rel) as DocVersion[];
+  return (
+    db
+      .prepare(
+        'SELECT id, sha, content, source, created_at FROM doc_versions WHERE project_id = ? AND rel = ? ORDER BY id DESC',
+      )
+      .all(project.id, rel) as Array<DocVersion & { content: string }>
+  ).map(({ content, ...v }) => ({ ...v, bodySha: docVersion(stripFrontmatter(content)) }));
 }
 
 export function readVersion(

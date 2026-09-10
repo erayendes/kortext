@@ -223,6 +223,32 @@ test('one press settles the whole list: the accepted share a rewrite, the denied
   );
 });
 
+test('approving records a version, and the body it records is the same document', async (t) => {
+  const { p, db, request } = await fixture(t);
+  const path = docPath(p, 'PRODUCT.md');
+  const drafted = '---\nstatus: draft\n---\n\n# Product\n\nOne paragraph.\n';
+  writeFileSync(path, drafted);
+  const { recordVersion, listVersions } = await import('../server/docs.js');
+  recordVersion(db, p, 'PRODUCT.md', drafted, 'agent', null);
+
+  assert.equal(
+    (await request('docs/approve', { rel: 'PRODUCT.md', expectedVersion: docVersion(drafted) }))
+      .status,
+    200,
+  );
+
+  // Without this the file on disk no longer matches the recorded head and the
+  // panel refuses to diff — the diff would vanish the moment prime approved.
+  const [head, agent] = listVersions(db, p, 'PRODUCT.md');
+  assert.equal(head!.source, 'prime');
+  assert.equal(head!.sha, docVersion(readFileSync(path, 'utf8')));
+  // Approving rewrites `status:` and nothing else, so the two versions differ as
+  // files and are the same document. The diff reads the body, so it walks past
+  // this one rather than reporting that nothing changed.
+  assert.notEqual(head!.sha, agent!.sha);
+  assert.equal(head!.bodySha, agent!.bodySha);
+});
+
 test('a document still wearing the template cannot be approved without insisting', async (t) => {
   const { p, request } = await fixture(t);
   const path = docPath(p, 'DATABASE.md');

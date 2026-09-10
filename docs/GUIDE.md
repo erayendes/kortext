@@ -98,6 +98,10 @@ document owns. Both are written into the document and neither asks anything of y
 contradiction is handed to the build phase, where there is finally enough information to settle
 it and where you are present anyway.
 
+**Related documents** — blue, at the top. The documents that read this one. Nothing to do: it is
+what changes if you change this, said before you change it. A reader nobody has written yet is
+struck through — it will read this when its turn comes.
+
 **Dependent** — hollow pink. This document is approved, but something it reads is moving. Not
 work for you; when that input settles, this one is re-read against it and you are told only if
 something actually broke.

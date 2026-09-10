@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { Drawer } from './Drawer';
 import { highlight } from './highlight';
 import { parseInline, parseMarkdown, type AlertKind, type MdToken } from './markdown';
-import { api, type DocInfo, type Project } from './api';
+import { api, type DocInfo, type DocVersion, type Project } from './api';
 
 // The two headings the drawer looks for, each accepting the name it used to
 // carry: documents written before the rename are still on disk.
@@ -30,6 +30,7 @@ interface Explain {
 export function DocDrawer({
   project,
   doc,
+  docs,
   failedError,
   onRetry,
   onClose,
@@ -37,6 +38,8 @@ export function DocDrawer({
 }: {
   project: Project;
   doc: DocInfo | null;
+  /** The whole shelf — the readers of this document are found in it. */
+  docs: DocInfo[];
   failedError?: string | null;
   onRetry?: () => void;
   onClose: () => void;
@@ -56,6 +59,9 @@ export function DocDrawer({
   const [err, setErr] = useState<string | null>(null);
   // What the document said before it was last written, when the chain is intact.
   const [previous, setPrevious] = useState<string | null>(null);
+  const [versions, setVersions] = useState<DocVersion[]>([]);
+  /** Which recorded version the body is compared against; null = no diff. */
+  const [against, setAgainst] = useState<number | null>(null);
   const [onlyChanges, setOnlyChanges] = useState(false);
 
   // Track the visible document across async handlers; the drawer instance survives document changes.
@@ -78,6 +84,8 @@ export function DocDrawer({
     setVersion('');
     setDraft('');
     setPrevious(null);
+    setVersions([]);
+    setAgainst(null);
     setOnlyChanges(false);
     if (doc) {
       // Ignore results after effect cleanup; captured doc values alone cannot detect a later selection.
@@ -89,16 +97,21 @@ export function DocDrawer({
           setContent(r.content);
           setVersion(r.version);
           setDraft(r.content);
-          // Only diff against a recorded write. Approving, ticking a demand and
-          // appending a recheck's line all edit the file without recording, so a
-          // stale head would make the previous row the wrong baseline.
+          // Only diff against a recorded write. Ticking a demand and appending a
+          // recheck's line edit the file without recording, so a stale head
+          // would make the previous row the wrong baseline.
           void api
             .docHistory(project.id, doc.rel)
-            .then(async (h) => {
-              const [head, prior] = h.versions;
-              if (cancelled || !head || !prior || head.sha !== r.version) return;
-              const text = await api.docVersionText(project.id, prior.id);
-              if (!cancelled) setPrevious(text.content);
+            .then((h) => {
+              if (cancelled) return;
+              setVersions(h.versions);
+              const head = h.versions[0];
+              if (!head || head.sha !== r.version) return;
+              // Walk back to the last version whose BODY differs. Approving
+              // records a version that changes only `status:`, and diffing
+              // against that one would say nothing changed when a whole rewrite
+              // did.
+              setAgainst(h.versions.slice(1).find((v) => v.bodySha !== head.bodySha)?.id ?? null);
             })
             .catch(() => {});
         })
@@ -111,6 +124,25 @@ export function DocDrawer({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doc?.rel, project.id]);
+
+  // The chosen baseline, fetched on its own so the picker costs one request
+  // rather than a reload of the document.
+  useEffect(() => {
+    if (against === null) {
+      setPrevious(null);
+      return;
+    }
+    let cancelled = false;
+    api
+      .docVersionText(project.id, against)
+      .then((t) => {
+        if (!cancelled) setPrevious(t.content);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [against, project.id]);
 
   // Engine-written files hard-wrap prose at ~80 chars; the tokenizer is
   // line-oriented, so consecutive para/quote lines are merged back into one
@@ -414,6 +446,7 @@ export function DocDrawer({
             )}
           </div>
         )}
+        {!editing && <RelatedDocuments doc={doc} docs={docs} />}
         {doc.dependentOn.length > 0 && !editing && (
           <div className="kx-doc-dependbar">
             <span className="mono">
@@ -466,15 +499,36 @@ export function DocDrawer({
           </>
         ) : (
           <div className="kx-doc">
-            {changedCount > 0 && (
+            {/* The bar stays up whenever a baseline is loaded, even at zero
+                changes: it carries the picker, and a bar that disappears when
+                the comparison comes out empty cannot be used to pick another. */}
+            {previous !== null && (
               <div className="kx-diff-bar">
                 <span>
-                  {changedCount} of {tokens.filter((t) => t.kind !== 'blank').length} blocks changed
-                  since it was last written
+                  {changedCount === 0
+                    ? 'Nothing changed against'
+                    : `${changedCount} of ${tokens.filter((t) => t.kind !== 'blank').length} blocks changed since`}
                 </span>
-                <button className="btn btn-secondary" onClick={() => setOnlyChanges(!onlyChanges)}>
-                  {onlyChanges ? 'Show the whole document' : 'Show only what changed'}
-                </button>
+                <select
+                  className="kx-diff-pick mono"
+                  value={against ?? ''}
+                  aria-label="Compare against"
+                  onChange={(e) => setAgainst(Number(e.target.value))}
+                >
+                  {versions.slice(1).map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.source} · {v.created_at}
+                    </option>
+                  ))}
+                </select>
+                {changedCount > 0 && (
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => setOnlyChanges(!onlyChanges)}
+                  >
+                    {onlyChanges ? 'Show the whole document' : 'Show only what changed'}
+                  </button>
+                )}
               </div>
             )}
             {tokens
@@ -637,6 +691,37 @@ export function DocBadges({ doc }: { doc: DocInfo }) {
         </span>
       )}
     </>
+  );
+}
+
+/**
+ * Who reads this document — the inverse of the workflow's `inputs` relation, so
+ * no new data. It is the answer to "what happens if I change this": when this
+ * one settles, every document here is read against it again. A reader nobody
+ * has written yet is greyed; it will read this when its turn comes.
+ */
+function RelatedDocuments({ doc, docs }: { doc: DocInfo; docs: DocInfo[] }) {
+  const readers = docs.filter((d) => d.inputs.includes(doc.rel));
+  if (readers.length === 0) return null;
+  return (
+    <div className="kx-doc-readbar">
+      <span className="kx-readbar-head">Related documents</span>
+      <span>
+        {readers.map((r, i) => (
+          <Fragment key={r.rel}>
+            {i > 0 && ', '}
+            <span
+              className={r.status === 'uninitialized' ? 'kx-reader-unwritten mono' : 'mono'}
+              title={r.status === 'uninitialized' ? 'not written yet' : `${r.name} reads this one`}
+            >
+              {r.name}
+            </span>
+          </Fragment>
+        ))}{' '}
+        — {readers.length > 1 ? 'these read' : 'this reads'} this document. When it changes,{' '}
+        {readers.length > 1 ? 'they are' : 'it is'} read against it again.
+      </span>
+    </div>
   );
 }
 

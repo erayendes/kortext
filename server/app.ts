@@ -559,6 +559,10 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
         }
       }
       setFrontmatterStatus(path, 'approved');
+      // Approving edits the file, so without this the recorded head no longer
+      // matches what is on disk and the panel refuses to diff — the diff would
+      // vanish the moment prime approved, although the body never changed.
+      recordVersion(db, project, String(rel), readFileSync(path, 'utf8'), 'prime', null);
       writeDesignPreview(project);
       kickChain(project);
       // Recheck already-approved readers; there are none on the initial pass.
@@ -825,10 +829,16 @@ ${body}`,
     } catch {
       /* no .kopeng dir */
     }
+    // The handover, counted rather than gated: a conflict or a finding is work
+    // deferred to the build phase, and prime should see how much of it there is
+    // without being asked to settle any of it here.
+    const docs = listDocs(db, project, pkgRoot).filter((d) => d.status !== 'uninitialized');
     res.json({
       analysisComplete: analysisComplete(db, project, pkgRoot),
       kopengInstalled: onPath('kopeng'),
       transferred,
+      documents: docs.length,
+      handedOver: docs.reduce((n, d) => n + d.conflicts.length + d.warnings.length, 0),
     });
   });
 

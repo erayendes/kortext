@@ -69,6 +69,15 @@ With `--db /path/name.sqlite`, logs live in `/path/name.sqlite.logs/`; sibling d
 | `settings` | `key/value` — today just the selected engine |
 | `jobs` | `project_id · doc_rel · kind (doc\|plan\|recheck) · status (running\|done\|failed\|stopped) · error · notes (JSON) · started_at · finished_at` |
 | `pending_rechecks` | `project_id · source_rel · reader_rel · generation` — durable work, unique per source/reader pair |
+| `doc_versions` | `project_id · rel · sha · content · source (agent\|prime\|proposal\|pre-existing) · job_id` — what the drawer diffs against |
+
+**The diff always has a baseline.** `listVersions` reports a `bodySha` beside the file `sha`:
+approving rewrites `status:` and nothing else, so two versions can differ as files and be the same
+document. The drawer takes the head (which must match the file on disk, or something edited it
+outside the panel and no baseline is trustworthy) and walks back to the first version whose *body*
+differs — otherwise approving would show "nothing changed" over a whole rewrite. Approval records a
+version for that reason: without it the head stops matching the file and the diff vanishes the
+moment prime approves. A picker in the diff bar reaches the older versions.
 
 `code` is the task-id prefix (`ACME-T001`), 2–8 letters A–Z, unique across projects. No migration
 framework: `openDb` creates tables `IF NOT EXISTS` and adds missing columns with `ALTER TABLE`.
@@ -246,7 +255,8 @@ No fs-watch — the panel polls (docs 3s, transfer 4s, handshake 5s).
 | `POST …/archive` | shelve — row and repo both stay |
 | `GET …/docs` | document list (+ idempotent self-heal scaffold) |
 | `GET \| PUT …/docs/content` | read content + SHA-256 version · write with `expectedVersion` (409 on conflict or active writer; approved edits queue reader checks) |
-| `POST …/docs/approve` | `draft → approved` with `expectedVersion`; refuses open questions, stale text and active writers; queues reader checks |
+| `POST …/docs/approve` | `draft → approved` with `expectedVersion`; refuses open questions, stale text and active writers; records a version and queues reader checks |
+| `GET …/docs/history[/:id]` | the recorded versions of one document · the text of one of them |
 | `POST …/docs/propose` | returns a drafted revision for the brief |
 | `POST …/docs/retry` | repeats the latest failed/stopped document job with its saved notes, or resumes pending rechecks |
 | `POST …/docs/revise` | re-runs the producing step with notes (fire-and-forget, 202) |

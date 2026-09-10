@@ -1620,6 +1620,12 @@ function HandshakeCard({ project }: { project: Project }) {
           Kortext's job is done; the documents are now the project's sacred guideline. From here on
           it's between you and your client.
         </span>
+        {/* A handover, not a warning: the items were deferred to the phase that
+            can finally decide them, and nothing here asks prime to do it now. */}
+        <span className="kx-handshake-count mono">
+          {state.documents} documents
+          {state.handedOver > 0 && ` · ${state.handedOver} items handed to the build phase`}
+        </span>
       </div>
       {/* Kopeng is not released, so nothing advertises it: whoever has the
           binary sees the transfer panel, everyone else sees nothing rather
@@ -1820,6 +1826,7 @@ function DocumentsTab({
       <DocDrawer
         project={project}
         doc={open}
+        docs={docs}
         failedError={
           open && jobFor(open.rel)?.status === 'failed'
             ? (jobFor(open.rel)?.error ?? 'no reason recorded')

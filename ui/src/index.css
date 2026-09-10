@@ -1825,6 +1825,35 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   margin-top: 8px;
   background: var(--bg-surface, transparent);
 }
+/* Who reads this one. Blue because it is neither work nor a warning — it is the
+   blast radius of a change, stated before the change is made. */
+.kx-doc-readbar {
+  margin: var(--sp-3) 18px 8px;
+  padding: 8px 12px;
+  border-radius: var(--r-md);
+  background: var(--blue-bg);
+  color: var(--fg-secondary);
+  font-size: var(--fs-ui);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.kx-readbar-head {
+  color: var(--blue);
+  font-weight: 600;
+  font-size: var(--fs-micro);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.kx-doc-readbar .mono {
+  color: var(--blue);
+}
+/* A reader that does not exist yet: named, but plainly not there. */
+.kx-doc-readbar .kx-reader-unwritten {
+  color: var(--fg-muted);
+  text-decoration: line-through;
+  text-decoration-color: var(--border-strong);
+}
 .kx-doc-dependbar {
   margin: var(--sp-3) 18px 8px;
   padding: 8px 12px;
@@ -2650,6 +2679,11 @@ button.kx-note-exc:hover {
   font-weight: 650;
   color: var(--green, #2f7d4f);
 }
+/* The handover, in the head's quiet register: a count, not a badge. */
+.kx-handshake-count {
+  font-size: var(--fs-label);
+  color: var(--fg-secondary);
+}
 .kx-handshake-kopeng {
   display: flex;
   align-items: center;
@@ -2677,9 +2711,24 @@ button.kx-note-exc:hover {
 .kx-diff-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-3);
+  gap: var(--sp-2);
   margin: var(--sp-3) 0 var(--sp-2);
+}
+/* Which recorded version the body is read against. It sits inside the sentence
+   it completes, so it is quiet: no frame until you go near it. */
+.kx-diff-pick {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-label);
+  color: var(--fg-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  padding: 2px 4px;
+}
+.kx-diff-pick:hover,
+.kx-diff-pick:focus {
+  border-color: var(--border-strong);
 }
 .kx-diff {
   min-height: 60vh;

@@ -56,10 +56,23 @@ export interface KopengPlan {
   tasks: number;
 }
 
+export interface DocVersion {
+  id: number;
+  sha: string;
+  /** The same hash over the body alone — approving changes the file, not the document. */
+  bodySha: string;
+  source: string;
+  created_at: string;
+}
+
 export interface HandshakeState {
   analysisComplete: boolean;
   kopengInstalled: boolean;
   transferred: boolean;
+  /** Written documents. */
+  documents: number;
+  /** Conflicts and findings — decisions deferred to the build phase. */
+  handedOver: number;
 }
 
 export interface EngineInfo {
@@ -138,7 +151,7 @@ export const api = {
       },
     ),
   docHistory: (projectId: number, rel: string) =>
-    req<{ versions: Array<{ id: number; sha: string; source: string; created_at: string }> }>(
+    req<{ versions: DocVersion[] }>(
       `/api/projects/${projectId}/docs/history?rel=${encodeURIComponent(rel)}`,
     ),
   docVersionText: (projectId: number, versionId: number) =>
