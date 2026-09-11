@@ -904,7 +904,7 @@ function ActionNeeded({
 
       {questions.length > 0 && (
         <>
-          <div className="kx-changebar-group">Clarify</div>
+          <div className="kx-changebar-group">Questions</div>
           <ul className="kx-changebar-list">
             {questions.map((q) => {
               const thread = explains.filter((x) => x.line === q.index);

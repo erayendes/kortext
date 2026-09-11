@@ -78,7 +78,7 @@ be dark while the design is read in light. It is also left in your repository as
 **Action Needed** — pink, at the top of the document. Everything owed on this document, in two
 groups and under one button.
 
-*Clarify* — the questions the document is asking *you*. Click one, answer it, Add note. It cannot
+*Questions* — what the document is asking *you*. Click one, answer it, Add note. It cannot
 be approved until they are answered.
 
 *Revisions* — change requests another document made about this one: `ENVIRONMENT` says the
