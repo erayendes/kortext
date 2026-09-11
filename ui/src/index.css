@@ -2609,30 +2609,23 @@ button.kx-note-exc:hover {
   background: var(--red-bg);
   border-color: var(--red-border);
 }
-/* The Decisions ledger reads as prose: the request on its line, the reason
-   under it, quieter — and no bullets, because bullets look like work. */
-.kx-block.kx-decision-request::before,
-.kx-block.kx-decision-reason::before {
+/* A decision is one block: the request, and the reason under it in a quieter
+   colour. No bullet, no rail — bullets look like work, and the two lines are
+   one thing, selected together. */
+.kx-block.kx-decision-request::before {
   content: none;
 }
-.kx-block.kx-decision-request,
-.kx-block.kx-decision-reason {
+.kx-block.kx-decision-request {
   padding-left: 8px;
   text-indent: 0;
+  margin-top: 6px;
 }
-/* The pair is one thing: the request, and right under it the reason as a
-   quote — a rail, no gap, the same left edge. Space goes between pairs. */
-.kx-block.kx-decision-request {
-  margin-top: 8px;
-  padding-bottom: 0;
-}
-.kx-block.kx-decision-reason {
-  margin-left: 8px !important;
-  margin-top: -2px;
-  padding-left: 12px;
-  box-shadow: inset 3px 0 0 var(--border-strong);
-  border-radius: 0;
+.kx-decision-why {
   color: var(--fg-secondary);
+  margin-top: 2px;
+}
+.kx-decision-why-label {
+  color: var(--fg-muted);
 }
 /* A decision in the footer tray, said in one word and coloured by it. */
 .kx-decision {

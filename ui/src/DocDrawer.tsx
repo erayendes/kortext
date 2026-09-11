@@ -261,9 +261,10 @@ export function DocDrawer({
   const [openQ, changeReq, outcomes, trailers, ledger, records] = useMemo(() => {
     const asks = new Set<number>();
     const demands = new Set<number>();
-    // The ledger reads as prose, not as a list: the request, and the reason
-    // under it. Bullets would make it look like work.
-    const ledger = new Map<number, 'request' | 'reason'>();
+    // The ledger: a decision is one thing — the request, and the reason under
+    // it — so the reason line is folded into the request's block rather than
+    // shown, or selected, on its own.
+    const ledger = new Map<number, string>();
     // Decisions and Findings are records kortext and prime append; that they
     // grew is known, and painting them as changes only distracts from the text.
     const records = new Set<number>();
@@ -289,8 +290,11 @@ export function DocDrawer({
       }
       if (section === 'ask') asks.add(t.index);
       if (section === 'decision' || section === 'finding') records.add(t.index);
-      if (section === 'decision' && t.kind === 'bullet') {
-        ledger.set(t.index, (t.depth ?? 0) > 0 ? 'reason' : 'request');
+      if (section === 'decision' && t.kind === 'bullet' && (t.depth ?? 0) === 0) {
+        const next = tokens[i + 1];
+        const why = next && next.kind === 'bullet' && (next.depth ?? 0) > 0 ? next : null;
+        ledger.set(t.index, why?.text.trim() ?? '');
+        if (why) trailers.add(why.index);
       }
       if (section !== 'demand' || t.kind !== 'bullet') continue;
       // One heading, two directions. A line `from` another document is what it
@@ -1360,8 +1364,8 @@ function DocBlock({
   outcome?: Outcome;
   /** What this block replaced, when it changed since the last write. */
   replaced?: MdToken[];
-  /** A line of the Decisions ledger: the request, or the reason under it. */
-  decision?: 'request' | 'reason';
+  /** A line of the Decisions ledger; the string is the reason, folded in. */
+  decision?: string;
   questionNo?: number;
   noteLabel?: string;
   changed?: boolean;
@@ -1381,7 +1385,7 @@ function DocBlock({
     },
   };
   if (token.kind === 'blank') return <div className="kx-blank" />;
-  const cls = `kx-block kx-${token.kind}${selected ? ' selected' : ''}${noted ? ' noted' : ''}${openQuestion ? ' open-q' : ''}${changeRequest ? ' req-q' : ''}${questionNo || noteLabel ? ' kx-numbered' : ''}${changed ? ' kx-changed' : ''}${decision ? ` kx-decision-${decision}` : ''}`;
+  const cls = `kx-block kx-${token.kind}${selected ? ' selected' : ''}${noted ? ' noted' : ''}${openQuestion ? ' open-q' : ''}${changeRequest ? ' req-q' : ''}${questionNo || noteLabel ? ' kx-numbered' : ''}${changed ? ' kx-changed' : ''}${decision !== undefined ? ' kx-decision-request' : ''}`;
   if (token.kind === 'table' && token.table) {
     return (
       <div className={cls} {...activation}>
@@ -1508,6 +1512,11 @@ function DocBlock({
         </>
       ) : (
         <Inline text={token.text} />
+      )}
+      {decision !== undefined && decision !== '' && (
+        <div className="kx-decision-why">
+          <span className="kx-decision-why-label">Reason:</span> {decision}
+        </div>
       )}
       {showOld && replaced && (
         <div className="kx-removed-body">
