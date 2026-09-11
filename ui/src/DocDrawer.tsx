@@ -9,6 +9,7 @@ import { api, type DocInfo, type DocVersion, type Project } from './api';
 const QUESTIONS = /^(open )?questions( for prime)?$/i;
 const CHANGE_REQUESTS = /^(change|revision) requests$/i;
 const DECISIONS = /^decisions$/i;
+const FINDINGS = /^(findings|warnings)$/i;
 
 interface Note {
   line: number | null;
@@ -257,19 +258,22 @@ export function DocDrawer({
   const [answerBy, setAnswerBy] = useState(project.engine ?? 'agent');
 
   // Distinguish questions for this document from change requests sent to another document.
-  const [openQ, changeReq, outcomes, trailers, ledger] = useMemo(() => {
+  const [openQ, changeReq, outcomes, trailers, ledger, records] = useMemo(() => {
     const asks = new Set<number>();
     const demands = new Set<number>();
     // The ledger reads as prose, not as a list: the request, and the reason
     // under it. Bullets would make it look like work.
     const ledger = new Map<number, 'request' | 'reason'>();
+    // Decisions and Findings are records kortext and prime append; that they
+    // grew is known, and painting them as changes only distracts from the text.
+    const records = new Set<number>();
     // A change request in the body is read as a status, not a checkbox: the
     // box looked like something to do, and the outcome line under it said in a
     // sentence what one word says. The word replaces both; the sentence stays
     // in the file and in the tooltip.
     const outcomes = new Map<number, Outcome>();
     const trailers = new Set<number>();
-    let section: 'ask' | 'demand' | 'decision' | null = null;
+    let section: 'ask' | 'demand' | 'decision' | 'finding' | null = null;
     for (let i = 0; i < tokens.length; i++) {
       const t = tokens[i]!;
       if (t.kind === 'h1' || t.kind === 'h2' || t.kind === 'h3') {
@@ -279,9 +283,12 @@ export function DocDrawer({
             ? 'demand'
             : DECISIONS.test(t.text.trim())
               ? 'decision'
-              : null;
+              : FINDINGS.test(t.text.trim())
+                ? 'finding'
+                : null;
       }
       if (section === 'ask') asks.add(t.index);
+      if (section === 'decision' || section === 'finding') records.add(t.index);
       if (section === 'decision' && t.kind === 'bullet') {
         ledger.set(t.index, (t.depth ?? 0) > 0 ? 'reason' : 'request');
       }
@@ -314,7 +321,7 @@ export function DocDrawer({
         said: state === 'outgoing' ? `Goes to ${task[3]} when you approve this document` : said,
       });
     }
-    return [asks, demands, outcomes, trailers, ledger] as const;
+    return [asks, demands, outcomes, trailers, ledger, records] as const;
   }, [tokens]);
 
   // The questions themselves, in the order the body numbers them. The panel
@@ -735,14 +742,14 @@ export function DocDrawer({
               <div key={t.index} id={`kx-line-${t.index}`}>
                 <DocBlock
                   token={t}
-                  changed={changed.has(t.index)}
+                  changed={changed.has(t.index) && !records.has(t.index)}
                   openQuestion={openQ.has(t.index)}
                   questionNo={qNo.get(t.index)}
                   noteLabel={lineLabel.get(t.index)}
                   changeRequest={changeReq.has(t.index)}
                   outcome={outcomes.get(t.index)}
                   decision={ledger.get(t.index)}
-                  replaced={replaced.get(t.index)}
+                  replaced={records.has(t.index) ? undefined : replaced.get(t.index)}
                   selected={selected === t.index}
                   noted={notes.some((n) => n.line === t.index)}
                   onSelect={() => {
