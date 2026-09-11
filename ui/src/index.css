@@ -2620,11 +2620,18 @@ button.kx-note-exc:hover {
   padding-left: 8px;
   text-indent: 0;
 }
+/* The pair is one thing: the request, and right under it the reason as a
+   quote — a rail, no gap, the same left edge. Space goes between pairs. */
 .kx-block.kx-decision-request {
-  margin-top: 6px;
+  margin-top: 8px;
+  padding-bottom: 0;
 }
 .kx-block.kx-decision-reason {
-  margin-left: 0 !important;
+  margin-left: 8px !important;
+  margin-top: -2px;
+  padding-left: 12px;
+  box-shadow: inset 3px 0 0 var(--border-strong);
+  border-radius: 0;
   color: var(--fg-secondary);
 }
 /* A decision in the footer tray, said in one word and coloured by it. */
