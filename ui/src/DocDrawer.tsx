@@ -320,18 +320,16 @@ export function DocDrawer({
     [tokens, openQ, doc?.status],
   );
 
-  // What the body shows. On a draft the questions are asked in the Action
-  // Needed list above, so the section is not repeated underneath — it was
-  // already asked once. The tokens keep their indices; only the view narrows.
+  // What the body shows. Whatever the Action Needed list above already asks —
+  // a draft's questions, and every waiting request — is not repeated
+  // underneath. The tokens keep their indices; only the view narrows.
   const shown = useMemo(
     () =>
       tokens.filter(
         (t) =>
           !trailers.has(t.index) &&
-          !(
-            doc?.status === 'draft' &&
-            (openQ.has(t.index) || outcomes.get(t.index)?.state === 'waiting')
-          ),
+          !(doc?.status === 'draft' && openQ.has(t.index)) &&
+          !(doc?.status !== 'uninitialized' && outcomes.get(t.index)?.state === 'waiting'),
       ),
     [tokens, openQ, trailers, outcomes, doc?.status],
   );
