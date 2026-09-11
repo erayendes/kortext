@@ -797,13 +797,11 @@ function ActionNeeded({
   // Denials change no text, so they can be settled on a document no agent writes.
   const startsRun = written && (accepting.length > 0 || answers.length > 0);
 
-  const decide = (key: string, what: 'accept' | 'deny') =>
-    setDecided((d) => {
-      const next = { ...d };
-      if (next[key] === what) delete next[key];
-      else next[key] = what;
-      return next;
-    });
+  const decide = (key: string, what: 'accept' | 'deny', note: string) => {
+    setDecided((d) => ({ ...d, [key]: what }));
+    if (note) setNotes((n) => ({ ...n, [key]: note }));
+    setOpen(null);
+  };
 
   const apply = async () => {
     setBusy(true);
@@ -830,34 +828,32 @@ function ActionNeeded({
     }
   };
 
-  const label = [
-    accepting.length > 0 && written ? `apply ${accepting.length}` : null,
-    denying.length > 0 ? `deny ${denying.length}` : null,
-    answers.length > 0 && written ? `answer ${answers.length}` : null,
+  // What the button will send, said in full above it.
+  const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+  const summary = [
+    answers.length > 0 && written ? plural(answers.length, 'note added', 'notes added') : null,
+    accepting.length > 0 && written
+      ? plural(accepting.length, 'revision accepted', 'revisions accepted')
+      : null,
+    denying.length > 0 ? plural(denying.length, 'revision denied', 'revisions denied') : null,
   ].filter(Boolean);
 
-  // The row's own buttons: Ask opens the input; a decision is a toggle.
-  const askButton = (key: string) => (
-    <button
-      className={`btn btn-link-primary${open === key ? ' kx-req-on' : ''}`}
-      disabled={busy}
-      onClick={() => setOpen(open === key ? null : key)}
-    >
-      Ask
-    </button>
-  );
-  const decideButton = (key: string, what: 'accept' | 'deny', text: string) => (
-    <button
-      className={`btn ${decided[key] === what ? 'btn-secondary' : 'btn-link-primary'}`}
-      disabled={busy || (what === 'accept' && !written)}
-      title={
-        what === 'accept' && !written ? 'No agent writes this one — draft the change yourself' : ''
+  // A row is selected by clicking it, and the input opens underneath.
+  const select = (key: string) => ({
+    role: 'button' as const,
+    tabIndex: 0,
+    'aria-pressed': open === key,
+    onClick: () => {
+      if ((window.getSelection()?.toString() ?? '').trim()) return;
+      setOpen(open === key ? null : key);
+    },
+    onKeyDown: (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        setOpen(open === key ? null : key);
       }
-      onClick={() => decide(key, what)}
-    >
-      {text}
-    </button>
-  );
+    },
+  });
 
   if (requests.length === 0 && questions.length === 0) return null;
   return (
@@ -877,13 +873,10 @@ function ActionNeeded({
               const thread = explains.filter((x) => x.line === q.index);
               const key = `q${q.index}`;
               return (
-                <li key={key}>
-                  <span className="kx-req-text">
+                <li key={key} className={open === key ? 'kx-req-open' : ''}>
+                  <span className="kx-req-text" {...select(key)}>
                     <span className="mono">Q{q.no}</span> — {q.text}
-                  </span>
-                  <span className="kx-req-actions">
                     {note && <span className="kx-req-state mono">added</span>}
-                    {askButton(key)}
                   </span>
                   {(thread.length > 0 || open === key) && (
                     <LineThread
@@ -917,19 +910,14 @@ function ActionNeeded({
               const key = keyOf(r);
               const talk = chat.filter((c) => c.key === key);
               return (
-                <li key={key}>
-                  <span className="kx-req-text">
+                <li key={key} className={open === key ? 'kx-req-open' : ''}>
+                  <span className="kx-req-text" {...select(key)}>
                     <span className="mono">{r.from.replace(/\.md$/, '')}</span> — {r.reason}
-                  </span>
-                  <span className="kx-req-actions">
                     {decided[key] && (
                       <span className="kx-req-state mono">
                         {decided[key] === 'accept' ? 'accepted' : 'denied'}
                       </span>
                     )}
-                    {askButton(key)}
-                    {decideButton(key, 'accept', 'Accept')}
-                    {decideButton(key, 'deny', 'Deny')}
                   </span>
                   {(talk.length > 0 || open === key) && (
                     <LineThread
@@ -937,10 +925,8 @@ function ActionNeeded({
                       active={open === key}
                       answerBy={r.from.replace(/\.md$/, '')}
                       onAsk={(q) => askFrom(r, q)}
-                      onNote={(text) => {
-                        setNotes((n) => ({ ...n, [key]: text }));
-                        setOpen(null);
-                      }}
+                      onNote={(text) => setNotes((n) => ({ ...n, [key]: text }))}
+                      onDecide={written ? (what, note) => decide(key, what, note) : undefined}
                     />
                   )}
                   {notes[key] && (
@@ -955,11 +941,14 @@ function ActionNeeded({
         </>
       )}
 
-      {/* One button for the whole list, saying what it starts. */}
+      {/* One button for the whole list, with what it will send said in full. */}
       <div className="kx-changebar-actions">
+        <span className="kx-changebar-summary">
+          {summary.length > 0 ? `${summary.join(' — ')}.` : 'Nothing selected yet.'}
+        </span>
         <button
           className="btn btn-primary"
-          disabled={busy || label.length === 0}
+          disabled={busy || summary.length === 0}
           onClick={() => void apply()}
           title={
             startsRun
@@ -967,11 +956,7 @@ function ActionNeeded({
               : 'Denials are recorded as conflicts; nothing is rewritten'
           }
         >
-          {busy
-            ? 'Sending…'
-            : label.length > 0
-              ? label.join(' · ').replace(/^./, (c) => c.toUpperCase())
-              : 'Nothing to send'}
+          {busy ? 'Sending…' : 'Apply'}
         </button>
         {extra}
       </div>
@@ -1372,12 +1357,18 @@ function LineThread({
   answerBy,
   onAsk,
   onNote,
+  onDecide,
 }: {
   thread: Explain[];
   active: boolean;
   answerBy: string;
   onAsk: (q: string) => void;
   onNote: (text: string) => void;
+  /**
+   * A change request is decided, not annotated: with this set the buttons are
+   * Ask · Accept · Deny, and whatever is in the box rides along as the note.
+   */
+  onDecide?: (what: 'accept' | 'deny', note: string) => void;
 }) {
   const [text, setText] = useState('');
   const box = useRef<HTMLDivElement>(null);
@@ -1434,13 +1425,36 @@ function LineThread({
             >
               Ask
             </button>
-            <button
-              className="btn btn-primary"
-              disabled={!text.trim()}
-              onClick={() => send('note')}
-            >
-              Add note
-            </button>
+            {onDecide ? (
+              <>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => {
+                    onDecide('accept', text.trim());
+                    setText('');
+                  }}
+                >
+                  Accept
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    onDecide('deny', text.trim());
+                    setText('');
+                  }}
+                >
+                  Deny
+                </button>
+              </>
+            ) : (
+              <button
+                className="btn btn-primary"
+                disabled={!text.trim()}
+                onClick={() => send('note')}
+              >
+                Add note
+              </button>
+            )}
           </div>
         </div>
       )}

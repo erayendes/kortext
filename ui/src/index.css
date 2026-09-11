@@ -2529,6 +2529,11 @@ button.kx-note-exc:hover {
 .kx-changebar-actions .kx-cmd-hint {
   margin-right: auto;
 }
+/* What the button will send, in words, before it is pressed. */
+.kx-changebar-summary {
+  margin-right: auto;
+  color: var(--fg-secondary);
+}
 
 /* What this write changed, in the document rather than in a separate view: the
    new text carries a green rail, and what it replaced folds away beneath it. */
@@ -2572,20 +2577,16 @@ button.kx-note-exc:hover {
   margin-right: 6px;
 }
 
-/* The row's own buttons, on the line after the text: Ask, then the decisions. */
-.kx-req-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 2px;
-  margin-top: 2px;
+/* A row is selected by clicking it; the input opens underneath. */
+.kx-req-text {
+  cursor: pointer;
 }
-.kx-req-actions .kx-req-state {
-  margin-right: auto;
-  margin-left: 0;
-}
-.kx-req-on {
+.kx-req-text:hover {
   text-decoration: underline;
+  text-decoration-color: var(--border-strong);
+}
+.kx-req-open > .kx-req-text {
+  font-weight: 600;
 }
 
 .kx-doc-askbar {
