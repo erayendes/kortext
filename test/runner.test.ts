@@ -208,11 +208,14 @@ test('the prompt keeps the settled record and brakes the loop that would re-rais
   // A ticked line and its outcome are the whole durable record of a decision.
   // Nothing else in the system protects them, so the prompt has to.
   const first = buildStepPrompt(p, step, 'step text', null);
-  assert.match(first, /Ticked lines are load-bearing/);
+  assert.match(first, /`## Decisions` is load-bearing/);
   assert.match(first, /do not raise the point again/);
 
   const again = buildStepPrompt(p, step, 'step text', null, ['fix the Plausible line']);
-  assert.match(again, /carry\n?every ticked `- \[x\]` line and its outcome across unchanged/);
+  assert.match(
+    again,
+    /carry\n?`## Decisions` and every `from` line under `## Change Requests` across unchanged/,
+  );
   rmSync(work, { recursive: true, force: true });
 });
 

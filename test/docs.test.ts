@@ -17,6 +17,7 @@ import {
   parseDenied,
   markRequestHandled,
   removeRequest,
+  appendIncomingRequest,
   appendListItem,
   parseConflicts,
   parseWarnings,
@@ -257,7 +258,7 @@ test('a request travels to the document it names when its author is approved', (
   rmSync(work, { recursive: true, force: true });
 });
 
-test('a request is settled where it lives, by the name it carries', () => {
+test('a refusal leaves the mailbox and enters the ledger', () => {
   const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
   const db = openDb(join(work, 'db.sqlite'));
   const p = createProject(db, { name: 'Key', repoPath: join(work, 'key') }, pkgRoot);
@@ -273,19 +274,21 @@ test('a request is settled where it lives, by the name it carries', () => {
     'BRIEF.md',
     'PRODUCT.md',
     'say it the other way round',
-    'denied by prime — it reads fine',
+    'prime: it reads fine',
   );
   assert.equal(brd().revisionRequests.length, 0);
-  // A denial stays: the ticked box closes it and the line under it says why.
+  // Not a request any more — a decision: no box, no "denied", under its own
+  // heading, with prime's reason and the day beneath it.
   const brief = readFileSync(docPath(p, 'BRIEF.md'), 'utf8');
-  assert.match(brief, /^- \[x\] from `PRODUCT\.md` — say it the other way round$/m);
-  assert.match(brief, /^ {2}- denied by prime — it reads fine · \d{4}-\d{2}-\d{2}$/m);
-  // A done request leaves instead — the text says what it asked for.
-  writeFileSync(
-    docPath(p, 'BRIEF.md'),
-    brief + '- [ ] from `STACK.md` — name the region\n',
-    'utf8',
+  assert.doesNotMatch(brief, /from `PRODUCT\.md`/);
+  assert.match(
+    brief,
+    /## Decisions\n\n- `PRODUCT\.md` — say it the other way round\n {2}- prime: it reads fine · \d{4}-\d{2}-\d{2}/,
   );
+  assert.deepEqual(brd().denied, [{ from: 'PRODUCT.md', reason: 'say it the other way round' }]);
+  // A done request leaves instead — the text says what it asked for.
+  appendIncomingRequest(p, 'BRIEF.md', 'STACK.md', 'name the region');
+  assert.match(readFileSync(docPath(p, 'BRIEF.md'), 'utf8'), /name the region/);
   removeRequest(p, 'BRIEF.md', 'STACK.md', 'name the region');
   assert.doesNotMatch(readFileSync(docPath(p, 'BRIEF.md'), 'utf8'), /name the region/);
   rmSync(work, { recursive: true, force: true });
@@ -491,7 +494,7 @@ test('a change request does not leave its document until prime approves it', () 
   assert.doesNotMatch(readFileSync(docPath(p, 'SECURITY.md'), 'utf8'), /the logs must go/);
 });
 
-test('a denied request is the record — ticked in place, reason under it', () => {
+test('a decision is the record, and it holds nothing up', () => {
   const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
   const db = openDb(join(work, 'db.sqlite'));
   const p = createProject(db, { name: 'Acme', repoPath: join(work, 'acme') }, pkgRoot);
@@ -503,21 +506,27 @@ test('a denied request is the record — ticked in place, reason under it', () =
     'utf8',
   );
 
-  markRequestHandled(p, 'ENVIRONMENT.md', 'SECURITY.md', reason, 'denied by prime — kept');
+  markRequestHandled(p, 'ENVIRONMENT.md', 'SECURITY.md', reason, 'prime: kept');
 
   const env = listDocs(db, p, pkgRoot).find((d) => d.rel === 'ENVIRONMENT.md')!;
   assert.deepEqual(env.revisionRequests, []);
   assert.deepEqual(env.denied, [{ from: 'SECURITY.md', reason }]);
-  // Prime decided when they denied it. Asking them to settle a "conflict" too
-  // would be asking twice, so the document goes nowhere near Action Needed.
+  // Prime decided. Asking them to settle a "conflict" too would be asking
+  // twice, so the document goes nowhere near Action Needed.
   assert.equal(env.section, 'done');
   assert.equal(env.detail, null);
 
   const body = readFileSync(docPath(p, 'ENVIRONMENT.md'), 'utf8');
-  assert.match(body, /^- \[x\] from `SECURITY\.md`/m);
-  assert.match(body, /denied by prime — kept/);
-  // The line is read as denied, not as a conflict section that no longer exists.
+  assert.match(body, /## Decisions/);
+  assert.match(body, /prime: kept/);
   assert.deepEqual(parseDenied(body), [{ from: 'SECURITY.md', reason }]);
+  // The two older shapes are still read as decisions.
+  assert.deepEqual(
+    parseDenied(
+      '## Change Requests\n\n- [x] from `A.md` — old\n  - denied by prime · 2026-09-01\n',
+    ),
+    [{ from: 'A.md', reason: 'old' }],
+  );
 });
 
 test('a demand that wraps over two lines is read whole, and its outcome lands after it', () => {
@@ -540,13 +549,10 @@ test('a demand that wraps over two lines is read whole, and its outcome lands af
   const db = openDb(join(work, 'db.sqlite'));
   const p = createProject(db, { name: 'Acme', repoPath: join(work, 'acme') }, pkgRoot);
   writeFileSync(join(p.repo_path, '.kortext', 'SECURITY.md'), body, 'utf8');
-  markRequestHandled(p, 'SECURITY.md', 'STACK.md', reason, 'applied by prime');
-  const after = readFileSync(join(p.repo_path, '.kortext', 'SECURITY.md'), 'utf8').split('\n');
-  const box = after.findIndex((l) => l.includes('STACK.md'));
-  assert.match(after[box]!, /^- \[x\]/);
-  assert.match(after[box + 1]!, /SQLite dosyası düz/); // the wrapped rest stays put
-  assert.match(after[box + 2]!, /applied by prime/); // the outcome goes after it
-  assert.deepEqual(parseIncoming(after.join('\n')), [
-    { from: 'API.md', reason: 'tek satır, sarmalanmamış.' },
-  ]);
+  // Refusing a wrapped request moves the whole of it, not just its first line.
+  markRequestHandled(p, 'SECURITY.md', 'STACK.md', reason, 'prime: kept');
+  const after = readFileSync(join(p.repo_path, '.kortext', 'SECURITY.md'), 'utf8');
+  assert.deepEqual(parseIncoming(after), [{ from: 'API.md', reason: 'tek satır, sarmalanmamış.' }]);
+  assert.deepEqual(parseDenied(after), [{ from: 'STACK.md', reason }]);
+  assert.doesNotMatch(after.split('## Decisions')[0]!, /SQLite dosyası düz/);
 });

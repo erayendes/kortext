@@ -327,19 +327,24 @@ export function DocDrawer({
   // What the body shows. Whatever the Action Needed list above already asks —
   // a draft's questions, and every waiting request — is not repeated
   // underneath. The tokens keep their indices; only the view narrows.
-  const shown = useMemo(
-    () =>
-      tokens.filter(
-        (t) =>
-          !trailers.has(t.index) &&
-          !(doc?.status === 'draft' && openQ.has(t.index)) &&
-          !(
-            doc?.status !== 'uninitialized' &&
-            ['waiting', 'outgoing'].includes(outcomes.get(t.index)?.state ?? '')
-          ),
-      ),
-    [tokens, openQ, trailers, outcomes, doc?.status],
-  );
+  const shown = useMemo(() => {
+    const kept = tokens.filter(
+      (t) =>
+        !trailers.has(t.index) &&
+        !(doc?.status === 'draft' && openQ.has(t.index)) &&
+        !(
+          doc?.status !== 'uninitialized' &&
+          ['waiting', 'outgoing'].includes(outcomes.get(t.index)?.state ?? '')
+        ),
+    );
+    // A heading left with nothing under it — every request asked above — goes too.
+    const isHead = (t: MdToken) => t.kind === 'h1' || t.kind === 'h2' || t.kind === 'h3';
+    return kept.filter((t, i) => {
+      if (!isHead(t) || !CHANGE_REQUESTS.test(t.text.trim())) return true;
+      const next = kept.slice(i + 1).find((u) => u.kind !== 'blank');
+      return !!next && !isHead(next);
+    });
+  }, [tokens, openQ, trailers, outcomes, doc?.status]);
 
   // Anything owed on this document goes into one list under one button.
   const actionNeeded =

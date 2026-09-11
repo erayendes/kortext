@@ -128,15 +128,17 @@ reason ``, Discard deletes it. An undecided outgoing request holds approval, lik
 question. (Documents approved before requests travelled are swept on listing.) That `from` line is the request's
 only home from then on: it is listed in the target's Action Needed and decided there. Accepted
 and written, it is removed — the text now says what it asked for, and git keeps the history.
-Denied, it stays, ticked `- [x]` with `denied by prime — reason` beneath: the one outcome the
-next writer cannot infer from the text, and the only reason it does not ask again. There is no
-`## Conflicts` section any more (older ones are still read, for the handover count only). Questions and requests are two groups of one list,
+Refused, it leaves the mailbox for `## Decisions`: `` - `FROM.md` — reason `` with
+`prime: why · date` beneath, no box and no word like "denied" — the ledger is the word. It is
+the one outcome the next writer cannot infer from the text, and the only reason it does not ask
+again. (Older shapes — a ticked `denied` line under Change Requests, a `## Conflicts` section —
+are still read as decisions.) Questions and requests are two groups of one list,
 and one button settles them together, because both rewrite the same document and a document is
 rewritten once.
 
-The `from` lines are not the agent's to touch. The prompt says so, and `restoreRequests` makes
-it so: after every agent write, any such line the rewrite dropped is appended again, state and
-outcome intact. A document nobody has written yet can already hold some — they are handed to
+The `from` lines and the `## Decisions` ledger are not the agent's to touch. The prompt says
+so, and `restoreRequests` makes it so: after every agent write, any such line the rewrite
+dropped is appended again, state and outcome intact. A document nobody has written yet can already hold some — they are handed to
 its first write and removed afterwards, like any request that was done.
 
 `## Findings` is read but carries no work — a problem in a file no document owns. A record for

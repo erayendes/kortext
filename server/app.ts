@@ -685,16 +685,16 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     }
     for (const r of discarding) discardOutgoing(project, doc.rel, r.target, r.reason);
     if (sending.length > 0) deliverRequests(project, doc.rel, sending);
-    // A denial is settled in place: the line is ticked and the reason goes
-    // under it. That line IS the record — the next agent to rewrite this
-    // document reads it here, and the build phase inherits it from here.
+    // A refusal goes into the document's `## Decisions`, reason under it. That
+    // line IS the record — the next agent to rewrite this document reads it
+    // there, and the build phase inherits it from there.
     for (const r of denying) {
       markRequestHandled(
         project,
         doc.rel,
         r.from,
         r.reason,
-        r.note ? `denied by prime — ${r.note}` : 'denied by prime — no change made',
+        r.note ? `prime: ${r.note}` : 'prime: no change made',
       );
     }
     // Denials, sends and discards change nothing in the text; nothing to rewrite.

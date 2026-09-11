@@ -186,6 +186,8 @@ const DOC_SUBJECT = /^[A-Za-z][\w./-]*\.md$/;
  * reading them would drop demands nobody would ever see again.
  */
 export const CHANGE_REQUESTS = /^(change|revision) requests$/i;
+/** The ledger: what prime refused, with the reason. Read by the next writer. */
+export const DECISIONS = /^decisions$/i;
 export const FINDINGS = /^(findings|warnings)$/i;
 export const QUESTIONS = /^(open )?questions( for prime)?$/i;
 
@@ -196,11 +198,17 @@ export function parseIncoming(content: string): Array<{ from: string; reason: st
     .map((r) => ({ from: r.subject, reason: r.reason }));
 }
 
-/** What prime denied here. The line stays ticked, its reason under it. */
+/**
+ * What prime refused here — the `## Decisions` ledger, plus the two shapes
+ * older documents carry: a ticked `denied` line still under Change Requests,
+ * and the `## Conflicts` section before that.
+ */
 export function parseDenied(content: string): Array<{ from: string; reason: string }> {
-  return parseMarkedList(content, CHANGE_REQUESTS)
-    .filter((r) => r.incoming && r.settled && /^(denied|dismissed)/i.test(r.outcome))
-    .map((r) => ({ from: r.subject, reason: r.reason }));
+  const ledger = parseMarkedList(content, DECISIONS);
+  const inPlace = parseMarkedList(content, CHANGE_REQUESTS).filter(
+    (r) => r.incoming && r.settled && /^(denied|dismissed)/i.test(r.outcome),
+  );
+  return [...ledger, ...inPlace].map((r) => ({ from: r.subject, reason: r.reason }));
 }
 
 /**
@@ -468,10 +476,11 @@ export function discardOutgoing(project: Project, rel: string, target: string, r
 }
 
 /**
- * Settles a denied request in the document it is about: `rel` holds the line,
- * `from` is the document that asked. The line stays, ticked, with prime's
- * reason under it — the next agent to rewrite `rel` reads it here, and does
- * not raise the same request again.
+ * Records a refusal in the document it is about: the request leaves the
+ * mailbox and goes into `## Decisions`, with prime's reason under it. Not a
+ * request any more — a decision, which is why it carries no box and no word
+ * like "denied": the ledger is the word. The next agent to rewrite `rel` reads
+ * it here, and does not raise the same request again.
  */
 export function markRequestHandled(
   project: Project,
@@ -480,7 +489,8 @@ export function markRequestHandled(
   reason: string,
   outcome: string,
 ): void {
-  markListItemHandled(project, rel, CHANGE_REQUESTS, from, reason, outcome, true);
+  removeRequest(project, rel, from, reason);
+  appendListItem(project, rel, 'Decisions', from, reason, outcome, false, false);
 }
 
 /**
@@ -496,12 +506,14 @@ export function appendListItem(
   reason: string,
   trailer?: string,
   incoming = false,
+  boxed = true,
 ): void {
   const path = docPath(project, rel);
   if (!existsSync(path)) return;
   const lines = readFileSync(path, 'utf8').split('\n');
-  const item = `- [ ] ${incoming ? 'from ' : ''}\`${subject}\` — ${reason.replace(/\s+/g, ' ').trim()}`;
-  const block = trailer ? [item, `  - ${trailer}`] : [item];
+  const day = new Date().toISOString().slice(0, 10);
+  const item = `- ${boxed ? '[ ] ' : ''}${incoming ? 'from ' : ''}\`${subject}\` — ${reason.replace(/\s+/g, ' ').trim()}`;
+  const block = trailer ? [item, `  - ${trailer} · ${day}`] : [item];
   const head = lines.findIndex((l) => {
     const m = l.match(/^#{1,6}\s+(.*?)\s*$/);
     return !!m && new RegExp(`^${heading}$`, 'i').test(m[1]!);
@@ -540,29 +552,38 @@ export function restoreRequests(project: Project, rel: string, priorText: string
   const path = docPath(project, rel);
   if (!existsSync(path)) return;
   const written = readFileSync(path, 'utf8');
-  const kept = parseMarkedList(written, CHANGE_REQUESTS).filter((r) => r.incoming);
-  const lost = parseMarkedList(priorText, CHANGE_REQUESTS).filter(
-    (r) => r.incoming && !kept.some((k) => k.subject === r.subject && k.reason === r.reason),
-  );
-  if (lost.length === 0) return;
-  const lines = written.split('\n');
-  const block = lost.flatMap((r) => [
-    `- [${r.settled ? 'x' : ' '}] from \`${r.subject}\` — ${r.reason}`,
+  const missing = (heading: RegExp, keep: (r: MarkedItem) => boolean) => {
+    const kept = parseMarkedList(written, heading).filter(keep);
+    return parseMarkedList(priorText, heading)
+      .filter(keep)
+      .filter((r) => !kept.some((k) => k.subject === r.subject && k.reason === r.reason));
+  };
+  const line = (r: MarkedItem, boxed: boolean) => [
+    `- ${boxed ? `[${r.settled ? 'x' : ' '}] ` : ''}${r.incoming ? 'from ' : ''}\`${r.subject}\` — ${r.reason}`,
     ...(r.outcome ? [`  - ${r.outcome}`] : []),
-  ]);
-  const head = lines.findIndex((l) => {
-    const m = l.match(/^#{1,6}\s+(.*?)\s*$/);
-    return !!m && CHANGE_REQUESTS.test(m[1]!);
-  });
-  if (head === -1) {
-    lines.push('', '## Change Requests', '', ...block);
-  } else {
-    let end = head + 1;
-    while (end < lines.length && !/^#{1,6}\s/.test(lines[end] ?? '')) end++;
-    let at = end;
-    while (at > head + 1 && (lines[at - 1] ?? '').trim() === '') at--;
-    lines.splice(at, 0, ...block);
-  }
+  ];
+  const lines = written.split('\n');
+  const put = (heading: RegExp, title: string, block: string[]) => {
+    if (block.length === 0) return;
+    const head = lines.findIndex((l) => {
+      const m = l.match(/^#{1,6}\s+(.*?)\s*$/);
+      return !!m && heading.test(m[1]!);
+    });
+    if (head === -1) {
+      lines.push('', `## ${title}`, '', ...block);
+    } else {
+      let end = head + 1;
+      while (end < lines.length && !/^#{1,6}\s/.test(lines[end] ?? '')) end++;
+      let at = end;
+      while (at > head + 1 && (lines[at - 1] ?? '').trim() === '') at--;
+      lines.splice(at, 0, ...block);
+    }
+  };
+  const requests = missing(CHANGE_REQUESTS, (r) => r.incoming).flatMap((r) => line(r, true));
+  const decisions = missing(DECISIONS, () => true).flatMap((r) => line(r, false));
+  if (requests.length === 0 && decisions.length === 0) return;
+  put(CHANGE_REQUESTS, 'Change Requests', requests);
+  put(DECISIONS, 'Decisions', decisions);
   writeFileSync(path, lines.join('\n'), 'utf8');
 }
 

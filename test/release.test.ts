@@ -181,7 +181,7 @@ test('cancel removes Kortext only and preserves Kopeng and user-owned project fi
   assert.equal(readFileSync(join(p.repo_path, 'app.txt'), 'utf8'), 'My source');
 });
 
-test('one press settles the whole list: the accepted share a rewrite, the denied stay ticked', async (t) => {
+test('one press settles the whole list: the accepted share a rewrite, the refused enter the ledger', async (t) => {
   const { p, request } = await fixture(t);
   writeFileSync(
     docPath(p, 'STACK.md'),
@@ -211,8 +211,11 @@ test('one press settles the whole list: the accepted share a rewrite, the denied
   // and both are settled there: the denial ticked with prime's reason under
   // it, where the next writer reads, and nothing left behind in SECURITY.md.
   const product = readFileSync(docPath(p, 'PRODUCT.md'), 'utf8');
-  assert.match(product, /- \[x\] from `SECURITY.md` — list the personal data/);
-  assert.match(product, /denied by prime/);
+  assert.match(
+    product,
+    /## Decisions\n\n- `SECURITY.md` — list the personal data\n {2}- prime: no change made/,
+  );
+  assert.doesNotMatch(product, /from `SECURITY.md`/);
   assert.doesNotMatch(product, /## Conflicts/);
   assert.doesNotMatch(readFileSync(docPath(p, 'SECURITY.md'), 'utf8'), /list the personal data/);
   // The applied one is a single revision, not one run per demand.

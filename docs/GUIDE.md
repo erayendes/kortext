@@ -94,8 +94,9 @@ still a draft, the request sits in its Action Needed list under *Outgoing Reques
 **Send** or **Discard**. Nothing goes out until you send it, and the document cannot be approved
 while one is undecided. Sent, it travels to the target, where it appears as `from` the document
 that asked and waits for you under *Incoming Requests*. Accepted and written, it disappears — the document now says what it asked for.
-Denied, it stays, ticked, with your reason under it. That denied line is the whole record of the
-disagreement — nothing asks you about it again, and the build phase reads it there.
+Denied, it moves to the document's `## Decisions`, with your reason under it. That line is the
+whole record of the disagreement — nothing asks you about it again, and the build phase reads
+it there.
 
 **Findings** — problems in files no document owns, written into the document. Nothing asks
 anything of you.
