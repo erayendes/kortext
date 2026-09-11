@@ -2779,17 +2779,15 @@ button.kx-note-exc:hover {
   gap: var(--sp-2);
   margin: var(--sp-3) 0 var(--sp-2);
 }
-/* Which recorded version the body is read against. It sits inside the sentence
-   it completes, so it is quiet: no frame until you go near it. */
+/* Which recorded version the body is read against — a date beside the name,
+   quiet until you go near it. Choosing one paints the diff; nothing else. */
 .kx-diff-pick {
-  flex: 1;
-  min-width: 0;
   font-size: var(--fs-label);
   color: var(--fg-secondary);
   background: transparent;
-  border: 1px solid transparent;
+  border: 1px solid var(--border);
   border-radius: var(--r-sm);
-  padding: 2px 4px;
+  padding: 2px 6px;
 }
 .kx-diff-pick:hover,
 .kx-diff-pick:focus {

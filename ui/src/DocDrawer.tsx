@@ -31,6 +31,14 @@ interface Decision {
 
 const keyOf = (r: { from: string; reason: string }) => `${r.from}: ${r.reason}`;
 
+/** SQLite's UTC `YYYY-MM-DD HH:MM:SS`, shown as a local `dd.MM.yyyy HH:mm:ss`. */
+function stamp(createdAt: string): string {
+  const d = new Date(createdAt.replace(' ', 'T') + 'Z');
+  if (Number.isNaN(d.getTime())) return createdAt;
+  const two = (n: number) => String(n).padStart(2, '0');
+  return `${two(d.getDate())}.${two(d.getMonth() + 1)}.${d.getFullYear()} ${two(d.getHours())}:${two(d.getMinutes())}:${two(d.getSeconds())}`;
+}
+
 /**
  * What the footer collected, kept in the browser so closing the drawer does not
  * throw it away. Tied to the document's version: notes point at line indices,
@@ -120,7 +128,6 @@ export function DocDrawer({
   const [versions, setVersions] = useState<DocVersion[]>([]);
   /** Which recorded version the body is compared against; null = no diff. */
   const [against, setAgainst] = useState<number | null>(null);
-  const [onlyChanges, setOnlyChanges] = useState(false);
 
   // Track the visible document across async handlers; the drawer instance survives document changes.
   const showing = useRef<string | null>(null);
@@ -145,7 +152,6 @@ export function DocDrawer({
     setPrevious(null);
     setVersions([]);
     setAgainst(null);
-    setOnlyChanges(false);
     if (doc) {
       // Ignore results after effect cleanup; captured doc values alone cannot detect a later selection.
       let cancelled = false;
@@ -161,21 +167,26 @@ export function DocDrawer({
             setNotes(kept.notes);
             setDecided(kept.decided);
           }
-          // Only diff against a recorded write. Ticking a demand and appending a
-          // recheck's line edit the file without recording, so a stale head
-          // would make the previous row the wrong baseline.
           void api
             .docHistory(project.id, doc.rel)
             .then((h) => {
               if (cancelled) return;
               setVersions(h.versions);
               const head = h.versions[0];
-              if (!head || head.sha !== r.version) return;
-              // Walk back to the last version whose BODY differs. Approving
-              // records a version that changes only `status:`, and diffing
-              // against that one would say nothing changed when a whole rewrite
-              // did.
-              setAgainst(h.versions.slice(1).find((v) => v.bodySha !== head.bodySha)?.id ?? null);
+              if (!head) return;
+              // The file on disk is the recorded head: walk back to the last
+              // version whose BODY differs. Approving records a version that
+              // changes only `status:`, and diffing against that one would say
+              // nothing changed when a whole rewrite did.
+              //
+              // The file has moved past the head — kortext ticked a request or
+              // appended a recheck's line without recording — then the head is
+              // the last known text, and what moved since is exactly the diff.
+              setAgainst(
+                head.sha === r.version
+                  ? (h.versions.slice(1).find((v) => v.bodySha !== head.bodySha)?.id ?? null)
+                  : head.id,
+              );
             })
             .catch(() => {});
         })
@@ -345,8 +356,6 @@ export function DocDrawer({
     return [marks, gone] as [Set<number>, Map<number, MdToken[]>];
   }, [previous, content]);
 
-  const changedCount = tokens.filter((t) => changed.has(t.index) || replaced.has(t.index)).length;
-
   // A note marks its line, and the mark is what the footer row shows: a question
   // keeps the number it already carries, any other line takes the next letter.
   // A question keeps the number the list gave it; a noted line is numbered in
@@ -501,6 +510,26 @@ export function DocDrawer({
         <div className="dr-ident">
           <div className="dr-title">
             <span className="kx-doc-name">{doc.name}.md</span>
+            {/* Which earlier version the body is read against. A date is all it
+                needs to say; choosing one paints the diff, there is no second
+                step. */}
+            {against !== null && (
+              <select
+                className="kx-diff-pick mono"
+                value={against}
+                aria-label="Show what changed since"
+                title="Show what changed since this version"
+                onChange={(e) => setAgainst(Number(e.target.value))}
+              >
+                {versions
+                  .filter((v) => v.sha !== version)
+                  .map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {stamp(v.created_at)}
+                    </option>
+                  ))}
+              </select>
+            )}
             <StatusBadge doc={doc} />
           </div>
           {doc.author && (
@@ -637,76 +666,42 @@ export function DocDrawer({
           </>
         ) : (
           <div className="kx-doc">
-            {/* The bar stays up whenever a baseline is loaded, even at zero
-                changes: it carries the picker, and a bar that disappears when
-                the comparison comes out empty cannot be used to pick another. */}
-            {previous !== null && (
-              <div className="kx-diff-bar">
-                <span>
-                  {changedCount === 0
-                    ? 'Nothing changed against'
-                    : `${changedCount} of ${tokens.filter((t) => t.kind !== 'blank').length} blocks changed since`}
-                </span>
-                <select
-                  className="kx-diff-pick mono"
-                  value={against ?? ''}
-                  aria-label="Compare against"
-                  onChange={(e) => setAgainst(Number(e.target.value))}
-                >
-                  {versions.slice(1).map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.source} · {v.created_at}
-                    </option>
-                  ))}
-                </select>
-                {changedCount > 0 && (
-                  <button
-                    className="btn btn-secondary"
-                    onClick={() => setOnlyChanges(!onlyChanges)}
-                  >
-                    {onlyChanges ? 'Show the whole document' : 'Show only what changed'}
-                  </button>
-                )}
+            {shown.map((t) => (
+              <div key={t.index} id={`kx-line-${t.index}`}>
+                <DocBlock
+                  token={t}
+                  changed={changed.has(t.index)}
+                  openQuestion={openQ.has(t.index)}
+                  questionNo={qNo.get(t.index)}
+                  noteLabel={lineLabel.get(t.index)}
+                  changeRequest={changeReq.has(t.index)}
+                  outcome={outcomes.get(t.index)}
+                  selected={selected === t.index}
+                  noted={notes.some((n) => n.line === t.index)}
+                  onSelect={() => {
+                    // Let the user select text: a click that ends a selection
+                    // must not toggle the thread.
+                    if ((window.getSelection()?.toString() ?? '').trim()) return;
+                    if (doc.status === 'uninitialized') return;
+                    setSelected(selected === t.index ? null : t.index);
+                  }}
+                />
+                {(selected === t.index || explains.some((x) => x.line === t.index)) &&
+                  doc.status !== 'uninitialized' && (
+                    <LineThread
+                      thread={explains.filter((x) => x.line === t.index)}
+                      active={selected === t.index}
+                      answerBy={answerBy}
+                      onAsk={(q) => ask(t.index, q)}
+                      onNote={(text) => {
+                        addLineNote(t.index, text);
+                        setSelected(null);
+                      }}
+                    />
+                  )}
+                {replaced.has(t.index) && <RemovedToggle tokens={replaced.get(t.index)!} />}
               </div>
-            )}
-            {shown
-              .filter((t) => !onlyChanges || changed.has(t.index) || replaced.has(t.index))
-              .map((t) => (
-                <div key={t.index} id={`kx-line-${t.index}`}>
-                  <DocBlock
-                    token={t}
-                    changed={changed.has(t.index)}
-                    openQuestion={openQ.has(t.index)}
-                    questionNo={qNo.get(t.index)}
-                    noteLabel={lineLabel.get(t.index)}
-                    changeRequest={changeReq.has(t.index)}
-                    outcome={outcomes.get(t.index)}
-                    selected={selected === t.index}
-                    noted={notes.some((n) => n.line === t.index)}
-                    onSelect={() => {
-                      // Let the user select text: a click that ends a selection
-                      // must not toggle the thread.
-                      if ((window.getSelection()?.toString() ?? '').trim()) return;
-                      if (doc.status === 'uninitialized') return;
-                      setSelected(selected === t.index ? null : t.index);
-                    }}
-                  />
-                  {(selected === t.index || explains.some((x) => x.line === t.index)) &&
-                    doc.status !== 'uninitialized' && (
-                      <LineThread
-                        thread={explains.filter((x) => x.line === t.index)}
-                        active={selected === t.index}
-                        answerBy={answerBy}
-                        onAsk={(q) => ask(t.index, q)}
-                        onNote={(text) => {
-                          addLineNote(t.index, text);
-                          setSelected(null);
-                        }}
-                      />
-                    )}
-                  {replaced.has(t.index) && <RemovedToggle tokens={replaced.get(t.index)!} />}
-                </div>
-              ))}
+            ))}
           </div>
         )}
       </div>
