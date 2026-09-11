@@ -314,10 +314,12 @@ for good on the second click.
 The markdown the panel renders, on the same seven sizes: body `--fs-body`, headings
 `--fs-title` / `--fs-section` / `--fs-heading`.
 
-Two kinds of debt, two colours — **amber** `.open-q` (`## Questions for Prime`, yours to
-answer) and **pink** `.req-q` (`## Change Requests`, a demand written to another document).
-Share one colour and you lose which is yours. Pink lands only on a **standing** demand: a closed
-one (`- [x]`) stays in the document unpainted — it is no longer a debt but the record of one.
+Two kinds of debt, told apart differently. A question (`## Questions for Prime`, yours to answer)
+paints its line **amber** `.open-q`. A change request (`## Change Requests`, a demand written to
+another document) paints nothing: it wears one word instead — `.kx-outcome`, **WAITING** amber,
+**ACCEPTED** green, **DENIED** red — in place of the checkbox, which looked like work when it was
+not yours to do. The outcome line under a settled request folds into that word's tooltip; the
+sentence stays in the file.
 
 An open question is always numbered `#n` (`.kx-qno`), and the bullet is suppressed on that line —
 both fall into the same hanging indent and would overlap. Once a note is added (`.noted`) the

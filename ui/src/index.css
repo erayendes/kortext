@@ -2670,21 +2670,11 @@ button.kx-note-exc:hover {
   background: var(--amber-bg);
 }
 
-/* Match open revision-request highlighting to the request badge. */
-.kx-block.req-q {
-  background: var(--red-bg);
-}
-.kx-block.kx-h2.req-q {
-  background: none;
-  font-weight: 650;
-}
-.kx-block.req-q + .kx-blank {
-  background: var(--red-bg);
-}
+/* An open change request carries its own WAITING label; the line needs no
+   ground of its own on top of it. */
 
 /* Remove the question background once the note bar indicates an answer. */
-.kx-block.open-q.noted,
-.kx-block.req-q.noted {
+.kx-block.open-q.noted {
   background: none;
 }
 
