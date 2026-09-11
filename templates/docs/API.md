@@ -60,7 +60,7 @@ approver: +prime
 
 ## Change Requests
 
-- [One line per document, in the form: - [ ] `TARGET.md` — what must change there and why. Leave the box unticked; kortext ticks it and records the outcome underneath when the demand is settled. Leave this section empty when nothing upstream needs to change]
+- [What THIS document asks of another, one line per request: - `TARGET.md` — what must change there and why. It travels to that document when this one is approved. Lines that start with `from` are the other direction — what others asked of this document; the human decides them, kortext ticks them, leave them exactly as they are. Leave this section empty when nothing upstream needs to change]
 
 ## Questions for Prime
 

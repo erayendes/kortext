@@ -2583,6 +2583,12 @@ button.kx-note-exc:hover {
   margin-right: var(--sp-2);
   border: 1px solid transparent;
 }
+/* What this document asks of another: quiet, because nothing is decided here. */
+.kx-outcome-outgoing {
+  color: var(--fg-muted);
+  background: var(--bg-muted);
+  border-color: var(--border);
+}
 .kx-outcome-waiting {
   color: var(--amber);
   background: var(--amber-bg);

@@ -171,8 +171,9 @@ test('a change request aimed at an unwritten document is handed to its first wri
     'utf8',
   );
 
-  // Nothing has written ENVIRONMENT.md yet, so nobody can decide the request —
-  // it goes into the prompt of the run that writes the document.
+  // SECURITY.md is approved, so its request has travelled into ENVIRONMENT.md —
+  // which nobody has written yet, so nobody can decide it. It goes into the
+  // prompt of the run that writes the document.
   const step = { output: 'ENVIRONMENT.md', inputs: [], author: '+devops-engineer', approver: null };
   const prompt = buildStepPrompt(
     p,
@@ -185,12 +186,12 @@ test('a change request aimed at an unwritten document is handed to its first wri
   assert.match(prompt, /CHANGE REQUESTS ALREADY WAITING FOR THIS DOCUMENT/);
   assert.match(prompt, /\[SECURITY\.md asks\] the access-log lines/);
 
-  // …and once it is written, the asking is settled where it was made.
+  // …and once it is written, the request is settled where it lives.
   const res = await runStep(db, p, step, mockEngine(work, 'ok'), pkgRoot);
   assert.equal(res.ok, true, res.error);
-  const security = readFileSync(docPath(p, 'SECURITY.md'), 'utf8');
-  assert.match(security, /^- \[x\] `ENVIRONMENT\.md`/m);
-  assert.match(security, /folded into the first draft of ENVIRONMENT\.md/);
+  const env = readFileSync(docPath(p, 'ENVIRONMENT.md'), 'utf8');
+  assert.match(env, /^- \[x\] from `SECURITY\.md`/m);
+  assert.match(env, /folded into the first draft of ENVIRONMENT\.md/);
   rmSync(work, { recursive: true, force: true });
 });
 
@@ -204,7 +205,7 @@ test('the prompt keeps the settled record and brakes the loop that would re-rais
   // Nothing else in the system protects them, so the prompt has to.
   const first = buildStepPrompt(p, step, 'step text', null);
   assert.match(first, /Ticked lines are load-bearing/);
-  assert.match(first, /Do not raise it again/);
+  assert.match(first, /do not raise the point again/);
 
   const again = buildStepPrompt(p, step, 'step text', null, ['fix the Plausible line']);
   assert.match(again, /carry\n?every ticked `- \[x\]` line and its outcome across unchanged/);
@@ -601,16 +602,18 @@ test('an engine that proposes nothing is an error, not an empty document', async
   rmSync(work, { recursive: true, force: true });
 });
 
-test('a verdict becomes a demand in the document that caused it', async () => {
+test('a verdict becomes a request in the document that must change', async () => {
   const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
   const db = openDb(join(work, 'db.sqlite'));
   const p = createProject(db, { name: 'Recheck', repoPath: join(work, 'recheck') }, pkgRoot);
   const { appendRevisionRequest } = await import('../server/runner.js');
 
-  // The line lands under the heading, above whatever follows it.
+  // Kortext writes the verdict, so it goes straight where it will be decided:
+  // into PRODUCT.md, as a line from STACK.md — inside the section, above
+  // whatever follows it.
   writeFileSync(
-    docPath(p, 'STACK.md'),
-    '---\nstatus: approved\n---\n\n# Stack\n\n## Revision Requests\n\n- `API.md` — an older demand\n\n## Open Questions for prime\n\n- something\n',
+    docPath(p, 'PRODUCT.md'),
+    '---\nstatus: approved\n---\n\n# Product\n\n## Change Requests\n\n- [x] from `API.md` — an older request\n  - applied · 2026-09-01\n\n## Questions for Prime\n\n- something\n',
     'utf8',
   );
   appendRevisionRequest(
@@ -619,30 +622,31 @@ test('a verdict becomes a demand in the document that caused it', async () => {
     'PRODUCT.md',
     'the runtime changed, the flow list must follow',
   );
-  const stack = readFileSync(docPath(p, 'STACK.md'), 'utf8');
-  const lines = stack.split('\n');
-  const head = lines.findIndex((l) => l === '## Revision Requests');
-  const next = lines.findIndex((l) => l === '## Open Questions for prime');
-  const at = lines.findIndex((l) => l.startsWith('- `PRODUCT.md`'));
+  const product = readFileSync(docPath(p, 'PRODUCT.md'), 'utf8');
+  const lines = product.split('\n');
+  const head = lines.findIndex((l) => l === '## Change Requests');
+  const next = lines.findIndex((l) => l === '## Questions for Prime');
+  const at = lines.findIndex((l) => l.startsWith('- [ ] from `STACK.md`'));
   assert.ok(
     at > head && at < next,
-    `the demand must sit inside the section (${at} vs ${head}..${next})`,
+    `the request must sit inside the section (${at} vs ${head}..${next})`,
   );
-  assert.match(stack, /- `PRODUCT\.md` — the runtime changed, the flow list must follow/);
-  // Frontmatter is untouched: writing a demand does not un-approve the writer.
-  assert.match(stack, /status: approved/);
-  // Requests target written documents; initialize PRODUCT.md before checking the incoming request.
-  setFrontmatterStatus(docPath(p, 'PRODUCT.md'), 'approved');
+  assert.match(
+    product,
+    /- \[ \] from `STACK\.md` — the runtime changed, the flow list must follow/,
+  );
+  // Frontmatter is untouched: filing a request does not un-approve the reader.
+  assert.match(product, /status: approved/);
   const prd = listDocs(db, p, pkgRoot).find((d) => d.rel === 'PRODUCT.md')!;
   assert.equal(prd.revisionRequests.length, 1);
   assert.equal(prd.revisionRequests[0].from, 'STACK.md');
 
   // A document with no such section gets one rather than losing the finding.
-  writeFileSync(docPath(p, 'DESIGN.md'), '---\nstatus: approved\n---\n\n# Design\n', 'utf8');
+  writeFileSync(docPath(p, 'CONTENT.md'), '---\nstatus: approved\n---\n\n# Content\n', 'utf8');
   appendRevisionRequest(p, 'DESIGN.md', 'CONTENT.md', 'the empty state lost its slot');
   assert.match(
-    readFileSync(docPath(p, 'DESIGN.md'), 'utf8'),
-    /## Change Requests\n\n- `CONTENT\.md` —/,
+    readFileSync(docPath(p, 'CONTENT.md'), 'utf8'),
+    /## Change Requests\n\n- \[ \] from `DESIGN\.md` —/,
   );
   rmSync(work, { recursive: true, force: true });
 });

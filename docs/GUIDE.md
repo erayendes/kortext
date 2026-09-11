@@ -81,22 +81,24 @@ groups and under one button.
 *Questions* — what the document is asking *you*. Click one, answer it, Add note. It cannot
 be approved until they are answered.
 
-*Revisions* — change requests another document made about this one: `ENVIRONMENT` says the
-access-log lines contradict the no-logs decision, say. Tick the ones you accept; the rest are
-denied, and you may say why. Ask the document that made the request if the reason is unclear.
+*Change Requests* — what other documents asked of this one: `ENVIRONMENT` says the access-log
+lines contradict the no-logs decision, say. Pick a row, Accept or Deny, say why if you like. Ask
+the document that made the request if the reason is unclear.
 
 One button sends the lot. Both groups rewrite this document, and a document is rewritten once —
 so your answers and the changes you accepted go into a single rewrite, which is also how the
-author sees them: together. Every request is settled inside the document that raised it, ticked,
-with the outcome written underneath, so the record lives where the request was made.
+author sees them: together.
 
-A change request does not leave its own document until you approve that document. You see it in
-the body under `## Change Requests` first — if you disagree, edit the draft and delete it.
+**A request lives in one place: the document it is about.** While the document that asks is
+still a draft, you see the request in its body under `## Change Requests`, as a plain line
+naming the target — if you disagree, edit the draft and delete it. When you approve that
+document, the line travels to the target, where it appears as `from` the document that asked and
+waits for you. Accepted, it is ticked `applied`; denied, it is ticked `denied` with your reason
+under it. That denied line is the whole record of the disagreement — nothing asks you about it
+again, and the build phase reads it there.
 
-**Conflicts and findings** — what a denied request left standing, and problems in files no
-document owns. Both are written into the document and neither asks anything of you: the
-contradiction is handed to the build phase, where there is finally enough information to settle
-it and where you are present anyway.
+**Findings** — problems in files no document owns, written into the document. Nothing asks
+anything of you.
 
 **Related documents** — blue, at the top. The documents that read this one. Nothing to do: it is
 what changes if you change this, said before you change it. A reader nobody has written yet is

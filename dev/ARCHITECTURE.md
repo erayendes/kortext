@@ -119,17 +119,25 @@ The file is the source of truth — no document state is kept in the database.
 **`status`:** `uninitialized` → `draft` (engine wrote it) → `approved` (prime). Side exits:
 `not-applicable` (the step judged it irrelevant; satisfies a dependency like `approved`), `log`.
 
-**Four sections are machine-read, two of them as work.** `## Questions for Prime` — non-empty
-means the document is waiting on a human. `## Change Requests` — `` - `TARGET.md` — reason ``
-lines, which leave this document only once prime approves it, and then land in the named
-document's Action Needed list. Both are groups of that one list, and one button settles them
-together, because both rewrite the receiving document and a document is rewritten once. A settled
-line is ticked `- [x]` with the outcome beneath it: the record stays inside the document that
-made the request, because every agent that opens it must see what the panel saw.
+**Three sections are machine-read, two of them as work.** `## Questions for Prime` — non-empty
+means the document is waiting on a human. `## Change Requests` — one heading, two directions,
+told apart by one word. `` - `TARGET.md` — reason `` is what this document asks of another; the
+agent writes it while drafting, prime sees it before approving, and on approval `deliverRequests`
+moves it into the target as `` - [ ] from `THIS.md` — reason ``. That `from` line is the request's
+only home from then on: it is listed in the target's Action Needed, decided there, and settled
+there in place — ticked `- [x]` with `applied …` or `denied by prime — reason` beneath. A denied
+line IS the record of the disagreement; there is no `## Conflicts` section any more (older ones
+are still read, for the handover count only). Questions and requests are two groups of one list,
+and one button settles them together, because both rewrite the same document and a document is
+rewritten once.
 
-`## Conflicts` and `## Findings` are read but carry no work — a denied request's contradiction,
-and a problem in a file no document owns. They are records for the next writer, they show no
-buttons, and neither gates the handshake. Deciding them was asking prime twice.
+The `from` lines are not the agent's to touch. The prompt says so, and `restoreRequests` makes
+it so: after every agent write, any such line the rewrite dropped is appended again, state and
+outcome intact. A document nobody has written yet can already hold some — they are handed to
+its first write and ticked `folded into the first draft` afterwards.
+
+`## Findings` is read but carries no work — a problem in a file no document owns. A record for
+the next writer, no buttons, no gate on the handshake.
 
 **The dependency graph** comes from `inputs:` / `outputs:` / `approver:` in `workflows/*.md`
 (`parseWorkflowSteps`). Per document, `listDocs` computes `blocked` (an input is not settled),

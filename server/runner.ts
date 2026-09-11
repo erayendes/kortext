@@ -7,13 +7,14 @@ import { spawnCli } from './cli-spawn.js';
 import { ENGINES, type EngineSpec } from './engines.js';
 import { writeDesignPreview } from './design-preview.js';
 import {
-  CHANGE_REQUESTS,
+  appendIncomingRequest,
   docPath,
   listDocs,
   loadDocMap,
   markRequestHandled,
   readFrontmatter,
   recordVersion,
+  restoreRequests,
   templateFor,
   unfilledPlaceholders,
   workflowNameFor,
@@ -124,7 +125,7 @@ export function buildStepPrompt(
     "- Every question you leave for the human goes under the document's `## Questions for Prime` heading, one `- ` item each, and nowhere else. Leave that section empty when there is nothing to ask — an empty section is the signal that the document stands on its own.",
     '- A finding about something no document owns — a config file, a workflow, a tracked secret, a live endpoint — goes under `## Findings` in THIS document, one line each, starting with the path in backticks: `` - `.gitignore` — `.env` is tracked and holds live credentials ``. Do not aim a revision request at it: a demand can only ask a document to change, and one aimed anywhere else is a finding nobody can act on.',
     '- When an ALREADY-WRITTEN document must change because of what you found, that is not prose: put one line under `## Change Requests`, starting with the target file in backticks — `` - `ENVIRONMENT.md` — the access-log lines must follow the no-logs decision `` — and say what must change and why. The panel turns each line into an action the human can take; a demand written anywhere else in the document is a demand nobody can act on. Leave the section empty when nothing upstream needs to change.',
-    '- Before you write one, read the ticked lines already in this document. A `- [x]` line with an outcome under it is a request the human has ALREADY decided. Do not raise it again. Raise it a second time only if your evidence has actually changed since — and then the new line must say what changed, in so many words. Repeating a settled request with a fresh wording is how a document set argues with itself forever.',
+    '- Under the same heading you will find lines that start with `from` — `` - [ ] from `STACK.md` — … ``. Those are the OTHER direction: what other documents asked of THIS one. They are not yours to write, reword or remove; the human decides them in the panel, and kortext ticks them. Keep every one of them exactly as it is. A `- [x] from` line with an outcome under it is a request the human has ALREADY decided — do not raise the point again, in either direction, unless your evidence has actually changed since, and then say what changed, in so many words. Repeating a settled request with a fresh wording is how a document set argues with itself forever.',
     '',
     'HARD RULES:',
     `- Produce EXACTLY this file and nothing else: .kortext/${step.output}`,
@@ -144,12 +145,13 @@ export function buildStepPrompt(
   if (waiting.length > 0) {
     lines.push(
       '',
-      'CHANGE REQUESTS ALREADY WAITING FOR THIS DOCUMENT — other documents asked for these while',
-      'this one did not exist yet, so nobody could decide them. They are yours to satisfy in this',
-      'first write: write the document so each is already true, in the section where it belongs.',
-      'Do not quote them and do not answer them as prose. If your evidence contradicts one, follow',
-      'your evidence and put a line under `## Change Requests` aimed back at the document that',
-      'asked, saying why it cannot be as asked.',
+      'CHANGE REQUESTS ALREADY WAITING FOR THIS DOCUMENT — the `from` lines under its',
+      '`## Change Requests`: other documents asked for these while this one did not exist yet, so',
+      'nobody could decide them. They are yours to satisfy in this first write: write the document',
+      'so each is already true, in the section where it belongs, and leave the lines themselves',
+      'exactly as they are — kortext ticks them. Do not quote them and do not answer them as prose.',
+      'If your evidence contradicts one, follow your evidence and put a line under',
+      '`## Change Requests` aimed back at the document that asked, saying why it cannot be as asked.',
       '',
       ...waiting.map((r) => `- [${r.from} asks] ${r.reason}`),
     );
@@ -417,32 +419,18 @@ export async function explainDoc(
 // Re-reading a document against an input that moved
 // ---------------------------------------------------------------------------
 
-/** Appends one demand under the source's `## Change Requests` heading. */
+/**
+ * A recheck's verdict becomes a request in the document that must change,
+ * made by the document that changed. Kortext writes it, so it goes straight
+ * where it will be decided — there is no draft for it to wait in.
+ */
 export function appendRevisionRequest(
   project: Project,
   sourceRel: string,
   targetRel: string,
   reason: string,
 ): void {
-  const path = docPath(project, sourceRel);
-  const lines = readFileSync(path, 'utf8').split('\n');
-  const line = `- \`${targetRel}\` — ${reason.replace(/\s+/g, ' ').trim()}`;
-  const head = lines.findIndex((l) => {
-    const m = l.match(/^#{1,6}\s+(.*?)\s*$/);
-    return !!m && CHANGE_REQUESTS.test(m[1]!);
-  });
-  if (head === -1) {
-    // Create the required section if the document does not already have it.
-    lines.push('', '## Change Requests', '', line);
-  } else {
-    let end = head + 1;
-    while (end < lines.length && !/^#{1,6}\s/.test(lines[end])) end++;
-    // Past the last item of the section, before the next heading.
-    let at = end;
-    while (at > head + 1 && lines[at - 1].trim() === '') at--;
-    lines.splice(at, 0, line);
-  }
-  writeFileSync(path, lines.join('\n'), 'utf8');
+  appendIncomingRequest(project, targetRel, sourceRel, reason);
 }
 
 /** The CLI judges the changed input; the server records any resulting revision request. */
@@ -857,24 +845,26 @@ export async function runStep(
       }
     }
     recordVersion(db, project, step.output, written, 'agent', priorText, job.id);
-    // The requests this run answered are settled in the document that made
-    // them: the ones prime chose, and the ones the first write inherited.
+    // What was asked of this document is not the agent's to drop: put back any
+    // line the rewrite lost, then settle the ones this run answered — the ones
+    // prime chose, and the ones the first write inherited.
+    restoreRequests(project, step.output, priorText);
     for (const request of listDocs(db, project, pkgRoot).find((d) => d.rel === step.output)
       ?.revisionRequests ?? []) {
       if (reviseNotes.includes(`[${request.from} asks] ${request.reason}`)) {
         const decision = reviseNotes.find((note) => note.startsWith('[prime decides] '));
         markRequestHandled(
           project,
-          request.from,
           step.output,
+          request.from,
           request.reason,
           `applied — the agent rewrote ${step.output}${decision ? `; prime said: ${decision.slice('[prime decides] '.length)}` : ''}`,
         );
       } else if (waiting.some((w) => w.from === request.from && w.reason === request.reason)) {
         markRequestHandled(
           project,
-          request.from,
           step.output,
+          request.from,
           request.reason,
           `folded into the first draft of ${step.output}`,
         );

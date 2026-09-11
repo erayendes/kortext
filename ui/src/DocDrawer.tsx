@@ -17,7 +17,8 @@ interface Note {
 
 /** What became of a change request, read from its box and the line under it. */
 interface Outcome {
-  state: 'waiting' | 'accepted' | 'denied';
+  /** `outgoing` is what this document asks of another; the rest are what others asked of it. */
+  state: 'outgoing' | 'waiting' | 'accepted' | 'denied';
   /** The outcome line as written — who did it, when, and why. */
   said: string;
 }
@@ -272,11 +273,14 @@ export function DocDrawer({
       }
       if (section === 'ask') asks.add(t.index);
       if (section !== 'demand' || t.kind !== 'bullet') continue;
-      // With its box, or without one — an older agent wrote the line bare, and
-      // a bare line under this heading is an open request all the same.
-      const task = t.text.match(/^(?:\[([ xX])\]\s*)?`[A-Za-z][\w./-]*\.md`/);
+      // One heading, two directions. A line `from` another document is what it
+      // asked of this one — waiting, accepted or denied here. A bare line is
+      // what this document asks of another; it goes there on approval. With a
+      // box or without: an older agent wrote the line bare, all the same.
+      const task = t.text.match(/^(?:\[([ xX])\]\s*)?(from\s+)?`([A-Za-z][\w./-]*\.md)`/);
       if (!task) continue;
       const box = task[1] ?? ' ';
+      const incoming = !!task[2];
       // Highlight only open requests; keep settled requests visible as history.
       if (box === ' ') demands.add(t.index);
       const next = tokens[i + 1];
@@ -285,8 +289,17 @@ export function DocDrawer({
       if (trailer) trailers.add(trailer.index);
       const said = trailer?.text.trim() ?? '';
       const state =
-        box === ' ' ? 'waiting' : /^(denied|dismissed)/i.test(said) ? 'denied' : 'accepted';
-      outcomes.set(t.index, { state, said });
+        box === ' '
+          ? incoming
+            ? 'waiting'
+            : 'outgoing'
+          : /^(denied|dismissed)/i.test(said)
+            ? 'denied'
+            : 'accepted';
+      outcomes.set(t.index, {
+        state,
+        said: state === 'outgoing' ? `Goes to ${task[3]} when you approve this document` : said,
+      });
     }
     return [asks, demands, outcomes, trailers] as const;
   }, [tokens]);
@@ -313,9 +326,14 @@ export function DocDrawer({
   const shown = useMemo(
     () =>
       tokens.filter(
-        (t) => !trailers.has(t.index) && !(doc?.status === 'draft' && openQ.has(t.index)),
+        (t) =>
+          !trailers.has(t.index) &&
+          !(
+            doc?.status === 'draft' &&
+            (openQ.has(t.index) || outcomes.get(t.index)?.state === 'waiting')
+          ),
       ),
-    [tokens, openQ, trailers, doc?.status],
+    [tokens, openQ, trailers, outcomes, doc?.status],
   );
 
   // Anything owed on this document goes into one list under one button.
@@ -423,9 +441,9 @@ export function DocDrawer({
     answered > 0 && written ? plural(answered, 'question answered', 'questions answered') : null,
     remarks > 0 && written ? plural(remarks, 'note added', 'notes added') : null,
     accepting.length > 0 && written
-      ? plural(accepting.length, 'revision accepted', 'revisions accepted')
+      ? plural(accepting.length, 'request accepted', 'requests accepted')
       : null,
-    denying.length > 0 ? plural(denying.length, 'revision denied', 'revisions denied') : null,
+    denying.length > 0 ? plural(denying.length, 'request denied', 'requests denied') : null,
   ].filter(Boolean);
   const applyAll = () =>
     act(async () => {
@@ -772,9 +790,9 @@ export function DocDrawer({
                       }
                     }}
                   >
-                    <span className="kx-note-exc mono">revision #{i + 1}</span>
+                    <span className="kx-note-exc mono">request #{i + 1}</span>
                     <span className="kx-note-body">
-                      <span className="mono">{r.from.replace(/\.md$/, '')}</span> revision{' '}
+                      <span className="mono">{r.from.replace(/\.md$/, '')}</span>{' '}
                       <span className={`kx-decision kx-decision-${d.what}`}>
                         {d.what === 'accept' ? 'accepted' : 'denied'}
                       </span>
@@ -1054,7 +1072,7 @@ function ActionNeeded({
 
       {requests.length > 0 && (
         <>
-          <div className="kx-changebar-group">Revisions</div>
+          <div className="kx-changebar-group">Change Requests</div>
           <ul className="kx-changebar-list">
             {requests.map((r, i) => {
               const key = keyOf(r);

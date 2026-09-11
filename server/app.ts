@@ -12,8 +12,7 @@ import {
 } from './projects.js';
 import {
   analysisComplete,
-  appendListItem,
-  CHANGE_REQUESTS,
+  deliverRequests,
   docPath,
   docVersion,
   listDocs,
@@ -492,8 +491,8 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
           ?.revisionRequests ?? []) {
           markRequestHandled(
             project,
-            r.from,
             String(rel),
+            r.from,
             r.reason,
             `applied — prime saved the change into ${rel}`,
           );
@@ -559,6 +558,10 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
         }
       }
       setFrontmatterStatus(path, 'approved');
+      // Approval is the moment this document's requests become real: each one
+      // travels to the document it names, where it will be decided. Until now
+      // prime could still edit the draft and delete it.
+      deliverRequests(project, String(rel));
       // Approving edits the file, so without this the recorded head no longer
       // matches what is on disk and the panel refuses to diff — the diff would
       // vanish the moment prime approved, although the body never changed.
@@ -641,9 +644,9 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
    * document and a document is rewritten once. Sent separately, the first press
    * would start a run and the rest would come back refused.
    *
-   * A denied request leaves its conflict behind: the asking is settled, the
-   * contradiction is not, and the next agent to rewrite this document reads it
-   * here rather than in the document that asked.
+   * A denied request stays in the document, ticked, with prime's reason under
+   * it: the asking is settled, the contradiction is not, and the next agent to
+   * rewrite this document reads that here.
    */
   app.post('/api/projects/:id/docs/settle-requests', (req, res) => {
     const project = projectOr404(req.params.id, res);
@@ -666,22 +669,16 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     if (applying.length === 0 && denying.length === 0 && said.length === 0) {
       return res.status(409).json({ error: 'there is nothing left to settle here' });
     }
-    const day = new Date().toISOString().slice(0, 10);
+    // A denial is settled in place: the line is ticked and the reason goes
+    // under it. That line IS the record — the next agent to rewrite this
+    // document reads it here, and the build phase inherits it from here.
     for (const r of denying) {
       markRequestHandled(
         project,
-        r.from,
         doc.rel,
+        r.from,
         r.reason,
         r.note ? `denied by prime — ${r.note}` : 'denied by prime — no change made',
-      );
-      appendListItem(
-        project,
-        doc.rel,
-        'Conflicts',
-        r.from,
-        r.reason,
-        `denied ${day}${r.note ? ` · prime: ${r.note}` : ''}`,
       );
     }
     // Denials alone change nothing in the text; there is nothing to rewrite.
@@ -838,7 +835,10 @@ ${body}`,
       kopengInstalled: onPath('kopeng'),
       transferred,
       documents: docs.length,
-      handedOver: docs.reduce((n, d) => n + d.conflicts.length + d.warnings.length, 0),
+      handedOver: docs.reduce(
+        (n, d) => n + d.denied.length + d.conflicts.length + d.warnings.length,
+        0,
+      ),
     });
   });
 

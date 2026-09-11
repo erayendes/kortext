@@ -18,12 +18,14 @@ Make your decisions by reading from here, not by guessing from the code:
   project. `PRODUCT` is where the project came from — read it for context, and do not change it
   at will. `BRIEF` sits beside it when the project started from one; a project analysed from an
   existing codebase has none, because the code was the brief.
-- **`## Conflicts`** in a document — a change another document asked for and +prime denied.
-  The two statements stand side by side on purpose: the decision was not avoided, it was
-  deferred to this phase, where there is finally enough information to make it. Read the
-  section as open work, not as fact — when your task touches one, raise it with +prime before
-  you choose. **`## Findings`** is the same shape for files no document owns (a `.gitignore`,
-  a CI file): informational, and nobody has acted on it yet.
+- **`## Change Requests`** in a document — what other documents asked of it, one line each,
+  `from` the document that asked. A ticked line marked `applied` was done. A ticked line marked
+  `denied` was refused by +prime, with the reason under it: the two documents disagree on
+  purpose, and the decision was deferred to this phase, where there is finally enough
+  information to make it. Read a denied line as open work, not as fact — when your task
+  touches one, raise it with +prime before you choose. **`## Findings`** is the same shape for
+  files no document owns (a `.gitignore`, a CI file): informational, and nobody has acted on
+  it yet.
 - **`.kopeng/`** (if present) — the task structure: Version → Epic → Task files. Task
   tracking is Kopeng's job; if it is set up, take your next piece of work from there and
   update its status there.

@@ -27,12 +27,15 @@ export interface DocInfo {
   /** A workflow step writes this document. The brief has none — it is prime's own. */
   hasProducingStep: boolean;
   /**
-   * Change requests arriving from other approved documents. The receiving
-   * document is the only place they are decided — prime reads the request
-   * beside the text it is about. On a document nobody has written yet these
-   * are not prime's to decide: they go into its first write.
+   * Open change requests about this document, read from its own
+   * `## Change Requests` — one place, one list. They arrive when the document
+   * that asked is approved, and this is where they are decided. On a document
+   * nobody has written yet they are not prime's to decide: they go into its
+   * first write.
    */
   revisionRequests: Array<{ from: string; reason: string }>;
+  /** Requests prime denied here. A record, not work: nothing asks about them again. */
+  denied: Array<{ from: string; reason: string }>;
   /**
    * Findings about something no document owns — a config file, a workflow, a
    * key. A record the next writer reads, not a decision owed: no buttons, no
@@ -40,9 +43,8 @@ export interface DocInfo {
    */
   warnings: Array<{ subject: string; reason: string }>;
   /**
-   * Contradictions left standing because prime denied the change request that
-   * named them. A record, like a finding — prime already decided when denying,
-   * and asking them to settle the result would be asking twice.
+   * The `## Conflicts` section documents carried before denials were recorded
+   * in place. Read for the handover count only; nothing writes it any more.
    */
   conflicts: Array<{ from: string; reason: string }>;
   /** Which shelf the panel files this on. */
@@ -98,12 +100,15 @@ function fileDoc(doc: DocInfo, job: LastJob | null): Pick<DocInfo, 'section' | '
 }
 
 /**
- * A warning names something outside the document set — `.gitignore`, a CI file,
- * a live endpoint. It uses the demand grammar but not the demand pattern: the
- * subject is any backticked path, because insisting on `.md` is what made a real
- * `.gitignore` finding vanish into prose nobody could act on.
+ * One grammar for every marked line. Under `## Change Requests` the line has a
+ * direction: `` - `TARGET.md` — reason `` is what THIS document asks of another
+ * (it leaves when this document is approved), and `` - [ ] from `SOURCE.md` —
+ * reason `` is what another document asked of this one (it stays, and is
+ * decided here). Findings use the same shape with any path as the subject,
+ * because insisting on `.md` is what made a real `.gitignore` finding vanish
+ * into prose nobody could act on.
  */
-const MARKED_LINE = /^\s*[-*+]\s+(?:\[([ xX]?)\]\s*)?`([^`]+)`\s*[—:-]?\s*(.*)$/;
+const MARKED_LINE = /^\s*[-*+]\s+(?:\[([ xX]?)\]\s*)?(from\s+)?`([^`]+)`\s*[—:-]?\s*(.*)$/;
 
 /** An outcome trailer: indented and a list item of its own. */
 const TRAILER = /^\s+[-*+] /;
@@ -125,42 +130,47 @@ function foldWrapped(lines: string[], i: number, first: string): [string, number
   return [reason, j];
 }
 
-/**
- * One parser for the three sections that carry marked lists: Change Requests,
- * Conflicts and Findings. `subject` narrows what counts as a subject — change
- * requests insist on a document, findings take anything.
- */
-export function parseMarkedList(
-  content: string,
-  heading: RegExp,
-  subject: RegExp,
-): Array<{ subject: string; reason: string }> {
-  const out: Array<{ subject: string; reason: string }> = [];
+export interface MarkedItem {
+  subject: string;
+  reason: string;
+  /** The line is `from` another document — a request made about this one. */
+  incoming: boolean;
+  /** The box is ticked. */
+  settled: boolean;
+  /** The first outcome trailer under it, if any. */
+  outcome: string;
+}
+
+/** Every marked line under `heading`, settled or not, with its direction. */
+export function parseMarkedList(content: string, heading: RegExp): MarkedItem[] {
+  const out: MarkedItem[] = [];
   const lines = content.split('\n');
   let inSection = false;
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i] ?? '';
     const h = line.match(/^#{1,6}\s+(.*)$/);
     if (h) {
-      inSection = heading.test(h[1] ?? '');
+      inSection = heading.test((h[1] ?? '').trim());
       continue;
     }
     if (!inSection) continue;
     const m = line.match(MARKED_LINE);
     if (!m) continue;
-    const [reason, next] = foldWrapped(lines, i, m[3] ?? '');
+    const [reason, next] = foldWrapped(lines, i, m[4] ?? '');
+    const trailer = lines[next] ?? '';
     i = next - 1;
-    // A ticked box is settled and excluded from the pending list.
-    if ((m[1] ?? '').trim().toLowerCase() === 'x') continue;
-    const name = m[2]!.replace(/^\.kortext\//, '');
-    if (!subject.test(name)) continue;
-    out.push({ subject: name, reason });
+    out.push({
+      subject: m[3]!.replace(/^\.kortext\//, ''),
+      reason,
+      incoming: !!m[2],
+      settled: (m[1] ?? '').trim().toLowerCase() === 'x',
+      outcome: TRAILER.test(trailer) ? trailer.replace(TRAILER, '').trim() : '',
+    });
   }
   return out;
 }
 
 const DOC_SUBJECT = /^[A-Za-z][\w./-]*\.md$/;
-const ANY_SUBJECT = /./;
 
 /**
  * The three headings, each accepting the name it used to carry. Documents
@@ -171,19 +181,35 @@ export const CHANGE_REQUESTS = /^(change|revision) requests$/i;
 export const FINDINGS = /^(findings|warnings)$/i;
 export const QUESTIONS = /^(open )?questions( for prime)?$/i;
 
-export function parseRevisionRequests(content: string): Array<{ target: string; reason: string }> {
-  return parseMarkedList(content, CHANGE_REQUESTS, DOC_SUBJECT).map((r) => ({
-    target: r.subject,
-    reason: r.reason,
-  }));
+/** What other documents asked of this one and prime has not decided yet. */
+export function parseIncoming(content: string): Array<{ from: string; reason: string }> {
+  return parseMarkedList(content, CHANGE_REQUESTS)
+    .filter((r) => r.incoming && !r.settled)
+    .map((r) => ({ from: r.subject, reason: r.reason }));
 }
 
-/** Contradictions left standing because prime dismissed the demand that named them. */
+/** What prime denied here. The line stays ticked, its reason under it. */
+export function parseDenied(content: string): Array<{ from: string; reason: string }> {
+  return parseMarkedList(content, CHANGE_REQUESTS)
+    .filter((r) => r.incoming && r.settled && /^(denied|dismissed)/i.test(r.outcome))
+    .map((r) => ({ from: r.subject, reason: r.reason }));
+}
+
+/**
+ * What this document asks of others — the lines the agent wrote while drafting.
+ * They travel to the document they name when this one is approved.
+ */
+export function parseOutgoing(content: string): Array<{ target: string; reason: string }> {
+  return parseMarkedList(content, CHANGE_REQUESTS)
+    .filter((r) => !r.incoming && !r.settled && DOC_SUBJECT.test(r.subject))
+    .map((r) => ({ target: r.subject, reason: r.reason }));
+}
+
+/** The `## Conflicts` section older documents carry. Counted, never written. */
 export function parseConflicts(content: string): Array<{ from: string; reason: string }> {
-  return parseMarkedList(content, /^conflicts$/i, ANY_SUBJECT).map((r) => ({
-    from: r.subject,
-    reason: r.reason,
-  }));
+  return parseMarkedList(content, /^conflicts$/i)
+    .filter((r) => !r.settled)
+    .map((r) => ({ from: r.subject, reason: r.reason }));
 }
 
 /**
@@ -195,11 +221,11 @@ export function parseConflicts(content: string): Array<{ from: string; reason: s
  * became prose nobody could act on. It is a finding, and it is read as one.
  */
 export function parseWarnings(content: string): Array<{ subject: string; reason: string }> {
-  const own = parseMarkedList(content, FINDINGS, ANY_SUBJECT);
-  const misfiled = parseMarkedList(content, CHANGE_REQUESTS, ANY_SUBJECT).filter(
-    (r) => !DOC_SUBJECT.test(r.subject),
+  const own = parseMarkedList(content, FINDINGS).filter((r) => !r.settled);
+  const misfiled = parseMarkedList(content, CHANGE_REQUESTS).filter(
+    (r) => !r.incoming && !r.settled && !DOC_SUBJECT.test(r.subject),
   );
-  return [...own, ...misfiled];
+  return [...own, ...misfiled].map((r) => ({ subject: r.subject, reason: r.reason }));
 }
 
 // Read questions only from the questions section; ignore template placeholders.
@@ -331,8 +357,13 @@ export function setFrontmatterStatus(path: string, status: string): void {
   }
 }
 
-// Record the outcome in the document that carries the line, so the panel and the
-// next CLI read the same state.
+/**
+ * Settles one marked line in place: the box is ticked and the outcome goes
+ * under it, so the record stays in the file where the next reader looks. A
+ * line may already carry a trailer saying how it came to be; the outcome goes
+ * after it, so the item reads in the order it happened. The wrapped rest of the
+ * demand stays where it is — it belongs to the demand, not to the outcome.
+ */
 function markListItemHandled(
   project: Project,
   rel: string,
@@ -340,6 +371,7 @@ function markListItemHandled(
   subject: string,
   reason: string,
   outcome: string,
+  incoming: boolean,
 ): void {
   const path = docPath(project, rel);
   if (!existsSync(path)) return;
@@ -350,37 +382,38 @@ function markListItemHandled(
     const line = lines[i] ?? '';
     const h = line.match(/^#{1,6}\s+(.*)$/);
     if (h) {
-      inSection = heading.test(h[1] ?? '');
+      inSection = heading.test((h[1] ?? '').trim());
       continue;
     }
     if (!inSection) continue;
     const m = line.match(MARKED_LINE);
-    if (!m) continue;
-    if (m[2]!.replace(/^\.kortext\//, '') !== subject.replace(/^.*\//, '') && m[2] !== subject)
+    if (!m || !!m[2] !== incoming) continue;
+    if (m[3]!.replace(/^\.kortext\//, '') !== subject.replace(/^.*\//, '') && m[3] !== subject)
       continue;
-    const [full, afterWrap] = foldWrapped(lines, i, m[3] ?? '');
+    const [full, afterWrap] = foldWrapped(lines, i, m[4] ?? '');
     if (full !== reason.trim()) continue;
-    // Keep both the settled marker and the outcome in the document. A line may
-    // already carry a trailer saying how it came to be; the outcome goes after
-    // it, so the item reads in the order it happened. The wrapped rest of the
-    // demand stays where it is — it belongs to the demand, not to the outcome.
     let end = afterWrap;
     while (end < lines.length && TRAILER.test(lines[end] ?? '')) end++;
     lines.splice(end, 0, `  - ${outcome} · ${day}`);
-    lines[i] = `- [x] \`${m[2]}\` — ${m[3]}`;
+    lines[i] = `- [x] ${incoming ? 'from ' : ''}\`${m[3]}\` — ${m[4]}`;
     writeFileSync(path, lines.join('\n'), 'utf8');
     return;
   }
 }
 
+/**
+ * Settles a request in the document it is about: `rel` holds the line,
+ * `from` is the document that asked. The record stays here — the next agent to
+ * rewrite `rel` reads it here, and does not raise the same request again.
+ */
 export function markRequestHandled(
   project: Project,
+  rel: string,
   from: string,
-  target: string,
   reason: string,
   outcome: string,
 ): void {
-  markListItemHandled(project, from, CHANGE_REQUESTS, target, reason, outcome);
+  markListItemHandled(project, rel, CHANGE_REQUESTS, from, reason, outcome, true);
 }
 
 /**
@@ -395,13 +428,17 @@ export function appendListItem(
   subject: string,
   reason: string,
   trailer?: string,
+  incoming = false,
 ): void {
   const path = docPath(project, rel);
   if (!existsSync(path)) return;
   const lines = readFileSync(path, 'utf8').split('\n');
-  const item = `- [ ] \`${subject}\` — ${reason.replace(/\s+/g, ' ').trim()}`;
+  const item = `- [ ] ${incoming ? 'from ' : ''}\`${subject}\` — ${reason.replace(/\s+/g, ' ').trim()}`;
   const block = trailer ? [item, `  - ${trailer}`] : [item];
-  const head = lines.findIndex((l) => new RegExp(`^#{1,6}\\s+${heading}\\s*$`, 'i').test(l));
+  const head = lines.findIndex((l) => {
+    const m = l.match(/^#{1,6}\s+(.*?)\s*$/);
+    return !!m && new RegExp(`^${heading}$`, 'i').test(m[1]!);
+  });
   if (head === -1) {
     lines.push('', `## ${heading}`, '', ...block);
   } else {
@@ -414,13 +451,111 @@ export function appendListItem(
   writeFileSync(path, lines.join('\n'), 'utf8');
 }
 
+/** Files a request about `target`, made by `from`, where it will be decided. */
+export function appendIncomingRequest(
+  project: Project,
+  target: string,
+  from: string,
+  reason: string,
+): void {
+  appendListItem(project, target, 'Change Requests', from, reason, undefined, true);
+}
+
+/**
+ * Puts back what an agent's rewrite dropped. The lines `from` other documents
+ * are not the agent's to remove — an open one is a decision prime still owes,
+ * a ticked one is a decision prime made — and the prompt says so, but a prompt
+ * is not a guarantee. This is: after every agent write, any such line missing
+ * from the new text is appended again, state and outcome intact.
+ */
+export function restoreRequests(project: Project, rel: string, priorText: string | null): void {
+  if (priorText === null) return;
+  const path = docPath(project, rel);
+  if (!existsSync(path)) return;
+  const written = readFileSync(path, 'utf8');
+  const kept = parseMarkedList(written, CHANGE_REQUESTS).filter((r) => r.incoming);
+  const lost = parseMarkedList(priorText, CHANGE_REQUESTS).filter(
+    (r) => r.incoming && !kept.some((k) => k.subject === r.subject && k.reason === r.reason),
+  );
+  if (lost.length === 0) return;
+  const lines = written.split('\n');
+  const block = lost.flatMap((r) => [
+    `- [${r.settled ? 'x' : ' '}] from \`${r.subject}\` — ${r.reason}`,
+    ...(r.outcome ? [`  - ${r.outcome}`] : []),
+  ]);
+  const head = lines.findIndex((l) => {
+    const m = l.match(/^#{1,6}\s+(.*?)\s*$/);
+    return !!m && CHANGE_REQUESTS.test(m[1]!);
+  });
+  if (head === -1) {
+    lines.push('', '## Change Requests', '', ...block);
+  } else {
+    let end = head + 1;
+    while (end < lines.length && !/^#{1,6}\s/.test(lines[end] ?? '')) end++;
+    let at = end;
+    while (at > head + 1 && (lines[at - 1] ?? '').trim() === '') at--;
+    lines.splice(at, 0, ...block);
+  }
+  writeFileSync(path, lines.join('\n'), 'utf8');
+}
+
+/**
+ * Moves every open outgoing request of an approved document to the document it
+ * names. The agent writes what it asks of others into its own draft, where
+ * prime sees it before approving and may delete it; approval is the moment it
+ * becomes real, so this runs on approval — and once more on every listing, for
+ * documents approved before requests travelled. Idempotent: a moved line is
+ * gone from its source.
+ */
+export function deliverRequests(project: Project, rel: string): number {
+  const path = docPath(project, rel);
+  if (!existsSync(path)) return 0;
+  const text = readFileSync(path, 'utf8');
+  if (readFrontmatter(text).status !== 'approved') return 0;
+  const outgoing = parseOutgoing(text).filter((r) => {
+    try {
+      return existsSync(docPath(project, r.target));
+    } catch {
+      return false;
+    }
+  });
+  if (outgoing.length === 0) return 0;
+  // Remove from the source first, line by line, then file in the target.
+  const lines = text.split('\n');
+  let inSection = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] ?? '';
+    const h = line.match(/^#{1,6}\s+(.*)$/);
+    if (h) {
+      inSection = CHANGE_REQUESTS.test((h[1] ?? '').trim());
+      continue;
+    }
+    if (!inSection) continue;
+    const m = line.match(MARKED_LINE);
+    if (!m || m[2] || (m[1] ?? '').trim().toLowerCase() === 'x') continue;
+    const [reason, next] = foldWrapped(lines, i, m[4] ?? '');
+    const name = m[3]!.replace(/^\.kortext\//, '');
+    if (!outgoing.some((r) => r.target === name && r.reason === reason)) continue;
+    lines.splice(i, next - i);
+    i--;
+  }
+  writeFileSync(path, lines.join('\n'), 'utf8');
+  for (const r of outgoing) appendIncomingRequest(project, r.target, rel, r.reason);
+  return outgoing.length;
+}
+
 export function listDocs(db: Database.Database, project: Project, pkgRoot: string): DocInfo[] {
   const map = loadDocMap(pkgRoot, project.kind ?? 'new');
   const statuses = new Map<string, string>();
   const docs: DocInfo[] = [];
-  const requests: Array<{ from: string; target: string; reason: string }> = [];
-  const collect = (dir: string) => {
-    if (!existsSync(dir)) return;
+  const dir = join(project.repo_path, '.kortext');
+  if (existsSync(dir)) {
+    // Requests travel on approval. A document approved before they did still
+    // carries its outgoing lines; deliver those now, before anything is read.
+    for (const file of readdirSync(dir).filter((f) => f.endsWith('.md'))) {
+      deliverRequests(project, file);
+    }
+    // One shelf: every .md in .kortext/ is a document of this project.
     for (const file of readdirSync(dir)
       .filter((f) => f.endsWith('.md'))
       .sort()) {
@@ -439,7 +574,11 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
         dependentOn: [],
         openQuestions: status !== 'uninitialized' && hasOpenQuestions(body),
         hasProducingStep: map.has(rel),
-        revisionRequests: [],
+        // Read from the document's own section: what others asked of it is
+        // filed here when they are approved, and decided here. An unwritten
+        // document can already hold some — they go into its first write.
+        revisionRequests: parseIncoming(body),
+        denied: parseDenied(body),
         warnings: status === 'uninitialized' ? [] : parseWarnings(body),
         conflicts: status === 'uninitialized' ? [] : parseConflicts(body),
         // Filled once every document is known; nothing can be filed before then.
@@ -448,27 +587,7 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
         detail: 'queue',
         pendingRecheck: false,
       });
-      // A change request leaves its document only when prime approves that
-      // document. Prime may edit the draft and delete the reason, so sending it
-      // earlier is premature — they see it in the body under `## Change
-      // Requests` before approving, which is the whole warning it needs.
-      if (status === 'approved') {
-        for (const r of parseRevisionRequests(body)) requests.push({ ...r, from: rel });
-      }
     }
-  };
-  // One shelf: every .md in .kortext/ is a document of this project.
-  collect(join(project.repo_path, '.kortext'));
-
-  // Attach each open request to the document it names — including one nobody
-  // has written yet. Under the lighter model a request is decided only in the
-  // receiving document, so dropping it while that document is unwritten leaves
-  // it with nowhere at all to be decided; it is handed to the first write
-  // instead (`buildStepPrompt`).
-  for (const r of requests) {
-    const target = docs.find((d) => d.rel === r.target);
-    if (!target) continue;
-    target.revisionRequests.push({ from: r.from, reason: r.reason });
   }
 
   // 'not-applicable' satisfies a dependency: the doc was considered and

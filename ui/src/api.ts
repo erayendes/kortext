@@ -40,6 +40,7 @@ export interface DocInfo {
   openQuestions: boolean;
   hasProducingStep: boolean;
   revisionRequests: Array<{ from: string; reason: string }>;
+  denied: Array<{ from: string; reason: string }>;
   warnings: Array<{ subject: string; reason: string }>;
   conflicts: Array<{ from: string; reason: string }>;
   section: 'needs' | 'doing' | 'todo' | 'done';
