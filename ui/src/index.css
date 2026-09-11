@@ -2178,6 +2178,14 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
 .kx-note .btn-x {
   flex: none;
 }
+/* The tray's own head, in the register the panels above use. */
+.kx-notes-title {
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-secondary);
+}
 .kx-note {
   display: flex;
   align-items: center;
@@ -2187,6 +2195,13 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--r-md);
+}
+/* A row that leads somewhere — the line, the question, the request. */
+.kx-note[role='button'] {
+  cursor: pointer;
+}
+.kx-note[role='button']:hover {
+  border-color: var(--border-strong);
 }
 .kx-note-body {
   flex: 1;
@@ -2198,10 +2213,9 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   font-size: var(--fs-label);
   color: var(--fg-muted);
   flex-shrink: 0;
-  max-width: 12ch;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 button.kx-note-exc {
   border: 0;

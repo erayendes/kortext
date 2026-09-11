@@ -24,11 +24,6 @@ interface Decision {
 
 const keyOf = (r: { from: string; reason: string }) => `${r.from}: ${r.reason}`;
 
-// A, B, ... Z, AA — spreadsheet columns, so a long review never runs out of marks.
-function letter(n: number): string {
-  return n < 26 ? String.fromCharCode(65 + n) : letter(Math.floor(n / 26) - 1) + letter(n % 26);
-}
-
 // Ephemeral by design: answers live only in panel state, never in the file.
 interface Explain {
   line: number | null;
@@ -275,13 +270,15 @@ export function DocDrawer({
 
   // A note marks its line, and the mark is what the footer row shows: a question
   // keeps the number it already carries, any other line takes the next letter.
+  // A question keeps the number the list gave it; a noted line is numbered in
+  // the order it was first noted. The tray says which is which.
   const lineLabel = useMemo(() => {
     const m = new Map<number, string>();
     let n = 0;
     for (const note of notes) {
       if (note.line === null || m.has(note.line)) continue;
       const q = qNo.get(note.line);
-      m.set(note.line, q ? `#${q}` : `#${letter(n++)}`);
+      m.set(note.line, `#${q ?? ++n}`);
     }
     return m;
   }, [notes, qNo]);
@@ -371,6 +368,13 @@ export function DocDrawer({
           xs.map((x) => (x === entry ? { ...x, answer: `Error: ${e.message}` } : x)),
         ),
       );
+  };
+
+  // Instant, not smooth: the drawer is a transformed ancestor, and Chrome's
+  // smooth path silently does nothing inside one.
+  const goTo = (id: string) => {
+    setSelected(null);
+    document.getElementById(id)?.scrollIntoView({ block: 'center' });
   };
 
   const addLineNote = (line: number, text: string) => {
@@ -632,60 +636,89 @@ export function DocDrawer({
         <div className="dr-foot">
           {notes.length > 0 || decisions.length > 0 ? (
             <div className="kx-notes">
-              {notes.map((n, i) => (
-                <div key={i} className="kx-note">
-                  {n.line !== null && lineLabel.has(n.line) ? (
+              <div className="kx-notes-title">Actions</div>
+              {/* Each row names what it is and where it came from, and clicking
+                  it goes there — the question or request in the list above, or
+                  the line in the document. */}
+              {notes.map((n, i) => {
+                const isQuestion = n.line !== null && qNo.has(n.line);
+                const target =
+                  n.line === null ? null : isQuestion ? `kx-q-${n.line}` : `kx-line-${n.line}`;
+                return (
+                  <div
+                    key={i}
+                    className="kx-note"
+                    role={target ? 'button' : undefined}
+                    tabIndex={target ? 0 : undefined}
+                    onClick={() => target && goTo(target)}
+                    onKeyDown={(e) => {
+                      if (target && (e.key === 'Enter' || e.key === ' ')) {
+                        e.preventDefault();
+                        goTo(target);
+                      }
+                    }}
+                  >
+                    <span className="kx-note-exc mono">
+                      {isQuestion ? 'question' : 'note'}{' '}
+                      {n.line !== null ? lineLabel.get(n.line) : n.excerpt}
+                    </span>
+                    <span className="kx-note-body">{n.text}</span>
                     <button
-                      className="kx-note-exc mono"
-                      title="Go to the line"
-                      onClick={() => {
-                        setSelected(null);
-                        // Instant, not smooth: the drawer is a transformed
-                        // ancestor, and Chrome's smooth path silently does
-                        // nothing inside one.
-                        document
-                          .getElementById(`kx-line-${n.line}`)
-                          ?.scrollIntoView({ block: 'center' });
+                      className="btn btn-x"
+                      title="Take it back"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setNotes(notes.filter((_, j) => j !== i));
                       }}
                     >
-                      {lineLabel.get(n.line)}
+                      ×
                     </button>
-                  ) : (
-                    n.excerpt && <span className="kx-note-exc mono">{n.excerpt}</span>
-                  )}
-                  <span className="kx-note-body">{n.text}</span>
-                  <button
-                    className="btn btn-x"
-                    onClick={() => setNotes(notes.filter((_, j) => j !== i))}
+                  </div>
+                );
+              })}
+              {doc.revisionRequests.map((r, i) => {
+                const d = decided[keyOf(r)];
+                if (!d) return null;
+                const target = `kx-req-${i}`;
+                return (
+                  <div
+                    key={target}
+                    className="kx-note"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => goTo(target)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        goTo(target);
+                      }
+                    }}
                   >
-                    ×
-                  </button>
-                </div>
-              ))}
-              {decisions.map((d) => (
-                <div key={keyOf(d)} className="kx-note">
-                  <span className="kx-note-exc mono">{d.from.replace(/\.md$/, '')}</span>
-                  <span className="kx-note-body">
-                    <span className={`kx-decision kx-decision-${d.what}`}>
-                      {d.what === 'accept' ? 'accepted' : 'denied'}
+                    <span className="kx-note-exc mono">revision #{i + 1}</span>
+                    <span className="kx-note-body">
+                      <span className="mono">{r.from.replace(/\.md$/, '')}</span> revision{' '}
+                      <span className={`kx-decision kx-decision-${d.what}`}>
+                        {d.what === 'accept' ? 'accepted' : 'denied'}
+                      </span>
+                      {d.note && ` — ${d.note}`}
                     </span>
-                    {d.note && ` — ${d.note}`}
-                  </span>
-                  <button
-                    className="btn btn-x"
-                    title="Take the decision back"
-                    onClick={() =>
-                      setDecided((all) => {
-                        const next = { ...all };
-                        delete next[keyOf(d)];
-                        return next;
-                      })
-                    }
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
+                    <button
+                      className="btn btn-x"
+                      title="Take the decision back"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDecided((all) => {
+                          const next = { ...all };
+                          delete next[keyOf(r)];
+                          return next;
+                        });
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <span className="kx-cmd-hint">
@@ -910,7 +943,7 @@ function ActionNeeded({
               const thread = explains.filter((x) => x.line === q.index);
               const key = `q${q.index}`;
               return (
-                <li key={key} className={open === key ? 'kx-req-open' : ''}>
+                <li key={key} id={`kx-q-${q.index}`} className={open === key ? 'kx-req-open' : ''}>
                   <input
                     type="checkbox"
                     className="kx-req-check"
@@ -945,11 +978,11 @@ function ActionNeeded({
         <>
           <div className="kx-changebar-group">Revisions</div>
           <ul className="kx-changebar-list">
-            {requests.map((r) => {
+            {requests.map((r, i) => {
               const key = keyOf(r);
               const talk = chat.filter((c) => c.key === key);
               return (
-                <li key={key} className={open === key ? 'kx-req-open' : ''}>
+                <li key={key} id={`kx-req-${i}`} className={open === key ? 'kx-req-open' : ''}>
                   <input
                     type="checkbox"
                     className="kx-req-check"
