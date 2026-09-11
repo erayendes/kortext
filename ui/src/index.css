@@ -2523,7 +2523,7 @@ button.kx-note-exc:hover {
   grid-column: 2;
 }
 .kx-req-check {
-  pointer-events: none;
+  cursor: pointer;
   accent-color: var(--amber);
   margin: 0;
   position: relative;
@@ -2646,7 +2646,7 @@ button.kx-note-exc:hover {
   border: 0;
   background: none;
   padding: 0;
-  margin-right: var(--sp-2);
+  margin-left: var(--sp-2);
   color: var(--green);
   font-size: var(--fs-label);
 }
@@ -2656,8 +2656,10 @@ button.kx-removed-toggle {
 button.kx-removed-toggle:hover {
   text-decoration: underline;
 }
+/* The old text starts where the new text starts — same edge, quieter. */
 .kx-removed-body {
   margin-top: 4px;
+  text-indent: 0;
   color: var(--fg-muted);
   font-size: var(--fs-label);
   white-space: pre-wrap;

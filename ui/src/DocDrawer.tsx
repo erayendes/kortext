@@ -1186,6 +1186,7 @@ function ActionNeeded({
                     readOnly
                     tabIndex={-1}
                     aria-hidden="true"
+                    onClick={() => setOpen(open === key ? null : key)}
                   />
                   <span className="kx-req-text" {...select(key)}>
                     <span className="mono">#{q.no}</span> — {q.text}
@@ -1225,6 +1226,7 @@ function ActionNeeded({
                     readOnly
                     tabIndex={-1}
                     aria-hidden="true"
+                    onClick={() => setOpen(open === key ? null : key)}
                   />
                   <span className="kx-req-text" {...select(key)}>
                     <span className="mono">{r.from.replace(/\.md$/, '')}</span> — {r.reason}
@@ -1270,6 +1272,7 @@ function ActionNeeded({
                     readOnly
                     tabIndex={-1}
                     aria-hidden="true"
+                    onClick={() => setOpen(open === key ? null : key)}
                   />
                   <span className="kx-req-text" {...select(key)}>
                     <span className="mono">to {r.target.replace(/\.md$/, '')}</span> — {r.reason}
@@ -1485,26 +1488,6 @@ function DocBlock({
       ) : noteLabel ? (
         <span className="kx-qno mono">{noteLabel}</span>
       ) : null}
-      {/* A changed block wears a [+] rather than a colour. Press it and what
-          the text replaced unfolds beneath, faded; [−] folds it back. A block
-          that replaced nothing is simply new, and the mark says so. */}
-      {changed &&
-        (replaced ? (
-          <button
-            className="kx-removed-toggle mono"
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowOld(!showOld);
-            }}
-            title={showOld ? 'Hide what this replaced' : 'Show what this replaced'}
-          >
-            [{showOld ? '−' : '+'}]
-          </button>
-        ) : (
-          <span className="kx-removed-toggle mono" title="New since the last write">
-            [+]
-          </span>
-        ))}
       {outcome ? (
         <>
           <span
@@ -1533,6 +1516,27 @@ function DocBlock({
       ) : (
         <Inline text={token.text} />
       )}
+      {/* A changed block wears a [+] at the end of its sentence rather than a
+          colour. Press it and what the text replaced unfolds beneath, faded; [−]
+          folds it back. A block that replaced nothing is simply new, and the
+          mark says so. */}
+      {changed &&
+        (replaced ? (
+          <button
+            className="kx-removed-toggle mono"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowOld(!showOld);
+            }}
+            title={showOld ? 'Hide what this replaced' : 'Show what this replaced'}
+          >
+            [{showOld ? '−' : '+'}]
+          </button>
+        ) : (
+          <span className="kx-removed-toggle mono" title="New since the last write">
+            [+]
+          </span>
+        ))}
       {decision !== undefined && decision !== '' && (
         <div className="kx-decision-why">
           <span className="kx-decision-why-label">Reason:</span> {decision}
