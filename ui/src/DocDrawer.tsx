@@ -208,6 +208,14 @@ export function DocDrawer({
     [tokens, openQ, doc?.status],
   );
 
+  // What the body shows. On a draft the questions are asked in the Action
+  // Needed list above, so the section is not repeated underneath — it was
+  // already asked once. The tokens keep their indices; only the view narrows.
+  const shown = useMemo(
+    () => (doc?.status === 'draft' ? tokens.filter((t) => !openQ.has(t.index)) : tokens),
+    [tokens, openQ, doc?.status],
+  );
+
   // Anything owed on this document goes into one list under one button.
   const actionNeeded =
     doc !== null &&
@@ -216,6 +224,10 @@ export function DocDrawer({
 
   // Use question numbers in note labels instead of truncated excerpts.
   const qNo = useMemo(() => new Map(questions.map((q) => [q.index, q.no])), [questions]);
+
+  const trayNotes = notes
+    .map((n, i) => ({ n, i }))
+    .filter(({ n }) => !(actionNeeded && n.line !== null && qNo.has(n.line)));
 
   /**
    * What this write changed, compared block by block rather than line by line.
@@ -468,6 +480,7 @@ export function DocDrawer({
             answerBy={answerBy}
             onAsk={ask}
             onNote={addLineNote}
+            onDropNote={(line) => setNotes((ns) => ns.filter((n) => n.line !== line))}
             extra={
               doc.hasProducingStep ? null : (
                 <button className="btn btn-primary" disabled={busy} onClick={proposeFix}>
@@ -533,7 +546,7 @@ export function DocDrawer({
                 )}
               </div>
             )}
-            {tokens
+            {shown
               .filter((t) => !onlyChanges || changed.has(t.index) || replaced.has(t.index))
               .map((t) => (
                 <div key={t.index} id={`kx-line-${t.index}`}>
@@ -576,9 +589,12 @@ export function DocDrawer({
       {/* The footer asks about lines of the document; the preview has none. */}
       {!editing && !preview && doc.status !== 'uninitialized' && (
         <div className="dr-foot">
-          {notes.length > 0 ? (
+          {/* An answer to a listed question is shown under that question, in
+              the Action Needed list; the tray carries only the notes that have
+              no row of their own up there. */}
+          {trayNotes.length > 0 ? (
             <div className="kx-notes">
-              {notes.map((n, i) => (
+              {trayNotes.map(({ n, i }) => (
                 <div key={i} className="kx-note">
                   {n.line !== null && lineLabel.has(n.line) ? (
                     <button
@@ -751,6 +767,7 @@ function ActionNeeded({
   answerBy,
   onAsk,
   onNote,
+  onDropNote,
   extra,
   onApplied,
 }: {
@@ -764,6 +781,7 @@ function ActionNeeded({
   answerBy: string;
   onAsk: (line: number, question: string) => void;
   onNote: (line: number, text: string) => void;
+  onDropNote: (line: number) => void;
   /** Draft the change yourself, when no agent writes this document. */
   extra?: React.ReactNode;
   onApplied: () => void;
@@ -892,7 +910,15 @@ function ActionNeeded({
                   )}
                   {note && (
                     <div className="kx-req-note">
-                      <span className="mono">answer</span> {note.text}
+                      <span className="kx-req-note-who mono">answer</span>
+                      <span className="kx-req-note-body">{note.text}</span>
+                      <button
+                        className="btn btn-x"
+                        title="Take the answer back"
+                        onClick={() => onDropNote(q.index)}
+                      >
+                        ×
+                      </button>
                     </div>
                   )}
                 </li>
@@ -931,7 +957,21 @@ function ActionNeeded({
                   )}
                   {notes[key] && (
                     <div className="kx-req-note">
-                      <span className="mono">note</span> {notes[key]}
+                      <span className="kx-req-note-who mono">note</span>
+                      <span className="kx-req-note-body">{notes[key]}</span>
+                      <button
+                        className="btn btn-x"
+                        title="Take the note back"
+                        onClick={() =>
+                          setNotes((n) => {
+                            const next = { ...n };
+                            delete next[key];
+                            return next;
+                          })
+                        }
+                      >
+                        ×
+                      </button>
                     </div>
                   )}
                 </li>

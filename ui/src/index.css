@@ -2564,17 +2564,32 @@ button.kx-note-exc:hover {
   white-space: pre-wrap;
 }
 
+/* What prime said under a row — the answer, or the note riding with a
+   decision. A reply, so it reads like one: indented under the line it answers,
+   on a card, with a rail in the panel's colour and its own × to take it back. */
 .kx-req-note {
-  margin-top: 6px;
-  padding: 4px 8px;
-  border-radius: var(--r-sm);
-  background: var(--bg-muted);
-  color: var(--fg-secondary);
-  font-size: var(--fs-label);
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  margin: 6px 0 2px 0;
+  padding: 6px 10px;
+  border-radius: var(--r-md);
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: inset 3px 0 0 var(--pink);
+  color: var(--fg);
+  font-size: var(--fs-ui);
 }
-.kx-req-note .mono {
-  color: var(--fg-faint);
-  margin-right: 6px;
+.kx-req-note-who {
+  color: var(--pink);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  flex: none;
+}
+.kx-req-note-body {
+  flex: 1;
+  min-width: 0;
 }
 
 /* A row is selected by clicking it; the input opens underneath. */
