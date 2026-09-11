@@ -689,13 +689,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     // line IS the record — the next agent to rewrite this document reads it
     // there, and the build phase inherits it from there.
     for (const r of denying) {
-      markRequestHandled(
-        project,
-        doc.rel,
-        r.from,
-        r.reason,
-        r.note ? `prime: ${r.note}` : 'prime: no change made',
-      );
+      markRequestHandled(project, doc.rel, r.from, r.reason, r.note || 'no change made');
     }
     // Denials, sends and discards change nothing in the text; nothing to rewrite.
     if (applying.length === 0 && said.length === 0)

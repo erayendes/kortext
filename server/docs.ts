@@ -477,10 +477,11 @@ export function discardOutgoing(project: Project, rel: string, target: string, r
 
 /**
  * Records a refusal in the document it is about: the request leaves the
- * mailbox and goes into `## Decisions`, with prime's reason under it. Not a
- * request any more — a decision, which is why it carries no box and no word
- * like "denied": the ledger is the word. The next agent to rewrite `rel` reads
- * it here, and does not raise the same request again.
+ * mailbox and goes into `## Decisions`, the reason under it. Not a request any
+ * more — a decision, which is why it carries no box, no "denied", no "prime"
+ * and no date: the heading is the word, prime is the only one who decides, and
+ * git keeps the day. The next agent to rewrite `rel` reads it here, and does
+ * not raise the same request again.
  */
 export function markRequestHandled(
   project: Project,
@@ -511,9 +512,8 @@ export function appendListItem(
   const path = docPath(project, rel);
   if (!existsSync(path)) return;
   const lines = readFileSync(path, 'utf8').split('\n');
-  const day = new Date().toISOString().slice(0, 10);
   const item = `- ${boxed ? '[ ] ' : ''}${incoming ? 'from ' : ''}\`${subject}\` — ${reason.replace(/\s+/g, ' ').trim()}`;
-  const block = trailer ? [item, `  - ${trailer} · ${day}`] : [item];
+  const block = trailer ? [item, `  - ${trailer}`] : [item];
   const head = lines.findIndex((l) => {
     const m = l.match(/^#{1,6}\s+(.*?)\s*$/);
     return !!m && new RegExp(`^${heading}$`, 'i').test(m[1]!);

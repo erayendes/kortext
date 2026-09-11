@@ -2609,6 +2609,24 @@ button.kx-note-exc:hover {
   background: var(--red-bg);
   border-color: var(--red-border);
 }
+/* The Decisions ledger reads as prose: the request on its line, the reason
+   under it, quieter — and no bullets, because bullets look like work. */
+.kx-block.kx-decision-request::before,
+.kx-block.kx-decision-reason::before {
+  content: none;
+}
+.kx-block.kx-decision-request,
+.kx-block.kx-decision-reason {
+  padding-left: 8px;
+  text-indent: 0;
+}
+.kx-block.kx-decision-request {
+  margin-top: 6px;
+}
+.kx-block.kx-decision-reason {
+  margin-left: 0 !important;
+  color: var(--fg-secondary);
+}
 /* A decision in the footer tray, said in one word and coloured by it. */
 .kx-decision {
   font-weight: 600;

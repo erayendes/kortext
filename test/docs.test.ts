@@ -269,13 +269,7 @@ test('a refusal leaves the mailbox and enters the ledger', () => {
   );
   const brd = () => listDocs(db, p, pkgRoot).find((d) => d.rel === 'BRIEF.md')!;
   assert.equal(brd().revisionRequests.length, 1);
-  markRequestHandled(
-    p,
-    'BRIEF.md',
-    'PRODUCT.md',
-    'say it the other way round',
-    'prime: it reads fine',
-  );
+  markRequestHandled(p, 'BRIEF.md', 'PRODUCT.md', 'say it the other way round', 'it reads fine');
   assert.equal(brd().revisionRequests.length, 0);
   // Not a request any more — a decision: no box, no "denied", under its own
   // heading, with prime's reason and the day beneath it.
@@ -283,7 +277,7 @@ test('a refusal leaves the mailbox and enters the ledger', () => {
   assert.doesNotMatch(brief, /from `PRODUCT\.md`/);
   assert.match(
     brief,
-    /## Decisions\n\n- `PRODUCT\.md` — say it the other way round\n {2}- prime: it reads fine · \d{4}-\d{2}-\d{2}/,
+    /## Decisions\n\n- `PRODUCT\.md` — say it the other way round\n {2}- it reads fine$/m,
   );
   assert.deepEqual(brd().denied, [{ from: 'PRODUCT.md', reason: 'say it the other way round' }]);
   // A done request leaves instead — the text says what it asked for.
@@ -506,7 +500,7 @@ test('a decision is the record, and it holds nothing up', () => {
     'utf8',
   );
 
-  markRequestHandled(p, 'ENVIRONMENT.md', 'SECURITY.md', reason, 'prime: kept');
+  markRequestHandled(p, 'ENVIRONMENT.md', 'SECURITY.md', reason, 'kept');
 
   const env = listDocs(db, p, pkgRoot).find((d) => d.rel === 'ENVIRONMENT.md')!;
   assert.deepEqual(env.revisionRequests, []);
@@ -518,7 +512,7 @@ test('a decision is the record, and it holds nothing up', () => {
 
   const body = readFileSync(docPath(p, 'ENVIRONMENT.md'), 'utf8');
   assert.match(body, /## Decisions/);
-  assert.match(body, /prime: kept/);
+  assert.match(body, /^ {2}- kept$/m);
   assert.deepEqual(parseDenied(body), [{ from: 'SECURITY.md', reason }]);
   // The two older shapes are still read as decisions.
   assert.deepEqual(
@@ -550,7 +544,7 @@ test('a demand that wraps over two lines is read whole, and its outcome lands af
   const p = createProject(db, { name: 'Acme', repoPath: join(work, 'acme') }, pkgRoot);
   writeFileSync(join(p.repo_path, '.kortext', 'SECURITY.md'), body, 'utf8');
   // Refusing a wrapped request moves the whole of it, not just its first line.
-  markRequestHandled(p, 'SECURITY.md', 'STACK.md', reason, 'prime: kept');
+  markRequestHandled(p, 'SECURITY.md', 'STACK.md', reason, 'kept');
   const after = readFileSync(join(p.repo_path, '.kortext', 'SECURITY.md'), 'utf8');
   assert.deepEqual(parseIncoming(after), [{ from: 'API.md', reason: 'tek satır, sarmalanmamış.' }]);
   assert.deepEqual(parseDenied(after), [{ from: 'STACK.md', reason }]);

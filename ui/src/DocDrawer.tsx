@@ -8,6 +8,7 @@ import { api, type DocInfo, type DocVersion, type Project } from './api';
 // carry: documents written before the rename are still on disk.
 const QUESTIONS = /^(open )?questions( for prime)?$/i;
 const CHANGE_REQUESTS = /^(change|revision) requests$/i;
+const DECISIONS = /^decisions$/i;
 
 interface Note {
   line: number | null;
@@ -256,16 +257,19 @@ export function DocDrawer({
   const [answerBy, setAnswerBy] = useState(project.engine ?? 'agent');
 
   // Distinguish questions for this document from change requests sent to another document.
-  const [openQ, changeReq, outcomes, trailers] = useMemo(() => {
+  const [openQ, changeReq, outcomes, trailers, ledger] = useMemo(() => {
     const asks = new Set<number>();
     const demands = new Set<number>();
+    // The ledger reads as prose, not as a list: the request, and the reason
+    // under it. Bullets would make it look like work.
+    const ledger = new Map<number, 'request' | 'reason'>();
     // A change request in the body is read as a status, not a checkbox: the
     // box looked like something to do, and the outcome line under it said in a
     // sentence what one word says. The word replaces both; the sentence stays
     // in the file and in the tooltip.
     const outcomes = new Map<number, Outcome>();
     const trailers = new Set<number>();
-    let section: 'ask' | 'demand' | null = null;
+    let section: 'ask' | 'demand' | 'decision' | null = null;
     for (let i = 0; i < tokens.length; i++) {
       const t = tokens[i]!;
       if (t.kind === 'h1' || t.kind === 'h2' || t.kind === 'h3') {
@@ -273,9 +277,14 @@ export function DocDrawer({
           ? 'ask'
           : CHANGE_REQUESTS.test(t.text.trim())
             ? 'demand'
-            : null;
+            : DECISIONS.test(t.text.trim())
+              ? 'decision'
+              : null;
       }
       if (section === 'ask') asks.add(t.index);
+      if (section === 'decision' && t.kind === 'bullet') {
+        ledger.set(t.index, (t.depth ?? 0) > 0 ? 'reason' : 'request');
+      }
       if (section !== 'demand' || t.kind !== 'bullet') continue;
       // One heading, two directions. A line `from` another document is what it
       // asked of this one — waiting, accepted or denied here. A bare line is
@@ -305,7 +314,7 @@ export function DocDrawer({
         said: state === 'outgoing' ? `Goes to ${task[3]} when you approve this document` : said,
       });
     }
-    return [asks, demands, outcomes, trailers] as const;
+    return [asks, demands, outcomes, trailers, ledger] as const;
   }, [tokens]);
 
   // The questions themselves, in the order the body numbers them. The panel
@@ -732,6 +741,7 @@ export function DocDrawer({
                   noteLabel={lineLabel.get(t.index)}
                   changeRequest={changeReq.has(t.index)}
                   outcome={outcomes.get(t.index)}
+                  decision={ledger.get(t.index)}
                   replaced={replaced.get(t.index)}
                   selected={selected === t.index}
                   noted={notes.some((n) => n.line === t.index)}
@@ -1328,6 +1338,7 @@ function DocBlock({
   changeRequest,
   outcome,
   replaced,
+  decision,
   questionNo,
   noteLabel,
   changed,
@@ -1342,6 +1353,8 @@ function DocBlock({
   outcome?: Outcome;
   /** What this block replaced, when it changed since the last write. */
   replaced?: MdToken[];
+  /** A line of the Decisions ledger: the request, or the reason under it. */
+  decision?: 'request' | 'reason';
   questionNo?: number;
   noteLabel?: string;
   changed?: boolean;
@@ -1361,7 +1374,7 @@ function DocBlock({
     },
   };
   if (token.kind === 'blank') return <div className="kx-blank" />;
-  const cls = `kx-block kx-${token.kind}${selected ? ' selected' : ''}${noted ? ' noted' : ''}${openQuestion ? ' open-q' : ''}${changeRequest ? ' req-q' : ''}${questionNo || noteLabel ? ' kx-numbered' : ''}${changed ? ' kx-changed' : ''}`;
+  const cls = `kx-block kx-${token.kind}${selected ? ' selected' : ''}${noted ? ' noted' : ''}${openQuestion ? ' open-q' : ''}${changeRequest ? ' req-q' : ''}${questionNo || noteLabel ? ' kx-numbered' : ''}${changed ? ' kx-changed' : ''}${decision ? ` kx-decision-${decision}` : ''}`;
   if (token.kind === 'table' && token.table) {
     return (
       <div className={cls} {...activation}>

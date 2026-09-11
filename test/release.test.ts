@@ -213,7 +213,7 @@ test('one press settles the whole list: the accepted share a rewrite, the refuse
   const product = readFileSync(docPath(p, 'PRODUCT.md'), 'utf8');
   assert.match(
     product,
-    /## Decisions\n\n- `SECURITY.md` — list the personal data\n {2}- prime: no change made/,
+    /## Decisions\n\n- `SECURITY.md` — list the personal data\n {2}- no change made/,
   );
   assert.doesNotMatch(product, /from `SECURITY.md`/);
   assert.doesNotMatch(product, /## Conflicts/);
