@@ -391,19 +391,39 @@ export function DocDrawer({
     const after = mergeWrappedLines(parseMarkdown(stripFrontmatter(content)));
     const marks = new Set<number>();
     const gone = new Map<number, MdToken[]>();
-    let pending: MdToken[] = [];
+    // A hunk is a run of removed and added blocks with nothing kept between
+    // them. Inside it the i-th removed block is read as what the i-th added
+    // block replaced — a rewritten paragraph pairs with its own old text, not
+    // with the first new block in sight. Leftover old blocks go to the last new
+    // one; a hunk with nothing added hands its old blocks to the next kept block.
+    let removed: MdToken[] = [];
+    let added: MdToken[] = [];
+    const settle = (fallback?: MdToken) => {
+      if (added.length > 0) {
+        added.forEach((a, i) => {
+          const old = i < added.length - 1 ? removed.slice(i, i + 1) : removed.slice(i);
+          if (old.length > 0) gone.set(a.index, old);
+        });
+      } else if (removed.length > 0 && fallback) {
+        gone.set(fallback.index, removed);
+      }
+      removed = [];
+      added = [];
+    };
     for (const d of lcsDiff(before, after, (t) => `${t.kind}\u0000${t.text}`)) {
+      if (d.item.kind === 'blank') continue;
       if (d.sign === '-') {
-        if (d.item.kind !== 'blank') pending.push(d.item);
+        removed.push(d.item);
         continue;
       }
-      if (d.sign === '+' && d.item.kind !== 'blank') marks.add(d.item.index);
-      // Removed blocks belong to whatever survived them.
-      if (pending.length > 0 && d.item.kind !== 'blank') {
-        gone.set(d.item.index, pending);
-        pending = [];
+      if (d.sign === '+') {
+        marks.add(d.item.index);
+        added.push(d.item);
+        continue;
       }
+      settle(d.item);
     }
+    settle();
     return [marks, gone] as [Set<number>, Map<number, MdToken[]>];
   }, [previous, content]);
 
