@@ -272,17 +272,20 @@ export function DocDrawer({
       }
       if (section === 'ask') asks.add(t.index);
       if (section !== 'demand' || t.kind !== 'bullet') continue;
-      const task = t.text.match(/^\[([ xX])\]\s*/);
+      // With its box, or without one — an older agent wrote the line bare, and
+      // a bare line under this heading is an open request all the same.
+      const task = t.text.match(/^(?:\[([ xX])\]\s*)?`[A-Za-z][\w./-]*\.md`/);
       if (!task) continue;
+      const box = task[1] ?? ' ';
       // Highlight only open requests; keep settled requests visible as history.
-      if (task[1] === ' ') demands.add(t.index);
+      if (box === ' ') demands.add(t.index);
       const next = tokens[i + 1];
       const trailer =
         next && next.kind === 'bullet' && (next.depth ?? 0) > (t.depth ?? 0) ? next : null;
       if (trailer) trailers.add(trailer.index);
       const said = trailer?.text.trim() ?? '';
       const state =
-        task[1] === ' ' ? 'waiting' : /^(denied|dismissed)/i.test(said) ? 'denied' : 'accepted';
+        box === ' ' ? 'waiting' : /^(denied|dismissed)/i.test(said) ? 'denied' : 'accepted';
       outcomes.set(t.index, { state, said });
     }
     return [asks, demands, outcomes, trailers] as const;
@@ -1301,7 +1304,7 @@ function DocBlock({
             [+]
           </span>
         ))}
-      {task && outcome ? (
+      {outcome ? (
         <>
           <span
             className={`kx-outcome kx-outcome-${outcome.state} mono`}
@@ -1310,7 +1313,7 @@ function DocBlock({
             {outcome.state}
           </span>
           <span className="kx-task-text">
-            <Inline text={task[2] ?? ''} />
+            <Inline text={task ? (task[2] ?? '') : token.text} />
           </span>
         </>
       ) : task ? (
