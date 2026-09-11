@@ -15,6 +15,15 @@ interface Note {
   text: string;
 }
 
+interface Decision {
+  from: string;
+  reason: string;
+  what: 'accept' | 'deny';
+  note: string;
+}
+
+const keyOf = (r: { from: string; reason: string }) => `${r.from}: ${r.reason}`;
+
 // A, B, ... Z, AA — spreadsheet columns, so a long review never runs out of marks.
 function letter(n: number): string {
   return n < 26 ? String.fromCharCode(65 + n) : letter(Math.floor(n / 26) - 1) + letter(n % 26);
@@ -51,6 +60,10 @@ export function DocDrawer({
   const [draft, setDraft] = useState('');
   const [selected, setSelected] = useState<number | null>(null);
   const [notes, setNotes] = useState<Note[]>([]);
+  // Decisions on the change requests, keyed by `from: reason`, with the note
+  // that rides along. They live beside the notes because they are sent with
+  // them, in the one rewrite the footer button starts.
+  const [decided, setDecided] = useState<Record<string, Decision>>({});
   const [explains, setExplains] = useState<Explain[]>([]);
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState(false); // DESIGN.md drawn, not read
@@ -77,6 +90,7 @@ export function DocDrawer({
     setRawEdit(false);
     setSelected(null);
     setNotes([]);
+    setDecided({});
     setExplains([]);
     setErr(null);
     // Clear prior content before loading so stale text cannot be saved into the new document.
@@ -225,10 +239,6 @@ export function DocDrawer({
   // Use question numbers in note labels instead of truncated excerpts.
   const qNo = useMemo(() => new Map(questions.map((q) => [q.index, q.no])), [questions]);
 
-  const trayNotes = notes
-    .map((n, i) => ({ n, i }))
-    .filter(({ n }) => !(actionNeeded && n.line !== null && qNo.has(n.line)));
-
   /**
    * What this write changed, compared block by block rather than line by line.
    *
@@ -306,6 +316,34 @@ export function DocDrawer({
         notes.map((n) => (n.excerpt ? `[${n.excerpt}] ${n.text}` : n.text)),
       );
       setNotes([]);
+      onClose();
+    });
+
+  // Everything the footer collected goes in one press: the answers and notes,
+  // the accepted requests and the denied ones. One press, because they all
+  // rewrite this document and a document is rewritten once.
+  const decisions = Object.values(decided);
+  const accepting = decisions.filter((d) => d.what === 'accept');
+  const denying = decisions.filter((d) => d.what === 'deny');
+  const written = doc?.hasProducingStep ?? false;
+  const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+  const summary = [
+    notes.length > 0 && written ? plural(notes.length, 'note added', 'notes added') : null,
+    accepting.length > 0 && written
+      ? plural(accepting.length, 'revision accepted', 'revisions accepted')
+      : null,
+    denying.length > 0 ? plural(denying.length, 'revision denied', 'revisions denied') : null,
+  ].filter(Boolean);
+  const applyAll = () =>
+    act(async () => {
+      await api.settleRequests(project.id, {
+        rel: doc.rel,
+        apply: written ? accepting.map(({ from, reason, note }) => ({ from, reason, note })) : [],
+        deny: denying.map(({ from, reason, note }) => ({ from, reason, note })),
+        answers: written ? notes.map((n) => (n.excerpt ? `[${n.excerpt}] ${n.text}` : n.text)) : [],
+      });
+      setNotes([]);
+      setDecided({});
       onClose();
     });
 
@@ -475,23 +513,13 @@ export function DocDrawer({
             project={project}
             doc={doc}
             questions={questions}
-            answers={notes}
             explains={explains}
             answerBy={answerBy}
             onAsk={ask}
             onNote={addLineNote}
-            onDropNote={(line) => setNotes((ns) => ns.filter((n) => n.line !== line))}
-            extra={
-              doc.hasProducingStep ? null : (
-                <button className="btn btn-primary" disabled={busy} onClick={proposeFix}>
-                  {busy ? 'Drafting…' : 'Draft the change'}
-                </button>
-              )
+            onDecide={(r, what, note) =>
+              setDecided((d) => ({ ...d, [keyOf(r)]: { ...r, what, note } }))
             }
-            onApplied={() => {
-              setNotes([]);
-              onChanged();
-            }}
           />
         )}
         {editing ? (
@@ -586,15 +614,13 @@ export function DocDrawer({
           </div>
         )}
       </div>
-      {/* The footer asks about lines of the document; the preview has none. */}
+      {/* The footer collects what the drawer decided — notes on lines, answers to
+          questions, decisions on change requests — and sends it in one press. */}
       {!editing && !preview && doc.status !== 'uninitialized' && (
         <div className="dr-foot">
-          {/* An answer to a listed question is shown under that question, in
-              the Action Needed list; the tray carries only the notes that have
-              no row of their own up there. */}
-          {trayNotes.length > 0 ? (
+          {notes.length > 0 || decisions.length > 0 ? (
             <div className="kx-notes">
-              {trayNotes.map(({ n, i }) => (
+              {notes.map((n, i) => (
                 <div key={i} className="kx-note">
                   {n.line !== null && lineLabel.has(n.line) ? (
                     <button
@@ -624,24 +650,65 @@ export function DocDrawer({
                   </button>
                 </div>
               ))}
+              {decisions.map((d) => (
+                <div key={keyOf(d)} className="kx-note">
+                  <span className="kx-note-exc mono">{d.from.replace(/\.md$/, '')}</span>
+                  <span className="kx-note-body">
+                    <span className={`kx-decision kx-decision-${d.what}`}>
+                      {d.what === 'accept' ? 'accepted' : 'denied'}
+                    </span>
+                    {d.note && ` — ${d.note}`}
+                  </span>
+                  <button
+                    className="btn btn-x"
+                    title="Take the decision back"
+                    onClick={() =>
+                      setDecided((all) => {
+                        const next = { ...all };
+                        delete next[keyOf(d)];
+                        return next;
+                      })
+                    }
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
             </div>
           ) : (
             <span className="kx-cmd-hint">
-              Click a line: chat with its author right below (Ask) or collect a revision note (Add
-              note).
+              {actionNeeded
+                ? 'Pick a row above, or click a line of the document — what you decide collects here.'
+                : 'Click a line: chat with its author right below (Ask) or collect a revision note (Add note).'}
             </span>
           )}
-          {/* One button at a time: when the Action Needed list is up, its Apply
-              carries these notes too, and a second button here would start a
-              rewrite the first one has already claimed. */}
           <div className="kx-note-input">
-            {!doc.hasProducingStep ? (
+            {actionNeeded ? (
+              <>
+                <span className="kx-changebar-summary">
+                  {summary.length > 0 ? `${summary.join(' — ')}.` : 'Nothing selected yet.'}
+                </span>
+                {!written && (
+                  <button className="btn btn-secondary" disabled={busy} onClick={proposeFix}>
+                    {busy ? 'Drafting…' : 'Draft the change'}
+                  </button>
+                )}
+                <button
+                  className="btn btn-primary"
+                  disabled={busy || summary.length === 0}
+                  onClick={applyAll}
+                  title={
+                    written
+                      ? 'One rewrite carries the answers and the accepted changes together'
+                      : 'Denials are recorded as conflicts; nothing is rewritten'
+                  }
+                >
+                  Apply
+                </button>
+              </>
+            ) : !written ? (
               <span className="kx-cmd-hint">
                 No agent writes this document — use Edit to change it yourself.
-              </span>
-            ) : actionNeeded ? (
-              <span className="kx-cmd-hint">
-                These go up with the Action Needed list, in one rewrite.
               </span>
             ) : (
               <button
@@ -744,56 +811,38 @@ function RelatedDocuments({ doc, docs }: { doc: DocInfo; docs: DocInfo[] }) {
 }
 
 /**
- * Everything owed on this document, in one list under one button.
+ * Everything owed on this document, in one list.
  *
  * Two groups, because they read differently — questions the agent left for
- * prime, and change requests arriving from other documents. One Apply, because
- * both rewrite THIS document and a document is rewritten once: two presses
- * would start a run and have the second come back refused. The single commit is
- * also the better thing, not just the possible one — the agent sees the answers
- * and the accepted changes at the same time.
- *
- * Every row has the same three moves. `Ask` opens the input, where the answer
- * or the note is written. `Accept` and `Deny` are decisions, and they work like
- * Add note does: each adds the row to the button below, pressing it again takes
- * the row back out. A row prime has not decided is not sent.
+ * prime, and change requests arriving from other documents. The list only
+ * selects: click a row and its moves open under it, Ask · Add note for a
+ * question, Ask · Accept · Deny for a request. What prime decides collects in
+ * the footer, beside the notes on lines, and goes out in one press from there.
+ * One press, because both groups rewrite THIS document and a document is
+ * rewritten once.
  */
 function ActionNeeded({
   project,
   doc,
   questions,
-  answers,
   explains,
   answerBy,
   onAsk,
   onNote,
-  onDropNote,
-  extra,
-  onApplied,
+  onDecide,
 }: {
   project: Project;
   doc: DocInfo;
   /** The bullets under the questions heading, numbered as the body numbers them. */
   questions: Array<{ index: number; no: number; text: string }>;
-  /** Notes prime has collected — the answers, and anything said about a line. */
-  answers: Note[];
   explains: Explain[];
   answerBy: string;
   onAsk: (line: number, question: string) => void;
   onNote: (line: number, text: string) => void;
-  onDropNote: (line: number) => void;
-  /** Draft the change yourself, when no agent writes this document. */
-  extra?: React.ReactNode;
-  onApplied: () => void;
+  onDecide: (r: { from: string; reason: string }, what: 'accept' | 'deny', note: string) => void;
 }) {
-  const keyOf = (r: { from: string; reason: string }) => `${r.from}: ${r.reason}`;
-  const [decided, setDecided] = useState<Record<string, 'accept' | 'deny'>>({});
-  const [notes, setNotes] = useState<Record<string, string>>({});
   const [open, setOpen] = useState<string | null>(null);
   const [chat, setChat] = useState<Array<{ key: string; q: string; a: string | null }>>([]);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-  const [settled, setSettled] = useState(false);
 
   // Ask the document that made the request, in its own voice.
   const askFrom = (r: { from: string; reason: string }, q: string) => {
@@ -807,54 +856,6 @@ function ActionNeeded({
       .then((res) => fill(res.answer))
       .catch((e) => fill(`— ${(e as Error).message}`));
   };
-
-  const requests = settled ? [] : doc.revisionRequests;
-  const accepting = requests.filter((r) => decided[keyOf(r)] === 'accept');
-  const denying = requests.filter((r) => decided[keyOf(r)] === 'deny');
-  const written = doc.hasProducingStep;
-  // Denials change no text, so they can be settled on a document no agent writes.
-  const startsRun = written && (accepting.length > 0 || answers.length > 0);
-
-  const decide = (key: string, what: 'accept' | 'deny', note: string) => {
-    setDecided((d) => ({ ...d, [key]: what }));
-    if (note) setNotes((n) => ({ ...n, [key]: note }));
-    setOpen(null);
-  };
-
-  const apply = async () => {
-    setBusy(true);
-    setErr(null);
-    try {
-      await api.settleRequests(project.id, {
-        rel: doc.rel,
-        apply: written
-          ? accepting.map((r) => ({ from: r.from, reason: r.reason, note: notes[keyOf(r)] }))
-          : [],
-        deny: denying.map((r) => ({ from: r.from, reason: r.reason, note: notes[keyOf(r)] })),
-        answers: startsRun
-          ? answers.map((n) => (n.excerpt ? `[${n.excerpt}] ${n.text}` : n.text))
-          : [],
-      });
-      // The list only clears on the next refresh; hide it now so the button
-      // cannot be pressed a second time for a press the server would refuse.
-      setSettled(true);
-      onApplied();
-    } catch (e) {
-      setErr((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  // What the button will send, said in full above it.
-  const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
-  const summary = [
-    answers.length > 0 && written ? plural(answers.length, 'note added', 'notes added') : null,
-    accepting.length > 0 && written
-      ? plural(accepting.length, 'revision accepted', 'revisions accepted')
-      : null,
-    denying.length > 0 ? plural(denying.length, 'revision denied', 'revisions denied') : null,
-  ].filter(Boolean);
 
   // A row is selected by clicking it, and the input opens underneath.
   const select = (key: string) => ({
@@ -873,28 +874,27 @@ function ActionNeeded({
     },
   });
 
+  const requests = doc.revisionRequests;
   if (requests.length === 0 && questions.length === 0) return null;
   return (
     <div className="kx-doc-changebar">
       <div className="kx-changebar-title">Action Needed</div>
       <div className="kx-changebar-head">
-        Nothing here is written until you press the button below, and it all goes into one rewrite.
+        Pick a row. What you answer or decide collects at the bottom, and goes into one rewrite when
+        you press Apply.
       </div>
-      {err && <div className="kx-error">{err}</div>}
 
       {questions.length > 0 && (
         <>
           <div className="kx-changebar-group">Clarify</div>
           <ul className="kx-changebar-list">
             {questions.map((q) => {
-              const note = answers.find((n) => n.line === q.index);
               const thread = explains.filter((x) => x.line === q.index);
               const key = `q${q.index}`;
               return (
                 <li key={key} className={open === key ? 'kx-req-open' : ''}>
                   <span className="kx-req-text" {...select(key)}>
                     <span className="mono">Q{q.no}</span> — {q.text}
-                    {note && <span className="kx-req-state mono">added</span>}
                   </span>
                   {(thread.length > 0 || open === key) && (
                     <LineThread
@@ -907,19 +907,6 @@ function ActionNeeded({
                         setOpen(null);
                       }}
                     />
-                  )}
-                  {note && (
-                    <div className="kx-req-note">
-                      <span className="kx-req-note-who mono">answer</span>
-                      <span className="kx-req-note-body">{note.text}</span>
-                      <button
-                        className="btn btn-x"
-                        title="Take the answer back"
-                        onClick={() => onDropNote(q.index)}
-                      >
-                        ×
-                      </button>
-                    </div>
                   )}
                 </li>
               );
@@ -939,11 +926,6 @@ function ActionNeeded({
                 <li key={key} className={open === key ? 'kx-req-open' : ''}>
                   <span className="kx-req-text" {...select(key)}>
                     <span className="mono">{r.from.replace(/\.md$/, '')}</span> — {r.reason}
-                    {decided[key] && (
-                      <span className="kx-req-state mono">
-                        {decided[key] === 'accept' ? 'accepted' : 'denied'}
-                      </span>
-                    )}
                   </span>
                   {(talk.length > 0 || open === key) && (
                     <LineThread
@@ -951,28 +933,17 @@ function ActionNeeded({
                       active={open === key}
                       answerBy={r.from.replace(/\.md$/, '')}
                       onAsk={(q) => askFrom(r, q)}
-                      onNote={(text) => setNotes((n) => ({ ...n, [key]: text }))}
-                      onDecide={written ? (what, note) => decide(key, what, note) : undefined}
+                      onNote={() => {}}
+                      onDecide={(what, note) => {
+                        onDecide(r, what, note);
+                        setOpen(null);
+                      }}
+                      cannotAccept={
+                        doc.hasProducingStep
+                          ? undefined
+                          : 'No agent writes this document — press Draft the change below'
+                      }
                     />
-                  )}
-                  {notes[key] && (
-                    <div className="kx-req-note">
-                      <span className="kx-req-note-who mono">note</span>
-                      <span className="kx-req-note-body">{notes[key]}</span>
-                      <button
-                        className="btn btn-x"
-                        title="Take the note back"
-                        onClick={() =>
-                          setNotes((n) => {
-                            const next = { ...n };
-                            delete next[key];
-                            return next;
-                          })
-                        }
-                      >
-                        ×
-                      </button>
-                    </div>
                   )}
                 </li>
               );
@@ -980,26 +951,6 @@ function ActionNeeded({
           </ul>
         </>
       )}
-
-      {/* One button for the whole list, with what it will send said in full. */}
-      <div className="kx-changebar-actions">
-        <span className="kx-changebar-summary">
-          {summary.length > 0 ? `${summary.join(' — ')}.` : 'Nothing selected yet.'}
-        </span>
-        <button
-          className="btn btn-primary"
-          disabled={busy || summary.length === 0}
-          onClick={() => void apply()}
-          title={
-            startsRun
-              ? 'One rewrite carries the answers and the accepted changes together'
-              : 'Denials are recorded as conflicts; nothing is rewritten'
-          }
-        >
-          {busy ? 'Sending…' : 'Apply'}
-        </button>
-        {extra}
-      </div>
     </div>
   );
 }
@@ -1398,6 +1349,7 @@ function LineThread({
   onAsk,
   onNote,
   onDecide,
+  cannotAccept,
 }: {
   thread: Explain[];
   active: boolean;
@@ -1409,6 +1361,8 @@ function LineThread({
    * Ask · Accept · Deny, and whatever is in the box rides along as the note.
    */
   onDecide?: (what: 'accept' | 'deny', note: string) => void;
+  /** No agent writes this document, so nothing can be accepted on its behalf. */
+  cannotAccept?: string;
 }) {
   const [text, setText] = useState('');
   const box = useRef<HTMLDivElement>(null);
@@ -1469,6 +1423,8 @@ function LineThread({
               <>
                 <button
                   className="btn btn-primary"
+                  disabled={!!cannotAccept}
+                  title={cannotAccept ?? ''}
                   onClick={() => {
                     onDecide('accept', text.trim());
                     setText('');
