@@ -676,6 +676,7 @@ export function DocDrawer({
                   noteLabel={lineLabel.get(t.index)}
                   changeRequest={changeReq.has(t.index)}
                   outcome={outcomes.get(t.index)}
+                  replaced={replaced.get(t.index)}
                   selected={selected === t.index}
                   noted={notes.some((n) => n.line === t.index)}
                   onSelect={() => {
@@ -699,7 +700,6 @@ export function DocDrawer({
                       }}
                     />
                   )}
-                {replaced.has(t.index) && <RemovedToggle tokens={replaced.get(t.index)!} />}
               </div>
             ))}
           </div>
@@ -1097,36 +1097,6 @@ function ActionNeeded({
   );
 }
 
-/**
- * The text this block replaced, folded away. A sibling of the block rather than
- * a child: the block's wrapper is itself a click target, and a button nested in
- * it would open the line's thread on the way past.
- */
-function RemovedToggle({ tokens }: { tokens: MdToken[] }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="kx-removed">
-      <button
-        className="kx-removed-toggle mono"
-        onClick={(e) => {
-          e.stopPropagation();
-          setOpen(!open);
-        }}
-        title={open ? 'Hide what this replaced' : 'Show what this replaced'}
-      >
-        [{open ? '−' : '+'}]
-      </button>
-      {open && (
-        <div className="kx-removed-body">
-          {tokens.map((t, i) => (
-            <div key={i}>{t.text}</div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 function CopyButton({ text }: { text: string }) {
   const [done, setDone] = useState(false);
   useEffect(() => {
@@ -1197,6 +1167,7 @@ function DocBlock({
   openQuestion,
   changeRequest,
   outcome,
+  replaced,
   questionNo,
   noteLabel,
   changed,
@@ -1209,11 +1180,14 @@ function DocBlock({
   changeRequest?: boolean;
   /** A change request's status word, in place of its box. */
   outcome?: Outcome;
+  /** What this block replaced, when it changed since the last write. */
+  replaced?: MdToken[];
   questionNo?: number;
   noteLabel?: string;
   changed?: boolean;
   onSelect: () => void;
 }) {
+  const [showOld, setShowOld] = useState(false);
   const activation = {
     role: 'button',
     tabIndex: 0,
@@ -1307,6 +1281,26 @@ function DocBlock({
       ) : noteLabel ? (
         <span className="kx-qno mono">{noteLabel}</span>
       ) : null}
+      {/* A changed block wears a [+] rather than a colour. Press it and what
+          the text replaced unfolds beneath, faded; [−] folds it back. A block
+          that replaced nothing is simply new, and the mark says so. */}
+      {changed &&
+        (replaced ? (
+          <button
+            className="kx-removed-toggle mono"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowOld(!showOld);
+            }}
+            title={showOld ? 'Hide what this replaced' : 'Show what this replaced'}
+          >
+            [{showOld ? '−' : '+'}]
+          </button>
+        ) : (
+          <span className="kx-removed-toggle mono" title="New since the last write">
+            [+]
+          </span>
+        ))}
       {task && outcome ? (
         <>
           <span
@@ -1334,6 +1328,13 @@ function DocBlock({
         </>
       ) : (
         <Inline text={token.text} />
+      )}
+      {showOld && replaced && (
+        <div className="kx-removed-body">
+          {replaced.map((t, i) => (
+            <div key={i}>{t.text}</div>
+          ))}
+        </div>
       )}
     </div>
   );
