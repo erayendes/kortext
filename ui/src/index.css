@@ -2569,6 +2569,35 @@ button.kx-note-exc:hover {
   color: var(--fg-secondary);
   font-size: var(--fs-ui);
 }
+/* A change request's status in the body: one word, three colours, in place of
+   a box that looked like work. Amber waits, green was taken, red was refused. */
+.kx-outcome {
+  flex: none;
+  align-self: baseline;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: 999px;
+  margin-right: var(--sp-2);
+  border: 1px solid transparent;
+}
+.kx-outcome-waiting {
+  color: var(--amber);
+  background: var(--amber-bg);
+  border-color: var(--amber-border);
+}
+.kx-outcome-accepted {
+  color: var(--green);
+  background: var(--green-bg);
+  border-color: var(--green-border, transparent);
+}
+.kx-outcome-denied {
+  color: var(--red);
+  background: var(--red-bg);
+  border-color: var(--red-border);
+}
 /* A decision in the footer tray, said in one word and coloured by it. */
 .kx-decision {
   font-weight: 600;

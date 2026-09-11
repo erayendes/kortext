@@ -15,6 +15,13 @@ interface Note {
   text: string;
 }
 
+/** What became of a change request, read from its box and the line under it. */
+interface Outcome {
+  state: 'waiting' | 'accepted' | 'denied';
+  /** The outcome line as written — who did it, when, and why. */
+  said: string;
+}
+
 interface Decision {
   from: string;
   reason: string;
@@ -23,6 +30,49 @@ interface Decision {
 }
 
 const keyOf = (r: { from: string; reason: string }) => `${r.from}: ${r.reason}`;
+
+/**
+ * What the footer collected, kept in the browser so closing the drawer does not
+ * throw it away. Tied to the document's version: notes point at line indices,
+ * and a rewrite moves every line, so a draft saved against older text is
+ * dropped rather than landing on the wrong lines.
+ */
+const draftKey = (projectId: number, rel: string) => `kx-actions:${projectId}:${rel}`;
+function loadDraft(
+  projectId: number,
+  rel: string,
+  version: string,
+): { notes: Note[]; decided: Record<string, Decision> } | null {
+  try {
+    const raw = localStorage.getItem(draftKey(projectId, rel));
+    if (!raw) return null;
+    const saved = JSON.parse(raw) as {
+      version: string;
+      notes: Note[];
+      decided: Record<string, Decision>;
+    };
+    return saved.version === version ? { notes: saved.notes, decided: saved.decided } : null;
+  } catch {
+    return null;
+  }
+}
+function saveDraft(
+  projectId: number,
+  rel: string,
+  version: string,
+  notes: Note[],
+  decided: Record<string, Decision>,
+): void {
+  try {
+    if (notes.length === 0 && Object.keys(decided).length === 0) {
+      localStorage.removeItem(draftKey(projectId, rel));
+    } else {
+      localStorage.setItem(draftKey(projectId, rel), JSON.stringify({ version, notes, decided }));
+    }
+  } catch {
+    /* storage may be unavailable; the drawer still works for the session */
+  }
+}
 
 // Ephemeral by design: answers live only in panel state, never in the file.
 interface Explain {
@@ -106,6 +156,11 @@ export function DocDrawer({
           setContent(r.content);
           setVersion(r.version);
           setDraft(r.content);
+          const kept = loadDraft(project.id, doc.rel, r.version);
+          if (kept) {
+            setNotes(kept.notes);
+            setDecided(kept.decided);
+          }
           // Only diff against a recorded write. Ticking a demand and appending a
           // recheck's line edit the file without recording, so a stale head
           // would make the previous row the wrong baseline.
@@ -133,6 +188,11 @@ export function DocDrawer({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doc?.rel, project.id]);
+
+  // Keep what the footer collected, so closing the drawer does not lose it.
+  useEffect(() => {
+    if (doc && version) saveDraft(project.id, doc.rel, version, notes, decided);
+  }, [notes, decided, doc, version, project.id]);
 
   // The chosen baseline, fetched on its own so the picker costs one request
   // rather than a reload of the document.
@@ -180,11 +240,18 @@ export function DocDrawer({
   const [answerBy, setAnswerBy] = useState(project.engine ?? 'agent');
 
   // Distinguish questions for this document from change requests sent to another document.
-  const [openQ, changeReq] = useMemo(() => {
+  const [openQ, changeReq, outcomes, trailers] = useMemo(() => {
     const asks = new Set<number>();
     const demands = new Set<number>();
+    // A change request in the body is read as a status, not a checkbox: the
+    // box looked like something to do, and the outcome line under it said in a
+    // sentence what one word says. The word replaces both; the sentence stays
+    // in the file and in the tooltip.
+    const outcomes = new Map<number, Outcome>();
+    const trailers = new Set<number>();
     let section: 'ask' | 'demand' | null = null;
-    for (const t of tokens) {
+    for (let i = 0; i < tokens.length; i++) {
+      const t = tokens[i]!;
       if (t.kind === 'h1' || t.kind === 'h2' || t.kind === 'h3') {
         section = QUESTIONS.test(t.text.trim())
           ? 'ask'
@@ -193,12 +260,21 @@ export function DocDrawer({
             : null;
       }
       if (section === 'ask') asks.add(t.index);
+      if (section !== 'demand' || t.kind !== 'bullet') continue;
+      const task = t.text.match(/^\[([ xX])\]\s*/);
+      if (!task) continue;
       // Highlight only open requests; keep settled requests visible as history.
-      if (section === 'demand' && /^(?:\[ \]\s*)?`[A-Za-z][\w./-]*\.md`/.test(t.text.trim())) {
-        demands.add(t.index);
-      }
+      if (task[1] === ' ') demands.add(t.index);
+      const next = tokens[i + 1];
+      const trailer =
+        next && next.kind === 'bullet' && (next.depth ?? 0) > (t.depth ?? 0) ? next : null;
+      if (trailer) trailers.add(trailer.index);
+      const said = trailer?.text.trim() ?? '';
+      const state =
+        task[1] === ' ' ? 'waiting' : /^(denied|dismissed)/i.test(said) ? 'denied' : 'accepted';
+      outcomes.set(t.index, { state, said });
     }
-    return [asks, demands] as const;
+    return [asks, demands, outcomes, trailers] as const;
   }, [tokens]);
 
   // The questions themselves, in the order the body numbers them. The panel
@@ -221,8 +297,11 @@ export function DocDrawer({
   // Needed list above, so the section is not repeated underneath — it was
   // already asked once. The tokens keep their indices; only the view narrows.
   const shown = useMemo(
-    () => (doc?.status === 'draft' ? tokens.filter((t) => !openQ.has(t.index)) : tokens),
-    [tokens, openQ, doc?.status],
+    () =>
+      tokens.filter(
+        (t) => !trailers.has(t.index) && !(doc?.status === 'draft' && openQ.has(t.index)),
+      ),
+    [tokens, openQ, trailers, doc?.status],
   );
 
   // Anything owed on this document goes into one list under one button.
@@ -601,6 +680,7 @@ export function DocDrawer({
                     questionNo={qNo.get(t.index)}
                     noteLabel={lineLabel.get(t.index)}
                     changeRequest={changeReq.has(t.index)}
+                    outcome={outcomes.get(t.index)}
                     selected={selected === t.index}
                     noted={notes.some((n) => n.line === t.index)}
                     onSelect={() => {
@@ -1121,6 +1201,7 @@ function DocBlock({
   noted,
   openQuestion,
   changeRequest,
+  outcome,
   questionNo,
   noteLabel,
   changed,
@@ -1131,6 +1212,8 @@ function DocBlock({
   noted: boolean;
   openQuestion?: boolean;
   changeRequest?: boolean;
+  /** A change request's status word, in place of its box. */
+  outcome?: Outcome;
   questionNo?: number;
   noteLabel?: string;
   changed?: boolean;
@@ -1229,7 +1312,19 @@ function DocBlock({
       ) : noteLabel ? (
         <span className="kx-qno mono">{noteLabel}</span>
       ) : null}
-      {task ? (
+      {task && outcome ? (
+        <>
+          <span
+            className={`kx-outcome kx-outcome-${outcome.state} mono`}
+            title={outcome.said || 'Not decided yet — it is decided in the document it names'}
+          >
+            {outcome.state}
+          </span>
+          <span className="kx-task-text">
+            <Inline text={task[2] ?? ''} />
+          </span>
+        </>
+      ) : task ? (
         <>
           <input
             type="checkbox"
