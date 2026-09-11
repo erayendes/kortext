@@ -13,6 +13,7 @@ import {
 import {
   analysisComplete,
   deliverRequests,
+  discardOutgoing,
   docPath,
   docVersion,
   listDocs,
@@ -532,10 +533,11 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       const path = reviewedPath(project, req, res);
       if (!path) return;
       const doc = listDocs(db, project, pkgRoot).find((d) => d.rel === String(rel));
-      if (doc?.status !== 'draft' || doc.openQuestions) {
-        return res
-          .status(409)
-          .json({ error: 'Only a draft without open questions can be approved' });
+      if (doc?.status !== 'draft' || doc.openQuestions || doc.outgoing.length > 0) {
+        return res.status(409).json({
+          error:
+            'Only a draft with no open questions and no unsent change requests can be approved',
+        });
       }
       // Template lines the agent never replaced. A real test approved a
       // DATABASE.md still carrying `### Table: `[table_name]``, which then reads
@@ -553,9 +555,9 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
         }
       }
       setFrontmatterStatus(path, 'approved');
-      // Approval is the moment this document's requests become real: each one
-      // travels to the document it names, where it will be decided. Until now
-      // prime could still edit the draft and delete it.
+      // Every request this document sends went out with prime's Send before
+      // approval could pass; this sweep is for documents approved before
+      // requests travelled.
       deliverRequests(project, String(rel));
       // Approving edits the file, so without this the recorded head no longer
       // matches what is on disk and the panel refuses to diff — the diff would
@@ -646,7 +648,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   app.post('/api/projects/:id/docs/settle-requests', (req, res) => {
     const project = projectOr404(req.params.id, res);
     if (!project) return;
-    const { rel, apply, deny, answers } = req.body ?? {};
+    const { rel, apply, deny, answers, send, discard } = req.body ?? {};
     const doc = listDocs(db, project, pkgRoot).find((d) => d.rel === String(rel ?? ''));
     if (!doc) return res.status(404).json({ error: `no such document: ${rel}` });
     const pick = (list: unknown) =>
@@ -661,9 +663,28 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     const applying = pick(apply);
     const denying = pick(deny);
     const said = (Array.isArray(answers) ? answers : []).map(String).filter((a) => a.trim());
-    if (applying.length === 0 && denying.length === 0 && said.length === 0) {
+    // What this document asks of others: sent now, or dropped before it goes.
+    const pickOut = (list: unknown) =>
+      (Array.isArray(list) ? list : [])
+        .map((r: { target?: unknown; reason?: unknown }) =>
+          doc.outgoing.find(
+            (x) => x.target === String(r.target ?? '') && x.reason === String(r.reason ?? ''),
+          ),
+        )
+        .filter((r): r is { target: string; reason: string } => !!r);
+    const sending = pickOut(send);
+    const discarding = pickOut(discard);
+    if (
+      applying.length === 0 &&
+      denying.length === 0 &&
+      said.length === 0 &&
+      sending.length === 0 &&
+      discarding.length === 0
+    ) {
       return res.status(409).json({ error: 'there is nothing left to settle here' });
     }
+    for (const r of discarding) discardOutgoing(project, doc.rel, r.target, r.reason);
+    if (sending.length > 0) deliverRequests(project, doc.rel, sending);
     // A denial is settled in place: the line is ticked and the reason goes
     // under it. That line IS the record — the next agent to rewrite this
     // document reads it here, and the build phase inherits it from here.
@@ -676,9 +697,14 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
         r.note ? `denied by prime — ${r.note}` : 'denied by prime — no change made',
       );
     }
-    // Denials alone change nothing in the text; there is nothing to rewrite.
+    // Denials, sends and discards change nothing in the text; nothing to rewrite.
     if (applying.length === 0 && said.length === 0)
-      return res.json({ applied: 0, denied: denying.length });
+      return res.json({
+        applied: 0,
+        denied: denying.length,
+        sent: sending.length,
+        discarded: discarding.length,
+      });
 
     if (!doc.hasProducingStep) {
       return res
@@ -706,9 +732,13 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       engine,
       pkgRoot,
     ).catch((err) => console.error(`settle-requests follow-up failed for ${doc.rel}:`, err));
-    res
-      .status(202)
-      .json({ applied: applying.length, denied: denying.length, answered: said.length });
+    res.status(202).json({
+      applied: applying.length,
+      denied: denying.length,
+      answered: said.length,
+      sent: sending.length,
+      discarded: discarding.length,
+    });
   });
 
   // Return line-anchored Q&A without modifying documents; CLI output is logged.

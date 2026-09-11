@@ -24,13 +24,17 @@ interface Outcome {
 }
 
 interface Decision {
-  from: string;
+  /** An incoming request is accepted or denied; an outgoing one is sent or discarded. */
+  kind: 'incoming' | 'outgoing';
+  /** The other document — who asked, or who is asked. */
+  other: string;
   reason: string;
   what: 'accept' | 'deny';
   note: string;
 }
 
-const keyOf = (r: { from: string; reason: string }) => `${r.from}: ${r.reason}`;
+const keyOf = (r: { from: string; reason: string }) => `in:${r.from}: ${r.reason}`;
+const keyOut = (r: { target: string; reason: string }) => `out:${r.target}: ${r.reason}`;
 
 /** SQLite's UTC `YYYY-MM-DD HH:MM:SS`, shown as a local `dd.MM.yyyy HH:mm:ss`. */
 function stamp(createdAt: string): string {
@@ -329,7 +333,10 @@ export function DocDrawer({
         (t) =>
           !trailers.has(t.index) &&
           !(doc?.status === 'draft' && openQ.has(t.index)) &&
-          !(doc?.status !== 'uninitialized' && outcomes.get(t.index)?.state === 'waiting'),
+          !(
+            doc?.status !== 'uninitialized' &&
+            ['waiting', 'outgoing'].includes(outcomes.get(t.index)?.state ?? '')
+          ),
       ),
     [tokens, openQ, trailers, outcomes, doc?.status],
   );
@@ -338,7 +345,7 @@ export function DocDrawer({
   const actionNeeded =
     doc !== null &&
     doc.status !== 'uninitialized' &&
-    (doc.revisionRequests.length > 0 || questions.length > 0);
+    (doc.revisionRequests.length > 0 || doc.outgoing.length > 0 || questions.length > 0);
 
   // Use question numbers in note labels instead of truncated excerpts.
   const qNo = useMemo(() => new Map(questions.map((q) => [q.index, q.no])), [questions]);
@@ -427,8 +434,10 @@ export function DocDrawer({
   // the accepted requests and the denied ones. One press, because they all
   // rewrite this document and a document is rewritten once.
   const decisions = Object.values(decided);
-  const accepting = decisions.filter((d) => d.what === 'accept');
-  const denying = decisions.filter((d) => d.what === 'deny');
+  const accepting = decisions.filter((d) => d.kind === 'incoming' && d.what === 'accept');
+  const denying = decisions.filter((d) => d.kind === 'incoming' && d.what === 'deny');
+  const sending = decisions.filter((d) => d.kind === 'outgoing' && d.what === 'accept');
+  const discarding = decisions.filter((d) => d.kind === 'outgoing' && d.what === 'deny');
   const written = doc?.hasProducingStep ?? false;
   const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
   // An answer to a listed question and a note on a line are counted apart —
@@ -442,14 +451,22 @@ export function DocDrawer({
       ? plural(accepting.length, 'request accepted', 'requests accepted')
       : null,
     denying.length > 0 ? plural(denying.length, 'request denied', 'requests denied') : null,
+    sending.length > 0 ? plural(sending.length, 'request sent', 'requests sent') : null,
+    discarding.length > 0
+      ? plural(discarding.length, 'request discarded', 'requests discarded')
+      : null,
   ].filter(Boolean);
   const applyAll = () =>
     act(async () => {
       await api.settleRequests(project.id, {
         rel: doc.rel,
-        apply: written ? accepting.map(({ from, reason, note }) => ({ from, reason, note })) : [],
-        deny: denying.map(({ from, reason, note }) => ({ from, reason, note })),
+        apply: written
+          ? accepting.map(({ other, reason, note }) => ({ from: other, reason, note }))
+          : [],
+        deny: denying.map(({ other, reason, note }) => ({ from: other, reason, note })),
         answers: written ? notes.map((n) => (n.excerpt ? `[${n.excerpt}] ${n.text}` : n.text)) : [],
+        send: sending.map(({ other, reason }) => ({ target: other, reason })),
+        discard: discarding.map(({ other, reason }) => ({ target: other, reason })),
       });
       setNotes([]);
       setDecided({});
@@ -560,8 +577,14 @@ export function DocDrawer({
             // Require open questions to be resolved before approval.
             <button
               className="btn btn-success"
-              disabled={busy || doc.openQuestions}
-              title={doc.openQuestions ? 'Answer the open questions in this document first' : ''}
+              disabled={busy || doc.openQuestions || doc.outgoing.length > 0}
+              title={
+                doc.openQuestions
+                  ? 'Answer the open questions in this document first'
+                  : doc.outgoing.length > 0
+                    ? 'Send or discard the outgoing requests first'
+                    : ''
+              }
               onClick={approve}
             >
               Approve
@@ -661,7 +684,16 @@ export function DocDrawer({
             answered={new Set(notes.map((n) => n.line).filter((l): l is number => l !== null))}
             decided={decided}
             onDecide={(r, what, note) =>
-              setDecided((d) => ({ ...d, [keyOf(r)]: { ...r, what, note } }))
+              setDecided((d) => ({
+                ...d,
+                [keyOf(r)]: { kind: 'incoming', other: r.from, reason: r.reason, what, note },
+              }))
+            }
+            onDecideOut={(r, what, note) =>
+              setDecided((d) => ({
+                ...d,
+                [keyOut(r)]: { kind: 'outgoing', other: r.target, reason: r.reason, what, note },
+              }))
             }
           />
         )}
@@ -763,6 +795,48 @@ export function DocDrawer({
                       onClick={(e) => {
                         e.stopPropagation();
                         setNotes(notes.filter((_, j) => j !== i));
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                );
+              })}
+              {doc.outgoing.map((r, i) => {
+                const d = decided[keyOut(r)];
+                if (!d) return null;
+                const target = `kx-out-${i}`;
+                return (
+                  <div
+                    key={target}
+                    className="kx-note"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => goTo(target)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        goTo(target);
+                      }
+                    }}
+                  >
+                    <span className="kx-note-exc mono">outgoing #{i + 1}</span>
+                    <span className="kx-note-body">
+                      to <span className="mono">{r.target.replace(/\.md$/, '')}</span>{' '}
+                      <span className={`kx-decision kx-decision-${d.what}`}>
+                        {d.what === 'accept' ? 'sent' : 'discarded'}
+                      </span>
+                    </span>
+                    <button
+                      className="btn btn-x"
+                      title="Take the decision back"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDecided((all) => {
+                          const next = { ...all };
+                          delete next[keyOut(r)];
+                          return next;
+                        });
                       }}
                     >
                       ×
@@ -969,6 +1043,7 @@ function ActionNeeded({
   onAsk,
   onNote,
   onDecide,
+  onDecideOut,
   answered,
   decided,
 }: {
@@ -981,6 +1056,12 @@ function ActionNeeded({
   onAsk: (line: number, question: string) => void;
   onNote: (line: number, text: string) => void;
   onDecide: (r: { from: string; reason: string }, what: 'accept' | 'deny', note: string) => void;
+  /** Send or discard what this document asks of another. */
+  onDecideOut: (
+    r: { target: string; reason: string },
+    what: 'accept' | 'deny',
+    note: string,
+  ) => void;
   /** Lines that already carry an answer — their box is ticked. */
   answered: Set<number>;
   /** Requests already decided — their box is ticked. */
@@ -998,6 +1079,19 @@ function ActionNeeded({
     const fill = (a: string) => setChat((cs) => cs.map((c) => (c === entry ? { ...c, a } : c)));
     api
       .explainDoc(project.id, r.from, `[asks ${doc.rel}] ${r.reason}`, q, history)
+      .then((res) => fill(res.answer))
+      .catch((e) => fill(`— ${(e as Error).message}`));
+  };
+
+  // Ask this document's own author why it asks another to change.
+  const askOwn = (r: { target: string; reason: string }, q: string) => {
+    const key = keyOut(r);
+    const history = chat.filter((c) => c.key === key && c.a).map((c) => ({ q: c.q, a: c.a! }));
+    const entry = { key, q, a: null as string | null };
+    setChat((cs) => [...cs, entry]);
+    const fill = (a: string) => setChat((cs) => cs.map((c) => (c === entry ? { ...c, a } : c)));
+    api
+      .explainDoc(project.id, doc.rel, `[asks ${r.target}] ${r.reason}`, q, history)
       .then((res) => fill(res.answer))
       .catch((e) => fill(`— ${(e as Error).message}`));
   };
@@ -1020,7 +1114,8 @@ function ActionNeeded({
   });
 
   const requests = doc.revisionRequests;
-  if (requests.length === 0 && questions.length === 0) return null;
+  const outgoing = doc.outgoing;
+  if (requests.length === 0 && outgoing.length === 0 && questions.length === 0) return null;
   return (
     <div className="kx-doc-changebar">
       <div className="kx-changebar-title">Action Needed</div>
@@ -1070,7 +1165,7 @@ function ActionNeeded({
 
       {requests.length > 0 && (
         <>
-          <div className="kx-changebar-group">Change Requests</div>
+          <div className="kx-changebar-group">Incoming Requests</div>
           <ul className="kx-changebar-list">
             {requests.map((r, i) => {
               const key = keyOf(r);
@@ -1104,6 +1199,47 @@ function ActionNeeded({
                           ? undefined
                           : 'No agent writes this document — press Draft the change below'
                       }
+                    />
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      )}
+
+      {outgoing.length > 0 && (
+        <>
+          <div className="kx-changebar-group">Outgoing Requests</div>
+          <ul className="kx-changebar-list">
+            {outgoing.map((r, i) => {
+              const key = keyOut(r);
+              const talk = chat.filter((c) => c.key === key);
+              return (
+                <li key={key} id={`kx-out-${i}`} className={open === key ? 'kx-req-open' : ''}>
+                  <input
+                    type="checkbox"
+                    className="kx-req-check"
+                    checked={key in decided}
+                    readOnly
+                    tabIndex={-1}
+                    aria-hidden="true"
+                  />
+                  <span className="kx-req-text" {...select(key)}>
+                    <span className="mono">to {r.target.replace(/\.md$/, '')}</span> — {r.reason}
+                  </span>
+                  {(talk.length > 0 || open === key) && (
+                    <LineThread
+                      thread={talk.map((c) => ({ line: null, question: c.q, answer: c.a }))}
+                      active={open === key}
+                      answerBy={doc.name}
+                      onAsk={(q) => askOwn(r, q)}
+                      onNote={() => {}}
+                      onDecide={(what, note) => {
+                        onDecideOut(r, what, note);
+                        setOpen(null);
+                      }}
+                      verbs={['Send', 'Discard']}
                     />
                   )}
                 </li>
@@ -1527,6 +1663,7 @@ function LineThread({
   onNote,
   onDecide,
   cannotAccept,
+  verbs = ['Accept', 'Deny'],
 }: {
   thread: Explain[];
   active: boolean;
@@ -1540,6 +1677,8 @@ function LineThread({
   onDecide?: (what: 'accept' | 'deny', note: string) => void;
   /** No agent writes this document, so nothing can be accepted on its behalf. */
   cannotAccept?: string;
+  /** The two decision words — Accept · Deny by default, Send · Discard for an outgoing request. */
+  verbs?: [string, string];
 }) {
   const [text, setText] = useState('');
   const box = useRef<HTMLDivElement>(null);
@@ -1607,7 +1746,7 @@ function LineThread({
                     setText('');
                   }}
                 >
-                  Accept
+                  {verbs[0]}
                 </button>
                 <button
                   className="btn btn-secondary"
@@ -1616,7 +1755,7 @@ function LineThread({
                     setText('');
                   }}
                 >
-                  Deny
+                  {verbs[1]}
                 </button>
               </>
             ) : (

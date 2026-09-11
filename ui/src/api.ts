@@ -41,6 +41,7 @@ export interface DocInfo {
   hasProducingStep: boolean;
   revisionRequests: Array<{ from: string; reason: string }>;
   denied: Array<{ from: string; reason: string }>;
+  outgoing: Array<{ target: string; reason: string }>;
   warnings: Array<{ subject: string; reason: string }>;
   conflicts: Array<{ from: string; reason: string }>;
   section: 'needs' | 'doing' | 'todo' | 'done';
@@ -164,9 +165,11 @@ export const api = {
       apply: Array<{ from: string; reason: string; note?: string }>;
       deny: Array<{ from: string; reason: string; note?: string }>;
       answers: string[];
+      send: Array<{ target: string; reason: string }>;
+      discard: Array<{ target: string; reason: string }>;
     },
   ) =>
-    req<{ applied: number; denied: number; answered?: number }>(
+    req<{ applied: number; denied: number; answered?: number; sent: number; discarded: number }>(
       `/api/projects/${projectId}/docs/settle-requests`,
       { method: 'POST', body: JSON.stringify(body) },
     ),

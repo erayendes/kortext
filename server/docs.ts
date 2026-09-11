@@ -37,6 +37,11 @@ export interface DocInfo {
   /** Requests prime denied here. A record, not work: nothing asks about them again. */
   denied: Array<{ from: string; reason: string }>;
   /**
+   * What this document asks of others and prime has not sent or discarded yet.
+   * Every one must be decided before the document can be approved.
+   */
+  outgoing: Array<{ target: string; reason: string }>;
+  /**
    * Findings about something no document owns — a config file, a workflow, a
    * key. A record the next writer reads, not a decision owed: no buttons, no
    * Action Needed row, no gate on the handshake.
@@ -87,10 +92,13 @@ function fileDoc(doc: DocInfo, job: LastJob | null): Pick<DocInfo, 'section' | '
   if (job?.status === 'failed') return at('needs', 'failed', pass);
   if (doc.status === 'uninitialized') return at('todo', 'waiting', 'queue');
   // Every open Action Needed item blocks approval, so one case covers them all:
-  // questions left for prime and change requests arriving from other documents.
-  // Conflicts and findings are not among them — they are records written into
-  // the document, not decisions owed.
-  if (doc.revisionRequests.length > 0 || (doc.status === 'draft' && doc.openQuestions))
+  // questions left for prime, requests arriving from other documents, and
+  // requests this one wants to send. Findings are not among them — they are
+  // records written into the document, not decisions owed.
+  if (
+    doc.revisionRequests.length > 0 ||
+    (doc.status === 'draft' && (doc.openQuestions || doc.outgoing.length > 0))
+  )
     return at('needs', 'waiting', 'review');
   // A recheck is a reading, not a writing: the document waits either way.
   if (doc.pendingRecheck) return at('todo', 'waiting', 'recheck');
@@ -434,6 +442,31 @@ export function removeRequest(project: Project, rel: string, from: string, reaso
   }
 }
 
+/** Drops what this document asked of another, before it was sent. */
+export function discardOutgoing(project: Project, rel: string, target: string, reason: string) {
+  const path = docPath(project, rel);
+  if (!existsSync(path)) return;
+  const lines = readFileSync(path, 'utf8').split('\n');
+  let inSection = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] ?? '';
+    const h = line.match(/^#{1,6}\s+(.*)$/);
+    if (h) {
+      inSection = CHANGE_REQUESTS.test((h[1] ?? '').trim());
+      continue;
+    }
+    if (!inSection) continue;
+    const m = line.match(MARKED_LINE);
+    if (!m || m[2] || (m[1] ?? '').trim().toLowerCase() === 'x') continue;
+    if (m[3]!.replace(/^\.kortext\//, '') !== target) continue;
+    const [full, afterWrap] = foldWrapped(lines, i, m[4] ?? '');
+    if (full !== reason.trim()) continue;
+    lines.splice(i, afterWrap - i);
+    writeFileSync(path, lines.join('\n'), 'utf8');
+    return;
+  }
+}
+
 /**
  * Settles a denied request in the document it is about: `rel` holds the line,
  * `from` is the document that asked. The line stays, ticked, with prime's
@@ -541,12 +574,19 @@ export function restoreRequests(project: Project, rel: string, priorText: string
  * documents approved before requests travelled. Idempotent: a moved line is
  * gone from its source.
  */
-export function deliverRequests(project: Project, rel: string): number {
+export function deliverRequests(
+  project: Project,
+  rel: string,
+  only?: Array<{ target: string; reason: string }>,
+): number {
   const path = docPath(project, rel);
   if (!existsSync(path)) return 0;
   const text = readFileSync(path, 'utf8');
-  if (readFrontmatter(text).status !== 'approved') return 0;
+  // Without a list this is the sweep for documents approved before requests
+  // travelled; with one it is prime pressing Send on a draft.
+  if (!only && readFrontmatter(text).status !== 'approved') return 0;
   const outgoing = parseOutgoing(text).filter((r) => {
+    if (only && !only.some((o) => o.target === r.target && o.reason === r.reason)) return false;
     try {
       return existsSync(docPath(project, r.target));
     } catch {
@@ -613,6 +653,7 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
         // document can already hold some — they go into its first write.
         revisionRequests: parseIncoming(body),
         denied: parseDenied(body),
+        outgoing: status === 'uninitialized' ? [] : parseOutgoing(body),
         warnings: status === 'uninitialized' ? [] : parseWarnings(body),
         conflicts: status === 'uninitialized' ? [] : parseConflicts(body),
         // Filled once every document is known; nothing can be filed before then.

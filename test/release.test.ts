@@ -199,7 +199,13 @@ test('one press settles the whole list: the accepted share a rewrite, the denied
     deny: [{ from: 'SECURITY.md', reason: 'list the personal data' }],
   });
   assert.equal(res.status, 202);
-  assert.deepEqual(await res.json(), { applied: 1, denied: 1, answered: 0 });
+  assert.deepEqual(await res.json(), {
+    applied: 1,
+    denied: 1,
+    answered: 0,
+    sent: 0,
+    discarded: 0,
+  });
 
   // Both requests travelled to PRODUCT.md when their authors were approved,
   // and both are settled there: the denial ticked with prime's reason under
@@ -249,6 +255,63 @@ test('approving records a version, and the body it records is the same document'
   // this one rather than reporting that nothing changed.
   assert.notEqual(head!.sha, agent!.sha);
   assert.equal(head!.bodySha, agent!.bodySha);
+});
+
+test('an outgoing request is sent or discarded by prime, and holds approval until then', async (t) => {
+  const { p, request } = await fixture(t);
+  const draft = [
+    '---',
+    'status: draft',
+    '---',
+    '',
+    '# Stack',
+    '',
+    '## Change Requests',
+    '',
+    '- `PRODUCT.md` — name the region',
+    '- `PRODUCT.md` — drop the free tier',
+    '',
+  ].join('\n');
+  writeFileSync(docPath(p, 'STACK.md'), draft);
+  writeFileSync(docPath(p, 'PRODUCT.md'), '---\nstatus: approved\n---\n\n# Product\n');
+
+  // Undecided outgoing requests hold approval, like an open question does.
+  assert.equal(
+    (await request('docs/approve', { rel: 'STACK.md', expectedVersion: docVersion(draft) })).status,
+    409,
+  );
+
+  const res = await request('docs/settle-requests', {
+    rel: 'STACK.md',
+    apply: [],
+    deny: [],
+    answers: [],
+    send: [{ target: 'PRODUCT.md', reason: 'name the region' }],
+    discard: [{ target: 'PRODUCT.md', reason: 'drop the free tier' }],
+  });
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), { applied: 0, denied: 0, sent: 1, discarded: 1 });
+
+  // The sent one lives in PRODUCT.md now; the discarded one lives nowhere.
+  const stack = readFileSync(docPath(p, 'STACK.md'), 'utf8');
+  assert.doesNotMatch(stack, /name the region|drop the free tier/);
+  assert.match(
+    readFileSync(docPath(p, 'PRODUCT.md'), 'utf8'),
+    /- \[ \] from `STACK\.md` — name the region/,
+  );
+  assert.doesNotMatch(readFileSync(docPath(p, 'PRODUCT.md'), 'utf8'), /drop the free tier/);
+
+  // Nothing left to decide — approval passes.
+  assert.equal(
+    (
+      await request('docs/approve', {
+        rel: 'STACK.md',
+        expectedVersion: docVersion(stack),
+        force: true,
+      })
+    ).status,
+    200,
+  );
 });
 
 test('a document still wearing the template cannot be approved without insisting', async (t) => {

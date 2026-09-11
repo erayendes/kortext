@@ -122,8 +122,10 @@ The file is the source of truth — no document state is kept in the database.
 **Three sections are machine-read, two of them as work.** `## Questions for Prime` — non-empty
 means the document is waiting on a human. `## Change Requests` — one heading, two directions,
 told apart by one word. `` - `TARGET.md` — reason `` is what this document asks of another; the
-agent writes it while drafting, prime sees it before approving, and on approval `deliverRequests`
-moves it into the target as `` - [ ] from `THIS.md` — reason ``. That `from` line is the request's
+agent writes it while drafting, the panel lists it under Outgoing Requests, and prime presses
+Send or Discard — Send moves it (`deliverRequests`) into the target as `` - [ ] from `THIS.md` —
+reason ``, Discard deletes it. An undecided outgoing request holds approval, like an open
+question. (Documents approved before requests travelled are swept on listing.) That `from` line is the request's
 only home from then on: it is listed in the target's Action Needed and decided there. Accepted
 and written, it is removed — the text now says what it asked for, and git keeps the history.
 Denied, it stays, ticked `- [x]` with `denied by prime — reason` beneath: the one outcome the
