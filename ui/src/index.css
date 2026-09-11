@@ -2480,8 +2480,8 @@ button.kx-note-exc:hover {
   margin: var(--sp-3) 0 8px;
   padding: 10px 12px;
   border-radius: var(--r-md);
-  background: var(--pink-bg);
-  border: 1px solid var(--pink-border);
+  background: var(--amber-bg);
+  border: 1px solid var(--amber-border);
   font-size: var(--fs-ui);
   display: flex;
   flex-direction: column;
@@ -2490,7 +2490,7 @@ button.kx-note-exc:hover {
 /* The same head as the blue panel's, in this panel's colour, with the one
    sentence that explains it underneath. */
 .kx-changebar-title {
-  color: var(--pink);
+  color: var(--amber);
   font-weight: 600;
   font-size: var(--fs-micro);
   letter-spacing: 0.06em;
@@ -2500,7 +2500,7 @@ button.kx-note-exc:hover {
   margin-top: -4px;
 }
 .kx-changebar-head {
-  color: var(--pink);
+  color: var(--amber);
   font-weight: 600;
 }
 /* Boxes, not bullets: the box is ticked once the row has its answer or its
@@ -2524,25 +2524,30 @@ button.kx-note-exc:hover {
 }
 .kx-req-check {
   pointer-events: none;
-  accent-color: var(--pink);
+  accent-color: var(--amber);
   margin: 0;
   position: relative;
   top: 1px;
 }
 
 /* Render actions per revision request. */
-.kx-changebar-list > li + li {
-  padding-top: 10px;
-  border-top: 1px solid var(--red-border);
-}
 /* Two groups in one list. The label separates them without a second box —
    the point of the pass is fewer boxes, not more. */
+/* The rule sits after the label, not between the rows: INCOMING ———— */
 .kx-changebar-group {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
   font-size: var(--fs-micro);
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--fg-secondary);
+}
+.kx-changebar-group::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--amber-border);
 }
 .kx-changebar-group + .kx-changebar-list {
   margin-top: -4px;
