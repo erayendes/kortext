@@ -327,8 +327,13 @@ export function DocDrawer({
   const denying = decisions.filter((d) => d.what === 'deny');
   const written = doc?.hasProducingStep ?? false;
   const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+  // An answer to a listed question and a note on a line are counted apart —
+  // they read differently, and prime should see which is which before pressing.
+  const answered = notes.filter((n) => n.line !== null && qNo.has(n.line)).length;
+  const remarks = notes.length - answered;
   const summary = [
-    notes.length > 0 && written ? plural(notes.length, 'note added', 'notes added') : null,
+    answered > 0 && written ? plural(answered, 'question answered', 'questions answered') : null,
+    remarks > 0 && written ? plural(remarks, 'note added', 'notes added') : null,
     accepting.length > 0 && written
       ? plural(accepting.length, 'revision accepted', 'revisions accepted')
       : null,
