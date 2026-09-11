@@ -186,12 +186,16 @@ test('a change request aimed at an unwritten document is handed to its first wri
   assert.match(prompt, /CHANGE REQUESTS ALREADY WAITING FOR THIS DOCUMENT/);
   assert.match(prompt, /\[SECURITY\.md asks\] the access-log lines/);
 
-  // …and once it is written, the request is settled where it lives.
+  // …and once it is written, the request is done and leaves the document: the
+  // text now says what it asked for, and a record would only repeat it.
   const res = await runStep(db, p, step, mockEngine(work, 'ok'), pkgRoot);
   assert.equal(res.ok, true, res.error);
   const env = readFileSync(docPath(p, 'ENVIRONMENT.md'), 'utf8');
-  assert.match(env, /^- \[x\] from `SECURITY\.md`/m);
-  assert.match(env, /folded into the first draft of ENVIRONMENT\.md/);
+  assert.doesNotMatch(env, /from `SECURITY\.md`/);
+  assert.deepEqual(
+    listDocs(db, p, pkgRoot).find((d) => d.rel === 'ENVIRONMENT.md')!.revisionRequests,
+    [],
+  );
   rmSync(work, { recursive: true, force: true });
 });
 

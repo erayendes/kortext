@@ -402,9 +402,43 @@ function markListItemHandled(
 }
 
 /**
- * Settles a request in the document it is about: `rel` holds the line,
- * `from` is the document that asked. The record stays here — the next agent to
- * rewrite `rel` reads it here, and does not raise the same request again.
+ * Removes a request from the document it is about, once it has been done. A
+ * request that was accepted and written needs no record: the next reader sees
+ * the document as asked, and git keeps the history. Only a denial is kept —
+ * see `markRequestHandled` — because a denial is the one outcome the next
+ * writer cannot infer from the text.
+ */
+export function removeRequest(project: Project, rel: string, from: string, reason: string): void {
+  const path = docPath(project, rel);
+  if (!existsSync(path)) return;
+  const lines = readFileSync(path, 'utf8').split('\n');
+  let inSection = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] ?? '';
+    const h = line.match(/^#{1,6}\s+(.*)$/);
+    if (h) {
+      inSection = CHANGE_REQUESTS.test((h[1] ?? '').trim());
+      continue;
+    }
+    if (!inSection) continue;
+    const m = line.match(MARKED_LINE);
+    if (!m || !m[2]) continue;
+    if (m[3]!.replace(/^\.kortext\//, '') !== from.replace(/^.*\//, '') && m[3] !== from) continue;
+    const [full, afterWrap] = foldWrapped(lines, i, m[4] ?? '');
+    if (full !== reason.trim()) continue;
+    let end = afterWrap;
+    while (end < lines.length && TRAILER.test(lines[end] ?? '')) end++;
+    lines.splice(i, end - i);
+    writeFileSync(path, lines.join('\n'), 'utf8');
+    return;
+  }
+}
+
+/**
+ * Settles a denied request in the document it is about: `rel` holds the line,
+ * `from` is the document that asked. The line stays, ticked, with prime's
+ * reason under it — the next agent to rewrite `rel` reads it here, and does
+ * not raise the same request again.
  */
 export function markRequestHandled(
   project: Project,

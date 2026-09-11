@@ -20,6 +20,7 @@ import {
   listVersions,
   markRequestHandled,
   readVersion,
+  removeRequest,
   recordVersion,
   setFrontmatterStatus,
   templateFor,
@@ -489,13 +490,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       if (settleRequests) {
         for (const r of listDocs(db, project, pkgRoot).find((d) => d.rel === String(rel))
           ?.revisionRequests ?? []) {
-          markRequestHandled(
-            project,
-            String(rel),
-            r.from,
-            r.reason,
-            `applied — prime saved the change into ${rel}`,
-          );
+          removeRequest(project, String(rel), r.from, r.reason);
         }
       }
       // Re-evaluate readiness and producibility after edits.

@@ -317,7 +317,8 @@ The markdown the panel renders, on the same seven sizes: body `--fs-body`, headi
 Two kinds of debt, told apart differently. A question (`## Questions for Prime`, yours to answer)
 paints its line **amber** `.open-q`. A change request (`## Change Requests`) paints nothing: it
 wears one word instead — `.kx-outcome`: **OUTGOING** grey for what this document asks of another,
-and for what others asked of it **WAITING** amber, **ACCEPTED** green, **DENIED** red — in place
+and for what others asked of it **WAITING** amber and **DENIED** red (a done request is gone, so
+**ACCEPTED** green survives only on documents from before) — in place
 of the checkbox, which looked like work when it was not yours to do. The outcome line under a
 settled request folds into that word's tooltip; the sentence stays in the file.
 

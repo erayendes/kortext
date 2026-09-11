@@ -124,17 +124,18 @@ means the document is waiting on a human. `## Change Requests` — one heading, 
 told apart by one word. `` - `TARGET.md` — reason `` is what this document asks of another; the
 agent writes it while drafting, prime sees it before approving, and on approval `deliverRequests`
 moves it into the target as `` - [ ] from `THIS.md` — reason ``. That `from` line is the request's
-only home from then on: it is listed in the target's Action Needed, decided there, and settled
-there in place — ticked `- [x]` with `applied …` or `denied by prime — reason` beneath. A denied
-line IS the record of the disagreement; there is no `## Conflicts` section any more (older ones
-are still read, for the handover count only). Questions and requests are two groups of one list,
+only home from then on: it is listed in the target's Action Needed and decided there. Accepted
+and written, it is removed — the text now says what it asked for, and git keeps the history.
+Denied, it stays, ticked `- [x]` with `denied by prime — reason` beneath: the one outcome the
+next writer cannot infer from the text, and the only reason it does not ask again. There is no
+`## Conflicts` section any more (older ones are still read, for the handover count only). Questions and requests are two groups of one list,
 and one button settles them together, because both rewrite the same document and a document is
 rewritten once.
 
 The `from` lines are not the agent's to touch. The prompt says so, and `restoreRequests` makes
 it so: after every agent write, any such line the rewrite dropped is appended again, state and
 outcome intact. A document nobody has written yet can already hold some — they are handed to
-its first write and ticked `folded into the first draft` afterwards.
+its first write and removed afterwards, like any request that was done.
 
 `## Findings` is read but carries no work — a problem in a file no document owns. A record for
 the next writer, no buttons, no gate on the handshake.

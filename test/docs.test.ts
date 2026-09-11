@@ -16,6 +16,7 @@ import {
   parseOutgoing,
   parseDenied,
   markRequestHandled,
+  removeRequest,
   appendListItem,
   parseConflicts,
   parseWarnings,
@@ -272,14 +273,21 @@ test('a request is settled where it lives, by the name it carries', () => {
     'BRIEF.md',
     'PRODUCT.md',
     'say it the other way round',
-    'applied — the agent rewrote it',
+    'denied by prime — it reads fine',
   );
   assert.equal(brd().revisionRequests.length, 0);
-  // The ticked box is what closes it, and the line under it says what closed
-  // it — a denial and a rewrite must not leave the same record.
+  // A denial stays: the ticked box closes it and the line under it says why.
   const brief = readFileSync(docPath(p, 'BRIEF.md'), 'utf8');
   assert.match(brief, /^- \[x\] from `PRODUCT\.md` — say it the other way round$/m);
-  assert.match(brief, /^ {2}- applied — the agent rewrote it · \d{4}-\d{2}-\d{2}$/m);
+  assert.match(brief, /^ {2}- denied by prime — it reads fine · \d{4}-\d{2}-\d{2}$/m);
+  // A done request leaves instead — the text says what it asked for.
+  writeFileSync(
+    docPath(p, 'BRIEF.md'),
+    brief + '- [ ] from `STACK.md` — name the region\n',
+    'utf8',
+  );
+  removeRequest(p, 'BRIEF.md', 'STACK.md', 'name the region');
+  assert.doesNotMatch(readFileSync(docPath(p, 'BRIEF.md'), 'utf8'), /name the region/);
   rmSync(work, { recursive: true, force: true });
 });
 

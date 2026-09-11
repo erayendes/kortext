@@ -11,8 +11,8 @@ import {
   docPath,
   listDocs,
   loadDocMap,
-  markRequestHandled,
   readFrontmatter,
+  removeRequest,
   recordVersion,
   restoreRequests,
   templateFor,
@@ -846,29 +846,15 @@ export async function runStep(
     }
     recordVersion(db, project, step.output, written, 'agent', priorText, job.id);
     // What was asked of this document is not the agent's to drop: put back any
-    // line the rewrite lost, then settle the ones this run answered — the ones
-    // prime chose, and the ones the first write inherited.
+    // line the rewrite lost. Then the requests this run answered — the ones
+    // prime chose, and the ones the first write inherited — are done, and a
+    // done request leaves the document: the text now says what it asked for.
     restoreRequests(project, step.output, priorText);
     for (const request of listDocs(db, project, pkgRoot).find((d) => d.rel === step.output)
       ?.revisionRequests ?? []) {
-      if (reviseNotes.includes(`[${request.from} asks] ${request.reason}`)) {
-        const decision = reviseNotes.find((note) => note.startsWith('[prime decides] '));
-        markRequestHandled(
-          project,
-          step.output,
-          request.from,
-          request.reason,
-          `applied — the agent rewrote ${step.output}${decision ? `; prime said: ${decision.slice('[prime decides] '.length)}` : ''}`,
-        );
-      } else if (waiting.some((w) => w.from === request.from && w.reason === request.reason)) {
-        markRequestHandled(
-          project,
-          step.output,
-          request.from,
-          request.reason,
-          `folded into the first draft of ${step.output}`,
-        );
-      }
+      const chosen = reviseNotes.includes(`[${request.from} asks] ${request.reason}`);
+      const inherited = waiting.some((w) => w.from === request.from && w.reason === request.reason);
+      if (chosen || inherited) removeRequest(project, step.output, request.from, request.reason);
     }
     return settle('done');
   } catch (err) {

@@ -93,9 +93,9 @@ author sees them: together.
 still a draft, you see the request in its body under `## Change Requests`, as a plain line
 naming the target — if you disagree, edit the draft and delete it. When you approve that
 document, the line travels to the target, where it appears as `from` the document that asked and
-waits for you. Accepted, it is ticked `applied`; denied, it is ticked `denied` with your reason
-under it. That denied line is the whole record of the disagreement — nothing asks you about it
-again, and the build phase reads it there.
+waits for you. Accepted and written, it disappears — the document now says what it asked for.
+Denied, it stays, ticked, with your reason under it. That denied line is the whole record of the
+disagreement — nothing asks you about it again, and the build phase reads it there.
 
 **Findings** — problems in files no document owns, written into the document. Nothing asks
 anything of you.
