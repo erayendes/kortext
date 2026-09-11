@@ -1275,7 +1275,7 @@ function DocBlock({
   const task = token.kind === 'bullet' ? token.text.match(/^\[([ xX])\]\s*(.*)$/s) : null;
   return (
     <div
-      className={`${cls}${task ? ' kx-task' : ''}`}
+      className={`${cls}${task || outcome ? ' kx-task' : ''}`}
       style={token.depth ? { marginLeft: token.depth * 18 } : undefined}
       {...activation}
     >
