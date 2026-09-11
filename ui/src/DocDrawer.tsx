@@ -516,7 +516,14 @@ export function DocDrawer({
             explains={explains}
             answerBy={answerBy}
             onAsk={ask}
-            onNote={addLineNote}
+            // A question has one answer. A second Add note replaces the first
+            // rather than sending the agent two answers to reconcile.
+            onNote={(line, text) => {
+              setNotes((ns) => ns.filter((n) => n.line !== line));
+              addLineNote(line, text);
+            }}
+            answered={new Set(notes.map((n) => n.line).filter((l): l is number => l !== null))}
+            decided={decided}
             onDecide={(r, what, note) =>
               setDecided((d) => ({ ...d, [keyOf(r)]: { ...r, what, note } }))
             }
@@ -830,6 +837,8 @@ function ActionNeeded({
   onAsk,
   onNote,
   onDecide,
+  answered,
+  decided,
 }: {
   project: Project;
   doc: DocInfo;
@@ -840,6 +849,10 @@ function ActionNeeded({
   onAsk: (line: number, question: string) => void;
   onNote: (line: number, text: string) => void;
   onDecide: (r: { from: string; reason: string }, what: 'accept' | 'deny', note: string) => void;
+  /** Lines that already carry an answer — their box is ticked. */
+  answered: Set<number>;
+  /** Requests already decided — their box is ticked. */
+  decided: Record<string, Decision>;
 }) {
   const [open, setOpen] = useState<string | null>(null);
   const [chat, setChat] = useState<Array<{ key: string; q: string; a: string | null }>>([]);
@@ -893,8 +906,16 @@ function ActionNeeded({
               const key = `q${q.index}`;
               return (
                 <li key={key} className={open === key ? 'kx-req-open' : ''}>
+                  <input
+                    type="checkbox"
+                    className="kx-req-check"
+                    checked={answered.has(q.index)}
+                    readOnly
+                    tabIndex={-1}
+                    aria-hidden="true"
+                  />
                   <span className="kx-req-text" {...select(key)}>
-                    <span className="mono">Q{q.no}</span> — {q.text}
+                    <span className="mono">#{q.no}</span> — {q.text}
                   </span>
                   {(thread.length > 0 || open === key) && (
                     <LineThread
@@ -924,6 +945,14 @@ function ActionNeeded({
               const talk = chat.filter((c) => c.key === key);
               return (
                 <li key={key} className={open === key ? 'kx-req-open' : ''}>
+                  <input
+                    type="checkbox"
+                    className="kx-req-check"
+                    checked={key in decided}
+                    readOnly
+                    tabIndex={-1}
+                    aria-hidden="true"
+                  />
                   <span className="kx-req-text" {...select(key)}>
                     <span className="mono">{r.from.replace(/\.md$/, '')}</span> — {r.reason}
                   </span>

@@ -1828,7 +1828,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
 /* Who reads this one. Blue because it is neither work nor a warning — it is the
    blast radius of a change, stated before the change is made. */
 .kx-doc-readbar {
-  margin: var(--sp-3) 18px 8px;
+  margin: var(--sp-3) 0 8px;
   padding: 8px 12px;
   border-radius: var(--r-md);
   background: var(--blue-bg);
@@ -1853,7 +1853,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   color: var(--fg-muted);
 }
 .kx-doc-dependbar {
-  margin: var(--sp-3) 18px 8px;
+  margin: var(--sp-3) 0 8px;
   padding: 8px 12px;
   border-radius: var(--r-md);
   background: transparent;
@@ -2463,7 +2463,7 @@ button.kx-note-exc:hover {
   margin-left: auto;
 }
 .kx-doc-changebar {
-  margin: var(--sp-3) 18px 8px;
+  margin: var(--sp-3) 0 8px;
   padding: 10px 12px;
   border-radius: var(--r-md);
   background: var(--pink-bg);
@@ -2489,12 +2489,31 @@ button.kx-note-exc:hover {
   color: var(--pink);
   font-weight: 600;
 }
+/* Boxes, not bullets: the box is ticked once the row has its answer or its
+   decision. It is drawn, not pressed — the row is the control. */
 .kx-changebar-list {
   margin: 0;
-  padding-left: 18px;
+  padding-left: 0;
+  list-style: none;
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+.kx-changebar-list > li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: var(--sp-2);
+  align-items: baseline;
+}
+.kx-changebar-list > li > .kx-thread {
+  grid-column: 2;
+}
+.kx-req-check {
+  pointer-events: none;
+  accent-color: var(--pink);
+  margin: 0;
+  position: relative;
+  top: 1px;
 }
 
 /* Render actions per revision request. */
