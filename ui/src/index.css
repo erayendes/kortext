@@ -1848,11 +1848,9 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
 .kx-doc-readbar .mono {
   color: var(--blue);
 }
-/* A reader that does not exist yet: named, but plainly not there. */
+/* A reader that does not exist yet: named, but greyed — it is coming, not gone. */
 .kx-doc-readbar .kx-reader-unwritten {
   color: var(--fg-muted);
-  text-decoration: line-through;
-  text-decoration-color: var(--border-strong);
 }
 .kx-doc-dependbar {
   margin: var(--sp-3) 18px 8px;
@@ -2474,6 +2472,18 @@ button.kx-note-exc:hover {
   flex-direction: column;
   gap: 8px;
 }
+/* The same head as the blue panel's, in this panel's colour, with the one
+   sentence that explains it underneath. */
+.kx-changebar-title {
+  color: var(--pink);
+  font-weight: 600;
+  font-size: var(--fs-micro);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.kx-changebar-title + .kx-changebar-head {
+  margin-top: -4px;
+}
 .kx-changebar-head {
   color: var(--pink);
   font-weight: 600;
@@ -2549,13 +2559,6 @@ button.kx-note-exc:hover {
   white-space: pre-wrap;
 }
 
-.kx-req-text {
-  cursor: pointer;
-}
-.kx-req-text:hover {
-  text-decoration: underline;
-  text-decoration-color: var(--border-strong);
-}
 .kx-req-note {
   margin-top: 6px;
   padding: 4px 8px;
@@ -2569,10 +2572,20 @@ button.kx-note-exc:hover {
   margin-right: 6px;
 }
 
-.kx-req-check {
-  margin-right: var(--sp-2);
-  vertical-align: baseline;
-  accent-color: var(--accent);
+/* The row's own buttons, on the line after the text: Ask, then the decisions. */
+.kx-req-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  margin-top: 2px;
+}
+.kx-req-actions .kx-req-state {
+  margin-right: auto;
+  margin-left: 0;
+}
+.kx-req-on {
+  text-decoration: underline;
 }
 
 .kx-doc-askbar {

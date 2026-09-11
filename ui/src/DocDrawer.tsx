@@ -736,6 +736,11 @@ function RelatedDocuments({ doc, docs }: { doc: DocInfo; docs: DocInfo[] }) {
  * would start a run and have the second come back refused. The single commit is
  * also the better thing, not just the possible one — the agent sees the answers
  * and the accepted changes at the same time.
+ *
+ * Every row has the same three moves. `Ask` opens the input, where the answer
+ * or the note is written. `Accept` and `Deny` are decisions, and they work like
+ * Add note does: each adds the row to the button below, pressing it again takes
+ * the row back out. A row prime has not decided is not sent.
  */
 function ActionNeeded({
   project,
@@ -764,9 +769,8 @@ function ActionNeeded({
   onApplied: () => void;
 }) {
   const keyOf = (r: { from: string; reason: string }) => `${r.from}: ${r.reason}`;
-  const [accepted, setAccepted] = useState<Set<string>>(new Set());
-  const [denials, setDenials] = useState<Record<string, string>>({});
-  const [denying, setDenying] = useState<string | null>(null);
+  const [decided, setDecided] = useState<Record<string, 'accept' | 'deny'>>({});
+  const [notes, setNotes] = useState<Record<string, string>>({});
   const [open, setOpen] = useState<string | null>(null);
   const [chat, setChat] = useState<Array<{ key: string; q: string; a: string | null }>>([]);
   const [busy, setBusy] = useState(false);
@@ -787,11 +791,19 @@ function ActionNeeded({
   };
 
   const requests = settled ? [] : doc.revisionRequests;
-  const accepting = requests.filter((r) => accepted.has(keyOf(r)));
-  const denied = requests.filter((r) => !accepted.has(keyOf(r)));
+  const accepting = requests.filter((r) => decided[keyOf(r)] === 'accept');
+  const denying = requests.filter((r) => decided[keyOf(r)] === 'deny');
   const written = doc.hasProducingStep;
   // Denials change no text, so they can be settled on a document no agent writes.
   const startsRun = written && (accepting.length > 0 || answers.length > 0);
+
+  const decide = (key: string, what: 'accept' | 'deny') =>
+    setDecided((d) => {
+      const next = { ...d };
+      if (next[key] === what) delete next[key];
+      else next[key] = what;
+      return next;
+    });
 
   const apply = async () => {
     setBusy(true);
@@ -800,9 +812,9 @@ function ActionNeeded({
       await api.settleRequests(project.id, {
         rel: doc.rel,
         apply: written
-          ? accepting.map((r) => ({ from: r.from, reason: r.reason, note: denials[keyOf(r)] }))
+          ? accepting.map((r) => ({ from: r.from, reason: r.reason, note: notes[keyOf(r)] }))
           : [],
-        deny: denied.map((r) => ({ from: r.from, reason: r.reason, note: denials[keyOf(r)] })),
+        deny: denying.map((r) => ({ from: r.from, reason: r.reason, note: notes[keyOf(r)] })),
         answers: startsRun
           ? answers.map((n) => (n.excerpt ? `[${n.excerpt}] ${n.text}` : n.text))
           : [],
@@ -820,16 +832,39 @@ function ActionNeeded({
 
   const label = [
     accepting.length > 0 && written ? `apply ${accepting.length}` : null,
-    denied.length > 0 ? `deny ${denied.length}` : null,
+    denying.length > 0 ? `deny ${denying.length}` : null,
     answers.length > 0 && written ? `answer ${answers.length}` : null,
   ].filter(Boolean);
+
+  // The row's own buttons: Ask opens the input; a decision is a toggle.
+  const askButton = (key: string) => (
+    <button
+      className={`btn btn-link-primary${open === key ? ' kx-req-on' : ''}`}
+      disabled={busy}
+      onClick={() => setOpen(open === key ? null : key)}
+    >
+      Ask
+    </button>
+  );
+  const decideButton = (key: string, what: 'accept' | 'deny', text: string) => (
+    <button
+      className={`btn ${decided[key] === what ? 'btn-secondary' : 'btn-link-primary'}`}
+      disabled={busy || (what === 'accept' && !written)}
+      title={
+        what === 'accept' && !written ? 'No agent writes this one — draft the change yourself' : ''
+      }
+      onClick={() => decide(key, what)}
+    >
+      {text}
+    </button>
+  );
 
   if (requests.length === 0 && questions.length === 0) return null;
   return (
     <div className="kx-doc-changebar">
+      <div className="kx-changebar-title">Action Needed</div>
       <div className="kx-changebar-head">
-        Action Needed — nothing here is written until you press the button below, and it all goes
-        into one rewrite.
+        Nothing here is written until you press the button below, and it all goes into one rewrite.
       </div>
       {err && <div className="kx-error">{err}</div>}
 
@@ -843,24 +878,13 @@ function ActionNeeded({
               const key = `q${q.index}`;
               return (
                 <li key={key}>
-                  <span
-                    className="kx-req-text"
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => {
-                      if ((window.getSelection()?.toString() ?? '').trim()) return;
-                      setOpen(open === key ? null : key);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        setOpen(open === key ? null : key);
-                      }
-                    }}
-                  >
+                  <span className="kx-req-text">
                     <span className="mono">Q{q.no}</span> — {q.text}
                   </span>
-                  {note && <span className="kx-req-state mono">added</span>}
+                  <span className="kx-req-actions">
+                    {note && <span className="kx-req-state mono">added</span>}
+                    {askButton(key)}
+                  </span>
                   {(thread.length > 0 || open === key) && (
                     <LineThread
                       thread={thread}
@@ -894,64 +918,19 @@ function ActionNeeded({
               const talk = chat.filter((c) => c.key === key);
               return (
                 <li key={key}>
-                  <input
-                    type="checkbox"
-                    className="kx-req-check"
-                    checked={accepted.has(key)}
-                    disabled={busy || !written}
-                    aria-label={`Accept the change ${r.from} asked for`}
-                    title={written ? '' : 'No agent writes this one — open it to draft the change'}
-                    onChange={(e) =>
-                      setAccepted((a) => {
-                        const next = new Set(a);
-                        if (e.target.checked) next.add(key);
-                        else next.delete(key);
-                        return next;
-                      })
-                    }
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                  {/* The request reads like a line of the document, so it answers
-                      to the same click — the thread opens under it. */}
-                  <span
-                    className="kx-req-text"
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => {
-                      if ((window.getSelection()?.toString() ?? '').trim()) return;
-                      setOpen(open === key ? null : key);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        setOpen(open === key ? null : key);
-                      }
-                    }}
-                  >
+                  <span className="kx-req-text">
                     <span className="mono">{r.from.replace(/\.md$/, '')}</span> — {r.reason}
                   </span>
-                  <span className="kx-req-state mono">
-                    {accepted.has(key) ? 'accepted' : 'denied'}
+                  <span className="kx-req-actions">
+                    {decided[key] && (
+                      <span className="kx-req-state mono">
+                        {decided[key] === 'accept' ? 'accepted' : 'denied'}
+                      </span>
+                    )}
+                    {askButton(key)}
+                    {decideButton(key, 'accept', 'Accept')}
+                    {decideButton(key, 'deny', 'Deny')}
                   </span>
-                  <button
-                    className="btn btn-link-primary"
-                    disabled={busy}
-                    onClick={() => setDenying(denying === key ? null : key)}
-                  >
-                    {denials[key] ? 'Edit reason' : 'Say why'}
-                  </button>
-                  {denying === key && (
-                    <div className="kx-thread-input">
-                      <textarea
-                        className="kx-input kx-thread-text"
-                        rows={2}
-                        autoFocus
-                        placeholder="Optional — written into the document beside the outcome"
-                        value={denials[key] ?? ''}
-                        onChange={(e) => setDenials((d) => ({ ...d, [key]: e.target.value }))}
-                      />
-                    </div>
-                  )}
                   {(talk.length > 0 || open === key) && (
                     <LineThread
                       thread={talk.map((c) => ({ line: null, question: c.q, answer: c.a }))}
@@ -959,14 +938,14 @@ function ActionNeeded({
                       answerBy={r.from.replace(/\.md$/, '')}
                       onAsk={(q) => askFrom(r, q)}
                       onNote={(text) => {
-                        setDenials((d) => ({ ...d, [key]: text }));
+                        setNotes((n) => ({ ...n, [key]: text }));
                         setOpen(null);
                       }}
                     />
                   )}
-                  {denials[key] && (
+                  {notes[key] && (
                     <div className="kx-req-note">
-                      <span className="mono">note</span> {denials[key]}
+                      <span className="mono">note</span> {notes[key]}
                     </div>
                   )}
                 </li>
