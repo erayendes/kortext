@@ -375,6 +375,13 @@ as the first word of it. `- [ ]` and `- [x]` are drawn with the § 7 box, and th
 vertical lines. The head is the mono eyebrow. Cells keep their left edge on the text column and
 their right padding for breath.
 
+**What changed since.** The date beside the name picks a recorded version, and the body is read
+against it. A block that replaced an old one wears `[+]` after its last word — press it and the
+old text unfolds beneath, faded, on the same edge; `[−]` folds it back. A block that replaced
+nothing is simply new, and a faint `new` says so — once, on the first block of a run of new
+blocks, because a whole new section is one addition, not twelve. The word is not a control and
+does not underline; only the bracket is pressed.
+
 **Proposal diff.** The agent's draft is shown in the editor itself, not in a second box: the whole
 document with the changed lines marked, removed in `--red-bg`, added in `--green-bg`, the line
 count above and **Edit text** to drop into plain text. Two boxes meant two documents, and the

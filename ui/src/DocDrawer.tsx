@@ -427,6 +427,21 @@ export function DocDrawer({
     return [marks, gone] as [Set<number>, Map<number, MdToken[]>];
   }, [previous, content]);
 
+  // A run of new blocks is one addition, and says so once: the mark sits on the
+  // first block of the run. A block that replaced something keeps its own mark,
+  // because it is the only place the old text can be opened from.
+  const leads = useMemo(() => {
+    const out = new Set<number>();
+    let inRun = false;
+    shown.forEach((t, i) => {
+      if (t.kind === 'blank') return;
+      const isNew = changed.has(t.index) && !replaced.has(t.index);
+      if (replaced.has(t.index) || (isNew && !inRun)) out.add(i);
+      inRun = isNew;
+    });
+    return out;
+  }, [shown, changed, replaced]);
+
   // A note marks its line, and the mark is what the footer row shows: a question
   // keeps the number it already carries, any other line takes the next letter.
   // A question keeps the number the list gave it; a noted line is numbered in
@@ -762,11 +777,11 @@ export function DocDrawer({
           </>
         ) : (
           <div className="kx-doc">
-            {shown.map((t) => (
+            {shown.map((t, i) => (
               <div key={t.index} id={`kx-line-${t.index}`}>
                 <DocBlock
                   token={t}
-                  changed={changed.has(t.index) && !records.has(t.index)}
+                  changed={changed.has(t.index) && !records.has(t.index) && leads.has(i)}
                   openQuestion={openQ.has(t.index)}
                   questionNo={qNo.get(t.index)}
                   noteLabel={lineLabel.get(t.index)}
@@ -1527,8 +1542,8 @@ function DocBlock({
       )}
       {/* A changed block wears a [+] at the end of its sentence rather than a
           colour. Press it and what the text replaced unfolds beneath, faded; [−]
-          folds it back. A block that replaced nothing is simply new, and the
-          mark says so. */}
+          folds it back. A block that replaced nothing is simply new, and a quiet
+          word says so — once per run of new blocks, not on every line. */}
       {changed &&
         (replaced ? (
           <button
@@ -1542,8 +1557,8 @@ function DocBlock({
             [{showOld ? '−' : '+'}]
           </button>
         ) : (
-          <span className="kx-removed-toggle mono" title="New since the last write">
-            [+]
+          <span className="kx-new-mark mono" title="New since the last write">
+            new
           </span>
         ))}
       {decision !== undefined && decision !== '' && (

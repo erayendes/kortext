@@ -2750,6 +2750,12 @@ button.kx-removed-toggle:hover {
 }
 
 /* A row is selected by clicking it; the input opens underneath. */
+/* "new" is a fact, not a control: faint, and not underlined on hover. */
+.kx-new-mark {
+  margin-left: var(--sp-2);
+  color: var(--fg-faint);
+  font-size: var(--fs-label);
+}
 .kx-req-text {
   cursor: pointer;
 }
