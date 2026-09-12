@@ -120,19 +120,20 @@ Seven roles, named by job, not by number:
 
 | token | px | where |
 | --- | --- | --- |
-| `--fs-title` | 18 | the single title of a page or document (h1) |
-| `--fs-section` | 16 | a section inside a document (h2) |
-| `--fs-heading` | 14 | card name, drawer title, panel head (h3) |
-| `--fs-body` | 13 | prose, inputs — the base |
-| `--fs-ui` | 12 | buttons, controls, panel chrome |
+| `--fs-title` | 20 | the single title of a page or document (h1) |
+| `--fs-section` | 18 | a section inside a document (h2) |
+| `--fs-heading` | 16 | card name, drawer title, a sub-section (h3) |
+| `--fs-body` | 13 | prose, inputs, buttons — the base |
+| `--fs-ui` | 12 | controls, pills, panel chrome |
 | `--fs-label` | 11 | meta, id, counter, footer |
-| `--fs-micro` | 10 | badge, mono eyebrow |
+| `--fs-micro` | 10 | mono eyebrow: group label, h4, table head |
 
 Base: `font-family:var(--font-sans); font-size:var(--fs-body); line-height:1.5; color:var(--fg)`
 with `font-feature-settings:"cv01","ss01","tnum"` so numbers align in a column.
 
-Weights: `400` body · `500` control and label · `600` section heading · `650` page title.
-Mono takes the **same size** as the prose beside it; `.mono` changes the family only.
+Weights: `400` body · `500` control and label · `600` every heading. Nothing heavier: a title is
+told by its size, not by a fourth weight. Mono takes the **same size** as the prose beside it;
+`.mono` changes the family only.
 
 **Two vocabularies, one scale.** Panel chrome speaks in role names — a `Dismiss` button is not a
 heading. Markdown inside a document says h1/h2/h3. Same seven sizes, different words.
@@ -168,8 +169,10 @@ animations is still incomplete. The accessibility target is recorded in [PRODUCT
 
 ## 6 · Buttons
 
-One height, and it is the height of a single-line text input (`--control-h`, 36px). In a control
+One height, and it is the height of a single-line text input (`--control-h`, 30px). In a control
 row the input, button, select and segment line up; two different heights never sit side by side.
+A button is `--fs-body` on a `--r-md` corner — the June size, kept because a 36px control read as
+a web form, not a tool.
 
 Two families: **solid** always shows its box; **link** shows it only on hover — and then becomes
 its solid twin. One primary button per screen.
@@ -197,9 +200,13 @@ button that sends them all sits under the whole list, not under a group.
 
 ## 7 · Inputs
 
-`--control-h` is 36px for standard form controls. Compact controls use sizes in their own rules.
+`--control-h` is 30px for standard form controls. Compact controls use sizes in their own rules.
 `.input` takes `--fs-body` and a `--border-strong` edge, and on focus swaps to the accent border
 plus a 3px `--accent-ring`.
+
+**Checkbox.** Never the browser's: `appearance:none`, a 16px hairline square on `--r-sm` that
+fills with the accent and a white tick when on. The same drawing serves the Action Needed rows
+(`.kx-req-check`) and a `- [x]` in a document (`.kx-task-box`); only the cursor differs.
 
 **Select.** The native arrow ignores the theme and is drawn differently on every platform, so
 `appearance:none` kills it and the chevron comes back as an inline SVG that inherits the text
@@ -224,13 +231,16 @@ The heart of the system. A document is in **exactly one** state — where it is.
 | state | means | colour |
 |---|---|---|
 | `waiting` | queued; the chain has not reached it | neutral |
-| `writing` | the agent is writing it now | blue, slow pulse |
+| `writing` | the agent is writing it now | blue, the dot pulses |
 | `paused` | writing was stopped | amber |
 | `pending` | written, waiting for your approval | violet |
 | `approved` | you approved it | green |
-| `n/a` | considered, deliberately skipped | no badge, faint outline |
+| `n/a` | considered, deliberately skipped | no ground, faint outline |
 
-`n/a` is not a colour but the absence of one: an outline in the text's own ink.
+A state is a **pill with a dot**: 20px, `--fs-ui`, a hairline border in the state's own tint, a
+6px dot in the state's colour before the word. The dot is what you scan a column for; the word is
+what you read when you stop. `n/a` is not a colour but the absence of one: an outline in the
+text's own ink.
 
 | badge | means | colour |
 |---|---|---|
@@ -238,11 +248,13 @@ The heart of the system. A document is in **exactly one** state — where it is.
 | `change request` | another document wants this one changed | pink |
 | `dependent` | an input is moving; it will be re-read when that settles | pink, hollow |
 
+A badge is the same pill without the dot: it says what is owed, and a debt has no motion to show.
+
 **A badge beats the state.** Anything carrying `failed` or `change request` moves to **Needs
 you** whatever its state. The exception is `dependent`: news, not work, so it stays put.
 
-Groups: `Action needed` → `In progress` → `Next` → `Approved` → `Not applicable`. The last two are
-collapsed by default — one is finished, the other deliberately skipped.
+Groups: `Action needed` → `Doing` → `To do` → `Done`. The last is collapsed by default — it is
+finished, and the not-applicable documents sit inside it with their faint outline.
 
 ---
 
@@ -270,13 +282,16 @@ in a separate button.
 | band | colour | means |
 |---|---|---|
 | readiness gate `.kx-gate` | blue ground, blue text, no frame | the system is reading |
-| demand `.kx-doc-changebar` | pink ground, pink frame and text | a decision is waited on |
+| related `.kx-doc-readbar` | blue ground, mono head, no frame | who reads this document |
+| action needed `.kx-doc-changebar` | amber ground, amber frame and head | your turn: questions and requests |
 | dependency `.kx-doc-dependbar` | no ground, plain pink frame | news only |
 | open question `.kx-doc-askbar` | amber | yours, and it blocks approval |
 
-The demand band shares its pink with the `change request` badge: you see the badge in the row,
-open the document and find the same pink. The dependency band is the `dependent` badge enlarged —
-hollow, framed.
+Amber is *your turn* everywhere — the `paused` state, the question band, the Action Needed band —
+so the one band that asks for a decision wears it too. Pink stays with the badges in the row: it
+says a demand exists, the amber band is where it is answered. The dependency band is the
+`dependent` badge enlarged — hollow, framed. Every band's head is the group label from § 10, in
+mono, so the panel's labels and the document's own labels are one thing.
 
 **Header.** The wordmark — a PNG per theme, swapped by CSS, so the drawing is right on the
 first frame — and, at the far right, the theme button. Nothing else, unless there is no agent
@@ -312,28 +327,33 @@ for good on the second click.
 ## 10 · Document view
 
 The markdown the panel renders, on the same seven sizes: body `--fs-body`, headings
-`--fs-title` / `--fs-section` / `--fs-heading`.
+`--fs-title` / `--fs-section` / `--fs-heading` — 20 / 18 / 16, all `600`, none underlined. A
+fourth level (`####`, `.kx-h4`) is not a heading but a label: the mono `--fs-micro` eyebrow the
+panel uses for its group labels, with the rule running out to the right edge. Whitespace and size
+carry the hierarchy; a line under a heading was one more thing to read.
 
-Two kinds of debt, told apart differently. A question (`## Questions for Prime`, yours to answer)
-paints its line **amber** `.open-q`. A change request (`## Change Requests`) paints nothing: it
-wears nothing in the body at all: waiting and outgoing requests are asked in the list above and
-not repeated below, a done request is gone, and a refused one lives under `## Decisions` as a
-plain line with the reason beneath — a ledger, no label. (`.kx-outcome` chips — **WAITING**
-amber, **DENIED** red, **ACCEPTED** green — survive only for lines written in the older shape) — in place
-of the checkbox, which looked like work when it was not yours to do. The outcome line under a
-settled request folds into that word's tooltip; the sentence stays in the file.
+Debt wears nothing in the body. A question (`## Questions for Prime`) and a change request
+(`## Change Requests`) are asked in the amber band above and not repeated below; a done request is
+gone, and a refused one lives under `## Decisions` as a plain line with the reason beneath — a
+ledger, no label. (`.kx-outcome` chips — **WAITING** amber, **DENIED** red, **ACCEPTED** green —
+survive only for lines written in the older shape.) The outcome line under a settled request folds
+into that word's tooltip; the sentence stays in the file.
 
-An open question is always numbered `#n` (`.kx-qno`), and the bullet is suppressed on that line —
-both fall into the same hanging indent and would overlap. Once a note is added (`.noted`) the
-amber ground withdraws and only the left bar stays; ground plus bar would read as brown.
+An open question is always numbered `#n` (`.kx-qno`), and the dash is suppressed on that line —
+both fall into the same hanging indent and would overlap. The line has no ground of its own: the
+band above already says it is open. Once a note is added (`.noted`) the whole line turns
+`--fg-faint` — it has been dealt with, and the eye should pass it; a bar or a ground would keep
+pulling the eye back.
 
-**Blockquote** has no ground: a grey bar on the left, GitHub-style. The bar is not a `border` but
-the **same mechanism as the selection/note bar** (`box-shadow: inset 3px`), so a blue selection or
-an amber note replaces it instead of sitting beside it. It starts at the heading column
+**Blockquote** has no ground: a 2px grey rail on the left in `--fg-secondary` ink. The rail is not
+a `border` but the **same mechanism as the selection bar** (`box-shadow: inset`), so a blue
+selection replaces it instead of sitting beside it. It starts at the heading column
 (`margin-left: 8px`), because a rule that overhangs the text it aligns with reads as a margin.
 
-**Alerts** use GitHub's `> [!NOTE]` syntax — five kinds, each with its own 16px inline SVG, label
-and ground: NOTE blue · TIP green · IMPORTANT violet · WARNING amber · CAUTION red. The block is
+**Alerts** use GitHub's `> [!NOTE]` syntax — five kinds, and each is the blockquote with its rail
+and its label in the kind's colour: NOTE blue · TIP green · IMPORTANT violet · WARNING amber ·
+CAUTION red. No ground and no icon: grounds belong to the panel's bands, and a callout that
+looked like a band looked like something to act on. The label is the mono eyebrow. The block is
 parsed as one piece, so a reader asks about the whole alert, not one of its lines.
 
 **Code.** Inline code is a token inside the sentence: 0.9em, `--bg-inset` ground, 4px corner. A
@@ -344,13 +364,16 @@ keyword/command violet · string green · number amber · JSON key blue · comme
 · flag `--fg-muted`. An unknown or unlabelled language is **not painted at all**, so folder trees
 and output dumps stay plain. The painter's one hard rule: text in equals text out.
 
-**Lists and boxes.** Top-level bullets are filled (`•`), nested ones hollow (`◦`); indentation
-comes from the source. A wrapped line rejoins its own item instead of falling to the left margin.
-`- [ ]` and `- [x]` are drawn as real boxes, and they are **read-only**: the mark is placed by
-whoever wrote the document, not by the panel.
+**Lists and boxes.** A bullet is a hanging dash in `--fg-faint`, 16px wide; a nested item steps
+in by one dash and keeps the same dash — depth is told by position, not by a second glyph. A
+wrapped line rejoins its own item instead of falling to the left margin. An ordered item keeps
+its number, set as a label beside the text (`.kx-ol-n`: `--fs-label`, mono, muted) rather than
+as the first word of it. `- [ ]` and `- [x]` are drawn with the § 7 box, and they are
+**read-only**: the mark is placed by whoever wrote the document, not by the panel.
 
-**Headings.** `H1` and `H2` carry a thin `--border` line beneath them — a section boundary reads
-cheaper and sharper than whitespace alone.
+**Table.** Rows, not a grid: a hairline under every row, a stronger one under the head, no
+vertical lines. The head is the mono eyebrow. Cells keep their left edge on the text column and
+their right padding for breath.
 
 **Proposal diff.** The agent's draft is shown in the editor itself, not in a second box: the whole
 document with the changed lines marked, removed in `--red-bg`, added in `--green-bg`, the line
@@ -395,6 +418,30 @@ so the radii and control heights are now the literal values they always computed
 Two things were left on purpose: `--sp-1`, `--sp-5` and `--sp-6` (a spacing scale with holes
 invites hand-written pixels) and `var(--bg-surface, transparent)`, which reads an undefined
 token through a fallback and is therefore correct as written.
+
+The counts above are the sweep's own; the file has grown since with the drawer, the bands and the
+document view, and is measured again only when the next sweep is due.
+
+---
+
+## 14 · The merge (2026-09-12)
+
+Three drawings of Kortext existed: the June design system in `archive/concepts/` (a product
+prototype, `kortext.css`), the panel as built (`index.css`), and a proposal for the document body
+drawn as a style sheet. They agreed on tokens and disagreed on almost every element. Eray chose
+element by element — twenty-six rows, three candidates each — and the result is what this document
+now describes. What came from where:
+
+| from June | from the panel | from the proposal |
+| --- | --- | --- |
+| control height 30px, `--r-md` corner, `--fs-body` on a button | the button families (solid / link) and their hover | the body: dash lists, numbered labels, quote rail |
+| the state pill with a dot; the badge as the same pill | the select with its own chevron | callouts with a rail and a mono word, no ground |
+| the drawn checkbox with accent fill | group labels, document rows, the two bands | table as rows; the diff mark; the faint noted line |
+| the type scale — 20 / 18 / 16 for the three headings | Decisions and Findings as they are | the mono eyebrow as `####` |
+
+The rule that fell out of it: **the panel's labels and the document's labels are one vocabulary.**
+A group label in the Action Needed band, the head of the Related band, an `####` in a document
+and a table head are all the same mono eyebrow. The reader learns it once.
 
 ---
 

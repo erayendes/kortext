@@ -7,6 +7,7 @@ export type MdTokenKind =
   | 'h1'
   | 'h2'
   | 'h3'
+  | 'h4'
   | 'quote'
   | 'alert'
   | 'bullet'
@@ -51,6 +52,7 @@ function isSeparatorRow(row: string): boolean {
 
 function classifyLine(line: string): { kind: MdTokenKind; text: string; depth?: number } {
   if (line.trim() === '') return { kind: 'blank', text: '' };
+  if (line.startsWith('#### ')) return { kind: 'h4', text: line.slice(5) };
   if (line.startsWith('### ')) return { kind: 'h3', text: line.slice(4) };
   if (line.startsWith('## ')) return { kind: 'h2', text: line.slice(3) };
   if (line.startsWith('# ')) return { kind: 'h1', text: line.slice(2) };

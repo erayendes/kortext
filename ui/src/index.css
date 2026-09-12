@@ -56,12 +56,12 @@
   --r-pill: 999px;
 
   /* control heights */
-  --control-h: 36px;
+  --control-h: 30px;
 
   /* Typography roles */
-  --fs-title: 18px;
-  --fs-section: 16px;
-  --fs-heading: 14px;
+  --fs-title: 20px;
+  --fs-section: 18px;
+  --fs-heading: 16px;
   --fs-body: 13px;
   --fs-ui: 12px;
   --fs-label: 11px;
@@ -651,11 +651,11 @@ body {
   justify-content: center;
   gap: 6px;
   height: var(--control-h);
-  padding: 0 12px;
-  font-size: var(--fs-ui);
+  padding: 0 11px;
+  font-size: var(--fs-body);
   font-weight: 500;
   line-height: 1;
-  border-radius: var(--r-sm);
+  border-radius: var(--r-md);
   border: 1px solid transparent;
   background: var(--bg);
   color: var(--fg);
@@ -812,7 +812,7 @@ a.btn {
   color: var(--fg);
   background-color: var(--bg);
   border: 1px solid var(--border-strong);
-  border-radius: var(--r-sm);
+  border-radius: var(--r-md);
   cursor: pointer;
   appearance: none;
   -webkit-appearance: none;
@@ -848,7 +848,7 @@ a.btn {
 }
 .seg button {
   height: calc(var(--control-h) - 6px);
-  padding: 0 12px;
+  padding: 0 10px;
   border: none;
   background: transparent;
   font-family: inherit;
@@ -1775,38 +1775,57 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
 /* Every state is the same pill, sized to the longest word it can carry, so a
    column of them reads as one column rather than a ragged edge. */
 .kx-status {
-  display: inline-block;
-  min-width: 11ch;
-  text-align: center;
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 20px;
+  padding: 0 8px;
+  font-size: var(--fs-ui);
+  font-weight: 500;
+  line-height: 1;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--border);
   background: var(--bg-muted);
-  color: var(--fg-mid);
+  color: var(--fg-secondary);
   white-space: nowrap;
+}
+/* The dot is the state's colour; the word is the state. */
+.kx-status::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  flex: none;
 }
 .kx-status-writing {
   background: var(--blue-bg);
+  border-color: var(--blue-border, var(--blue-bg));
   color: var(--blue);
+}
+.kx-status-writing::before {
   animation: kx-pulse 1.4s ease-in-out infinite;
 }
 .kx-status-paused {
   background: var(--amber-bg);
+  border-color: var(--amber-border);
   color: var(--amber);
 }
 .kx-status-draft {
   background: var(--violet-bg);
+  border-color: var(--violet-border);
   color: var(--violet);
 }
 .kx-status-approved {
   background: var(--green-bg);
+  border-color: var(--green-border);
   color: var(--green);
 }
 /* A run that errored. `paused` is prime's own stop and stays amber; this is red
    because it asks for a Retry. */
 .kx-status-failed {
   background: var(--red-bg);
+  border-color: var(--red-border);
   color: var(--red);
 }
 
@@ -1818,7 +1837,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   color: var(--fg-secondary);
 }
 .kx-status-not-applicable {
-  background: var(--bg-muted);
+  background: transparent;
   color: var(--fg-muted);
 }
 .kx-doc-changebar .kx-thread {
@@ -1839,6 +1858,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   gap: 4px;
 }
 .kx-readbar-head {
+  font-family: var(--font-mono);
   color: var(--blue);
   font-weight: 600;
   font-size: var(--fs-micro);
@@ -1865,10 +1885,16 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   color: var(--pink);
 }
 .kx-badge {
-  font-family: var(--font-mono);
-  font-size: var(--fs-micro);
-  padding: 2px 7px;
-  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  margin-left: 0;
+  font-family: var(--font-sans);
+  font-size: var(--fs-ui);
+  font-weight: 500;
+  line-height: 1;
+  border-radius: var(--r-pill);
   border: 1px solid transparent;
 }
 /* The word in brackets: which kind of waiting, writing or pausing. It carries
@@ -2001,53 +2027,81 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   border-radius: 0;
 }
 .kx-block.noted {
-  box-shadow: inset 3px 0 0 var(--amber);
-  border-radius: 0;
+  color: var(--fg-faint);
 }
 .kx-h1 {
-  font-size: 19px;
-  font-weight: 650;
-  margin: 10px 0 4px;
-  padding-bottom: 5px;
-  border-bottom: 1px solid var(--border);
-  border-radius: 0;
+  font-size: var(--fs-title);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 8px 0 6px;
 }
 .kx-h2 {
-  font-size: 16px;
+  font-size: var(--fs-section);
   font-weight: 600;
-  margin: 8px 0 3px;
-  padding-bottom: 4px;
-  border-bottom: 1px solid var(--border);
-  border-radius: 0;
+  margin: 14px 0 2px;
 }
 .kx-h3 {
-  font-size: 14px;
+  font-size: var(--fs-heading);
   font-weight: 600;
-  margin: 6px 0 2px;
+  margin: 8px 0 2px;
+}
+/* The fourth level is a label, not a heading: the group label from the panel,
+   with its rule running to the edge. */
+.kx-h4 {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: 10px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-secondary);
+}
+.kx-h4::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--border);
 }
 
 /* Use an inset shadow so selection and note bars replace the quote bar instead of overlapping it. */
 .kx-quote {
-  color: var(--fg-mid);
+  color: var(--fg-secondary);
   margin-left: 8px;
   padding-left: 12px;
-  box-shadow: inset 3px 0 0 var(--border-strong);
+  box-shadow: inset 2px 0 0 var(--border-strong);
   border-radius: 0;
 }
+/* A hanging dash, faint; a nested item steps in by one dash-width (the depth
+   margin comes from the source). */
 .kx-bullet {
-  padding-left: 20px;
-  text-indent: -12px;
+  padding-left: 24px;
+  text-indent: -16px;
 }
 .kx-bullet::before {
-  content: '•  ';
+  content: '–';
+  display: inline-block;
+  width: 16px;
+  text-indent: 0;
   color: var(--fg-faint);
 }
-.kx-bullet[style*='margin-left']::before {
-  content: '◦  ';
-}
+/* The number is a label beside the text, in the meta size and family. */
 .kx-ordered {
-  padding-left: 20px;
-  text-indent: -12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  padding-left: 8px;
+}
+.kx-ol-n {
+  flex: none;
+  width: 22px;
+  font-size: var(--fs-label);
+  color: var(--fg-muted);
+}
+.kx-ordered > .kx-removed-body {
+  width: 100%;
+  padding-left: 22px;
 }
 
 /* Suppress the bullet when a question number supplies the marker. */
@@ -2137,18 +2191,24 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
 }
 .kx-table table {
   border-collapse: collapse;
-  font-size: 12.5px;
+  font-size: var(--fs-ui);
   width: 100%;
 }
 .kx-table th,
 .kx-table td {
-  border: 1px solid var(--border);
-  padding: 5px 9px;
+  padding: 6px 10px 6px 0;
   text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border);
 }
 .kx-table th {
-  background: var(--bg-muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
   font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-secondary);
+  border-bottom-color: var(--border-strong);
 }
 .kx-blank {
   height: 8px;
@@ -2524,10 +2584,34 @@ button.kx-note-exc:hover {
 }
 .kx-req-check {
   cursor: pointer;
-  accent-color: var(--amber);
   margin: 0;
   position: relative;
-  top: 1px;
+  top: 2px;
+}
+/* One drawn box for both the list and the body: a hairline square that fills
+   with the accent when it is on. The browser's own box ignores the theme. */
+.kx-req-check,
+.kx-task-box {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--bg);
+  flex: none;
+  transition:
+    background var(--speed) var(--ease),
+    border-color var(--speed) var(--ease);
+}
+.kx-req-check:checked,
+.kx-task-box:checked {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M20 6 9 17l-5-5'/></svg>");
+  background-size: 11px 11px;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 /* Render actions per revision request. */
@@ -2687,14 +2771,14 @@ button.kx-removed-toggle:hover {
   font-size: var(--fs-ui);
 }
 .kx-block.open-q {
-  background: var(--amber-bg);
+  background: none;
 }
 .kx-block.kx-h2.open-q {
   background: none;
   font-weight: 650;
 }
 .kx-block.open-q + .kx-blank {
-  background: var(--amber-bg);
+  background: none;
 }
 
 /* An open change request carries its own WAITING label; the line needs no
@@ -2869,33 +2953,32 @@ button.kx-removed-toggle:hover {
   min-width: 0;
 }
 .kx-task-box {
-  flex-shrink: 0;
   margin: 0;
   position: relative;
   top: 2px;
-  accent-color: var(--fg-muted);
   pointer-events: none;
 }
 
 /* GitHub alerts — `> [!NOTE]` and friends. The kind is the colour and the
    label; the body is ordinary document text. */
 .kx-alert {
-  border-left: 3px solid var(--kx-alert);
-  padding: 8px 12px;
-  margin: 2px 0 2px 8px;
-  border-radius: 0 var(--r-md) var(--r-md) 0;
-  background: var(--kx-alert-bg);
+  margin: 4px 0 4px 8px;
+  padding: 2px 12px;
+  box-shadow: inset 2px 0 0 var(--kx-alert);
+  border-radius: 0;
 }
 .kx-alert-head {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  display: block;
   color: var(--kx-alert);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
   font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   margin-bottom: 2px;
 }
 .kx-alert-icon {
-  flex-shrink: 0;
+  display: none;
 }
 .kx-alert-body {
   color: var(--fg);

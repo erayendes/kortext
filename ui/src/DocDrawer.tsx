@@ -1477,6 +1477,8 @@ function DocBlock({
   }
   // Render checklist markers as read-only checkbox states.
   const task = token.kind === 'bullet' ? token.text.match(/^\[([ xX])\]\s*(.*)$/s) : null;
+  // The number is a label beside the text, so it takes the meta size and family.
+  const ordered = token.kind === 'ordered' ? token.text.match(/^(\d+[.)])\s*(.*)$/s) : null;
   return (
     <div
       className={`${cls}${task || outcome ? ' kx-task' : ''}`}
@@ -1511,6 +1513,13 @@ function DocBlock({
           />
           <span className="kx-task-text">
             <Inline text={task[2] ?? ''} />
+          </span>
+        </>
+      ) : ordered ? (
+        <>
+          <span className="kx-ol-n mono">{ordered[1]}</span>
+          <span>
+            <Inline text={ordered[2] ?? ''} />
           </span>
         </>
       ) : (
