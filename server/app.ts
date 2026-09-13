@@ -298,7 +298,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
           stage: 'no-engine',
           questions: [
             'Kortext drives your own agent CLI; none is installed yet.',
-            'Install one — claude, codex or gemini — then pick it in the header and press Start.',
+            'Install one — claude, codex, antigravity or gemini — then pick it in the header and press Start.',
           ],
           briefHash: '',
           checkedAt: new Date().toISOString(),

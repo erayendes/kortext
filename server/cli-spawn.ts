@@ -15,8 +15,11 @@ export type SpawnCliOptions = {
   cwd: string;
   stdin?: string;
   /** Some CLIs take the prompt only as an argument. When set, `stdin` goes
-   *  after this flag instead of through the pipe. */
+   *  after this flag instead of through the pipe — or last, alone, when the
+   *  flag is ''. */
   promptFlag?: string;
+  /** Environment for the child; the server's own when unset. */
+  env?: NodeJS.ProcessEnv;
   logPath: string;
   signal: AbortSignal;
   /** Delay between SIGTERM and SIGKILL when aborted. Default 1000ms. */
@@ -63,14 +66,16 @@ export async function spawnCli(opts: SpawnCliOptions): Promise<SpawnCliResult> {
   const onWindows = process.platform === 'win32';
   // A prompt on the command line is untrusted text; the Windows path runs
   // through a shell, so it stays on stdin there or not at all.
-  if (opts.promptFlag && onWindows) throw new Error(`${opts.binary} needs stdin prompts on Windows`);
+  const asArg = opts.promptFlag !== undefined;
+  if (asArg && onWindows) throw new Error(`${opts.binary} needs stdin prompts on Windows`);
   const args =
-    opts.promptFlag && opts.stdin !== undefined
-      ? [...opts.args, opts.promptFlag, opts.stdin]
+    asArg && opts.stdin !== undefined
+      ? [...opts.args, ...(opts.promptFlag ? [opts.promptFlag] : []), opts.stdin]
       : opts.args;
-  const stdin = opts.promptFlag ? undefined : opts.stdin;
+  const stdin = asArg ? undefined : opts.stdin;
   const proc = spawn(opts.binary, args, {
     cwd: opts.cwd,
+    env: opts.env,
     stdio: ['pipe', 'pipe', 'pipe'],
     shell: onWindows,
     // Use a POSIX process group to terminate descendants that could keep output pipes open.

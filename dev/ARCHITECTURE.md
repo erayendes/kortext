@@ -158,7 +158,10 @@ standing requests (plus a settled brief on a new project).
 
 ## 5 · The engine
 
-**Selection (`engines.ts`).** Detected with `which`. The three are equals — nothing ranks them —
+**Selection (`engines.ts`).** One `EngineSpec` per CLI: binary, headless args, how the prompt
+travels (stdin, after a flag, or last and alone), the model flag or variable, a cwd flag, extra
+env, a model list for the panel, and `untested` for the ones prepared from documentation only.
+Detected with `which`, then `~/.local/bin`. The three are equals — nothing ranks them —
 so the choice belongs to the project, not the app: the **Add project** form carries a dropdown
 beside Initialize, and the answer is stored in `projects.engine`. `engineFor` honours it as long
 as that CLI is still installed and otherwise falls back to anything that is, so uninstalling a

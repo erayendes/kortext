@@ -4,6 +4,10 @@
 
 Findings from the first real project run through the panel end to end.
 
+- **More engines.** `antigravity` (Google's `agy`) ran a real project; `cursor`, `copilot`,
+  `opencode`, `amp`, `droid`, `goose`, `qwen` and `cline` are prepared from their CLI's
+  documentation and appear in the dropdown, marked untested, the day they are installed. A CLI
+  in `~/.local/bin` is found even when the server was started from an app without that PATH.
 - **A model per project.** The dropdown beside the engine names the model the CLI is
   told to use — `claude --model`, `codex -m`, `gemini -m`. Empty keeps the CLI's own default.
 - **Rechecks are pool work.** They run up to three at once alongside the steps, they follow an

@@ -83,6 +83,7 @@ export interface EngineInfo {
   available: boolean;
   installHint: string;
   models?: string[];
+  untested?: boolean;
 }
 
 export interface Job {

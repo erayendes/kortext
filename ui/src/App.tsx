@@ -930,8 +930,8 @@ function EngineSelect({
       title="The agent CLI that writes this project's documents"
     >
       {engines.map((e) => (
-        <option key={e.id} value={e.id}>
-          {e.id}
+        <option key={e.id} value={e.id} title={e.untested ? 'Prepared from its documentation, not yet run here' : undefined}>
+          {e.untested ? `${e.id} · untested` : e.id}
         </option>
       ))}
     </select>
@@ -951,6 +951,8 @@ function ModelSelect({
 }) {
   if (!engine) return null;
   const known = engine.models ?? [];
+  // A CLI that names no models takes its own from its config; nothing to pick.
+  if (known.length === 0 && !value) return null;
   const options = value && !known.includes(value) ? [...known, value] : known;
   return (
     <select
@@ -1374,7 +1376,7 @@ function AddProject({
       )}
       {engines.length === 0 && (
         <span className="kx-cmd-hint">
-          No agent CLI found on your PATH. Install one — claude, codex or gemini — and pick it here;
+          No agent CLI found on your PATH. Install one — claude, codex, antigravity, gemini or another the dropdown knows — and pick it here;
           the project can be added now and started later.
         </span>
       )}

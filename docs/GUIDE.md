@@ -119,7 +119,11 @@ says.
 
 ## Running, pausing, changing the engine
 
-The engine — `claude`, `codex` or `gemini` — belongs to the project, not to Kortext. You pick it
+The engine — `claude`, `codex`, `antigravity` or `gemini`, and behind them `cursor`, `copilot`,
+`opencode`, `amp`, `droid`, `goose`, `qwen` and `cline` — belongs to the project, not to Kortext.
+The dropdown lists what is installed; the ones marked *untested* were prepared from their CLI's
+documentation and have not written a document on a real machine yet — try one, and tell us how
+it went. You pick it
 when you add the project, and the dropdown next to Start changes it later. That is the move when
 a quota runs out: switch, and the steps that start afterwards run on the other CLI. Whatever is
 running at that moment finishes on the old one.
@@ -194,7 +198,7 @@ before it does, and hiding them on one screen hides them on both.
 **A step failed.** The row says why, in the CLI's own words. The usual cause is an agent CLI that
 is installed but not signed in — run it once on its own in a terminal, then Retry.
 
-**The header says no agent CLI was found.** None of `claude`, `codex`, `gemini` is on your
+**The header says no agent CLI was found.** None of the known CLIs is on your
 `PATH`. Install one (see the [README](../README.md)) and reload.
 
 **A step has been running for a long time.** Analysis steps take minutes; a stuck one is stopped

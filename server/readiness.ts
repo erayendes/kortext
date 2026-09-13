@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { spawnCli } from './cli-spawn.js';
 import { logPathFor, type Project } from './db.js';
 import { readFrontmatter, setFrontmatterStatus } from './docs.js';
-import { engineArgs, type EngineSpec } from './engines.js';
+import { engineArgs, engineEnv, type EngineSpec } from './engines.js';
 
 // Gate analysis on project evidence. New projects need a local content check and a CLI
 // judgment cached by brief version; existing projects require source files only.
@@ -279,6 +279,7 @@ async function check(
       binary: engine.binary,
       args: engineArgs(engine, project),
       promptFlag: engine.promptFlag,
+      env: engineEnv(engine, project),
       cwd: project.repo_path,
       stdin: buildJudgmentPrompt(project),
       logPath,

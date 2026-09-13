@@ -4,7 +4,7 @@ import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'no
 import { join } from 'node:path';
 import { logPathFor, type Project } from './db.js';
 import { spawnCli } from './cli-spawn.js';
-import { detectEngines, engineArgs, type EngineSpec } from './engines.js';
+import { detectEngines, engineArgs, engineEnv, type EngineSpec } from './engines.js';
 import { writeDesignPreview } from './design-preview.js';
 import {
   appendIncomingRequest,
@@ -460,6 +460,7 @@ export async function explainDoc(
       binary: engine.binary,
       args: engineArgs(engine, liveProject(db, project)),
       promptFlag: engine.promptFlag,
+      env: engineEnv(engine, liveProject(db, project)),
       cwd: project.repo_path,
       stdin: prompt,
       logPath: logPathFor(db, `p${project.id}-explain.log`),
@@ -535,6 +536,7 @@ async function runRecheck(
       binary: engine.binary,
       args: engineArgs(engine, liveProject(db, project)),
       promptFlag: engine.promptFlag,
+      env: engineEnv(engine, liveProject(db, project)),
       cwd: project.repo_path,
       stdin: prompt,
       logPath: logPathFor(db, `p${project.id}-recheck.log`),
@@ -692,6 +694,7 @@ export async function proposeRevision(
       binary: engine.binary,
       args: engineArgs(engine, liveProject(db, project)),
       promptFlag: engine.promptFlag,
+      env: engineEnv(engine, liveProject(db, project)),
       cwd: project.repo_path,
       stdin: prompt,
       logPath: logPathFor(db, `p${project.id}-propose.log`),
@@ -768,6 +771,7 @@ export async function runPlanning(
       binary: engine.binary,
       args: engineArgs(engine, liveProject(db, project)),
       promptFlag: engine.promptFlag,
+      env: engineEnv(engine, liveProject(db, project)),
       cwd: project.repo_path,
       stdin: lines.join('\n'),
       logPath: logPathFor(db, `p${project.id}-plan.log`),
@@ -877,6 +881,7 @@ export async function runStep(
       binary: engine.binary,
       args: engineArgs(engine, liveProject(db, project)),
       promptFlag: engine.promptFlag,
+      env: engineEnv(engine, liveProject(db, project)),
       cwd: project.repo_path,
       stdin: prompt,
       logPath,
