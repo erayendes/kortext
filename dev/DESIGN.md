@@ -100,7 +100,7 @@ inside a code block.
 |---|---|---|---|
 | green | approved | Tip | string |
 | amber | your turn, paused | Warning | number |
-| violet | pending | Important | keyword |
+| violet | the `approve` badge; a plan not yet approved | Important | keyword |
 | blue | writing | Note | JSON key |
 | red | failed | Caution | — |
 | pink | demand, dependency | — | — |
@@ -230,11 +230,10 @@ The heart of the system. A document is in **exactly one** state — where it is.
 
 | state | means | colour |
 |---|---|---|
-| `waiting` | queued; the chain has not reached it | neutral |
+| `waiting` | queued — or written and waiting for you, which the `approve` badge says | neutral |
 | `writing` | the agent is writing it now | blue, the dot pulses |
 | `reading` | a recheck is running against it now — the agent reads, it does not write | blue, the dot pulses |
 | `paused` | writing was stopped | amber |
-| `pending` | written, waiting for your approval | violet |
 | `approved` | you approved it | green |
 | `n/a` | considered, deliberately skipped | no ground, faint outline |
 
