@@ -1,5 +1,5 @@
 // Render a preview from the tokens declared in DESIGN.md without inventing missing values.
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Project } from './db.js';
 import { readFrontmatter } from './docs.js';
@@ -573,11 +573,14 @@ ${body}
 /** Writes `.kortext/DESIGN.html` next to the document. No document, no page. */
 export function writeDesignPreview(project: Project): void {
   const md = join(project.repo_path, '.kortext', 'DESIGN.md');
+  const html = join(project.repo_path, '.kortext', 'DESIGN.html');
   if (!existsSync(md)) return;
   const content = readFileSync(md, 'utf8');
-  writeFileSync(
-    join(project.repo_path, '.kortext', 'DESIGN.html'),
-    renderDesignPreview(content, project.name),
-    'utf8',
-  );
+  // A skeleton has nothing to preview: a page rendered from placeholders is a
+  // file nobody asked for, and the next author reports it as one.
+  if (readFrontmatter(content).status === 'uninitialized') {
+    if (existsSync(html)) unlinkSync(html);
+    return;
+  }
+  writeFileSync(html, renderDesignPreview(content, project.name), 'utf8');
 }

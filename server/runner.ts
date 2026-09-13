@@ -123,7 +123,7 @@ export function buildStepPrompt(
     '- Write only what your evidence supports. Where it is silent, say so and leave the question to prime; never fill a section by assuming what the product is probably like.',
     '- You may write something you did not find but believe the project should have. Every such line starts with `**Suggestion —**` and says why you are proposing it. A line without that marker is a fact you observed. Writing a suggestion as a fact misleads everyone who later uses this document as a contract — a target, a threshold and a schedule are facts only if the evidence carries them.',
     "- Every question you leave for the human goes under the document's `## Questions for Prime` heading, one `- ` item each, and nowhere else. Leave that section empty when there is nothing to ask — an empty section is the signal that the document stands on its own.",
-    '- A finding about something no document owns — a config file, a workflow, a tracked secret, a live endpoint — goes under `## Findings` in THIS document, one line each, starting with the path in backticks: `` - `.gitignore` — `.env` is tracked and holds live credentials ``. Do not aim a revision request at it: a demand can only ask a document to change, and one aimed anywhere else is a finding nobody can act on.',
+    '- A finding about something no document owns — a config file, a workflow, a tracked secret, a live endpoint — goes under `## Findings` in THIS document, one line each, starting with the path in backticks: `` - `.gitignore` — `.env` is tracked and holds live credentials ``. Do not aim a revision request at it: a demand can only ask a document to change, and one aimed anywhere else is a finding nobody can act on. Nothing under `.kortext/` is a finding: `.kortext/DESIGN.html` is the preview kortext itself renders from `DESIGN.md`, and the dot-files there are its own bookkeeping — generated, owned, and not yours to report.',
     '- When an ALREADY-WRITTEN document must change because of what you found, that is not prose: put one line under `## Change Requests`, starting with the target file in backticks — `` - `ENVIRONMENT.md` — the access-log lines must follow the no-logs decision `` — and say what must change and why. The panel turns each line into an action the human can take; a demand written anywhere else in the document is a demand nobody can act on. Leave the section empty when nothing upstream needs to change.',
     '- Under the same heading you will find lines that start with `from` — `` - [ ] from `STACK.md` — … ``. Those are the OTHER direction: what other documents asked of THIS one. They are not yours to write, reword or remove; the human decides them in the panel, and kortext ticks them. Keep every one of them exactly as it is. And read `## Decisions` before you write a request: each line there is a request the human has ALREADY refused, with the reason under it — do not raise the point again, in either direction, unless your evidence has actually changed since, and then say what changed, in so many words. Keep that section exactly as it is too. Repeating a settled request with a fresh wording is how a document set argues with itself forever.',
     '',
@@ -844,7 +844,13 @@ export async function runStep(
         );
       }
     }
-    recordVersion(db, project, step.output, written, 'agent', priorText, job.id);
+    // A skeleton is not a version of the document: recording it would make the
+    // first draft read as a rewrite of the placeholders, every line marked.
+    const priorVersion =
+      priorText !== null && readFrontmatter(priorText).status === 'uninitialized'
+        ? null
+        : priorText;
+    recordVersion(db, project, step.output, written, 'agent', priorVersion, job.id);
     // What was asked of this document is not the agent's to drop: put back any
     // line the rewrite lost. Then the requests this run answered — the ones
     // prime chose, and the ones the first write inherited — are done, and a

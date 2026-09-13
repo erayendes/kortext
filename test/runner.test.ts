@@ -14,7 +14,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { logPathFor, logRootDir, openDb } from '../server/db.js';
 import { createProject, BRIEF_REL } from '../server/projects.js';
-import { setFrontmatterStatus, docPath, listDocs } from '../server/docs.js';
+import { setFrontmatterStatus, docPath, listDocs, listVersions } from '../server/docs.js';
 import {
   abortRuns,
   advance,
@@ -113,6 +113,11 @@ test('runStep happy path: engine writes draft, job settles done', async () => {
   assert.match(readFileSync(docPath(p, step.output), 'utf8'), /status: draft/);
   assert.equal(listJobs(db, p.id)[0].status, 'done');
   assert.equal(runningJob(db, p.id), undefined);
+  // The skeleton the draft replaced is not a version of the document.
+  assert.deepEqual(
+    listVersions(db, p, step.output).map((v) => v.source),
+    ['agent'],
+  );
   rmSync(work, { recursive: true, force: true });
 });
 
