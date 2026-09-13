@@ -243,15 +243,21 @@ beside it are round, so the two never read as one family. The dot is what you sc
 what you read when you stop. `n/a` is not a colour but the absence of one: an outline in the
 text's own ink.
 
-| badge | means | colour |
-|---|---|---|
-| `failed` | the last attempt fell over; the reason is in the document | red |
-| `change request` | another document wants this one changed | pink |
+| badge | means | colour | group |
+|---|---|---|---|
+| `review` | Action Needed items stand on it — questions, incoming or outgoing requests; the tooltip lists them | pink | Action needed |
+| `approve` | nothing open — approve it | violet | Action needed |
+| `recheck` | an input moved; read again when it settles — the tooltip names the input | amber | To do |
+| `draft` / `revision` | what a run is writing: the first draft, or a rewrite of what stands | muted | Doing |
+| `queue` | not written yet | muted | To do |
+
+`failed` is a state, not a badge — the run fell over and asks for a Retry — and the row that
+carries it wears the `draft` or `revision` badge of the run that failed.
 
 A badge is the round pill without the dot: it says what is owed, and a debt has no motion to
 show. Round against the state's square corner is the whole difference at a glance.
 
-**A badge beats the state.** Anything carrying `failed` or `change request` moves to **Action
+**A badge beats the state.** Anything carrying `failed` or `review` moves to **Action
 needed** whatever its state. A moving input is news, not work, so it is not a badge: `recheck`
 says which input in its tooltip, and the drawer's dependency band names it.
 
@@ -271,8 +277,8 @@ something.
   <span class="kx-doc-name">API</span>
   <span class="kx-doc-author mono">architect</span>
   <span class="kx-doc-spacer"></span>
-  <span class="kx-badge kx-badge-change">change request</span>
-  <span class="kx-status kx-status-approved">approved</span>
+  <span class="kx-badge kx-badge-review">review</span>
+  <span class="kx-status kx-status-waiting">waiting</span>
 </button>
 ```
 
