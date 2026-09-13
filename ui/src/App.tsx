@@ -1375,6 +1375,7 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
   // An engine change applies to subsequent steps; active steps keep their current CLI.
   const [engines, setEngines] = useState<EngineInfo[]>([]);
   const [engine, setEngine] = useState<string | null>(project.engine || null);
+  const [model, setModel] = useState(project.model ?? '');
 
   useEffect(() => {
     api
@@ -1481,6 +1482,20 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
               setEngine(id);
               api.setProjectEngine(project.id, id).catch((e) => setErr((e as Error).message));
             }}
+          />
+          {/* Free text: each CLI names its models its own way. Saved on blur or
+              Enter; empty means the CLI's default. Only later steps see it. */}
+          <input
+            className="input kx-model mono"
+            value={model}
+            placeholder="model (default)"
+            title="The model that CLI is told to use — claude --model, codex -m, gemini -m. Empty: the CLI's own default. Applies to steps that start after it."
+            onChange={(e) => setModel(e.target.value)}
+            onBlur={() => {
+              if (model.trim() !== (project.model ?? ''))
+                api.setProjectModel(project.id, model.trim()).catch((e) => setErr((e as Error).message));
+            }}
+            onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
           />
 
           {running ? (
@@ -1800,6 +1815,13 @@ function DocumentsTab({
                   <span className="kx-doc-name">{d.name}</span>
                   {d.author && (
                     <span className="kx-doc-author mono">{d.author.replace(/^\+/, '')}</span>
+                  )}
+                  {/* The reason, in the row: a Retry the server refused writes a
+                      new failed job, and a tooltip alone hides that anything happened. */}
+                  {failed && job?.error && (
+                    <span className="kx-doc-why mono" title={job.error}>
+                      {job.error}
+                    </span>
                   )}
                   <span className="kx-doc-spacer" />
                   {failed && (

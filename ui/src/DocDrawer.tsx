@@ -13,9 +13,13 @@ const FINDINGS = /^(findings|warnings)$/i;
 
 interface Note {
   line: number | null;
+  /** `#3` for a question — the number it carries in the list — else the line's
+   *  first words. Fixed when the note is taken: the tray reads it, not the
+   *  token index, because the text under the index moves once a request is sent. */
   excerpt: string;
   text: string;
 }
+const isQuestionNote = (n: Note) => n.line !== null && /^#\d+$/.test(n.excerpt);
 
 /** What became of a change request, read from its box and the line under it. */
 interface Outcome {
@@ -483,11 +487,10 @@ export function DocDrawer({
     let n = 0;
     for (const note of notes) {
       if (note.line === null || m.has(note.line)) continue;
-      const q = qNo.get(note.line);
-      m.set(note.line, `#${q ?? ++n}`);
+      m.set(note.line, isQuestionNote(note) ? note.excerpt : `#${++n}`);
     }
     return m;
-  }, [notes, qNo]);
+  }, [notes]);
 
   if (!doc)
     return (
@@ -534,7 +537,7 @@ export function DocDrawer({
   const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
   // An answer to a listed question and a note on a line are counted apart —
   // they read differently, and prime should see which is which before pressing.
-  const answered = notes.filter((n) => n.line !== null && qNo.has(n.line)).length;
+  const answered = notes.filter(isQuestionNote).length;
   const remarks = notes.length - answered;
   const summary = [
     answered > 0 && written ? plural(answered, 'question answered', 'questions answered') : null,
@@ -619,10 +622,11 @@ export function DocDrawer({
       onClose();
     });
 
-  const saveEdit = () =>
+  // Saving a proposal settles the requests it addresses; a hand edit settles
+  // them only when prime says so — the second button, drawn when requests stand.
+  const saveEdit = (settle = proposed) =>
     act(async () => {
-      // Saving a proposal also settles the requests it addresses.
-      const saved = await api.saveDoc(project.id, doc.rel, draft, version, proposed);
+      const saved = await api.saveDoc(project.id, doc.rel, draft, version, settle);
       setContent(saved.content);
       setVersion(saved.version);
       setDraft(saved.content);
@@ -717,9 +721,19 @@ export function DocDrawer({
           )}
           {editing && (
             <>
-              <button className="btn btn-primary" disabled={busy} onClick={saveEdit}>
+              <button className="btn btn-primary" disabled={busy} onClick={() => saveEdit()}>
                 Save
               </button>
+              {!proposed && doc.revisionRequests.length > 0 && (
+                <button
+                  className="btn btn-primary"
+                  disabled={busy}
+                  title="Save this text and mark the incoming requests done — no rewrite by the agent"
+                  onClick={() => saveEdit(true)}
+                >
+                  Save, requests done
+                </button>
+              )}
               <button
                 className="btn btn-secondary"
                 disabled={busy}
@@ -873,7 +887,7 @@ export function DocDrawer({
                   it goes there — the question or request in the list above, or
                   the line in the document. */}
               {notes.map((n, i) => {
-                const isQuestion = n.line !== null && qNo.has(n.line);
+                const isQuestion = isQuestionNote(n);
                 const target =
                   n.line === null ? null : isQuestion ? `kx-q-${n.line}` : `kx-line-${n.line}`;
                 return (

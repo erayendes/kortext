@@ -6,6 +6,8 @@ export interface EngineSpec {
   id: string;
   binary: string;
   args: string[];
+  /** The flag that names a model; the project's `model` rides after it. */
+  modelFlag: string;
   installHint: string;
 }
 
@@ -16,6 +18,7 @@ export const ENGINES: EngineSpec[] = [
     // --print: headless (no REPL); skip-permissions: auto-approve tool use;
     // stdin carries the step prompt.
     args: ['--print', '--dangerously-skip-permissions'],
+    modelFlag: '--model',
     installHint: 'npm install -g @anthropic-ai/claude-code',
   },
   {
@@ -24,15 +27,23 @@ export const ENGINES: EngineSpec[] = [
     // exec = non-interactive; workspace-write so it can create the output
     // file; skip-git-repo-check: project may not be a git repo (yet).
     args: ['exec', '--sandbox', 'workspace-write', '--skip-git-repo-check'],
+    modelFlag: '-m',
     installHint: 'npm install -g @openai/codex',
   },
   {
     id: 'gemini',
     binary: 'gemini',
     args: ['--yolo'],
+    modelFlag: '-m',
     installHint: 'npm install -g @google/gemini-cli',
   },
 ];
+
+/** The CLI's arguments with the project's model, when one is set. */
+export function engineArgs(engine: EngineSpec, project: { model?: string }): string[] {
+  const model = (project.model ?? '').trim();
+  return model ? [...engine.args, engine.modelFlag, model] : engine.args;
+}
 
 /**
  * Check PATH with which on POSIX and where on Windows.

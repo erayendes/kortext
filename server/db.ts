@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS projects (
   archived INTEGER NOT NULL DEFAULT 0,-- 1 = folded away in the panel; files untouched
   doc_lang TEXT NOT NULL DEFAULT '',  -- the language the documents are written in
   engine TEXT NOT NULL DEFAULT '',    -- the agent CLI this project runs on
+  model TEXT NOT NULL DEFAULT '',     -- the model that CLI is told to use; '' = the CLI's own default
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE TABLE IF NOT EXISTS settings (
@@ -74,6 +75,9 @@ export function openDb(path = defaultDbPath()): Database.Database {
   if (!(db.pragma('table_info(jobs)') as { name: string }[]).some((c) => c.name === 'notes')) {
     db.exec("ALTER TABLE jobs ADD COLUMN notes TEXT NOT NULL DEFAULT '[]'");
   }
+  if (!(db.pragma('table_info(projects)') as { name: string }[]).some((c) => c.name === 'model')) {
+    db.exec("ALTER TABLE projects ADD COLUMN model TEXT NOT NULL DEFAULT ''");
+  }
   return db;
 }
 
@@ -87,5 +91,6 @@ export interface Project {
   archived: number; // 1 = finished with, folded away in the panel; files untouched
   doc_lang: string; // the language the documents are written in; '' = follow the brief
   engine: string; // the agent CLI this project runs on; '' = whatever is installed
+  model: string; // passed to that CLI's model flag; '' = the CLI's own default
   created_at: string;
 }

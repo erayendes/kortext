@@ -65,7 +65,7 @@ With `--db /path/name.sqlite`, logs live in `/path/name.sqlite.logs/`; sibling d
 
 | Table | Columns |
 | --- | --- |
-| `projects` | `id · name · repo_path (UNIQUE) · kind (new\|existing) · code · paused · archived · doc_lang · engine · created_at` |
+| `projects` | `id · name · repo_path (UNIQUE) · kind (new\|existing) · code · paused · archived · doc_lang · engine · model · created_at` |
 | `settings` | `key/value` — today just the selected engine |
 | `jobs` | `project_id · doc_rel · kind (doc\|plan\|recheck) · status (running\|done\|failed\|stopped) · error · notes (JSON) · started_at · finished_at` |
 | `pending_rechecks` | `project_id · source_rel · reader_rel · generation` — durable work, unique per source/reader pair |
@@ -189,9 +189,14 @@ one engine **judgment**, cached per brief hash: one run per edit of the brief, n
 A refused brief is demoted `approved → draft`: a document waiting on a human belongs under
 "Action needed", not sitting approved next to "I cannot start".
 
-**The chain (`runner.ts:advance`).** One loop per project. Each turn it takes the producible
-steps (unwritten, inputs settled, not running), starts at most **3 in parallel**, then waits on
-`Promise.race` for either a completion or a wake. Approval routes call the same `advance`; a
+**The chain (`runner.ts:advance`).** One loop per project. Each turn it fills a pool of
+**3**: pending rechecks first, then the producible steps (unwritten, inputs settled, not
+running); room is what the database shows running, so a revision started from the panel takes a
+slot too, and `reviseDoc` waits for one instead of running as a fourth CLI. The engine and model
+are read from the project row at every spawn, so a switch in the panel reaches the next step and
+the next recheck alike. The loop runs once with rechecks alone before the readiness gate — a
+reader owes its verdict whatever the brief says — then with steps once the gate has passed, and
+waits on `Promise.race` for either a completion or a wake. Approval routes call the same `advance`; a
 running loop is woken rather than duplicated, so an approval does not wait for the next
 completion while the pool has room. Pause stops new steps and aborts active runs. The
 loop is claimed before the gate is awaited, so two approvals landing in the same second wake one
@@ -234,7 +239,7 @@ write. A successful write settles it in the document that asked, as `folded into
 | `explainDoc` | line-anchored Q&A with the author persona | nothing — the answer lives in the panel |
 
 `recheckDependents` queues every approved reader when its source is edited or approved.
-The chain drains `pending_rechecks` one at a time. Pause and server restarts retain unfinished
+The chain runs `pending_rechecks` inside its pool, up to three at once, never two on one reader. Pause and server restarts retain unfinished
 checks; Continue/Retry resumes them. A newer source change increments the generation so an older
 verdict cannot clear it. Pending checks prevent analysis completion.
 
@@ -259,6 +264,7 @@ No fs-watch — the panel polls (docs 3s, transfer 4s, handshake 5s).
 | `GET \| PUT /api/engines` | detect the installed CLIs · the global fallback choice |
 | `POST /api/pick-directory` | macOS chooser; `null` elsewhere |
 | `PUT …/engine` | the CLI this project runs on |
+| `PUT …/model` | the model that CLI is told to use (`--model` / `-m`); empty = the CLI's default |
 | `GET /api/projects/:id/jobs` | last 50 + the running one |
 | `POST …/run-next` | nudge the chain by hand |
 | `GET …/readiness` | the gate's standing verdict + whether a check is out |

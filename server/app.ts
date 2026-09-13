@@ -55,6 +55,7 @@ import {
   resumeStoppedRevisions,
   runPlanning,
   runningDoc,
+  writingDoc,
   runningJob,
 } from './runner.js';
 import { isChecking, readReadiness } from './readiness.js';
@@ -216,6 +217,19 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     if (!ENGINES.some((e) => e.id === id)) return res.status(400).json({ error: 'unknown engine' });
     db.prepare('UPDATE projects SET engine = ? WHERE id = ?').run(String(id), project.id);
     res.json({ engine: id });
+  });
+
+  // The model that CLI is told to use — free text, because each CLI names its
+  // models its own way and a new one appears before this list would. Empty
+  // means the CLI's own default. Like the engine, only later steps see it.
+  app.put('/api/projects/:id/model', (req, res) => {
+    const project = projectOr404(req.params.id, res);
+    if (!project) return;
+    const model = String(req.body?.model ?? '').trim();
+    if (model.length > 80 || /[\s"'`]/.test(model))
+      return res.status(400).json({ error: 'a model name is one word' });
+    db.prepare('UPDATE projects SET model = ? WHERE id = ?').run(model, project.id);
+    res.json({ model });
   });
 
   app.get('/api/projects/:id/jobs', (req, res) => {
@@ -404,7 +418,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   const reviewedPath = (project: Project, req: express.Request, res: express.Response) => {
     const { rel, expectedVersion } = req.body ?? {};
     const path = docPath(project, String(rel));
-    if (runningDoc(db, project.id, String(rel))) {
+    if (writingDoc(db, project.id, String(rel))) {
       res.status(409).json({ error: `${rel} is being rewritten — wait for it to land` });
       return null;
     }

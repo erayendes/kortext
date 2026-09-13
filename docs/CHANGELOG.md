@@ -1,5 +1,23 @@
 # Changelog
 
+## [Unreleased]
+
+Findings from the first real project run through the panel end to end.
+
+- **A model per project.** The field beside the engine dropdown names the model the CLI is
+  told to use — `claude --model`, `codex -m`, `gemini -m`. Empty keeps the CLI's own default.
+- **Rechecks are pool work.** They run up to three at once alongside the steps, they follow an
+  engine switch like every other run, and a running one shows as `reading` under Doing rather
+  than waiting under To do. A recheck that fails says `failed · recheck`.
+- **Three means three.** A revision or retry started from the panel takes a slot in the same
+  pool as the chain instead of running as a fourth CLI.
+- **Edit while a recheck reads.** Prime's edits are refused only while a run is writing the
+  document; a recheck only reads it.
+- **Save, requests done.** When requests stand on a document, the editor offers to save your
+  own text and close them — no rewrite by the agent for a number or a sentence.
+- A draft with a recheck queued shows `approve` first; a failed Retry writes its reason into
+  the row; the tray keeps a note's label once the document under it moves.
+
 ## [3.1.0] — 2026-09-06
 
 The first public release.

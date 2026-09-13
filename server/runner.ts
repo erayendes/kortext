@@ -4,7 +4,7 @@ import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'no
 import { join } from 'node:path';
 import { logPathFor, type Project } from './db.js';
 import { spawnCli } from './cli-spawn.js';
-import { ENGINES, type EngineSpec } from './engines.js';
+import { ENGINES, engineArgs, type EngineSpec } from './engines.js';
 import { writeDesignPreview } from './design-preview.js';
 import {
   appendIncomingRequest,
@@ -51,6 +51,27 @@ export function runningJob(db: Database.Database, projectId: number): Job | unde
 }
 
 /** Is this one document being written right now? */
+// The row as it stands now — engine and model can change while a chain runs,
+// and each spawn should carry what the panel shows.
+function liveProject(db: Database.Database, project: Project): Project {
+  return (
+    (db.prepare('SELECT * FROM projects WHERE id = ?').get(project.id) as Project | undefined) ??
+    project
+  );
+}
+
+// A run that will write the document. A recheck only reads it, so prime may
+// still edit while one runs — the verdict lands against whatever prime saved.
+export function writingDoc(db: Database.Database, projectId: number, rel: string): boolean {
+  return (
+    db
+      .prepare(
+        "SELECT 1 FROM jobs WHERE project_id = ? AND doc_rel = ? AND status = 'running' AND kind != 'recheck'",
+      )
+      .get(projectId, rel) !== undefined
+  );
+}
+
 export function runningDoc(db: Database.Database, projectId: number, rel: string): boolean {
   return (
     db
@@ -234,6 +255,32 @@ export function abortRuns(projectId: number): void {
   for (const c of liveRuns.get(projectId) ?? []) c.abort();
 }
 
+// The CLI the project picks now, or the caller's when it picks none. Read per
+// spawn, not per loop: a quota runs out mid-chain and the panel's switch must
+// reach the next step and the next recheck alike.
+function pickedEngine(db: Database.Database, project: Project, fallback: EngineSpec): EngineSpec {
+  const picked = (
+    db.prepare('SELECT engine FROM projects WHERE id = ?').get(project.id) as
+      { engine: string } | undefined
+  )?.engine;
+  return (picked && ENGINES.find((e) => e.id === picked)) || fallback;
+}
+
+function runningJobs(db: Database.Database, projectId: number): number {
+  return (
+    db
+      .prepare("SELECT count(*) AS n FROM jobs WHERE project_id = ? AND status = 'running'")
+      .get(projectId) as { n: number }
+  ).n;
+}
+
+// A revision or a retry started from the panel is not scheduled by the loop,
+// so it waits here for a slot instead of running as a fourth CLI.
+// ponytail: 2s poll, not a semaphore — the loop counts running jobs in the db anyway.
+async function waitForRoom(db: Database.Database, projectId: number): Promise<void> {
+  while (runningJobs(db, projectId) >= MAX_PARALLEL) await new Promise((r) => setTimeout(r, 2000));
+}
+
 export async function advance(
   db: Database.Database,
   project: Project,
@@ -251,7 +298,50 @@ export async function advance(
   advancing.set(project.id, () => wake());
   try {
     const checked = new Set<string>();
-    await drainRechecks(db, project, engine, pkgRoot, checked);
+    const inFlight = new Set<Promise<unknown>>();
+    // Cap attempts per document to prevent repeated failures from consuming unlimited quota.
+    // A new chain loop starts with a fresh count.
+    const attempts = new Map<string, number>();
+    // One scheduling loop, run twice: rechecks alone before the readiness
+    // gate — a reader owes its verdict whatever the brief says — then rechecks
+    // and steps together once the gate has passed.
+    const pump = async (steps: boolean) => {
+      for (;;) {
+        // Stop scheduling while paused; wait for in-flight promises to settle.
+        const paused = (
+          db.prepare('SELECT paused FROM projects WHERE id = ?').get(project.id) as
+            { paused: number } | undefined
+        )?.paused;
+        // Room is what the db shows running, not what this loop started: a
+        // revision from the panel takes a slot too.
+        let room = paused
+          ? 0
+          : MAX_PARALLEL - Math.max(inFlight.size, runningJobs(db, project.id));
+        const current = pickedEngine(db, project, engine);
+        // Rechecks share the pool with steps and take it first: they are short,
+        // and a reader that needs a change should say so before a step that
+        // reads it starts.
+        for (const p of startRechecks(db, project, current, pkgRoot, checked, room)) {
+          const q: Promise<void> = p.finally(() => inFlight.delete(q));
+          inFlight.add(q);
+          room -= 1;
+        }
+        if (steps && room > 0) {
+          for (const step of producibleSteps(db, project, pkgRoot).slice(0, room)) {
+            const tried = attempts.get(step.output) ?? 0;
+            if (tried >= MAX_STEP_ATTEMPTS) continue;
+            attempts.set(step.output, tried + 1);
+            const p = runStep(db, project, step, current, pkgRoot).finally(() =>
+              inFlight.delete(p),
+            );
+            inFlight.add(p);
+          }
+        }
+        if (inFlight.size === 0) return; // nothing running, nothing producible
+        await Promise.race([...inFlight, arm()]); // completion OR an approval nudge
+      }
+    };
+    await pump(false);
     // Check pause/removal before the readiness gate to avoid starting an unwanted CLI run.
     const before = db.prepare('SELECT paused FROM projects WHERE id = ?').get(project.id) as
       { paused: number } | undefined;
@@ -274,37 +364,7 @@ export async function advance(
       gate.done();
     }
     if (!ready) return;
-    const inFlight = new Set<Promise<unknown>>();
-    // Cap attempts per document to prevent repeated failures from consuming unlimited quota.
-    // A new chain loop starts with a fresh count.
-    const attempts = new Map<string, number>();
-    for (;;) {
-      await drainRechecks(db, project, engine, pkgRoot, checked);
-      // Stop scheduling while paused; wait for in-flight promises to settle.
-      const paused = (
-        db.prepare('SELECT paused FROM projects WHERE id = ?').get(project.id) as
-          { paused: number } | undefined
-      )?.paused;
-      const room = paused ? 0 : MAX_PARALLEL - inFlight.size;
-      if (room > 0) {
-        // Read the project selection each scheduling pass so later steps use the selected CLI.
-        // If unset, retain the caller-provided engine rather than resolving a global fallback.
-        const picked = (
-          db.prepare('SELECT engine FROM projects WHERE id = ?').get(project.id) as
-            { engine: string } | undefined
-        )?.engine;
-        const current = (picked && ENGINES.find((e) => e.id === picked)) || engine;
-        for (const step of producibleSteps(db, project, pkgRoot).slice(0, room)) {
-          const tried = attempts.get(step.output) ?? 0;
-          if (tried >= MAX_STEP_ATTEMPTS) continue;
-          attempts.set(step.output, tried + 1);
-          const p = runStep(db, project, step, current, pkgRoot).finally(() => inFlight.delete(p));
-          inFlight.add(p);
-        }
-      }
-      if (inFlight.size === 0) return; // nothing running, nothing producible
-      await Promise.race([...inFlight, arm()]); // completion OR an approval nudge
-    }
+    await pump(true);
   } finally {
     advancing.delete(project.id);
   }
@@ -332,7 +392,8 @@ export async function reviseDoc(
   if (runningDoc(db, project.id, rel)) {
     return refuse(db, project, rel, `${rel} is already being rewritten — wait for it to land`);
   }
-  const out = await runStep(db, project, step, engine, pkgRoot, notes);
+  await waitForRoom(db, project.id);
+  const out = await runStep(db, project, step, pickedEngine(db, project, engine), pkgRoot, notes);
   if (out.ok) await advance(db, project, engine, pkgRoot);
   return out;
 }
@@ -397,7 +458,7 @@ export async function explainDoc(
   try {
     res = await spawnCli({
       binary: engine.binary,
-      args: engine.args,
+      args: engineArgs(engine, liveProject(db, project)),
       cwd: project.repo_path,
       stdin: prompt,
       logPath: logPathFor(db, `p${project.id}-explain.log`),
@@ -471,7 +532,7 @@ async function runRecheck(
     const readerBefore = readFileSync(docPath(project, readerRel), 'utf8');
     const res = await spawnCli({
       binary: engine.binary,
-      args: engine.args,
+      args: engineArgs(engine, liveProject(db, project)),
       cwd: project.repo_path,
       stdin: prompt,
       logPath: logPathFor(db, `p${project.id}-recheck.log`),
@@ -541,20 +602,31 @@ export function recheckDependents(
 
 // The queue survives pause and process restarts. Each generation is attempted
 // once per chain loop; a failed judgment stays pending for Continue/Retry.
-async function drainRechecks(
+// Start up to `room` pending rechecks and return their promises; the chain
+// loop races them with its steps. Two rechecks never share a reader: the
+// running-doc check below sees the job the first one inserted.
+function startRechecks(
   db: Database.Database,
   project: Project,
   engine: EngineSpec,
   pkgRoot: string,
   attempted: Set<string>,
-): Promise<void> {
+  room: number,
+): Promise<void>[] {
+  const started: Promise<void>[] = [];
+  if (room <= 0) return started;
   const pending = db
     .prepare('SELECT * FROM pending_rechecks WHERE project_id = ?')
     .all(project.id) as { source_rel: string; reader_rel: string; generation: number }[];
+  const clear = (item: (typeof pending)[number]) =>
+    db
+      .prepare(
+        `DELETE FROM pending_rechecks WHERE project_id = ?
+      AND source_rel = ? AND reader_rel = ? AND generation = ?`,
+      )
+      .run(project.id, item.source_rel, item.reader_rel, item.generation);
   for (const item of pending) {
-    const row = db.prepare('SELECT paused FROM projects WHERE id = ?').get(project.id) as
-      { paused: number } | undefined;
-    if (!row || row.paused) return;
+    if (started.length >= room) break;
     const key = `${item.source_rel}:${item.reader_rel}:${item.generation}`;
     if (
       attempted.has(key) ||
@@ -565,15 +637,17 @@ async function drainRechecks(
     attempted.add(key);
     const reader = listDocs(db, project, pkgRoot).find((d) => d.rel === item.reader_rel);
     // A fresh draft needs human approval; it no longer claims to be settled.
-    const done =
-      reader?.status !== 'approved' ||
-      (await runRecheck(db, project, item.reader_rel, item.source_rel, engine));
-    if (done)
-      db.prepare(
-        `DELETE FROM pending_rechecks WHERE project_id = ?
-      AND source_rel = ? AND reader_rel = ? AND generation = ?`,
-      ).run(project.id, item.source_rel, item.reader_rel, item.generation);
+    if (reader?.status !== 'approved') {
+      clear(item);
+      continue;
+    }
+    started.push(
+      runRecheck(db, project, item.reader_rel, item.source_rel, engine).then((done) => {
+        if (done) clear(item);
+      }),
+    );
   }
+  return started;
 }
 
 // Draft a revision into a temporary text file, return it to the editor, then delete it.
@@ -614,7 +688,7 @@ export async function proposeRevision(
   try {
     res = await spawnCli({
       binary: engine.binary,
-      args: engine.args,
+      args: engineArgs(engine, liveProject(db, project)),
       cwd: project.repo_path,
       stdin: prompt,
       logPath: logPathFor(db, `p${project.id}-propose.log`),
@@ -689,7 +763,7 @@ export async function runPlanning(
   try {
     const res = await spawnCli({
       binary: engine.binary,
-      args: engine.args,
+      args: engineArgs(engine, liveProject(db, project)),
       cwd: project.repo_path,
       stdin: lines.join('\n'),
       logPath: logPathFor(db, `p${project.id}-plan.log`),
@@ -797,7 +871,7 @@ export async function runStep(
   try {
     const res = await spawnCli({
       binary: engine.binary,
-      args: engine.args,
+      args: engineArgs(engine, liveProject(db, project)),
       cwd: project.repo_path,
       stdin: prompt,
       logPath,

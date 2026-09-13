@@ -83,8 +83,9 @@ function fileDoc(doc: DocInfo, job: LastJob | null): Pick<DocInfo, 'section' | '
     detail,
   });
 
-  // What a run is writing: the first draft, or a revision of what stands.
-  const pass = job?.isUpdate ? 'revision' : 'draft';
+  // What a run is doing: reading again, the first draft, or a revision of what
+  // stands. A recheck that fell over says `failed · recheck`, not `· draft`.
+  const pass = job?.kind === 'recheck' ? 'recheck' : job?.isUpdate ? 'revision' : 'draft';
   if (job?.kind === 'doc' && job.status === 'running') return at('doing', 'writing', pass);
   // `paused` means one thing: prime stopped it. A run that errored is `failed`,
   // and the two share no button — Continue against Retry.

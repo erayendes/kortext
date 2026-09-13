@@ -1348,6 +1348,14 @@ a.btn {
   align-items: center;
   gap: 8px;
 }
+/* Model field: the same height and corner as the select beside it. */
+.kx-model {
+  width: 150px;
+  height: var(--control-h);
+  padding: 0 9px;
+  border-radius: var(--r-md);
+  font-size: var(--fs-ui);
+}
 .kx-main-head {
   display: flex;
   align-items: center;
@@ -2436,6 +2444,17 @@ button.kx-note-exc:hover {
 }
 .kx-doc-row.failed {
   border-color: rgba(204, 107, 107, 0.5);
+}
+/* The failure reason beside the name: one line, cut with an ellipsis, the
+   whole text in the tooltip. */
+.kx-doc-why {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-micro);
+  color: var(--red);
 }
 .kx-doc-fail {
   font-size: var(--fs-micro);

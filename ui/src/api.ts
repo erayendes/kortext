@@ -4,6 +4,7 @@ export interface Project {
   code: string;
   repo_path: string;
   engine?: string;
+  model?: string;
   paused?: number;
   archived?: number;
   created_at: string;
@@ -117,6 +118,11 @@ export const api = {
     req<{ engine: string }>(`/api/projects/${projectId}/engine`, {
       method: 'PUT',
       body: JSON.stringify({ id }),
+    }),
+  setProjectModel: (projectId: number, model: string) =>
+    req<{ model: string }>(`/api/projects/${projectId}/model`, {
+      method: 'PUT',
+      body: JSON.stringify({ model }),
     }),
   jobs: (projectId: number) =>
     req<{ jobs: Job[]; running: Job | null }>(`/api/projects/${projectId}/jobs`),
