@@ -480,7 +480,9 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   app.put('/api/projects/:id/docs/content', (req, res) => {
     const project = projectOr404(req.params.id, res);
     if (!project) return;
-    const { rel, content, settleRequests } = req.body ?? {};
+    // `recheck: false` is prime saying the readers need not re-read this: a
+    // number, a sentence, a typo. Default on — the cascade is the safe side.
+    const { rel, content, settleRequests, recheck = true } = req.body ?? {};
     // Reject empty saves to prevent accidental loss of document contents and approval state.
     if (typeof content !== 'string' || content.trim() === '') {
       return res.status(400).json({ error: 'content is required' });
@@ -511,7 +513,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       // Re-evaluate readiness and producibility after edits.
       kickChain(project);
       // Recheck approved readers against the updated source document.
-      if (wasApproved) {
+      if (wasApproved && recheck !== false) {
         const engine = engineFor(db, project);
         recheckDependents(db, project, String(rel), engine, pkgRoot);
       }

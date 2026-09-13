@@ -152,12 +152,13 @@ export const api = {
     content: string,
     expectedVersion: string,
     settleRequests = false,
+    recheck = true,
   ) =>
     req<{ ok: boolean; content: string; version: string }>(
       `/api/projects/${projectId}/docs/content`,
       {
         method: 'PUT',
-        body: JSON.stringify({ rel, content, expectedVersion, settleRequests }),
+        body: JSON.stringify({ rel, content, expectedVersion, settleRequests, recheck }),
       },
     ),
   docHistory: (projectId: number, rel: string) =>

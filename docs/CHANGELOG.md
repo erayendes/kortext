@@ -20,6 +20,8 @@ Findings from the first real project run through the panel end to end.
   document the next server had already marked failed.
 - **Edit while a recheck reads.** Prime's edits are refused only while a run is writing the
   document; a recheck only reads it.
+- **Re-read, or not.** Saving an approved document asks whether its readers should re-read it
+  — ticked by default; untick for the typo or the number that changes nothing for them.
 - **Save, requests done.** When requests stand on a document, the editor offers to save your
   own text and close them — no rewrite by the agent for a number or a sentence.
 - A draft with a recheck queued shows `approve` first; a failed Retry writes its reason into

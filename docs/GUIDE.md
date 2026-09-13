@@ -61,7 +61,11 @@ answer to it: the question disappears and the fact it established becomes part o
 **Edit** — write the file yourself. A normal save updates the text; it does not automatically
 close change requests or clear open questions. When requests are standing, a second button —
 **Save, requests done** — saves your text and closes them, for the number or the sentence that
-does not need the agent. When you use **Propose** to draft a requested change to the brief,
+does not need the agent. On an approved document the footer also carries **Re-read by N
+readers**, ticked: after the save, the documents that read this one read it again and say
+whether it now contradicts them. Untick it for a change that means nothing to them — a typo, a
+number — and nothing is re-read. Approvals and the agent's own rewrites always re-read; the
+choice is yours only when the hand on the file is yours. When you use **Propose** to draft a requested change to the brief,
 saving that proposal also closes the incoming requests it answers.
 
 **Preview** — on `DESIGN.md` only, in the drawer itself: the button swaps the text for the page

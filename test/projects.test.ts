@@ -280,6 +280,42 @@ test('a document being rewritten cannot be saved over, and an approved edit re-r
   rmSync(work, { recursive: true, force: true });
 });
 
+test('a save re-reads the approved readers unless prime says the change means nothing to them', async () => {
+  const work = tempDir();
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Reread', repoPath: join(work, 'reread') }, pkgRoot);
+  const { buildApp } = await import('../server/app.js');
+  const app = buildApp(db, pkgRoot, join(work, 'db.sqlite'));
+  const server = app.listen(0);
+  const port = (server.address() as { port: number }).port;
+  const kortext = join(work, 'reread', '.kortext');
+  // STACK is approved and ARCHITECTURE, which reads it, is approved too.
+  writeFileSync(join(kortext, 'STACK.md'), '---\nstatus: approved\n---\n\n# S\n\nold\n');
+  writeFileSync(join(kortext, 'ARCHITECTURE.md'), '---\nstatus: approved\n---\n\n# A\n');
+  const save = (content: string, extra: Record<string, unknown>) =>
+    fetch(`http://127.0.0.1:${port}/api/projects/${p.id}/docs/content`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        rel: 'STACK.md',
+        content,
+        expectedVersion: docVersion(readFileSync(join(kortext, 'STACK.md'), 'utf8')),
+        ...extra,
+      }),
+    });
+  const pending = () =>
+    (db.prepare('SELECT reader_rel FROM pending_rechecks WHERE project_id = ?').all(p.id) as {
+      reader_rel: string;
+    }[]).map((r) => r.reader_rel);
+
+  assert.equal((await save('---\nstatus: approved\n---\n\n# S\n\ntypo fixed\n', { recheck: false })).status, 200);
+  assert.deepEqual(pending(), [], 'recheck: false queues nothing');
+  assert.equal((await save('---\nstatus: approved\n---\n\n# S\n\nnew rule\n', {})).status, 200);
+  assert.deepEqual(pending(), ['ARCHITECTURE.md'], 'the default re-reads the approved reader');
+  server.close();
+  rmSync(work, { recursive: true, force: true });
+});
+
 test('a cross-site page cannot reach the API, and the vite proxy still can', async () => {
   const work = tempDir();
   const db = openDb(join(work, 'db.sqlite'));

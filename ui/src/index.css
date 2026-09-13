@@ -2595,6 +2595,19 @@ button.kx-note-exc:hover {
 .kx-changebar-list > li > .kx-thread {
   grid-column: 2;
 }
+/* The re-read option beside Save: a drawn box and a short label, ui size. */
+.kx-recheck-opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-ui);
+  color: var(--fg-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.kx-recheck-opt .kx-req-check {
+  top: 0;
+}
 .kx-req-check {
   cursor: pointer;
   margin: 0;

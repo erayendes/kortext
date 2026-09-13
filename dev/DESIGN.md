@@ -263,6 +263,11 @@ would hide that anything happened.
 A badge is the round pill without the dot: it says what is owed, and a debt has no motion to
 show. Round against the state's square corner is the whole difference at a glance.
 
+**A checkbox beside Save.** The drawer's footer, in edit on an approved document, carries one
+drawn box with a `--fs-ui` label — *Re-read by 3 readers* — the same `.kx-req-check` square as
+the request rows, so the one box vocabulary holds. Ticked by default; a preference would make the
+cascade silent, and silent is the wrong side.
+
 **A badge beats the state.** Anything carrying `failed` or `review` moves to **Action
 needed** whatever its state. A moving input is news, not work, so it is not a badge: `recheck`
 says which input in its tooltip, and the drawer's dependency band names it.
