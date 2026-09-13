@@ -255,7 +255,10 @@ A badge is drawn only when it says something the state beside it does not. `queu
 exist in the data and are never drawn: `waiting` in To do already means queued, `writing` already
 means a first draft — only a rewrite needs a word, and that word is `revision`. `failed` is a
 state, not a badge — the run fell over and asks for a Retry — and the row that carries it wears
-`revision` when the run that failed was one.
+`revision` when the run that failed was one, `recheck` when it was a reading. The reason sits in
+the row itself (`.kx-doc-why`): one red micro line between the name and the button, cut with an
+ellipsis, whole in the tooltip — a refused Retry writes a new reason there, and a tooltip alone
+would hide that anything happened.
 
 A badge is the round pill without the dot: it says what is owed, and a debt has no motion to
 show. Round against the state's square corner is the whole difference at a glance.
@@ -307,7 +310,8 @@ mono, so the panel's labels and the document's own labels are one thing.
 **Header.** The wordmark — a PNG per theme, swapped by CSS, so the drawing is right on the
 first frame — and, at the far right, the theme button. Nothing else, unless there is no agent
 CLI at all: the engine belongs to a project, so its control sits on the project screen beside
-Start, at the same height as Start. A tagline in the chrome is a thing the reader learns once
+Start, at the same height as Start — two selects, the CLI and its model, `default` first in the
+second so the CLI's own choice is a word, not an empty box. A tagline in the chrome is a thing the reader learns once
 and then reads forever. The theme button is the one preference that survived, and it is an
 icon, not a control row: it takes no width a heading would.
 

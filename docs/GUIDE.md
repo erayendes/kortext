@@ -59,8 +59,9 @@ is rewritten with them. A note left on one of the document's own open questions 
 answer to it: the question disappears and the fact it established becomes part of the text.
 
 **Edit** — write the file yourself. A normal save updates the text; it does not automatically
-close change requests or clear open questions. Resolve the questions in the text and handle
-standing requests separately. When you use **Propose** to draft a requested change to the brief,
+close change requests or clear open questions. When requests are standing, a second button —
+**Save, requests done** — saves your text and closes them, for the number or the sentence that
+does not need the agent. When you use **Propose** to draft a requested change to the brief,
 saving that proposal also closes the incoming requests it answers.
 
 **Preview** — on `DESIGN.md` only, in the drawer itself: the button swaps the text for the page
@@ -107,7 +108,8 @@ struck through — it will read this when its turn comes.
 
 **Recheck** — amber. This document is approved, but something it reads is moving. Not work for
 you; hover the word to see which input, and when that settles, this one is re-read against it and
-you are told only if something actually broke.
+you are told only if something actually broke. While the reading runs the row sits in **Doing**
+as `reading`, blue like writing; you can still edit the document meanwhile.
 
 ## The groups
 

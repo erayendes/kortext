@@ -254,6 +254,12 @@ function trackRun(projectId: number): { ctrl: AbortController; done: () => void 
 export function abortRuns(projectId: number): void {
   for (const c of liveRuns.get(projectId) ?? []) c.abort();
 }
+// The server is going down: take every CLI with it. Each runs in its own
+// process group, so left alone it outlives the server and writes into a
+// document the next server has already marked failed.
+export function abortAllRuns(): void {
+  for (const set of liveRuns.values()) for (const c of set) c.abort();
+}
 
 // The CLI the project picks now, or the caller's when it picks none. Read per
 // spawn, not per loop: a quota runs out mid-chain and the panel's switch must

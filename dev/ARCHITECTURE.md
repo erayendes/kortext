@@ -9,7 +9,8 @@ The canonical reference for what the code does today. Behaviour changes here fir
 
 ## 1 · In one line
 
-Kortext drives the user's own installed agent CLI (`claude` · `codex` · `gemini`) headlessly
+Kortext drives the user's own installed agent CLI (`claude` · `codex` · `antigravity` · `gemini`, and
+six more prepared from their documentation) headlessly
 to write a project's analysis documents in dependency order. Each lands as `draft`; prime
 approves, revises or questions it in the panel. When every document is settled, kortext is
 done — the documents become the project's contract and the user's own agent writes the code.
@@ -27,15 +28,15 @@ kortext (npm package, installed globally)
 │   ├─ index.ts      131  entry, CLI flags (--port --db --no-open --no-detach --stop --help)
 │   ├─ daemon.ts      47  detached respawn + health probe (start/stop from the terminal)
 │   ├─ update.ts      68  npm registry check + self-update (the panel's update strip)
-│   ├─ db.ts          77  SQLite schema + column migration + Project type
-│   ├─ app.ts        791  every REST route + static panel
-│   ├─ projects.ts   258  registry, code derivation, scaffold, handover contract
-│   ├─ docs.ts       346  frontmatter, request parsing, dependency ordering
-│   ├─ runner.ts     848  chain, step run, revision, recheck, planning
-│   ├─ design-preview.ts 568  DESIGN.md tokens → .kortext/DESIGN.html (swatches, contrast, light/dark)
-│   ├─ readiness.ts  350  the single gate ahead of the chain
-│   ├─ engines.ts    111  CLI detection + headless flags
-│   ├─ cli-spawn.ts  349  shell-free spawn, abort, logging, failure classification
+│   ├─ db.ts          96  SQLite schema + column migration + Project type
+│   ├─ app.ts        891  every REST route + static panel
+│   ├─ projects.ts   243  registry, code derivation, scaffold, handover contract
+│   ├─ docs.ts       885  frontmatter, request parsing, dependency ordering
+│   ├─ runner.ts     956  chain, step run, revision, recheck, planning
+│   ├─ design-preview.ts 586  DESIGN.md tokens → .kortext/DESIGN.html (swatches, contrast, light/dark)
+│   ├─ readiness.ts  326  the single gate ahead of the chain
+│   ├─ engines.ts    277  one spec per CLI: flags, prompt route, model, detection
+│   ├─ cli-spawn.ts  300  shell-free spawn, abort, logging, failure classification
 │   └─ pick-directory.ts 40  macOS folder chooser (osascript)
 │
 ├─ ui/ (React 19 + Vite 8 → ui/dist/, served by the same Express)
@@ -161,25 +162,31 @@ standing requests (plus a settled brief on a new project).
 **Selection (`engines.ts`).** One `EngineSpec` per CLI: binary, headless args, how the prompt
 travels (stdin, after a flag, or last and alone), the model flag or variable, a cwd flag, extra
 env, a model list for the panel, and `untested` for the ones prepared from documentation only.
-Detected with `which`, then `~/.local/bin`. The three are equals — nothing ranks them —
+Detected with `which`, then `~/.local/bin`. They are equals — nothing ranks them —
 so the choice belongs to the project, not the app: the **Add project** form carries a dropdown
 beside Initialize, and the answer is stored in `projects.engine`. `engineFor` honours it as long
 as that CLI is still installed and otherwise falls back to anything that is, so uninstalling a
 CLI does not strand a project. The project screen carries a quieter copy of the dropdown next to
 Start — the day a quota runs out, the rest of the analysis continues on another CLI; a running
-step finishes on the old one. Prompt always arrives on **stdin**, cwd is the project.
+step finishes on the old one. Beside it, the model: `projects.model`, passed after the spec's
+flag (or in its variable) on every spawn, read from the row each time. cwd is the project.
 
-| id | command |
-| --- | --- |
-| `claude` | `claude --print --dangerously-skip-permissions` |
-| `codex` | `codex exec --sandbox workspace-write --skip-git-repo-check` |
-| `gemini` | `gemini --yolo` |
+| id | command | prompt |
+| --- | --- | --- |
+| `claude` | `claude --print --dangerously-skip-permissions` | stdin |
+| `codex` | `codex exec --sandbox workspace-write --skip-git-repo-check` | stdin |
+| `antigravity` | `agy --dangerously-skip-permissions --print-timeout 30m --add-dir <repo>` | `--print <prompt>` |
+| `gemini` | `gemini --yolo` | stdin |
+| prepared, untested | `cursor` `copilot` `opencode` `amp` `droid` `goose` `qwen` `cline` — see `engines.ts` | as each spec says |
 
 **Spawn (`cli-spawn.ts`).** Never a command string — `binary + args`, no shell, so prompt text
-can never be read as a shell metacharacter. Own process group so an abort kills the tree
+can never be read as a shell metacharacter (a spec that wants the prompt as an argument gets it
+only on POSIX, where no shell is involved). The child's env is the server's plus the spec's. Own process group so an abort kills the tree
 (SIGTERM → 1s → SIGKILL, which has to land before restart and cancel wipe the directory). A
 failed spawn emits `error` **and** `close`; the first one settles the run and the second is
-ignored, because ending the log twice raised an unhandled stream error that killed the server. Output goes to the log and to a 64 KiB rolling tail.
+ignored, because ending the log twice raised an unhandled stream error that killed the server. On SIGTERM / SIGINT the server aborts every live run before it exits — each CLI sits
+in its own process group and would otherwise outlive the server and write into a document the
+next server has already marked failed. Output goes to the log and to a 64 KiB rolling tail.
 `isTransientCliFailure` / `isRecoverableCliFailure` separate retryable failures (429, quota,
 network, overload, exit-0-with-no-output) from deterministic ones.
 

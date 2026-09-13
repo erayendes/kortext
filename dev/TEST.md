@@ -14,7 +14,9 @@ Board, deploy gates). None of that exists.
 
 ## 0 · Before you start
 
-- **Node ≥ 22** and **at least one agent CLI** on the PATH: `claude`, `codex` or `gemini`.
+- **Node ≥ 22** and **at least one agent CLI** on the PATH: `claude`, `codex`, `antigravity`
+  (`agy`) or `gemini`. The ones marked *untested* in the dropdown are prepared from their
+  documentation; a pass on one of them is a finding either way.
   Kortext has no LLM key of its own; it spends the subscription behind that CLI.
 - **A real run costs real money and real minutes.** Each step is one headless CLI call; a step
   is killed at 15 minutes, the planning run at 30. Keep the first pass small — a brief with
@@ -128,9 +130,18 @@ The order for a new project: `PRODUCT` · `STACK`+`STRUCTURE` · `ARCHITECTURE` 
 - [ ] **Pause** stops new steps and kills the running one — `pgrep -f "claude --print"` (or
       your engine) is empty a few seconds later, and the row says stopped, not failed.
       **Continue** picks the chain back up; the stopped step is retried from the row.
-- [ ] Switching the CLI from the dropdown next to Start moves the steps that begin after it;
-      the running one finishes on the old CLI.
-- [ ] A failed step stays visible with its reason and can be retried.
+- [ ] Switching the CLI from the dropdown next to Start moves the steps **and the rechecks**
+      that begin after it; the running one finishes on the old CLI.
+- [ ] The model dropdown beside it: pick one and the next run's log header carries it
+      (`# args: [... "-m", "<model>"]`); `default` carries nothing.
+- [ ] A running recheck sits in **Doing** as `reading`, blue and pulsing; a queued one waits in
+      To do. Two rechecks on two readers run at once, never two on one.
+- [ ] A revision started from the drawer takes a slot: with three runs in flight it starts when
+      one lands, not as a fourth CLI.
+- [ ] A failed step stays visible with its reason **in the row** and can be retried; a Retry the
+      server refuses writes its reason there too.
+- [ ] Editing server files under `tsx watch` restarts the server and kills every running CLI
+      (`pgrep -f agy` / `-f "claude --print"` empty a second later); the rows say restarted.
 - [ ] Raw CLI output is in `~/.kortext/kortext.db.logs/`, or `<db-path>.logs/` when using `--db`.
 
 ---
@@ -146,7 +157,7 @@ Open any document. Everything you can do to it is here:
 | **Ask** | the author persona answers, in the panel only — nothing is written |
 | **Apply** | one press sends everything the tray collected: answers and accepted requests go into one rewrite, denials into `## Decisions`, sent requests to their target now, discards out of the file |
 | select a line of the body → **Add note** | a revision note on that line; **Request revision** (or Apply) re-runs the author with it |
-| **Edit** | saves your text; an ordinary save does not close requests or remove open questions |
+| **Edit** | saves your text; an ordinary save does not close requests or remove open questions. With requests standing, a second button — **Save, requests done** — saves and closes them without a rewrite |
 | `not-applicable` | the step judged the document irrelevant and said why; it satisfies dependencies like an approval |
 
 - [ ] Ask answers about the selected row and writes nothing to disk — hash the file before and after.
@@ -158,6 +169,9 @@ Open any document. Everything you can do to it is here:
 - [ ] `## Decisions` and every `from` line survive the next rewrite untouched — the agent is told they are not its to drop, and kortext restores them if it drops them anyway.
 - [ ] The diff picker beside the name shows recorded versions; a rewritten block wears `[+]` and unfolds its old text; a run of new blocks says `new` once.
 - [ ] The brief has no producing step: **Edit** is the only way to change it.
+- [ ] **Edit** works while a recheck reads the document; only a run that writes it locks the drawer.
+- [ ] Notes in the tray keep their label (`#3` for a question, `#1` for a line) after Send moves
+      the text under them.
 
 ## 6 · Handshake
 
@@ -222,6 +236,9 @@ of the handshake. Without kopeng installed, the button is replaced by an install
    templates before the new server gets there — old headings, old placeholder text, and the
    agent fills what it finds. Before a test pass: `pgrep -fl kortext`, and `kortext --stop` (or
    kill the pid) for anything that is not the server under test.
+6. **Antigravity reads the whole repository every run.** A one-sentence revision took five
+   minutes where codex took one; that is the CLI, not the chain. Without `--add-dir` it would
+   also hunt for the repository in its own home — the spec passes it.
 
 ---
 

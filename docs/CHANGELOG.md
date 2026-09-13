@@ -15,6 +15,9 @@ Findings from the first real project run through the panel end to end.
   than waiting under To do. A recheck that fails says `failed · recheck`.
 - **Three means three.** A revision or retry started from the panel takes a slot in the same
   pool as the chain instead of running as a fourth CLI.
+- **No CLI outlives the server.** Stopping kortext — `kortext --stop`, Ctrl-C, a dev restart —
+  aborts every running CLI first; before, one could finish minutes later and write into a
+  document the next server had already marked failed.
 - **Edit while a recheck reads.** Prime's edits are refused only while a run is writing the
   document; a recheck only reads it.
 - **Save, requests done.** When requests stand on a document, the editor offers to save your

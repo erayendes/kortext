@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { defaultDbPath, openDb } from './db.js';
 import { buildApp } from './app.js';
+import { abortAllRuns } from './runner.js';
 import { respawnDetached, serverUp, waitForServer } from './daemon.js';
 
 const { values } = parseArgs({
@@ -108,6 +109,15 @@ app.listen(PORT, '127.0.0.1', () => {
 app.listen(PORT, '::1').on('error', () => {
   /* no IPv6 loopback on this machine; the IPv4 listener above is the panel */
 });
+
+// tsx watch, kortext --stop and a terminal Ctrl-C all arrive as a signal. Kill
+// the CLIs first — SIGTERM, then SIGKILL a second later — or they outlive us.
+for (const sig of ['SIGTERM', 'SIGINT'] as const) {
+  process.on(sig, () => {
+    abortAllRuns();
+    setTimeout(() => process.exit(0), 1500).unref();
+  });
+}
 
 function openBrowser(url: string): void {
   const cmd =

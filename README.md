@@ -57,16 +57,18 @@ repo.
 | --- | --- | --- |
 | **Node.js** | 22 | the runtime |
 | **npm** | 10 | ships with Node 22 |
-| **An agent CLI** | one of the three below | the engine Kortext drives |
+| **An agent CLI** | one of the four below | the engine Kortext drives |
 
 Kortext holds no key: it spends the subscription behind the CLI you already use. Install
-whichever one that is — the three are equal as far as Kortext is concerned, and it picks up any
-of them from your `PATH`. Git is not required.
+whichever one that is — they are equal as far as Kortext is concerned, and it picks up any
+of them from your `PATH` (Cursor, Copilot, OpenCode, Amp, Droid, Goose, Qwen Code and Cline
+are prepared too, marked *untested* until they have written a document on a real machine). Git is not required.
 
 ```sh
 npm install -g @anthropic-ai/claude-code    # claude
 npm install -g @openai/codex                # codex
 npm install -g @google/gemini-cli           # gemini
+# antigravity: install the Antigravity app, then `agy install`
 ```
 
 ## Install
@@ -134,7 +136,7 @@ Never `sudo npm install -g`. On `EACCES`:
 ## Quick start
 
 Requires **Node ≥ 22** and at least one agent CLI on your PATH
-(`claude`, `codex`, or `gemini`).
+(`claude`, `codex`, `antigravity` or `gemini`).
 
 ```sh
 npm install -g kortext
@@ -163,7 +165,7 @@ Frontmatter `status` is the source of truth:
 ```sh
 node --version                          # v22 or newer
 kortext --version
-which claude || which codex || which gemini
+which claude || which codex || which agy || which gemini
 ```
 
 An installed CLI is not necessarily a signed-in one: run yours once on its own before pointing
