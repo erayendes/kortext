@@ -13,8 +13,7 @@
   <a href="https://milowda.com"><img alt="Yerli üretim" src="https://img.shields.io/badge/YERL%C4%B0%20%C3%9CRET%C4%B0M-red?style=flat&label=%F0%9F%A4%9D&color=red&link=https%3A%2F%2Fmilowda.com"></a>
 </p>
 
-> [!NOTE]
-> [For Turkish press 1](docs/tr/README.md)
+🇹🇷 [For Turkish press 1](docs/tr/README.md)
 
 **The project brain for AI-driven development.** Kortext turns a brief (or an
 existing codebase) into an approved analysis foundation — and it drives your

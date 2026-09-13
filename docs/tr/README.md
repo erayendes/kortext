@@ -13,8 +13,7 @@
   <a href="https://milowda.com"><img alt="Yerli üretim" src="https://img.shields.io/badge/YERL%C4%B0%20%C3%9CRET%C4%B0M-red?style=flat&label=%F0%9F%A4%9D&color=red&link=https%3A%2F%2Fmilowda.com"></a>
 </p>
 
-> [!NOTE]
-> [For English press 9](../../README.md)
+🇬🇧 [For English press 9](../../README.md)
 
 **Yapay zekâ destekli geliştirmenin proje beyni.** Kortext bir brief'i (ya da mevcut bir kod
 tabanını) onaylı bir analiz temeline çevirir — ve bunu yazması için **senin** kodlama ajanını
