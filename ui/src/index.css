@@ -1914,12 +1914,11 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   border-color: var(--amber-border);
   background: var(--amber-bg);
 }
-/* The quiet two. `.kx-badge` is declared twice and the earlier one paints a
+/* The quiet one. `.kx-badge` is declared twice and the earlier one paints a
    solid accent, so a badge that sets only its text colour comes out as the
-   loudest pill on the row — the opposite of what these two mean. */
-.kx-badge-draft,
-.kx-badge-revision,
-.kx-badge-queue {
+   loudest pill on the row — the opposite of what this means. (`draft` and
+   `queue` are never drawn; see SILENT_BADGES.) */
+.kx-badge-revision {
   color: var(--fg-muted);
   background: var(--bg-muted);
   border-color: var(--border);

@@ -248,11 +248,13 @@ text's own ink.
 | `review` | Action Needed items stand on it — questions, incoming or outgoing requests; the tooltip lists them | pink | Action needed |
 | `approve` | nothing open — approve it | violet | Action needed |
 | `recheck` | an input moved; read again when it settles — the tooltip names the input | amber | To do |
-| `draft` / `revision` | what a run is writing: the first draft, or a rewrite of what stands | muted | Doing |
-| `queue` | not written yet | muted | To do |
+| `revision` | the run is a rewrite of what already stands, not a first draft | muted | Doing |
 
-`failed` is a state, not a badge — the run fell over and asks for a Retry — and the row that
-carries it wears the `draft` or `revision` badge of the run that failed.
+A badge is drawn only when it says something the state beside it does not. `queue` and `draft`
+exist in the data and are never drawn: `waiting` in To do already means queued, `writing` already
+means a first draft — only a rewrite needs a word, and that word is `revision`. `failed` is a
+state, not a badge — the run fell over and asks for a Retry — and the row that carries it wears
+`revision` when the run that failed was one.
 
 A badge is the round pill without the dot: it says what is owed, and a debt has no motion to
 show. Round against the state's square corner is the whole difference at a glance.

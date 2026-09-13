@@ -1052,11 +1052,14 @@ const DETAIL_TITLE: Record<string, string> = {
 
 /** What is owed on this document, next to the state it is in. A moving input is
     not a debt, so it is not a badge: `recheck` says it in its tooltip, and the
-    drawer's band names the input. */
+    drawer's band names the input. `queue` and `draft` say nothing the state
+    beside them does not — waiting in To do is queued, writing is the first
+    draft — so they draw nothing; only `revision` tells a write apart. */
+const SILENT_BADGES = new Set(['queue', 'draft']);
 export function DocBadges({ doc }: { doc: DocInfo }) {
   return (
     <>
-      {doc.detail && (
+      {doc.detail && !SILENT_BADGES.has(doc.detail) && (
         <span
           className={`kx-badge kx-badge-${doc.detail}`}
           title={
