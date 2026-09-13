@@ -548,6 +548,10 @@ export function DocDrawer({
         discard: discarding.map(({ other, reason }) => ({ target: other, reason })),
       });
       setSent(true);
+      // A send or a discard edits the file at once, rewrite or not; the text
+      // in the drawer is behind it until read again — and an approve sent on
+      // the old version would be refused.
+      setLanded((n) => n + 1);
     });
 
   // Keep multi-turn Q&A in drawer state only.
