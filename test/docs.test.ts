@@ -469,14 +469,18 @@ test('every document is filed by one rule, and the first matching rule wins', ()
   write('DATABASE.md', '---\nstatus: not-applicable\n---\n\n# D\n\nNo persistence layer.\n');
   assert.equal(label('DATABASE.md'), 'done/n/a');
 
-  // An approved document waiting to be re-read is queued, not done — while the
-  // recheck runs as much as before it starts.
+  // An approved document waiting to be re-read is queued, not done; once the
+  // recheck runs it is the agent's work and sits in Doing as `reading`.
   db.prepare(
     'INSERT INTO pending_rechecks (project_id, source_rel, reader_rel) VALUES (?,?,?)',
   ).run(p.id, 'PRODUCT.md', 'STACK.md');
   assert.equal(label('STACK.md'), 'todo/waiting:(recheck)');
   job('STACK.md', 'running', 'recheck');
-  assert.equal(label('STACK.md'), 'todo/waiting:(recheck)');
+  assert.equal(label('STACK.md'), 'doing/reading:(recheck)');
+  // A draft with a recheck queued still owes prime an approval first.
+  write('STACK.md', '---\nstatus: draft\n---\n\n# S\n');
+  db.prepare('DELETE FROM jobs WHERE project_id = ?').run(p.id);
+  assert.equal(label('STACK.md'), 'needs/waiting:(approve)');
 });
 
 test('a change request does not leave its document until prime approves it', () => {

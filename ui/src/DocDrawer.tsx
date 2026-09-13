@@ -1060,6 +1060,7 @@ export function DocDrawer({
 /** The state word, as the server decided it. Presentation only. */
 export function statusOf(doc: DocInfo): { key: string; label: string } {
   if (doc.state === 'writing') return { key: 'writing', label: 'writing…' };
+  if (doc.state === 'reading') return { key: 'reading', label: 'reading…' };
   if (doc.state === 'n/a') return { key: 'not-applicable', label: 'n/a' };
   return { key: doc.state, label: doc.state };
 }
@@ -1097,9 +1098,11 @@ export function DocBadges({ doc }: { doc: DocInfo }) {
                   ...(doc.openQuestions ? ['questions are waiting for you'] : []),
                   ...doc.revisionRequests.map((r) => `${r.from}: ${r.reason}`),
                 ].join('\n')
-              : doc.detail === 'recheck' && doc.dependentOn.length > 0
-                ? `Waiting on ${doc.dependentOn.join(', ')} to settle, then read again`
-                : (DETAIL_TITLE[doc.detail] ?? '')
+              : doc.detail === 'recheck' && doc.state === 'reading'
+                ? 'Being read again now'
+                : doc.detail === 'recheck' && doc.dependentOn.length > 0
+                  ? `Waiting on ${doc.dependentOn.join(', ')} to settle, then read again`
+                  : (DETAIL_TITLE[doc.detail] ?? '')
           }
         >
           {doc.detail}

@@ -232,6 +232,7 @@ The heart of the system. A document is in **exactly one** state — where it is.
 |---|---|---|
 | `waiting` | queued; the chain has not reached it | neutral |
 | `writing` | the agent is writing it now | blue, the dot pulses |
+| `reading` | a recheck is running against it now — the agent reads, it does not write | blue, the dot pulses |
 | `paused` | writing was stopped | amber |
 | `pending` | written, waiting for your approval | violet |
 | `approved` | you approved it | green |
@@ -247,7 +248,7 @@ text's own ink.
 |---|---|---|---|
 | `review` | Action Needed items stand on it — questions, incoming or outgoing requests; the tooltip lists them | pink | Action needed |
 | `approve` | nothing open — approve it | violet | Action needed |
-| `recheck` | an input moved; read again when it settles — the tooltip names the input | amber | To do |
+| `recheck` | an input moved; read again when it settles — the tooltip names the input | amber | To do while queued, Doing while `reading` |
 | `revision` | the run is a rewrite of what already stands, not a first draft | muted | Doing |
 
 A badge is drawn only when it says something the state beside it does not. `queue` and `draft`

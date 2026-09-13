@@ -1798,12 +1798,16 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   background: currentColor;
   flex: none;
 }
-.kx-status-writing {
+/* A recheck in flight reads the document instead of writing it: same blue,
+   same pulse — the agent is on it either way. */
+.kx-status-writing,
+.kx-status-reading {
   background: var(--blue-bg);
   border-color: var(--blue-border, var(--blue-bg));
   color: var(--blue);
 }
-.kx-status-writing::before {
+.kx-status-writing::before,
+.kx-status-reading::before {
   animation: kx-pulse 1.4s ease-in-out infinite;
 }
 .kx-status-paused {

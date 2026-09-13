@@ -55,7 +55,7 @@ export interface DocInfo {
   /** Which shelf the panel files this on. */
   section: 'needs' | 'doing' | 'todo' | 'done';
   /** The word after the name: what the document is doing, or waiting to do. */
-  state: 'waiting' | 'writing' | 'paused' | 'failed' | 'approved' | 'n/a';
+  state: 'waiting' | 'writing' | 'reading' | 'paused' | 'failed' | 'approved' | 'n/a';
   /** The word in brackets: which kind of waiting, writing, pausing or failing. */
   detail: 'approve' | 'review' | 'queue' | 'recheck' | 'draft' | 'revision' | null;
   /** A recheck is queued or running against this document. */
@@ -100,9 +100,12 @@ function fileDoc(doc: DocInfo, job: LastJob | null): Pick<DocInfo, 'section' | '
     (doc.status === 'draft' && (doc.openQuestions || doc.outgoing.length > 0))
   )
     return at('needs', 'waiting', 'review');
-  // A recheck is a reading, not a writing: the document waits either way.
-  if (doc.pendingRecheck) return at('todo', 'waiting', 'recheck');
+  // A recheck in flight is the agent's work too, so it sits in Doing; one that
+  // is only queued is a wait. A draft with a recheck queued still owes prime an
+  // approval first — the recheck reads whatever prime approves.
+  if (job?.kind === 'recheck' && job.status === 'running') return at('doing', 'reading', 'recheck');
   if (doc.status === 'draft') return at('needs', 'waiting', 'approve');
+  if (doc.pendingRecheck) return at('todo', 'waiting', 'recheck');
   if (doc.status === 'approved') return at('done', 'approved', null);
   return at('done', 'n/a', null);
 }
