@@ -938,6 +938,37 @@ function EngineSelect({
   );
 }
 
+/** The model that CLI is told to use. `default` is the CLI's own; a saved name
+ *  the list does not know is kept as its own option rather than dropped. */
+function ModelSelect({
+  engine,
+  value,
+  onChange,
+}: {
+  engine: EngineInfo | undefined;
+  value: string;
+  onChange: (model: string) => void;
+}) {
+  if (!engine) return null;
+  const known = engine.models ?? [];
+  const options = value && !known.includes(value) ? [...known, value] : known;
+  return (
+    <select
+      className="select"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      title="The model that CLI is told to use — claude --model, codex -m, gemini -m. Applies to steps that start after it."
+    >
+      <option value="">default</option>
+      {options.map((m) => (
+        <option key={m} value={m}>
+          {m}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 // Transfer = split into .kopeng/ files; the plan gets a summary + approve /
 // revise round — the last act of the handshake.
 function TransferPanel({ project }: { project: Project }) {
@@ -1483,19 +1514,13 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
               api.setProjectEngine(project.id, id).catch((e) => setErr((e as Error).message));
             }}
           />
-          {/* Free text: each CLI names its models its own way. Saved on blur or
-              Enter; empty means the CLI's default. Only later steps see it. */}
-          <input
-            className="input kx-model mono"
+          <ModelSelect
+            engine={engines.find((e) => e.id === (engine ?? engines[0]?.id))}
             value={model}
-            placeholder="model (default)"
-            title="The model that CLI is told to use — claude --model, codex -m, gemini -m. Empty: the CLI's own default. Applies to steps that start after it."
-            onChange={(e) => setModel(e.target.value)}
-            onBlur={() => {
-              if (model.trim() !== (project.model ?? ''))
-                api.setProjectModel(project.id, model.trim()).catch((e) => setErr((e as Error).message));
+            onChange={(m) => {
+              setModel(m);
+              api.setProjectModel(project.id, m).catch((e) => setErr((e as Error).message));
             }}
-            onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
           />
 
           {running ? (

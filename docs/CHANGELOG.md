@@ -4,7 +4,7 @@
 
 Findings from the first real project run through the panel end to end.
 
-- **A model per project.** The field beside the engine dropdown names the model the CLI is
+- **A model per project.** The dropdown beside the engine names the model the CLI is
   told to use — `claude --model`, `codex -m`, `gemini -m`. Empty keeps the CLI's own default.
 - **Rechecks are pool work.** They run up to three at once alongside the steps, they follow an
   engine switch like every other run, and a running one shows as `reading` under Doing rather

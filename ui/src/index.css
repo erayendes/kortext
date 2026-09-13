@@ -1348,14 +1348,6 @@ a.btn {
   align-items: center;
   gap: 8px;
 }
-/* Model field: the same height and corner as the select beside it. */
-.kx-model {
-  width: 150px;
-  height: var(--control-h);
-  padding: 0 9px;
-  border-radius: var(--r-md);
-  font-size: var(--fs-ui);
-}
 .kx-main-head {
   display: flex;
   align-items: center;

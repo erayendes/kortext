@@ -82,6 +82,7 @@ export interface EngineInfo {
   id: string;
   available: boolean;
   installHint: string;
+  models?: string[];
 }
 
 export interface Job {

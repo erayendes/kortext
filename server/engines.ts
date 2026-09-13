@@ -8,6 +8,9 @@ export interface EngineSpec {
   args: string[];
   /** The flag that names a model; the project's `model` rides after it. */
   modelFlag: string;
+  /** What the panel offers after "default". A name that is not here still
+   *  works — the list is a convenience, the flag takes any string. */
+  models: string[];
   installHint: string;
 }
 
@@ -19,6 +22,8 @@ export const ENGINES: EngineSpec[] = [
     // stdin carries the step prompt.
     args: ['--print', '--dangerously-skip-permissions'],
     modelFlag: '--model',
+    // Aliases the CLI resolves to its latest of each tier.
+    models: ['fable', 'opus', 'sonnet', 'haiku'],
     installHint: 'npm install -g @anthropic-ai/claude-code',
   },
   {
@@ -28,6 +33,7 @@ export const ENGINES: EngineSpec[] = [
     // file; skip-git-repo-check: project may not be a git repo (yet).
     args: ['exec', '--sandbox', 'workspace-write', '--skip-git-repo-check'],
     modelFlag: '-m',
+    models: ['gpt-6-astra', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.6-sol', 'gpt-5.4-mini'],
     installHint: 'npm install -g @openai/codex',
   },
   {
@@ -35,6 +41,7 @@ export const ENGINES: EngineSpec[] = [
     binary: 'gemini',
     args: ['--yolo'],
     modelFlag: '-m',
+    models: ['gemini-2.5-pro', 'gemini-2.5-flash'],
     installHint: 'npm install -g @google/gemini-cli',
   },
 ];

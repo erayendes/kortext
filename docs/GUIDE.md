@@ -128,11 +128,11 @@ Two projects can sit on two different CLIs, and neither disturbs the other. If y
 one a project was using, that project does not stop — it falls back to whichever CLI is still
 installed, and the dropdown shows you what it fell back to.
 
-The field beside the dropdown names the **model**. Leave it empty and the CLI uses its own
-default — whatever `~/.codex/config.toml` or `claude`'s settings say. Type a name and Kortext
-passes it on every run: `claude --model`, `codex -m`, `gemini -m`. Like the engine, it reaches
-the steps and rechecks that start after you set it; the log of every run records the exact
-command, so you can always see which model wrote a document.
+The second dropdown names the **model**. `default` leaves it to the CLI — whatever
+`~/.codex/config.toml` or `claude`'s settings say. Pick one and Kortext passes it on every run:
+`claude --model`, `codex -m`, `gemini -m`. Like the engine, it reaches the steps and rechecks
+that start after you set it; the log of every run records the exact command, so you can always
+see which model wrote a document.
 
 - **Pause** stops new steps from starting; a running step is stopped too.
 - **Continue** picks the chain back up.
