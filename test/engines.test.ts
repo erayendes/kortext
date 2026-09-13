@@ -54,3 +54,37 @@ test('a prompt goes on stdin, after a flag, or last and alone — as the spec sa
   assert.match(await run(''), /arg:--x\narg:hello there\nstdin:$/m);
   rmSync(work, { recursive: true, force: true });
 });
+
+test('switching the CLI drops a model the new CLI does not know', async () => {
+  const { openDb } = await import('../server/db.ts');
+  const { createProject } = await import('../server/projects.ts');
+  const { buildApp } = await import('../server/app.ts');
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const pkgRoot = join(import.meta.dirname, '..');
+  const p = createProject(db, { name: 'Sw', repoPath: join(work, 'sw') }, pkgRoot);
+  const server = buildApp(db, pkgRoot, join(work, 'db.sqlite')).listen(0);
+  const port = (server.address() as { port: number }).port;
+  const put = (path: string, body: unknown) =>
+    fetch(`http://127.0.0.1:${port}/api/projects/${p.id}/${path}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }).then((r) => r.json());
+  await put('engine', { id: 'claude' });
+  await put('model', { model: 'sonnet' });
+  // codex does not know `sonnet`: the switch resets it to the CLI's default.
+  assert.deepEqual(await put('engine', { id: 'codex' }), { engine: 'codex', model: '' });
+  const row = () =>
+    db.prepare('SELECT engine, model FROM projects WHERE id = ?').get(p.id) as {
+      engine: string;
+      model: string;
+    };
+  assert.deepEqual(row(), { engine: 'codex', model: '' });
+  // A name both know survives the switch.
+  await put('model', { model: 'gpt-5.4' });
+  await put('engine', { id: 'copilot' });
+  assert.equal(row().model, 'gpt-5.4');
+  server.close();
+  rmSync(work, { recursive: true, force: true });
+});

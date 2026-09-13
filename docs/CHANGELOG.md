@@ -15,6 +15,17 @@ Findings from the first real project run through the panel end to end.
   than waiting under To do. A recheck that fails says `failed · recheck`.
 - **Three means three.** A revision or retry started from the panel takes a slot in the same
   pool as the chain instead of running as a fourth CLI.
+- **The agent does not approve.** A document the agent marked `approved` is set back to
+  draft and lands as one; any other stray status fails the run and puts the previous text back,
+  so a failed write never opens the steps that read it.
+- **Pause reaches a waiting revision.** A revision queued behind a full pool is aborted by
+  Pause like a run in flight, and waits for Continue with its notes.
+- **The version picker shows the real change.** A rewrite is recorded after the requests and
+  decisions it dropped are put back, so the diff is against what is on disk.
+- **A model belongs to its CLI.** Switching the engine drops a model the new CLI does not know
+  back to its default instead of passing `-m sonnet` to codex.
+- **An empty plan is not approvable.** Approve plan is refused, and greyed, when the last split
+  failed or left no tasks; the failure is shown on the card instead of "Plan ready".
 - **No CLI outlives the server.** Stopping kortext — `kortext --stop`, Ctrl-C, a dev restart —
   aborts every running CLI first; before, one could finish minutes later and write into a
   document the next server had already marked failed.

@@ -708,27 +708,6 @@ function GitHubMark() {
   );
 }
 
-// lucide external-link (ISC)
-function ExternalLink() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width="13"
-      height="13"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M15 3h6v6" />
-      <path d="M10 14 21 3" />
-      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-    </svg>
-  );
-}
-
 // lucide scale (ISC) — the balance GitHub puts next to a licence.
 function Licence() {
   return (
@@ -930,7 +909,11 @@ function EngineSelect({
       title="The agent CLI that writes this project's documents"
     >
       {engines.map((e) => (
-        <option key={e.id} value={e.id} title={e.untested ? 'Prepared from its documentation, not yet run here' : undefined}>
+        <option
+          key={e.id}
+          value={e.id}
+          title={e.untested ? 'Prepared from its documentation, not yet run here' : undefined}
+        >
           {e.untested ? `${e.id} · untested` : e.id}
         </option>
       ))}
@@ -988,8 +971,10 @@ function TransferPanel({ project }: { project: Project }) {
           setPlan(p);
           setSplitting(j.jobs.some((jb) => jb.doc_rel === '.kopeng/' && jb.status === 'running'));
           setStopped(j.jobs.find((jb) => jb.doc_rel === '.kopeng/')?.status === 'stopped');
-          const failed = j.jobs.find((jb) => jb.doc_rel === '.kopeng/' && jb.status === 'failed');
-          setErr(failed && !p.exists ? failed.error : null);
+          // The last split decides: a failed one is shown even when an older
+          // project.yaml still stands, or "Plan ready" hides the failure.
+          const last = j.jobs.find((jb) => jb.doc_rel === '.kopeng/');
+          setErr(last?.status === 'failed' ? last.error : null);
         })
         .catch(() => {});
     refresh();
@@ -1012,11 +997,16 @@ function TransferPanel({ project }: { project: Project }) {
   }
 
   if (plan?.exists) {
+    // Approvable only when the last split landed and left tasks; the button
+    // that lets you approve an empty or failed plan is worse than no button.
+    const approvable = !err && plan.tasks > 0;
     return (
       <div className="kx-handshake-plan">
+        {err && <div className="kx-error">The last split failed: {err}</div>}
         <div className="kx-plan-row">
           <span className="kx-cmd-title">
-            Plan ready: {plan.versions} version · {plan.epics} epic · {plan.tasks} task
+            {approvable ? 'Plan ready' : 'Plan incomplete'}: {plan.versions} version · {plan.epics}{' '}
+            epic · {plan.tasks} task
           </span>
           <span
             className={`kx-status kx-status-${plan.status === 'approved' ? 'approved' : 'draft'}`}
@@ -1027,8 +1017,17 @@ function TransferPanel({ project }: { project: Project }) {
           {plan.status !== 'approved' && (
             <button
               className="btn btn-success"
+              disabled={!approvable}
+              title={
+                approvable
+                  ? undefined
+                  : 'Re-split the plan first — it has no tasks or the split failed'
+              }
               onClick={() =>
-                api.approvePlan(project.id).then(() => setPlan({ ...plan, status: 'approved' }))
+                api
+                  .approvePlan(project.id)
+                  .then(() => setPlan({ ...plan, status: 'approved' }))
+                  .catch((e) => setErr((e as Error).message))
               }
             >
               Approve plan
@@ -1376,8 +1375,9 @@ function AddProject({
       )}
       {engines.length === 0 && (
         <span className="kx-cmd-hint">
-          No agent CLI found on your PATH. Install one — claude, codex, antigravity, gemini or another the dropdown knows — and pick it here;
-          the project can be added now and started later.
+          No agent CLI found on your PATH. Install one — claude, codex, antigravity, gemini or
+          another the dropdown knows — and pick it here; the project can be added now and started
+          later.
         </span>
       )}
       <div className="kx-form-row">
@@ -1513,7 +1513,10 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
             value={engine}
             onChange={(id) => {
               setEngine(id);
-              api.setProjectEngine(project.id, id).catch((e) => setErr((e as Error).message));
+              api
+                .setProjectEngine(project.id, id)
+                .then((r) => setModel(r.model ?? ''))
+                .catch((e) => setErr((e as Error).message));
             }}
           />
           <ModelSelect

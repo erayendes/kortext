@@ -382,50 +382,6 @@ export function setFrontmatterStatus(path: string, status: string): void {
 }
 
 /**
- * Settles one marked line in place: the box is ticked and the outcome goes
- * under it, so the record stays in the file where the next reader looks. A
- * line may already carry a trailer saying how it came to be; the outcome goes
- * after it, so the item reads in the order it happened. The wrapped rest of the
- * demand stays where it is — it belongs to the demand, not to the outcome.
- */
-function markListItemHandled(
-  project: Project,
-  rel: string,
-  heading: RegExp,
-  subject: string,
-  reason: string,
-  outcome: string,
-  incoming: boolean,
-): void {
-  const path = docPath(project, rel);
-  if (!existsSync(path)) return;
-  const day = new Date().toISOString().slice(0, 10);
-  const lines = readFileSync(path, 'utf8').split('\n');
-  let inSection = false;
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i] ?? '';
-    const h = line.match(/^#{1,6}\s+(.*)$/);
-    if (h) {
-      inSection = heading.test((h[1] ?? '').trim());
-      continue;
-    }
-    if (!inSection) continue;
-    const m = line.match(MARKED_LINE);
-    if (!m || !!m[2] !== incoming) continue;
-    if (m[3]!.replace(/^\.kortext\//, '') !== subject.replace(/^.*\//, '') && m[3] !== subject)
-      continue;
-    const [full, afterWrap] = foldWrapped(lines, i, m[4] ?? '');
-    if (full !== reason.trim()) continue;
-    let end = afterWrap;
-    while (end < lines.length && TRAILER.test(lines[end] ?? '')) end++;
-    lines.splice(end, 0, `  - ${outcome} · ${day}`);
-    lines[i] = `- [x] ${incoming ? 'from ' : ''}\`${m[3]}\` — ${m[4]}`;
-    writeFileSync(path, lines.join('\n'), 'utf8');
-    return;
-  }
-}
-
-/**
  * Removes a request from the document it is about, once it has been done. A
  * request that was accepted and written needs no record: the next reader sees
  * the document as asked, and git keeps the history. Only a denial is kept —

@@ -34,7 +34,10 @@ const pkgRoot = process.cwd();
 
 // A fake engine: a shell script that reads the prompt from stdin, extracts the
 // target rel from the "Produce EXACTLY" line, and writes a draft doc there.
-function mockEngine(work: string, behavior: 'ok' | 'noop' | 'wrong-status'): EngineSpec {
+function mockEngine(
+  work: string,
+  behavior: 'ok' | 'noop' | 'wrong-status' | 'self-approved',
+): EngineSpec {
   const script = join(work, 'mock-engine.sh');
   const body =
     behavior === 'noop'
@@ -45,7 +48,7 @@ case "$prompt" in
   *readiness.json*) printf '{ "ready": true }\\n' > .kortext/.readiness.json; exit 0;;
 esac
 rel=$(printf '%s' "$prompt" | grep 'Produce EXACTLY' | sed 's/.*: \\.kortext\\///')
-status=${behavior === 'wrong-status' ? 'approved' : 'draft'}
+status=${behavior === 'wrong-status' ? 'reviewed' : behavior === 'self-approved' ? 'approved' : 'draft'}
 printf -- '---\\nstatus: %s\\nauthor: +mock\\n---\\n\\n# Mock doc\\n' "$status" > ".kortext/$rel"
 `;
   writeFileSync(script, body);
@@ -136,6 +139,15 @@ test('runStep failure paths: no output file / wrong status → job failed with e
   const wrong = await runStep(db, p, step, mockEngine(work, 'wrong-status'), pkgRoot);
   assert.equal(wrong.ok, false);
   assert.match(wrong.error!, /expected draft/);
+  // A failed write leaves nothing new behind: the file is the skeleton again,
+  // so no step that reads it can start on a document nobody approved.
+  assert.match(readFileSync(docPath(p, step.output), 'utf8'), /status: uninitialized/);
+
+  // An agent that approves its own work is corrected, not obeyed: the text
+  // stays, the status is prime's, and the run counts as a draft landing.
+  const self = await runStep(db, p, step, mockEngine(work, 'self-approved'), pkgRoot);
+  assert.equal(self.ok, true);
+  assert.match(readFileSync(docPath(p, step.output), 'utf8'), /status: draft/);
   rmSync(work, { recursive: true, force: true });
 });
 
@@ -516,6 +528,36 @@ test('the gate blocks an existing project whose folder holds no code', async () 
   const { advance } = await import('../server/runner.js');
   await advance(db, p, mockEngine(work, 'ok'), pkgRoot);
   assert.deepEqual(listJobs(db, p.id), []); // nothing ran, nothing was written
+  rmSync(work, { recursive: true, force: true });
+});
+
+test('a revision waiting for a slot does not start once the project is paused', async () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Full', repoPath: join(work, 'full') }, pkgRoot);
+  const { reviseDoc, abortRuns } = await import('../server/runner.js');
+  const engine = mockEngine(work, 'ok');
+  const doc = docPath(p, 'STACK.md');
+  const before = readFileSync(doc, 'utf8');
+
+  // Three runs fill the pool; the revision has to wait.
+  for (const rel of ['PRODUCT.md', 'ARCHITECTURE.md', 'DESIGN.md'])
+    db.prepare("INSERT INTO jobs (project_id, doc_rel, status) VALUES (?, ?, 'running')").run(
+      p.id,
+      rel,
+    );
+  const waiting = reviseDoc(db, p, 'STACK.md', ['change it'], engine, pkgRoot);
+  await new Promise((r) => setTimeout(r, 300));
+  // Pause lands while it waits: the flag and the abort, as the route does.
+  db.prepare('UPDATE projects SET paused = 1 WHERE id = ?').run(p.id);
+  abortRuns(p.id);
+  db.prepare("UPDATE jobs SET status = 'stopped' WHERE project_id = ?").run(p.id);
+  const out = await waiting;
+  assert.equal(out.ok, false);
+  assert.equal(readFileSync(doc, 'utf8'), before, 'the file was not touched');
+  const last = listJobs(db, p.id).find((j) => j.doc_rel === 'STACK.md');
+  assert.equal(last?.status, 'stopped', 'and it waits for Continue with its notes');
+  assert.deepEqual(JSON.parse(last!.notes), ['change it']);
   rmSync(work, { recursive: true, force: true });
 });
 

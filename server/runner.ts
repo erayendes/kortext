@@ -15,6 +15,7 @@ import {
   removeRequest,
   recordVersion,
   restoreRequests,
+  setFrontmatterStatus,
   templateFor,
   unfilledPlaceholders,
   workflowNameFor,
@@ -281,10 +282,23 @@ function runningJobs(db: Database.Database, projectId: number): number {
 }
 
 // A revision or a retry started from the panel is not scheduled by the loop,
-// so it waits here for a slot instead of running as a fourth CLI.
+// so it waits here for a slot instead of running as a fourth CLI. The wait is
+// a tracked run: a Pause, Restart or Cancel that lands while it waits aborts
+// it like any run in flight, and it does not start when a slot opens. A
+// revision asked for on an already-paused project still runs — prime asked.
+// False means do not run.
 // ponytail: 2s poll, not a semaphore — the loop counts running jobs in the db anyway.
-async function waitForRoom(db: Database.Database, projectId: number): Promise<void> {
-  while (runningJobs(db, projectId) >= MAX_PARALLEL) await new Promise((r) => setTimeout(r, 2000));
+async function waitForRoom(db: Database.Database, projectId: number): Promise<boolean> {
+  const wait = trackRun(projectId);
+  try {
+    while (runningJobs(db, projectId) >= MAX_PARALLEL) {
+      if (wait.ctrl.signal.aborted) return false;
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+    return !wait.ctrl.signal.aborted;
+  } finally {
+    wait.done();
+  }
 }
 
 export async function advance(
@@ -320,9 +334,7 @@ export async function advance(
         )?.paused;
         // Room is what the db shows running, not what this loop started: a
         // revision from the panel takes a slot too.
-        let room = paused
-          ? 0
-          : MAX_PARALLEL - Math.max(inFlight.size, runningJobs(db, project.id));
+        let room = paused ? 0 : MAX_PARALLEL - Math.max(inFlight.size, runningJobs(db, project.id));
         const current = pickedEngine(db, project, engine);
         // Rechecks share the pool with steps and take it first: they are short,
         // and a reader that needs a change should say so before a step that
@@ -398,7 +410,15 @@ export async function reviseDoc(
   if (runningDoc(db, project.id, rel)) {
     return refuse(db, project, rel, `${rel} is already being rewritten — wait for it to land`);
   }
-  await waitForRoom(db, project.id);
+  if (!(await waitForRoom(db, project.id))) {
+    // Stopped, with its notes, so Continue resumes it like a revision the pause
+    // caught mid-run — not failed, nothing went wrong.
+    db.prepare(
+      `INSERT INTO jobs (project_id, doc_rel, kind, status, error, notes, finished_at)
+       VALUES (?, ?, 'doc', 'stopped', 'stopped by pause before it could start', ?, datetime('now'))`,
+    ).run(project.id, rel, JSON.stringify(notes));
+    return { ok: false, error: 'paused' };
+  }
   const out = await runStep(db, project, step, pickedEngine(db, project, engine), pkgRoot, notes);
   if (out.ok) await advance(db, project, engine, pkgRoot);
   return out;
@@ -911,17 +931,28 @@ export async function runStep(
     if (!existsSync(outPath)) {
       return settle('failed', `engine finished without producing ${step.output}`);
     }
-    const written = readFileSync(outPath, 'utf8');
+    let written = readFileSync(outPath, 'utf8');
     if (before !== null && written === before) {
       return settle(
         'failed',
         `${engine.id} left ${step.output} exactly as it was — the change was not made`,
       );
     }
-    const status = readFrontmatter(written).status;
+    let status = readFrontmatter(written).status;
+    // The agent does not approve: a document it marked `approved` would open
+    // every step that reads it without prime ever seeing it. The text stays,
+    // the status is prime's — back to draft, and the run goes on as one.
+    if (status === 'approved') {
+      setFrontmatterStatus(outPath, 'draft');
+      written = readFileSync(outPath, 'utf8');
+      status = 'draft';
+    }
     // Generate the design preview after a successful DESIGN.md write.
     if (step.output === 'DESIGN.md') writeDesignPreview(project);
     if (status !== 'draft' && status !== 'not-applicable') {
+      // Any other status is a write nobody asked for; the file goes back to
+      // what stood, so a failed run leaves nothing new for the chain to read.
+      if (priorText !== null) writeFileSync(outPath, priorText, 'utf8');
       return settle('failed', `${step.output} written but status is '${status}' (expected draft)`);
     }
     // A document that does not apply is a title and one line. Anything else is
@@ -941,7 +972,6 @@ export async function runStep(
       priorText !== null && readFrontmatter(priorText).status === 'uninitialized'
         ? null
         : priorText;
-    recordVersion(db, project, step.output, written, 'agent', priorVersion, job.id);
     // What was asked of this document is not the agent's to drop: put back any
     // line the rewrite lost. Then the requests this run answered — the ones
     // prime chose, and the ones the first write inherited — are done, and a
@@ -953,6 +983,18 @@ export async function runStep(
       const inherited = waiting.some((w) => w.from === request.from && w.reason === request.reason);
       if (chosen || inherited) removeRequest(project, step.output, request.from, request.reason);
     }
+    // Record the file as it stands after those repairs: the version the panel
+    // diffs against must be the text on disk, or the picker offers a version
+    // nobody saw and the real change hides behind the restored lines.
+    recordVersion(
+      db,
+      project,
+      step.output,
+      readFileSync(outPath, 'utf8'),
+      'agent',
+      priorVersion,
+      job.id,
+    );
     return settle('done');
   } catch (err) {
     return settle('failed', (err as Error).message);

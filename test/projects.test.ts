@@ -280,6 +280,40 @@ test('a document being rewritten cannot be saved over, and an approved edit re-r
   rmSync(work, { recursive: true, force: true });
 });
 
+test('a plan with no tasks, or one whose split failed, cannot be approved', async () => {
+  const work = tempDir();
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Plan', repoPath: join(work, 'plan') }, pkgRoot);
+  const { buildApp } = await import('../server/app.js');
+  const app = buildApp(db, pkgRoot, join(work, 'db.sqlite'));
+  const server = app.listen(0);
+  const port = (server.address() as { port: number }).port;
+  const kopeng = join(work, 'plan', '.kopeng');
+  mkdirSync(join(kopeng, 'tasks'), { recursive: true });
+  writeFileSync(join(kopeng, 'project.yaml'), 'name: Plan\nstatus: draft\n');
+  const approve = () =>
+    fetch(`http://127.0.0.1:${port}/api/projects/${p.id}/kopeng/approve`, { method: 'POST' });
+  const status = () => readFileSync(join(kopeng, 'project.yaml'), 'utf8');
+
+  // project.yaml stands, but the split that wrote it failed.
+  db.prepare(
+    "INSERT INTO jobs (project_id, doc_rel, kind, status, error) VALUES (?, '.kopeng/', 'plan', 'failed', 'engine wrote nothing')",
+  ).run(p.id);
+  assert.equal((await approve()).status, 409, 'a failed split is not a plan');
+  assert.match(status(), /status: draft/);
+
+  // The split landed, but left no tasks.
+  db.prepare("UPDATE jobs SET status = 'done', error = NULL WHERE project_id = ?").run(p.id);
+  assert.equal((await approve()).status, 409, 'zero tasks is nothing to approve');
+  assert.match(status(), /status: draft/);
+
+  writeFileSync(join(kopeng, 'tasks', 'PLAN-1.md'), '# one task\n');
+  assert.equal((await approve()).status, 200);
+  assert.match(status(), /status: approved/);
+  server.close();
+  rmSync(work, { recursive: true, force: true });
+});
+
 test('a cross-site page cannot reach the API, and the vite proxy still can', async () => {
   const work = tempDir();
   const db = openDb(join(work, 'db.sqlite'));

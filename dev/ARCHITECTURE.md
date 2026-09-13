@@ -117,7 +117,9 @@ anything else survives; a file kortext never wrote is left alone.
 
 The file is the source of truth — no document state is kept in the database.
 
-**`status`:** `uninitialized` → `draft` (engine wrote it) → `approved` (prime). Side exits:
+**`status`:** `uninitialized` → `draft` (engine wrote it) → `approved` (prime, and only prime:
+an agent that writes `approved` is set back to `draft`; any other status fails the run and the
+previous text is restored). Side exits:
 `not-applicable` (the step judged it irrelevant; satisfies a dependency like `approved`), `log`.
 
 **Three sections are machine-read, two of them as work.** `## Questions for Prime` — non-empty
@@ -202,7 +204,8 @@ A refused brief is demoted `approved → draft`: a document waiting on a human b
 **The chain (`runner.ts:advance`).** One loop per project. Each turn it fills a pool of
 **3**: pending rechecks first, then the producible steps (unwritten, inputs settled, not
 running); room is what the database shows running, so a revision started from the panel takes a
-slot too, and `reviseDoc` waits for one instead of running as a fourth CLI. The engine and model
+slot too, and `reviseDoc` waits for one instead of running as a fourth CLI — the wait is a
+tracked run, so Pause aborts it and it lands `stopped` with its notes. The engine and model
 are read from the project row at every spawn, so a switch in the panel reaches the next step and
 the next recheck alike. The loop runs once with rechecks alone before the readiness gate — a
 reader owes its verdict whatever the brief says — then with steps once the gate has passed, and

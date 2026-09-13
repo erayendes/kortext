@@ -215,8 +215,15 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     if (!project) return;
     const { id } = req.body ?? {};
     if (!ENGINES.some((e) => e.id === id)) return res.status(400).json({ error: 'unknown engine' });
-    db.prepare('UPDATE projects SET engine = ? WHERE id = ?').run(String(id), project.id);
-    res.json({ engine: id });
+    // A model name belongs to one CLI — `sonnet` means nothing to codex — so a
+    // switch drops it back to the new CLI's default unless the new CLI knows it.
+    const keeps = ENGINES.find((e) => e.id === id)?.models.includes(project.model ?? '') ?? false;
+    db.prepare('UPDATE projects SET engine = ?, model = ? WHERE id = ?').run(
+      String(id),
+      keeps ? project.model : '',
+      project.id,
+    );
+    res.json({ engine: id, model: keeps ? project.model : '' });
   });
 
   // The model that CLI is told to use — free text, because each CLI names its
@@ -832,6 +839,24 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     const project = projectOr404(req.params.id, res);
     if (!project) return;
     const p = join(project.repo_path, '.kopeng', 'project.yaml');
+    // A plan is approvable when the split finished and left tasks behind — a
+    // failed split leaves project.yaml too, and an empty plan approved is a
+    // handshake over nothing.
+    const last = listJobs(db, project.id).find((j) => j.doc_rel === '.kopeng/');
+    if (last && last.status !== 'done') {
+      return res
+        .status(409)
+        .json({ error: `the last split ${last.status}: ${last.error ?? 'retry it first'}` });
+    }
+    let tasks = 0;
+    try {
+      tasks = readdirSync(join(project.repo_path, '.kopeng', 'tasks')).filter((f) =>
+        f.endsWith('.md'),
+      ).length;
+    } catch {
+      /* no tasks dir */
+    }
+    if (tasks === 0) return res.status(409).json({ error: 'the plan has no tasks to approve' });
     try {
       const body = readFileSync(p, 'utf8');
       writeFileSync(

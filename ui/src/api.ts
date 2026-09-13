@@ -117,7 +117,7 @@ export const api = {
   selectEngine: (id: string) =>
     req<{ selected: string }>('/api/engines', { method: 'PUT', body: JSON.stringify({ id }) }),
   setProjectEngine: (projectId: number, id: string) =>
-    req<{ engine: string }>(`/api/projects/${projectId}/engine`, {
+    req<{ engine: string; model?: string }>(`/api/projects/${projectId}/engine`, {
       method: 'PUT',
       body: JSON.stringify({ id }),
     }),
