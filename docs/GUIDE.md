@@ -1,5 +1,8 @@
 # Kortext — Guide
 
+> [!NOTE]
+> [For Turkish press 9](tr/GUIDE.md)
+
 The panel, explained. Installation and the five-step overview are in the
 [README](../README.md); this is what to do once a project is on screen.
 

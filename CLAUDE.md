@@ -23,7 +23,8 @@ Eski v3 kodu ve tasarım turları (düzenleme YOK)    → archive/
 ```
 
 > **Doküman yeri (2026-09-04):** okuyucusuna göre ayrıldı.
-> **`docs/`** = kullanıcının okuduğu: `GUIDE`, `CHANGELOG` (+ `assets/`). Kök `README.md`
+> **`docs/`** = kullanıcının okuduğu: `GUIDE`, `CHANGELOG` (+ `assets/`); Türkçeleri `docs/tr/`
+> altında (`README`, `GUIDE`, `CHANGELOG`) — İngilizcesi değişince Türkçesi de değişir. Kök `README.md`
 > kurulum dahil her şeyi anlatır — npm paket sayfası onu okur, o yüzden kökte durur. Docusaurus
 > sitesi buradan kurulacak.
 > **`dev/`** = geliştiricinin okuduğu, dört dosya: `ARCHITECTURE`, `DESIGN`, `PRODUCT`,

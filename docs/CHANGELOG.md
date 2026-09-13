@@ -1,5 +1,8 @@
 # Changelog
 
+> [!NOTE]
+> [For Turkish press 9](tr/CHANGELOG.md)
+
 ## [Unreleased]
 
 Findings from the first real project run through the panel end to end.
