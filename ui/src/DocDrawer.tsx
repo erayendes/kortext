@@ -131,7 +131,10 @@ export function DocDrawer({
   const [sent, setSent] = useState(false);
   const [landed, setLanded] = useState(0);
   const writing = doc?.state === 'writing';
-  const locked = busy || writing;
+  // No version means the text is still on its way (first open, or the reload
+  // after a rewrite): an approve or a save sent now would name no version and
+  // be refused, so the buttons wait for it.
+  const locked = busy || writing || !version;
   const [preview, setPreview] = useState(false); // DESIGN.md drawn, not read
   const [proposed, setProposed] = useState(false); // the editor holds a draft the engine wrote
   const [rawEdit, setRawEdit] = useState(false); // …and you asked to type in it rather than read it

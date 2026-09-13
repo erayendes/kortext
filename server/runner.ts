@@ -132,6 +132,7 @@ export function buildStepPrompt(
     '- Fill the skeleton template already at that path. A heading that CONTAINS a bracketed span — `### [Module Name]`, ``### Table: `[table_name]` `` — is a pattern, not a heading: rename it to the real thing, repeat the whole block once per real item, and delete the block entirely when the project has none of them. Every other heading is fixed: keep it VERBATIM and replace the placeholder content under it.',
     `- Frontmatter must end up as: status: draft, author: ${step.author ?? '+agent'}${step.approver ? `, approver: ${step.approver}` : ''}.`,
     '- NEVER set status to approved — approval belongs to the human.',
+    '- Write the file in place, on whatever branch the folder is on. Do not create a branch, do not commit, do not run git at all: the human keeps the history, and a run that stops to ask for a branch has produced nothing.',
     '- `## Decisions` is load-bearing: each line there and the indented reason beneath it record a decision the human made. Reproduce the section EXACTLY — same lines, same reasons, same place — no matter how much of the document you rewrite. It is the only reason the next author does not re-open a settled question; drop a line and the decision is gone with it.',
     project.doc_lang
       ? `- Document language: write the PROSE in ${project.doc_lang}. This is prime's stated choice — it overrides the language of the inputs, the repository and the README.`

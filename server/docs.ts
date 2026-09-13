@@ -281,7 +281,11 @@ export function unfilledPlaceholders(content: string, template: string | null): 
   const out: string[] = [];
   for (const line of content.split('\n')) {
     const t = line.trim();
-    if (!t || !/\[[^\]]+\]/.test(t)) continue;
+    // An alert marker (`[!WARNING]`) and a task box (`[ ]`, `[x]`) are markdown,
+    // not blanks to fill — a template ships them and a finished document keeps
+    // them. Only the bracketed prose that is left counts.
+    const blanks = t.replace(/\[![A-Z]+\]/g, '').replace(/\[[ xX]\]/g, '');
+    if (!t || !/\[[^\]]+\]/.test(blanks)) continue;
     if (/^#{1,6}\s/.test(t) || shipped.has(t)) out.push(t);
   }
   return out;

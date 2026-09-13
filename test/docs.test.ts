@@ -312,6 +312,18 @@ test('a template line the agent never replaced is unfilled; prose in brackets is
 
   // A heading carrying a pattern is unfilled wherever it came from.
   assert.deepEqual(unfilledPlaceholders('### [Surface name]\n', null), ['### [Surface name]']);
+
+  // An alert marker the template ships is markdown, not a blank: a finished
+  // DESIGN.md keeps `> [!WARNING] **FE RULE:**` and is still approvable.
+  const design = templateFor(pkgRoot, 'DESIGN.md')!;
+  assert.ok(design.includes('> [!WARNING] **FE RULE:**'));
+  assert.deepEqual(
+    unfilledPlaceholders(
+      '> [!WARNING] **FE RULE:**\n> No hex values outside tokens.\n- [x] done\n',
+      design,
+    ),
+    [],
+  );
 });
 
 test('conflicts and warnings read as demands do, but a warning may name any path', () => {
