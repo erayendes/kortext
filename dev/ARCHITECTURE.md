@@ -248,9 +248,7 @@ write. A successful write settles it in the document that asked, as `folded into
 | `runRecheck` | judges an approved reader against an input that moved | a verdict JSON; the server writes the demand |
 | `explainDoc` | line-anchored Q&A with the author persona | nothing — the answer lives in the panel |
 
-`recheckDependents` queues every approved reader when its source is approved or edited —
-except an edit prime saved with `recheck: false`, the panel's *Re-read by N readers* box
-unticked, which says the change means nothing to them.
+`recheckDependents` queues every approved reader when its source is edited or approved.
 The chain runs `pending_rechecks` inside its pool, up to three at once, never two on one reader. Pause and server restarts retain unfinished
 checks; Continue/Retry resumes them. A newer source change increments the generation so an older
 verdict cannot clear it. Pending checks prevent analysis completion.
@@ -285,7 +283,7 @@ No fs-watch — the panel polls (docs 3s, transfer 4s, handshake 5s).
 | `POST …/cancel` | pause, abort, remove all of `.kortext/` (including the brief and manual edits), the Kortext `AGENTS.md` block, `CLAUDE.md` pointer, project logs and registry row; preserve `.kopeng/` and other project files |
 | `POST …/archive` | shelve — row and repo both stay |
 | `GET …/docs` | document list (+ idempotent self-heal scaffold) |
-| `GET \| PUT …/docs/content` | read content + SHA-256 version · write with `expectedVersion` (409 on conflict or active writer); `settleRequests` closes the incoming requests, and an approved edit queues reader checks unless `recheck: false` |
+| `GET \| PUT …/docs/content` | read content + SHA-256 version · write with `expectedVersion` (409 on conflict or active writer; approved edits queue reader checks) |
 | `POST …/docs/approve` | `draft → approved` with `expectedVersion`; refuses open questions, stale text and active writers; records a version and queues reader checks |
 | `GET …/docs/history[/:id]` | the recorded versions of one document · the text of one of them |
 | `POST …/docs/propose` | returns a drafted revision for the brief |

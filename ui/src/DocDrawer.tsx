@@ -144,10 +144,6 @@ export function DocDrawer({
   const [preview, setPreview] = useState(false); // DESIGN.md drawn, not read
   const [proposed, setProposed] = useState(false); // the editor holds a draft the engine wrote
   const [rawEdit, setRawEdit] = useState(false); // …and you asked to type in it rather than read it
-  // Whether the documents that read this one re-read it after the save. On by
-  // default; prime unticks it for the number or the sentence that changes nothing
-  // for them. Reset with every Edit, so a small save never inherits the last.
-  const [recheck, setRecheck] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   // What the document said before it was last written, when the chain is intact.
   const [previous, setPrevious] = useState<string | null>(null);
@@ -539,8 +535,6 @@ export function DocDrawer({
   const discarding = decisions.filter((d) => d.kind === 'outgoing' && d.what === 'deny');
   const written = doc?.hasProducingStep ?? false;
   const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
-  // The approved documents that read this one — the ones a save sends back to it.
-  const readers = docs.filter((d) => d.status === 'approved' && d.inputs.includes(doc.rel)).map((d) => d.rel);
   // An answer to a listed question and a note on a line are counted apart —
   // they read differently, and prime should see which is which before pressing.
   const answered = notes.filter(isQuestionNote).length;
@@ -632,7 +626,7 @@ export function DocDrawer({
   // them only when prime says so — the second button, drawn when requests stand.
   const saveEdit = (settle = proposed) =>
     act(async () => {
-      const saved = await api.saveDoc(project.id, doc.rel, draft, version, settle, recheck);
+      const saved = await api.saveDoc(project.id, doc.rel, draft, version, settle);
       setContent(saved.content);
       setVersion(saved.version);
       setDraft(saved.content);
@@ -711,7 +705,6 @@ export function DocDrawer({
               disabled={locked}
               onClick={() => {
                 setPreview(false);
-                setRecheck(true);
                 setEditing(true);
               }}
             >
@@ -728,22 +721,6 @@ export function DocDrawer({
           )}
           {editing && (
             <>
-              {/* Only an approved document has readers to re-read it; a draft's
-                  readers have not been written. */}
-              {doc.status === 'approved' && readers.length > 0 && (
-                <label
-                  className="kx-recheck-opt"
-                  title={`After the save, ${readers.join(', ')} read this document again and say whether it now contradicts them. Untick for a change that means nothing to them — a number, a typo.`}
-                >
-                  <input
-                    type="checkbox"
-                    className="kx-req-check"
-                    checked={recheck}
-                    onChange={(e) => setRecheck(e.target.checked)}
-                  />
-                  Re-read by {plural(readers.length, 'reader', 'readers')}
-                </label>
-              )}
               <button className="btn btn-primary" disabled={busy} onClick={() => saveEdit()}>
                 Save
               </button>

@@ -157,7 +157,7 @@ Open any document. Everything you can do to it is here:
 | **Ask** | the author persona answers, in the panel only — nothing is written |
 | **Apply** | one press sends everything the tray collected: answers and accepted requests go into one rewrite, denials into `## Decisions`, sent requests to their target now, discards out of the file |
 | select a line of the body → **Add note** | a revision note on that line; **Request revision** (or Apply) re-runs the author with it |
-| **Edit** | saves your text; an ordinary save does not close requests or remove open questions. With requests standing, a second button — **Save, requests done** — saves and closes them without a rewrite. On an approved document, **Re-read by N readers** (ticked) beside Save decides whether the readers are re-checked |
+| **Edit** | saves your text; an ordinary save does not close requests or remove open questions. With requests standing, a second button — **Save, requests done** — saves and closes them without a rewrite |
 | `not-applicable` | the step judged the document irrelevant and said why; it satisfies dependencies like an approval |
 
 - [ ] Ask answers about the selected row and writes nothing to disk — hash the file before and after.
@@ -170,9 +170,6 @@ Open any document. Everything you can do to it is here:
 - [ ] The diff picker beside the name shows recorded versions; a rewritten block wears `[+]` and unfolds its old text; a run of new blocks says `new` once.
 - [ ] The brief has no producing step: **Edit** is the only way to change it.
 - [ ] **Edit** works while a recheck reads the document; only a run that writes it locks the drawer.
-- [ ] Saving an approved document with **Re-read** unticked queues no recheck (the readers stay
-      in Done); ticked, every approved reader drops to `recheck`. The box is ticked again on the
-      next Edit.
 - [ ] Notes in the tray keep their label (`#3` for a question, `#1` for a line) after Send moves
       the text under them.
 
