@@ -15,10 +15,14 @@ You approve the drafts; a document marked `n/a` also satisfies dependencies.
 
 Three things follow from that.
 
-- **Every document has a status.** `waiting` (its turn has not come) → `writing` (your CLI is
-  producing it now) → `pending` (written, waiting for you) → `approved`. A document can also
-  settle as `n/a` — the step read the inputs and judged that this project does not need it, and
-  said why.
+- **Every document has a status.** `waiting` (its turn has not come, or it is written and
+  waiting for you) → `writing` (your CLI is producing it now) → `approved`. Stop a run and it
+  is `paused`, to be continued; a run that fell over is `failed`, to be retried. A document can
+  also settle as `n/a` — the step read the inputs and judged that this project does not need
+  it, and said why.
+- **A badge beside the status says what is owed.** `approve` (it waits for you), `review`
+  (questions or requests stand on it), `recheck` (something it reads changed; it will be read
+  again), `revision` (a rewrite, not a first draft).
 - **The order is not a preference.** A document is written only after everything it depends on
   is settled. That is why `SECURITY` waits for `ARCHITECTURE`, and why approving one document
   often starts three others at once.
@@ -63,8 +67,9 @@ answer to it: the question disappears and the fact it established becomes part o
 **Edit** — write the file yourself. A normal save updates the text; it does not automatically
 close change requests or clear open questions. When requests are standing, a second button —
 **Save, requests done** — saves your text and closes them, for the number or the sentence that
-does not need the agent. When you use **Propose** to draft a requested change to the brief,
-saving that proposal also closes the incoming requests it answers.
+does not need the agent. The brief has no author persona, so a request aimed at it offers
+**Draft the change** instead: the engine drafts the text into the editor, and saving it closes
+the requests it answers.
 
 **Preview** — on `DESIGN.md` only, in the drawer itself: the button swaps the text for the page
 and back. The tokens the designer wrote — colors, type scale, spacing,
