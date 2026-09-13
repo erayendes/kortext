@@ -15,106 +15,111 @@
 
 🇬🇧 [For English press 9](../../README.md)
 
-**Yapay zekâ ile geliştirilen projelerin beyni.** Kortext, elinizdeki bir brief'i — ya da
-zaten yazılmış bir kod tabanını — onaylı bir analiz temeline dönüştürür. Bunu yaparken kendi
-kodlama ajanınızı kullanır: Claude Code, Codex, Gemini CLI, hangisi kuruluysa. Analiz boyunca
-panelden hiç çıkmazsınız. Belgeler taslak olarak gelir; siz okur, onaylar, not düşer ya da
-"bunu şöyle yazsana" dersiniz. Zincir sizin onaylarınızla ilerler. Son belge de yerine
-oturduğunda Kortext kenara çekilir: belgeler artık projenin kılavuzudur, `AGENTS.md` de
-ajanınıza teslim edilen sözleşme.
+# Attım hafızaya, beyin bedava
 
-Kortext'in kendi API anahtarı yoktur, kendi adına hiçbir modeli çağırmaz. Bilgisayarınızda
-zaten kurulu olan, ücretini zaten ödediğiniz ajan CLI'ını alır ve repo'nuzun içinde, sessizce
-çalıştırır.
+Yapay zekayla ürün geliştirirken yaşadığım iki sorun var.
+
+1. Proje durumunu görsel olarak takip edememek.
+2. Bir noktada el sıkıştığımız kurallardan uzaklaşıp serbest gezen tavuğa bağlayıp doğaçlama yapması.
+
+Biliyorum, siz de bu durumu yaşıyorsunuz, sadece henüz adını koyamadınız.
+
+Ama ben koydum. Adı **Kortext**.
+
+Kortext, ürün geliştirmeye başlamadan önce — arzu ettiğiniz demokrasi çerçevesinde — yapay zekayla el sıkıştığınız bir ürün anayasası.
+
+Verdiğiniz **`BRIEF.md`** üzerinden alanında **uzman 10 farklı persona**nın hazırladığı **14 mimari belge**den oluşan anayasa sayesinde, modelin projeden çıkmasını engelliyor.
+
+Kullanımı basit ama kapsamlı.
+
+- Muhteşem sadelikteki arayüzden proje bilgileri ve iş kapsamını girin.
+
+- Personaların hazırladığı her bir belge onayınıza sunulur. 
+
+- Pürüzsüz bir deneyim ya da denetim için üretilen belgeleri okuyun. Belgelerde size sorular gelebilir. Siz açıklama isteyebilir ya da yorum yazabilirsiniz.
+
+- Eğer istediğiniz değişiklik bir başka belgede değişiklik gerektiriyorsa, o belge tekrar pipeline’a girer.
+
+- Anayasa belli olduktan sonra hangi yapay zekayı kullanıyorsanız süreci onunla dilediğiniz gibi yürütebilirsiniz.
+
+Bu arada, daha önce başlamış projeleri de unutmadım. Kortext, mevcut kod tabanını analiz ederek oradan da başlayabiliyor.
+
+## Bundan sonrası DAHA meraklısına
+
+Tek bir insan rolü var, **Prime**. Diğer personalar; product manager, architect, designer, growth expert, security engineer, DevOps engineer, DBA, compliance expert, copywriter ve QA engineer.
+
+**BRIEF.md**, sizin verdiğiniz belge. Bu belgeden referansla Kortext’in ürettiği belgeler; PRODUCT.md, STACK.md, STRUCTURE.md, ARCHITECTURE.md, DESIGN.md, GROWTH.md, SECURITY.md, ENVIRONMENT.md, DATABASE.md, API.md, LEGAL.md, CONTENT.md, ENGINEERING.md, TEST.md
+
+BRIEF.md'nin bir örneği var. Eğer yazdığınız BRIEF yeterli değilse, bunu belirtiyor.
+
+Mevcut bir projeyi Kortext'e eklediğinizde, projenin durumuna ve gidişatına göre yeni öneriler sunabilir ukala.
+
+Kendi yapay zeka ajanınızı çalıştırıyorsunuz. 
+
+Fena token tüketmiyor ama sonradan boşa gidecek tokenların önüne geçiyor. Toplamda çok daha karlı.
+
+Kortext hiçbir bilgi almıyor, telemetry tutmuyor. Ama ne kadar kullanılacağını çok merak ediyorum. 
+
+## Nasıl Çalışır
 
 <p align="center">
   <img src="../assets/panel-documents.png" alt="Analiz sürerken: belgeler bağımlılık sırasında, her birinin yazarı ve durumu" width="880">
 </p>
 
-## Nasıl çalışır
+1. Proje klasörünü ve hangi ajan CLI'ıyla çalışacağını seçin. Bu seçim projeye aittir; iki projeniz iki ayrı CLI'da rahatça çalışabilir. *Yeni proje* formda yazdığınız ya da yüklediğiniz bir brief'le başlar, *mevcut proje* ise doğrudan mevcut koddan başlar.
 
-1. **Bir proje ekleyin.** Repo klasörünü ve hangi ajan CLI'ıyla çalışacağını seçin. Bu seçim
-   projeye aittir; iki projeniz iki ayrı CLI'da rahatça yaşayabilir. *Yeni proje* formda
-   yazdığınız ya da yüklediğiniz bir brief'le başlar; *mevcut proje* doğrudan koddan. Kortext
-   repo'nun köküne `AGENTS.md`'yi, `.kortext/` altına da belge iskeletlerini yerleştirir.
-2. **Analiz.** Kortext, ajan CLI'ınızı bağımlılık sırasına uyan bir iş akışında adım adım
-   çalıştırır. Her adım tek bir belge yazar — ARCHITECTURE, STACK, SECURITY, DATABASE, DESIGN,
-   LEGAL… — ve bunu bir persona olarak yapar: mimar, güvenlik mühendisi, tasarımcı. Belge
-   `draft` olarak gelir. Girdilerini henüz onaylamadığınız bir belge asla yazılmaz. Birbirinden
-   bağımsız en fazla üç adım aynı anda koşar; siz bir şeyi onayladığınızda zincir uyanır.
-3. **Panelde inceleyin.** Herhangi bir belgeyi açın. Onaylayabilirsiniz; bir satır seçip "bunu
-   neden böyle yazdın?" diye yazarına sorabilirsiniz (bu sohbet geçicidir, hiçbir yere
-   yazılmaz); ya da notlar bırakıp revizyon isteyebilirsiniz — o zaman belgeyi yazan adım
-   notlarınızla yeniden koşar. Bir belge "bu projede buna gerek yok" diyerek, gerekçesiyle,
-   `not-applicable` olarak da kapanabilir.
-4. **El sıkışma.** Bütün belgeler onaylandığında ya da gerek yok dendiğinde analiz bitmiştir.
-   Belgeler artık projenin anayasası, `AGENTS.md` de devir teslim metnidir. Başlangıç
-   komutlarından birini kendi istemcinize — CLI ya da uygulama, hangisini kullanıyorsanız —
-   kopyalayın ve yapmaya başlayın.
+2. Kortext repo'nun köküne `.kortext/` dizinini ve içine belge iskeletlerini, bir de `AGENTS.md`'yi yerleştirir. `AGENTS.md` zaten varsa içine işaretli bir blok ekler; sizin yazdıklarınıza dokunmaz.
 
-## Neye ihtiyacınız var
+3. Kortext, ajan CLI'ınızı belgelerin bağımlılık sırasına uyan bir iş akışında adım adım çalıştırır. Her adım tek bir belge yazar — ARCHITECTURE, STACK, SECURITY, DATABASE, DESIGN, LEGAL… — ve bunu bir persona olarak yapar: mimar, güvenlik mühendisi, tasarımcı.
+   Her belge `draft` olarak gelir ve onaylamadığınız bir belge asla yazılmaz.
 
-| | en az | neden |
-| --- | --- | --- |
-| **Node.js** | 22 | çalışma ortamı |
-| **npm** | 10 | Node 22 ile birlikte gelir |
-| **Bir ajan CLI'ı** | aşağıdaki dörtten biri | Kortext'in sürdüğü motor |
+4. Herhangi bir belgeyi açın. Onaylayabilirsiniz; bir satır seçip “bunu neden böyle yazdın?" diye sorabilirsiniz (bu sohbet geçicidir, hiçbir yere yazılmaz); ya da notlar bırakıp revizyon isteyebilirsiniz. Revizyon istediğinizde belge yeniden koşar. 
+   
+5. Bütün belgeler onaylandığında ya da gerek yok dendiğinde analiz bitmiştir. Belgeler artık projenin anayasası, `AGENTS.md` de devir teslim metnidir. Başlangıç komutlarından birini kendi istemcinize — CLI ya da uygulama, hangisini kullanıyorsanız — kopyalayın ve yapmaya başlayın.
 
-Kortext'e anahtar vermezsiniz; zaten kullandığınız CLI'ın aboneliğini harcar. Hangisini
-kullanıyorsanız onu kurmanız yeter. Kortext için hepsi eşittir; `PATH`'inizde hangisini bulursa
-onu kullanır. Cursor, Copilot, OpenCode, Amp, Droid, Goose, Qwen Code ve Cline için de tanımlar
-hazır — gerçek bir makinede belge yazana kadar listede *untested* etiketiyle dururlar; denerseniz
-nasıl gittiğini bize yazın. Git zorunlu değildir.
-
-```sh
-npm install -g @anthropic-ai/claude-code    # claude
-npm install -g @openai/codex                # codex
-npm install -g @google/gemini-cli           # gemini
-# antigravity: Antigravity uygulamasını kurun, sonra `agy install`
-```
+> Bir belge "bu projede buna gerek yok" diyerek, gerekçesiyle, `not-applicable` olarak da kapanabilir.
 
 ## Kurulum
 
-```sh
-npm install -g kortext
-```
+**Node 22 veya üstü** ve PATH'inizde en az bir ajan CLI'ı olsun yeter
+(`claude`, `codex`, `antigravity` ya da bir başkası).
 
-npm artık paketlerin kurulum betiklerini kendiliğinden çalıştırmıyor. Kortext'in SQLite
-bağlayıcısı yaygın platformlar için hazır derlenmiş geldiğinden bu komut çoğu zaman yeter.
+Sonrası terminale yazacağınız hepi topu tek bir komut; `npm install -g kortext`
+
+> npm artık paketlerin kurulum betiklerini kendiliğinden çalıştırmıyor. Kortext'in SQLite bağlayıcısı yaygın platformlar için hazır derlenmiş geldiğinden bu komut çoğu zaman yeter.
 `kortext` açılıp da veritabanını açamazsa, betiğe bir kerelik izin vererek yeniden kurun:
 
 ```sh
 npm install -g --allow-scripts=better-sqlite3 kortext
 ```
 
-Node 22'nin kendisi için, platformunuza göre:
+Kurulum bittikten sonra `kortext` yazın. Sunucu ayağa kalkar, tarayıcınız açılır ve Kortext paneli karşınıza gelir. Hepsi bu.
+
+> Sunucu 3441 portunu kullanır; isterseniz `--port` ile değiştirebilirsiniz.
+> Verileriniz tek bir global SQLite veritabanında durur: `~/.kortext/kortext.db`. Onu da `--db` ile değiştirebilirsiniz.
 
 <details>
-<summary><b>macOS</b></summary>
+<summary><b>Gereksinimler</b></summary>
+<br/>
+
+### Node.js `22`ve npm `10`
+
+<details>
+<summary><b>macOS için Node 22</b></summary>
 
 ```sh
 brew install node@22
 ```
-
-Birden fazla Node sürümüyle uğraşıyorsanız: `brew install fnm && fnm install 22 && fnm default 22`.
 </details>
 
 <details>
-<summary><b>Windows</b> — deneysel</summary>
+<summary><b>Windows için Node 22</b></summary>
 
-> **Windows desteği deneyseldir.** Kortext macOS ve Linux'ta geliştiriliyor ve orada test
-> ediliyor. Windows'a özgü kısımlar — ajan CLI'ını `where` ile bulmak, npm'in kurduğu `.cmd`
-> shim'ini çalıştırmak — belgelenmiş davranışa göre yazıldı ama gerçek bir Windows'ta
-> koşturulmadı. Bir şey çalışmazsa lütfen
-> [bir issue açın](https://github.com/erayendes/kortext/issues); sorun sizin kurulumunuz değil,
-> bizim eksiğimizdir.
+> **Windows desteği deneyseldir.** Kortext macOS ve Linux'ta geliştiriliyor ve orada test ediliyor. Windows'a özgü kısımlar — ajan CLI'ını `where` ile bulmak, npm'in kurduğu `.cmd` shim'ini çalıştırmak — belgelenmiş davranışa göre yazıldı ama gerçek bir Windows’ta koşturulmadı. Bir şey çalışmazsa lütfen [bir issue açın](https://github.com/erayendes/kortext/issues); sorun sizin kurulumunuz değil, benim eksiğimdir.
 
-Node 22'yi **nodejs.org**'dan kurun (v22.x etiketli LTS). *Tools for Native Modules* ekranında
-**"Automatically install the necessary tools"** kutusunu işaretleyin; Kortext'in SQLite
-bağlayıcısının bunlara ihtiyacı var.
+Node 22'yi **nodejs.org**'dan kurun (v22.x etiketli LTS). *Tools for Native Modules* ekranında **"Automatically install the necessary tools"** kutusunu işaretleyin; Kortext'in SQLite bağlayıcısının bunlara ihtiyacı var.
 
-Global kurulumda `EACCES` ya da izin hatası alırsanız, yönetici kabuğu açmak yerine npm'in global
-klasörünü kendi klasörünüze çevirin:
+Global kurulumda `EACCES` ya da izin hatası alırsanız, yönetici kabuğu açmak yerine npm'in global klasörünü kendi klasörünüze çevirin:
 
 ```powershell
 npm config set prefix "$env:APPDATA\npm"
@@ -136,53 +141,26 @@ nvm install 22 && nvm alias default 22
 `npm config set prefix ~/.npm-global`, sonra `~/.npm-global/bin`'i `PATH`'inize ekleyin.
 </details>
 
-## Hızlı başlangıç
-
-**Node 22 veya üstü** ve PATH'inizde en az bir ajan CLI'ı olsun yeter
-(`claude`, `codex`, `antigravity` ya da `gemini`).
+### Ajan CLI’ı
 
 ```sh
-npm install -g kortext
-kortext
+npm install -g @anthropic-ai/claude-code    # claude
+npm install -g @openai/codex                # codex
+npm install -g @google/gemini-cli           # gemini
 ```
 
-Sunucu **3441** portunda açılır (`--port` ile değiştirebilirsiniz) ve panel karşınıza gelir.
-Verileriniz tek bir global SQLite veritabanında durur: `~/.kortext/kortext.db` (`--db` ile
-değiştirebilirsiniz). Belgelerse sizin repo'nuzda yaşar.
+> [!NOTE]
+> Kortext'e anahtar vermezsiniz; zaten kullandığınız CLI'ın aboneliğini kullanır. Cursor, Copilot, OpenCode, Amp, Droid, Goose, Qwen Code ve Cline için de tanımlar hazır.
 
-## Repo'nuza ne gelir
-
-```
-AGENTS.md                  ajanın giriş sözleşmesi (devir teslim metni)
-.kortext/                  bütün belgeler, tek raf, yazıldıkları sırayla
-  BRIEF.md PRODUCT.md STACK.md STRUCTURE.md ARCHITECTURE.md SECURITY.md
-  ENVIRONMENT.md DATABASE.md API.md DESIGN.md GROWTH.md LEGAL.md
-  CONTENT.md ENGINEERING.md TEST.md
-```
-
-Bir belgenin durumu frontmatter'daki `status` alanında yazar ve doğru olan odur:
-`uninitialized → draft → approved` (ya da `not-applicable`).
-
-## Çalıştığından emin olun
-
-```sh
-node --version                          # v22 ya da üstü
-kortext --version
-which claude || which codex || which agy || which gemini
-```
-
-Bir CLI'ın kurulu olması oturum açmış olduğu anlamına gelmez. Kortext'i gerçek bir projeye
-yöneltmeden önce CLI'ınızı bir kez tek başına çalıştırıp giriş yaptığınızdan emin olun. CLI,
-proje eklerken formda seçilir; proje ekranında Start'ın yanında aynı liste durur — kotanız
-bittiğinde oradan başka bir CLI'a geçebilirsiniz. Hiçbiri kurulu değilse panel bunu başlığında
-söyler.
+</details>
 
 ## Başlatma ve durdurma
 
-`kortext` sunucuyu arka planda başlatır ve paneli açar. Terminal penceresini kapatabilirsiniz;
-panel çalışmaya devam eder. Durdurmak için panelin durum çubuğundaki ⏻ düğmesine basın. Aynı
-çubuktaki nokta sunucu ayaktayken yeşil, kapandığında kırmızıdır. Yeniden başlatmak için tekrar
-`kortext` yazmanız yeter.
+Kortext’i başlattıktan sonra terminal penceresini kapatabilirsiniz; Kortext arka planda çalışmaya devam eder. 
+
+Durdurmak için panelin durum çubuğundaki ⏻ düğmesine basın. 
+
+Yeniden başlatmak için tekrar `kortext` yazmanız yeter.
 
 ```sh
 kortext              # arka planda başlat, paneli aç
@@ -190,25 +168,20 @@ kortext --stop       # arka plandaki sunucuyu durdur
 kortext --no-detach  # bu terminalde tut, Ctrl+C ile durdur
 ```
 
-Ne düğme ne `--stop` koşan bir adımı yarıda keser; biri sürerken beklemenizi ister. Böylece bir
-analiz yazımın ortasında kesilmez.
+Ne düğme ne `--stop` koşan bir adımı yarıda keser; biri sürerken beklemenizi ister. Böylece bir analiz yazımın ortasında kesilmez.
 
 Arka plandaki sunucunun yazdıkları `~/.kortext/kortext.db.log` dosyasında birikir.
 
 ## Güncelleme ve kaldırma
 
-Yeni bir sürüm çıktığında panel başlığın altında bir şeritle haber verir. **Update now** düğmesi
-kurulumu sizin yerinize yapar; yeni sürüm, kortext'i kapatıp yeniden açtığınızda devreye girer.
-Düğme, koşan bir adım varsa dosyaları onun altından değiştirmez, bitmesini bekler. Elle yapmak
-isterseniz, ya da düğme hata verirse:
+Yeni bir sürüm çıktığında panel başlığın altında bir şeritle haber verir. **Update now** düğmesi kurulumu sizin yerinize yapar; yeni sürüm, kortext'i kapatıp yeniden açtığınızda devreye girer. Düğme, koşan bir adım varsa dosyaları onun altından değiştirmez, bitmesini bekler. Elle yapmak isterseniz, ya da düğme hata verirse:
 
 ```sh
 npm update -g kortext
 npm uninstall -g kortext
 ```
 
-Kaldırmak yalnızca programı siler. Proje kaydınız ve loglar `~/.kortext/`'te, belgeleriniz de
-repo'nuzda olduğu gibi kalır. Tertemiz bir başlangıç istiyorsanız ikisini de kendiniz silin.
+Kaldırmak yalnızca programı siler. Proje kaydınız ve loglar `~/.kortext/`'te, belgeleriniz de repo'nuzda olduğu gibi kalır. Tertemiz bir başlangıç istiyorsanız ikisini de kendiniz silin.
 
 ## Geliştirme
 
@@ -222,7 +195,7 @@ npm run format     # prettier yazar; format:check doğrular (CI bu kontrolü ça
 npm run build      # tsc → dist/ + vite → ui/dist/
 ```
 
-Issue ve pull request'lerinizi bekliyoruz — bkz. [CONTRIBUTING](../../.github/CONTRIBUTING.md),
+Issue ve pull request’leriniz için — bkz. [CONTRIBUTING](../../.github/CONTRIBUTING.md),
 [SUPPORT](../../.github/SUPPORT.md) ve [güvenlik politikası](../../.github/SECURITY.md).
 
 Kortext ücretsizdir ve MIT lisanslıdır. İşinizde bir yer edinirse,
