@@ -1783,7 +1783,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   font-size: var(--fs-ui);
   font-weight: 500;
   line-height: 1;
-  border-radius: var(--r-pill);
+  border-radius: var(--r-sm);
   border: 1px solid var(--border);
   background: var(--bg-muted);
   color: var(--fg-secondary);

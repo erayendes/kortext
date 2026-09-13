@@ -237,8 +237,9 @@ The heart of the system. A document is in **exactly one** state — where it is.
 | `approved` | you approved it | green |
 | `n/a` | considered, deliberately skipped | no ground, faint outline |
 
-A state is a **pill with a dot**: 20px, `--fs-ui`, a hairline border in the state's own tint, a
-6px dot in the state's colour before the word. The dot is what you scan a column for; the word is
+A state is a **tag with a dot**: 20px, `--fs-ui`, a hairline border in the state's own tint, a
+6px dot in the state's colour before the word, on the `--r-sm` corner — square where the badges
+beside it are round, so the two never read as one family. The dot is what you scan a column for; the word is
 what you read when you stop. `n/a` is not a colour but the absence of one: an outline in the
 text's own ink.
 
@@ -248,7 +249,8 @@ text's own ink.
 | `change request` | another document wants this one changed | pink |
 | `dependent` | an input is moving; it will be re-read when that settles | pink, hollow |
 
-A badge is the same pill without the dot: it says what is owed, and a debt has no motion to show.
+A badge is the round pill without the dot: it says what is owed, and a debt has no motion to
+show. Round against the state's square corner is the whole difference at a glance.
 
 **A badge beats the state.** Anything carrying `failed` or `change request` moves to **Needs
 you** whatever its state. The exception is `dependent`: news, not work, so it stays put.
