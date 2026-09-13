@@ -141,25 +141,23 @@ Open any document. Everything you can do to it is here:
 
 | action | what happens |
 | --- | --- |
-| **Approve** | `draft → approved`; the chain advances and every approved reader of it is re-judged |
-| select a line → **Ask** | the author persona answers, in the panel only — nothing is written |
-| **Add note** → revise | the producing step re-runs with your notes; the document returns as `draft` |
-| **Edit** | saves your text; ordinary saves do not automatically close requests or remove open questions |
-| **Propose** → save | saving the proposed brief revision also settles its incoming requests |
-| a demand (`change request`) | **Apply** re-runs the author with it, **Dismiss** closes it with your reason — decidable from either end, the document that asked or the one asked |
+| **Approve** | `draft → approved`; the chain advances, this document's outgoing requests travel to their targets, and every approved reader of it is re-judged |
+| select a row in **Action Needed** | the row's moves open under it — a question takes **Ask** · **Add note**; an incoming request **Ask** · **Accept** · **Deny**; an outgoing one **Ask** · **Send** · **Discard** |
+| **Ask** | the author persona answers, in the panel only — nothing is written |
+| **Apply** | one press sends everything the tray collected: answers and accepted requests go into one rewrite, denials into `## Decisions`, sent requests to their target now, discards out of the file |
+| select a line of the body → **Add note** | a revision note on that line; **Request revision** (or Apply) re-runs the author with it |
+| **Edit** | saves your text; an ordinary save does not close requests or remove open questions |
 | `not-applicable` | the step judged the document irrelevant and said why; it satisfies dependencies like an approval |
 
-- [ ] Ask answers about the selected passage and writes nothing to disk.
-- [ ] An ordinary edit leaves incoming requests open; saving a proposed revision closes them.
-- [ ] Open questions block approval. A standing request alone does not, but it still blocks completion.
-- [ ] A revision request comes back as a rewritten draft, with the answered question **gone**
-      from `## Questions for Prime` rather than restated.
-- [ ] A demand ticked `- [x]` in the source document carries the outcome line beneath it.
-- [ ] The brief has no producing step, so **Propose** drafts the change and you apply it.
-- [ ] Approving a rewritten document raises demands on the approved documents that read it —
-      or stays silent when there is nothing wrong.
-
----
+- [ ] Ask answers about the selected row and writes nothing to disk — hash the file before and after.
+- [ ] Open questions block approval (the button says so on hover); outgoing requests still undecided block it too.
+- [ ] After Apply the drawer stays open: the tray goes read-only and says *sent; the document is being rewritten*, Approve / Edit / Apply are locked, and when the rewrite lands the body reloads and the tray empties.
+- [ ] A revision comes back with the answered questions **gone** from `## Questions for Prime`, the facts folded into the body, and the unanswered ones kept — the author may add new ones.
+- [ ] **Send** puts `- [ ] from \`SOURCE.md\` — …` under the target's `## Change Requests` at once, and the target climbs to **Action needed** with `review`, approved or not.
+- [ ] **Deny** with a reason removes the `from` line and writes the request and the reason under `## Decisions`; **Accept** re-runs the author with it and the line is gone afterwards.
+- [ ] `## Decisions` and every `from` line survive the next rewrite untouched — the agent is told they are not its to drop, and kortext restores them if it drops them anyway.
+- [ ] The diff picker beside the name shows recorded versions; a rewritten block wears `[+]` and unfolds its old text; a run of new blocks says `new` once.
+- [ ] The brief has no producing step: **Edit** is the only way to change it.
 
 ## 6 · Handshake
 
@@ -218,6 +216,12 @@ of the handshake. Without kopeng installed, the button is replaced by an install
 3. **A restart mid-step** settles the orphaned `running` rows at boot — they show as failed with
    "kortext restarted mid-step — retry", which is the truth, not a bug.
 4. **The panel polls** (documents every 3s), so a change made on disk shows up a beat later.
+5. **An older kortext left running is a second writer.** A global install from before
+   (`kortext` in the background, `~/.kortext/kortext.db`) keeps polling every project it
+   registered; clear a project's `.kortext/` and it re-scaffolds the skeletons from **its**
+   templates before the new server gets there — old headings, old placeholder text, and the
+   agent fills what it finds. Before a test pass: `pgrep -fl kortext`, and `kortext --stop` (or
+   kill the pid) for anything that is not the server under test.
 
 ---
 

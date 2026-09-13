@@ -1974,8 +1974,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   flex-direction: column;
   gap: 8px;
   background: var(--bg-subtle);
-  max-height: 35%;
-  overflow-y: auto;
+  flex: none;
 }
 
 @media (max-width: 480px) {
@@ -2151,7 +2150,8 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
 }
 
 /* Inline code reads as a token inside the sentence, not as a second typeface. */
-.kx-block code {
+.kx-block code,
+.kx-req-text code {
   font-family: var(--font-mono);
   font-size: 0.9em;
   background: var(--bg-inset);
@@ -2224,10 +2224,15 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
 .kx-editor::-webkit-resizer {
   background: var(--bg);
 }
+/* The tray never takes the document's room: four rows show, the rest scroll,
+   and the summary with Apply stays put beneath. */
 .kx-notes {
   display: flex;
   flex-direction: column;
   gap: 5px;
+  max-height: 150px;
+  overflow-y: auto;
+  flex: none;
 }
 .kx-note .btn-x {
   flex: none;

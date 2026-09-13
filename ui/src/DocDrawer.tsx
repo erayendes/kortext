@@ -126,6 +126,12 @@ export function DocDrawer({
   const [decided, setDecided] = useState<Record<string, Decision>>({});
   const [explains, setExplains] = useState<Explain[]>([]);
   const [busy, setBusy] = useState(false);
+  // What Apply sent is on its way into a rewrite: the tray keeps showing it,
+  // read-only, until the new draft lands and the version changes.
+  const [sent, setSent] = useState(false);
+  const [landed, setLanded] = useState(0);
+  const writing = doc?.state === 'writing';
+  const locked = busy || writing;
   const [preview, setPreview] = useState(false); // DESIGN.md drawn, not read
   const [proposed, setProposed] = useState(false); // the editor holds a draft the engine wrote
   const [rawEdit, setRawEdit] = useState(false); // …and you asked to type in it rather than read it
@@ -169,11 +175,12 @@ export function DocDrawer({
           setContent(r.content);
           setVersion(r.version);
           setDraft(r.content);
+          // A draft belongs to one version of the text: when the file moved on,
+          // what was noted on the old text is gone with it — sent or not.
           const kept = loadDraft(project.id, doc.rel, r.version);
-          if (kept) {
-            setNotes(kept.notes);
-            setDecided(kept.decided);
-          }
+          setNotes(kept?.notes ?? []);
+          setDecided(kept?.decided ?? {});
+          setSent(false);
           void api
             .docHistory(project.id, doc.rel)
             .then((h) => {
@@ -205,7 +212,16 @@ export function DocDrawer({
       };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doc?.rel, project.id]);
+  }, [doc?.rel, project.id, landed]);
+
+  // The body is fetched once per document; a rewrite that lands while the
+  // drawer is open would otherwise stay invisible behind the old text. When
+  // the row stops saying writing, the text is read again.
+  const wasWriting = useRef(false);
+  useEffect(() => {
+    if (wasWriting.current && !writing) setLanded((n) => n + 1);
+    wasWriting.current = writing;
+  }, [writing]);
 
   // Keep what the footer collected, so closing the drawer does not lose it.
   useEffect(() => {
@@ -528,9 +544,7 @@ export function DocDrawer({
         send: sending.map(({ other, reason }) => ({ target: other, reason })),
         discard: discarding.map(({ other, reason }) => ({ target: other, reason })),
       });
-      setNotes([]);
-      setDecided({});
-      onClose();
+      setSent(true);
     });
 
   // Keep multi-turn Q&A in drawer state only.
@@ -637,13 +651,15 @@ export function DocDrawer({
             // Require open questions to be resolved before approval.
             <button
               className="btn btn-success"
-              disabled={busy || doc.openQuestions || doc.outgoing.length > 0}
+              disabled={locked || doc.openQuestions || doc.outgoing.length > 0}
               title={
-                doc.openQuestions
-                  ? 'Answer the open questions in this document first'
-                  : doc.outgoing.length > 0
-                    ? 'Send or discard the outgoing requests first'
-                    : ''
+                writing
+                  ? 'Being rewritten — wait for it to land'
+                  : doc.openQuestions
+                    ? 'Answer the open questions in this document first'
+                    : doc.outgoing.length > 0
+                      ? 'Send or discard the outgoing requests first'
+                      : ''
               }
               onClick={approve}
             >
@@ -653,7 +669,7 @@ export function DocDrawer({
           {!editing && doc.status !== 'uninitialized' && (
             <button
               className="btn btn-secondary"
-              disabled={busy}
+              disabled={locked}
               onClick={() => {
                 setPreview(false);
                 setEditing(true);
@@ -850,16 +866,18 @@ export function DocDrawer({
                       {n.line !== null ? lineLabel.get(n.line) : n.excerpt}
                     </span>
                     <span className="kx-note-body">{n.text}</span>
-                    <button
-                      className="btn btn-x"
-                      title="Take it back"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setNotes(notes.filter((_, j) => j !== i));
-                      }}
-                    >
-                      ×
-                    </button>
+                    {!sent && !writing && (
+                      <button
+                        className="btn btn-x"
+                        title="Take it back"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setNotes(notes.filter((_, j) => j !== i));
+                        }}
+                      >
+                        ×
+                      </button>
+                    )}
                   </div>
                 );
               })}
@@ -888,20 +906,22 @@ export function DocDrawer({
                         {d.what === 'accept' ? 'sent' : 'discarded'}
                       </span>
                     </span>
-                    <button
-                      className="btn btn-x"
-                      title="Take the decision back"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDecided((all) => {
-                          const next = { ...all };
-                          delete next[keyOut(r)];
-                          return next;
-                        });
-                      }}
-                    >
-                      ×
-                    </button>
+                    {!sent && !writing && (
+                      <button
+                        className="btn btn-x"
+                        title="Take the decision back"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDecided((all) => {
+                            const next = { ...all };
+                            delete next[keyOut(r)];
+                            return next;
+                          });
+                        }}
+                      >
+                        ×
+                      </button>
+                    )}
                   </div>
                 );
               })}
@@ -931,20 +951,22 @@ export function DocDrawer({
                       </span>
                       {d.note && ` — ${d.note}`}
                     </span>
-                    <button
-                      className="btn btn-x"
-                      title="Take the decision back"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDecided((all) => {
-                          const next = { ...all };
-                          delete next[keyOf(r)];
-                          return next;
-                        });
-                      }}
-                    >
-                      ×
-                    </button>
+                    {!sent && !writing && (
+                      <button
+                        className="btn btn-x"
+                        title="Take the decision back"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDecided((all) => {
+                            const next = { ...all };
+                            delete next[keyOf(r)];
+                            return next;
+                          });
+                        }}
+                      >
+                        ×
+                      </button>
+                    )}
                   </div>
                 );
               })}
@@ -960,16 +982,22 @@ export function DocDrawer({
             {actionNeeded ? (
               <>
                 <span className="kx-changebar-summary">
-                  {summary.length > 0 ? `${summary.join(' — ')}.` : 'Nothing selected yet.'}
+                  {sent || writing
+                    ? summary.length > 0
+                      ? `${summary.join(' — ')} — sent; the document is being rewritten.`
+                      : 'The document is being rewritten.'
+                    : summary.length > 0
+                      ? `${summary.join(' — ')}.`
+                      : 'Nothing selected yet.'}
                 </span>
-                {!written && (
+                {!written && !sent && !writing && (
                   <button className="btn btn-secondary" disabled={busy} onClick={proposeFix}>
                     {busy ? 'Drafting…' : 'Draft the change'}
                   </button>
                 )}
                 <button
                   className="btn btn-primary"
-                  disabled={busy || summary.length === 0}
+                  disabled={locked || sent || summary.length === 0}
                   onClick={applyAll}
                   title={
                     written
@@ -1200,7 +1228,7 @@ function ActionNeeded({
                     onClick={() => setOpen(open === key ? null : key)}
                   />
                   <span className="kx-req-text" {...select(key)}>
-                    <span className="mono">#{q.no}</span> — {q.text}
+                    <span className="mono">#{q.no}</span> — <Inline text={q.text} />
                   </span>
                   {(thread.length > 0 || open === key) && (
                     <LineThread
@@ -1240,7 +1268,8 @@ function ActionNeeded({
                     onClick={() => setOpen(open === key ? null : key)}
                   />
                   <span className="kx-req-text" {...select(key)}>
-                    <span className="mono">{r.from.replace(/\.md$/, '')}</span> — {r.reason}
+                    <span className="mono">{r.from.replace(/\.md$/, '')}</span> —{' '}
+                    <Inline text={r.reason} />
                   </span>
                   {(talk.length > 0 || open === key) && (
                     <LineThread
@@ -1286,7 +1315,8 @@ function ActionNeeded({
                     onClick={() => setOpen(open === key ? null : key)}
                   />
                   <span className="kx-req-text" {...select(key)}>
-                    <span className="mono">to {r.target.replace(/\.md$/, '')}</span> — {r.reason}
+                    <span className="mono">to {r.target.replace(/\.md$/, '')}</span> —{' '}
+                    <Inline text={r.reason} />
                   </span>
                   {(talk.length > 0 || open === key) && (
                     <LineThread
