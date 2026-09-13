@@ -14,6 +14,9 @@ export type SpawnCliOptions = {
   args: string[];
   cwd: string;
   stdin?: string;
+  /** Some CLIs take the prompt only as an argument. When set, `stdin` goes
+   *  after this flag instead of through the pipe. */
+  promptFlag?: string;
   logPath: string;
   signal: AbortSignal;
   /** Delay between SIGTERM and SIGKILL when aborted. Default 1000ms. */
@@ -58,7 +61,15 @@ export async function spawnCli(opts: SpawnCliOptions): Promise<SpawnCliResult> {
   // Windows support is experimental: .cmd shims require a shell and process-tree termination
   // uses taskkill. Keep binary/arguments trusted and send user-written prompts through stdin.
   const onWindows = process.platform === 'win32';
-  const proc = spawn(opts.binary, opts.args, {
+  // A prompt on the command line is untrusted text; the Windows path runs
+  // through a shell, so it stays on stdin there or not at all.
+  if (opts.promptFlag && onWindows) throw new Error(`${opts.binary} needs stdin prompts on Windows`);
+  const args =
+    opts.promptFlag && opts.stdin !== undefined
+      ? [...opts.args, opts.promptFlag, opts.stdin]
+      : opts.args;
+  const stdin = opts.promptFlag ? undefined : opts.stdin;
+  const proc = spawn(opts.binary, args, {
     cwd: opts.cwd,
     stdio: ['pipe', 'pipe', 'pipe'],
     shell: onWindows,
@@ -113,8 +124,8 @@ export async function spawnCli(opts: SpawnCliOptions): Promise<SpawnCliResult> {
         log.write(`\n[stdin-error] ${err.message}\n`);
       }
     });
-    if (opts.stdin !== undefined) {
-      proc.stdin.write(opts.stdin);
+    if (stdin !== undefined) {
+      proc.stdin.write(stdin);
     }
     proc.stdin.end();
   }

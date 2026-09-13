@@ -4,7 +4,7 @@ import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'no
 import { join } from 'node:path';
 import { logPathFor, type Project } from './db.js';
 import { spawnCli } from './cli-spawn.js';
-import { ENGINES, engineArgs, type EngineSpec } from './engines.js';
+import { detectEngines, engineArgs, type EngineSpec } from './engines.js';
 import { writeDesignPreview } from './design-preview.js';
 import {
   appendIncomingRequest,
@@ -263,7 +263,7 @@ function pickedEngine(db: Database.Database, project: Project, fallback: EngineS
     db.prepare('SELECT engine FROM projects WHERE id = ?').get(project.id) as
       { engine: string } | undefined
   )?.engine;
-  return (picked && ENGINES.find((e) => e.id === picked)) || fallback;
+  return (picked && detectEngines().find((e) => e.id === picked && e.available)) || fallback;
 }
 
 function runningJobs(db: Database.Database, projectId: number): number {
@@ -459,6 +459,7 @@ export async function explainDoc(
     res = await spawnCli({
       binary: engine.binary,
       args: engineArgs(engine, liveProject(db, project)),
+      promptFlag: engine.promptFlag,
       cwd: project.repo_path,
       stdin: prompt,
       logPath: logPathFor(db, `p${project.id}-explain.log`),
@@ -533,6 +534,7 @@ async function runRecheck(
     const res = await spawnCli({
       binary: engine.binary,
       args: engineArgs(engine, liveProject(db, project)),
+      promptFlag: engine.promptFlag,
       cwd: project.repo_path,
       stdin: prompt,
       logPath: logPathFor(db, `p${project.id}-recheck.log`),
@@ -689,6 +691,7 @@ export async function proposeRevision(
     res = await spawnCli({
       binary: engine.binary,
       args: engineArgs(engine, liveProject(db, project)),
+      promptFlag: engine.promptFlag,
       cwd: project.repo_path,
       stdin: prompt,
       logPath: logPathFor(db, `p${project.id}-propose.log`),
@@ -764,6 +767,7 @@ export async function runPlanning(
     const res = await spawnCli({
       binary: engine.binary,
       args: engineArgs(engine, liveProject(db, project)),
+      promptFlag: engine.promptFlag,
       cwd: project.repo_path,
       stdin: lines.join('\n'),
       logPath: logPathFor(db, `p${project.id}-plan.log`),
@@ -872,6 +876,7 @@ export async function runStep(
     const res = await spawnCli({
       binary: engine.binary,
       args: engineArgs(engine, liveProject(db, project)),
+      promptFlag: engine.promptFlag,
       cwd: project.repo_path,
       stdin: prompt,
       logPath,

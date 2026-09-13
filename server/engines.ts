@@ -1,4 +1,7 @@
 import { spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import type Database from 'better-sqlite3';
 
 // Headless CLI commands; prompts are supplied through stdin.
@@ -8,6 +11,10 @@ export interface EngineSpec {
   args: string[];
   /** The flag that names a model; the project's `model` rides after it. */
   modelFlag: string;
+  /** Set when the CLI takes the prompt as an argument rather than on stdin. */
+  promptFlag?: string;
+  /** Set when the CLI's workspace is not its cwd and has to be named. */
+  cwdFlag?: string;
   /** What the panel offers after "default". A name that is not here still
    *  works — the list is a convenience, the flag takes any string. */
   models: string[];
@@ -37,6 +44,27 @@ export const ENGINES: EngineSpec[] = [
     installHint: 'npm install -g @openai/codex',
   },
   {
+    id: 'antigravity',
+    binary: 'agy',
+    // Antigravity's CLI. --print takes the prompt itself, so it rides as an
+    // argument; the default print timeout is 5 minutes, too short for a document.
+    args: ['--dangerously-skip-permissions', '--print-timeout', '30m'],
+    promptFlag: '--print',
+    // Without it the workspace is ~/.gemini/antigravity-cli and the agent
+    // hunts for the repository with find and ls.
+    cwdFlag: '--add-dir',
+    modelFlag: '--model',
+    // `agy models` lists more; these are the tiers.
+    models: [
+      'gemini-3.8-flash-high',
+      'gemini-3.1-pro-high',
+      'claude-opus-4-6-thinking',
+      'claude-sonnet-4-6',
+      'gpt-oss-120b-medium',
+    ],
+    installHint: 'install Antigravity, then run: agy install',
+  },
+  {
     id: 'gemini',
     binary: 'gemini',
     args: ['--yolo'],
@@ -47,18 +75,34 @@ export const ENGINES: EngineSpec[] = [
 ];
 
 /** The CLI's arguments with the project's model, when one is set. */
-export function engineArgs(engine: EngineSpec, project: { model?: string }): string[] {
+export function engineArgs(
+  engine: EngineSpec,
+  project: { model?: string; repo_path?: string },
+): string[] {
   const model = (project.model ?? '').trim();
-  return model ? [...engine.args, engine.modelFlag, model] : engine.args;
+  return [
+    ...engine.args,
+    ...(engine.cwdFlag && project.repo_path ? [engine.cwdFlag, project.repo_path] : []),
+    ...(model ? [engine.modelFlag, model] : []),
+  ];
 }
 
 /**
  * Check PATH with which on POSIX and where on Windows.
  * Windows support is experimental and has not been runtime-tested.
  */
-export function onPath(binary: string): boolean {
+/** Where the CLI is, or null: the bare name when PATH has it, else the one
+ *  place a server started from an app rather than a shell tends to miss —
+ *  ~/.local/bin, where agy lands. */
+export function binaryPath(binary: string): string | null {
   const lookup = process.platform === 'win32' ? 'where' : 'which';
-  return spawnSync(lookup, [binary], { stdio: 'ignore' }).status === 0;
+  if (spawnSync(lookup, [binary], { stdio: 'ignore' }).status === 0) return binary;
+  const local = join(homedir(), '.local', 'bin', binary);
+  return existsSync(local) ? local : null;
+}
+
+export function onPath(binary: string): boolean {
+  return binaryPath(binary) !== null;
 }
 
 // Cache blocking PATH lookups briefly to avoid spawning a lookup on every panel poll.
@@ -67,10 +111,10 @@ let detected: { at: number; engines: Array<EngineSpec & { available: boolean }> 
 
 export function detectEngines(): Array<EngineSpec & { available: boolean }> {
   if (detected && Date.now() - detected.at < DETECT_TTL_MS) return detected.engines;
-  const engines = ENGINES.map((e) => ({
-    ...e,
-    available: onPath(e.binary),
-  }));
+  const engines = ENGINES.map((e) => {
+    const path = binaryPath(e.binary);
+    return { ...e, binary: path ?? e.binary, available: path !== null };
+  });
   detected = { at: Date.now(), engines };
   return engines;
 }

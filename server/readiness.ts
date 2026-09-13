@@ -278,6 +278,7 @@ async function check(
     const res = await spawnCli({
       binary: engine.binary,
       args: engineArgs(engine, project),
+      promptFlag: engine.promptFlag,
       cwd: project.repo_path,
       stdin: buildJudgmentPrompt(project),
       logPath,
