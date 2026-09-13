@@ -129,6 +129,8 @@ export function DocDrawer({
   // What Apply sent is on its way into a rewrite: the tray keeps showing it,
   // read-only, until the new draft lands and the version changes.
   const [sent, setSent] = useState(false);
+  const sentRef = useRef(false);
+  sentRef.current = sent;
   const [landed, setLanded] = useState(0);
   const writing = doc?.state === 'writing';
   // No version means the text is still on its way (first open, or the reload
@@ -157,8 +159,10 @@ export function DocDrawer({
     setProposed(false);
     setRawEdit(false);
     setSelected(null);
-    setNotes([]);
-    setDecided({});
+    if (!sentRef.current) {
+      setNotes([]);
+      setDecided({});
+    }
     setExplains([]);
     setErr(null);
     // Clear prior content before loading so stale text cannot be saved into the new document.
@@ -178,12 +182,15 @@ export function DocDrawer({
           setContent(r.content);
           setVersion(r.version);
           setDraft(r.content);
-          // A draft belongs to one version of the text: when the file moved on,
-          // what was noted on the old text is gone with it — sent or not.
-          const kept = loadDraft(project.id, doc.rel, r.version);
-          setNotes(kept?.notes ?? []);
-          setDecided(kept?.decided ?? {});
-          setSent(false);
+          // A draft belongs to one version of the text: when the file moved
+          // on, what was noted on the old text is gone with it. What Apply
+          // just sent is the exception — it stays on show, read-only, until
+          // the rewrite it went into lands.
+          if (!sentRef.current) {
+            const kept = loadDraft(project.id, doc.rel, r.version);
+            setNotes(kept?.notes ?? []);
+            setDecided(kept?.decided ?? {});
+          }
           void api
             .docHistory(project.id, doc.rel)
             .then((h) => {
@@ -222,7 +229,13 @@ export function DocDrawer({
   // the row stops saying writing, the text is read again.
   const wasWriting = useRef(false);
   useEffect(() => {
-    if (wasWriting.current && !writing) setLanded((n) => n + 1);
+    if (wasWriting.current && !writing) {
+      setSent(false);
+      sentRef.current = false;
+      setNotes([]);
+      setDecided({});
+      setLanded((n) => n + 1);
+    }
     wasWriting.current = writing;
   }, [writing]);
 
@@ -547,10 +560,19 @@ export function DocDrawer({
         send: sending.map(({ other, reason }) => ({ target: other, reason })),
         discard: discarding.map(({ other, reason }) => ({ target: other, reason })),
       });
-      setSent(true);
-      // A send or a discard edits the file at once, rewrite or not; the text
-      // in the drawer is behind it until read again — and an approve sent on
-      // the old version would be refused.
+      // Answers and accepted requests go into a rewrite, and the tray shows
+      // them as sent until it lands. A send or a discard alone edits the file
+      // at once and is done: nothing to wait for, so the tray empties.
+      const rewriting = written && (notes.length > 0 || accepting.length > 0);
+      if (rewriting) {
+        setSent(true);
+        sentRef.current = true;
+      } else {
+        setNotes([]);
+        setDecided({});
+      }
+      // Either way the text in the drawer is behind the file until read again
+      // — and an approve sent on the old version would be refused.
       setLanded((n) => n + 1);
     });
 
