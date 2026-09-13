@@ -14,7 +14,7 @@
 </p>
 
 > [!NOTE]
-> [For English press 1](../../README.md)
+> [For English press 9](../../README.md)
 
 **Yapay zekâ destekli geliştirmenin proje beyni.** Kortext bir brief'i (ya da mevcut bir kod
 tabanını) onaylı bir analiz temeline çevirir — ve bunu yazması için **senin** kodlama ajanını

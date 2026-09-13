@@ -1,7 +1,7 @@
 # Changelog
 
 > [!NOTE]
-> [For Turkish press 9](tr/CHANGELOG.md)
+> [For Turkish press 1](tr/CHANGELOG.md)
 
 ## [Unreleased]
 

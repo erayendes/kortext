@@ -14,7 +14,7 @@
 </p>
 
 > [!NOTE]
-> [For Turkish press 9](docs/tr/README.md)
+> [For Turkish press 1](docs/tr/README.md)
 
 **The project brain for AI-driven development.** Kortext turns a brief (or an
 existing codebase) into an approved analysis foundation — and it drives your

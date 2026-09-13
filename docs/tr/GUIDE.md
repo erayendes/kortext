@@ -1,7 +1,7 @@
 # Kortext — Kılavuz
 
 > [!NOTE]
-> [For English press 1](../GUIDE.md)
+> [For English press 9](../GUIDE.md)
 
 Panel, anlatılmış. Kurulum ve beş adımlık genel bakış [README](README.md)'de; burası bir proje
 ekrana geldikten sonra ne yapılacağı.

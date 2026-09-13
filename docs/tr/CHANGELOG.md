@@ -1,7 +1,7 @@
 # Değişiklik günlüğü
 
 > [!NOTE]
-> [For English press 1](../CHANGELOG.md)
+> [For English press 9](../CHANGELOG.md)
 
 ## [Yayımlanmamış]
 
