@@ -2,241 +2,119 @@
 
 🇹🇷 [For Turkish press 1](tr/GUIDE.md)
 
-The panel, explained. Installation and the five-step overview are in the
-[README](../README.md); this is what to do once a project is on screen.
+Installation and the overview are in the [README](../README.md); this is what to do once a project is on screen.
 
 ---
 
 ## The mental model
 
-Kortext runs **your** agent CLI inside your repo. Each analysis run produces one document,
-with up to three documents being written in parallel per project when their inputs are settled.
-You approve the drafts; a document marked `n/a` also satisfies dependencies.
+Kortext runs **your** agent CLI inside your repo. Each analysis run produces one document and marks it as a draft.
+Only you approve drafts.
 
-Three things follow from that.
-
-- **Every document has a status.** `waiting` (its turn has not come, or it is written and
-  waiting for you) → `writing` (your CLI is producing it now) → `approved`. Stop a run and it
-  is `paused`, to be continued; a run that fell over is `failed`, to be retried. A document can
-  also settle as `n/a` — the step read the inputs and judged that this project does not need
-  it, and said why.
-- **A badge beside the status says what is owed.** `approve` (it waits for you), `review`
-  (questions or requests stand on it), `recheck` (something it reads changed; it will be read
-  again), `revision` (a rewrite, not a first draft).
-- **The order is not a preference.** A document is written only after everything it depends on
-  is settled. That is why `SECURITY` waits for `ARCHITECTURE`, and why approving one document
-  often starts three others at once.
-- **The panel is the only place you work.** Nothing needs a terminal after `kortext`.
+- **Every document has a status.** `waiting` (its turn has not come, or it is written and waiting for your approval) → `writing` (being written now) → `approved`. Stop a run and it is `paused`, to be continued; a run that hits an error is `failed`, to be retried. A document the project has no use for shows as `n/a`.
+- **A badge may sit beside the status.** `approve` (waiting for your approval), `review` (it has questions or requests), `recheck` (a document it reads changed; it will be read again), `revision` (a rewrite, not a first draft).
+- **The order is not a preference.** A document is written only after everything it depends on is settled. `SECURITY` waiting for `ARCHITECTURE`, say. That is why approving one document starts another.
+- **The panel is the only place you work.**
 
 ![The project list — one card per project, with what is settled in each](assets/panel-projects.png)
 
-## Starting: the gate
+## Starting
 
-Press **Start** and Kortext checks your evidence before producing analysis documents. The initial
-content check is local. For a new project that passes it, the brief is then judged by your agent
-CLI; that call consumes the CLI's quota or billing and is cached for the same brief.
+**A new project** is created from the brief you write. If the brief does not say what is being built, who it is for, which language the product speaks, how you will know it worked, and what is out of scope, the analysis does not begin — questions come back and the brief drops to **Action needed**.
+Answer them in the brief and approve it. It is judged again.
 
-A **new project** is judged on its brief. If the brief does not say what you are building, who
-it is for, which language the product speaks, how you will know it worked, and what is out of
-scope, the analysis does not begin — you get questions back and the brief moves to **Action needed**.
-The local check uses fixed English questions; the CLI is asked to use the brief's language.
-Answer them in the brief, approve it again, and press Start if the project is paused.
+**This gate exists for one reason.** An agent asked to write a product requirements document from three sentences will write one — it will simply invent the product. A question costs a minute; an invented product costs the whole analysis.
 
-An **existing project** is judged on its code: a folder with almost nothing in it has nothing to
-analyse.
-
-This gate exists for one reason. An agent asked to write a product requirements document from
-three sentences will write one — it will simply invent the product. A question costs you a
-minute; an invented product costs you the whole analysis.
+Or, for an **existing project**, point Kortext at its repo. It starts by reading the code.
 
 ## Reviewing a document
 
-Open any document from the list. Everything happens in the drawer.
+Open any document from the list.
 
-![A document in the drawer: its status, its author, and the questions it is asking you](assets/panel-document.png)
+![A document in the drawer: its status, its author, and the questions it asks](assets/panel-document.png)
 
 **Approve** — the document becomes ground for the ones after it, and the chain moves on.
 
-**Ask** — select a line, ask its author. The persona that wrote the document answers about that
-passage. Nothing is saved: this is for understanding what you are approving, not for changing it.
+**Ask** — select a line and ask your question. The persona that wrote the document answers about that passage.
+Questions are for understanding, not for changing. That is why they are not saved.
 
-**Add note → Request revision** — your notes go back to the step that wrote the document, and it
-is rewritten with them. A note left on one of the document's own open questions is read as the
-answer to it: the question disappears and the fact it established becomes part of the text.
+**Add note** — your notes get the document rewritten. A note left on one of the document's open questions counts as the answer: the question disappears and the fact it established becomes part of the document.
 
-**Edit** — write the file yourself. A normal save updates the text; it does not automatically
-close change requests or clear open questions. When requests are standing, a second button —
-**Save, requests done** — saves your text and closes them, for the number or the sentence that
-does not need the agent. The brief has no author persona, so a request aimed at it offers
-**Draft the change** instead: the engine drafts the text into the editor, and saving it closes
-the requests it answers.
+**Edit** — for a number or a sentence that does not need the agent, write the file yourself. It only updates the text; it does not close change requests or clear open questions. While requests stand, a second button appears: **Save, requests done** — it saves the text and closes them.
 
-**Preview** — on `DESIGN.md` only, in the drawer itself: the button swaps the text for the page
-and back. The tokens the designer wrote — colors, type scale, spacing,
-radius, shadows — drawn as swatches, specimens and live buttons, with the WCAG contrast of each
-color measured against the surface it actually sits on. A Light · Dark · System switch sits at
-the top: it repaints the page, and where the document declares a dark palette (a `Dark` column,
-a `## Dark mode` table, or `-dark` tokens) the swatches, components and contrast grades switch
-with it. Where it does not, the page says so rather than implying the design has one. It is
-rendered from the document itself, so it can never say something the document does not. The page
-is its own document inside the drawer, so its palette and the panel's never mix — the panel can
-be dark while the design is read in light. It is also left in your repository as
-`.kortext/DESIGN.html`, which opens in any browser without the panel running.
+**Preview** — on `DESIGN.md` only. The tokens the designer wrote — colours, typefaces and scale, spacing, radii, shadows — made real and drawn. Seeing a button's colour and corners beats reading a HEX and a radius. Light and dark mode both. The same page also sits in your repo as `.kortext/DESIGN.html`.
 
-**Action Needed** — pink, at the top of the document. Everything owed on this document, in two
-groups and under one button.
+**Action Needed** — at the top of the document. Everything this document expects from you, in two groups.
 
-*Questions* — what the document is asking *you*. Click one, answer it, Add note. It cannot
-be approved until they are answered.
+*Questions* — what the document asks you. Click one, answer it, Add note. The document cannot be approved until they are answered.
 
-*Change Requests* — what other documents asked of this one: `ENVIRONMENT` says the access-log
-lines contradict the no-logs decision, say. Pick a row, Accept or Deny, say why if you like. Ask
-the document that made the request if the reason is unclear.
+*Change Requests* — revision requests other documents sent to this one. `ENVIRONMENT` might say the log lines contradict the no-logs decision, for instance. Select the row, **Accept** or **Deny**. On Deny, write why. If the request is unclear, **Ask** the document that made it.
 
-One button sends the lot. Both groups rewrite this document, and a document is rewritten once —
-so your answers and the changes you accepted go into a single rewrite, which is also how the
-author sees them: together.
+**Apply** sends the lot at once. Your answers and the requests you accepted go into one rewrite. The ones you denied are written to the document's `## Decisions`, with your reason.
 
-**A request lives in one place: the document it is about.** While the document that asks is
-still a draft, the request sits in its Action Needed list under *Outgoing Requests*: pick it,
-**Send** or **Discard**. Nothing goes out until you send it, and the document cannot be approved
-while one is undecided. Sent, it travels to the target, where it appears as `from` the document
-that asked and waits for you under *Incoming Requests*. Accepted and written, it disappears — the document now says what it asked for.
-Denied, it moves to the document's `## Decisions`, with your reason under it. That line is the
-whole record of the disagreement — nothing asks you about it again, and the build phase reads
-it there.
+**A document can ask another document for a change.** While the asking document is still a draft, the request sits under *Outgoing Requests*: **Send** or **Discard**. Nothing goes out until you send it; a document with an undecided request cannot be approved. Sent, it appears under *Incoming Requests* on the target document and waits for you. Accepted and written, it disappears; denied, it goes to `## Decisions` with your reason. You are not asked again; the agent writing the code reads it there.
 
-**Findings** — problems in files no document owns, written into the document. Nothing asks
-anything of you.
+**Findings** — problems in files no document owns (a missing `.gitignore` entry, say), written into the document for your information. It asks nothing of you.
 
-**Related documents** — blue, at the top. The documents that read this one. Nothing to do: it is
-what changes if you change this, said before you change it. A reader nobody has written yet is
-struck through — it will read this when its turn comes.
+**Related documents** — the documents that read this one. Change this one and they are read again. The ones not yet written are struck through.
 
-**Recheck** — amber. This document is approved, but something it reads is moving. Not work for
-you; hover the word to see which input, and when that settles, this one is re-read against it and
-you are told only if something actually broke. While the reading runs the row sits in **Doing**
-as `reading`, blue like writing; you can still edit the document meanwhile.
+**Recheck** — the document is approved, but a document it reads changed. Not your job; when its turn comes it is read again, and only a real contradiction becomes a request for you.
 
 ## The groups
 
-`Action needed` · `Doing` · `To do` · `Done`. The last is collapsed — it is finished, and the
-deliberately skipped documents sit in it with a faint outline.
+`Action needed` · `Doing` · `To do` · `Done`. The last is collapsed.
 
-Anything carrying a failure or an open demand climbs to **Action needed** no matter what its status
-says.
+Any document carrying a failure or something waiting on you rises to **Action needed**.
 
 ## Running, pausing, changing the engine
 
-The engine — `claude`, `codex`, `antigravity` or `gemini`, and behind them `cursor`, `copilot`,
-`opencode`, `amp`, `droid`, `goose`, `qwen` and `cline` — belongs to the project, not to Kortext.
-The dropdown lists what is installed; the ones marked *untested* were prepared from their CLI's
-documentation and have not written a document on a real machine yet — try one, and tell us how
-it went. You pick it
-when you add the project, and the dropdown next to Start changes it later. That is the move when
-a quota runs out: switch, and the steps that start afterwards run on the other CLI. Whatever is
-running at that moment finishes on the old one.
+The engine — `claude`, `codex`, `antigravity` and the others in the list. The dropdown shows what is installed. You choose it when adding the project, and you can change it whenever you like. When a quota runs out, changing it is all there is to do.
 
-Two projects can sit on two different CLIs, and neither disturbs the other. If you uninstall the
-one a project was using, that project does not stop — it falls back to whichever CLI is still
-installed, and the dropdown shows you what it fell back to.
+The second dropdown is the **model**. `default` uses the CLI's own setting. Pick a model and it is passed to the CLI on every run (`claude --model`, `codex -m`).
 
-The second dropdown names the **model**. `default` leaves it to the CLI — whatever
-`~/.codex/config.toml` or `claude`'s settings say. Pick one and Kortext passes it on every run:
-`claude --model`, `codex -m`, `gemini -m`. Like the engine, it reaches the steps and rechecks
-that start after you set it; the log of every run records the exact command, so you can always
-see which model wrote a document.
-
-- **Pause** stops new steps from starting; a running step is stopped too.
-- **Continue** picks the chain back up.
-- **Restart** clears the analysis documents and readiness result, preserving `BRIEF.md`
-  exactly as it is, including its approval status. The project lands paused; press **Start**
-  when ready. `.kopeng/` is independent and stays untouched.
-- **Archive** puts a finished project on a shelf. The row stays, the repo is untouched.
-- **Cancel** removes Kortext's analysis — the entire `.kortext/` folder, including your brief
-  and any manual edits inside it — its block in `AGENTS.md`, its pointer line in `CLAUDE.md`,
-  and the project's logs, then unregisters the project. `.kopeng/` and other project files stay;
-  your own content in `AGENTS.md` and `CLAUDE.md` stays too. It does not uninstall either tool.
+- **Pause** stops new steps from starting; the running step stops too.
+- **Continue** picks up where it left off.
+- **Restart** deletes the analysis documents and keeps `BRIEF.md` as it is. The project comes back paused; **Start** begins again.
+- **Archive** puts a finished project on the shelf. The repo is untouched.
+- **Remove** deletes the `.kortext/` folder (brief included), the Kortext block in `AGENTS.md`, the pointer line in `CLAUDE.md` and the project's logs, then takes the project off the list. What you wrote yourself in `AGENTS.md` and `CLAUDE.md` stays.
 
 ## The handshake
 
 ![The handshake card — three starter commands, copied on click](assets/panel-handshake.png)
 
-When every document is approved or `n/a`, with nothing left open, the analysis is complete and
-Kortext is done. The completion card gives you three starter commands; copy one into your own
-agent — CLI or app — and it begins by reading `AGENTS.md` and the `.kortext/` documents.
+When every document is approved, the analysis is over. The card gives you three starter commands; copy one into your own agent. The agent begins by reading `AGENTS.md` and the `.kortext/` documents.
 
-From here Kortext is not in the loop. The documents are the contract, and your agent works
-against them.
+From here on, Kortext is not in the loop.
 
-## Transfer to Kopeng — optional
+## The panel itself
 
-With `kopeng` on your `PATH`, the completion card gains **Transfer to Kopeng**: one long run
-splits the approved documents into versions, epics and tasks under `.kopeng/`, with ids that
-carry the project code (`ACME-E01`, `ACME-T001`). The panel shows the plan; **Approve plan** is
-the last signature. Without kopeng installed the card shows an install note instead, and nothing
-else changes — the handshake is complete either way.
+**The status bar**, at the bottom. A green dot means the server is up. The ⏻ button stops it — never while a document is being written.
 
-## The panel's own controls
+**The update strip**, at the top, only when npm has a newer version. **Update now** installs it; then quit kortext and start it again.
 
-Kortext runs in the background: the terminal that started it can be closed, and the panel
-stays. What the panel says about itself lives in two strips.
-
-**The status bar**, at the bottom. A green dot means the server is answering; it turns red the
-moment the server is gone, and green again by itself when you start `kortext` once more. Next
-to it: the running version and the ⏻ button. Stopping takes two clicks — the first arms it and
-says so, the second stops the server. It refuses while a step is writing, so an analysis is
-never cut off mid-document; `kortext --stop` in a terminal follows the same rule. The credit on
-the right opens a short list of the other Milowda tools.
-
-**The update strip**, under the header, appears only when npm carries a newer version than the
-one running. **Update now** runs the install for you; while it runs every other call to the
-server is refused, and afterwards the strip says to quit kortext and start it again — the
-process on screen is still the old one. If the install fails, the strip says so and gives the
-command to run yourself.
-
-**Theme.** The button at the right of the header cycles auto → light → dark. Auto follows the
-operating system; the other two are remembered in this browser.
-
-**Also from Milowda.** The cards under the project list, and the one-line slide on a project
-screen, name the other Milowda tools. The × hides them for good in this browser; it asks once
-before it does, and hiding them on one screen hides them on both.
+**Theme.** The button at the top right cycles auto → light → dark.
 
 ## When something goes wrong
 
-**A step failed.** The row says why, in the CLI's own words. The usual cause is an agent CLI that
-is installed but not signed in — run it once on its own in a terminal, then Retry.
+**A step failed.** The row says why. The most common cause is a CLI that is installed but not signed in: run it once in a terminal, then **Retry**.
 
-**The header says no agent CLI was found.** None of the known CLIs is on your
-`PATH`. Install one (see the [README](../README.md)) and reload.
+**The panel says no CLI was found.** None is on your `PATH`. Install one and reload the page.
 
-**A step has been running for a long time.** Analysis steps take minutes; a stuck one is stopped
-at fifteen. The optional Kopeng planning run has a thirty-minute limit. Raw CLI output is in
-`~/.kortext/kortext.db.logs/` by default; with a custom `--db`, it is in `<db-path>.logs/`.
+**A step is taking too long.** Steps take minutes; at fifteen they are stopped.
 
-**Kortext restarted while a step was running.** That step is marked failed with "kortext
-restarted mid-step — retry", which is exactly what to do.
+**Kortext restarted in the middle of a step.** The step is marked "kortext restarted mid-step — retry". Press Retry.
 
-**A document will not leave "Action needed".** Check for a failed run, an open question or a standing
-change request. Open questions block approval. A change request alone does not block approval,
-but approving does not close it: the document still needs attention, and analysis cannot finish
-until the request is handled.
-
-**Your changes on disk do not show.** The panel polls every few seconds; give it a moment.
+**A document will not leave Action needed.** There is an open question, a pending request or a failed run.
 
 ## Where things live
 
 | | |
 | --- | --- |
-| `~/.kortext/kortext.db` | the project registry — one database, every project |
+| `~/.kortext/kortext.db` | the project registry |
 | `~/.kortext/kortext.db.logs/` | raw output of every CLI run |
 | `~/.kortext/kortext.db.log` | what the background server prints |
-| `<repo>/AGENTS.md` | the handover contract, inside a marked block |
-| `<repo>/.kortext/` | fourteen analysis documents; a new project also has `BRIEF.md`, for fifteen total |
-| `<repo>/.kortext/DESIGN.html` | the design tokens drawn — regenerated from `DESIGN.md` |
+| `<repo>/AGENTS.md` | the agent's contract, inside a marked block |
+| `<repo>/.kortext/` | the analysis documents; a new project's `BRIEF.md` is here too |
+| `<repo>/.kortext/DESIGN.html` | `DESIGN.md`, drawn |
 
-With `--db /path/name.sqlite`, the registry is `/path/name.sqlite`, CLI logs are in
-`/path/name.sqlite.logs/`, and the background server writes `/path/name.sqlite.log`.
-
-The documents are plain markdown in your repository. Commit them: they are the project's
-memory, and the next agent that opens the repo reads them before it writes a line.
+The documents are plain markdown. Commit them: they are the project's memory, and the next agent to open the repo reads them before writing a line.

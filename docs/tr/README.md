@@ -15,9 +15,7 @@
 
 🇬🇧 [For English press 9](../../README.md)
 
-# Attım hafızaya, beyin bedava
-
-Yapay zekayla ürün geliştirirken yaşadığım iki sorun var.
+Yapay zekayla ürün geliştirirken yaşadığım iki temel sorun var.
 
 1. Proje durumunu görsel olarak takip edememek.
 2. Bir noktada el sıkıştığımız kurallardan uzaklaşıp serbest gezen tavuğa bağlayıp doğaçlama yapması.
@@ -28,7 +26,7 @@ Ama ben koydum. Adı **Kortext**.
 
 Kortext, ürün geliştirmeye başlamadan önce — arzu ettiğiniz demokrasi çerçevesinde — yapay zekayla el sıkıştığınız bir ürün anayasası.
 
-Verdiğiniz **`BRIEF.md`** üzerinden alanında **uzman 10 farklı persona**nın hazırladığı **14 mimari belge**den oluşan anayasa sayesinde, modelin projeden çıkmasını engelliyor.
+Verdiğiniz **`BRIEF.md`** üzerinden alanında **uzman 10 farklı persona**nın hazırladığı **14 mimari belge**den oluşan anayasa sayesinde, modelin projenin gerçeğinden çıkmasını engelliyor.
 
 Kullanımı basit ama kapsamlı.
 
@@ -36,7 +34,7 @@ Kullanımı basit ama kapsamlı.
 
 - Personaların hazırladığı her bir belge onayınıza sunulur. 
 
-- Pürüzsüz bir deneyim ya da denetim için üretilen belgeleri okuyun. Belgelerde size sorular gelebilir. Siz açıklama isteyebilir ya da yorum yazabilirsiniz.
+- Pürüzsüz bir deneyim ya da denetim için üretilen belgeleri okuyun. Belgelerde size sorular gelebilir. Siz açıklama ya da değişiklik isteyebilirsiniz.
 
 - Eğer istediğiniz değişiklik bir başka belgede değişiklik gerektiriyorsa, o belge tekrar pipeline’a girer.
 
@@ -48,15 +46,15 @@ Bu arada, daha önce başlamış projeleri de unutmadım. Kortext, mevcut kod ta
 
 Tek bir insan rolü var, **Prime**. Diğer personalar; product manager, architect, designer, growth expert, security engineer, DevOps engineer, DBA, compliance expert, copywriter ve QA engineer.
 
-**BRIEF.md**, sizin verdiğiniz belge. Bu belgeden referansla Kortext’in ürettiği belgeler; PRODUCT.md, STACK.md, STRUCTURE.md, ARCHITECTURE.md, DESIGN.md, GROWTH.md, SECURITY.md, ENVIRONMENT.md, DATABASE.md, API.md, LEGAL.md, CONTENT.md, ENGINEERING.md, TEST.md
+**BRIEF.md**, sizin verdiğiniz belge. Bu belgeden referansla Kortext’in ürettiği belgeler; `PRODUCT.md`, `STACK.md`, `STRUCTURE.md`, `ARCHITECTURE.md`, `DESIGN.md`, `GROWTH.md`, `SECURITY.md`, `ENVIRONMENT.md`, `DATABASE.md`, `API.md`, `LEGAL.md`, `CONTENT.md`, `ENGINEERING.md`, `TEST.md`
 
-BRIEF.md'nin bir örneği var. Eğer yazdığınız BRIEF yeterli değilse, bunu belirtiyor.
+`BRIEF.md`'nin bir örneği var. Eğer yazdığınız brief yeterli değilse, bunu belirtiyor.
 
-Mevcut bir projeyi Kortext'e eklediğinizde, projenin durumuna ve gidişatına göre yeni öneriler sunabilir ukala.
+Mevcut bir projeyi Kortext'e eklediğinizde, projenin durumuna ve gidişatına göre yeni öneriler sunabilir. Ukala.
 
 Kendi yapay zeka ajanınızı çalıştırıyorsunuz. 
 
-Fena token tüketmiyor ama sonradan boşa gidecek tokenların önüne geçiyor. Toplamda çok daha karlı.
+Fena zaman token tüketmiyor ama sonradan boşa gidecek tokenların ve zamanın önüne geçiyor. Toplamda çok daha karlı.
 
 Kortext hiçbir bilgi almıyor, telemetry tutmuyor. Ama ne kadar kullanılacağını çok merak ediyorum. 
 

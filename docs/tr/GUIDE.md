@@ -8,7 +8,7 @@ Kurulum ve genel bakış [README](README.md)'de; burası bir proje ekrana geldik
 
 ## Zihinsel model
 
-Kortext **sizin** ajan CLI'ınızı repo'nun içinde çalıştırır. Her analiz koşusu bir belge üretir ve taslak olarak işaretler.
+Kortext **sizin** ajan CLI'ınızı repo'nun içinde çalıştırır. Her analiz koşusu bir belge üretir ve taslak olarak işaretlenir.
 Taslakları yalnızca siz onaylarsınız.
 
 - **Her belgenin bir durumu vardır.** `waiting` (sırası gelmedi ya da yazıldı, onayınızı bekliyor) → `writing` (şu an yazılıyor) → `approved`. Yazımı durdurursanız `paused` olur, devam ettirebilirsiniz; hata alırsa `failed` olur, yeniden başlatabilirsiniz. Projede işlevi olmayan bir belge `n/a` olarak görünür.
@@ -44,21 +44,21 @@ Sorular anlamak içindir, değiştirmek için değil. Bu yüzden kaydedilmezler.
 
 **Preview** — yalnız `DESIGN.md`'de. Tasarımcının yazdığı token'lar — renkler, yazı tipleri ve ölçeği, boşluklar, köşe yarıçapları, gölgeler — gerçeğe döndürülmüş ve görselleştirilmiş hali. Butonun rengini ve kenarlarını görmek HEX ve radius bilgisinden çok daha iyidir. Açık ve karanlık modu da destekler. Aynı sayfa repo'nuzda `.kortext/DESIGN.html` olarak da durur.
 
-**Action Needed** — belgenin üstünde. Bu belgenin sizden beklediği her şey, iki grupta ve tek düğmenin altında.
+**Action Needed** — belgenin üstünde. Bu belgenin sizden beklediği her şey, iki grupta toplanır.
 
-*Questions* — belgenin size sordukları. Birine tıklayın, yanıtlayın, Add note. Yanıtlanmadan belge onaylanamaz.
+*Questions* — belgenin size sordukları. Birine tıklayın, yanıtlayın ve Add note. Yanıtlanmadan belge onaylanamaz.
 
-*Change Requests* — başka belgelerin bundan istedikleri. Örneğin `ENVIRONMENT`, log satırlarının log-yok kararıyla çeliştiğini söylüyor olabilir. Satırı seçin, **Accept** ya da **Deny**; isterseniz nedenini yazın. Neden açık değilse **Ask** ile isteği yapan belgeye sorun.
+*Change Requests* — başka belgelerin bu belgeye gönderdiği revize istekleri. Örneğin `ENVIRONMENT`, log satırlarının log-yok kararıyla çeliştiğini söylüyor olabilir. Satırı seçin, **Accept** ya da **Deny**. Deny ise nedenini yazın. Eğer talep anlaşılmıyorsa **Ask** ile isteği yapan belgeye sorun.
 
-**Apply** hepsini tek seferde gönderir. Yanıtlarınız ve kabul ettiğiniz istekler tek bir yeniden yazıma girer; reddettikleriniz nedeniyle belgenin `## Decisions` bölümüne yazılır.
+**Apply** hepsini tek seferde gönderir. Yanıtlarınız ve kabul ettiğiniz istekler tek seferde yeniden yazıma girer. Reddettiklerinizse nedeniyle birlikte belgenin `## Decisions` bölümüne yazılır.
 
 **Bir belge başka bir belgeden değişiklik isteyebilir.** İsteyen belge hâlâ taslakken bu istek *Outgoing Requests* altında durur: **Send** ya da **Discard**. Siz göndermeden hiçbir şey çıkmaz; kararsız bir istek varken belge onaylanamaz. Gönderilince hedef belgede *Incoming Requests* altında görünür ve sizi bekler. Kabul edilip yazıldığında kaybolur; reddedildiğinde nedeniyle `## Decisions`'a iner. Bir daha sorulmaz; kod yazan ajan onu oradan okur.
 
-**Findings** — hiçbir belgenin sahiplenmediği dosyalardaki sorunlar (bir `.gitignore` eksiği gibi), belgeye yazılmış. Sizden bir şey istemez.
+**Findings** — hiçbir belgenin sahiplenmediği dosyalardaki sorunları (bir `.gitignore` eksiği gibi), belgeye bilgilendirme için yazar. Sizden bir şey istemez.
 
-**Related documents** — üstte, mavi. Bu belgeyi okuyan belgeler. Bunu değiştirirseniz onlar da yeniden okunur. Henüz yazılmamış olanlar üstü çizili durur.
+**Related documents** — bu belgeyi okuyan belgeler. Bunu değiştirirseniz onlar da yeniden okunur. Henüz yazılmamış olanlar üstü çizili durur.
 
-**Recheck** — kehribar rozet. Belge onaylı ama okuduğu bir belge değişti. Sizin işiniz değil; sırası gelince yeniden okunur ve yalnız gerçekten çelişki varsa size bir istek düşer. Okuma sürerken satır **Doing**'de `reading` olarak durur; bu sırada belgeyi düzenleyebilirsiniz.
+**Recheck** — belge onaylı ama okuduğu bir belge değişti. Sizin işiniz değil; sırası gelince yeniden okunur ve yalnız gerçekten çelişki varsa size bir istek düşer.
 
 ## Gruplar
 
@@ -68,7 +68,7 @@ Bir hata ya da sizi bekleyen bir şey taşıyan her belge **Action needed**'a ç
 
 ## Çalıştırma, duraklatma, motoru değiştirme
 
-Motor — `claude`, `codex`, `antigravity`, `gemini` ve listedeki diğerleri — projeye aittir. Açılır liste kurulu olanları gösterir; *untested* işaretliler gerçek bir makinede henüz denenmedi. Projeyi eklerken seçersiniz, Start'ın yanındaki listeden değiştirirsiniz. Kota bittiğinde yapılacak şey budur: değiştirin, sonraki adımlar yeni CLI'da koşar. O anda koşan adım eskisinde biter.
+Motor — `claude`, `codex`, `antigravity` ve listedeki diğerleri. Açılır liste kurulu olanları gösterir. Projeyi eklerken seçersiniz ama istediğiniz zaman değiştirebilirsiniz. Kota bittiğinde de yapılacak tek şey değiştirmek. 
 
 İkinci liste **model**. `default` seçimi CLI'ın kendi ayarını kullanır. Bir model seçerseniz her koşuda CLI'a geçilir (`claude --model`, `codex -m`).
 
@@ -76,7 +76,7 @@ Motor — `claude`, `codex`, `antigravity`, `gemini` ve listedeki diğerleri —
 - **Continue** kaldığı yerden devam eder.
 - **Restart** analiz belgelerini siler, `BRIEF.md`'yi olduğu gibi korur. Proje duraklatılmış gelir; **Start** ile yeniden başlar.
 - **Archive** biten projeyi rafa kaldırır. Repo'ya dokunmaz.
-- **Cancel** `.kortext/` klasörünü (brief dahil), `AGENTS.md`'deki Kortext bloğunu, `CLAUDE.md`'deki işaret satırını ve projenin loglarını siler; projeyi listeden çıkarır. `AGENTS.md` ve `CLAUDE.md`'deki kendi yazdıklarınız kalır.
+- **Remove** `.kortext/` klasörünü (brief dahil), `AGENTS.md`'deki Kortext bloğunu, `CLAUDE.md`'deki işaret satırını ve projenin loglarını siler; projeyi listeden çıkarır. `AGENTS.md` ve `CLAUDE.md`'deki kendi yazdıklarınız kalır.
 
 ## El sıkışma
 
@@ -86,19 +86,13 @@ Bütün belgeler onaylandığında analiz biter. Kart size üç başlangıç kom
 
 Buradan sonra Kortext işin içinde değildir.
 
-## Kopeng'e aktarım — isteğe bağlı
-
-`kopeng` kuruluysa kartta **Transfer to Kopeng** görünür: onaylı belgeler `.kopeng/` altında sürüm, epic ve görevlere bölünür. **Approve plan** son imzadır. Kopeng kurulu değilse kart bir kurulum notu gösterir; el sıkışma yine tamamdır.
-
 ## Panelin kendisi
 
-**Durum çubuğu**, altta. Yeşil nokta sunucu ayakta demektir. ⏻ düğmesi iki tıkla durdurur: ilki sorar, ikincisi kapatır. Bir belge yazılırken kapatmaz.
+**Durum çubuğu**, altta. Yeşil nokta sunucu ayakta demektir. ⏻ düğmesi kapatır ama bir belge yazılırken kapatmaz.
 
 **Güncelleme şeridi**, üstte, yalnız npm'de yeni sürüm varsa görünür. **Update now** kurar; sonra kortext'i kapatıp yeniden açmanız gerekir.
 
 **Tema.** Sağ üstteki düğme auto → light → dark döner.
-
-**Milowda kartları.** Proje listesinin altındaki diğer Milowda araçları. × ile kalıcı olarak gizleyebilirsiniz.
 
 ## Bir şey ters gittiğinde
 
@@ -106,7 +100,7 @@ Buradan sonra Kortext işin içinde değildir.
 
 **Panel CLI bulamadı diyor.** `PATH`'inizde hiçbiri yok. Birini kurun ve sayfayı yenileyin.
 
-**Bir adım çok uzun sürüyor.** Adımlar dakikalar sürer; on beş dakikada durdurulur. Kopeng planlaması otuz dakikada. Ham çıktı `~/.kortext/kortext.db.logs/` altındadır.
+**Bir adım çok uzun sürüyor.** Adımlar dakikalar sürer; on beş dakikada durdurulur. 
 
 **Kortext bir adımın ortasında yeniden başladı.** Adım "kortext restarted mid-step — retry" ile işaretlenir. Retry'a basın.
 

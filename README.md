@@ -15,105 +15,109 @@
 
 🇹🇷 [For Turkish press 1](docs/tr/README.md)
 
-**The project brain for AI-driven development.** Kortext turns a brief (or an
-existing codebase) into an approved analysis foundation — and it drives your
-own coding agent (Claude Code, Codex, Gemini CLI…) to write it. You never
-leave the panel during analysis: documents land as drafts, you approve,
-annotate, or request revisions, and the chain advances on your approvals.
-When every document is settled, Kortext retires — the docs become the
-project's guideline and `AGENTS.md` hands your agent the contract.
+Building products with AI, I keep running into two problems.
 
-Kortext holds no API key and calls no LLM API of its own — it spawns the
-agent CLI you already have installed and pay for, headlessly, inside your
-repo.
+1. I cannot see where the project stands.
+2. At some point the model drifts from the rules we shook hands on and starts improvising like a free-range chicken.
+
+I know you have the same problem. You just have not named it yet.
+
+I have. Its name is **Kortext**.
+
+Kortext is a product constitution you agree on with the AI before development starts — under whatever form of democracy you prefer.
+
+From the **`BRIEF.md`** you provide, **10 expert personas** write **14 architecture documents**. That constitution is what keeps the model inside the project's reality.
+
+Simple to use, thorough in what it covers.
+
+- Enter the project and its scope in a refreshingly plain interface.
+
+- Every document a persona writes is put in front of you for approval.
+
+- Read them — for a smooth ride, or for an audit. A document may ask you questions; you may ask for an explanation or a change.
+
+- If the change you ask for touches another document, that document goes back through the pipeline.
+
+- Once the constitution is settled, carry on with whatever AI you use, however you like.
+
+And I have not forgotten projects that are already under way: Kortext can start from an existing codebase too.
+
+## For the more curious
+
+There is one human role, **Prime**. The other personas: product manager, architect, designer, growth expert, security engineer, DevOps engineer, DBA, compliance expert, copywriter and QA engineer.
+
+**BRIEF.md** is the document you provide. From it, Kortext produces `PRODUCT.md`, `STACK.md`, `STRUCTURE.md`, `ARCHITECTURE.md`, `DESIGN.md`, `GROWTH.md`, `SECURITY.md`, `ENVIRONMENT.md`, `DATABASE.md`, `API.md`, `LEGAL.md`, `CONTENT.md`, `ENGINEERING.md`, `TEST.md`.
+
+There is a sample `BRIEF.md`. If the brief you wrote is not enough, Kortext says so.
+
+Add an existing project and it may come back with suggestions about where the project is and where it is heading. Smart-arse.
+
+It runs your own AI agent.
+
+It is not shy with tokens, but it spends them before the tokens and the hours that would otherwise be wasted later. On the whole, a much better deal.
+
+Kortext collects nothing, keeps no telemetry. I am very curious how much it gets used, though.
+
+## How it works
 
 <p align="center">
   <img src="docs/assets/panel-documents.png" alt="The analysis in flight: documents in dependency order, each with its author and state" width="880">
 </p>
 
-## How it works
+1. Pick the project folder and the agent CLI it runs on. The choice belongs to the project; two projects can happily sit on two different CLIs. A *new project* starts from a brief you write or upload in the form; an *existing project* starts straight from the code.
 
-1. **Add a project.** Pick the repo folder and the agent CLI it runs on — the
-   choice belongs to the project, so two projects can sit on two different
-   CLIs. *New project* starts from a brief you write or upload in the
-   form; *existing project* starts straight from the code. Kortext scaffolds
-   `AGENTS.md` at the repo root and `.kortext/` with document skeletons.
-2. **Analysis.** Kortext runs your agent CLI step by step through a
-   dependency-gated workflow. Each step writes one document
-   (ARCHITECTURE, STACK, SECURITY, DATABASE, DESIGN, LEGAL, …) as a persona
-   (architect, security-engineer, …) and lands it as `draft`.
-   A document whose inputs you haven't approved is never written. Up to
-   three independent steps run in parallel; your approval wakes the chain.
-3. **Review in the panel.** Open any document: approve it, select a line and
-   ask the author persona about it (ephemeral Q&A — nothing is saved), or
-   drop notes and request a revision (the producing step re-runs with your
-   notes). A document can also settle as `not-applicable` with reasoning.
-4. **Handshake.** When every document is approved or not-applicable, analysis
-   is complete. The docs are now the project's sacred guideline; `AGENTS.md`
-   is the handover constitution. Copy one of the starter commands into your
-   client (CLI or app) and build.
+2. Kortext puts a `.kortext/` folder at the root of the repo, with the document skeletons inside, and an `AGENTS.md` beside it. If `AGENTS.md` already exists, it adds a marked block and leaves your own text alone.
 
-## Requirements
+3. Kortext runs your agent CLI step by step, in the order the documents depend on each other. Each step writes one document — ARCHITECTURE, STACK, SECURITY, DATABASE, DESIGN, LEGAL… — as a persona: architect, security engineer, designer.
+   Every document arrives as a `draft`, and a document you have not approved is never written.
 
-| | minimum | why |
-| --- | --- | --- |
-| **Node.js** | 22 | the runtime |
-| **npm** | 10 | ships with Node 22 |
-| **An agent CLI** | one of the four below | the engine Kortext drives |
+4. Open any document. Approve it; select a line and ask "why did you write it this way?" (that conversation is ephemeral, nothing is saved); or leave notes and ask for a revision. Ask for a revision and the document is written again.
 
-Kortext holds no key: it spends the subscription behind the CLI you already use. Install
-whichever one that is — they are equal as far as Kortext is concerned, and it picks up any
-of them from your `PATH` (Cursor, Copilot, OpenCode, Amp, Droid, Goose, Qwen Code and Cline
-are prepared too, marked *untested* until they have written a document on a real machine). Git is not required.
+5. When every document is approved or declared unnecessary, the analysis is complete. The documents are now the project's constitution and `AGENTS.md` is the handover. Copy one of the starter commands into your client — CLI or app, whichever you use — and start building.
 
-```sh
-npm install -g @anthropic-ai/claude-code    # claude
-npm install -g @openai/codex                # codex
-npm install -g @google/gemini-cli           # gemini
-# antigravity: install the Antigravity app, then `agy install`
-```
+> A document can also close as `not-applicable`, with a reason: "this project does not need this one."
 
 ## Install
 
-```sh
-npm install -g kortext
-```
+**Node 22 or newer** and at least one agent CLI on your PATH is all you need
+(`claude`, `codex`, `antigravity` or another).
 
-npm no longer runs a package's install scripts by default. Kortext's SQLite binding ships
-prebuilt binaries for the common platforms, so this is usually enough; if `kortext` starts and
-cannot open its database, install it once with the script allowed:
+After that it is one command in the terminal: `npm install -g kortext`
+
+> npm no longer runs a package's install scripts on its own. Kortext's SQLite binding ships prebuilt for the common platforms, so this command is usually enough.
+> If `kortext` starts but cannot open its database, install once more with the script allowed:
 
 ```sh
 npm install -g --allow-scripts=better-sqlite3 kortext
 ```
 
-Node 22 itself, per platform:
+When the install finishes, type `kortext`. The server comes up, your browser opens, and the Kortext panel is in front of you. That is all.
+
+> The server uses port 3441; change it with `--port` if you like.
+> Your data lives in one global SQLite database: `~/.kortext/kortext.db`. Change that with `--db`.
 
 <details>
-<summary><b>macOS</b></summary>
+<summary><b>Requirements</b></summary>
+<br/>
+
+### Node.js `22` and npm `10`
+
+<details>
+<summary><b>Node 22 on macOS</b></summary>
 
 ```sh
 brew install node@22
 ```
-
-Juggling Node versions? `brew install fnm && fnm install 22 && fnm default 22`.
 </details>
 
 <details>
-<summary><b>Windows</b> — experimental</summary>
+<summary><b>Node 22 on Windows</b></summary>
 
-> **Windows support is experimental.** Kortext is developed and tested on macOS and Linux.
-> The Windows paths — finding your agent CLI with `where`, and running the `.cmd` shim npm
-> installs — are written from the documented behaviour but have not been run on Windows.
-> If something does not work, [open an issue](https://github.com/erayendes/kortext/issues);
-> it is a gap, not your setup.
+> **Windows support is experimental.** Kortext is developed and tested on macOS and Linux. The Windows-specific parts — finding your agent CLI with `where`, running the `.cmd` shim npm installs — were written from the documented behaviour but have not been run on a real Windows machine. If something does not work, please [open an issue](https://github.com/erayendes/kortext/issues); the fault is my gap, not your setup.
 
-Install Node 22 from **nodejs.org** (the LTS labelled v22.x). On the *Tools for Native Modules*
-screen, tick **"Automatically install the necessary tools"** — Kortext's SQLite binding needs
-them.
+Install Node 22 from **nodejs.org** (the LTS labelled v22.x). On the *Tools for Native Modules* screen, tick **"Automatically install the necessary tools"**; Kortext's SQLite binding needs them.
 
-`EACCES` or a permission error on a global install? Point npm's global prefix at a folder you
-own instead of using an admin shell:
+`EACCES` or a permission error on the global install? Point npm's global folder at one you own instead of opening an admin shell:
 
 ```powershell
 npm config set prefix "$env:APPDATA\npm"
@@ -131,82 +135,51 @@ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
 nvm install 22 && nvm alias default 22
 ```
 
-Never `sudo npm install -g`. On `EACCES`:
-`npm config set prefix ~/.npm-global` and put `~/.npm-global/bin` on your `PATH`.
+Do not `sudo npm install -g`. On `EACCES`:
+`npm config set prefix ~/.npm-global`, then put `~/.npm-global/bin` on your `PATH`.
 </details>
 
-## Quick start
-
-Requires **Node ≥ 22** and at least one agent CLI on your PATH
-(`claude`, `codex`, `antigravity` or `gemini`).
+### An agent CLI
 
 ```sh
-npm install -g kortext
-kortext
+npm install -g @anthropic-ai/claude-code    # claude
+npm install -g @openai/codex                # codex
+npm install -g @google/gemini-cli           # gemini
 ```
 
-The server starts on port **3441** (`--port` to change) and opens the panel.
-Data lives in one global SQLite database at `~/.kortext/kortext.db`
-(`--db` to change); the documents live in your repo.
+> [!NOTE]
+> You give Kortext no key; it uses the subscription behind the CLI you already use. Cursor, Copilot, OpenCode, Amp, Droid, Goose, Qwen Code and Cline have their definitions ready too.
 
-## What lands in your repo
-
-```
-AGENTS.md                  the agent's entry contract (handover constitution)
-.kortext/                  every document, one shelf, in the order they are written
-  BRIEF.md PRODUCT.md STACK.md STRUCTURE.md ARCHITECTURE.md SECURITY.md
-  ENVIRONMENT.md DATABASE.md API.md DESIGN.md GROWTH.md LEGAL.md
-  CONTENT.md ENGINEERING.md TEST.md
-```
-
-Frontmatter `status` is the source of truth:
-`uninitialized → draft → approved` (or `not-applicable`).
-
-## Check it works
-
-```sh
-node --version                          # v22 or newer
-kortext --version
-which claude || which codex || which agy || which gemini
-```
-
-An installed CLI is not necessarily a signed-in one: run yours once on its own before pointing
-Kortext at a real project. The CLI is chosen per project, in the Add project form; a project
-screen carries the same dropdown next to Start, so you can switch when a quota runs out. With
-none installed, the panel says so in its header.
+</details>
 
 ## Starting and stopping
 
-`kortext` starts the server in the background and opens the panel — the terminal window can be
-closed, the panel keeps running. Stop it with the ⏻ button in the panel's status bar; the same
-bar's dot is green while the server is up and red once it is gone. Run `kortext` again to start
-it.
+Once Kortext is running you can close the terminal window; it keeps running in the background.
+
+To stop it, press the ⏻ button in the panel's status bar.
+
+To start it again, type `kortext` once more.
 
 ```sh
-kortext            # start in the background, open the panel
-kortext --stop     # stop the background server
+kortext              # start in the background, open the panel
+kortext --stop       # stop the background server
 kortext --no-detach  # keep it in this terminal, Ctrl+C to stop
 ```
 
-Neither the button nor `--stop` interrupts a running step: they refuse while one is in flight,
-so an analysis is never cut off mid-write.
+Neither the button nor `--stop` cuts a running step short; while one is in flight they ask you to wait. An analysis is never interrupted mid-write.
 
-The background server writes what it prints to `~/.kortext/kortext.db.log`.
+What the background server prints collects in `~/.kortext/kortext.db.log`.
 
 ## Update and uninstall
 
-When a newer version is published, the panel says so in a strip under the header, with an
-**Update now** button that runs the install for you — the new version is live once you quit
-kortext and start it again. The button waits for a running step to finish rather than swap the
-files under it. By hand, or if the button reports an error:
+When a new version is out, the panel says so in a strip under the header. **Update now** runs the install for you; the new version takes over once you quit kortext and start it again. If a step is running, the button waits for it rather than swapping the files underneath. By hand, or if the button fails:
 
 ```sh
 npm update -g kortext
 npm uninstall -g kortext
 ```
 
-Uninstalling removes the binary only. The registry and logs stay in `~/.kortext/`, and every
-document stays in your repo — delete either yourself if you want a clean slate.
+Uninstalling removes only the program. Your project registry and logs stay in `~/.kortext/`, and your documents stay in your repo. For a clean slate, delete both yourself.
 
 ## Development
 
@@ -220,7 +193,7 @@ npm run format     # prettier writes; format:check verifies (CI runs the check)
 npm run build      # tsc → dist/ + vite → ui/dist/
 ```
 
-Issues and pull requests are welcome — see [CONTRIBUTING](.github/CONTRIBUTING.md),
+For issues and pull requests — see [CONTRIBUTING](.github/CONTRIBUTING.md),
 [SUPPORT](.github/SUPPORT.md) and the [security policy](.github/SECURITY.md).
 
 Kortext is free and MIT-licensed. If it earns a place in your work,
@@ -228,8 +201,7 @@ Kortext is free and MIT-licensed. If it earns a place in your work,
 
 ## Docs
 
-[Guide](docs/GUIDE.md) — the panel, explained · [Changelog](docs/CHANGELOG.md) ·
-Türkçe: [README](docs/tr/README.md) · [Kılavuz](docs/tr/GUIDE.md) · [Değişiklik günlüğü](docs/tr/CHANGELOG.md)
+[Guide](docs/GUIDE.md) — the panel, explained · [Changelog](docs/CHANGELOG.md)
 
 ## License
 
