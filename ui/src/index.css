@@ -1930,12 +1930,6 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   color: var(--pink);
   border-color: var(--pink-border, transparent);
 }
-.kx-badge-dependent {
-  background: transparent;
-  color: var(--pink);
-  border-color: var(--pink-border, currentColor);
-  opacity: 0.75;
-}
 .dr-head {
   display: flex;
   align-items: flex-start;

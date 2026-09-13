@@ -247,13 +247,13 @@ text's own ink.
 |---|---|---|
 | `failed` | the last attempt fell over; the reason is in the document | red |
 | `change request` | another document wants this one changed | pink |
-| `dependent` | an input is moving; it will be re-read when that settles | pink, hollow |
 
 A badge is the round pill without the dot: it says what is owed, and a debt has no motion to
 show. Round against the state's square corner is the whole difference at a glance.
 
-**A badge beats the state.** Anything carrying `failed` or `change request` moves to **Needs
-you** whatever its state. The exception is `dependent`: news, not work, so it stays put.
+**A badge beats the state.** Anything carrying `failed` or `change request` moves to **Action
+needed** whatever its state. A moving input is news, not work, so it is not a badge: `recheck`
+says which input in its tooltip, and the drawer's dependency band names it.
 
 Groups: `Action needed` → `Doing` → `To do` → `Done`. The last is collapsed by default — it is
 finished, and the not-applicable documents sit inside it with their faint outline.
@@ -286,13 +286,13 @@ in a separate button.
 | readiness gate `.kx-gate` | blue ground, blue text, no frame | the system is reading |
 | related `.kx-doc-readbar` | blue ground, mono head, no frame | who reads this document |
 | action needed `.kx-doc-changebar` | amber ground, amber frame and head | your turn: questions and requests |
-| dependency `.kx-doc-dependbar` | no ground, plain pink frame | news only |
+| dependency `.kx-doc-dependbar` | no ground, plain pink frame | news only: which input is moving |
 | open question `.kx-doc-askbar` | amber | yours, and it blocks approval |
 
 Amber is *your turn* everywhere — the `paused` state, the question band, the Action Needed band —
 so the one band that asks for a decision wears it too. Pink stays with the badges in the row: it
-says a demand exists, the amber band is where it is answered. The dependency band is the
-`dependent` badge enlarged — hollow, framed. Every band's head is the group label from § 10, in
+says a demand exists, the amber band is where it is answered. The dependency band is
+hollow and framed because it asks nothing. Every band's head is the group label from § 10, in
 mono, so the panel's labels and the document's own labels are one thing.
 
 **Header.** The wordmark — a PNG per theme, swapped by CSS, so the drawing is right on the

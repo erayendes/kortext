@@ -1022,7 +1022,9 @@ const DETAIL_TITLE: Record<string, string> = {
   revision: 'A rewrite of what already stands',
 };
 
-/** What is owed on this document, next to the state it is in. */
+/** What is owed on this document, next to the state it is in. A moving input is
+    not a debt, so it is not a badge: `recheck` says it in its tooltip, and the
+    drawer's band names the input. */
 export function DocBadges({ doc }: { doc: DocInfo }) {
   return (
     <>
@@ -1035,18 +1037,12 @@ export function DocBadges({ doc }: { doc: DocInfo }) {
                   ...(doc.openQuestions ? ['questions are waiting for you'] : []),
                   ...doc.revisionRequests.map((r) => `${r.from}: ${r.reason}`),
                 ].join('\n')
-              : (DETAIL_TITLE[doc.detail] ?? '')
+              : doc.detail === 'recheck' && doc.dependentOn.length > 0
+                ? `Waiting on ${doc.dependentOn.join(', ')} to settle, then read again`
+                : (DETAIL_TITLE[doc.detail] ?? '')
           }
         >
           {doc.detail}
-        </span>
-      )}
-      {doc.dependentOn.length > 0 && (
-        <span
-          className="kx-badge kx-badge-dependent"
-          title={`Waiting on ${doc.dependentOn.join(', ')} to settle`}
-        >
-          dependent
         </span>
       )}
     </>

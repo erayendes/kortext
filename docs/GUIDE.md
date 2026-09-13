@@ -105,17 +105,17 @@ anything of you.
 what changes if you change this, said before you change it. A reader nobody has written yet is
 struck through — it will read this when its turn comes.
 
-**Dependent** — hollow pink. This document is approved, but something it reads is moving. Not
-work for you; when that input settles, this one is re-read against it and you are told only if
-something actually broke.
+**Recheck** — amber. This document is approved, but something it reads is moving. Not work for
+you; hover the word to see which input, and when that settles, this one is re-read against it and
+you are told only if something actually broke.
 
 ## The groups
 
-`Action needed` · `In progress` · `Next` · `Approved` · `Not applicable`. The last two are collapsed
-— one is finished, the other was deliberately skipped.
+`Action needed` · `Doing` · `To do` · `Done`. The last is collapsed — it is finished, and the
+deliberately skipped documents sit in it with a faint outline.
 
 Anything carrying a failure or an open demand climbs to **Action needed** no matter what its status
-says. The one exception is `dependent`, which is news, not a task.
+says.
 
 ## Running, pausing, changing the engine
 
