@@ -157,6 +157,9 @@ export function DocDrawer({
   const [proposed, setProposed] = useState(false); // the editor holds a draft the engine wrote
   const [rawEdit, setRawEdit] = useState(false); // …and you asked to type in it rather than read it
   const [err, setErr] = useState<string | null>(null);
+  // Template lines the author never replaced: the server names them and
+  // refuses once; prime sees the lines and can insist.
+  const [placeholders, setPlaceholders] = useState<string[]>([]);
   // What the document said before it was last written, when the chain is intact.
   const [previous, setPrevious] = useState<string | null>(null);
   const [versions, setVersions] = useState<DocVersion[]>([]);
@@ -655,9 +658,16 @@ export function DocDrawer({
     ]);
   };
 
-  const approve = () =>
+  const approve = (force = false) =>
     act(async () => {
-      await api.approveDoc(project.id, doc.rel, version);
+      setPlaceholders([]);
+      try {
+        await api.approveDoc(project.id, doc.rel, version, force);
+      } catch (e) {
+        const left = (e as { body?: { placeholders?: string[] } }).body?.placeholders;
+        if (left?.length) setPlaceholders(left);
+        throw e;
+      }
       onClose();
     });
 
@@ -733,7 +743,7 @@ export function DocDrawer({
                       ? 'Accept or discard the outgoing requests first'
                       : ''
               }
-              onClick={approve}
+              onClick={() => approve()}
             >
               Approve
             </button>
@@ -801,7 +811,27 @@ export function DocDrawer({
             src={`/api/projects/${project.id}/docs/design-preview`}
           />
         )}
-        {err && <div className="kx-error">{err}</div>}
+        {err && (
+          <div className="kx-error">
+            {err}
+            {placeholders.length > 0 && (
+              <>
+                <ul className="kx-error-lines mono">
+                  {placeholders.map((l) => (
+                    <li key={l}>{l}</li>
+                  ))}
+                </ul>
+                <button
+                  className="btn btn-link-danger"
+                  disabled={busy}
+                  onClick={() => approve(true)}
+                >
+                  Approve anyway
+                </button>
+              </>
+            )}
+          </div>
+        )}
         {failedError && !editing && (
           <div className="kx-doc-changebar">
             <div className="kx-changebar-head">The last attempt to write this document failed.</div>

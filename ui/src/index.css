@@ -1831,6 +1831,12 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+.kx-error-lines {
+  margin: 6px 0 4px;
+  padding-left: 18px;
+  font-size: var(--fs-label);
+  color: var(--fg-secondary);
+}
 .kx-error {
   margin: 10px 22px 0;
   padding: 8px 12px;

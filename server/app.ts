@@ -281,7 +281,12 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   app.get('/api/projects/:id/jobs', (req, res) => {
     const project = projectOr404(req.params.id, res);
     if (!project) return;
-    res.json({ jobs: listJobs(db, project.id), running: runningJob(db, project.id) ?? null });
+    // `paused` rides along so a panel learns of a pause made elsewhere — the menu bar app, another tab.
+    res.json({
+      jobs: listJobs(db, project.id),
+      running: runningJob(db, project.id) ?? null,
+      paused: !!project.paused,
+    });
   });
 
   // Start the chain asynchronously; the panel polls jobs and documents for progress.

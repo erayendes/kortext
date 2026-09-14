@@ -1787,6 +1787,7 @@ function ProjectScreen({
         onPending={setPending}
         onChecking={setChecking}
         onSettled={setSettled}
+        onPaused={setPaused}
       />
     </main>
   );
@@ -1863,6 +1864,7 @@ function DocumentsTab({
   onPending,
   onChecking,
   onSettled,
+  onPaused,
 }: {
   project: Project;
   paused?: boolean;
@@ -1871,6 +1873,7 @@ function DocumentsTab({
   onPending?: (pending: boolean) => void;
   onChecking?: (checking: boolean) => void;
   onSettled?: (settled: boolean) => void;
+  onPaused?: (paused: boolean) => void;
 }) {
   const [docs, setDocs] = useState<DocInfo[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -1901,6 +1904,7 @@ function DocumentsTab({
           current ? (d.docs.find((doc) => doc.rel === current.rel) ?? null) : null,
         );
         setJobs(j.jobs);
+        onPaused?.(j.paused);
         setGate(g);
         onChecking?.(g.checking);
         setOffline(false);

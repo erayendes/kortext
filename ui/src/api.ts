@@ -27,7 +27,12 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
     throw new Error('the server answered with something that is not JSON');
   }
   const error = (body as { error?: string } | null)?.error;
-  if (!res.ok) throw new Error(error ?? `HTTP ${res.status}`);
+  if (!res.ok) {
+    // The body may say more than the sentence — which lines, for instance.
+    const e = new Error(error ?? `HTTP ${res.status}`) as Error & { body?: unknown };
+    e.body = body;
+    throw e;
+  }
   return body as T;
 }
 
@@ -138,7 +143,7 @@ export const api = {
       body: JSON.stringify({ effort }),
     }),
   jobs: (projectId: number) =>
-    req<{ jobs: Job[]; running: Job | null }>(`/api/projects/${projectId}/jobs`),
+    req<{ jobs: Job[]; running: Job | null; paused: boolean }>(`/api/projects/${projectId}/jobs`),
   runNext: (projectId: number) =>
     req<{ started: string }>(`/api/projects/${projectId}/run-next`, { method: 'POST' }),
   handshake: (projectId: number) => req<HandshakeState>(`/api/projects/${projectId}/handshake`),
@@ -218,10 +223,10 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ rel, excerpt, question, history }),
     }),
-  approveDoc: (projectId: number, rel: string, expectedVersion: string) =>
+  approveDoc: (projectId: number, rel: string, expectedVersion: string, force = false) =>
     req<{ ok: boolean }>(`/api/projects/${projectId}/docs/approve`, {
       method: 'POST',
-      body: JSON.stringify({ rel, expectedVersion }),
+      body: JSON.stringify({ rel, expectedVersion, force }),
     }),
   createProject: (input: {
     name: string;
