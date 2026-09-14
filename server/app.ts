@@ -154,7 +154,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   });
 
   // Installing replaces files on disk; the running process keeps its boot-time version until restarted.
-  app.post('/api/version/update', async (_req, res) => {
+  app.post('/api/version/update', async (req, res) => {
     if (!managed) return res.status(400).json({ error: 'not an npm install — update it yourself' });
     // Wait for active work before npm replaces files read by the runner.
     if (stepRunning()) {
@@ -162,7 +162,8 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     }
     updating = true;
     try {
-      const result = await selfUpdate();
+      // `tag: "beta"` installs the beta dist-tag; `latest` also walks a beta back to the release.
+      const result = await selfUpdate(req.body?.tag === 'beta' ? 'beta' : 'latest');
       res.status(result.ok ? 200 : 500).json(result);
     } finally {
       updating = false;

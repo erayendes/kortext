@@ -329,9 +329,8 @@ struct SettingsView: View {
                     notifications.toggle()
                     if notifications { model.ensureNotifications() }
                 }
-                // Two versions live here: the app's own (Sparkle) and the package's (npm).
-            Row(icon: "arrow.down.circle", title: "Check for updates",
-                sub: model.update ?? ["app \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?")", model.version.map { "kortext \($0)" }].compactMap { $0 }.joined(separator: " · ")) { model.checkUpdates() }
+                Row(icon: "arrow.down.circle", title: "Check for updates", sub: model.update ?? model.version.map { "kortext \($0)" }) { model.checkUpdates() }
+            Row(icon: "flask", title: "Want to try the beta?", sub: model.betaNote ?? model.beta.map { model.onBeta ? "kortext \($0) · installed" : "kortext \($0)" } ?? "looking…") { model.tryBeta() }
                 Row(icon: "ladybug", title: "Report an issue") {
                     var u = "https://github.com/erayendes/kortext/issues/new?template=bug_report.yml"
                     if let v = model.version { u += "&version=\(v)" }
@@ -342,6 +341,7 @@ struct SettingsView: View {
             }
         }
         .padding(12)
+        .onAppear { model.lookBeta() }
     }
 }
 

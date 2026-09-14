@@ -58,6 +58,20 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
     // Settings › Check for updates: the daemon knows both versions.
     @Published var update: String? = nil       // what the last check said
     var checkAppUpdate: () -> Void = {}
+    /// The beta channel: npm's `beta` dist-tag, looked up when settings open.
+    @Published var beta: String? = nil
+    @Published var betaNote: String? = nil     // what the beta row says under its title
+    var onBeta: Bool { (version ?? "").contains("-") }
+    func lookBeta() { Task { beta = await Api.distTags()["beta"] } }
+    /// The beta row, pressed: installed → say so; else arm once, then install `kortext@beta` and restart.
+    var betaArmed = false
+    func tryBeta() {
+        if onBeta { betaNote = "the beta is what runs now · Check for updates goes back to the release"; return }
+        guard let beta else { betaNote = "no beta on npm right now"; return }
+        if !betaArmed { betaArmed = true; betaNote = "install kortext \(beta)? press again"; return }
+        betaArmed = false
+        install(tag: "beta", label: "kortext \(beta)")
+    }
     /// The version pill: the app asks Sparkle about itself, the daemon about the npm package.
     func checkUpdates() {
         checkAppUpdate()
@@ -65,18 +79,21 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
         update = "checking…"
         Task {
             guard let v = try? await Api.version() else { update = "v\(version ?? "") · offline"; return }
-            pendingUpdate = v.stale
-            let app = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
-            update = v.stale ? "kortext \(v.latest ?? "") available · click to update" : "app \(app) · kortext \(v.current) · up to date"
+            pendingUpdate = v.stale || onBeta
+            update = v.stale ? "kortext \(v.latest ?? "") available · click to update"
+                : onBeta ? "on the beta · click to go back to kortext \(v.latest ?? "the release")"
+                : "kortext \(v.current) · up to date"
         }
     }
     var pendingUpdate = false
     /// Install, then restart the server ourselves: the process on the port is still the old
     /// one until it goes down and comes back. A refused install (a step running) says so.
-    func applyUpdate() {
-        update = "updating…"
+    func applyUpdate() { install(tag: "latest", label: "the release") }
+    func install(tag: String, label: String) {
+        update = "installing \(label)…"
+        betaNote = nil
         Task {
-            guard (try? await Api.post("/api/version/update")) == true else { update = "could not update — a step may be running"; return }
+            guard (try? await Api.post("/api/version/update", ["tag": tag])) == true else { update = "could not update — a step may be running"; return }
             pendingUpdate = false
             update = "installed · restarting the server…"
             Shell.run("kortext --stop")

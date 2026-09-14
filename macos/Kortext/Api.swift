@@ -42,6 +42,13 @@ enum Api {
         return try await get("/api/projects/\(id)/docs", R.self).docs
     }
     static func version() async throws -> Version { try await get("/api/version", Version.self) }
+    /// npm's dist-tags, asked of the registry itself — the daemon only knows `latest`.
+    static func distTags() async -> [String: String] {
+        var req = URLRequest(url: URL(string: "https://registry.npmjs.org/-/package/kortext/dist-tags")!)
+        req.timeoutInterval = 5
+        guard let (d, _) = try? await URLSession.shared.data(for: req) else { return [:] }
+        return (try? JSONDecoder().decode([String: String].self, from: d)) ?? [:]
+    }
     @discardableResult
     static func post(_ path: String, _ body: [String: Any] = [:]) async throws -> Bool {
         var req = URLRequest(url: base.appending(path: path))

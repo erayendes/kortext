@@ -36,11 +36,13 @@ export function isNewer(latest: string, current: string): boolean {
  * Update the global package and allow the SQLite binding install script.
  * Windows requires a shell for the npm .cmd shim; command arguments are fixed.
  */
-export function selfUpdate(): Promise<{ ok: boolean; output: string }> {
+export function selfUpdate(
+  tag: 'latest' | 'beta' = 'latest',
+): Promise<{ ok: boolean; output: string }> {
   return new Promise((resolve) => {
     const proc = spawn(
       'npm',
-      ['install', '-g', '--allow-scripts=better-sqlite3', 'kortext@latest'],
+      ['install', '-g', '--allow-scripts=better-sqlite3', `kortext@${tag}`],
       { shell: process.platform === 'win32' },
     );
     let output = '';
