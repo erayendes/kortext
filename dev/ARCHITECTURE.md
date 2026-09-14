@@ -321,7 +321,8 @@ The chrome around it. The **header** carries the wordmark (one PNG per theme), t
 warning when there is nothing on the `PATH`, and at the far right one cycling **theme** button
 (auto → light → dark, remembered in `localStorage`, no attribute meaning auto). Under it the
 **update strip** appears only when npm carries a newer version and kortext runs from a global
-install; **Update now** calls `/api/version/update`, and afterwards the strip says to quit and
+install — the panel asks `/api/version` on open and hourly, the server asks the registry at
+most hourly; **Update now** calls `/api/version/update`, and afterwards the strip says to quit and
 start again, because the process on screen is still the old one. At the bottom, an application
 **status bar** (34px, never wrapping): the server dot — green while `/api/health` answers, red
 the moment it stops and green again on its own when it comes back — the version, the ⏻ button

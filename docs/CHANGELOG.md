@@ -2,6 +2,13 @@
 
 🇹🇷 [For Turkish press 1](tr/CHANGELOG.md)
 
+## [Unreleased]
+
+- **The update strip shows.** Blue, with a primary button, instead of a grey line that read
+  like any other card. The panel checks for a release when opened and then every hour, and
+  the server asks npm at most hourly instead of every six — a release lands on a panel that
+  has been open all day.
+
 ## [3.1.1] — 2026-09-14
 
 - **Change model.** The CLI, model and effort read as one line under the buttons, at the

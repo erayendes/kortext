@@ -2599,12 +2599,15 @@ button.kx-note-exc:hover {
 .kx-update {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   margin: 10px 22px 0;
-  padding: 8px 12px;
+  padding: 10px 14px;
   border-radius: var(--r-md);
-  border: 1px solid var(--border);
-  font-size: var(--fs-ui);
+  border: 1px solid var(--blue);
+  background: var(--blue-bg);
+  color: var(--fg);
+  font-size: var(--fs-body);
+  font-weight: 500;
 }
 .kx-update-err {
   color: var(--red);

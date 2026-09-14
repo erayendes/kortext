@@ -322,8 +322,10 @@ and then reads forever. The theme button is the one preference that survived, an
 icon, not a control row: it takes no width a heading would.
 
 **Update strip** (`.kx-update`), under the header: present only when there is something to say
-— a newer version on npm. One sentence, one button, and after the install one sentence again
-(quit and start again). An error keeps the strip and adds the command to run by hand.
+— a newer version on npm. Blue ground and border (the panel's one informational colour), one
+sentence, one primary button, and after the install one sentence again (quit and start
+again). An error keeps the strip and adds the command to run by hand. The panel asks once on
+open and then hourly; the server asks npm at most hourly.
 
 **Status bar** (`.kx-statusbar`), 52px, never wrapping — an application's bar, not a web
 page's footer. On the left two stacked lines (`.kx-statusbar-lines`), one column under the

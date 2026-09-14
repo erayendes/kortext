@@ -844,11 +844,16 @@ function UpdateStrip() {
   const [state, setState] = useState<'idle' | 'running' | 'done'>('idle');
   const [err, setErr] = useState('');
 
+  // Once on open, then hourly: a release lands while the panel sits open.
   useEffect(() => {
-    api
-      .version()
-      .then((v) => setLatest(v.stale ? v.latest : null))
-      .catch(() => {}); // no server, no strip
+    const check = () =>
+      api
+        .version()
+        .then((v) => setLatest(v.stale ? v.latest : null))
+        .catch(() => {}); // no server, no strip
+    void check();
+    const t = setInterval(check, 60 * 60 * 1000);
+    return () => clearInterval(t);
   }, []);
 
   if (!latest) return null;
@@ -864,7 +869,7 @@ function UpdateStrip() {
     <div className="kx-update">
       <span>Version {latest} is out.</span>
       <button
-        className="btn"
+        className="btn btn-primary"
         disabled={state === 'running'}
         onClick={() => {
           setErr('');

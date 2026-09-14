@@ -172,7 +172,7 @@ Arka plandaki sunucunun yazdıkları `~/.kortext/kortext.db.log` dosyasında bir
 
 ## Güncelleme ve kaldırma
 
-Yeni bir sürüm çıktığında panel başlığın altında bir şeritle haber verir. **Update now** düğmesi kurulumu sizin yerinize yapar; yeni sürüm, kortext'i kapatıp yeniden açtığınızda devreye girer. Düğme, koşan bir adım varsa dosyaları onun altından değiştirmez, bitmesini bekler. Elle yapmak isterseniz, ya da düğme hata verirse:
+Yeni bir sürüm çıktığında panel başlığın altında mavi bir şeritle haber verir — açılışta ve sonra her saat bakar. **Update now** düğmesi kurulumu sizin yerinize yapar; yeni sürüm, kortext'i kapatıp yeniden açtığınızda devreye girer. Düğme, koşan bir adım varsa dosyaları onun altından değiştirmez, bitmesini bekler. Elle yapmak isterseniz, ya da düğme hata verirse:
 
 ```sh
 npm update -g kortext

@@ -1,8 +1,8 @@
 import { spawn } from 'node:child_process';
 
-// Cache registry version checks for six hours; failures hide the update notice.
+// Cache registry version checks for an hour; failures hide the update notice.
 const LATEST_URL = 'https://registry.npmjs.org/kortext/latest';
-const CACHE_MS = 6 * 60 * 60 * 1000;
+const CACHE_MS = 60 * 60 * 1000;
 
 let cached: { at: number; version: string } | null = null;
 
