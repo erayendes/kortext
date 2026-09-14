@@ -200,10 +200,11 @@ struct WaitingRow: View {
     }
 }
 
-// The panel's status bar in miniature: dot · Kortext · ⏻ — and the credit opposite.
+// The status bar: ⏻ (server and app together) · the version, which checks for updates when clicked · the credit, a link.
 struct StatusBar: View {
     @EnvironmentObject var model: Model
     @State private var armed = false
+    @State private var hoverVersion = false
 
     var body: some View {
         let up = model.version != nil
@@ -213,27 +214,39 @@ struct StatusBar: View {
                     Icon(name: "power", size: 12, color: armed ? Kx.red : up ? Kx.green : Kx.fgFaint, weight: .semibold).frame(width: 18, height: 18)
                 }
                 .buttonStyle(.plain).padding(.leading, -3)
-                .help(!up ? "Start the server" : armed ? "Press again to stop" : "Stop the server")
+                .help(!up ? "Start the server" : armed ? "Press again to quit Kortext and stop the server" : "Quit Kortext and stop the server")
             }
-            Text("Kortext").font(Kx.sans(11, .medium)).foregroundStyle(Kx.fgMuted)
             if armed {
-                Text("Press again to stop the server").font(Kx.sans(11, .medium)).foregroundStyle(Kx.red).lineLimit(1).fixedSize()
+                Text("Press again to quit and stop the server").font(Kx.sans(11, .medium)).foregroundStyle(Kx.red).lineLimit(1).fixedSize()
                     .padding(.horizontal, 8).frame(height: 20)
                     .background(Kx.red.opacity(0.09)).clipShape(Capsule())
+            } else if let v = model.version {
+                Button { model.checkUpdates() } label: {
+                    Text(model.update ?? "v\(v)").font(Kx.mono(10)).foregroundStyle(hoverVersion ? Kx.fg : Kx.fgMuted).lineLimit(1)
+                        .padding(.horizontal, 6).frame(height: 18)
+                        .background(hoverVersion ? Kx.bgHover : .clear)
+                        .overlay(Capsule().stroke(Kx.border, lineWidth: 1)).clipShape(Capsule())
+                }
+                .buttonStyle(.plain).onHover { hoverVersion = $0 }
+                .help("Check for updates")
             }
             Spacer()
-            if !armed { Text("milowda").font(Kx.sans(11)).foregroundStyle(Kx.fgFaint).padding(.trailing, 4) }
+            if !armed {
+                Link("milowda", destination: URL(string: "https://milowda.com")!)
+                    .font(Kx.sans(11)).foregroundStyle(Kx.fgFaint).padding(.trailing, 4)
+            }
         }
         .padding(.leading, 12).padding(.trailing, 8).frame(height: 40)
         .background(Color.primary.opacity(0.03))
         .onChange(of: armed) { _, on in if on { Task { try? await Task.sleep(for: .seconds(4)); armed = false } } }
     }
 
+    // Down: start the server. Up: first press arms, second quits the app and stops the server with it.
     private func power() {
         if model.version == nil { model.startDaemon(); return }
         if !armed { armed = true; return }
         armed = false
-        model.stopDaemon()
+        model.quitAll()
     }
 }
 
@@ -242,7 +255,6 @@ struct SettingsView: View {
     @AppStorage("theme") private var theme = "auto"
     @AppStorage("notifications") private var notifications = true
     @State private var loginItem = SMAppService.mainApp.status == .enabled
-    @State private var hoverUpdate = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -270,25 +282,6 @@ struct SettingsView: View {
                 Check(on: $notifications, title: "Notify when a document waits on me",
                       sub: "A draft to approve, a failed step, a brief with questions, a finished chain.")
                 Divider()
-                // The row is the control.
-                Button { model.applyUpdate() } label: {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text("Check for updates").font(Kx.sans(13)).foregroundStyle(Kx.fg)
-                            Text(model.update ?? "kortext \(model.version ?? "—")").font(Kx.sans(11)).foregroundStyle(Kx.fgMuted)
-                        }
-                        Spacer()
-                        if let v = model.version {
-                            Text("v\(v)").font(Kx.mono(10)).foregroundStyle(Kx.fgMuted)
-                                .padding(.horizontal, 6).frame(height: 18)
-                                .overlay(Capsule().stroke(Kx.border, lineWidth: 1))
-                        }
-                    }
-                    .padding(8).background(hoverUpdate ? Kx.bgHover : .clear).clipShape(RoundedRectangle(cornerRadius: 6))
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain).padding(.horizontal, -8).padding(.top, 6)
-                .onHover { hoverUpdate = $0 }
                 HStack {
                     Button("Quit the menu bar app") { NSApp.terminate(nil) }.buttonStyle(.plain).font(Kx.sans(11)).foregroundStyle(Kx.fgFaint)
                     Spacer()

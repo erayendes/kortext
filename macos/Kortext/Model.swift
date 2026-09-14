@@ -55,18 +55,18 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
     // Settings › Check for updates: the daemon knows both versions.
     @Published var update: String? = nil       // what the last check said
     func checkUpdates() {
+        if pendingUpdate { return applyUpdate() }
         update = "checking…"
         Task {
-            guard let v = try? await Api.version() else { update = "could not reach the server"; return }
-            update = v.stale ? "\(v.latest ?? "") available — click to update" : "up to date"
-            if v.stale { pendingUpdate = true }
+            guard let v = try? await Api.version() else { update = "v\(version ?? "") · offline"; return }
+            pendingUpdate = v.stale
+            update = v.stale ? "v\(v.latest ?? "") available · click to update" : "v\(v.current) · up to date"
         }
     }
     var pendingUpdate = false
     func applyUpdate() {
-        guard pendingUpdate else { return checkUpdates() }
         update = "updating…"
-        Task { try? await Api.post("/api/version/update"); pendingUpdate = false; update = "installed — restart the server" }
+        Task { try? await Api.post("/api/version/update"); pendingUpdate = false; update = "installed · restart the server" }
     }
 
     func start() {
@@ -175,6 +175,13 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
     }
 
     func startDaemon() { Shell.run("kortext --no-open"); Task { try? await Task.sleep(for: .seconds(2)); await poll() } }
+    /// ⏻: the server goes down with the app. A running step refuses (--stop does), so the app stays and says so.
+    func quitAll() {
+        Task {
+            Shell.run("kortext --stop")
+            if await Api.health() == nil { NSApp.terminate(nil) } else { await poll() }
+        }
+    }
     func stopDaemon() { Shell.run("kortext --stop"); Task { await poll() } }
     func openPanel(_ p: ProjectState? = nil, _ doc: Doc? = nil) { openPanel(project: p?.id, doc: doc?.rel) }
     func openPanel(project: Int?, doc: String?) {
