@@ -2,7 +2,7 @@
 
 🇬🇧 [For English press 9](../CHANGELOG.md)
 
-## [Yayımlanmamış]
+## [3.1.2] — 2026-09-14
 
 - **Güncelleme şeridi görünür.** Başlığın altında herhangi bir kart gibi duran gri satır yerine
   iki ekranda da başlığın altında, mavi, düğmesi sağda. Kurulumdan sonra **Quit** sunar; yeniden
