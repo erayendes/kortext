@@ -21,8 +21,9 @@
 - **Approve anyway.** Şablon satırını olduğu gibi taşıyan taslak yine reddedilir, ama panel
   artık satırı gösterir — tıklayınca oraya gider — ve ısrar etme yolu drawer'ın altında,
   Request revision'ın yanında, okumanız bitene kadar bekler.
-- **Try the beta.** Uygulamanın ayarlarında, Check for updates'in altında: npm'deki beta,
-  ikinci basışta kurulur; betadayken Check for updates sürüme dönüşü sunar.
+- **Stable version / Try beta version.** Uygulamanın ayarlarında iki satır; her biri kendi
+  türünün en yenisini ve sizde kurulu olup olmadığını gösterir. Birine basınca kurulur —
+  sunucu yeniden başlar, uygulama aynı kanala geçer; ötekine basınca geri dönersiniz.
 - **Continue tutar** adım koşar görülene kadar; ikinci basış artık tekrar duraklatmaz. Başka
   yerden — menü çubuğu uygulaması, başka sekme — yapılan duraklatma panele ulaşır.
 - İki URL içeri girer: `/?project=<id>` ve `/?project=<id>&doc=<rel>`. Diğer araçlar

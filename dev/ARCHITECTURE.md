@@ -420,10 +420,12 @@ panel is sized when it opens, so the height is counted, not measured. The status
 panel's: ⏻ (green up, grey down; first press arms, second stops the server and quits the app;
 down, it starts the server without opening a browser), *open panel*, and the credit. Settings,
 behind the wordmark or ⚙, one card of rows: launch at login (which also starts the server),
-notifications, check for updates (the app asks Sparkle about itself and the daemon about the
-package; on a beta it offers the way back to the release), **Try the beta** (npm's `beta`
-dist-tag, read from the registry; a second press installs it through the daemon and restarts
-the server), report an issue, support, quit. Under it the bar's twin: the theme cycles
+notifications, **Stable version** and **Try beta version** (each row shows npm's newest for
+its dist-tag — `latest`, `beta` — and whether that is what runs here: *up to date* / *not
+installed* / *No beta version right now*; pressing a row installs its version through the
+daemon, downgrades included, restarts the server, then asks Sparkle about the app — Sparkle
+allows the `beta` channel only while the running package is a pre-release, so the app follows
+the package's channel and never needs a switch of its own), report an issue, support, quit. Under it the bar's twin: the theme cycles
 auto → light → dark where ⏻ was, the credit opposite. Everything pressable shows the hand
 cursor; SwiftUI's `Link` is inert in a non-activating panel, so links open by hand. After an
 install the app stops and restarts the server itself and waits for `/api/health` to answer.
