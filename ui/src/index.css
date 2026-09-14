@@ -1850,6 +1850,12 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
 .kx-error-line:hover {
   color: var(--fg);
 }
+.kx-error-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: var(--fs-label);
+  color: var(--fg-muted);
+}
 /* In the drawer the box keeps the readbar's width, not the page's inset. */
 .dr-body > .kx-error {
   margin: 10px 0 0;

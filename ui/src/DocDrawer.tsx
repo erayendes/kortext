@@ -1133,13 +1133,25 @@ export function DocDrawer({
                 No agent writes this document — use Edit to change it yourself.
               </span>
             ) : (
-              <button
-                className="btn btn-primary"
-                disabled={busy || notes.length === 0}
-                onClick={requestRevision}
-              >
-                Request revision{notes.length > 0 ? ` (${notes.length})` : ''}
-              </button>
+              <>
+                {placeholders.length > 0 && (
+                  <button
+                    className="btn btn-link-danger"
+                    disabled={busy}
+                    onClick={() => approve(true)}
+                    title="Approve with the template lines still in it"
+                  >
+                    Approve anyway
+                  </button>
+                )}
+                <button
+                  className="btn btn-primary"
+                  disabled={busy || notes.length === 0}
+                  onClick={requestRevision}
+                >
+                  Request revision{notes.length > 0 ? ` (${notes.length})` : ''}
+                </button>
+              </>
             )}
           </div>
         </div>
