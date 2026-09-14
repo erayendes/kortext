@@ -289,7 +289,7 @@ struct Credit: View {
         Button { NSWorkspace.shared.open(URL(string: "https://milowda.com")!) } label: {
             Text("milowda").font(Kx.sans(11)).foregroundStyle(hover ? Kx.fgSecondary : Kx.fgFaint)
         }
-        .buttonStyle(.plain).onHover { hover = $0 }
+        .buttonStyle(.plain).onHover { hover = $0; if $0 { NSCursor.pointingHand.push() } else { NSCursor.pop() } }
     }
 }
 
@@ -324,12 +324,12 @@ struct SettingsView: View {
                     if notifications { model.ensureNotifications() }
                 }
                 Row(icon: "arrow.down.circle", title: "Check for updates", sub: model.update ?? (model.version.map { "kortext \($0)" } ?? nil)) { model.checkUpdates() }
-                Row(icon: "ladybug", title: "Report an issue") {
+                Row(icon: "ladybug", title: "Report an issue", link: true) {
                     var u = "https://github.com/erayendes/kortext/issues/new?template=bug_report.yml"
                     if let v = model.version { u += "&version=\(v)" }
                     NSWorkspace.shared.open(URL(string: u)!)
                 }
-                Row(icon: "heart", title: "Support Kortext") { NSWorkspace.shared.open(URL(string: "https://buymeacoffee.com/erayendes")!) }
+                Row(icon: "heart", title: "Support Kortext", link: true) { NSWorkspace.shared.open(URL(string: "https://buymeacoffee.com/erayendes")!) }
                 Row(icon: "xmark.circle", title: "Quit Kortext", trailing: "⌘Q") { NSApp.terminate(nil) }
             }
         }
@@ -356,6 +356,7 @@ struct Row: View {
     var sub: String? = nil
     var on: Bool? = nil
     var trailing: String? = nil
+    var link = false          // leaves the app: the hand cursor says so
     let action: () -> Void
     @State private var hover = false
 
@@ -376,7 +377,7 @@ struct Row: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .onHover { hover = $0 }
+        .onHover { hover = $0; if link { if $0 { NSCursor.pointingHand.push() } else { NSCursor.pop() } } }
     }
 }
 
