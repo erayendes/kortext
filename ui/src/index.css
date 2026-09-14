@@ -1334,13 +1334,23 @@ a.btn {
   color: var(--red);
 }
 /* Under the path while ⚙ is on: the project's actions, and the question one of them asks.
-   Link buttons carry their own padding; pulled back so the first word sits on the path's edge. */
+   Nothing pulled left: the first word starts a few px in, the hover box and the warning stay
+   inside the column. */
 .kx-danger-zone {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  margin: 6px 0 0 -12px;
+  margin-top: 6px;
+}
+.kx-danger-zone .btn {
+  padding: 0 8px;
+}
+.kx-danger-zone > .btn:first-child {
+  padding-left: 0;
+}
+.kx-danger-zone .kx-arm-warn {
+  flex-basis: 100%;
 }
 .kx-gear {
   display: inline-flex;
