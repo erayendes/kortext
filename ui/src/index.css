@@ -1329,9 +1329,10 @@ a.btn {
   color: var(--fg-muted);
   margin-left: auto;
 }
+/* The question is prose, grey; the answer that acts carries the colour. */
 .kx-arm-warn {
   font-size: var(--fs-ui);
-  color: var(--red);
+  color: var(--fg-secondary);
 }
 /* Under the path while ⚙ is on: the project's actions, and the question one of them asks.
    The links keep their own 12px inset, as every link button does, so their hover boxes match;
