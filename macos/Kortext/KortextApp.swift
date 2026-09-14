@@ -24,7 +24,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         status = StatusController(model: model, content: Popover().environmentObject(model))
     }
 
-    // Sparkle asks which channels count; the beta switch answers.
+    // Sparkle asks which channels count; the server's channel answers (Model keeps the default).
 final class Channels: NSObject, SPUUpdaterDelegate {
     func allowedChannels(for updater: SPUUpdater) -> Set<String> {
         UserDefaults.standard.bool(forKey: "beta") ? ["beta"] : []
@@ -323,7 +323,6 @@ struct SettingsBar: View {
 struct SettingsView: View {
     @EnvironmentObject var model: Model
     @AppStorage("notifications") private var notifications = true
-    @AppStorage("beta") private var beta = false
     @State private var loginItem = SMAppService.mainApp.status == .enabled
 
     var body: some View {
@@ -339,10 +338,9 @@ struct SettingsView: View {
                     if notifications { model.ensureNotifications() }
                 }
                 Row(icon: "arrow.down.circle", title: "Check for updates",
-                sub: [model.version.map { "Kortext \(pretty($0))" }, model.update].compactMap { $0 }.joined(separator: " · ")) { model.checkUpdates() }
-            Row(icon: "flask", title: "Beta", sub: "Updates include betas.", on: beta) {
-                beta.toggle(); model.setBeta(beta)
-            }
+                    sub: "\(model.tags["latest"].map(pretty) ?? "…") · \(model.status("latest"))") { model.pick("latest") }
+                Row(icon: "flask", title: "Try beta",
+                    sub: "\(model.tags["beta"].map(pretty) ?? "…") · \(model.status("beta"))") { model.pick("beta") }
                 Row(icon: "ladybug", title: "Report an issue") {
                     var u = "https://github.com/erayendes/kortext/issues/new?template=bug_report.yml"
                     if let v = model.version { u += "&version=\(v)" }

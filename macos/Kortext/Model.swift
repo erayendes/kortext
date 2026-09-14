@@ -17,7 +17,9 @@ struct ProjectState: Identifiable {
 
 @MainActor
 final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate {
-    @Published var version: String? = nil      // nil = daemon down
+    @Published var version: String? = nil {     // nil = daemon down
+        didSet { UserDefaults.standard.set(channel == "beta", forKey: "beta") }  // Sparkle follows the server's channel
+    }
     @Published var installed = true
     @Published var projects: [ProjectState] = []
 
@@ -55,12 +57,20 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
     }
 
 
-    // One Kortext, one channel, one check. The package comes from npm, the app from
-    // Sparkle; the check brings whichever lags up to the channel's newest, and says so.
-    @Published var update: String? = nil
+    // Two rows, one Kortext: stable and beta, each showing its newest and whether that is
+    // what runs here. Pressing one installs it (npm follows the tag, downgrades included) and
+    // restarts the server; Sparkle then brings the app to the same channel.
+    @Published var tags: [String: String] = [:]   // npm dist-tags: latest, beta
+    @Published var note: String? = nil            // what the pressed row is doing
+    @Published var pressed: String? = nil         // "latest" | "beta"
     var checkAppUpdate: () -> Void = {}
-    var channel: String { UserDefaults.standard.bool(forKey: "beta") ? "beta" : "latest" }
-    func setBeta(_ on: Bool) { UserDefaults.standard.set(on, forKey: "beta"); checkUpdates() }
+    var channel: String { (version ?? "").contains("-") ? "beta" : "latest" }
+
+    func status(_ tag: String) -> String {
+        if pressed == tag, let n = note { return n }
+        guard let want = tags[tag] else { return "…" }
+        return version == want ? "up to date" : "not installed"
+    }
 
     /// Only a 3.2+ server knows the `tag` field; an older one always installs the release.
     var serverSwitches: Bool {
@@ -68,44 +78,43 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
         return p.count >= 2 && (p[0] > 3 || (p[0] == 3 && p[1] >= 2))
     }
 
-    func checkUpdates() {
-        update = "checking…"
+    func loadTags() { Task { tags = await Api.distTags() } }
+
+    func pick(_ tag: String) {
+        pressed = tag; note = "checking…"
         Task {
-            let tags = await Api.distTags()
-            guard let want = tags[channel] else { update = "could not reach npm"; return }
-            if version == want {
-                checkAppUpdate()                       // the app looks after itself, on the same channel
-                update = "up to date"
-                return
-            }
-            if channel == "beta", !serverSwitches {
-                // The first beta is installed by hand; from then on the app can switch.
+            tags = await Api.distTags()
+            guard let want = tags[tag] else { note = "could not reach npm"; return }
+            if version == want { checkAppUpdate(); note = nil; return }
+            if tag == "beta", !serverSwitches {
+                // The first beta is installed by hand; from then on the server can switch itself.
                 NSPasteboard.general.clearContents(); NSPasteboard.general.setString("npm i -g kortext@beta", forType: .string)
-                update = "copied npm i -g kortext@beta — run it, then ⏻"
+                note = "copied npm i -g kortext@beta — run it, then ⏻"
                 return
             }
-            install(tag: channel, to: want)
+            install(tag: tag, to: want)
         }
     }
 
     /// Install, then restart the server ourselves: the process on the port is still the old
     /// one until it goes down and comes back. A refused install (a step running) says so.
     func install(tag: String, to want: String) {
-        update = "installing \(pretty(want))…"
+        note = "installing \(pretty(want))…"
         Task {
-            guard (try? await Api.post("/api/version/update", ["tag": tag])) == true else { update = "not now — a step is running"; return }
-            update = "installed · restarting…"
+            guard (try? await Api.post("/api/version/update", ["tag": tag])) == true else { note = "not now — a step is running"; return }
+            note = "installed · restarting…"
             Shell.run("kortext --stop")
             Shell.run("kortext --no-open")
             for _ in 0..<20 {
                 try? await Task.sleep(for: .seconds(1))
-                if let h = await Api.health() { version = h.version; update = "up to date"; checkAppUpdate(); await poll(); return }
+                if let h = await Api.health() { version = h.version; note = nil; checkAppUpdate(); await poll(); return }
             }
-            update = "installed · press ⏻"
+            note = "installed · press ⏻"
         }
     }
 
     func start() {
+        loadTags()
         UNUserNotificationCenter.current().delegate = self
         installed = Shell.run("command -v kortext") != nil
         // Launched at login means the server is wanted too; a menu bar that says "not running" every morning is no companion.
