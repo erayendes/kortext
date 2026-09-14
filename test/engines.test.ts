@@ -38,7 +38,7 @@ test('the model rides after the flag, the workspace after its own, nothing when 
     '-c',
     'model_reasoning_effort=low',
   ]);
-  assert.deepEqual(engineArgs(spec('claude'), { effort: 'ultra' }), spec('claude').args);
+  assert.deepEqual(engineArgs(spec('claude'), { effort: 'max' }), spec('claude').args);
   assert.deepEqual(engineArgs(spec('gemini'), { effort: 'high' }), spec('gemini').args);
   // Or it travels in the environment.
   assert.equal(engineEnv(spec('goose'), { model: 'm' })?.GOOSE_MODEL, 'm');

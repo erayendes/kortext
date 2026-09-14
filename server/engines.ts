@@ -49,7 +49,8 @@ export const ENGINES: EngineSpec[] = [
     args: ['--print', '--dangerously-skip-permissions'],
     modelFlag: '--model',
     effortFlag: '--effort',
-    efforts: ['low', 'medium', 'high', 'xhigh', 'max'],
+    // The CLI takes xhigh and max too; three levels is what the panel offers everywhere.
+    efforts: ['low', 'medium', 'high'],
     // Aliases the CLI resolves to its latest of each tier.
     models: ['fable', 'opus', 'sonnet', 'haiku'],
     installHint: 'npm install -g @anthropic-ai/claude-code',
@@ -78,12 +79,14 @@ export const ENGINES: EngineSpec[] = [
     // hunts for the repository with find and ls.
     cwdFlag: '--add-dir',
     modelFlag: '--model',
-    effortFlag: '--effort',
-    efforts: ['low', 'medium', 'high'],
-    // `agy models` lists more; these are the tiers.
+    // No effort list: agy bakes the level into the model id (`gemini-3.8-flash-high`),
+    // and the ids below are exactly what `agy models` prints — pick the level there.
     models: [
       'gemini-3.8-flash-high',
+      'gemini-3.8-flash-medium',
+      'gemini-3.8-flash-low',
       'gemini-3.1-pro-high',
+      'gemini-3.1-pro-low',
       'claude-opus-4-6-thinking',
       'claude-sonnet-4-6',
       'gpt-oss-120b-medium',

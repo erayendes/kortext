@@ -5,7 +5,8 @@
 ## [Unreleased]
 
 - **Effort, per project.** A third dropdown beside the model, for the CLIs that have the
-  notion: `claude --effort`, codex's `model_reasoning_effort`, `agy --effort`.
+  notion: `claude --effort`, codex's `model_reasoning_effort` — low, medium, high. Antigravity
+  carries the level in its model ids, and the model list now shows them all.
 - The failure reason in a row wraps to two lines before it is cut; prose in the drawer runs to
   100 characters.
 - **The mark.** New wordmark and icon: outlines over sketch guides in light, solid in dark,

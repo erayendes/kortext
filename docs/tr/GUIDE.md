@@ -74,7 +74,7 @@ Motor — `claude`, `codex`, `antigravity` ve listedeki diğerleri. Açılır li
 
 İkinci liste **model**. `default` seçimi CLI'ın kendi ayarını kullanır. Bir model seçerseniz her koşuda CLI'a geçilir (`claude --model`, `codex -m`).
 
-Üçüncüsü, **effort**, bu kavramı bilen CLI'larda görünür — `claude --effort`, codex'in `model_reasoning_effort`'u, `agy --effort` — o CLI'ın kabul ettiği seviyelerle. Model gibi, ayarladıktan sonra başlayan koşulara ulaşır; motoru değiştirdiğinizde yeni CLI'ın almadığı seviye düşer.
+Üçüncüsü, **effort**, bunu bir ayar olarak alan CLI'larda görünür — `claude --effort`, codex'in `model_reasoning_effort`'u — `low`, `medium`, `high` ile. Antigravity'de üçüncü liste yok: model adları seviyeyi taşır (`gemini-3.8-flash-high`), model listesinden seçersiniz. Model gibi, ayarladıktan sonra başlayan koşulara ulaşır; motoru değiştirdiğinizde yeni CLI'ın almadığı seviye düşer.
 
 - **Pause** yeni adımların başlamasını durdurur; koşan adım da durur.
 - **Continue** kaldığı yerden devam eder.
