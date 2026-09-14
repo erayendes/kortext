@@ -79,12 +79,38 @@ struct Content: View {
         else if model.version == nil { Message(title: "Kortext is not running", sub: "Press ⏻ below to start the server.") }
         else if model.waiting.isEmpty { Empty() }
         else {
-            VStack(spacing: 0) {
-                Eyebrow(text: "Waiting on you", count: model.waiting.count)
-                VStack(spacing: 5) { ForEach(model.waiting) { WaitingRow(w: $0) } }
-                    .padding(.horizontal, 12).padding(.bottom, 12)
+            // One card per project, its documents as rows — the way mimir groups a provider's lines.
+            VStack(spacing: 10) {
+                ForEach(model.projects.filter { p in model.waiting.contains { $0.project.id == p.id } }) { p in
+                    ProjectCard(p: p, rows: model.waiting.filter { $0.project.id == p.id })
+                }
+            }
+            .padding(12)
+        }
+    }
+}
+
+struct ProjectCard: View {
+    let p: ProjectState
+    let rows: [Model.Waiting]
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 6) {
+                Text(p.project.code).font(Kx.mono(11, .semibold)).tracking(0.6).foregroundStyle(Kx.fgMuted)
+                Text(p.project.name).font(Kx.sans(11)).foregroundStyle(Kx.fgFaint)
+                Spacer()
+                Text("\(p.project.docCounts.settled)/\(p.project.docCounts.total)").font(Kx.mono(10)).foregroundStyle(Kx.fgFaint)
+            }
+            .padding(.horizontal, 14).padding(.top, 11).padding(.bottom, 4)
+            ForEach(Array(rows.enumerated()), id: \.element.id) { i, w in
+                if i > 0 { Divider().padding(.leading, 14) }
+                WaitingRow(w: w)
             }
         }
+        .padding(.bottom, 4)
+        .background(Kx.card)
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Kx.border, lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 
@@ -153,10 +179,7 @@ struct WaitingRow: View {
         Button { model.openPanel(project: w.project.id, doc: w.rel) } label: {
             HStack(spacing: 10) {
                 VStack(alignment: .leading, spacing: 3) {
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text(w.rel).font(Kx.mono(13, .medium)).foregroundStyle(Kx.fg)
-                        Text(w.project.project.code).font(Kx.mono(10)).tracking(0.4).foregroundStyle(Kx.fgFaint)
-                    }
+                    Text(w.rel).font(Kx.mono(13, .medium)).foregroundStyle(Kx.fg)
                     if case .failed(let e?) = w.why {
                         Text(e).font(Kx.mono(11)).foregroundStyle(Kx.red).lineLimit(3).fixedSize(horizontal: false, vertical: true)
                     }
@@ -168,10 +191,8 @@ struct WaitingRow: View {
                 case .questions(let n): Pill(kind: .questions, text: n == 1 ? "1 question" : "\(n) questions")
                 }
             }
-            .padding(.horizontal, 12).padding(.vertical, 9)
-            .background(hover ? Kx.bgHover : Kx.card)
-            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Kx.border, lineWidth: 1))
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .padding(.horizontal, 14).padding(.vertical, 9)
+            .background(hover ? Kx.bgHover : .clear)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
