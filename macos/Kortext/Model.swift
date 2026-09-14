@@ -65,9 +65,20 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
     func lookBeta() { Task { beta = await Api.distTags()["beta"] } }
     /// The beta row, pressed: installed → say so; else arm once, then install `kortext@beta` and restart.
     var betaArmed = false
+    /// Only a 3.2+ server knows the `tag` field; an older one would install the release again.
+    var serverSwitches: Bool {
+        let p = (version ?? "0").split(separator: ".").compactMap { Int($0.prefix { $0.isNumber }) }
+        return p.count >= 2 && (p[0] > 3 || (p[0] == 3 && p[1] >= 2))
+    }
     func tryBeta() {
         if onBeta { betaNote = "running · Check for updates goes back"; return }
         guard let beta else { betaNote = "no beta on npm right now"; return }
+        if !serverSwitches {
+            // The first beta is installed by hand; from then on the app can switch.
+            NSPasteboard.general.clearContents(); NSPasteboard.general.setString("npm i -g kortext@beta", forType: .string)
+            betaNote = "copied — run it, then press ⏻"
+            return
+        }
         if !betaArmed { betaArmed = true; betaNote = "press again to install \(beta)"; return }
         betaArmed = false
         install(tag: "beta", label: "kortext \(beta)")
@@ -80,8 +91,8 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
         Task {
             guard let v = try? await Api.version() else { update = "v\(version ?? "") · offline"; return }
             pendingUpdate = v.stale || onBeta
-            update = v.stale ? "kortext \(v.latest ?? "") available · click to update"
-                : onBeta ? "on the beta · click for kortext \(v.latest ?? "release")"
+            update = v.stale ? "\(v.latest ?? "") available · click to install"
+                : onBeta ? "click for the release, \(v.latest ?? "")"
                 : "kortext \(v.current) · up to date"
         }
     }
@@ -93,16 +104,16 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
         update = "installing \(label)…"
         betaNote = nil
         Task {
-            guard (try? await Api.post("/api/version/update", ["tag": tag])) == true else { update = "could not update — a step may be running"; return }
+            guard (try? await Api.post("/api/version/update", ["tag": tag])) == true else { update = "not now — a step is running"; return }
             pendingUpdate = false
-            update = "installed · restarting the server…"
+            update = "installed · restarting…"
             Shell.run("kortext --stop")
             Shell.run("kortext --no-open")
             for _ in 0..<20 {
                 try? await Task.sleep(for: .seconds(1))
                 if let h = await Api.health() { version = h.version; update = "v\(h.version) · up to date"; await poll(); return }
             }
-            update = "installed · press ⏻ to start the server"
+            update = "installed · press ⏻"
         }
     }
 
