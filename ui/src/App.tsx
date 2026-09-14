@@ -131,6 +131,7 @@ export function App() {
             </button>
           </div>
           <UpdateStrip {...update} />
+          <CompanionStrip />
           {projects.length === 0 && !adding && (
             <>
               <div className="kx-empty">
@@ -185,22 +186,27 @@ export function App() {
           <span className="kx-statusbar-line">
             <MadeBy />
           </span>
-          <span className="kx-statusbar-line">
-            <Companion />
-          </span>
+          <span className="kx-statusbar-line" aria-hidden="true" />
         </span>
       </footer>
     </div>
   );
 }
 
-// The menu bar app, offered once on a Mac that has no copy of it talking to this
-// server. It sits in the credit's empty second line and says nothing once the
-// app is heard from; the empty line keeps the column's height either way.
-function Companion() {
+// The menu bar app, offered in the update strip's slot on a Mac that has no
+// copy of it talking to this server. Quiet colours — an offer, not a warning —
+// and a × that keeps it away; it also goes on its own once the app is heard.
+function CompanionStrip() {
   const [companion, setCompanion] = useState(true);
+  const [hidden, setHidden] = useState(() => {
+    try {
+      return localStorage.getItem('kx-companion') === 'hidden';
+    } catch {
+      return false;
+    }
+  });
   useEffect(() => {
-    if (!navigator.platform.startsWith('Mac')) return;
+    if (!navigator.platform.startsWith('Mac') || hidden) return;
     const look = () =>
       api.health().then(
         (h) => setCompanion(h.companion),
@@ -209,16 +215,31 @@ function Companion() {
     look();
     const timer = setInterval(look, 30_000);
     return () => clearInterval(timer);
-  }, []);
-  if (companion) return null;
+  }, [hidden]);
+  if (companion || hidden) return null;
+  const dismiss = () => {
+    try {
+      localStorage.setItem('kx-companion', 'hidden');
+    } catch {
+      /* private mode */
+    }
+    setHidden(true);
+  };
   return (
-    <a
-      className="kx-statusbar-link"
-      href="https://github.com/erayendes/kortext/releases/latest/download/Kortext.zip"
-      title="A menu bar app for macOS: what waits on you, and a notification when something new does"
-    >
-      Menu bar app for macOS
-    </a>
+    <div className="kx-update kx-companion">
+      <span>Kortext can live in your menu bar — a notification when a document waits on you.</span>
+      <span className="kx-companion-actions">
+        <a
+          className="btn"
+          href="https://github.com/erayendes/kortext/releases/latest/download/Kortext.zip"
+        >
+          Download for macOS
+        </a>
+        <button className="kx-companion-close" onClick={dismiss} aria-label="Not now">
+          ×
+        </button>
+      </span>
+    </div>
   );
 }
 

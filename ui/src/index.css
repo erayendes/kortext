@@ -2611,6 +2611,30 @@ button.kx-note-exc:hover {
   font-size: var(--fs-body);
   font-weight: 500;
 }
+/* The companion offer borrows the update strip's shape in the panel's own greys. */
+.kx-companion {
+  border-color: var(--border);
+  background: var(--bg-subtle);
+  font-weight: 400;
+  color: var(--fg-secondary);
+}
+.kx-companion-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.kx-companion-close {
+  border: 0;
+  background: none;
+  padding: 0 4px;
+  font-size: var(--fs-heading);
+  line-height: 1;
+  color: var(--fg-faint);
+  cursor: pointer;
+}
+.kx-companion-close:hover {
+  color: var(--fg);
+}
 .kx-update-err {
   color: var(--red);
   font-size: var(--fs-label);
