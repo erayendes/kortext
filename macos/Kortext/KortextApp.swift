@@ -39,12 +39,10 @@ struct Popover: View {
     var body: some View {
         VStack(spacing: 0) {
             Header(settings: $settings)
-            Divider()
             if settings {
                 SettingsView()
             } else {
                 Content()
-                Divider()
                 StatusBar()
             }
         }
@@ -82,15 +80,14 @@ struct Header: View {
     @Binding var settings: Bool
     var body: some View {
         HStack {
-            if settings {
-                Button { settings = false } label: {
-                    HStack(spacing: 7) { Icon(name: "chevron.left", size: 11, color: Kx.fgSecondary, weight: .semibold); Image("wordmark").resizable().scaledToFit().frame(height: 14) }
-                }.buttonStyle(.plain)
-                Spacer()
-                ThemeCycle()
-            } else {
-                Image("wordmark").resizable().scaledToFit().frame(height: 14)
-                Spacer()
+            Button { settings.toggle() } label: {
+                HStack(spacing: 7) {
+                    if settings { Icon(name: "chevron.left", size: 11, color: Kx.fgSecondary, weight: .semibold) }
+                    Image("wordmark").resizable().scaledToFit().frame(height: 14)
+                }
+            }.buttonStyle(.plain)
+            Spacer()
+            if settings { ThemeCycle() } else {
                 Button { settings = true } label: { Icon(name: "gearshape", size: 13) }.buttonStyle(.plain)
             }
         }
@@ -155,11 +152,14 @@ struct ProjectCard: View {
 struct Message: View {
     let title: String; let sub: String
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title).font(Kx.sans(13, .medium)).foregroundStyle(Kx.fg)
-            Text(sub).font(Kx.sans(12)).foregroundStyle(Kx.fgMuted)
+        Card {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title).font(Kx.sans(13, .medium)).foregroundStyle(Kx.fg)
+                Text(sub).font(Kx.sans(12)).foregroundStyle(Kx.fgMuted)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading).padding(14)
         }
-        .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 12).padding(.vertical, 18)
+        .padding(12)
     }
 }
 
@@ -167,6 +167,7 @@ struct Message: View {
 struct Empty: View {
     @EnvironmentObject var model: Model
     var body: some View {
+        Card {
         VStack(alignment: .leading, spacing: 6) {
             Text("Nothing waiting on you").font(Kx.sans(13, .medium)).foregroundStyle(Kx.fg)
             if let r = model.runningLine {
@@ -182,13 +183,16 @@ struct Empty: View {
                 }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 12).padding(.vertical, 18)
+        .frame(maxWidth: .infinity, alignment: .leading).padding(14)
+        }
+        .padding(12)
     }
 }
 
 struct NotInstalled: View {
     @State private var copied = false
     var body: some View {
+        Card {
         VStack(alignment: .leading, spacing: 10) {
             Text("Kortext is not installed").font(Kx.sans(13, .medium)).foregroundStyle(Kx.fg)
             HStack(spacing: 8) {
@@ -204,7 +208,9 @@ struct NotInstalled: View {
             .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(.regularMaterial))
             .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(Color.primary.opacity(0.08), lineWidth: 1))
         }
-        .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 12).padding(.top, 18).padding(.bottom, 16)
+        .frame(maxWidth: .infinity, alignment: .leading).padding(14)
+        }
+        .padding(12)
     }
 }
 
@@ -238,7 +244,6 @@ struct WaitingRow: View {
 struct StatusBar: View {
     @EnvironmentObject var model: Model
     @State private var armed = false
-    @State private var hoverVersion = false
 
     var body: some View {
         let up = model.version != nil
@@ -254,15 +259,6 @@ struct StatusBar: View {
                 Text("Press again to quit and stop the server").font(Kx.sans(11, .medium)).foregroundStyle(Kx.red).lineLimit(1).fixedSize()
                     .padding(.horizontal, 8).frame(height: 20)
                     .background(Kx.red.opacity(0.09)).clipShape(Capsule())
-            } else if let v = model.version {
-                Button { model.checkUpdates() } label: {
-                    Text(model.update ?? "v\(v)").font(Kx.mono(10)).foregroundStyle(hoverVersion ? Kx.fg : Kx.fgMuted).lineLimit(1)
-                        .padding(.horizontal, 6).frame(height: 18)
-                        .background(hoverVersion ? Kx.bgHover : .clear)
-                        .overlay(Capsule().stroke(Kx.border, lineWidth: 1)).clipShape(Capsule())
-                }
-                .buttonStyle(.plain).onHover { hoverVersion = $0 }
-                .help("Check for updates")
             }
             Spacer()
             if !armed {
@@ -271,7 +267,6 @@ struct StatusBar: View {
             }
         }
         .padding(.leading, 12).padding(.trailing, 8).frame(height: 40)
-        .background(Color.primary.opacity(0.03))
         .onChange(of: armed) { _, on in if on { Task { try? await Task.sleep(for: .seconds(4)); armed = false } } }
     }
 
@@ -310,22 +305,17 @@ struct SettingsView: View {
                     loginItem.toggle()
                     try? loginItem ? SMAppService.mainApp.register() : SMAppService.mainApp.unregister()
                 }
-                Divider().padding(.leading, 14)
                 Row(icon: "bell", title: "Notify me", sub: "When a document waits on you.", on: notifications) {
                     notifications.toggle()
                     if notifications { model.ensureNotifications() }
                 }
-                Divider().padding(.leading, 14)
                 Row(icon: "arrow.down.circle", title: "Check for updates", sub: model.update ?? (model.version.map { "kortext \($0)" } ?? nil)) { model.checkUpdates() }
-                Divider().padding(.leading, 14)
                 Row(icon: "ladybug", title: "Report an issue") {
                     var u = "https://github.com/erayendes/kortext/issues/new?template=bug_report.yml"
                     if let v = model.version { u += "&version=\(v)" }
                     NSWorkspace.shared.open(URL(string: u)!)
                 }
-                Divider().padding(.leading, 14)
                 Row(icon: "heart", title: "Support Kortext") { NSWorkspace.shared.open(URL(string: "https://buymeacoffee.com/erayendes")!) }
-                Divider().padding(.leading, 14)
                 Row(icon: "xmark.circle", title: "Quit Kortext", trailing: "⌘Q") { NSApp.terminate(nil) }
             }
         }
