@@ -187,19 +187,18 @@ struct StatusBar: View {
     var body: some View {
         let up = model.version != nil
         HStack(spacing: 8) {
-            Circle().fill(up ? Kx.green : Kx.red).frame(width: 8, height: 8)
-            Text("Kortext").font(Kx.sans(11, .medium)).foregroundStyle(Kx.fgMuted)
             if model.installed {
                 Button { power() } label: {
                     Icon(name: "power", size: 12, color: armed ? Kx.red : up ? Kx.green : Kx.fgFaint, weight: .semibold).frame(width: 18, height: 18)
                 }
-                .buttonStyle(.plain).padding(.leading, -2)
+                .buttonStyle(.plain).padding(.leading, -3)
                 .help(!up ? "Start the server" : armed ? "Press again to stop" : "Stop the server")
-                if armed {
-                    Text("Press again to stop the server").font(Kx.sans(11, .medium)).foregroundStyle(Kx.red).lineLimit(1).fixedSize()
-                        .padding(.horizontal, 8).frame(height: 20)
-                        .background(Kx.red.opacity(0.14)).clipShape(Capsule())
-                }
+            }
+            Text("Kortext").font(Kx.sans(11, .medium)).foregroundStyle(Kx.fgMuted)
+            if armed {
+                Text("Press again to stop the server").font(Kx.sans(11, .medium)).foregroundStyle(Kx.red).lineLimit(1).fixedSize()
+                    .padding(.horizontal, 8).frame(height: 20)
+                    .background(Kx.red.opacity(0.09)).clipShape(Capsule())
             }
             Spacer()
             if !armed { Text("milowda").font(Kx.sans(11)).foregroundStyle(Kx.fgFaint).padding(.trailing, 4) }
