@@ -246,10 +246,7 @@ struct StatusBar: View {
                 .help(!up ? "Start the server and open the panel" : armed ? "Press again to quit Kortext and stop the server" : "Quit Kortext and stop the server")
                 if up, !armed {
                     Button { model.openPanel() } label: {
-                        HStack(spacing: 4) {
-                            Icon(name: "arrow.up.forward.app", size: 11, color: Kx.fgSecondary, weight: .medium)
-                            Text("Open panel").font(Kx.sans(11)).foregroundStyle(Kx.fgSecondary)
-                        }
+                        Text("Open panel").font(Kx.sans(11)).foregroundStyle(Kx.fgSecondary)
                     }
                     .buttonStyle(.plain).hand().help("Open the panel in your browser")
                 }
