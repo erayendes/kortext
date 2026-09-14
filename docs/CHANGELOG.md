@@ -2,6 +2,28 @@
 
 🇹🇷 [For Turkish press 1](tr/CHANGELOG.md)
 
+## [Unreleased]
+
+- **A menu bar app for macOS.** `Kortext.zip` on the release, notarized, updating itself. One
+  card per project with the documents that wait on you — `approve`, `review`, `failed` — and
+  the ones being written, grey; a row opens the panel on that document. ⏻ starts the server
+  or, pressed twice, stops it and quits. Launch at login brings the server up with it. A
+  notification when a document lands, a step fails, a brief is sent back or a chain settles,
+  in the project's language, opening the panel where it happened. On a Mac without it, the
+  panel offers it in the update strip's slot — one strip at a time.
+- **The engine line is the control.** `codex · default · high ›` beside Start opens the
+  picker; *Change model* is gone. Add project carries the same line and the same picker, the
+  effort always named.
+- **⚙ beside the project's name** unfolds Restart, Archive and Remove under the path, each
+  arming in place; the page's foot is empty. Restart wears amber. After the handshake the
+  engine line and its controls go — kortext has retired from that project.
+- **Approve anyway.** A draft that still carries a template line verbatim is refused as
+  before, but the panel now names the line and lets you insist.
+- **Continue holds** until the step is seen running; a second press no longer pauses it
+  again. A pause made elsewhere — the menu bar app, another tab — reaches the panel.
+- Two URLs reach in: `/?project=<id>` and `/?project=<id>&doc=<rel>`. The other tools sit
+  under the documents, not above them. Remove's warning no longer mentions Kopeng.
+
 ## [3.1.2] — 2026-09-14
 
 - **The update strip shows.** Under the heading of either screen, blue, the button at the

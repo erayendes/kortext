@@ -98,6 +98,14 @@ Buradan sonra Kortext işin içinde değildir.
 
 **Tema.** Sağ üstteki düğme auto → light → dark döner.
 
+## Menü çubuğu uygulaması
+
+Mac'te Kortext menü çubuğunda yaşayabilir. Panel onu başlığın altında sunar — **Download for macOS** — bir kopyası çalışana kadar; ya da son sürümden `Kortext.zip`'i alın. Kortext'in kurulu olması gerekir; değilse söyler ve kurulum komutunu sizin için kopyalar.
+
+Menü çubuğundaki K, kaç belgenin sizi beklediğini gösterir. Açın: proje başına bir kart, karar bekleyen belgeler beyaz ve panelin rozetleriyle, yazılmakta olanlar gri. Satıra basınca panel o belgede açılır. Altta ⏻ sunucuyu başlatır ya da — iki basışta — durdurur ve uygulamadan çıkar.
+
+Bir şey değişince haber verir: bir belge geldi ve onay bekliyor, bir adım başarısız oldu, bir brief sorularla geri döndü, bir zincir tamamlandı. Bildirim paneli olayın olduğu yerde açar. Ayarlar, logonun arkasında: login'de başlat (sunucu da onunla açılır), bildirimler açık/kapalı, güncelleme denetimi. Uygulama kendini güncel tutar; paket eskisi gibi panelden güncellenir.
+
 ## Bir şey ters gittiğinde
 
 **Bir adım başarısız oldu.** Satırda nedeni yazar. En sık neden kurulu ama oturum açmamış bir CLI'dır: terminalde bir kez çalıştırın, sonra **Retry**.

@@ -170,6 +170,10 @@ Neither the button nor `--stop` cuts a running step short; while one is in fligh
 
 What the background server prints collects in `~/.kortext/kortext.db.log`.
 
+## The menu bar app (macOS)
+
+Optional. `Kortext.zip` on the [latest release](https://github.com/erayendes/kortext/releases/latest) — notarized, updates itself. It needs kortext installed; it shows what waits on you, opens the panel on a document, starts and stops the server, and sends a notification when a document lands or a step fails. The panel offers it under the heading on a Mac that has none running.
+
 ## Update and uninstall
 
 When a new version is out, the panel says so in a blue strip under the heading — it checks when opened and then every hour. **Update now** runs the install for you, then offers **Quit**; the new version takes over once you start kortext again. If a step is running, the button waits for it rather than swapping the files underneath. By hand, or if the button fails:

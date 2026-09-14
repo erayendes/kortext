@@ -2,6 +2,29 @@
 
 🇬🇧 [For English press 9](../CHANGELOG.md)
 
+## [Unreleased]
+
+- **macOS için menü çubuğu uygulaması.** Sürümün yanında `Kortext.zip`, notarize edilmiş,
+  kendini güncelleyen. Proje başına bir kart: sizi bekleyen belgeler — `approve`, `review`,
+  `failed` — ve yazılmakta olanlar, gri; satıra basınca panel o belgede açılır. ⏻ sunucuyu
+  başlatır ya da iki basışta durdurup uygulamadan çıkar. Login'de açılınca sunucuyu da
+  kaldırır. Bir belge geldiğinde, bir adım başarısız olduğunda, bir brief geri döndüğünde ya da
+  bir zincir tamamlandığında bildirim — projenin dilinde, paneli olayın olduğu yerde açan.
+  Uygulaması olmayan Mac'te panel onu güncelleme şeridinin yerinde sunar — bir seferde tek
+  şerit.
+- **Motor satırı kontrolün kendisi.** Start'ın yanındaki `codex · default · high ›` seçiciyi
+  açar; *Change model* gitti. Proje ekleme de aynı satırı ve aynı seçiciyi taşır, efor hep
+  yazılı.
+- **Proje adının yanındaki ⚙** Restart, Archive ve Remove'u yolun altında açar, her biri
+  yerinde onay ister; sayfanın altı boş. Restart kehribar. El sıkışmadan sonra motor satırı ve
+  düğmeleri gider — kortext o projeden çekilmiştir.
+- **Approve anyway.** Şablon satırını olduğu gibi taşıyan taslak yine reddedilir, ama panel
+  artık satırı gösterir ve ısrar etmenize izin verir.
+- **Continue tutar** adım koşar görülene kadar; ikinci basış artık tekrar duraklatmaz. Başka
+  yerden — menü çubuğu uygulaması, başka sekme — yapılan duraklatma panele ulaşır.
+- İki URL içeri girer: `/?project=<id>` ve `/?project=<id>&doc=<rel>`. Diğer araçlar
+  belgelerin altında, üstünde değil. Remove'un uyarısı Kopeng'den söz etmez.
+
 ## [3.1.2] — 2026-09-14
 
 - **Güncelleme şeridi görünür.** Başlığın altında herhangi bir kart gibi duran gri satır yerine

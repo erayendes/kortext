@@ -70,7 +70,7 @@ Any document carrying a failure or something waiting on you rises to **Action ne
 
 ## Running, pausing, changing the engine
 
-The engine — `claude`, `codex`, `antigravity` and the others in the list. At the right, under the buttons, a line says what runs it — `claude · sonnet · high`. **Change model**, before Continue, opens the picker: the CLI (what is installed), its model with a line about each, its effort. Every pick saves at once. You choose the CLI when adding the project, and you can change it whenever you like. When a quota runs out, changing it is all there is to do.
+The engine — `claude`, `codex`, `antigravity` and the others in the list. At the right, beside Start, a line says what runs it — `claude · sonnet · high ›` — and pressing it opens the picker: the CLI (what is installed), its model with a line about each, its effort. Every pick saves at once. The same line sits on the Add project form, so you choose before Initialize; and you can change it whenever you like. When a quota runs out, changing it is all there is to do.
 
 The second section of the picker is the **model**. `default` uses the CLI's own setting. Pick a model and it is passed to the CLI on every run (`claude --model`, `codex -m`).
 
@@ -78,9 +78,14 @@ A third, **effort**, appears for the CLIs that have the notion — `claude --eff
 
 - **Pause** stops new steps from starting; the running step stops too.
 - **Continue** picks up where it left off.
+
+The rest sit behind the ⚙ beside the project's name; press it and they unfold under the path, each asking once more before it acts:
+
 - **Restart** deletes the analysis documents and keeps `BRIEF.md` as it is. The project comes back paused; **Start** begins again.
 - **Archive** puts a finished project on the shelf. The repo is untouched.
 - **Remove** deletes the `.kortext/` folder (brief included), the Kortext block in `AGENTS.md`, the pointer line in `CLAUDE.md` and the project's logs, then takes the project off the list. What you wrote yourself in `AGENTS.md` and `CLAUDE.md` stays.
+
+Once every document is settled the engine line and its buttons go — Kortext has nothing left to run there.
 
 ## The handshake
 
@@ -97,6 +102,14 @@ From here on, Kortext is not in the loop.
 **The update strip**, under the heading of either screen, in blue, only when npm has a newer version — the panel looks once when opened and then every hour, so a release lands while it sits open. **Update now** installs it; then the strip offers **Quit** — press it, start kortext again, and the new version takes over.
 
 **Theme.** The button at the top right cycles auto → light → dark.
+
+## The menu bar app
+
+On a Mac, Kortext can live in the menu bar. The panel offers it under the heading — **Download for macOS** — until a copy is running; or fetch `Kortext.zip` from the latest release. It needs kortext installed; without it, it says so and copies the install command for you.
+
+The K in the menu bar shows how many documents wait on you. Open it: one card per project, the documents that need a decision in white with the panel's badges, the ones being written in grey. A row opens the panel on that document. At the bottom, ⏻ starts the server, or — pressed twice — stops it and quits the app.
+
+It tells you when something changes: a document landed and waits for approval, a step failed, a brief came back with questions, a chain settled. The notification opens the panel where it happened. Settings, behind the logo: launch at login (the server starts with it), notifications on or off, check for updates. The app keeps itself current; the package updates from the panel as before.
 
 ## When something goes wrong
 

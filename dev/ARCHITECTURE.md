@@ -44,8 +44,12 @@ kortext (npm package, installed globally)
 │   ├─ DocDrawer.tsx  read, line-anchored chat, requests, edit, approve
 │   ├─ Drawer.tsx · api.ts · markdown.ts · highlight.ts · index.css (see DESIGN.md)
 │
-└─ package content (embedded in prompts / scaffolded)
-    workflows/ 3 · templates/ AGENTS.md + docs/ 15 skeletons (14 analysis + BRIEF) · agents/ 10 personas
+├─ package content (embedded in prompts / scaffolded)
+│   workflows/ 3 · templates/ AGENTS.md + docs/ 15 skeletons (14 analysis + BRIEF) · agents/ 10 personas
+│
+└─ macos/ (SwiftUI, not in the npm package — see § 11)
+    Kortext/  KortextApp.swift · StatusItem.swift · Model.swift · Api.swift · Theme.swift
+    project.yml (xcodegen) · appcast.xml (Sparkle feed) · script/gen_appcast_item.py
 ```
 
 One process, one port (default **3441**), and it outlives the terminal: `kortext` respawns
@@ -272,18 +276,18 @@ No fs-watch — the panel polls (docs 3s, transfer 4s, handshake 5s).
 
 | Route | Does |
 | --- | --- |
-| `GET /api/health` | ok · db path · the version actually **running** (the status bar's dot polls it) |
+| `GET /api/health` | ok · db path · the version actually **running** (the status bar's dot polls it) · `companion`, true while the menu bar app has polled in the last 30 s |
 | `GET /api/version` | current · newest on npm · whether the update strip shows |
 | `POST /api/version/update` | run `npm install -g kortext@latest`; 409 while a step runs — and while it runs, every other route but `/health` answers 409, so nothing reads or writes under a package being replaced |
 | `POST /api/quit` | stop the server (⏻ button, `--stop`); 409 while a step runs |
-| `GET \| POST /api/projects` | list (with per-group progress) · add (born paused) |
+| `GET \| POST /api/projects` | list (with per-group progress) · add (born paused; takes `model` and `effort` from the picker, checked against the CLI's spec) |
 | `DELETE /api/projects/:id` | unregister only; files untouched |
 | `GET \| PUT /api/engines` | detect the installed CLIs · the global fallback choice |
 | `POST /api/pick-directory` | macOS chooser; `null` elsewhere |
 | `PUT …/engine` | the CLI this project runs on |
 | `PUT …/model` | the model that CLI is told to use (`--model` / `-m`); empty = the CLI's default |
 | `PUT …/effort` | reasoning effort, from the spec's `efforts`; a flag (`--effort`) or a config override (`-c model_reasoning_effort=`) |
-| `GET /api/projects/:id/jobs` | last 50 + the running one |
+| `GET /api/projects/:id/jobs` | last 50 + the running one + `paused`, so a panel learns of a pause made elsewhere |
 | `POST …/run-next` | nudge the chain by hand |
 | `GET …/readiness` | the gate's standing verdict + whether a check is out |
 | `POST …/pause` | pause / continue (continue kicks the chain) |
@@ -292,7 +296,7 @@ No fs-watch — the panel polls (docs 3s, transfer 4s, handshake 5s).
 | `POST …/archive` | shelve — row and repo both stay |
 | `GET …/docs` | document list (+ idempotent self-heal scaffold) |
 | `GET \| PUT …/docs/content` | read content + SHA-256 version · write with `expectedVersion` (409 on conflict or active writer; approved edits queue reader checks) |
-| `POST …/docs/approve` | `draft → approved` with `expectedVersion`; refuses open questions, stale text and active writers; records a version and queues reader checks |
+| `POST …/docs/approve` | `draft → approved` with `expectedVersion`; refuses open questions, stale text and active writers; refuses template lines left verbatim (409 with `placeholders`) unless `force` — the drawer lists them and offers **Approve anyway**; records a version and queues reader checks |
 | `GET …/docs/history[/:id]` | the recorded versions of one document · the text of one of them |
 | `POST …/docs/propose` | returns a drafted revision for the brief |
 | `POST …/docs/retry` | repeats the latest failed/stopped document job with its saved notes, or resumes pending rechecks |
@@ -312,10 +316,20 @@ the answers are gone.
 ## 7 · Panel
 
 **Project list** (per-card progress, archive group) → **project screen**
-(Start/Continue/Pause · Restart/Archive/Cancel · Documents · handshake card · TransferPanel when
-kopeng is installed) → **DocDrawer**: read (own markdown, mermaid and highlighting), select a
-line to talk to the persona, decide incoming and outgoing requests one by one, edit directly,
-Approve. Destructive buttons arm in place — browsers silently suppress repeated `confirm()`.
+(Start/Continue/Pause · the engine line `codex · default · high ›`, which is the control that
+opens the picker · ⚙ beside the name, which unfolds Restart/Archive/Remove under the path, each
+arming in place · Documents · handshake card · TransferPanel when kopeng is installed) →
+**DocDrawer**: read (own markdown, mermaid and highlighting), select a line to talk to the
+persona, decide incoming and outgoing requests one by one, edit directly, Approve. Destructive
+buttons arm in place — browsers silently suppress repeated `confirm()`. Once every document is
+settled the engine line and its controls go: kortext has retired from that project.
+
+Two URLs reach into the panel: `/?project=<id>` opens a project, `/?project=<id>&doc=<rel>`
+opens it on a document (the drawer). The menu bar app and its notifications link there; the
+`doc` part is consumed on arrival so a reload lands on the project, not the drawer.
+
+**Add project** picks the engine the way the project screen does — the same picker, with no
+project yet: picks stay local and go with Initialize (`model` and `effort` in the create body).
 
 The chrome around it. The **header** carries the wordmark (one PNG per theme), the no-CLI
 warning when there is nothing on the `PATH`, and at the far right one cycling **theme** button
@@ -324,15 +338,17 @@ warning when there is nothing on the `PATH`, and at the far right one cycling **
 install — one check owned by `App` (`useUpdate`), asked of `/api/version` on open and hourly,
 while the server asks the registry at most hourly; **Update now** calls `/api/version/update`,
 and afterwards the strip offers **Quit** (`/api/quit`), because the process on screen is still
-the old one. At the bottom, an application
+the old one. The same slot carries the **companion strip** — "Kortext can live in your menu
+bar", **Download for macOS**, × — on a Mac, only while `/api/health` reports no companion, and
+never beside the update strip: one strip at a time, the update first. At the bottom, an application
 **status bar** (34px, never wrapping): the server dot — green while `/api/health` answers, red
 the moment it stops and green again on its own when it comes back — the version, the ⏻ button
 (two clicks, no `confirm()`), the restart command as a click-to-copy chip once the server is
 down, and the Milowda credit, a popover that lists the other tools only when clicked.
 
 The **Milowda strip** names those tools once more where there is room: six cards under the
-project list, and on a project screen one full-width slide that advances every seven seconds
-and holds while the pointer is on it. Its × hides both for good (`localStorage`, two clicks —
+project list, and on a project screen one full-width slide under the documents that advances
+every seven seconds and holds while the pointer is on it. Its × hides both for good (`localStorage`, two clicks —
 the second is not undoable from the panel, so it asks in red).
 
 The vocabulary splits in two: **status** (where the document is) and **badge** (what wants
@@ -381,3 +397,42 @@ build → `node dist/index.js --help` smoke.
 - **No dependency on Kopeng** — just `which kopeng`; the transfer button hides when it is absent.
 - **No fs-watch** — polling costs a few seconds and avoids per-platform event behaviour.
 - **No authentication** — `localhost` only, one user's machine.
+
+---
+
+## 11 · macOS companion
+
+A menu bar app, `macos/`, that is a plain client of the REST surface above — the server gained
+`companion` on `/api/health` and `paused` on `/jobs` for it, nothing else. It is not in the npm
+package; it ships as a notarized `Kortext.zip` on the GitHub release and keeps itself current
+through Sparkle (`macos/appcast.xml`, written by the release workflow). Without it kortext
+works in full; without kortext it says so and copies `npm i -g kortext`.
+
+**What it shows.** The K mark in the menu bar, dimmed while the server is down, with a count
+of decisions waiting. Its panel — `NSPanel` under the icon, centred, `hudWindow` / `popover`
+material, closed by a click elsewhere or Esc — is one card per project with rows for the
+documents the panel would list under *Action needed* and *Doing*, wearing the panel's own
+badges from the server's `section · state · detail`: `approve`, `review`, `recheck`, `failed`,
+`writing…`, `reading…`. A row that needs you opens the panel on that document; a row in flight
+is grey and inert. The list scrolls once its estimated height would outgrow the screen — the
+panel is sized when it opens, so the height is counted, not measured. The status bar is the
+panel's: ⏻ (green up, grey down; first press arms, second stops the server and quits the app)
+and the credit. Settings, behind the wordmark or ⚙: launch at login (which also starts the
+server), notifications, check for updates (the app asks Sparkle about itself and the daemon
+about the package), report an issue, support, quit; the theme cycles auto → light → dark in
+the header.
+
+**Notifications.** `UNUserNotificationCenter`, from poll deltas, in the project's `doc_lang`:
+a step `running → done` (ready — awaiting approval), `running → failed`, a brief the gate sent
+back, a chain that settled. Each carries `project` and `doc` and opens the panel there. Nothing
+on start, revision, recheck or the server going up or down — those live in the icon.
+
+**Finding kortext.** A GUI app's `PATH` knows nothing of npm; the app runs `kortext` through
+`zsh -lic` so `.zprofile` (Homebrew) and `.zshrc` (nvm, fnm, volta) both count. Every request
+carries `User-Agent: Kortext-mac/<version>`; that is the companion signal.
+
+**Release.** `.github/workflows/macos-release.yml`, on the same `v*` tag as npm: xcodegen →
+Release build → Developer ID signature inside-out (Sparkle's XPCs first, no `--deep`) →
+notarize and staple → `Kortext.zip` → `sign_update` → a new item in `macos/appcast.xml`
+committed to `main` → attached to the tag's release. Secrets: the Developer ID p12, the App
+Store Connect API key, the Sparkle private key. Build number `major·10⁶ + minor·10³ + patch`.
