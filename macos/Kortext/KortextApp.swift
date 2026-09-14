@@ -136,16 +136,13 @@ struct ProjectCard: View {
                 Spacer()
                 Text("\(p.project.docCounts.settled)/\(p.project.docCounts.total)").font(Kx.mono(10)).foregroundStyle(Color.primary.opacity(0.35))
                 if !p.writing.isEmpty {
-                    PillButton(kind: .approve, icon: "pause.fill", text: "Pause") { model.pause(p) }
+                    Button { model.pause(p) } label: { Icon(name: "pause.fill", size: 10, color: Kx.fgSecondary).frame(width: 16, height: 16) }.buttonStyle(.plain).help("Pause")
                 } else if (p.project.paused ?? 0) == 1, !p.complete {
-                    PillButton(kind: .questions, icon: "play.fill", text: "Continue") { model.resume(p) }
+                    Button { model.resume(p) } label: { Icon(name: "play.fill", size: 10, color: Kx.fgSecondary).frame(width: 16, height: 16) }.buttonStyle(.plain).help("Continue")
                 }
             }
             .padding(.horizontal, 14).padding(.top, 11).padding(.bottom, 4)
-            ForEach(Array(rows.enumerated()), id: \.element.id) { i, w in
-                if i > 0 { Divider().padding(.leading, 14) }
-                WaitingRow(w: w)
-            }
+            ForEach(rows) { w in WaitingRow(w: w) }
         }
         .padding(.bottom, 4)
         // mimir's card: the system's regular material on the glass, a hairline around it.
@@ -203,11 +200,12 @@ struct WaitingRow: View {
     @EnvironmentObject var model: Model
     let w: Model.Waiting
     @State private var hover = false
+    private var isWriting: Bool { if case .writing = w.why { return true }; return false }
 
     var body: some View {
         Button { model.openPanel(project: w.project.id, doc: w.rel) } label: {
             HStack(spacing: 10) {
-                Text(w.rel).font(Kx.mono(13, .medium)).foregroundStyle(Kx.fg)
+                Text(w.rel).font(Kx.mono(13, .medium)).foregroundStyle(isWriting ? Kx.fgMuted : Kx.fg)
                 Spacer(minLength: 0)
                 switch w.why {
                 case .approve: Pill(kind: .approve, text: "Approve")
