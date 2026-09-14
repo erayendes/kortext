@@ -2,16 +2,16 @@
 
 🇬🇧 [For English press 9](../CHANGELOG.md)
 
-## [Yayımlanmamış]
+## [3.1.1] — 2026-09-14
 
-- **Change model.** CLI, model ve effort proje adının altında tek satır — `claude · sonnet · high`
-  — ve CLI'ların kendi ekranı gibi bir seçicide değişir: chip'ler, her biri bir satır açıklamalı
+- **Change model.** CLI, model ve effort düğmelerin altında, proje adının sağında tek satır —
+  `claude · sonnet · high` — ve CLI'ların kendi ekranı gibi bir seçicide değişir: chip'ler, her biri bir satır açıklamalı
   model listesi, effort segmenti. Her seçim anında kaydedilir.
-- **Proje başına effort.** Modelin yanında üçüncü bir liste, bu kavramı bilen CLI'lar için:
+- **Proje başına effort.** Aynı pencerede üçüncü bir seçim, bu kavramı bilen CLI'lar için:
   `claude --effort`, codex'in `model_reasoning_effort`'u, `agy --effort` — her CLI'ın kendi
   seçicisinin sunduğu seviye ve modellerle.
-- Satırdaki hata nedeni kesilmeden önce iki satıra sarar; çekmecede düz yazı 100 karaktere
-  kadar uzar.
+- Satırdaki hata nedeni belge adının altında kendi satırında durur, kesilmeden önce iki satır;
+  çekmecede düz yazı 100 karaktere kadar uzar.
 - **Logo.** Yeni yazı markası ve ikon: açık temada eskiz kılavuzları üzerinde çizgi harfler,
   koyuda dolu; favicon tek başına `x`. Panel başlığı, README ve favicon bunları kullanır.
 - **Daha geniş çekmece.** 720'den 880px'e; bantlar, tablolar, kod ve tasarım sayfası için.

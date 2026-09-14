@@ -2,16 +2,16 @@
 
 🇹🇷 [For Turkish press 1](tr/CHANGELOG.md)
 
-## [Unreleased]
+## [3.1.1] — 2026-09-14
 
-- **Change model.** The CLI, model and effort read as one line under the project's name —
-  `claude · sonnet · high` — and are changed in a picker that reads like the CLIs' own: chips,
+- **Change model.** The CLI, model and effort read as one line under the buttons, at the
+  right of the project's name — `claude · sonnet · high` — and are changed in a picker that reads like the CLIs' own: chips,
   a model list with a line about each, an effort segment. Every pick saves at once.
-- **Effort, per project.** A third dropdown beside the model, for the CLIs that have the
+- **Effort, per project.** A third pick in the same dialog, for the CLIs that have the
   notion: `claude --effort`, codex's `model_reasoning_effort`, `agy --effort` — with the levels
   and models each CLI's own picker offers.
-- The failure reason in a row wraps to two lines before it is cut; prose in the drawer runs to
-  100 characters.
+- The failure reason sits on its own line under the document's name, two lines before it is
+  cut; prose in the drawer runs to 100 characters.
 - **The mark.** New wordmark and icon: outlines over sketch guides in light, solid in dark,
   the `x` alone as the favicon. Panel header, README and favicon use them.
 - **A wider drawer.** 880px, up from 720, for the bands, tables, code and the design page;
