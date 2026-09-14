@@ -7,7 +7,24 @@
     <link>https://github.com/erayendes/kortext</link>
     <description>Kortext menu bar app update feed</description>
     <language>en</language>
-          <item>
+              <item>
+      <title>Kortext 3.2.0-beta.3</title>
+      <sparkle:channel>beta</sparkle:channel>
+      <sparkle:version>3001993</sparkle:version>
+      <sparkle:shortVersionString>3.2.0-beta.3</sparkle:shortVersionString>
+      <pubDate>Mon, 14 Sep 2026 21:34:39 +0000</pubDate>
+      <description><![CDATA[
+<p>Kortext 3.2.0-beta.3.</p>
+      ]]></description>
+      <enclosure
+        url="https://github.com/erayendes/kortext/releases/download/v3.2.0-beta.3/Kortext.zip"
+        sparkle:edSignature="a6CxK0o2KQh5skb7Wzc02APiygX1kw+TPNG0axBwvu372aUURUQVfIo40Yw+ewBjQMpeUwbw+2C3Ot23E09BBA=="
+        length="1363641"
+        type="application/octet-stream"
+        sparkle:minimumSystemVersion="14.0"/>
+    </item>
+
+<item>
       <title>Kortext 3.2.0-beta.2</title>
       <sparkle:channel>beta</sparkle:channel>
       <sparkle:version>3001992</sparkle:version>
