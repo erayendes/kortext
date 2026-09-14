@@ -1165,6 +1165,14 @@ function Field({
   );
 }
 
+/** `codex · default · high` — model and effort both named; unset ones read as
+ * the CLI's own default, the effort by the level its spec marks as such. */
+function engineLine(engines: EngineInfo[], engine: string | null, model: string, effort: string) {
+  const spec = engines.find((e) => e.id === engine) ?? engines[0];
+  const defaultEffort = spec?.efforts?.find((lvl) => /CLI default/.test(spec.about?.[lvl] ?? ''));
+  return [spec?.id, model || 'default', effort || defaultEffort || 'default'].join(' · ');
+}
+
 function AddProject({
   onDone,
   onCancel,
@@ -1440,7 +1448,15 @@ function AddProject({
         onEffort={setEffort}
         onError={setErr}
       />
-      {/* As the project screen: the actions in one row, the engine line under them. */}
+      {/* Under a hairline: what will run, then the actions. */}
+      {engines.length > 0 && (
+        <span
+          className="kx-engine-line kx-form-engine mono"
+          title="The CLI that writes this project's documents, its model and effort"
+        >
+          {engineLine(engines, engine, model, effort)}
+        </span>
+      )}
       <div className="kx-form-row">
         {engines.length > 0 && (
           <button className="btn btn-link-primary" onClick={() => setPicking(true)}>
@@ -1455,14 +1471,6 @@ function AddProject({
         </button>
         {err && <span className="kx-field-err">{err}</span>}
       </div>
-      {engines.length > 0 && (
-        <span
-          className="kx-engine-line mono"
-          title="The CLI that writes this project's documents, its model and effort"
-        >
-          {[engine ?? engines[0]?.id, model || 'default', effort].filter(Boolean).join(' · ')}
-        </span>
-      )}
     </div>
   );
 }
@@ -1620,7 +1628,7 @@ function ProjectScreen({
                 className="kx-engine-line mono"
                 title="The CLI this project runs on, its model and effort"
               >
-                {[engine ?? engines[0]?.id, model || 'default', effort].filter(Boolean).join(' · ')}
+                {engineLine(engines, engine, model, effort)}
               </span>
             )}
           </div>
