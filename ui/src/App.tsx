@@ -239,6 +239,8 @@ function CompanionStrip({ quiet }: { quiet: boolean }) {
         <a
           className="btn btn-primary"
           href="https://github.com/erayendes/kortext/releases/latest/download/Kortext.zip"
+          target="_blank"
+          rel="noreferrer"
         >
           Download for macOS
         </a>
