@@ -201,7 +201,7 @@ Kortext ücretsizdir ve MIT lisanslıdır. İşinizde bir yer edinirse,
 
 ## Belgeler
 
-[Kılavuz](GUIDE.md) — panelin anlatımı · [Değişiklik günlüğü](CHANGELOG.md)
+[GUIDE](GUIDE.md) — panelin anlatımı · [CHANGELOG](CHANGELOG.md)
 
 ## Lisans
 

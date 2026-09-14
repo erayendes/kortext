@@ -201,7 +201,7 @@ Kortext is free and MIT-licensed. If it earns a place in your work,
 
 ## Docs
 
-[Guide](docs/GUIDE.md) — the panel, explained · [Changelog](docs/CHANGELOG.md)
+[GUIDE](docs/GUIDE.md) — the panel, explained · [CHANGELOG](docs/CHANGELOG.md)
 
 ## License
 

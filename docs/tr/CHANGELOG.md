@@ -2,7 +2,7 @@
 
 🇬🇧 [For English press 9](../CHANGELOG.md)
 
-## [Yayımlanmamış]
+## [3.1.0] — 2026-09-14
 
 İlk açık sürüm.
 
