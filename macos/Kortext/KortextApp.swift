@@ -114,7 +114,7 @@ struct DocRow: View {
                 if doc.status == "draft" {
                     Button("Approve") { model.approve(p, doc) }
                 }
-                Button("Open") { model.openPanel() }
+                Button("Open") { model.openPanel(p, doc) }
             }
             .controlSize(.mini)
             if let e = model.errors["\(p.id)/\(doc.rel)"] {

@@ -75,8 +75,8 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
         seenJobs[job.id] = job.status
         guard primed, was == "running", job.status != "running" else { return }
         switch job.status {
-        case "done": notify(p.code, "\(job.doc_rel) ready — awaiting approval")
-        case "failed": notify(p.code, "\(job.doc_rel) could not be written", job.error?.split(separator: "\n").first.map(String.init))
+        case "done": notify(p.code, "\(job.doc_rel) ready — awaiting approval", project: p.id, doc: job.doc_rel)
+        case "failed": notify(p.code, "\(job.doc_rel) could not be written", job.error?.split(separator: "\n").first.map(String.init), project: p.id, doc: job.doc_rel)
         default: break
         }
     }
@@ -85,24 +85,27 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
         let id = s.id
         if s.notReady, !seenNotReady.contains(id) {
             seenNotReady.insert(id)
-            if primed { notify(s.project.code, "Brief too thin — answer the questions") }
+            if primed { notify(s.project.code, "Brief too thin — answer the questions", project: id, doc: "BRIEF.md") }
         } else if !s.notReady { seenNotReady.remove(id) }
         if s.complete, !seenComplete.contains(id) {
             seenComplete.insert(id)
-            if primed { notify(s.project.code, "Ready — AGENTS.md in force", "\(s.project.docCounts.total) documents settled") }
+            if primed { notify(s.project.code, "Ready — AGENTS.md in force", "\(s.project.docCounts.total) documents settled", project: id) }
         } else if !s.complete { seenComplete.remove(id) }
     }
 
     // Show the banner even when this app counts as frontmost (it has no window to be behind).
     nonisolated func userNotificationCenter(_ c: UNUserNotificationCenter, willPresent n: UNNotification) async -> UNNotificationPresentationOptions { [.banner, .list] }
     nonisolated func userNotificationCenter(_ c: UNUserNotificationCenter, didReceive r: UNNotificationResponse) async {
-        await MainActor.run { NSWorkspace.shared.open(Api.base) }
+        let info = r.notification.request.content.userInfo
+        await MainActor.run { openPanel(project: info["project"] as? Int, doc: info["doc"] as? String) }
     }
 
-    func notify(_ title: String, _ body: String, _ subtitle: String? = nil) {
+    func notify(_ title: String, _ body: String, _ subtitle: String? = nil, project: Int? = nil, doc: String? = nil) {
         let c = UNMutableNotificationContent()
         c.title = title; c.body = body
         if let subtitle { c.subtitle = subtitle }
+        if let project { c.userInfo["project"] = project }
+        if let doc { c.userInfo["doc"] = doc }
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: UUID().uuidString, content: c, trigger: nil))
     }
 
@@ -117,7 +120,15 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
 
     func startDaemon() { Shell.run("kortext --no-open"); Task { try? await Task.sleep(for: .seconds(2)); await poll() } }
     func stopDaemon() { Shell.run("kortext --stop"); Task { await poll() } }
-    func openPanel() { NSWorkspace.shared.open(Api.base) }
+    func openPanel(_ p: ProjectState? = nil, _ doc: Doc? = nil) { openPanel(project: p?.id, doc: doc?.rel) }
+    func openPanel(project: Int?, doc: String?) {
+        var c = URLComponents(url: Api.base, resolvingAgainstBaseURL: false)!
+        if let project {
+            c.queryItems = [URLQueryItem(name: "project", value: String(project))]
+            if let doc { c.queryItems?.append(URLQueryItem(name: "doc", value: doc)) }
+        }
+        NSWorkspace.shared.open(c.url!)
+    }
 }
 
 enum Shell {

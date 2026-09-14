@@ -33,6 +33,21 @@ export function App() {
     refresh();
   }, []);
 
+  // `/?project=<id>&doc=<rel>` opens straight onto a document — the menu bar
+  // app links here. Read once, when the list first arrives.
+  const linked = useRef(new URLSearchParams(location.search).get('project'));
+  useEffect(() => {
+    if (!linked.current || projects.length === 0) return;
+    const p = projects.find((x) => String(x.id) === linked.current);
+    linked.current = null;
+    if (p) setSelected(p);
+  }, [projects]);
+  useEffect(() => {
+    if (linked.current) return;
+    const url = selected ? `/?project=${selected.id}` : '/';
+    if (location.pathname + location.search !== url) history.replaceState(null, '', url);
+  }, [selected]);
+
   const live = projects.filter((p) => !p.archived);
   const archived = projects.filter((p) => p.archived);
   const unarchive = (p: Project) =>
@@ -1753,6 +1768,14 @@ function DocumentsTab({
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project.id]);
+
+  const linkedDoc = useRef(new URLSearchParams(location.search).get('doc'));
+  useEffect(() => {
+    if (!linkedDoc.current || docs.length === 0) return;
+    const d = docs.find((x) => x.rel === linkedDoc.current);
+    linkedDoc.current = null;
+    if (d) setOpen(d);
+  }, [docs]);
 
   const retry = (doc: DocInfo) =>
     api
