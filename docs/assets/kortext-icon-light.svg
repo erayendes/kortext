@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Kortext — sketch, blueprint, final (light)</title>
+  <desc id="desc">Transparent light icon: upper-left arm has empty gray contours and sketch guides; lower-left arm has empty blue contours and blueprint guides; continuous right side is solid black.</desc>
+  <g transform="translate(89.29525000000001 85) scale(1.8)">
+    <g id="sketch-guides" fill="none" stroke="#60636a" stroke-linecap="round">
+      <path opacity=".28" stroke-width=".65" d="M-11 0H65M0-12V95M52.64-10V11M50-7L94 55M-6-8L66 95"/>
+      <path opacity=".17" stroke-width=".45" d="M-8 1L62-.5M1-9L-.5 91M51-5L91 52"/>
+    </g>
+    <g id="sketch" fill="none" stroke="#60636a" stroke-linejoin="miter">
+      <path fill="none" stroke="#60636a" stroke-width="1.4" d="M0 0L52.6399 0L86.5167 48.5459L60.1967 86.2628Z"/>
+      <path opacity=".22" stroke-width=".55" transform="translate(.55 -.35)" d="M0 0L52.6399 0L86.5167 48.5459L60.1967 86.2628Z"/>
+    </g>
+    <g id="blueprint-guides" fill="none" stroke="#0865ff" stroke-width=".65">
+      <path opacity=".43" stroke-dasharray="5 3" d="M0 112V203M52.64 136V203M-12 190H97M47 103.74H95M64 141.45H98"/>
+      <path opacity=".27" d="M-6 198L65 96M48 197L92 133M-5 190H5M0 185V195M47.64 190H57.64M52.64 185V195"/>
+    </g>
+    <path id="blueprint" fill="none" stroke="#0865ff" stroke-width="1.4" stroke-linejoin="miter" d="M60.1967 103.7372L86.5167 141.4541L52.6399 190L0 190Z"/>
+    <path id="final" fill="#202123" d="M132.5875 0L185.2275 0L118.9337 95L185.2275 190L132.5875 190L66.2937 95Z"/>
+  </g>
+</svg>

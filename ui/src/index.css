@@ -1,6 +1,9 @@
 /* Panel styles and design tokens; see dev/DESIGN.md. */
 
 :root {
+  /* The page's own answer to "light or dark" — what an <img> hands the SVG
+     inside it, so the wordmark's palette follows the panel's theme, not the OS. */
+  color-scheme: light;
   /* Neutral colors */
 
   --gray-300: #e0e0e4;
@@ -104,6 +107,7 @@
 /* ---------- dark theme ---------- */
 /* Repeat dark values for explicit and OS-selected themes to avoid a script-dependent theme flash. */
 :root[data-theme='dark'] {
+  color-scheme: dark;
   --border-hover: #3a3a40;
 
   --gray-300: #2c2c31;
@@ -155,6 +159,7 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
+    color-scheme: dark;
     --border-hover: #3a3a40;
 
     --gray-300: #2c2c31;
@@ -632,6 +637,173 @@ body {
 .input:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* The dialog: the panel's one centered overlay, for the engine picker. Same
+   backdrop as the drawer, the elevated surface, the large shadow; it sits in
+   the middle because it is a decision, not a document. */
+.kx-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 560px;
+  max-width: 94vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-lg);
+  z-index: 62;
+  padding: 18px 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.kx-dialog-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.kx-dialog-title {
+  font-size: var(--fs-section);
+  font-weight: 600;
+}
+.kx-dialog-hint {
+  font-size: var(--fs-ui);
+  color: var(--fg-faint);
+}
+.kx-dialog-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 4px;
+}
+.kx-picker-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+/* The CLI as chips: the drawn box vocabulary, one on at a time. */
+.kx-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.kx-chip {
+  height: var(--control-h);
+  padding: 0 12px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--fg);
+  font-size: var(--fs-ui);
+  font-family: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.kx-chip:hover {
+  border-color: var(--border-strong);
+}
+.kx-chip.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+}
+.kx-chip-note {
+  font-size: var(--fs-micro);
+  opacity: 0.7;
+}
+/* The models: one row each, a mark, the name in mono, one line about it. */
+.kx-picker-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+.kx-pick {
+  display: grid;
+  grid-template-columns: 14px minmax(190px, max-content) 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+  color: var(--fg);
+  text-align: left;
+  font-family: inherit;
+  font-size: var(--fs-body);
+  cursor: pointer;
+}
+.kx-pick:last-child {
+  border-bottom: 0;
+}
+.kx-pick:hover {
+  background: var(--bg-subtle);
+}
+.kx-pick.on {
+  background: var(--accent-tint);
+}
+.kx-pick-mark {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  justify-self: center;
+}
+.kx-pick.on .kx-pick-mark {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.kx-pick-name {
+  font-size: var(--fs-ui);
+  white-space: nowrap;
+}
+.kx-pick-about {
+  font-size: var(--fs-ui);
+  color: var(--fg-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* The effort as a segment: one bar, equal parts, the chosen one filled. */
+.kx-segment {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  height: var(--control-h);
+}
+.kx-segment-btn {
+  flex: 1 1 0;
+  border: 0;
+  border-right: 1px solid var(--border);
+  background: var(--card);
+  color: var(--fg-secondary);
+  font-family: inherit;
+  font-size: var(--fs-ui);
+  cursor: pointer;
+}
+.kx-segment-btn:last-child {
+  border-right: 0;
+}
+.kx-segment-btn:hover {
+  color: var(--fg);
+}
+.kx-segment-btn.on {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+.kx-picker-about {
+  font-size: var(--fs-ui);
+  color: var(--fg-secondary);
+  min-height: 1.4em;
 }
 
 /* Use the full viewport width for drawers on narrow screens. */
@@ -1348,6 +1520,13 @@ a.btn {
   align-items: center;
   gap: 8px;
 }
+/* Right column of the head: the buttons, and under them the engine line. */
+.kx-proj-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 14px;
+}
 .kx-main-head {
   display: flex;
   align-items: center;
@@ -1369,6 +1548,14 @@ a.btn {
 .kx-main-title h1 {
   margin: 0;
   line-height: 1.2;
+}
+/* Under the buttons: what runs this project, as one faint mono line — the
+   CLI, its model, its effort. Reading only; Change model, above it, opens
+   the picker. */
+.kx-engine-line {
+  font-size: var(--fs-label);
+  color: var(--fg-secondary);
+  line-height: 1.4;
 }
 .kx-grid {
   display: grid;
@@ -1741,8 +1928,9 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
 }
 .kx-doc-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 4px 10px;
   width: 100%;
   padding: 9px 12px;
   border: 1px solid var(--border);
@@ -2010,7 +2198,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
 .kx-bullet,
 .kx-ordered,
 .kx-quote {
-  max-width: 78ch;
+  max-width: 100ch;
 }
 .kx-block {
   padding: 3px 8px;
@@ -2411,12 +2599,17 @@ button.kx-note-exc:hover {
 .kx-update {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin: 10px 22px 0;
-  padding: 8px 12px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 10px 14px;
   border-radius: var(--r-md);
-  border: 1px solid var(--border);
-  font-size: var(--fs-ui);
+  border: 1px solid var(--blue);
+  background: var(--blue-bg);
+  color: var(--fg);
+  font-size: var(--fs-body);
+  font-weight: 500;
 }
 .kx-update-err {
   color: var(--red);
@@ -2449,14 +2642,17 @@ button.kx-note-exc:hover {
 .kx-doc-row.failed {
   border-color: rgba(204, 107, 107, 0.5);
 }
-/* The failure reason beside the name: one line, cut with an ellipsis, the
-   whole text in the tooltip. */
+/* The failure reason on its own line under the name: up to two lines, then
+   an ellipsis; the whole text in the tooltip and in the drawer. */
 .kx-doc-why {
-  flex: 1 1 0;
+  flex: 1 1 100%;
+  order: 10;
   min-width: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-height: 1.35;
   font-size: var(--fs-micro);
   color: var(--red);
 }

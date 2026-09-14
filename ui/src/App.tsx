@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { EnginePicker } from './EnginePicker';
 import {
   api,
   type DocInfo,
@@ -101,13 +102,14 @@ export function App() {
   return (
     <div className="kx-shell">
       <header className="kx-header">
-        <img className="kx-logo kx-logo-light" src="/kortext-logo.svg" alt="Kortext" />
+        {/* Two drawings, not one recoloured: the light mark is outlines, the
+            dark one is solid. CSS shows the one the panel's theme calls for. */}
+        <img className="kx-logo kx-logo-light" src="/kortext-logo-light.svg" alt="Kortext" />
         <img className="kx-logo kx-logo-dark" src="/kortext-logo-dark.svg" alt="" aria-hidden />
         <EngineBadge />
         <span className="kx-doc-spacer" />
         <ThemeSwitch />
       </header>
-      <UpdateStrip />
       {error && <div className="kx-error">{error}</div>}
       {selected ? (
         <ProjectScreen
@@ -126,6 +128,7 @@ export function App() {
               Add project
             </button>
           </div>
+          <UpdateStrip />
           {projects.length === 0 && !adding && (
             <>
               <div className="kx-empty">
@@ -850,17 +853,22 @@ function EngineBadge() {
   );
 }
 
-// Show self-update controls only when a managed install has a newer version available.
+// Under the Projects heading, only when a managed install has a newer version available.
 function UpdateStrip() {
   const [latest, setLatest] = useState<string | null>(null);
   const [state, setState] = useState<'idle' | 'running' | 'done'>('idle');
   const [err, setErr] = useState('');
 
+  // Once on open, then hourly: a release lands while the panel sits open.
   useEffect(() => {
-    api
-      .version()
-      .then((v) => setLatest(v.stale ? v.latest : null))
-      .catch(() => {}); // no server, no strip
+    const check = () =>
+      api
+        .version()
+        .then((v) => setLatest(v.stale ? v.latest : null))
+        .catch(() => {}); // no server, no strip
+    void check();
+    const t = setInterval(check, 60 * 60 * 1000);
+    return () => clearInterval(t);
   }, []);
 
   if (!latest) return null;
@@ -876,7 +884,7 @@ function UpdateStrip() {
     <div className="kx-update">
       <span>Version {latest} is out.</span>
       <button
-        className="btn"
+        className="btn btn-primary"
         disabled={state === 'running'}
         onClick={() => {
           setErr('');
@@ -930,39 +938,6 @@ function EngineSelect({
           title={e.untested ? 'Prepared from its documentation, not yet run here' : undefined}
         >
           {e.untested ? `${e.id} · untested` : e.id}
-        </option>
-      ))}
-    </select>
-  );
-}
-
-/** The model that CLI is told to use. `default` is the CLI's own; a saved name
- *  the list does not know is kept as its own option rather than dropped. */
-function ModelSelect({
-  engine,
-  value,
-  onChange,
-}: {
-  engine: EngineInfo | undefined;
-  value: string;
-  onChange: (model: string) => void;
-}) {
-  if (!engine) return null;
-  const known = engine.models ?? [];
-  // A CLI that names no models takes its own from its config; nothing to pick.
-  if (known.length === 0 && !value) return null;
-  const options = value && !known.includes(value) ? [...known, value] : known;
-  return (
-    <select
-      className="select"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      title="The model that CLI is told to use — claude --model, codex -m, gemini -m. Applies to steps that start after it."
-    >
-      <option value="">default</option>
-      {options.map((m) => (
-        <option key={m} value={m}>
-          {m}
         </option>
       ))}
     </select>
@@ -1424,6 +1399,10 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
   const [engines, setEngines] = useState<EngineInfo[]>([]);
   const [engine, setEngine] = useState<string | null>(project.engine || null);
   const [model, setModel] = useState(project.model ?? '');
+  const [effort, setEffort] = useState(project.effort ?? '');
+  // The engine line under the buttons says what runs; Change model, before
+  // Continue, opens the picker.
+  const [picking, setPicking] = useState(false);
 
   useEffect(() => {
     api
@@ -1522,42 +1501,54 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
             {shortPath(project.repo_path)}
           </span>
         </div>
-        <div className="kx-proj-actions">
-          <EngineSelect
-            engines={engines}
-            value={engine}
-            onChange={(id) => {
-              setEngine(id);
-              api
-                .setProjectEngine(project.id, id)
-                .then((r) => setModel(r.model ?? ''))
-                .catch((e) => setErr((e as Error).message));
-            }}
-          />
-          <ModelSelect
-            engine={engines.find((e) => e.id === (engine ?? engines[0]?.id))}
-            value={model}
-            onChange={(m) => {
-              setModel(m);
-              api.setProjectModel(project.id, m).catch((e) => setErr((e as Error).message));
-            }}
-          />
-
-          {running ? (
-            <button className="btn btn-primary" disabled={busy} onClick={togglePause}>
-              ⏸ Pause
-            </button>
-          ) : (
-            // Offer Start when the chain is idle, even if the project is already unpaused.
-            pending && (
-              <button className="btn btn-primary" disabled={busy} onClick={start}>
-                {hasJobs ? '▶ Continue' : '▶ Start'}
+        <div className="kx-proj-side">
+          <div className="kx-proj-actions">
+            {engines.length > 0 && (
+              <button className="btn btn-link-primary" onClick={() => setPicking(true)}>
+                Change model
               </button>
-            )
+            )}
+            {running ? (
+              <button className="btn btn-primary" disabled={busy} onClick={togglePause}>
+                ⏸ Pause
+              </button>
+            ) : (
+              // Offer Start when the chain is idle, even if the project is already unpaused.
+              pending && (
+                <button className="btn btn-primary" disabled={busy} onClick={start}>
+                  {hasJobs ? '▶ Continue' : '▶ Start'}
+                </button>
+              )
+            )}
+          </div>
+          {engines.length > 0 && (
+            <span
+              className="kx-engine-line mono"
+              title="The CLI this project runs on, its model and effort"
+            >
+              {[engine ?? engines[0]?.id, model || 'default', effort].filter(Boolean).join(' · ')}
+            </span>
           )}
         </div>
       </div>
       {err && <div className="kx-error">{err}</div>}
+      <EnginePicker
+        open={picking}
+        onClose={() => setPicking(false)}
+        projectId={project.id}
+        engines={engines}
+        engine={engine ?? engines[0]?.id ?? ''}
+        model={model}
+        effort={effort}
+        onEngine={(id, m, lvl) => {
+          setEngine(id);
+          setModel(m);
+          setEffort(lvl);
+        }}
+        onModel={setModel}
+        onEffort={setEffort}
+        onError={setErr}
+      />
       <DocumentsTab
         project={project}
         paused={paused}

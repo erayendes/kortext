@@ -255,8 +255,8 @@ exist in the data and are never drawn: `waiting` in To do already means queued, 
 means a first draft — only a rewrite needs a word, and that word is `revision`. `failed` is a
 state, not a badge — the run fell over and asks for a Retry — and the row that carries it wears
 `revision` when the run that failed was one, `recheck` when it was a reading. The reason sits in
-the row itself (`.kx-doc-why`): one red micro line between the name and the button, cut with an
-ellipsis, whole in the tooltip — a refused Retry writes a new reason there, and a tooltip alone
+the row itself (`.kx-doc-why`): red micro text on its own line under the name, two lines at
+most, then an ellipsis, whole in the tooltip — a refused Retry writes a new reason there, and a tooltip alone
 would hide that anything happened.
 
 A badge is the round pill without the dot: it says what is owed, and a debt has no motion to
@@ -306,17 +306,26 @@ says a demand exists, the amber band is where it is answered. The dependency ban
 hollow and framed because it asks nothing. Every band's head is the group label from § 10, in
 mono, so the panel's labels and the document's own labels are one thing.
 
-**Header.** The wordmark — a PNG per theme, swapped by CSS, so the drawing is right on the
-first frame — and, at the far right, the theme button. Nothing else, unless there is no agent
-CLI at all: the engine belongs to a project, so its control sits on the project screen beside
-Start, at the same height as Start — two selects, the CLI and its model, `default` first in the
-second so the CLI's own choice is a word, not an empty box. A tagline in the chrome is a thing the reader learns once
+**Header.** The wordmark — an SVG per theme, swapped by CSS, so the drawing is right on the
+first frame. Two drawings, not one recoloured: in light the letters are outlines over sketch
+guides (`kor` grey, `te` and half the `x` blueprint blue, `xt` solid ink); in dark they are solid.
+The outline strokes are set in screen pixels (`vector-effect: non-scaling-stroke`, 1.25px for
+letters, 0.6px for guides), so a mark drawn for a 1344px page still reads at the header's 20px.
+The favicon is the icon — the `x` alone, one file per theme, chosen by the `media` attribute on
+the `<link>`. And, at the far right, the theme button. Nothing else, unless there is no agent
+CLI at all: the engine belongs to a project, so its control sits on the project screen at the
+right — read as one faint mono line under Change model and Continue, `claude · sonnet · high`,
+and changed through **Change model**, a link-weight button before Continue, which opens the
+**dialog** (§9a). What is changed once a day should read all day and be a control only when
+asked. A tagline in the chrome is a thing the reader learns once
 and then reads forever. The theme button is the one preference that survived, and it is an
 icon, not a control row: it takes no width a heading would.
 
-**Update strip** (`.kx-update`), under the header: present only when there is something to say
-— a newer version on npm. One sentence, one button, and after the install one sentence again
-(quit and start again). An error keeps the strip and adds the command to run by hand.
+**Update strip** (`.kx-update`), under the Projects heading: present only when there is something to say
+— a newer version on npm. Blue ground and border (the panel's one informational colour), one
+sentence, one primary button, and after the install one sentence again (quit and start
+again). An error keeps the strip and adds the command to run by hand. The panel asks once on
+open and then hourly; the server asks npm at most hourly.
 
 **Status bar** (`.kx-statusbar`), 52px, never wrapping — an application's bar, not a web
 page's footer. On the left two stacked lines (`.kx-statusbar-lines`), one column under the
@@ -338,10 +347,28 @@ for good on the second click.
 
 ---
 
+## 9a · The dialog
+
+The panel's one centered overlay, and the engine picker is its only tenant. The drawer's
+backdrop, the elevated surface, `--r-lg`, `--shadow-lg`; 560px wide, in the middle of the page
+because it is a decision, not a document. Three sections under mono eyebrows, the way the CLIs'
+own pickers read:
+
+- **CLI** — chips, one on at a time: the drawn-box vocabulary at control height, the chosen one
+  filled with the accent; an untested one carries the word.
+- **Model** — one row each in a bordered list: a dot mark, the id in mono at a fixed 190px, one
+  line about it in the secondary ink. `default` first, "the CLI's own setting". The chosen row
+  sits on the accent tint.
+- **Effort** — a segment: one bar, equal parts, the chosen one filled; the line under it says
+  what the level means. Drawn only for a CLI that has the notion.
+
+Every pick saves at once — there is no Apply for a preference. *Done* and Escape close; ↑↓ walk
+the models and ←→ the levels, as the CLIs do, and the footer says so in mono.
+
 ## 10 · Document view
 
 The drawer is **880px** wide (`94vw` at most): the bands, tables, code blocks and the design
-page use all of it. Prose does not — headings, paragraphs, lists and quotes stop at **78ch**,
+page use all of it. Prose does not — headings, paragraphs, lists and quotes stop at **100ch**,
 left-aligned, so a line never runs past the length an eye carries and the room stays on the
 right. The drawer was 720 and read as cramped where a request and its thread stacked; the text
 was never the problem, so the text kept its measure.

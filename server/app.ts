@@ -217,13 +217,20 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     if (!ENGINES.some((e) => e.id === id)) return res.status(400).json({ error: 'unknown engine' });
     // A model name belongs to one CLI — `sonnet` means nothing to codex — so a
     // switch drops it back to the new CLI's default unless the new CLI knows it.
-    const keeps = ENGINES.find((e) => e.id === id)?.models.includes(project.model ?? '') ?? false;
-    db.prepare('UPDATE projects SET engine = ?, model = ? WHERE id = ?').run(
+    const next = ENGINES.find((e) => e.id === id);
+    const keeps = next?.models.includes(project.model ?? '') ?? false;
+    const keepsEffort = next?.efforts?.includes(project.effort ?? '') ?? false;
+    db.prepare('UPDATE projects SET engine = ?, model = ?, effort = ? WHERE id = ?').run(
       String(id),
       keeps ? project.model : '',
+      keepsEffort ? project.effort : '',
       project.id,
     );
-    res.json({ engine: id, model: keeps ? project.model : '' });
+    res.json({
+      engine: id,
+      model: keeps ? project.model : '',
+      effort: keepsEffort ? project.effort : '',
+    });
   });
 
   // The model that CLI is told to use — free text, because each CLI names its
@@ -237,6 +244,18 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       return res.status(400).json({ error: 'a model name is one word' });
     db.prepare('UPDATE projects SET model = ? WHERE id = ?').run(model, project.id);
     res.json({ model });
+  });
+
+  // Reasoning effort, from the list the CLI accepts; empty is its default.
+  app.put('/api/projects/:id/effort', (req, res) => {
+    const project = projectOr404(req.params.id, res);
+    if (!project) return;
+    const effort = String(req.body?.effort ?? '').trim();
+    const spec = ENGINES.find((e) => e.id === project.engine);
+    if (effort && !spec?.efforts?.includes(effort))
+      return res.status(400).json({ error: `${project.engine} takes no effort level "${effort}"` });
+    db.prepare('UPDATE projects SET effort = ? WHERE id = ?').run(effort, project.id);
+    res.json({ effort });
   });
 
   app.get('/api/projects/:id/jobs', (req, res) => {

@@ -4,6 +4,23 @@
 
 ## [Unreleased]
 
+- **The update strip shows.** Under the Projects heading, blue, the button at the right,
+  instead of a grey line under the header that read like any other card. The panel checks for a release when opened and then every hour, and
+  the server asks npm at most hourly instead of every six — a release lands on a panel that
+  has been open all day.
+
+## [3.1.1] — 2026-09-14
+
+- **Change model.** The CLI, model and effort read as one line under the buttons, at the
+  right of the project's name — `claude · sonnet · high` — and are changed in a picker that reads like the CLIs' own: chips,
+  a model list with a line about each, an effort segment. Every pick saves at once.
+- **Effort, per project.** A third pick in the same dialog, for the CLIs that have the
+  notion: `claude --effort`, codex's `model_reasoning_effort`, `agy --effort` — with the levels
+  and models each CLI's own picker offers.
+- The failure reason sits on its own line under the document's name, two lines before it is
+  cut; prose in the drawer runs to 100 characters.
+- **The mark.** New wordmark and icon: outlines over sketch guides in light, solid in dark,
+  the `x` alone as the favicon. Panel header, README and favicon use them.
 - **A wider drawer.** 880px, up from 720, for the bands, tables, code and the design page;
   prose keeps a 78-character measure.
 - **One decision per request.** Accepting an outgoing request on the document that asks

@@ -70,9 +70,11 @@ Bir hata ya da sizi bekleyen bir şey taşıyan her belge **Action needed**'a ç
 
 ## Çalıştırma, duraklatma, motoru değiştirme
 
-Motor — `claude`, `codex`, `antigravity` ve listedeki diğerleri. Açılır liste kurulu olanları gösterir. Projeyi eklerken seçersiniz ama istediğiniz zaman değiştirebilirsiniz. Kota bittiğinde de yapılacak tek şey değiştirmek. 
+Motor — `claude`, `codex`, `antigravity` ve listedeki diğerleri. Sağda, düğmelerin altındaki satır onu neyin çalıştırdığını söyler — `claude · sonnet · high`. Continue'nun yanındaki **Change model** seçiciyi açar: CLI (kurulu olanlar), her biri bir satır açıklamalı modeller, effort. Her seçim anında kaydedilir. CLI'ı projeyi eklerken seçersiniz ama istediğiniz zaman değiştirebilirsiniz. Kota bittiğinde de yapılacak tek şey değiştirmek. 
 
-İkinci liste **model**. `default` seçimi CLI'ın kendi ayarını kullanır. Bir model seçerseniz her koşuda CLI'a geçilir (`claude --model`, `codex -m`).
+Seçicinin ikinci bölümü **model**. `default` seçimi CLI'ın kendi ayarını kullanır. Bir model seçerseniz her koşuda CLI'a geçilir (`claude --model`, `codex -m`).
+
+Üçüncüsü, **effort**, bu kavramı bilen CLI'larda görünür — `claude --effort`, codex'in `model_reasoning_effort`'u, `agy --effort` — o CLI'ın kendi seçicisinin sunduğu seviyelerle. Model gibi, ayarladıktan sonra başlayan koşulara ulaşır; motoru değiştirdiğinizde yeni CLI'ın almadığı seviye düşer.
 
 - **Pause** yeni adımların başlamasını durdurur; koşan adım da durur.
 - **Continue** kaldığı yerden devam eder.
@@ -92,7 +94,7 @@ Buradan sonra Kortext işin içinde değildir.
 
 **Durum çubuğu**, altta. Yeşil nokta sunucu ayakta demektir. ⏻ düğmesi kapatır ama bir belge yazılırken kapatmaz.
 
-**Güncelleme şeridi**, üstte, yalnız npm'de yeni sürüm varsa görünür. **Update now** kurar; sonra kortext'i kapatıp yeniden açmanız gerekir.
+**Güncelleme şeridi**, Projects başlığının altında, mavi, yalnız npm'de yeni sürüm varsa görünür — panel açılışta bir kez, sonra her saat bakar; açık dururken çıkan sürüm de düşer. **Update now** kurar; sonra kortext'i kapatıp yeniden açmanız gerekir.
 
 **Tema.** Sağ üstteki düğme auto → light → dark döner.
 

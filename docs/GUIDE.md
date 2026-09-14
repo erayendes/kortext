@@ -70,9 +70,11 @@ Any document carrying a failure or something waiting on you rises to **Action ne
 
 ## Running, pausing, changing the engine
 
-The engine — `claude`, `codex`, `antigravity` and the others in the list. The dropdown shows what is installed. You choose it when adding the project, and you can change it whenever you like. When a quota runs out, changing it is all there is to do.
+The engine — `claude`, `codex`, `antigravity` and the others in the list. At the right, under the buttons, a line says what runs it — `claude · sonnet · high`. **Change model**, before Continue, opens the picker: the CLI (what is installed), its model with a line about each, its effort. Every pick saves at once. You choose the CLI when adding the project, and you can change it whenever you like. When a quota runs out, changing it is all there is to do.
 
-The second dropdown is the **model**. `default` uses the CLI's own setting. Pick a model and it is passed to the CLI on every run (`claude --model`, `codex -m`).
+The second section of the picker is the **model**. `default` uses the CLI's own setting. Pick a model and it is passed to the CLI on every run (`claude --model`, `codex -m`).
+
+A third, **effort**, appears for the CLIs that have the notion — `claude --effort`, codex's `model_reasoning_effort`, `agy --effort` — with the levels that CLI's own picker offers. Like the model, it reaches the runs that start after you set it, and a level the next CLI does not take is dropped when you switch.
 
 - **Pause** stops new steps from starting; the running step stops too.
 - **Continue** picks up where it left off.
@@ -92,7 +94,7 @@ From here on, Kortext is not in the loop.
 
 **The status bar**, at the bottom. A green dot means the server is up. The ⏻ button stops it — never while a document is being written.
 
-**The update strip**, at the top, only when npm has a newer version. **Update now** installs it; then quit kortext and start it again.
+**The update strip**, under the Projects heading, in blue, only when npm has a newer version — the panel looks once when opened and then every hour, so a release lands while it sits open. **Update now** installs it; then quit kortext and start it again.
 
 **Theme.** The button at the top right cycles auto → light → dark.
 

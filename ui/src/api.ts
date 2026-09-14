@@ -5,6 +5,7 @@ export interface Project {
   repo_path: string;
   engine?: string;
   model?: string;
+  effort?: string;
   paused?: number;
   archived?: number;
   created_at: string;
@@ -84,6 +85,9 @@ export interface EngineInfo {
   available: boolean;
   installHint: string;
   models?: string[];
+  efforts?: string[];
+  about?: Record<string, string>;
+  label?: Record<string, string>;
   untested?: boolean;
 }
 
@@ -118,7 +122,7 @@ export const api = {
   selectEngine: (id: string) =>
     req<{ selected: string }>('/api/engines', { method: 'PUT', body: JSON.stringify({ id }) }),
   setProjectEngine: (projectId: number, id: string) =>
-    req<{ engine: string; model?: string }>(`/api/projects/${projectId}/engine`, {
+    req<{ engine: string; model?: string; effort?: string }>(`/api/projects/${projectId}/engine`, {
       method: 'PUT',
       body: JSON.stringify({ id }),
     }),
@@ -126,6 +130,11 @@ export const api = {
     req<{ model: string }>(`/api/projects/${projectId}/model`, {
       method: 'PUT',
       body: JSON.stringify({ model }),
+    }),
+  setProjectEffort: (projectId: number, effort: string) =>
+    req<{ effort: string }>(`/api/projects/${projectId}/effort`, {
+      method: 'PUT',
+      body: JSON.stringify({ effort }),
     }),
   jobs: (projectId: number) =>
     req<{ jobs: Job[]; running: Job | null }>(`/api/projects/${projectId}/jobs`),

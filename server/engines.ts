@@ -15,6 +15,19 @@ export interface EngineSpec {
   modelFlag?: string;
   /** Or an environment variable that names it. */
   modelEnv?: string;
+  /** How reasoning effort travels, when the CLI has the notion: a flag that
+   *  takes the level, or a `-c key=` prefix the level is appended to. Absent
+   *  when it does not, and the panel shows no effort list. */
+  effortFlag?: string;
+  effortPrefix?: string;
+  /** The levels that CLI accepts, in order. */
+  efforts?: string[];
+  /** One line per model and per level, for the picker — what the CLI's own
+   *  picker says, kept short. Missing means the name alone. */
+  about?: Record<string, string>;
+  /** What the picker shows for an id, when the CLI's own picker shows
+   *  something other than the id — `opus[1m]` reads "Opus (1M context)". */
+  label?: Record<string, string>;
   /** Set when the CLI takes the prompt as an argument: the flag it follows,
    *  or '' when it is the last positional argument. */
   promptFlag?: string;
@@ -41,8 +54,24 @@ export const ENGINES: EngineSpec[] = [
     // stdin carries the step prompt.
     args: ['--print', '--dangerously-skip-permissions'],
     modelFlag: '--model',
-    // Aliases the CLI resolves to its latest of each tier.
-    models: ['fable', 'opus', 'sonnet', 'haiku'],
+    effortFlag: '--effort',
+    // The CLI's own slider, in its order; ultracode is xhigh plus workflows.
+    efforts: ['low', 'medium', 'high', 'xhigh', 'max', 'ultracode'],
+    // As the CLI's own picker lists them; `opus[1m]` is the 1M-context alias.
+    models: ['opus[1m]', 'fable', 'sonnet', 'haiku'],
+    label: { 'opus[1m]': 'Opus (1M context)', fable: 'Fable', sonnet: 'Sonnet', haiku: 'Haiku' },
+    about: {
+      'opus[1m]': 'Opus 5 with 1M context · recommended',
+      fable: 'Fable 5.1 · most capable',
+      sonnet: 'Sonnet 5 · efficient',
+      haiku: 'Haiku 4.5 · fastest',
+      low: 'faster',
+      medium: 'faster',
+      high: 'the CLI default',
+      xhigh: 'smarter',
+      max: 'smarter · spends limits fastest',
+      ultracode: 'xhigh + workflows',
+    },
     installHint: 'npm install -g @anthropic-ai/claude-code',
   },
   {
@@ -52,7 +81,27 @@ export const ENGINES: EngineSpec[] = [
     // file; skip-git-repo-check: project may not be a git repo (yet).
     args: ['exec', '--sandbox', 'workspace-write', '--skip-git-repo-check'],
     modelFlag: '-m',
-    models: ['gpt-6-astra', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.6-sol', 'gpt-5.4-mini'],
+    // codex has no flag; the config key is overridden on the command line. The
+    // levels and models are the CLI's own picker, in its order.
+    effortPrefix: '-c model_reasoning_effort=',
+    // The picker's "More reasoning…" opens ultra and max; both take on the command line.
+    efforts: ['low', 'medium', 'high', 'xhigh', 'ultra', 'max'],
+    models: ['gpt-6-astra', 'gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.5'],
+    label: { xhigh: 'extra high' },
+    // What the CLI's own picker says, in its order and words.
+    about: {
+      'gpt-6-astra': 'Our most capable model for complex, demanding work',
+      'gpt-5.6-sol': 'Reliable agentic workhorse for everyday tasks',
+      'gpt-5.6-terra': 'Balanced agentic coding model for everyday work',
+      'gpt-5.6-luna': 'Fast and affordable agentic coding model',
+      'gpt-5.5': 'Proven previous-generation model for coding and general work',
+      low: 'Fast responses with lighter reasoning',
+      medium: 'Balances speed and reasoning depth for everyday tasks · the CLI default',
+      high: 'Greater reasoning depth for complex problems',
+      xhigh: 'Extra high reasoning depth for complex problems',
+      ultra: 'More reasoning',
+      max: 'More reasoning · consumes usage limits faster',
+    },
     installHint: 'npm install -g @openai/codex',
   },
   {
@@ -66,14 +115,36 @@ export const ENGINES: EngineSpec[] = [
     // hunts for the repository with find and ls.
     cwdFlag: '--add-dir',
     modelFlag: '--model',
-    // `agy models` lists more; these are the tiers.
+    // `agy models` prints ids with the level baked in (gemini-3.8-flash-high);
+    // the CLI's own picker is a model and an effort apart, and --model takes
+    // the base id with --effort beside it — verified with a run.
+    effortFlag: '--effort',
+    efforts: ['low', 'medium', 'high'],
     models: [
-      'gemini-3.8-flash-high',
-      'gemini-3.1-pro-high',
-      'claude-opus-4-6-thinking',
+      'gemini-3.8-flash',
+      'gemini-3.7-flash',
+      'gemini-3.6-flash',
+      'gemini-3.1-pro',
       'claude-sonnet-4-6',
-      'gpt-oss-120b-medium',
+      'claude-opus-4-6-thinking',
+      'gpt-oss-120b',
     ],
+    label: {
+      'gemini-3.8-flash': 'Gemini 3.8 Flash',
+      'gemini-3.7-flash': 'Gemini 3.7 Flash',
+      'gemini-3.6-flash': 'Gemini 3.6 Flash',
+      'gemini-3.1-pro': 'Gemini 3.1 Pro',
+      'claude-sonnet-4-6': 'Claude Sonnet 4.6 (Thinking)',
+      'claude-opus-4-6-thinking': 'Claude Opus 4.6 (Thinking)',
+      'gpt-oss-120b': 'GPT-OSS 120B (Medium)',
+    },
+    // What the CLI's own picker says, in its order and words.
+    about: {
+      'gemini-3.8-flash': 'current default',
+      low: 'Fastest, lightest reasoning',
+      medium: 'Balanced',
+      high: 'Deepest reasoning for complex problems — slower but stronger · the CLI default',
+    },
     installHint: 'install Antigravity, then run: agy install',
   },
   {
@@ -180,13 +251,23 @@ export const ENGINES: EngineSpec[] = [
 /** The CLI's arguments with the project's model, when one is set. */
 export function engineArgs(
   engine: EngineSpec,
-  project: { model?: string; repo_path?: string },
+  project: { model?: string; effort?: string; repo_path?: string },
 ): string[] {
   const model = (project.model ?? '').trim();
+  const effort = (project.effort ?? '').trim();
+  const withEffort = effort && engine.efforts?.includes(effort);
   return [
     ...engine.args,
     ...(engine.cwdFlag && project.repo_path ? [engine.cwdFlag, project.repo_path] : []),
     ...(model && engine.modelFlag ? [engine.modelFlag, model] : []),
+    ...(withEffort && engine.effortFlag ? [engine.effortFlag, effort] : []),
+    // `-c key=value` is two argv entries: the flag, then key=value as one.
+    ...(withEffort && engine.effortPrefix
+      ? (() => {
+          const [flag, ...rest] = engine.effortPrefix.split(' ');
+          return [flag!, `${rest.join(' ')}${effort}`];
+        })()
+      : []),
   ];
 }
 

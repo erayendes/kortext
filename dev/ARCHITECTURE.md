@@ -66,7 +66,7 @@ With `--db /path/name.sqlite`, logs live in `/path/name.sqlite.logs/`; sibling d
 
 | Table | Columns |
 | --- | --- |
-| `projects` | `id · name · repo_path (UNIQUE) · kind (new\|existing) · code · paused · archived · doc_lang · engine · model · created_at` |
+| `projects` | `id · name · repo_path (UNIQUE) · kind (new\|existing) · code · paused · archived · doc_lang · engine · model · effort · created_at` |
 | `settings` | `key/value` — today just the selected engine |
 | `jobs` | `project_id · doc_rel · kind (doc\|plan\|recheck) · status (running\|done\|failed\|stopped) · error · notes (JSON) · started_at · finished_at` |
 | `pending_rechecks` | `project_id · source_rel · reader_rel · generation` — durable work, unique per source/reader pair |
@@ -282,6 +282,7 @@ No fs-watch — the panel polls (docs 3s, transfer 4s, handshake 5s).
 | `POST /api/pick-directory` | macOS chooser; `null` elsewhere |
 | `PUT …/engine` | the CLI this project runs on |
 | `PUT …/model` | the model that CLI is told to use (`--model` / `-m`); empty = the CLI's default |
+| `PUT …/effort` | reasoning effort, from the spec's `efforts`; a flag (`--effort`) or a config override (`-c model_reasoning_effort=`) |
 | `GET /api/projects/:id/jobs` | last 50 + the running one |
 | `POST …/run-next` | nudge the chain by hand |
 | `GET …/readiness` | the gate's standing verdict + whether a check is out |
@@ -318,9 +319,10 @@ Approve. Destructive buttons arm in place — browsers silently suppress repeate
 
 The chrome around it. The **header** carries the wordmark (one PNG per theme), the no-CLI
 warning when there is nothing on the `PATH`, and at the far right one cycling **theme** button
-(auto → light → dark, remembered in `localStorage`, no attribute meaning auto). Under it the
+(auto → light → dark, remembered in `localStorage`, no attribute meaning auto). Under the Projects heading the
 **update strip** appears only when npm carries a newer version and kortext runs from a global
-install; **Update now** calls `/api/version/update`, and afterwards the strip says to quit and
+install — the panel asks `/api/version` on open and hourly, the server asks the registry at
+most hourly; **Update now** calls `/api/version/update`, and afterwards the strip says to quit and
 start again, because the process on screen is still the old one. At the bottom, an application
 **status bar** (34px, never wrapping): the server dot — green while `/api/health` answers, red
 the moment it stops and green again on its own when it comes back — the version, the ⏻ button

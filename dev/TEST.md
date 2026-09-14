@@ -15,7 +15,7 @@ Board, deploy gates). None of that exists.
 ## 0 · Before you start
 
 - **Node ≥ 22** and **at least one agent CLI** on the PATH: `claude`, `codex`, `antigravity`
-  (`agy`) or `gemini`. The ones marked *untested* in the dropdown are prepared from their
+  (`agy`) or `gemini`. The ones marked *untested* in the picker are prepared from their
   documentation; a pass on one of them is a finding either way.
   Kortext has no LLM key of its own; it spends the subscription behind that CLI.
 - **A real run costs real money and real minutes.** Each step is one headless CLI call; a step
@@ -75,7 +75,7 @@ belongs to a project.
 **Add project** takes: name, code (2–8 letters, `ACME`; derived from the name when left
 empty, digits dropped — *365 Tracker* becomes `TRACK`), *New* or *Existing*, the folder (Browse
 opens the macOS chooser; other platforms take a typed path), an optional document language, the
-**agent CLI** (the dropdown beside Initialize — the choice is the project's, not the app's), and
+**agent CLI** (the dropdown beside Initialize; later, **Change model** on the project screen — the choice is the project's, not the app's), and
 — for a new project — the brief, written in the form or uploaded.
 
 **Expect on disk:** `AGENTS.md` at the repo root carrying kortext's block between
@@ -130,9 +130,9 @@ The order for a new project: `PRODUCT` · `STACK`+`STRUCTURE` · `ARCHITECTURE` 
 - [ ] **Pause** stops new steps and kills the running one — `pgrep -f "claude --print"` (or
       your engine) is empty a few seconds later, and the row says stopped, not failed.
       **Continue** picks the chain back up; the stopped step is retried from the row.
-- [ ] Switching the CLI from the dropdown next to Start moves the steps **and the rechecks**
+- [ ] Switching the CLI in the **Change model** picker moves the steps **and the rechecks**
       that begin after it; the running one finishes on the old CLI.
-- [ ] The model dropdown beside it: pick one and the next run's log header carries it
+- [ ] The model list in the same picker: pick one and the next run's log header carries it
       (`# args: [... "-m", "<model>"]`); `default` carries nothing.
 - [ ] A running recheck sits in **Doing** as `reading`, blue and pulsing; a queued one waits in
       To do. Two rechecks on two readers run at once, never two on one.
