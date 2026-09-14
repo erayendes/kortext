@@ -84,7 +84,7 @@ struct Header: View {
         HStack {
             if settings {
                 Button { settings = false } label: {
-                    HStack(spacing: 5) { Icon(name: "chevron.left", size: 11, color: Kx.fgSecondary, weight: .semibold); Text("Kortext").font(Kx.sans(13, .medium)).foregroundStyle(Kx.fg) }
+                    HStack(spacing: 7) { Icon(name: "chevron.left", size: 11, color: Kx.fgSecondary, weight: .semibold); Image("wordmark").resizable().scaledToFit().frame(height: 14) }
                 }.buttonStyle(.plain)
                 Spacer()
                 ThemeCycle()
