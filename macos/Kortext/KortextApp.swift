@@ -113,7 +113,7 @@ struct ProjectCard: View {
         }
         .padding(.bottom, 4)
         .background(Kx.card)
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Kx.border, lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Kx.cardBorder, lineWidth: 1))
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
@@ -167,7 +167,7 @@ struct NotInstalled: View {
                 }.buttonStyle(.plain)
             }
             .padding(.horizontal, 10).padding(.vertical, 7)
-            .background(Kx.card).overlay(RoundedRectangle(cornerRadius: 8).stroke(Kx.border, lineWidth: 1)).clipShape(RoundedRectangle(cornerRadius: 8))
+            .background(Kx.card).overlay(RoundedRectangle(cornerRadius: 8).stroke(Kx.cardBorder, lineWidth: 1)).clipShape(RoundedRectangle(cornerRadius: 8))
         }
         .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 12).padding(.top, 18).padding(.bottom, 16)
     }
