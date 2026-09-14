@@ -18,6 +18,7 @@ struct KortextApp: App {
             .labelStyle(.titleAndIcon)
             .task { model.start() }
         }
+        .menuBarExtraStyle(.window)
     }
 }
 
@@ -26,46 +27,126 @@ struct MenuContent: View {
     @State private var loginItem = SMAppService.mainApp.status == .enabled
 
     var body: some View {
-        if !model.installed {
-            Text("Kortext is not installed")
-            Button("Copy  npm i -g kortext") {
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString("npm i -g kortext", forType: .string)
-            }
-        } else if let v = model.version {
-            Text(headline(v))
-            ForEach(model.projects) { s in
-                Button(line(s)) { model.openPanel() }
-            }
+        VStack(alignment: .leading, spacing: 0) {
+            header.padding(.horizontal, 14).padding(.vertical, 10)
             Divider()
-            Button("Stop") { model.stopDaemon() }.keyboardShortcut("s")
-        } else {
-            Text("Kortext is not running")
-            Button("Start") { model.startDaemon() }.keyboardShortcut("s")
+            if model.version != nil {
+                // ponytail: no ScrollView — a ScrollView in a MenuBarExtra window collapses to zero height; add one with a measured height when a machine holds more projects than a screen.
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(model.projects) { p in ProjectSection(p: p) }
+                }
+                Divider()
+            }
+            footer.padding(.horizontal, 8).padding(.vertical, 6)
         }
-        Toggle("Launch at login", isOn: $loginItem).onChange(of: loginItem) { _, on in
-            try? on ? SMAppService.mainApp.register() : SMAppService.mainApp.unregister()
-        }
-        Button("Open panel") { model.openPanel() }
-        Divider()
-        Button("Quit") { NSApp.terminate(nil) }.keyboardShortcut("q")
+        .frame(width: 380)
     }
 
-    private func headline(_ v: String) -> String {
-        let n = model.draftCount
-        if n > 0 { return "Kortext \(v) · \(n) awaiting approval" }
-        if model.anyRunning { return "Kortext \(v) · writing" }
-        return "Kortext \(v)"
+    @ViewBuilder private var header: some View {
+        HStack {
+            if !model.installed {
+                Text("Kortext is not installed").fontWeight(.medium)
+                Spacer()
+                Button("Copy  npm i -g kortext") {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString("npm i -g kortext", forType: .string)
+                }.controlSize(.small)
+            } else if let v = model.version {
+                Text("Kortext \(v)").fontWeight(.medium)
+                Spacer()
+                if model.draftCount > 0 { Text("\(model.draftCount) awaiting approval").foregroundStyle(.secondary) }
+                else if model.anyRunning { Text("writing").foregroundStyle(.secondary) }
+                Button("Stop") { model.stopDaemon() }.controlSize(.small)
+            } else {
+                Text("Kortext is not running").fontWeight(.medium)
+                Spacer()
+                Button("Start") { model.startDaemon() }.controlSize(.small)
+            }
+        }
+        .font(.system(size: 13))
     }
 
-    // One line per project: code, then the one thing that matters right now.
-    private func line(_ s: ProjectState) -> String {
-        let head = "\(s.project.code) — \(s.project.name)"
-        if let j = s.running { return "\(head)   \(j.doc_rel) writing…" }
-        if !s.drafts.isEmpty { return "\(head)   \(s.drafts.joined(separator: ", ")) awaiting approval" }
-        if let f = s.failed { return "\(head)   \(f.doc_rel) failed" }
-        if s.notReady { return "\(head)   brief too thin" }
-        if s.complete { return "\(head)   ready" }
-        return "\(head)   \(s.project.docCounts.settled) / \(s.project.docCounts.total)"
+    private var footer: some View {
+        HStack {
+            Toggle("Launch at login", isOn: $loginItem).toggleStyle(.checkbox)
+                .onChange(of: loginItem) { _, on in try? on ? SMAppService.mainApp.register() : SMAppService.mainApp.unregister() }
+            Spacer()
+            Button("Open panel") { model.openPanel() }
+            Button("Quit") { NSApp.terminate(nil) }
+        }
+        .controlSize(.small)
+    }
+}
+
+struct ProjectSection: View {
+    @EnvironmentObject var model: Model
+    let p: ProjectState
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text(p.project.code).font(.system(size: 11, weight: .medium, design: .monospaced))
+                Text(p.project.name).font(.system(size: 13, weight: .medium))
+                Spacer()
+                Text("\(p.project.docCounts.settled) / \(p.project.docCounts.total)")
+                    .font(.system(size: 11).monospacedDigit()).foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 14).padding(.top, 10).padding(.bottom, 4)
+            ForEach(p.docs) { doc in DocRow(p: p, doc: doc) }
+        }
+        .padding(.bottom, 6)
+    }
+}
+
+struct DocRow: View {
+    @EnvironmentObject var model: Model
+    let p: ProjectState
+    let doc: Doc
+    @State private var hover = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 8) {
+                Circle().fill(color).frame(width: 7, height: 7)
+                Text(doc.rel).font(.system(size: 12, design: .monospaced))
+                Text(label).font(.system(size: 11)).foregroundStyle(.secondary)
+                Spacer()
+                if doc.status == "draft" {
+                    Button("Approve") { model.approve(p, doc) }
+                }
+                Button("Open") { model.openPanel() }
+            }
+            .controlSize(.mini)
+            if let e = model.errors["\(p.id)/\(doc.rel)"] {
+                Text(e).font(.system(size: 11)).foregroundStyle(.red).padding(.leading, 15)
+            }
+        }
+        .padding(.horizontal, 14).padding(.vertical, 3)
+        .background(hover ? Color.primary.opacity(0.06) : .clear)
+        .onHover { hover = $0 }
+    }
+
+    // DESIGN.md state colours: green approved · amber your turn · blue writing · red failed.
+    private var color: Color {
+        switch doc.state {
+        case "approved": .green
+        case "writing", "reading": .blue
+        case "failed": .red
+        case "waiting" where doc.status == "draft": .orange
+        case "n/a": .clear
+        default: .secondary.opacity(0.4)
+        }
+    }
+    private var label: String {
+        if doc.status == "draft" { return "awaiting approval" }
+        if doc.status == "approved" { return "approved" }
+        if doc.status == "not-applicable" { return "n/a" }
+        switch doc.state {
+        case "writing": return "writing…"
+        case "reading": return "rechecking"
+        case "failed": return "failed"
+        case "paused": return "paused"
+        default: return "queued"
+        }
     }
 }

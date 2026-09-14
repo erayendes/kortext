@@ -3,7 +3,8 @@ import UserNotifications
 
 struct ProjectState: Identifiable {
     let project: Project
-    var drafts: [String] = []      // doc rels with status draft
+    var docs: [Doc] = []
+    var drafts: [String] { docs.filter { $0.status == "draft" }.map(\.rel) }
     var running: Job? = nil
     var failed: Job? = nil         // most recent failed job, if the last job failed
     var notReady = false
@@ -16,6 +17,7 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
     @Published var version: String? = nil      // nil = daemon down
     @Published var installed = true
     @Published var projects: [ProjectState] = []
+    @Published var errors: [String: String] = [:]   // "projectId/rel" → last failed action
 
     // Poll deltas — what was true last time, so a change becomes one notification.
     private var seenJobs: [Int: String] = [:]    // job id → status
@@ -54,7 +56,7 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
         var next: [ProjectState] = []
         for p in list {
             var s = ProjectState(project: p)
-            if let d = try? await Api.docs(p.id) { s.drafts = d.filter { $0.status == "draft" }.map(\.rel) }
+            if let d = try? await Api.docs(p.id) { s.docs = d }
             if let j = try? await Api.jobs(p.id) {
                 s.running = j.running
                 if let last = j.jobs.first, last.status == "failed" { s.failed = last }
@@ -102,6 +104,15 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
         c.title = title; c.body = body
         if let subtitle { c.subtitle = subtitle }
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: UUID().uuidString, content: c, trigger: nil))
+    }
+
+    func approve(_ p: ProjectState, _ doc: Doc) {
+        let key = "\(p.id)/\(doc.rel)"
+        errors[key] = nil
+        Task {
+            do { try await Api.approve(p.id, rel: doc.rel) } catch { errors[key] = error.localizedDescription }
+            await poll()
+        }
     }
 
     func startDaemon() { Shell.run("kortext --no-open"); Task { try? await Task.sleep(for: .seconds(2)); await poll() } }
