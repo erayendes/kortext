@@ -48,6 +48,39 @@ test('parseDesignTokens buckets colors, scales and type roles', () => {
   assert.equal(t.type[0]?.tracking, '-0.02em');
 });
 
+test('a designer writing for SwiftUI and Compose names tokens with dots and pairs light with dark', () => {
+  // A real DESIGN.md from a real run: bullets, not tables; `color.primary`,
+  // not `--color-primary`; two values on one line; scales as `name = n` in prose.
+  const md = [
+    '### Color Palette',
+    '- `color.background`: light `#F5FAFC`, dark `#08171D` — ana uygulama zemini.',
+    '- `color.primary`: light `#006B8F`, dark `#70D6FF` — birincil aksiyon.',
+    '### Spacing',
+    '**Suggestion —** `space.xs = 4`, `space.md = 16` olmalıdır. Radius `radius.lg = 16`.',
+  ].join('\n');
+  const t = parseDesignTokens(md);
+  assert.deepEqual(
+    t.colors.map((c) => [c.name, c.value, c.dark]),
+    [
+      ['color.background', '#F5FAFC', '#08171D'],
+      ['color.primary', '#006B8F', '#70D6FF'],
+    ],
+  );
+  assert.equal(t.colors[0]!.note, 'ana uygulama zemini.');
+  // pt/dp on mobile, drawn as px.
+  assert.deepEqual(
+    t.spacing.map((c) => [c.name, c.value]),
+    [
+      ['space.xs', '4px'],
+      ['space.md', '16px'],
+    ],
+  );
+  assert.deepEqual(
+    t.radius.map((c) => [c.name, c.value]),
+    [['radius.lg', '16px']],
+  );
+});
+
 test('the template ships a scale but no colors — a placeholder is not a token', () => {
   const template = readFileSync(join(process.cwd(), 'templates', 'docs', 'DESIGN.md'), 'utf8');
   const t = parseDesignTokens(template);

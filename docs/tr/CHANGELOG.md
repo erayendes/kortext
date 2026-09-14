@@ -4,6 +4,9 @@
 
 ## [Yayımlanmamış]
 
+- **Tasarım önizlemesi tasarımcının yazdığını okur.** `--color-primary` kadar `color.primary`
+  adları; tek satırda `light #X, dark #Y`; düz yazıda `space.md = 16`, px olarak çizilir. Eskiden
+  "karar verilmiş token yok" diyen gerçek bir DESIGN.md artık paletini iki modda çiziyor.
 - **Brief kabul etmez, taslak hazırlar.** Brief'e gelen bir istek, nedeni tooltip'te saklı
   kapalı bir Accept yerine satırında **Draft the change** gösterir.
 

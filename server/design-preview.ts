@@ -34,7 +34,14 @@ export interface DesignTokens {
 
 const COLOR =
   /^(#[0-9a-f]{3,8}|rgba?\([^)]*\)|hsla?\([^)]*\)|oklch\([^)]*\)|oklab\([^)]*\)|color-mix\([^)]*\))$/i;
-const LENGTH = /^-?\d*\.?\d+(px|rem|em|%|vh|vw|ch)$/i;
+const LENGTH = /^-?\d*\.?\d+(px|rem|em|%|vh|vw|ch|pt|dp)$/i;
+// A token name: `--color-primary` as the template has it, or `color.primary`
+// as a designer writing for SwiftUI and Compose names it.
+const NAME = /^(--?[\w-]+|[a-z][\w-]*(?:\.[\w-]+)+)$/i;
+// A bare number on a spacing or radius token is a pt/dp on mobile; drawn as px.
+const UNITLESS = /^-?\d*\.?\d+$/;
+const sized = (name: string, v: string) =>
+  UNITLESS.test(v) && /space|gap|gutter|radius|rounded|width|max/i.test(name) ? `${v}px` : v;
 // Validate agent-written values before placing them in style attributes.
 const CSS_SAFE = /^[#\w%.,()\-+\s/'"]*$/;
 
@@ -162,7 +169,7 @@ export function parseDesignTokens(md: string): DesignTokens {
       }
       // A token row: the name cell, then the first cell holding a real value.
       const name = row[0] ?? '';
-      if (!/^--?[\w-]+$/.test(name)) continue;
+      if (!NAME.test(name)) continue;
       const usable = (c: string, i: number) =>
         i !== darkColumn && decided(c) && (COLOR.test(c) || LENGTH.test(c));
       const value = row.slice(1).find((c, i) => usable(c, i + 1));
@@ -176,11 +183,24 @@ export function parseDesignTokens(md: string): DesignTokens {
     }
     header = null;
     darkColumn = null;
-    const m = line.match(/^\s*[-*+]\s+`?(--[\w-]+)`?\s*:\s*(.+)$/);
+    // `name = value` inside code spans, anywhere in prose: `space.md = 16`.
+    for (const pair of line.matchAll(/`([a-z][\w.-]*)\s*=\s*([^`]+)`/gi)) {
+      const name = pair[1]!;
+      if (NAME.test(name)) attach(name, sized(name, pair[2]!.trim()), '');
+    }
+    const m = line.match(/^\s*[-*+]\s+`?(--[\w-]+|[a-z][\w-]*(?:\.[\w-]+)+)`?\s*:\s*(.+)$/);
     if (!m) continue;
     const name = m[1]!;
     const rest = m[2]!;
-    const value = unwrap(rest.split(/\s{2,}|\s+\(|\s+—|\s+#\s/)[0] ?? '');
+    // `light #X, dark #Y — note`: two values on one bullet.
+    const pair = rest.match(
+      /light\s*`?([^`,\s]+)`?\s*,\s*dark\s*`?([^`,\s—]+)`?\s*(?:—\s*(.*))?$/i,
+    );
+    if (pair) {
+      attach(name, sized(name, pair[1]!), (pair[3] ?? '').trim(), pair[2]!);
+      continue;
+    }
+    const value = sized(name, unwrap(rest.split(/\s{2,}|\s+\(|\s+—|\s+#\s/)[0] ?? ''));
     if (!decided(value)) continue;
     const note = rest.slice(rest.indexOf(value) + value.length).replace(/^[\s(]+|[)\s]+$/g, '');
     attach(name, value, note);
