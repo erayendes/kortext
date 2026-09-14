@@ -107,9 +107,9 @@ From here on, Kortext is not in the loop.
 
 On a Mac, Kortext can live in the menu bar. The panel offers it under the heading — **Download for macOS** — until a copy is running; or fetch `Kortext.zip` from the latest release. It needs kortext installed; without it, it says so and copies the install command for you.
 
-The K in the menu bar shows how many documents wait on you. Open it: one card per project, the documents that need a decision in white with the panel's badges, the ones being written in grey. A row opens the panel on that document. At the bottom, ⏻ starts the server, or — pressed twice — stops it and quits the app.
+The K in the menu bar shows how many documents wait on you. Open it: one card per project, the documents that need a decision in white with the panel's badges, the ones being written in grey. A row opens the panel on that document. At the bottom, ⏻ starts the server, or — pressed twice — stops it and quits the app; *open panel* beside it opens the panel in your browser.
 
-It tells you when something changes: a document landed and waits for approval, a step failed, a brief came back with questions, a chain settled. The notification opens the panel where it happened. Settings, behind the logo: launch at login (the server starts with it), notifications on or off, check for updates. The app keeps itself current; the package updates from the panel as before.
+It tells you when something changes: a document landed and waits for approval, a step failed, a brief came back with questions, a chain settled. The notification opens the panel where it happened. Settings, behind the logo: launch at login (the server starts with it), notifications on or off, check for updates, and **Try the beta** — the beta on npm, installed on a second press; from a beta, Check for updates offers the release back. The app keeps itself current; the package updates from the panel as before, or from here.
 
 ## When something goes wrong
 

@@ -102,9 +102,9 @@ Buradan sonra Kortext işin içinde değildir.
 
 Mac'te Kortext menü çubuğunda yaşayabilir. Panel onu başlığın altında sunar — **Download for macOS** — bir kopyası çalışana kadar; ya da son sürümden `Kortext.zip`'i alın. Kortext'in kurulu olması gerekir; değilse söyler ve kurulum komutunu sizin için kopyalar.
 
-Menü çubuğundaki K, kaç belgenin sizi beklediğini gösterir. Açın: proje başına bir kart, karar bekleyen belgeler beyaz ve panelin rozetleriyle, yazılmakta olanlar gri. Satıra basınca panel o belgede açılır. Altta ⏻ sunucuyu başlatır ya da — iki basışta — durdurur ve uygulamadan çıkar.
+Menü çubuğundaki K, kaç belgenin sizi beklediğini gösterir. Açın: proje başına bir kart, karar bekleyen belgeler beyaz ve panelin rozetleriyle, yazılmakta olanlar gri. Satıra basınca panel o belgede açılır. Altta ⏻ sunucuyu başlatır ya da — iki basışta — durdurur ve uygulamadan çıkar; yanındaki *open panel* paneli tarayıcıda açar.
 
-Bir şey değişince haber verir: bir belge geldi ve onay bekliyor, bir adım başarısız oldu, bir brief sorularla geri döndü, bir zincir tamamlandı. Bildirim paneli olayın olduğu yerde açar. Ayarlar, logonun arkasında: login'de başlat (sunucu da onunla açılır), bildirimler açık/kapalı, güncelleme denetimi. Uygulama kendini güncel tutar; paket eskisi gibi panelden güncellenir.
+Bir şey değişince haber verir: bir belge geldi ve onay bekliyor, bir adım başarısız oldu, bir brief sorularla geri döndü, bir zincir tamamlandı. Bildirim paneli olayın olduğu yerde açar. Ayarlar, logonun arkasında: login'de başlat (sunucu da onunla açılır), bildirimler açık/kapalı, güncelleme denetimi ve **Try the beta** — npm'deki beta, ikinci basışta kurulur; betadayken Check for updates sürüme dönüşü sunar. Uygulama kendini güncel tutar; paket eskisi gibi panelden ya da buradan güncellenir.
 
 ## Bir şey ters gittiğinde
 

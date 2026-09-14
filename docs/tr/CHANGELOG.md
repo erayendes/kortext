@@ -19,7 +19,10 @@
   yerinde onay ister; sayfanın altı boş. Restart kehribar. El sıkışmadan sonra motor satırı ve
   düğmeleri gider — kortext o projeden çekilmiştir.
 - **Approve anyway.** Şablon satırını olduğu gibi taşıyan taslak yine reddedilir, ama panel
-  artık satırı gösterir ve ısrar etmenize izin verir.
+  artık satırı gösterir — tıklayınca oraya gider — ve ısrar etme yolu drawer'ın altında,
+  Request revision'ın yanında, okumanız bitene kadar bekler.
+- **Try the beta.** Uygulamanın ayarlarında, Check for updates'in altında: npm'deki beta,
+  ikinci basışta kurulur; betadayken Check for updates sürüme dönüşü sunar.
 - **Continue tutar** adım koşar görülene kadar; ikinci basış artık tekrar duraklatmaz. Başka
   yerden — menü çubuğu uygulaması, başka sekme — yapılan duraklatma panele ulaşır.
 - İki URL içeri girer: `/?project=<id>` ve `/?project=<id>&doc=<rel>`. Diğer araçlar

@@ -278,7 +278,7 @@ No fs-watch — the panel polls (docs 3s, transfer 4s, handshake 5s).
 | --- | --- |
 | `GET /api/health` | ok · db path · the version actually **running** (the status bar's dot polls it) · `companion`, true while the menu bar app has polled in the last 30 s |
 | `GET /api/version` | current · newest on npm · whether the update strip shows |
-| `POST /api/version/update` | run `npm install -g kortext@latest`; 409 while a step runs — and while it runs, every other route but `/health` answers 409, so nothing reads or writes under a package being replaced |
+| `POST /api/version/update` | run `npm install -g kortext@latest` — or `@beta` with `{tag: "beta"}`; `latest` also walks a beta back to the release; 409 while a step runs — and while it runs, every other route but `/health` answers 409, so nothing reads or writes under a package being replaced |
 | `POST /api/quit` | stop the server (⏻ button, `--stop`); 409 while a step runs |
 | `GET \| POST /api/projects` | list (with per-group progress) · add (born paused; takes `model` and `effort` from the picker, checked against the CLI's spec) |
 | `DELETE /api/projects/:id` | unregister only; files untouched |
@@ -296,7 +296,7 @@ No fs-watch — the panel polls (docs 3s, transfer 4s, handshake 5s).
 | `POST …/archive` | shelve — row and repo both stay |
 | `GET …/docs` | document list (+ idempotent self-heal scaffold) |
 | `GET \| PUT …/docs/content` | read content + SHA-256 version · write with `expectedVersion` (409 on conflict or active writer; approved edits queue reader checks) |
-| `POST …/docs/approve` | `draft → approved` with `expectedVersion`; refuses open questions, stale text and active writers; refuses template lines left verbatim (409 with `placeholders`) unless `force` — the drawer lists them and offers **Approve anyway**; records a version and queues reader checks |
+| `POST …/docs/approve` | `draft → approved` with `expectedVersion`; refuses open questions, stale text and active writers; refuses template lines left verbatim (409 with `placeholders`) unless `force` — the drawer lists them, each a jump to its block, and **Approve anyway** waits in the drawer's foot beside Request revision; records a version and queues reader checks |
 | `GET …/docs/history[/:id]` | the recorded versions of one document · the text of one of them |
 | `POST …/docs/propose` | returns a drafted revision for the brief |
 | `POST …/docs/retry` | repeats the latest failed/stopped document job with its saved notes, or resumes pending rechecks |
@@ -417,11 +417,16 @@ badges from the server's `section · state · detail`: `approve`, `review`, `rec
 `writing…`, `reading…`. A row that needs you opens the panel on that document; a row in flight
 is grey and inert. The list scrolls once its estimated height would outgrow the screen — the
 panel is sized when it opens, so the height is counted, not measured. The status bar is the
-panel's: ⏻ (green up, grey down; first press arms, second stops the server and quits the app)
-and the credit. Settings, behind the wordmark or ⚙: launch at login (which also starts the
-server), notifications, check for updates (the app asks Sparkle about itself and the daemon
-about the package), report an issue, support, quit; the theme cycles auto → light → dark in
-the header.
+panel's: ⏻ (green up, grey down; first press arms, second stops the server and quits the app;
+down, it starts the server without opening a browser), *open panel*, and the credit. Settings,
+behind the wordmark or ⚙, one card of rows: launch at login (which also starts the server),
+notifications, check for updates (the app asks Sparkle about itself and the daemon about the
+package; on a beta it offers the way back to the release), **Try the beta** (npm's `beta`
+dist-tag, read from the registry; a second press installs it through the daemon and restarts
+the server), report an issue, support, quit. Under it the bar's twin: the theme cycles
+auto → light → dark where ⏻ was, the credit opposite. Everything pressable shows the hand
+cursor; SwiftUI's `Link` is inert in a non-activating panel, so links open by hand. After an
+install the app stops and restarts the server itself and waits for `/api/health` to answer.
 
 **Notifications.** `UNUserNotificationCenter`, from poll deltas, in the project's `doc_lang`:
 a step `running → done` (ready — awaiting approval), `running → failed`, a brief the gate sent

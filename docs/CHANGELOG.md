@@ -18,7 +18,10 @@
   arming in place; the page's foot is empty. Restart wears amber. After the handshake the
   engine line and its controls go — kortext has retired from that project.
 - **Approve anyway.** A draft that still carries a template line verbatim is refused as
-  before, but the panel now names the line and lets you insist.
+  before, but the panel now names the line — a click jumps to it — and the way to insist
+  waits at the foot of the drawer, beside Request revision, until you are done reading.
+- **Try the beta.** In the app's settings, under Check for updates: the beta on npm, installed
+  on a second press; from a beta, Check for updates offers the release back.
 - **Continue holds** until the step is seen running; a second press no longer pauses it
   again. A pause made elsewhere — the menu bar app, another tab — reaches the panel.
 - Two URLs reach in: `/?project=<id>` and `/?project=<id>&doc=<rel>`. The other tools sit
