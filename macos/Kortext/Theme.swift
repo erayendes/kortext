@@ -22,6 +22,7 @@ enum Kx {
     static let red = dyn("#c5392f", "#e0726a")
     static let amber = dyn("#9a6a16", "#d3a55e")
     static let violet = dyn("#5b4bcc", "#8b7df0")
+    static let blue = dyn("#2563c9", "#5e9bf0")
 
     static func sans(_ size: CGFloat, _ weight: Font.Weight = .regular) -> Font { .system(size: size, weight: weight) }
     static func mono(_ size: CGFloat, _ weight: Font.Weight = .regular) -> Font { .system(size: size, weight: weight, design: .monospaced) }
@@ -40,10 +41,10 @@ struct Icon: View {
 
 /// A tinted capsule: the state and its word.
 struct Pill: View {
-    enum Kind { case approve, failed, questions }
+    enum Kind { case approve, failed, questions, writing }
     let kind: Kind; let text: String
     var body: some View {
-        let c: Color = switch kind { case .approve: Kx.violet; case .failed: Kx.red; case .questions: Kx.amber }
+        let c: Color = switch kind { case .approve: Kx.violet; case .failed: Kx.red; case .questions: Kx.amber; case .writing: Kx.blue }
         Text(text).font(Kx.sans(11, .medium)).foregroundStyle(c)
             .padding(.horizontal, 8).frame(height: 20)
             .background(c.opacity(0.09)).clipShape(Capsule())
@@ -55,5 +56,22 @@ extension NSColor {
         var v: UInt64 = 0
         Scanner(string: String(hex.dropFirst())).scanHexInt64(&v)
         self.init(red: CGFloat((v >> 16) & 0xff) / 255, green: CGFloat((v >> 8) & 0xff) / 255, blue: CGFloat(v & 0xff) / 255, alpha: 1)
+    }
+}
+
+/// The same capsule as a control: the chain's Pause / Continue on a project card.
+struct PillButton: View {
+    let kind: Pill.Kind; let icon: String; let text: String; let action: () -> Void
+    var body: some View {
+        let c: Color = switch kind { case .approve: Kx.violet; case .failed: Kx.red; case .questions: Kx.amber; case .writing: Kx.blue }
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Image(systemName: icon).font(.system(size: 8, weight: .bold)).foregroundStyle(c)
+                Text(text).font(Kx.sans(11, .medium)).foregroundStyle(c)
+            }
+            .padding(.horizontal, 8).frame(height: 20)
+            .background(c.opacity(0.09)).clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
     }
 }

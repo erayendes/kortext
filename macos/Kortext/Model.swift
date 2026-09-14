@@ -7,6 +7,7 @@ struct ProjectState: Identifiable {
     var docs: [Doc] = []
     var drafts: [String] { docs.filter { $0.status == "draft" }.map(\.rel) }
     var running: Job? = nil
+    var writing: [Job] = []          // every step in flight
     var failed: Job? = nil         // most recent failed job, if the last job failed
     var notReady = false
     var questions = 0
@@ -27,7 +28,7 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
     private var primed = false                   // first poll only records, never notifies
 
     struct Waiting: Identifiable {
-        enum Why { case approve, failed, questions(Int) }
+        enum Why { case approve, failed, questions(Int), writing }
         let project: ProjectState; let rel: String; let why: Why
         var id: String { "\(project.id)/\(rel)" }
     }
@@ -40,10 +41,14 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
                 if d.status == "draft" { out.append(Waiting(project: p, rel: d.rel, why: .approve)) }
                 else if d.state == "failed" { out.append(Waiting(project: p, rel: d.rel, why: .failed)) }
             }
+            for j in p.writing { out.append(Waiting(project: p, rel: j.doc_rel, why: .writing)) }
             return out
         }
     }
-    var draftCount: Int { waiting.count }
+    /// The badge counts decisions, not work in flight.
+    var draftCount: Int { waiting.filter { if case .writing = $0.why { return false }; return true }.count }
+    /// Projects with something to show: a row, a step in flight, or a pause to lift.
+    var shown: [ProjectState] { projects.filter { p in waiting.contains { $0.project.id == p.id } || (p.project.paused ?? 0) == 1 && !p.complete } }
     var anyRunning: Bool { projects.contains { $0.running != nil } }
     var runningLine: (project: ProjectState, job: Job)? {
         for p in projects { if let j = p.running { return (p, j) } }
@@ -109,6 +114,7 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
             if let d = try? await Api.docs(p.id) { s.docs = d }
             if let j = try? await Api.jobs(p.id) {
                 s.running = j.running
+                s.writing = j.jobs.filter { $0.status == "running" }
                 if let last = j.jobs.first, last.status == "failed" { s.failed = last }
                 for job in j.jobs.prefix(10) { observe(job, in: p) }
             }

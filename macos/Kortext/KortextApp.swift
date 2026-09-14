@@ -112,11 +112,11 @@ struct Content: View {
     var body: some View {
         if !model.installed { NotInstalled() }
         else if model.version == nil { Message(title: "Kortext is not running", sub: "Press ⏻ below to start the server.") }
-        else if model.waiting.isEmpty { Empty() }
+        else if model.shown.isEmpty { Empty() }
         else {
             // One card per project, its documents as rows — the way mimir groups a provider's lines.
             VStack(spacing: 10) {
-                ForEach(model.projects.filter { p in model.waiting.contains { $0.project.id == p.id } }) { p in
+                ForEach(model.shown) { p in
                     ProjectCard(p: p, rows: model.waiting.filter { $0.project.id == p.id })
                 }
             }
@@ -126,6 +126,7 @@ struct Content: View {
 }
 
 struct ProjectCard: View {
+    @EnvironmentObject var model: Model
     let p: ProjectState
     let rows: [Model.Waiting]
     var body: some View {
@@ -134,6 +135,11 @@ struct ProjectCard: View {
                 Text(p.project.name.uppercased()).font(.system(size: 10, weight: .medium)).tracking(0.9).foregroundStyle(Color.primary.opacity(0.5)).lineLimit(1)
                 Spacer()
                 Text("\(p.project.docCounts.settled)/\(p.project.docCounts.total)").font(Kx.mono(10)).foregroundStyle(Color.primary.opacity(0.35))
+                if !p.writing.isEmpty {
+                    PillButton(kind: .approve, icon: "pause.fill", text: "Pause") { model.pause(p) }
+                } else if (p.project.paused ?? 0) == 1, !p.complete {
+                    PillButton(kind: .questions, icon: "play.fill", text: "Continue") { model.resume(p) }
+                }
             }
             .padding(.horizontal, 14).padding(.top, 11).padding(.bottom, 4)
             ForEach(Array(rows.enumerated()), id: \.element.id) { i, w in
@@ -163,43 +169,8 @@ struct Message: View {
     }
 }
 
-// Nothing to decide; if a step is in flight, name it and offer the one control that stops it.
 struct Empty: View {
-    @EnvironmentObject var model: Model
-    var body: some View {
-        Card {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Nothing waiting on you").font(Kx.sans(13, .medium)).foregroundStyle(Kx.fg)
-            if let r = model.runningLine {
-                HStack(spacing: 8) {
-                    (Text("\(r.project.project.code) is writing ").font(Kx.sans(12)).foregroundStyle(Kx.fgMuted)
-                     + Text(r.job.doc_rel).font(Kx.mono(12)).foregroundStyle(Kx.fgSecondary))
-                    Spacer()
-                    SmallButton(icon: "pause.fill", title: "Pause") { model.pause(r.project) }
-                }
-            } else if let p = model.pausedLine {
-                HStack(spacing: 8) {
-                    Text("\(p.project.code) is paused").font(Kx.sans(12)).foregroundStyle(Kx.fgMuted)
-                    Spacer()
-                    SmallButton(icon: "play.fill", title: "Continue") { model.resume(p) }
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading).padding(14)
-        }
-        .padding(12)
-    }
-}
-
-struct SmallButton: View {
-    let icon: String; let title: String; let action: () -> Void
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 4) { Icon(name: icon, size: 9, color: Kx.fgSecondary); Text(title).font(Kx.sans(11, .medium)).foregroundStyle(Kx.fgSecondary) }
-                .padding(.horizontal, 8).frame(height: 22)
-                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Kx.border, lineWidth: 1))
-        }.buttonStyle(.plain)
-    }
+    var body: some View { Message(title: "Nothing waiting on you", sub: "Every document is settled, or the chain is idle.") }
 }
 
 struct NotInstalled: View {
@@ -242,6 +213,7 @@ struct WaitingRow: View {
                 case .approve: Pill(kind: .approve, text: "Approve")
                 case .failed: Pill(kind: .failed, text: "Failed")
                 case .questions(let n): Pill(kind: .questions, text: n == 1 ? "1 question" : "\(n) questions")
+                case .writing: Pill(kind: .writing, text: "Writing")
                 }
             }
             .padding(.horizontal, 14).padding(.vertical, 9)
