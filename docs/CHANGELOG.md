@@ -2,7 +2,7 @@
 
 🇹🇷 [For Turkish press 1](tr/CHANGELOG.md)
 
-## [Unreleased]
+## [3.1.2] — 2026-09-14
 
 - **The update strip shows.** Under the heading of either screen, blue, the button at the
   right, instead of a grey line under the header that read like any other card. After the
