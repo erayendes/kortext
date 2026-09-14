@@ -719,7 +719,10 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
         const target = shelf.find((d) => d.rel === r.target);
         if (!target || !target.hasProducingStep || target.status === 'uninitialized') continue;
         if (runningDoc(db, project.id, r.target)) continue;
-        byTarget.set(r.target, [...(byTarget.get(r.target) ?? []), `[${doc.rel} asks] ${r.reason}`]);
+        byTarget.set(r.target, [
+          ...(byTarget.get(r.target) ?? []),
+          `[${doc.rel} asks] ${r.reason}`,
+        ]);
       }
       if (engineNow)
         for (const [target, notes] of byTarget) {
