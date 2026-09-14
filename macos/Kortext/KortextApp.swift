@@ -86,10 +86,10 @@ struct Header: View {
                     if settings { Icon(name: "chevron.left", size: 11, color: Kx.fgSecondary, weight: .semibold) }
                     Image("wordmark").resizable().scaledToFit().frame(height: 14)
                 }
-            }.buttonStyle(.plain)
+            }.buttonStyle(.plain).hand()
             Spacer()
             if !settings {
-                Button { settings = true } label: { Icon(name: "gearshape", size: 13).frame(width: 14) }.buttonStyle(.plain)
+                Button { settings = true } label: { Icon(name: "gearshape", size: 13).frame(width: 14) }.buttonStyle(.plain).hand()
             }
         }
         .padding(.horizontal, 12).frame(height: 40)
@@ -193,7 +193,7 @@ struct NotInstalled: View {
                     NSPasteboard.general.clearContents(); NSPasteboard.general.setString("npm i -g kortext", forType: .string); copied = true
                 } label: {
                     HStack(spacing: 4) { Icon(name: copied ? "checkmark" : "doc.on.doc", size: 11, color: Kx.fgSecondary); Text(copied ? "Copied" : "Copy").font(Kx.sans(11, .medium)).foregroundStyle(Kx.fgSecondary) }
-                }.buttonStyle(.plain)
+                }.buttonStyle(.plain).hand()
             }
             .padding(.horizontal, 10).padding(.vertical, 7)
             .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(.regularMaterial))
@@ -226,7 +226,7 @@ struct WaitingRow: View {
         }
         .buttonStyle(.plain)
         .disabled(!w.needs)   // a step in flight is a fact, not a decision — nothing to open
-        .onHover { hover = $0 }
+        .onHover { hover = $0; if w.needs { if $0 { NSCursor.pointingHand.push() } else { NSCursor.pop() } } }
     }
 }
 
@@ -242,7 +242,7 @@ struct StatusBar: View {
                 Button { power() } label: {
                     Icon(name: "power", size: 12, color: armed ? Kx.red : up ? Kx.green : Kx.fgFaint, weight: .semibold).frame(width: 14, height: 18)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.plain).hand()
                 .help(!up ? "Start the server" : armed ? "Press again to quit Kortext and stop the server" : "Quit Kortext and stop the server")
             }
             if armed {
@@ -277,7 +277,7 @@ struct ThemeCycle: View {
         Button { theme = theme == "auto" ? "light" : theme == "light" ? "dark" : "auto" } label: {
             Icon(name: icon, size: 13, color: Kx.fgSecondary).frame(width: 14, height: 18)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.plain).hand()
         .help("Theme: \(theme)")
     }
 }
@@ -289,7 +289,7 @@ struct Credit: View {
         Button { NSWorkspace.shared.open(URL(string: "https://milowda.com")!) } label: {
             Text("milowda").font(Kx.sans(11)).foregroundStyle(hover ? Kx.fgSecondary : Kx.fgFaint)
         }
-        .buttonStyle(.plain).onHover { hover = $0; if $0 { NSCursor.pointingHand.push() } else { NSCursor.pop() } }
+        .buttonStyle(.plain).hand().onHover { hover = $0 }
     }
 }
 
@@ -324,12 +324,12 @@ struct SettingsView: View {
                     if notifications { model.ensureNotifications() }
                 }
                 Row(icon: "arrow.down.circle", title: "Check for updates", sub: model.update ?? (model.version.map { "kortext \($0)" } ?? nil)) { model.checkUpdates() }
-                Row(icon: "ladybug", title: "Report an issue", link: true) {
+                Row(icon: "ladybug", title: "Report an issue") {
                     var u = "https://github.com/erayendes/kortext/issues/new?template=bug_report.yml"
                     if let v = model.version { u += "&version=\(v)" }
                     NSWorkspace.shared.open(URL(string: u)!)
                 }
-                Row(icon: "heart", title: "Support Kortext", link: true) { NSWorkspace.shared.open(URL(string: "https://buymeacoffee.com/erayendes")!) }
+                Row(icon: "heart", title: "Support Kortext") { NSWorkspace.shared.open(URL(string: "https://buymeacoffee.com/erayendes")!) }
                 Row(icon: "xmark.circle", title: "Quit Kortext", trailing: "⌘Q") { NSApp.terminate(nil) }
             }
         }
@@ -356,7 +356,6 @@ struct Row: View {
     var sub: String? = nil
     var on: Bool? = nil
     var trailing: String? = nil
-    var link = false          // leaves the app: the hand cursor says so
     let action: () -> Void
     @State private var hover = false
 
@@ -377,7 +376,8 @@ struct Row: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .onHover { hover = $0; if link { if $0 { NSCursor.pointingHand.push() } else { NSCursor.pop() } } }
+        .hand()
+        .onHover { hover = $0 }
     }
 }
 

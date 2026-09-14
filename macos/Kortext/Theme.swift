@@ -68,3 +68,8 @@ extension NSColor {
         self.init(red: CGFloat((v >> 16) & 0xff) / 255, green: CGFloat((v >> 8) & 0xff) / 255, blue: CGFloat(v & 0xff) / 255, alpha: 1)
     }
 }
+
+/// Everything pressable shows the hand.
+extension View {
+    func hand() -> some View { onHover { if $0 { NSCursor.pointingHand.push() } else { NSCursor.pop() } } }
+}
