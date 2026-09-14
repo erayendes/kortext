@@ -86,14 +86,27 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
             tags = await Api.distTags()
             guard let want = tags[tag] else { note = tags.isEmpty ? "could not reach npm" : nil; return }
             if version == want { checkAppUpdate(); note = nil; return }
+            if Shell.run("kortext --version")?.trimmingCharacters(in: .whitespacesAndNewlines) == want { await restart(); return }   // installed by hand, not yet running
             if tag == "beta", !serverSwitches {
                 // The first beta is installed by hand; from then on the server can switch itself.
                 NSPasteboard.general.clearContents(); NSPasteboard.general.setString("npm i -g kortext@beta", forType: .string)
-                note = "copied npm i -g kortext@beta — run it, then ⏻"
+                note = "copied npm i -g kortext@beta — run it, then press again"
                 return
             }
             install(tag: tag, to: want)
         }
+    }
+
+    /// Stop and start the server, then wait for `/api/health` to answer with the new version.
+    func restart() async {
+        note = "restarting…"
+        Shell.run("kortext --stop")
+        Shell.run("kortext --no-open")
+        for _ in 0..<20 {
+            try? await Task.sleep(for: .seconds(1))
+            if let h = await Api.health() { version = h.version; note = nil; checkAppUpdate(); await poll(); return }
+        }
+        note = "installed · press ⏻"
     }
 
     /// Install, then restart the server ourselves: the process on the port is still the old
@@ -102,14 +115,7 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
         note = "installing \(pretty(want))…"
         Task {
             guard (try? await Api.post("/api/version/update", ["tag": tag])) == true else { note = "not now — a step is running"; return }
-            note = "installed · restarting…"
-            Shell.run("kortext --stop")
-            Shell.run("kortext --no-open")
-            for _ in 0..<20 {
-                try? await Task.sleep(for: .seconds(1))
-                if let h = await Api.health() { version = h.version; note = nil; checkAppUpdate(); await poll(); return }
-            }
-            note = "installed · press ⏻"
+            await restart()
         }
     }
 
