@@ -1,0 +1,21 @@
+name: Kortext
+options:
+  bundleIdPrefix: dev.kortext
+  deploymentTarget:
+    macOS: "14.0"
+targets:
+  Kortext:
+    type: application
+    platform: macOS
+    sources: [Kortext]
+    info:
+      path: Kortext/Info.plist
+      properties:
+        LSUIElement: true
+        CFBundleDisplayName: Kortext
+        CFBundleShortVersionString: "0.1.0"
+    settings:
+      base:
+        SWIFT_VERSION: "5.0"
+        CODE_SIGN_IDENTITY: "-"
+        ENABLE_HARDENED_RUNTIME: false
