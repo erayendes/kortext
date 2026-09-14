@@ -79,9 +79,9 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
             betaNote = "copied — run it, then press ⏻"
             return
         }
-        if !betaArmed { betaArmed = true; betaNote = "press again to install \(beta)"; return }
+        if !betaArmed { betaArmed = true; betaNote = "press again to install \(pretty(beta))"; return }
         betaArmed = false
-        install(tag: "beta", label: "kortext \(beta)")
+        install(tag: "beta", label: "kortext \(pretty(beta))")
     }
     /// The version pill: the app asks Sparkle about itself, the daemon about the npm package.
     func checkUpdates() {
@@ -91,9 +91,9 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
         Task {
             guard let v = try? await Api.version() else { update = "v\(version ?? "") · offline"; return }
             pendingUpdate = v.stale || onBeta
-            update = v.stale ? "\(v.latest ?? "") available · click to install"
-                : onBeta ? "click for the release, \(v.latest ?? "")"
-                : "kortext \(v.current) · up to date"
+            update = v.stale ? "\(pretty(v.latest ?? "")) available · click to install"
+                : onBeta ? "click for the release, \(pretty(v.latest ?? ""))"
+                : "up to date"
         }
     }
     var pendingUpdate = false
@@ -111,7 +111,7 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
             Shell.run("kortext --no-open")
             for _ in 0..<20 {
                 try? await Task.sleep(for: .seconds(1))
-                if let h = await Api.health() { version = h.version; update = "v\(h.version) · up to date"; await poll(); return }
+                if let h = await Api.health() { version = h.version; update = "kortext \(pretty(h.version)) · up to date"; await poll(); return }
             }
             update = "installed · press ⏻"
         }
@@ -250,3 +250,14 @@ extension Project {
     /// The documents are written in this language; so is the nudge about them.
     var tr: Bool { (doc_lang ?? "").lowercased().hasPrefix("tur") || (doc_lang ?? "").lowercased().hasPrefix("türk") }
 }
+
+/// `3.2.0-beta.2` reads as `3.2-beta2`, `3.2.0` as `3.2`, `3.1.2` stays: the patch only when it says something.
+func pretty(_ v: String) -> String {
+    let base = String(v.prefix { $0 != "-" }); let pre = v.dropFirst(base.count).dropFirst()
+    var parts = base.split(separator: ".").map(String.init)
+    if parts.count == 3, parts[2] == "0" { parts.removeLast() }
+    let short = parts.joined(separator: ".")
+    return pre.isEmpty ? short : short + "-" + pre.replacingOccurrences(of: ".", with: "")
+}
+/// The app's own version, as the bundle carries it.
+var appVersion: String { Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0" }

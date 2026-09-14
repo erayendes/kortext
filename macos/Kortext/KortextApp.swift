@@ -250,7 +250,6 @@ struct StatusBar: View {
                     }
                     .buttonStyle(.plain).hand().help("Open the panel in your browser")
                 }
-                if up, !armed, let v = model.version { VersionPill(text: "v\(v)", help: "The kortext package this server runs") }
             }
             if armed {
                 Text("Press again to quit and stop the server").font(Kx.sans(11, .medium)).foregroundStyle(Kx.red).lineLimit(1).fixedSize()
@@ -289,17 +288,6 @@ struct ThemeCycle: View {
     }
 }
 
-/// mimir's version pill: mono, micro, a hairline around it.
-struct VersionPill: View {
-    let text: String; let help: String
-    var body: some View {
-        Text(text).font(Kx.mono(10)).foregroundStyle(Kx.fgMuted).lineLimit(1)
-            .padding(.horizontal, 6).frame(height: 18)
-            .overlay(Capsule().stroke(Kx.border, lineWidth: 1))
-            .help(help)
-    }
-}
-
 /// The credit, a link — opened by hand, since SwiftUI's Link is inert in a non-activating panel.
 struct Credit: View {
     @State private var hover = false
@@ -316,7 +304,6 @@ struct SettingsBar: View {
     var body: some View {
         HStack(spacing: 8) {
             ThemeCycle()
-            VersionPill(text: "app v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?")", help: "This menu bar app")
             Spacer()
             Credit()
                 .font(Kx.sans(11)).foregroundStyle(Kx.fgFaint)
@@ -342,8 +329,9 @@ struct SettingsView: View {
                     notifications.toggle()
                     if notifications { model.ensureNotifications() }
                 }
-                Row(icon: "arrow.down.circle", title: "Check for updates", sub: model.update ?? model.version.map { "kortext \($0)" }) { model.checkUpdates() }
-            Row(icon: "flask", title: "Try the beta", sub: model.betaNote ?? model.beta.map { model.onBeta ? "kortext \($0) · installed" : "kortext \($0)" } ?? "looking…") { model.tryBeta() }
+                Row(icon: "arrow.down.circle", title: "Check for updates",
+                sub: model.update ?? ["app \(pretty(appVersion))", model.version.map { "kortext \(pretty($0))" }].compactMap { $0 }.joined(separator: " · ")) { model.checkUpdates() }
+            Row(icon: "flask", title: "Try the beta", sub: model.betaNote ?? model.beta.map { model.onBeta ? "\(pretty($0)) · installed" : pretty($0) } ?? "looking…") { model.tryBeta() }
                 Row(icon: "ladybug", title: "Report an issue") {
                     var u = "https://github.com/erayendes/kortext/issues/new?template=bug_report.yml"
                     if let v = model.version { u += "&version=\(v)" }
