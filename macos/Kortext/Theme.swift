@@ -12,9 +12,6 @@ enum Kx {
     static let borderStrong = Color.primary.opacity(0.16)
     static let bgHover = Color.primary.opacity(0.06)
     static let bgActive = Color.primary.opacity(0.10)
-    // Cards read as their own surface on the glass: a lift in dark, a shade in light.
-    static let card = Color(nsColor: NSColor(name: nil) { $0.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? NSColor(white: 1, alpha: 0.11) : NSColor(white: 0, alpha: 0.05) })
-    static let cardBorder = Color(nsColor: NSColor(name: nil) { $0.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? NSColor(white: 1, alpha: 0.10) : NSColor(white: 0, alpha: 0.07) })
     static let accent = Color.accentColor
     static let accentFg = Color.white
     // The panel's state colours — quieter than the system's, and dark enough to read on a light ground.

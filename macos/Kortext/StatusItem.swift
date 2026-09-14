@@ -17,6 +17,7 @@ final class StatusController: NSObject, NSWindowDelegate {
     private var bag = Set<AnyCancellable>()
     private var monitors: [Any] = []
     private var host: NSView!
+    private var glass: NSVisualEffectView!
 
     init(model: Model, content: some View) {
         panel = KeyPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel, .fullSizeContentView], backing: .buffered, defer: true)
@@ -28,9 +29,9 @@ final class StatusController: NSObject, NSWindowDelegate {
         panel.level = .popUpMenu
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.isMovable = false
-        // Glass: the system's popover material behind clear SwiftUI content.
+        // Glass, as mimir does it: hudWindow's dark vibrant blur in dark, popover's in light; behind-window, so the desktop shows through.
         let glass = NSVisualEffectView()
-        glass.material = .popover
+        glass.material = NSApp.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? .hudWindow : .popover
         glass.blendingMode = .behindWindow
         glass.state = .active
         glass.wantsLayer = true
@@ -46,6 +47,7 @@ final class StatusController: NSObject, NSWindowDelegate {
             host.topAnchor.constraint(equalTo: glass.topAnchor), host.bottomAnchor.constraint(equalTo: glass.bottomAnchor),
         ])
         self.host = host
+        self.glass = glass
         panel.contentView = glass
 
         item.button?.image = NSImage(named: "menubar")
@@ -68,6 +70,7 @@ final class StatusController: NSObject, NSWindowDelegate {
 
     private func open() {
         guard let button = item.button, let win = button.window else { return }
+        glass.material = NSApp.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? .hudWindow : .popover
         host.layoutSubtreeIfNeeded()
         let size = host.fittingSize
         let anchor = win.convertToScreen(button.convert(button.bounds, to: nil))

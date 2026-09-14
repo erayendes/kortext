@@ -100,10 +100,10 @@ struct ProjectCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 6) {
-                Text(p.project.code).font(Kx.mono(11, .semibold)).tracking(0.6).foregroundStyle(Kx.fgMuted)
-                Text(p.project.name).font(Kx.sans(11)).foregroundStyle(Kx.fgFaint)
+                Text(p.project.code).font(.system(size: 10, weight: .medium)).tracking(0.9).foregroundStyle(Color.primary.opacity(0.5))
+                Text(p.project.name.uppercased()).font(.system(size: 10, weight: .medium)).tracking(0.9).foregroundStyle(Color.primary.opacity(0.35)).lineLimit(1)
                 Spacer()
-                Text("\(p.project.docCounts.settled)/\(p.project.docCounts.total)").font(Kx.mono(10)).foregroundStyle(Kx.fgFaint)
+                Text("\(p.project.docCounts.settled)/\(p.project.docCounts.total)").font(Kx.mono(10)).foregroundStyle(Color.primary.opacity(0.35))
             }
             .padding(.horizontal, 14).padding(.top, 11).padding(.bottom, 4)
             ForEach(Array(rows.enumerated()), id: \.element.id) { i, w in
@@ -112,9 +112,10 @@ struct ProjectCard: View {
             }
         }
         .padding(.bottom, 4)
-        .background(Kx.card)
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Kx.cardBorder, lineWidth: 1))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        // mimir's card: the system's regular material on the glass, a hairline around it.
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(.regularMaterial))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color.primary.opacity(0.08), lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
 
@@ -167,7 +168,8 @@ struct NotInstalled: View {
                 }.buttonStyle(.plain)
             }
             .padding(.horizontal, 10).padding(.vertical, 7)
-            .background(Kx.card).overlay(RoundedRectangle(cornerRadius: 8).stroke(Kx.cardBorder, lineWidth: 1)).clipShape(RoundedRectangle(cornerRadius: 8))
+            .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(.regularMaterial))
+            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(Color.primary.opacity(0.08), lineWidth: 1))
         }
         .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 12).padding(.top, 18).padding(.bottom, 16)
     }
