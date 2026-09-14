@@ -159,14 +159,16 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
     }
 
     static let demo: [ProjectState] = {
-        func p(_ id: Int, _ code: String, _ name: String, _ docs: [Doc], notReady: Bool = false) -> ProjectState {
+        func p(_ id: Int, _ code: String, _ name: String, _ docs: [Doc], notReady: Bool = false, writing: [String] = []) -> ProjectState {
             var s = ProjectState(project: Project(id: id, name: name, code: code, docCounts: .init(settled: 3, total: 15), doc_lang: "Turkish", paused: 0))
-            s.docs = docs; s.notReady = notReady; s.questions = 3; return s
+            s.docs = docs; s.notReady = notReady; s.questions = 3
+            s.writing = writing.enumerated().map { Job(id: 900 + $0.offset, doc_rel: $0.element, status: "running", error: nil) }
+            return s
         }
         return [
             p(90, "ACME", "Acme Billing", [Doc(rel: "PRODUCT.md", status: "draft", state: "waiting", detail: "approve"),
-                                          Doc(rel: "STACK.md", status: "draft", state: "waiting", detail: "approve"),
-                                          Doc(rel: "ARCHITECTURE.md", status: "uninitialized", state: "failed", detail: nil)]),
+                                          Doc(rel: "ARCHITECTURE.md", status: "uninitialized", state: "failed", detail: nil)],
+              writing: ["STACK.md", "STRUCTURE.md", "DESIGN.md"]),
             p(91, "MILO", "Milowda", [], notReady: true),
         ]
     }()
