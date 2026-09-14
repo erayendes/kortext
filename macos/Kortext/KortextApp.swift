@@ -162,7 +162,7 @@ struct WaitingRow: View {
                         Text(w.project.project.code).font(Kx.mono(10)).tracking(0.4).foregroundStyle(Kx.fgFaint)
                     }
                     if case .failed(let e?) = w.why {
-                        Text(e).font(Kx.mono(11)).foregroundStyle(Kx.red).lineLimit(1)
+                        Text(e).font(Kx.mono(11)).foregroundStyle(Kx.red).lineLimit(3).fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 Spacer(minLength: 0)
@@ -248,7 +248,7 @@ struct SettingsView: View {
                 }
                 .padding(.vertical, 6)
                 Divider().overlay(Kx.border)
-                Check(on: $loginItem, title: "Launch at login")
+                Check(on: $loginItem, title: "Launch at login", sub: "The server starts with it, so the morning begins with the list, not with ⏻.")
                     .onChange(of: loginItem) { _, on in try? on ? SMAppService.mainApp.register() : SMAppService.mainApp.unregister() }
                 Divider().overlay(Kx.border)
                 Check(on: $notifications, title: "Notify when a document waits on me",

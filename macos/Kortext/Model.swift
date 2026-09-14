@@ -1,5 +1,6 @@
 import AppKit
 import UserNotifications
+import ServiceManagement
 
 struct ProjectState: Identifiable {
     let project: Project
@@ -71,6 +72,10 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
     func start() {
         UNUserNotificationCenter.current().delegate = self
         installed = Shell.run("command -v kortext") != nil
+        // Launched at login means the server is wanted too; a menu bar that says "not running" every morning is no companion.
+        if installed, SMAppService.mainApp.status == .enabled {
+            Task { if await Api.health() == nil { Shell.run("kortext --no-open") } }
+        }
         Task {
             _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge])
             // ponytail: KORTEXT_DEMO=1 fires the four sample notifications on launch — for screenshots, nothing else.
