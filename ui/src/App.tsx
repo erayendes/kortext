@@ -1165,6 +1165,33 @@ function Field({
   );
 }
 
+/** The engine line as a control: `codex · default · high ↓` opens the picker. */
+function EngineButton({
+  engines,
+  engine,
+  model,
+  effort,
+  onOpen,
+}: {
+  engines: EngineInfo[];
+  engine: string | null;
+  model: string;
+  effort: string;
+  onOpen: () => void;
+}) {
+  if (engines.length === 0) return null;
+  return (
+    <button
+      className="btn kx-engine-btn mono"
+      onClick={onOpen}
+      title="The CLI that writes this project's documents, its model and effort — press to change"
+    >
+      {engineLine(engines, engine, model, effort)}
+      <span aria-hidden="true">↓</span>
+    </button>
+  );
+}
+
 /** `codex · default · high` — model and effort both named; unset ones read as
  * the CLI's own default, the effort by the level its spec marks as such. */
 function engineLine(engines: EngineInfo[], engine: string | null, model: string, effort: string) {
@@ -1448,25 +1475,18 @@ function AddProject({
         onEffort={setEffort}
         onError={setErr}
       />
-      {/* Under a hairline: what will run, then the actions. */}
-      {engines.length > 0 && (
-        <span
-          className="kx-engine-line kx-form-engine mono"
-          title="The CLI that writes this project's documents, its model and effort"
-        >
-          {engineLine(engines, engine, model, effort)}
-        </span>
-      )}
-      <div className="kx-form-row">
-        {engines.length > 0 && (
-          <button className="btn btn-link-primary" onClick={() => setPicking(true)}>
-            Change model
-          </button>
-        )}
+      <div className="kx-form-row kx-form-foot">
+        <EngineButton
+          engines={engines}
+          engine={engine}
+          model={model}
+          effort={effort}
+          onOpen={() => setPicking(true)}
+        />
         <button className="btn btn-primary" onClick={submit}>
           Initialize
         </button>
-        <button className="btn btn-link-primary" onClick={onCancel}>
+        <button className="btn btn-secondary" onClick={onCancel}>
           Cancel
         </button>
         {err && <span className="kx-field-err">{err}</span>}
@@ -1623,14 +1643,6 @@ function ProjectScreen({
                 )
               )}
             </div>
-            {engines.length > 0 && (
-              <span
-                className="kx-engine-line mono"
-                title="The CLI this project runs on, its model and effort"
-              >
-                {engineLine(engines, engine, model, effort)}
-              </span>
-            )}
           </div>
         )}
       </div>

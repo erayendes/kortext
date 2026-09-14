@@ -1552,12 +1552,23 @@ a.btn {
 /* Under the buttons: what runs this project, as one faint mono line — the
    CLI, its model, its effort. Reading only; Change model, above it, opens
    the picker. */
-/* Add project: the engine line opens the form's last block, under a hairline. */
-.kx-form-engine {
-  display: block;
+/* Add project's last row, under a hairline: the engine control and the actions. */
+.kx-form-foot {
   margin-top: 14px;
   padding-top: 12px;
   border-top: 1px solid var(--border);
+}
+/* The engine control reads as the line it was — mono, quiet — with an arrow that says it opens. */
+.kx-engine-btn {
+  font-size: var(--fs-label);
+  font-weight: 400;
+  color: var(--fg-secondary);
+  border-color: var(--border-strong);
+  background: none;
+}
+.kx-engine-btn:hover {
+  color: var(--fg);
+  border-color: var(--border-strong);
 }
 .kx-engine-line {
   font-size: var(--fs-label);
