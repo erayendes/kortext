@@ -1977,7 +1977,6 @@ function DocumentsTab({
         }
       />
       {err && <div className="kx-error">{err}</div>}
-      <SiblingsSlider />
       {groups.map((g) => {
         const items = sortFor(
           g.key,
@@ -2041,6 +2040,8 @@ function DocumentsTab({
           </details>
         );
       })}
+      {/* The other tools, after the work — the way the project list carries them under the projects. */}
+      <SiblingsSlider />
       <DocDrawer
         project={project}
         doc={open}
