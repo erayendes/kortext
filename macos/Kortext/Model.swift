@@ -69,7 +69,7 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
     func status(_ tag: String) -> String {
         if pressed == tag, let n = note { return n }
         guard let want = tags[tag] else { return tags.isEmpty ? "…" : "No beta version right now" }
-        return version == want ? "up to date" : "not installed"
+        return version == want ? "up to date" : tag == channel ? "update available" : "not installed"
     }
 
     /// Only a 3.2+ server knows the `tag` field; an older one always installs the release.
