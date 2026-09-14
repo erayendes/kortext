@@ -1334,23 +1334,28 @@ a.btn {
   color: var(--red);
 }
 /* Under the path while ⚙ is on: the project's actions, and the question one of them asks.
-   Nothing pulled left: the first word starts a few px in, the hover box and the warning stay
-   inside the column. */
+   The links keep their own 12px inset, as every link button does, so their hover boxes match;
+   the row starts on the column's edge and the first word sits 12px in, like the fields above. */
 .kx-danger-zone {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
+  /* Inline flow, not flex: the warning wraps as a sentence and Yes / No follow its last line.
+     Text sits 12px in on every line; the first link's box reaches back to the column edge. */
+  display: block;
   margin-top: 6px;
-}
-.kx-danger-zone .btn {
-  padding: 0 8px;
+  padding-left: 12px;
+  line-height: 30px;
 }
 .kx-danger-zone > .btn:first-child {
-  padding-left: 0;
+  margin-left: -12px;
+}
+.kx-danger-zone > * {
+  vertical-align: middle;
+}
+.kx-danger-zone .kx-danger-sep {
+  margin: 0 6px;
 }
 .kx-danger-zone .kx-arm-warn {
-  flex-basis: 100%;
+  line-height: 1.5;
+  margin-right: 4px;
 }
 .kx-gear {
   display: inline-flex;
