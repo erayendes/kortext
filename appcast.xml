@@ -9,6 +9,7 @@
     <language>en</language>
           <item>
       <title>Kortext 3.2.0-beta.2</title>
+      <sparkle:channel>beta</sparkle:channel>
       <sparkle:version>3001992</sparkle:version>
       <sparkle:shortVersionString>3.2.0-beta.2</sparkle:shortVersionString>
       <pubDate>Mon, 14 Sep 2026 20:46:33 +0000</pubDate>
@@ -25,6 +26,7 @@
 
 <item>
       <title>Kortext 3.2.0-beta.1</title>
+      <sparkle:channel>beta</sparkle:channel>
       <sparkle:version>3001991</sparkle:version>
       <sparkle:shortVersionString>3.2.0-beta.1</sparkle:shortVersionString>
       <pubDate>Mon, 14 Sep 2026 20:27:09 +0000</pubDate>
