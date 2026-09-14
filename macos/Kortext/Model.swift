@@ -66,7 +66,8 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
         Task {
             guard let v = try? await Api.version() else { update = "v\(version ?? "") · offline"; return }
             pendingUpdate = v.stale
-            update = v.stale ? "v\(v.latest ?? "") available · click to update" : "v\(v.current) · up to date"
+            let app = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
+            update = v.stale ? "kortext \(v.latest ?? "") available · click to update" : "app \(app) · kortext \(v.current) · up to date"
         }
     }
     var pendingUpdate = false
