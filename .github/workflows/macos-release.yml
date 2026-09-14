@@ -31,10 +31,14 @@ jobs:
           REF: ${{ github.ref_name }}
         run: |
           VERSION="${REF#v}"
-          # Monotonic CFBundleVersion: major*1_000_000 + minor*1_000 + patch.
-          IFS=. read -r maj min pat <<< "$VERSION"
+          # Monotonic CFBundleVersion: major*1_000_000 + minor*1_000 + patch, and a
+          # pre-release (3.2.0-beta.1) sits under its final (3.2.0) — patch*10 + beta.
+          BASE="${VERSION%%-*}"; PRE="${VERSION#"$BASE"}"; PRE="${PRE#-}"
+          IFS=. read -r maj min pat <<< "$BASE"
+          BUILD=$(( maj * 1000000 + min * 1000 + ${pat:-0} * 10 ))
+          if [ -n "$PRE" ]; then BUILD=$(( BUILD - 10 + ${PRE##*.} )); fi
           echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "BUILD=$(( maj * 1000000 + min * 1000 + ${pat:-0} ))" >> "$GITHUB_OUTPUT"
+          echo "BUILD=$BUILD" >> "$GITHUB_OUTPUT"
 
       - name: Install XcodeGen
         run: brew install xcodegen
@@ -117,28 +121,39 @@ jobs:
           echo "ED_SIG=$ED_SIG" >> "$GITHUB_OUTPUT"
 
       # The tag was cut from main's HEAD, so main is the same tree; dist/ is untracked and survives.
-      - name: Appcast on main
+      # The feed lives on its own branch, `appcast`, holding one file — so a tag cut
+      # from any branch (a beta from v3.2-macos, a final from main) feeds the same
+      # installed apps, and nothing else on the branch is touched.
+      - name: Appcast
         env:
           VERSION: ${{ steps.version.outputs.VERSION }}
           BUILD: ${{ steps.version.outputs.BUILD }}
           ED_SIG: ${{ steps.sparkle.outputs.ED_SIG }}
           LENGTH: ${{ steps.pkg.outputs.LENGTH }}
         run: |
-          # Release notes: this version's section of the changelog.
+          # Release notes: this version's section of the changelog; a beta has none yet.
           NOTES="$(awk -v v="$VERSION" '$0 ~ "^## \\["v"\\]"{c=1;next} c&&/^## \[/{c=0} c{print}' docs/CHANGELOG.md)"
           [ -n "$NOTES" ] || NOTES="Kortext $VERSION."
           printf '%s' "$NOTES" > /tmp/release_notes.md
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout main
+          rm -rf /tmp/feed
+          if git ls-remote --exit-code --heads origin appcast >/dev/null; then
+            git worktree add /tmp/feed origin/appcast
+            (cd /tmp/feed && git checkout -B appcast origin/appcast)
+          else
+            git worktree add --detach /tmp/feed
+            (cd /tmp/feed && git checkout --orphan appcast && git rm -rfq . && cp "$GITHUB_WORKSPACE/macos/appcast.xml" appcast.xml)
+          fi
           python3 macos/script/gen_appcast_item.py \
             --version "$VERSION" --build-number "$BUILD" \
             --url "https://github.com/erayendes/kortext/releases/download/v${VERSION}/Kortext.zip" \
             --signature "$ED_SIG" --length "$LENGTH" --notes "$NOTES" \
-            --appcast macos/appcast.xml
-          git add macos/appcast.xml
-          git commit -m "chore: appcast v$VERSION" || echo "appcast unchanged"
-          git push origin main
+            --appcast /tmp/feed/appcast.xml
+          cd /tmp/feed
+          git add appcast.xml
+          git commit -m "appcast: v$VERSION" || echo "appcast unchanged"
+          git push origin appcast
 
       # npm-publish.yml creates the release for the same tag; whichever job is first creates it.
       - name: Attach to the GitHub release
@@ -149,6 +164,7 @@ jobs:
         run: |
           TAG="v${VERSION}"
           gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Kortext $TAG" \
+            $( [[ "$TAG" == *-* ]] && echo --prerelease ) \
             --notes "See [the changelog](https://github.com/${GITHUB_REPOSITORY}/blob/${TAG}/docs/CHANGELOG.md)."
           gh release upload "$TAG" dist/Kortext.zip --clobber
           gh release view "$TAG" --json body -q .body > /tmp/notes.md

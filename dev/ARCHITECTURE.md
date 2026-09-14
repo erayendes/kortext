@@ -405,7 +405,8 @@ build → `node dist/index.js --help` smoke.
 A menu bar app, `macos/`, that is a plain client of the REST surface above — the server gained
 `companion` on `/api/health` and `paused` on `/jobs` for it, nothing else. It is not in the npm
 package; it ships as a notarized `Kortext.zip` on the GitHub release and keeps itself current
-through Sparkle (`macos/appcast.xml`, written by the release workflow). Without it kortext
+through Sparkle (the feed is `appcast.xml` on the orphan branch `appcast`, written by the
+release workflow; `macos/appcast.xml` is the empty channel it starts from). Without it kortext
 works in full; without kortext it says so and copies `npm i -g kortext`.
 
 **What it shows.** The K mark in the menu bar, dimmed while the server is down, with a count
@@ -433,6 +434,7 @@ carries `User-Agent: Kortext-mac/<version>`; that is the companion signal.
 
 **Release.** `.github/workflows/macos-release.yml`, on the same `v*` tag as npm: xcodegen →
 Release build → Developer ID signature inside-out (Sparkle's XPCs first, no `--deep`) →
-notarize and staple → `Kortext.zip` → `sign_update` → a new item in `macos/appcast.xml`
-committed to `main` → attached to the tag's release. Secrets: the Developer ID p12, the App
+notarize and staple → `Kortext.zip` → `sign_update` → a new item in `appcast.xml` on the
+`appcast` branch → attached to the tag's release. A pre-release tag (`v3.2.0-beta.1`) goes to
+npm's `beta` dist-tag and a GitHub pre-release; its build number sits under the final's. Secrets: the Developer ID p12, the App
 Store Connect API key, the Sparkle private key. Build number `major·10⁶ + minor·10³ + patch`.

@@ -40,7 +40,9 @@ jobs:
       # Upgraded here, after the install and the tests, so those run on the npm
       # the rest of CI runs on.
       - run: npm install -g npm@11
-      - run: npm publish --provenance --access public
+      # A pre-release (v3.2.0-beta.1) goes out under the `beta` dist-tag, so
+      # `npm i -g kortext` keeps giving the last stable and `kortext@beta` the trial.
+      - run: npm publish --provenance --access public --tag "$( [[ "$GITHUB_REF_NAME" == *-* ]] && echo beta || echo latest )"
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         env:
@@ -48,4 +50,5 @@ jobs:
         run: |
           gh release create "$GITHUB_REF_NAME" \
             --title "Kortext $GITHUB_REF_NAME" \
+            $( [[ "$GITHUB_REF_NAME" == *-* ]] && echo --prerelease ) \
             --notes "See [the changelog](https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/docs/CHANGELOG.md)."
