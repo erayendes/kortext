@@ -94,7 +94,7 @@ From here on, Kortext is not in the loop.
 
 **The status bar**, at the bottom. A green dot means the server is up. The ⏻ button stops it — never while a document is being written.
 
-**The update strip**, under the Projects heading, in blue, only when npm has a newer version — the panel looks once when opened and then every hour, so a release lands while it sits open. **Update now** installs it; then quit kortext and start it again.
+**The update strip**, under the heading of either screen, in blue, only when npm has a newer version — the panel looks once when opened and then every hour, so a release lands while it sits open. **Update now** installs it; then the strip offers **Quit** — press it, start kortext again, and the new version takes over.
 
 **Theme.** The button at the top right cycles auto → light → dark.
 

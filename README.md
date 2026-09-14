@@ -172,7 +172,7 @@ What the background server prints collects in `~/.kortext/kortext.db.log`.
 
 ## Update and uninstall
 
-When a new version is out, the panel says so in a blue strip under the Projects heading — it checks when opened and then every hour. **Update now** runs the install for you; the new version takes over once you quit kortext and start it again. If a step is running, the button waits for it rather than swapping the files underneath. By hand, or if the button fails:
+When a new version is out, the panel says so in a blue strip under the heading — it checks when opened and then every hour. **Update now** runs the install for you, then offers **Quit**; the new version takes over once you start kortext again. If a step is running, the button waits for it rather than swapping the files underneath. By hand, or if the button fails:
 
 ```sh
 npm update -g kortext

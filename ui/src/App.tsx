@@ -23,6 +23,7 @@ export function App() {
   const [selected, setSelected] = useState<Project | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const update = useUpdate();
 
   const refresh = () =>
     api
@@ -115,6 +116,7 @@ export function App() {
         <ProjectScreen
           key={selected.id}
           project={selected}
+          strip={<UpdateStrip {...update} />}
           onBack={() => {
             setSelected(null);
             refresh();
@@ -128,7 +130,7 @@ export function App() {
               Add project
             </button>
           </div>
-          <UpdateStrip />
+          <UpdateStrip {...update} />
           {projects.length === 0 && !adding && (
             <>
               <div className="kx-empty">
@@ -853,13 +855,13 @@ function EngineBadge() {
   );
 }
 
-// Under the Projects heading, only when a managed install has a newer version available.
-function UpdateStrip() {
+// One check for the whole panel — once on open, then hourly, so a release lands
+// on a panel left open — and the install's outcome, which both screens show.
+function useUpdate() {
   const [latest, setLatest] = useState<string | null>(null);
-  const [state, setState] = useState<'idle' | 'running' | 'done'>('idle');
+  const [state, setState] = useState<'idle' | 'running' | 'done' | 'quit'>('idle');
   const [err, setErr] = useState('');
 
-  // Once on open, then hourly: a release lands while the panel sits open.
   useEffect(() => {
     const check = () =>
       api
@@ -871,33 +873,56 @@ function UpdateStrip() {
     return () => clearInterval(t);
   }, []);
 
+  const run = () => {
+    setErr('');
+    setState('running');
+    api
+      .selfUpdate()
+      .then(() => setState('done'))
+      .catch((e) => {
+        setErr((e as Error).message);
+        setState('idle');
+      });
+  };
+  const quit = () => {
+    api
+      .quit()
+      .then(() => setState('quit'))
+      .catch((e) => setErr((e as Error).message));
+  };
+  return { latest, state, err, run, quit };
+}
+
+// Under the heading of either screen, only when a managed install has a newer version.
+function UpdateStrip({ latest, state, err, run, quit }: ReturnType<typeof useUpdate>) {
   if (!latest) return null;
+  if (state === 'quit') {
+    return (
+      <div className="kx-update">
+        <span>
+          Kortext stopped. Start it again — <code className="mono">kortext</code> — and {latest}{' '}
+          takes over.
+        </span>
+      </div>
+    );
+  }
   if (state === 'done') {
     return (
       <div className="kx-update">
-        Updated to {latest}. Quit Kortext and start it again — this one is still running the old
-        version.
+        <span>
+          Updated to {latest}. This one still runs the old version — quit and start again.
+        </span>
+        <button className="btn btn-primary" onClick={quit}>
+          Quit
+        </button>
+        {err && <span className="kx-update-err">{err}</span>}
       </div>
     );
   }
   return (
     <div className="kx-update">
       <span>Version {latest} is out.</span>
-      <button
-        className="btn btn-primary"
-        disabled={state === 'running'}
-        onClick={() => {
-          setErr('');
-          setState('running');
-          api
-            .selfUpdate()
-            .then(() => setState('done'))
-            .catch((e) => {
-              setErr((e as Error).message);
-              setState('idle');
-            });
-        }}
-      >
+      <button className="btn btn-primary" disabled={state === 'running'} onClick={run}>
         {state === 'running' ? 'Updating…' : 'Update now'}
       </button>
       {err && (
@@ -1385,7 +1410,15 @@ function AddProject({
 }
 
 // Show the handover commands when the analysis is complete.
-function ProjectScreen({ project, onBack }: { project: Project; onBack: () => void }) {
+function ProjectScreen({
+  project,
+  strip,
+  onBack,
+}: {
+  project: Project;
+  strip: ReactNode;
+  onBack: () => void;
+}) {
   const [paused, setPaused] = useState(!!project.paused);
   const [status, setStatus] = useState('');
   const [hasJobs, setHasJobs] = useState(true); // pessimistic until the first poll
@@ -1531,6 +1564,7 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
           )}
         </div>
       </div>
+      {strip}
       {err && <div className="kx-error">{err}</div>}
       <EnginePicker
         open={picking}

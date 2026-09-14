@@ -5,7 +5,8 @@
 ## [Yayımlanmamış]
 
 - **Güncelleme şeridi görünür.** Başlığın altında herhangi bir kart gibi duran gri satır yerine
-  Projects başlığının altında, mavi, düğmesi sağda. Panel açılışta ve sonra her saat sürüm bakar, sunucu npm'e altı saatte bir yerine en
+  iki ekranda da başlığın altında, mavi, düğmesi sağda. Kurulumdan sonra **Quit** sunar; yeniden
+  başlatmak bir basış ve bir `kortext`. Panel açılışta ve sonra her saat sürüm bakar, sunucu npm'e altı saatte bir yerine en
   çok saatte bir sorar — gün boyu açık duran panele de sürüm düşer.
 
 ## [3.1.1] — 2026-09-14
