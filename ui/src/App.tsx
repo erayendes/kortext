@@ -307,7 +307,7 @@ function ServerStatus({ info, note, checkNow }: ReturnType<typeof useUpdate>) {
           title="Check for updates"
         >
           {channelOf(info.current) === 'beta' ? 'Beta version' : 'Stable version'}{' '}
-          <span className="kx-version mono">v{pretty(info.current)}</span>
+          <span className="kx-version mono">{pretty(info.current)}</span>
         </button>
       )}
       {note && <span className="kx-status-note">· {note}</span>}
@@ -423,7 +423,7 @@ function OtherChannel({ info, run }: ReturnType<typeof useUpdate>) {
       >
         <ChannelMark beta={!beta} />
         {beta ? 'Use stable version' : 'Try beta version'}{' '}
-        <span className="kx-version mono">v{pretty(other)}</span>
+        <span className="kx-version mono">{pretty(other)}</span>
       </button>
       <span className="kx-danger-sep">·</span>
     </>
