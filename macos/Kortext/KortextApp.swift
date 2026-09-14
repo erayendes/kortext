@@ -45,6 +45,32 @@ struct Popover: View {
             StatusBar()
         }
         .frame(width: 300)
+        .background(Backdrop())
+    }
+}
+
+// mimir's ambient layer over the desktop blur: a whisper of tint and two corner glows —
+// here in kortext's colours, the blueprint blue and the sketch grey.
+struct Backdrop: View {
+    @Environment(\.colorScheme) private var scheme
+    var body: some View {
+        let dark = scheme == .dark
+        ZStack {
+            LinearGradient(colors: dark ? [Color(hex: 0x12121A), Color(hex: 0x0C0D14), Color(hex: 0x08090E)]
+                                        : [Color(hex: 0xF4F4F7), Color(hex: 0xECECEF), Color(hex: 0xE6E6EA)],
+                           startPoint: .top, endPoint: .bottom)
+                .opacity(dark ? 0.05 : 0.04)
+            RadialGradient(colors: [Color(hex: 0x0865FF).opacity(dark ? 0.10 : 0.07), .clear],
+                           center: .topTrailing, startRadius: 8, endRadius: 280)
+            RadialGradient(colors: [Color(hex: 0x9CA3AF).opacity(dark ? 0.08 : 0.06), .clear],
+                           center: .bottomLeading, startRadius: 8, endRadius: 280)
+        }
+    }
+}
+
+extension Color {
+    init(hex: UInt32) {
+        self.init(red: Double((hex >> 16) & 0xff) / 255, green: Double((hex >> 8) & 0xff) / 255, blue: Double(hex & 0xff) / 255)
     }
 }
 
