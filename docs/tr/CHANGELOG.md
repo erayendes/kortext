@@ -4,8 +4,9 @@
 
 ## [Yayımlanmamış]
 
-- **Motor satırı.** CLI, model ve effort proje adının altında tek satır — `claude · sonnet · high`
-  — basınca sabit genişlikte üç açılır liste olur.
+- **Change model.** CLI, model ve effort proje adının altında tek satır — `claude · sonnet · high`
+  — ve CLI'ların kendi ekranı gibi bir seçicide değişir: chip'ler, her biri bir satır açıklamalı
+  model listesi, effort segmenti. Her seçim anında kaydedilir.
 - **Proje başına effort.** Modelin yanında üçüncü bir liste, bu kavramı bilen CLI'lar için:
   `claude --effort`, codex'in `model_reasoning_effort`'u, `agy --effort` — her CLI'ın kendi
   seçicisinin sunduğu seviye ve modellerle.

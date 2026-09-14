@@ -4,8 +4,9 @@
 
 ## [Unreleased]
 
-- **The engine line.** The CLI, model and effort sit under the project's name as one line —
-  `claude · sonnet · high` — and become three fixed-width dropdowns when pressed.
+- **Change model.** The CLI, model and effort read as one line under the project's name —
+  `claude · sonnet · high` — and are changed in a picker that reads like the CLIs' own: chips,
+  a model list with a line about each, an effort segment. Every pick saves at once.
 - **Effort, per project.** A third dropdown beside the model, for the CLIs that have the
   notion: `claude --effort`, codex's `model_reasoning_effort`, `agy --effort` — with the levels
   and models each CLI's own picker offers.

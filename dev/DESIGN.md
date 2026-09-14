@@ -314,13 +314,10 @@ letters, 0.6px for guides), so a mark drawn for a 1344px page still reads at the
 The favicon is the icon — the `x` alone, one file per theme, chosen by the `media` attribute on
 the `<link>`. And, at the far right, the theme button. Nothing else, unless there is no agent
 CLI at all: the engine belongs to a project, so its control sits on the project screen beside
-Start — not as three selects standing beside it all day, but as one faint mono line under the
-project's path: `claude · sonnet · high`, dashed underline, a press. Pressed, the line becomes
-the three selects at fixed widths (120 · 190 · 100px, so a longer name never moves the row) and
-a *Done*; picking a model or an effort closes them, picking a CLI does not, since the model
-usually follows. `default` first in the model list and `effort` first in the third, so the
-CLI's own choice is a word, not an empty box; the third is drawn only for a CLI that has the
-notion. What is changed once a day should read all day and be a control only when asked. A tagline in the chrome is a thing the reader learns once
+Start — read as one faint mono line under the project's path, `claude · sonnet · high`, and
+changed through **Change model**, a link-weight button before Continue, which opens the
+**dialog** (§9a). What is changed once a day should read all day and be a control only when
+asked. A tagline in the chrome is a thing the reader learns once
 and then reads forever. The theme button is the one preference that survived, and it is an
 icon, not a control row: it takes no width a heading would.
 
@@ -347,6 +344,24 @@ would push the documents down. A GitHub mark says where a card goes; an unreleas
 for good on the second click.
 
 ---
+
+## 9a · The dialog
+
+The panel's one centered overlay, and the engine picker is its only tenant. The drawer's
+backdrop, the elevated surface, `--r-lg`, `--shadow-lg`; 560px wide, in the middle of the page
+because it is a decision, not a document. Three sections under mono eyebrows, the way the CLIs'
+own pickers read:
+
+- **CLI** — chips, one on at a time: the drawn-box vocabulary at control height, the chosen one
+  filled with the accent; an untested one carries the word.
+- **Model** — one row each in a bordered list: a dot mark, the id in mono at a fixed 190px, one
+  line about it in the secondary ink. `default` first, "the CLI's own setting". The chosen row
+  sits on the accent tint.
+- **Effort** — a segment: one bar, equal parts, the chosen one filled; the line under it says
+  what the level means. Drawn only for a CLI that has the notion.
+
+Every pick saves at once — there is no Apply for a preference. *Done* and Escape close; ↑↓ walk
+the models and ←→ the levels, as the CLIs do, and the footer says so in mono.
 
 ## 10 · Document view
 

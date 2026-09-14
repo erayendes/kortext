@@ -22,6 +22,9 @@ export interface EngineSpec {
   effortPrefix?: string;
   /** The levels that CLI accepts, in order. */
   efforts?: string[];
+  /** One line per model and per level, for the picker — what the CLI's own
+   *  picker says, kept short. Missing means the name alone. */
+  about?: Record<string, string>;
   /** Set when the CLI takes the prompt as an argument: the flag it follows,
    *  or '' when it is the last positional argument. */
   promptFlag?: string;
@@ -53,6 +56,17 @@ export const ENGINES: EngineSpec[] = [
     efforts: ['low', 'medium', 'high', 'xhigh', 'max'],
     // Aliases the CLI resolves to its latest of each tier, as its picker lists them.
     models: ['opus', 'fable', 'sonnet', 'haiku'],
+    about: {
+      opus: 'Opus 5 · 1M context · the default',
+      fable: 'Fable 5.1 · most capable',
+      sonnet: 'Sonnet 5 · efficient',
+      haiku: 'Haiku 4.5 · fastest',
+      low: 'faster, lighter reasoning',
+      medium: 'balanced',
+      high: 'deeper reasoning, slower',
+      xhigh: 'extra depth for hard problems',
+      max: 'everything it has — spends limits fastest',
+    },
     installHint: 'npm install -g @anthropic-ai/claude-code',
   },
   {
@@ -67,6 +81,18 @@ export const ENGINES: EngineSpec[] = [
     effortPrefix: '-c model_reasoning_effort=',
     efforts: ['low', 'medium', 'high', 'xhigh', 'max'],
     models: ['gpt-6-astra', 'gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.5'],
+    about: {
+      'gpt-6-astra': 'most capable · complex, demanding work',
+      'gpt-5.6-sol': 'reliable agentic workhorse',
+      'gpt-5.6-terra': 'balanced agentic coding',
+      'gpt-5.6-luna': 'fast and affordable',
+      'gpt-5.5': 'previous generation',
+      low: 'fast, lighter reasoning',
+      medium: 'balanced · the default',
+      high: 'greater depth for complex problems',
+      xhigh: 'extra depth',
+      max: 'more reasoning · spends limits fastest',
+    },
     installHint: 'npm install -g @openai/codex',
   },
   {
@@ -94,6 +120,18 @@ export const ENGINES: EngineSpec[] = [
       'claude-opus-4-6-thinking',
       'gpt-oss-120b',
     ],
+    about: {
+      'gemini-3.8-flash': 'Gemini 3.8 Flash · the default',
+      'gemini-3.7-flash': 'Gemini 3.7 Flash',
+      'gemini-3.6-flash': 'Gemini 3.6 Flash',
+      'gemini-3.1-pro': 'Gemini 3.1 Pro',
+      'claude-sonnet-4-6': 'Claude Sonnet 4.6 · thinking',
+      'claude-opus-4-6-thinking': 'Claude Opus 4.6 · thinking',
+      'gpt-oss-120b': 'GPT-OSS 120B',
+      low: 'fast',
+      medium: 'balanced',
+      high: 'deepest reasoning · slower but stronger',
+    },
     installHint: 'install Antigravity, then run: agy install',
   },
   {

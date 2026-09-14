@@ -86,6 +86,7 @@ export interface EngineInfo {
   installHint: string;
   models?: string[];
   efforts?: string[];
+  about?: Record<string, string>;
   untested?: boolean;
 }
 

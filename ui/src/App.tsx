@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { EnginePicker } from './EnginePicker';
 import {
   api,
   type DocInfo,
@@ -923,68 +924,6 @@ function EngineSelect({
   );
 }
 
-/** The model that CLI is told to use. `default` is the CLI's own; a saved name
- *  the list does not know is kept as its own option rather than dropped. */
-function ModelSelect({
-  engine,
-  value,
-  onChange,
-}: {
-  engine: EngineInfo | undefined;
-  value: string;
-  onChange: (model: string) => void;
-}) {
-  if (!engine) return null;
-  const known = engine.models ?? [];
-  // A CLI that names no models takes its own from its config; nothing to pick.
-  if (known.length === 0 && !value) return null;
-  const options = value && !known.includes(value) ? [...known, value] : known;
-  return (
-    <select
-      className="select"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      title="The model that CLI is told to use — claude --model, codex -m, gemini -m. Applies to steps that start after it."
-    >
-      <option value="">default</option>
-      {options.map((m) => (
-        <option key={m} value={m}>
-          {m}
-        </option>
-      ))}
-    </select>
-  );
-}
-
-/** Reasoning effort, for the CLIs that have the notion; the rest show nothing. */
-function EffortSelect({
-  engine,
-  value,
-  onChange,
-}: {
-  engine: EngineInfo | undefined;
-  value: string;
-  onChange: (effort: string) => void;
-}) {
-  const levels = engine?.efforts ?? [];
-  if (levels.length === 0) return null;
-  return (
-    <select
-      className="select"
-      value={levels.includes(value) ? value : ''}
-      onChange={(e) => onChange(e.target.value)}
-      title="How hard that CLI thinks — claude --effort, codex model_reasoning_effort, agy --effort. Applies to steps that start after it."
-    >
-      <option value="">effort</option>
-      {levels.map((l) => (
-        <option key={l} value={l}>
-          {l}
-        </option>
-      ))}
-    </select>
-  );
-}
-
 // Transfer = split into .kopeng/ files; the plan gets a summary + approve /
 // revise round — the last act of the handshake.
 function TransferPanel({ project }: { project: Project }) {
@@ -1441,9 +1380,9 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
   const [engine, setEngine] = useState<string | null>(project.engine || null);
   const [model, setModel] = useState(project.model ?? '');
   const [effort, setEffort] = useState(project.effort ?? '');
-  // The engine line under the name shows what runs; a press opens the three
-  // selects in its place, a pick closes them.
-  const [tuning, setTuning] = useState(false);
+  // The engine line under the name says what runs; Change model, before
+  // Continue, opens the picker.
+  const [picking, setPicking] = useState(false);
 
   useEffect(() => {
     api
@@ -1541,57 +1480,21 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
           <span className="kx-card-path mono" title={project.repo_path}>
             {shortPath(project.repo_path)}
           </span>
-          {tuning ? (
-            <div className="kx-engine-tune">
-              <EngineSelect
-                engines={engines}
-                value={engine}
-                onChange={(id) => {
-                  setEngine(id);
-                  api
-                    .setProjectEngine(project.id, id)
-                    .then((r) => {
-                      setModel(r.model ?? '');
-                      setEffort(r.effort ?? '');
-                    })
-                    .catch((e) => setErr((e as Error).message));
-                }}
-              />
-              <ModelSelect
-                engine={engines.find((e) => e.id === (engine ?? engines[0]?.id))}
-                value={model}
-                onChange={(m) => {
-                  setModel(m);
-                  api.setProjectModel(project.id, m).catch((e) => setErr((e as Error).message));
-                  setTuning(false);
-                }}
-              />
-              <EffortSelect
-                engine={engines.find((e) => e.id === (engine ?? engines[0]?.id))}
-                value={effort}
-                onChange={(lvl) => {
-                  setEffort(lvl);
-                  api.setProjectEffort(project.id, lvl).catch((e) => setErr((e as Error).message));
-                  setTuning(false);
-                }}
-              />
-              <button className="btn btn-link-primary" onClick={() => setTuning(false)}>
-                Done
-              </button>
-            </div>
-          ) : (
-            engines.length > 0 && (
-              <button
-                className="kx-engine-line mono"
-                title="The CLI this project runs on, its model and effort — press to change"
-                onClick={() => setTuning(true)}
-              >
-                {[engine ?? engines[0]?.id, model || 'default', effort].filter(Boolean).join(' · ')}
-              </button>
-            )
+          {engines.length > 0 && (
+            <span
+              className="kx-engine-line mono"
+              title="The CLI this project runs on, its model and effort"
+            >
+              {[engine ?? engines[0]?.id, model || 'default', effort].filter(Boolean).join(' · ')}
+            </span>
           )}
         </div>
         <div className="kx-proj-actions">
+          {engines.length > 0 && (
+            <button className="btn btn-link-primary" onClick={() => setPicking(true)}>
+              Change model
+            </button>
+          )}
           {running ? (
             <button className="btn btn-primary" disabled={busy} onClick={togglePause}>
               ⏸ Pause
@@ -1607,6 +1510,23 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
         </div>
       </div>
       {err && <div className="kx-error">{err}</div>}
+      <EnginePicker
+        open={picking}
+        onClose={() => setPicking(false)}
+        projectId={project.id}
+        engines={engines}
+        engine={engine ?? engines[0]?.id ?? ''}
+        model={model}
+        effort={effort}
+        onEngine={(id, m, lvl) => {
+          setEngine(id);
+          setModel(m);
+          setEffort(lvl);
+        }}
+        onModel={setModel}
+        onEffort={setEffort}
+        onError={setErr}
+      />
       <DocumentsTab
         project={project}
         paused={paused}

@@ -70,7 +70,7 @@ Bir hata ya da sizi bekleyen bir şey taşıyan her belge **Action needed**'a ç
 
 ## Çalıştırma, duraklatma, motoru değiştirme
 
-Motor — `claude`, `codex`, `antigravity` ve listedeki diğerleri. Proje adının altındaki satır onu neyin çalıştırdığını söyler — `claude · sonnet · high`. Basınca üç açılır listeye dönüşür: CLI (kurulu olanlar), modeli, effort'u. CLI'ı projeyi eklerken seçersiniz ama istediğiniz zaman değiştirebilirsiniz. Kota bittiğinde de yapılacak tek şey değiştirmek. 
+Motor — `claude`, `codex`, `antigravity` ve listedeki diğerleri. Proje adının altındaki satır onu neyin çalıştırdığını söyler — `claude · sonnet · high`. Continue'nun yanındaki **Change model** seçiciyi açar: CLI (kurulu olanlar), her biri bir satır açıklamalı modeller, effort. Her seçim anında kaydedilir. CLI'ı projeyi eklerken seçersiniz ama istediğiniz zaman değiştirebilirsiniz. Kota bittiğinde de yapılacak tek şey değiştirmek. 
 
 İkinci liste **model**. `default` seçimi CLI'ın kendi ayarını kullanır. Bir model seçerseniz her koşuda CLI'a geçilir (`claude --model`, `codex -m`).
 

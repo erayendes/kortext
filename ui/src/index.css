@@ -639,6 +639,175 @@ body {
   cursor: not-allowed;
 }
 
+/* The dialog: the panel's one centered overlay, for the engine picker. Same
+   backdrop as the drawer, the elevated surface, the large shadow; it sits in
+   the middle because it is a decision, not a document. */
+.kx-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 560px;
+  max-width: 94vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-lg);
+  z-index: 62;
+  padding: 18px 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.kx-dialog-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.kx-dialog-title {
+  font-size: var(--fs-section);
+  font-weight: 600;
+}
+.kx-dialog-hint {
+  font-size: var(--fs-ui);
+  color: var(--fg-faint);
+}
+.kx-dialog-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 4px;
+}
+.kx-picker-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+/* The CLI as chips: the drawn box vocabulary, one on at a time. */
+.kx-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.kx-chip {
+  height: var(--control-h);
+  padding: 0 12px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--fg);
+  font-size: var(--fs-ui);
+  font-family: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.kx-chip:hover {
+  border-color: var(--border-strong);
+}
+.kx-chip.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+}
+.kx-chip-note {
+  font-size: var(--fs-micro);
+  opacity: 0.7;
+}
+/* The models: one row each, a mark, the name in mono, one line about it. */
+.kx-picker-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+.kx-pick {
+  display: grid;
+  grid-template-columns: 14px 190px 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+  color: var(--fg);
+  text-align: left;
+  font-family: inherit;
+  font-size: var(--fs-body);
+  cursor: pointer;
+}
+.kx-pick:last-child {
+  border-bottom: 0;
+}
+.kx-pick:hover {
+  background: var(--bg-subtle);
+}
+.kx-pick.on {
+  background: var(--accent-tint);
+}
+.kx-pick-mark {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  justify-self: center;
+}
+.kx-pick.on .kx-pick-mark {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.kx-pick-name {
+  font-size: var(--fs-ui);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kx-pick-about {
+  font-size: var(--fs-ui);
+  color: var(--fg-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* The effort as a segment: one bar, equal parts, the chosen one filled. */
+.kx-segment {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  height: var(--control-h);
+}
+.kx-segment-btn {
+  flex: 1 1 0;
+  border: 0;
+  border-right: 1px solid var(--border);
+  background: var(--card);
+  color: var(--fg-secondary);
+  font-family: inherit;
+  font-size: var(--fs-ui);
+  cursor: pointer;
+}
+.kx-segment-btn:last-child {
+  border-right: 0;
+}
+.kx-segment-btn:hover {
+  color: var(--fg);
+}
+.kx-segment-btn.on {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+.kx-picker-about {
+  font-size: var(--fs-ui);
+  color: var(--fg-secondary);
+  min-height: 1.4em;
+}
+
 /* Use the full viewport width for drawers on narrow screens. */
 @media (max-width: 560px) {
   .drawer {
@@ -1375,46 +1544,13 @@ a.btn {
   margin: 0;
   line-height: 1.2;
 }
-/* Under the name: what runs this project, as one faint mono line. A press
-   swaps it for the three selects at fixed widths — the CLI, its model, its
-   effort — so a longer name never moves the row; a pick swaps it back. */
+/* Under the name: what runs this project, as one faint mono line — the CLI,
+   its model, its effort. Reading only; Change model, before Continue, opens
+   the picker. */
 .kx-engine-line {
-  align-self: flex-start;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: none;
   font-size: var(--fs-label);
   color: var(--fg-secondary);
-  cursor: pointer;
-  border-bottom: 1px dashed var(--border-strong);
   line-height: 1.4;
-}
-.kx-engine-line:hover {
-  color: var(--fg);
-  border-bottom-color: var(--fg-secondary);
-}
-.kx-engine-line:focus-visible {
-  outline: 2px solid var(--accent-ring);
-  outline-offset: 2px;
-}
-.kx-engine-tune {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 2px;
-}
-.kx-engine-tune > select {
-  text-overflow: ellipsis;
-}
-.kx-engine-tune > select:nth-of-type(1) {
-  width: 120px;
-}
-.kx-engine-tune > select:nth-of-type(2) {
-  width: 190px;
-}
-.kx-engine-tune > select:nth-of-type(3) {
-  width: 100px;
 }
 .kx-grid {
   display: grid;
