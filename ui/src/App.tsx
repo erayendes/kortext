@@ -1563,11 +1563,21 @@ function ProjectScreen({
     api.runNext(project.id).catch((e) => setErr((e as Error).message));
   };
 
-  const togglePause = () =>
-    api
+  // Between Continue and the first poll that sees a step running, the button
+  // still reads Continue — and a second press would pause again. Hold it until
+  // the running state has moved, one way or the other.
+  const [settling, setSettling] = useState(false);
+  useEffect(() => setSettling(false), [running]);
+  const togglePause = () => {
+    setSettling(true);
+    return api
       .pauseProject(project.id, !paused)
       .then((r) => setPaused(r.paused))
-      .catch((e) => setErr(e.message));
+      .catch((e) => {
+        setErr(e.message);
+        setSettling(false);
+      });
+  };
 
   const doRestart = () => {
     setArming(null);
@@ -1660,14 +1670,18 @@ function ProjectScreen({
                 onOpen={() => setPicking(true)}
               />
               {running ? (
-                <button className="btn btn-primary" disabled={busy} onClick={togglePause}>
+                <button
+                  className="btn btn-primary"
+                  disabled={busy || settling}
+                  onClick={togglePause}
+                >
                   ⏸ Pause
                 </button>
               ) : (
                 // Offer Start when the chain is idle, even if the project is already unpaused.
                 pending && (
-                  <button className="btn btn-primary" disabled={busy} onClick={start}>
-                    {hasJobs ? '▶ Continue' : '▶ Start'}
+                  <button className="btn btn-primary" disabled={busy || settling} onClick={start}>
+                    {settling ? '…' : hasJobs ? '▶ Continue' : '▶ Start'}
                   </button>
                 )
               )}
