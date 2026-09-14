@@ -17,7 +17,6 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
     @Published var version: String? = nil      // nil = daemon down
     @Published var installed = true
     @Published var projects: [ProjectState] = []
-    @Published var errors: [String: String] = [:]   // "projectId/rel" → last failed action
 
     // Poll deltas — what was true last time, so a change becomes one notification.
     private var seenJobs: [Int: String] = [:]    // job id → status
@@ -25,7 +24,23 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
     private var seenNotReady: Set<Int> = []
     private var primed = false                   // first poll only records, never notifies
 
-    var draftCount: Int { projects.reduce(0) { $0 + $1.drafts.count } }
+    struct Waiting: Identifiable {
+        let project: ProjectState; let rel: String; let why: String
+        var id: String { "\(project.id)/\(rel)" }
+    }
+    /// Every document that waits on the human: a draft to approve, a failed step, a brief with questions.
+    var waiting: [Waiting] {
+        projects.flatMap { p -> [Waiting] in
+            var out: [Waiting] = []
+            if p.notReady { out.append(Waiting(project: p, rel: "BRIEF.md", why: "questions to answer")) }
+            for d in p.docs {
+                if d.status == "draft" { out.append(Waiting(project: p, rel: d.rel, why: "awaiting approval")) }
+                else if d.state == "failed" { out.append(Waiting(project: p, rel: d.rel, why: "failed")) }
+            }
+            return out
+        }
+    }
+    var draftCount: Int { waiting.count }
     var anyRunning: Bool { projects.contains { $0.running != nil } }
 
     func start() {
@@ -33,8 +48,8 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
         installed = Shell.run("command -v kortext") != nil
         Task {
             _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge])
-            // ponytail: KORTEXT_DEMO_NOTIFY=1 fires the four sample notifications on launch — for screenshots, nothing else.
-            if ProcessInfo.processInfo.environment["KORTEXT_DEMO_NOTIFY"] != nil {
+            // ponytail: KORTEXT_DEMO=1 fires the four sample notifications on launch — for screenshots, nothing else.
+            if ProcessInfo.processInfo.environment["KORTEXT_DEMO"] != nil {
                 notify("HYDRA", "LEGAL.md ready — awaiting approval")
                 notify("HYDRA", "ARCHITECTURE.md could not be written", "claude: rate limit reached, retry after 60s")
                 notify("MILO", "Brief too thin — answer the questions")
@@ -66,6 +81,8 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
             observeGate(s)
             next.append(s)
         }
+        // ponytail: KORTEXT_DEMO=1 adds two sample projects so the popover can be photographed with rows in it.
+        if ProcessInfo.processInfo.environment["KORTEXT_DEMO"] != nil { next += Self.demo }
         projects = next
         primed = true
     }
@@ -100,22 +117,27 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
         await MainActor.run { openPanel(project: info["project"] as? Int, doc: info["doc"] as? String) }
     }
 
+    static let demo: [ProjectState] = {
+        func p(_ id: Int, _ code: String, _ name: String, _ docs: [Doc], notReady: Bool = false) -> ProjectState {
+            var s = ProjectState(project: Project(id: id, name: name, code: code, docCounts: .init(settled: 3, total: 15)))
+            s.docs = docs; s.notReady = notReady; return s
+        }
+        return [
+            p(90, "ACME", "Acme Billing", [Doc(rel: "PRODUCT.md", status: "draft", state: "waiting", detail: "approve"),
+                                          Doc(rel: "STACK.md", status: "draft", state: "waiting", detail: "approve"),
+                                          Doc(rel: "ARCHITECTURE.md", status: "uninitialized", state: "failed", detail: nil)]),
+            p(91, "MILO", "Milowda", [], notReady: true),
+        ]
+    }()
+
     func notify(_ title: String, _ body: String, _ subtitle: String? = nil, project: Int? = nil, doc: String? = nil) {
+        guard UserDefaults.standard.object(forKey: "notifications") as? Bool ?? true else { return }
         let c = UNMutableNotificationContent()
         c.title = title; c.body = body
         if let subtitle { c.subtitle = subtitle }
         if let project { c.userInfo["project"] = project }
         if let doc { c.userInfo["doc"] = doc }
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: UUID().uuidString, content: c, trigger: nil))
-    }
-
-    func approve(_ p: ProjectState, _ doc: Doc) {
-        let key = "\(p.id)/\(doc.rel)"
-        errors[key] = nil
-        Task {
-            do { try await Api.approve(p.id, rel: doc.rel) } catch { errors[key] = error.localizedDescription }
-            await poll()
-        }
     }
 
     func startDaemon() { Shell.run("kortext --no-open"); Task { try? await Task.sleep(for: .seconds(2)); await poll() } }

@@ -37,25 +37,8 @@ enum Api {
         struct R: Decodable { let docs: [Doc] }
         return try await get("/api/projects/\(id)/docs", R.self).docs
     }
-    /// Approve needs the version the panel would have read; fetch it, then post.
-    static func approve(_ id: Int, rel: String) async throws {
-        struct C: Decodable { let version: String }
-        let v = try await get("/api/projects/\(id)/docs/content?rel=\(rel)", C.self).version
-        var req = URLRequest(url: base.appending(path: "/api/projects/\(id)/docs/approve"))
-        req.httpMethod = "POST"
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = try JSONEncoder().encode(["rel": rel, "expectedVersion": v])
-        let (data, resp) = try await URLSession.shared.data(for: req)
-        if (resp as? HTTPURLResponse)?.statusCode != 200 {
-            struct E: Decodable { let error: String }
-            throw ApiError((try? JSONDecoder().decode(E.self, from: data).error) ?? "approve failed")
-        }
-    }
-
     static func readiness(_ id: Int) async throws -> Readiness? {
         struct R: Decodable { let readiness: Readiness? }
         return try await get("/api/projects/\(id)/readiness", R.self).readiness
     }
 }
-
-struct ApiError: LocalizedError { let msg: String; init(_ m: String) { msg = m }; var errorDescription: String? { msg } }

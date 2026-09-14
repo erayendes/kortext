@@ -7,7 +7,7 @@ struct KortextApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            MenuContent().environmentObject(model)
+            Popover().environmentObject(model)
         } label: {
             let icon = model.version == nil ? "k.square" : "k.square.fill"
             Label { if model.draftCount > 0 { Text("\(model.draftCount)") } } icon: {
@@ -22,131 +22,125 @@ struct KortextApp: App {
     }
 }
 
-struct MenuContent: View {
+struct Popover: View {
     @EnvironmentObject var model: Model
-    @State private var loginItem = SMAppService.mainApp.status == .enabled
+    @State private var settings = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            header.padding(.horizontal, 14).padding(.vertical, 10)
+            if settings { Settings(done: { settings = false }) } else { WaitingList() }
             Divider()
-            if model.version != nil {
-                // ponytail: no ScrollView — a ScrollView in a MenuBarExtra window collapses to zero height; add one with a measured height when a machine holds more projects than a screen.
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(model.projects) { p in ProjectSection(p: p) }
-                }
-                Divider()
-            }
-            footer.padding(.horizontal, 8).padding(.vertical, 6)
+            StatusBar(settings: $settings)
         }
-        .frame(width: 380)
-    }
-
-    @ViewBuilder private var header: some View {
-        HStack {
-            if !model.installed {
-                Text("Kortext is not installed").fontWeight(.medium)
-                Spacer()
-                Button("Copy  npm i -g kortext") {
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString("npm i -g kortext", forType: .string)
-                }.controlSize(.small)
-            } else if let v = model.version {
-                Text("Kortext \(v)").fontWeight(.medium)
-                Spacer()
-                if model.draftCount > 0 { Text("\(model.draftCount) awaiting approval").foregroundStyle(.secondary) }
-                else if model.anyRunning { Text("writing").foregroundStyle(.secondary) }
-                Button("Stop") { model.stopDaemon() }.controlSize(.small)
-            } else {
-                Text("Kortext is not running").fontWeight(.medium)
-                Spacer()
-                Button("Start") { model.startDaemon() }.controlSize(.small)
-            }
-        }
-        .font(.system(size: 13))
-    }
-
-    private var footer: some View {
-        HStack {
-            Toggle("Launch at login", isOn: $loginItem).toggleStyle(.checkbox)
-                .onChange(of: loginItem) { _, on in try? on ? SMAppService.mainApp.register() : SMAppService.mainApp.unregister() }
-            Spacer()
-            Button("Open panel") { model.openPanel() }
-            Button("Quit") { NSApp.terminate(nil) }
-        }
-        .controlSize(.small)
+        .frame(width: 340)
     }
 }
 
-struct ProjectSection: View {
+// The list is the popover: only what waits on the human, one line each, click to open.
+struct WaitingList: View {
     @EnvironmentObject var model: Model
-    let p: ProjectState
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text(p.project.code).font(.system(size: 11, weight: .medium, design: .monospaced))
-                Text(p.project.name).font(.system(size: 13, weight: .medium))
+                Text(title).font(.system(size: 13, weight: .medium))
                 Spacer()
-                Text("\(p.project.docCounts.settled) / \(p.project.docCounts.total)")
-                    .font(.system(size: 11).monospacedDigit()).foregroundStyle(.secondary)
+                if !model.waiting.isEmpty { Text("\(model.waiting.count)").font(.system(size: 11).monospacedDigit()).foregroundStyle(.secondary) }
             }
-            .padding(.horizontal, 14).padding(.top, 10).padding(.bottom, 4)
-            ForEach(p.docs) { doc in DocRow(p: p, doc: doc) }
+            .padding(.horizontal, 14).padding(.top, 12).padding(.bottom, 6)
+            ForEach(model.waiting) { w in WaitingRow(w: w) }
         }
-        .padding(.bottom, 6)
+        .padding(.bottom, 8)
+    }
+
+    private var title: String {
+        if !model.installed { return "Kortext is not installed" }
+        if model.version == nil { return "Kortext is not running" }
+        if model.waiting.isEmpty { return model.anyRunning ? "Writing — nothing waiting on you" : "Nothing waiting on you" }
+        return "Waiting on you"
     }
 }
 
-struct DocRow: View {
+struct WaitingRow: View {
     @EnvironmentObject var model: Model
-    let p: ProjectState
-    let doc: Doc
+    let w: Model.Waiting
     @State private var hover = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        Button { model.openPanel(project: w.project.id, doc: w.rel) } label: {
             HStack(spacing: 8) {
-                Circle().fill(color).frame(width: 7, height: 7)
-                Text(doc.rel).font(.system(size: 12, design: .monospaced))
-                Text(label).font(.system(size: 11)).foregroundStyle(.secondary)
+                Circle().fill(w.why == "failed" ? Color.red : Color.orange).frame(width: 7, height: 7)
+                Text(w.rel).font(.system(size: 12, design: .monospaced))
+                Text("|").foregroundStyle(.quaternary)
+                Text(w.project.project.code).font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary)
                 Spacer()
-                if doc.status == "draft" {
-                    Button("Approve") { model.approve(p, doc) }
-                }
-                Button("Open") { model.openPanel(p, doc) }
+                Text(w.why).font(.system(size: 11)).foregroundStyle(.secondary)
             }
-            .controlSize(.mini)
-            if let e = model.errors["\(p.id)/\(doc.rel)"] {
-                Text(e).font(.system(size: 11)).foregroundStyle(.red).padding(.leading, 15)
-            }
+            .padding(.horizontal, 14).padding(.vertical, 5)
+            .contentShape(Rectangle())
         }
-        .padding(.horizontal, 14).padding(.vertical, 3)
+        .buttonStyle(.plain)
         .background(hover ? Color.primary.opacity(0.06) : .clear)
         .onHover { hover = $0 }
     }
+}
 
-    // DESIGN.md state colours: green approved · amber your turn · blue writing · red failed.
-    private var color: Color {
-        switch doc.state {
-        case "approved": .green
-        case "writing", "reading": .blue
-        case "failed": .red
-        case "waiting" where doc.status == "draft": .orange
-        case "n/a": .clear
-        default: .secondary.opacity(0.4)
+// The panel's status bar, in miniature: dot · name · version · power. Nothing shown that is not true now.
+struct StatusBar: View {
+    @EnvironmentObject var model: Model
+    @Binding var settings: Bool
+    @State private var armed = false
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Circle().fill(model.version == nil ? Color.red : Color.green).frame(width: 7, height: 7)
+            Text("Kortext").font(.system(size: 12, weight: .medium))
+            if let v = model.version { Text(v).font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary) }
+            if model.installed {
+                Button { power() } label: { Image(systemName: "power").font(.system(size: 11, weight: .semibold)) }
+                    .buttonStyle(.plain).foregroundStyle(armed ? .red : .secondary)
+                    .help(model.version == nil ? "Start the server" : armed ? "Click again to stop" : "Stop the server")
+                if armed { Text("click again to stop").font(.system(size: 11)).foregroundStyle(.red) }
+            }
+            Spacer()
+            Button { settings.toggle() } label: { Image(systemName: "gearshape").font(.system(size: 12)) }
+                .buttonStyle(.plain).foregroundStyle(settings ? .primary : .secondary)
+        }
+        .padding(.horizontal, 14).padding(.vertical, 9)
+        .onChange(of: armed) { _, on in
+            if on { Task { try? await Task.sleep(for: .seconds(4)); armed = false } }
         }
     }
-    private var label: String {
-        if doc.status == "draft" { return "awaiting approval" }
-        if doc.status == "approved" { return "approved" }
-        if doc.status == "not-applicable" { return "n/a" }
-        switch doc.state {
-        case "writing": return "writing…"
-        case "reading": return "rechecking"
-        case "failed": return "failed"
-        case "paused": return "paused"
-        default: return "queued"
+
+    private func power() {
+        if model.version == nil { model.startDaemon(); return }
+        if !armed { armed = true; return }
+        armed = false
+        model.stopDaemon()
+    }
+}
+
+struct Settings: View {
+    let done: () -> Void
+    @State private var loginItem = SMAppService.mainApp.status == .enabled
+    @AppStorage("notifications") private var notifications = true
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Settings").font(.system(size: 13, weight: .medium))
+                Spacer()
+                Button("Done", action: done).controlSize(.small)
+            }
+            Toggle("Launch at login", isOn: $loginItem).toggleStyle(.checkbox)
+                .onChange(of: loginItem) { _, on in try? on ? SMAppService.mainApp.register() : SMAppService.mainApp.unregister() }
+            Toggle("Notify when a document waits on me", isOn: $notifications).toggleStyle(.checkbox)
+            Text("A draft to approve, a failed step, a brief with questions, a finished chain.")
+                .font(.system(size: 11)).foregroundStyle(.secondary).padding(.leading, 18).fixedSize(horizontal: false, vertical: true)
+            Divider().padding(.top, 2)
+            Button("Quit Kortext") { NSApp.terminate(nil) }.controlSize(.small)
         }
+        .font(.system(size: 12))
+        .padding(14)
     }
 }
