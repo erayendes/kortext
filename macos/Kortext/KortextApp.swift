@@ -109,18 +109,32 @@ struct Eyebrow: View {
 
 struct Content: View {
     @EnvironmentObject var model: Model
+    /// What the screen leaves for the list under the menu bar, less the header and the bar.
+    static var cap: CGFloat {
+        if let s = ProcessInfo.processInfo.environment["KORTEXT_CAP"], let v = Double(s) { return CGFloat(v) }
+        return (NSScreen.main?.visibleFrame.height ?? 800) - 40 - 40 - 24
+    }
     var body: some View {
         if !model.installed { NotInstalled() }
         else if model.version == nil { Message(title: "Kortext is not running", sub: "Press ⏻ below to start the server.") }
         else if model.shown.isEmpty { Empty() }
         else {
             // One card per project, its documents as rows — the way mimir groups a provider's lines.
-            VStack(spacing: 10) {
+            // The list grows with the work and scrolls once it would outgrow the screen.
+            // The panel is sized once, when it opens, so the list's height has to be known
+            // then: estimated from the counts, and scrolled only when it would not fit.
+            let list = VStack(spacing: 10) {
                 ForEach(model.shown) { p in
                     ProjectCard(p: p, rows: model.waiting.filter { $0.project.id == p.id })
                 }
             }
             .padding(12)
+            let estimate = 24 + CGFloat(model.shown.count) * 52 + CGFloat(model.waiting.count) * 34
+            if estimate > Self.cap {
+                ScrollView(.vertical, showsIndicators: false) { list }.frame(height: Self.cap)
+            } else {
+                list
+            }
         }
     }
 }
