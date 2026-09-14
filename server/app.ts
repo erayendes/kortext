@@ -188,6 +188,15 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
 
   app.post('/api/projects', (req, res) => {
     const { name, repoPath, kind, code, brief, docLang, engine } = req.body ?? {};
+    // The picker's model and effort, chosen before the project existed; the
+    // same words the PUT routes accept, and only ones the CLI knows.
+    const spec = ENGINES.find((e) => e.id === engine);
+    const model = String(req.body?.model ?? '').trim();
+    const effort = String(req.body?.effort ?? '').trim();
+    if (model.length > 80 || /[\s"'`]/.test(model))
+      return res.status(400).json({ error: 'a model name is one word' });
+    if (effort && !spec?.efforts?.includes(effort))
+      return res.status(400).json({ error: `${engine} takes no effort level "${effort}"` });
     try {
       const project = createProject(
         db,
@@ -196,8 +205,12 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       );
       // Nothing runs on Add — the project lands paused and the user presses
       // Start on the project screen (Start = the unpause endpoint).
-      db.prepare('UPDATE projects SET paused = 1 WHERE id = ?').run(project.id);
-      res.status(201).json({ project: { ...project, paused: 1 } });
+      db.prepare('UPDATE projects SET paused = 1, model = ?, effort = ? WHERE id = ?').run(
+        model,
+        effort,
+        project.id,
+      );
+      res.status(201).json({ project: { ...project, paused: 1, model, effort } });
     } catch (err) {
       res.status(400).json({ error: (err as Error).message });
     }

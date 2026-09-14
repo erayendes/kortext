@@ -108,3 +108,40 @@ test('switching the CLI drops a model the new CLI does not know', async () => {
   server.close();
   rmSync(work, { recursive: true, force: true });
 });
+
+test('Add project takes the picker model and effort, and refuses a level the CLI lacks', async () => {
+  const { openDb } = await import('../server/db.ts');
+  const { buildApp } = await import('../server/app.ts');
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const pkgRoot = join(import.meta.dirname, '..');
+  const server = buildApp(db, pkgRoot, join(work, 'db.sqlite')).listen(0);
+  const port = (server.address() as { port: number }).port;
+  const post = (body: unknown) =>
+    fetch(`http://127.0.0.1:${port}/api/projects`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }).then(async (r) => ({ status: r.status, body: await r.json() }));
+  const ok = await post({
+    name: 'Picked',
+    repoPath: join(work, 'picked'),
+    engine: 'codex',
+    model: 'gpt-5.4',
+    effort: 'high',
+  });
+  assert.equal(ok.status, 201);
+  const row = db
+    .prepare('SELECT engine, model, effort FROM projects WHERE id = ?')
+    .get(ok.body.project.id);
+  assert.deepEqual(row, { engine: 'codex', model: 'gpt-5.4', effort: 'high' });
+  const bad = await post({
+    name: 'Wrong',
+    repoPath: join(work, 'wrong'),
+    engine: 'codex',
+    effort: 'ultracode',
+  });
+  assert.equal(bad.status, 400);
+  server.close();
+  rmSync(work, { recursive: true, force: true });
+});

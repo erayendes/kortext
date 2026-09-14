@@ -11,7 +11,8 @@ import { api, type EngineInfo } from './api';
 export type EnginePickerProps = {
   open: boolean;
   onClose: () => void;
-  projectId: number;
+  /** null before the project exists (Add project): picks stay local until Initialize. */
+  projectId: number | null;
   engines: EngineInfo[];
   engine: string;
   model: string;
@@ -68,13 +69,23 @@ export function EnginePicker({
   // A pick is a PUT; a second pick before the first lands is just the next
   // PUT — nothing here is worth locking the dialog for.
   const guard = <T,>(p: Promise<T>) => p.catch((e) => onError((e as Error).message));
+  // Before the project exists nothing is saved; a CLI switch drops to its defaults, as the server would.
   const pickEngine = (id: string) =>
-    guard(
-      api.setProjectEngine(projectId, id).then((r) => onEngine(id, r.model ?? '', r.effort ?? '')),
-    );
-  const pickModel = (m: string) => guard(api.setProjectModel(projectId, m).then(() => onModel(m)));
+    projectId === null
+      ? onEngine(id, '', '')
+      : guard(
+          api
+            .setProjectEngine(projectId, id)
+            .then((r) => onEngine(id, r.model ?? '', r.effort ?? '')),
+        );
+  const pickModel = (m: string) =>
+    projectId === null
+      ? onModel(m)
+      : guard(api.setProjectModel(projectId, m).then(() => onModel(m)));
   const pickEffort = (lvl: string) =>
-    guard(api.setProjectEffort(projectId, lvl).then(() => onEffort(lvl)));
+    projectId === null
+      ? onEffort(lvl)
+      : guard(api.setProjectEffort(projectId, lvl).then(() => onEffort(lvl)));
 
   if (!open) return null;
   return (

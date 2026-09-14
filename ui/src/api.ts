@@ -231,6 +231,8 @@ export const api = {
     brief?: string;
     docLang?: string;
     engine?: string;
+    model?: string;
+    effort?: string;
   }) => req<{ project: Project }>('/api/projects', { method: 'POST', body: JSON.stringify(input) }),
   pickDirectory: () => req<{ path: string | null }>('/api/pick-directory', { method: 'POST' }),
   removeProject: (id: number) =>

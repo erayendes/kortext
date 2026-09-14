@@ -992,41 +992,6 @@ function UpdateStrip({ latest, state, err, run, quit }: ReturnType<typeof useUpd
   );
 }
 
-/** The installed CLIs, as a dropdown. Empty list renders nothing. */
-function EngineSelect({
-  engines,
-  value,
-  onChange,
-  className = '',
-}: {
-  engines: EngineInfo[];
-  value: string | null;
-  onChange: (id: string) => void;
-  className?: string;
-}) {
-  if (engines.length === 0) return null;
-  // Display the server-resolved fallback if the project's saved CLI is no longer installed.
-  const shown = engines.some((e) => e.id === value) ? (value as string) : engines[0].id;
-  return (
-    <select
-      className={`select ${className}`.trim()}
-      value={shown}
-      onChange={(e) => onChange(e.target.value)}
-      title="The agent CLI that writes this project's documents"
-    >
-      {engines.map((e) => (
-        <option
-          key={e.id}
-          value={e.id}
-          title={e.untested ? 'Prepared from its documentation, not yet run here' : undefined}
-        >
-          {e.untested ? `${e.id} · untested` : e.id}
-        </option>
-      ))}
-    </select>
-  );
-}
-
 // Transfer = split into .kopeng/ files; the plan gets a summary + approve /
 // revise round — the last act of the handshake.
 function TransferPanel({ project }: { project: Project }) {
@@ -1223,6 +1188,9 @@ function AddProject({
   // Use the only installed CLI by default; otherwise let the user choose per project.
   const [engines, setEngines] = useState<EngineInfo[]>([]);
   const [engine, setEngine] = useState<string | null>(null);
+  const [model, setModel] = useState('');
+  const [effort, setEffort] = useState('');
+  const [picking, setPicking] = useState(false);
 
   useEffect(() => {
     api
@@ -1268,6 +1236,8 @@ function AddProject({
     try {
       const { project } = await api.createProject({
         engine: engine ?? undefined,
+        model: model || undefined,
+        effort: effort || undefined,
         name,
         repoPath,
         kind,
@@ -1453,8 +1423,38 @@ function AddProject({
           later.
         </span>
       )}
+      {/* The engine as the project screen shows it — its line, and Change model opening the same picker. */}
+      {engines.length > 0 && (
+        <div className="kx-form-row kx-form-engine">
+          <span
+            className="kx-engine-line mono"
+            title="The CLI that writes this project's documents, its model and effort"
+          >
+            {[engine ?? engines[0]?.id, model || 'default', effort].filter(Boolean).join(' · ')}
+          </span>
+          <button className="btn btn-link-primary" onClick={() => setPicking(true)}>
+            Change model
+          </button>
+        </div>
+      )}
+      <EnginePicker
+        open={picking}
+        onClose={() => setPicking(false)}
+        projectId={null}
+        engines={engines}
+        engine={engine ?? engines[0]?.id ?? ''}
+        model={model}
+        effort={effort}
+        onEngine={(id, m, lvl) => {
+          setEngine(id);
+          setModel(m);
+          setEffort(lvl);
+        }}
+        onModel={setModel}
+        onEffort={setEffort}
+        onError={setErr}
+      />
       <div className="kx-form-row">
-        <EngineSelect engines={engines} value={engine} onChange={setEngine} />
         <button className="btn btn-primary" onClick={submit}>
           Initialize
         </button>
@@ -1688,7 +1688,7 @@ function ProjectScreen({
           <>
             <span className="kx-arm-warn">
               Remove Kortext's analysis, including the brief and edits in .kortext/, its contract
-              entries, logs and project registration? .kopeng/ and other project files stay.
+              entries, logs and project registration? The rest of the project stays.
             </span>
             <button className="btn btn-link-danger" disabled={busy} onClick={doCancel}>
               Yes, remove
