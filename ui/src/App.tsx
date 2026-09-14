@@ -116,7 +116,12 @@ export function App() {
         <ProjectScreen
           key={selected.id}
           project={selected}
-          strip={<UpdateStrip {...update} />}
+          strip={
+            <>
+              <UpdateStrip {...update} />
+              <CompanionStrip quiet={!!update.latest} />
+            </>
+          }
           onBack={() => {
             setSelected(null);
             refresh();
@@ -197,6 +202,7 @@ export function App() {
 // copy of it talking to this server. Quiet colours — an offer, not a warning —
 // and a × that keeps it away; it also goes on its own once the app is heard.
 // One strip at a time: while an update is on offer, this one waits its turn.
+// Both screens carry it, in the update strip's slot.
 function CompanionStrip({ quiet }: { quiet: boolean }) {
   const [companion, setCompanion] = useState(true);
   const [hidden, setHidden] = useState(() => {
