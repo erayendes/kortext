@@ -299,13 +299,13 @@ function ServerStatus({ info, note, checkNow }: ReturnType<typeof useUpdate>) {
 
   return (
     <>
-      {info && <ChannelMark beta={channelOf(info.current) === 'beta'} />}
       {info && (
         <button
           className="kx-statusbar-link kx-version-btn"
           onClick={checkNow}
           title="Check for updates"
         >
+          <ChannelMark beta={channelOf(info.current) === 'beta'} />
           {channelOf(info.current) === 'beta' ? 'Beta version' : 'Stable version'}{' '}
           <span className="kx-version mono">{pretty(info.current)}</span>
         </button>

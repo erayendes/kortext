@@ -251,7 +251,7 @@ struct StatusBar: View {
                     Icon(name: "power", size: 12, color: armed ? Kx.red : up ? Kx.green : Kx.fgFaint, weight: .semibold).frame(width: 14, height: 18)
                 }
                 .buttonStyle(.plain).hand()
-                .help(!up ? "Start the server" : armed ? "Press again to quit Kortext and stop the server" : "Quit Kortext and stop the server")
+                .help(!up ? "Start the server" : armed ? "Press again to stop the server" : "Stop the server")
                 if up, !armed {
                     Button { model.openPanel() } label: {
                         Text("open panel").font(Kx.sans(11)).foregroundStyle(Kx.fgSecondary)
@@ -260,7 +260,7 @@ struct StatusBar: View {
                 }
             }
             if armed {
-                Text("Press again to quit and stop the server").font(Kx.sans(11, .medium)).foregroundStyle(Kx.red).lineLimit(1).fixedSize()
+                Text("Press again to stop the server").font(Kx.sans(11, .medium)).foregroundStyle(Kx.red).lineLimit(1).fixedSize()
                     .padding(.horizontal, 8).frame(height: 20)
                     .background(Kx.red.opacity(0.09)).clipShape(Capsule())
             }
@@ -274,12 +274,12 @@ struct StatusBar: View {
         .onChange(of: armed) { _, on in if on { Task { try? await Task.sleep(for: .seconds(4)); armed = false } } }
     }
 
-    // Down: start the server. Up: first press arms, second quits the app and stops the server with it.
+    // Down: start the server. Up: first press arms, second stops the server; the app stays.
     private func power() {
         if model.version == nil { model.startDaemon(); return }
         if !armed { armed = true; return }
         armed = false
-        model.quitAll()
+        model.stopDaemon()
     }
 }
 

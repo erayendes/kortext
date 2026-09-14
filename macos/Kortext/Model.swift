@@ -214,13 +214,7 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
 
     /// ⏻: start the server; the panel is a press away, not a browser window that opens itself.
     func startDaemon() { Shell.run("kortext --no-open"); Task { try? await Task.sleep(for: .seconds(2)); await poll() } }
-    /// ⏻: the server goes down with the app. A running step refuses (--stop does), so the app stays and says so.
-    func quitAll() {
-        Task {
-            Shell.run("kortext --stop")
-            if await Api.health() == nil { NSApp.terminate(nil) } else { await poll() }
-        }
-    }
+    /// ⏻: stop the server; the app stays, dimmed, a press away from starting it again.
     func stopDaemon() { Shell.run("kortext --stop"); Task { await poll() } }
     func openPanel(_ p: ProjectState? = nil, _ doc: Doc? = nil) { openPanel(project: p?.id, doc: doc?.rel) }
     func openPanel(project: Int?, doc: String?) {
