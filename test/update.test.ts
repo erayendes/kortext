@@ -27,6 +27,11 @@ test('a newer release shows, an older or equal one does not', () => {
   assert.equal(isNewer('3.1.0', '3.2.0'), false);
   // Two digits sort as numbers, not as text: 3.10.0 is after 3.9.0.
   assert.equal(isNewer('3.9.0', '3.10.0'), false);
+  assert.equal(isNewer('3.2.0-beta.4', '3.2.0-beta.3'), true);
+  assert.equal(isNewer('3.2.0-beta.3', '3.2.0-beta.3'), false);
+  assert.equal(isNewer('3.2.0', '3.2.0-beta.3'), true);
+  assert.equal(isNewer('3.2.0-beta.3', '3.2.0'), false);
+  assert.equal(isNewer('3.1.2', '3.2.0-beta.3'), false);
   // A prerelease suffix does not compare as newer than the corresponding numeric version.
   assert.equal(isNewer('3.2.0-rc.1', '3.2.0'), false);
 });

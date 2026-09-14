@@ -61,7 +61,7 @@ import {
 import { isChecking, readReadiness } from './readiness.js';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { logRootDir, type Project } from './db.js';
-import { isNewer, latestVersion, selfUpdate } from './update.js';
+import { channelOf, distTags, isNewer, selfUpdate } from './update.js';
 
 export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string): express.Express {
   failStaleJobs(db);
@@ -148,9 +148,16 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   // Offer self-update only for package paths under node_modules, excluding normal dev checkouts.
   const managed = pkgRoot.includes(`${sep}node_modules${sep}`);
 
-  app.get('/api/version', async (_req, res) => {
-    const latest = managed ? await latestVersion() : null;
-    res.json({ current: version, latest, stale: !!latest && isNewer(latest, version) });
+  // Both channels, and whether the running one has moved on; `?fresh=1` skips the hour's cache.
+  app.get('/api/version', async (req, res) => {
+    const tags = managed ? await distTags(req.query.fresh === '1') : {};
+    const want = tags[channelOf(version)];
+    res.json({
+      current: version,
+      latest: tags.latest ?? null,
+      beta: tags.beta ?? null,
+      stale: !!want && isNewer(want, version),
+    });
   });
 
   // Installing replaces files on disk; the running process keeps its boot-time version until restarted.
@@ -162,8 +169,11 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     }
     updating = true;
     try {
-      // `tag: "beta"` installs the beta dist-tag; `latest` also walks a beta back to the release.
-      const result = await selfUpdate(req.body?.tag === 'beta' ? 'beta' : 'latest');
+      // `tag` picks the channel; without one the running channel is kept. `latest` walks a beta back.
+      const tag = req.body?.tag;
+      const result = await selfUpdate(
+        tag === 'beta' || tag === 'latest' ? tag : channelOf(version),
+      );
       res.status(result.ok ? 200 : 500).json(result);
     } finally {
       updating = false;

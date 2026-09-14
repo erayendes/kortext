@@ -1545,9 +1545,29 @@ a.btn {
   color: var(--fg-faint);
   cursor: pointer;
 }
+.kx-power-up {
+  color: var(--green);
+}
 .kx-power:hover,
-.kx-power-armed {
+.kx-power-arming,
+.kx-power-down {
   color: var(--red);
+}
+.kx-power:disabled {
+  cursor: default;
+}
+.kx-version-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--fg-muted);
+}
+.kx-version-btn svg {
+  flex: none;
+  margin: 0 -2px;
+}
+.kx-status-note {
+  color: var(--fg-faint);
 }
 .kx-copy-cmd {
   display: inline-flex;

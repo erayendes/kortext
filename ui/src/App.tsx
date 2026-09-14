@@ -9,6 +9,9 @@ import {
   type KopengPlan,
   type Project,
   type Readiness,
+  channelOf,
+  type Channel,
+  type VersionInfo,
 } from './api';
 import { DocBadges, DocDrawer, StatusBadge } from './DocDrawer';
 
@@ -119,7 +122,7 @@ export function App() {
           strip={
             <>
               <UpdateStrip {...update} />
-              <CompanionStrip quiet={!!update.latest} />
+              <CompanionStrip quiet={!!update.target} />
             </>
           }
           onBack={() => {
@@ -136,7 +139,7 @@ export function App() {
             </button>
           </div>
           <UpdateStrip {...update} />
-          <CompanionStrip quiet={!!update.latest} />
+          <CompanionStrip quiet={!!update.target} />
           {projects.length === 0 && !adding && (
             <>
               <div className="kx-empty">
@@ -175,9 +178,10 @@ export function App() {
       <footer className="kx-statusbar">
         <span className="kx-statusbar-lines">
           <span className="kx-statusbar-line">
-            <ServerStatus />
+            <ServerStatus {...update} />
           </span>
           <span className="kx-statusbar-line">
+            <OtherChannel {...update} />
             <ReportIssue />
             <span className="kx-danger-sep">·</span>
             <SupportWork />
@@ -253,7 +257,7 @@ function CompanionStrip({ quiet }: { quiet: boolean }) {
 }
 
 // Confirm shutdown in place because some embedded browsers suppress native dialogs.
-function ServerStatus() {
+function ServerStatus({ info, note, checkNow }: ReturnType<typeof useUpdate>) {
   const [phase, setPhase] = useState<'up' | 'arming' | 'down'>('up');
   const [err, setErr] = useState('');
 
@@ -295,23 +299,30 @@ function ServerStatus() {
 
   return (
     <>
-      <span className={`kx-dot kx-dot-${down ? 'down' : 'up'}`} aria-hidden="true" />
-      <span className="kx-status-name">
-        <a
-          className="kx-statusbar-link"
-          href="https://github.com/erayendes/kortext"
-          target="_blank"
-          rel="noreferrer"
-        >
-          Kortext
-        </a>{' '}
-        <Version />
-      </span>
-      {!down && (
+      {info && <ChannelMark beta={channelOf(info.current) === 'beta'} />}
+      {info && (
         <button
-          className={phase === 'arming' ? 'kx-power kx-power-armed' : 'kx-power'}
+          className="kx-statusbar-link kx-version-btn"
+          onClick={checkNow}
+          title="Check for updates"
+        >
+          {channelOf(info.current) === 'beta' ? 'Beta version' : 'Stable version'}{' '}
+          <span className="kx-version mono">v{pretty(info.current)}</span>
+        </button>
+      )}
+      {note && <span className="kx-status-note">· {note}</span>}
+      {
+        <button
+          className={`kx-power kx-power-${phase}`}
           onClick={stop}
-          title={phase === 'arming' ? 'Click again to stop the server' : 'Stop the server'}
+          disabled={down}
+          title={
+            down
+              ? 'Stopped'
+              : phase === 'arming'
+                ? 'Click again to stop the server'
+                : 'Stop the server'
+          }
           aria-label="Stop the server"
         >
           <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
@@ -331,7 +342,7 @@ function ServerStatus() {
             />
           </svg>
         </button>
-      )}
+      }
       {down ? (
         <span className="kx-status-warn">
           stopped — type <CopyCommand command="kortext" /> in your terminal to start it again
@@ -373,16 +384,50 @@ export function pretty(v: string) {
   return pre ? `${short}-${pre.replace('.', '')}` : short;
 }
 
-// Display the running version, which can differ from the installed version after an update.
-function Version() {
-  const [version, setVersion] = useState('');
-  useEffect(() => {
-    api
-      .health()
-      .then((h) => setVersion(h.version))
-      .catch(() => {});
-  }, []);
-  return version ? <span className="kx-version mono">v{pretty(version)}</span> : null;
+function ChannelMark({ beta }: { beta: boolean }) {
+  return beta ? (
+    <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true" fill="none">
+      <path
+        d="M4.6 1.5h2.8M5 1.5v3.2L2.3 9.3a1 1 0 00.9 1.5h5.6a1 1 0 00.9-1.5L7 4.7V1.5"
+        stroke="currentColor"
+        strokeWidth="1"
+        strokeLinejoin="round"
+      />
+    </svg>
+  ) : (
+    <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true" fill="none">
+      <circle cx="6" cy="6" r="4.8" stroke="currentColor" strokeWidth="1" />
+      <path
+        d="M6 3.4v5M4 6.6 6 8.4l2-1.8"
+        stroke="currentColor"
+        strokeWidth="1"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// The channel not running here — a press installs it, and the strip takes it from there.
+function OtherChannel({ info, run }: ReturnType<typeof useUpdate>) {
+  if (!info) return null;
+  const beta = channelOf(info.current) === 'beta';
+  const other = beta ? info.latest : info.beta;
+  if (!other) return null; // no beta out right now
+  return (
+    <>
+      <button
+        className="kx-statusbar-link kx-version-btn"
+        onClick={() => run(beta ? 'latest' : 'beta', other)}
+        title={beta ? 'Back to the stable version' : 'Install the beta'}
+      >
+        <ChannelMark beta={!beta} />
+        {beta ? 'Use stable version' : 'Try beta version'}{' '}
+        <span className="kx-version mono">v{pretty(other)}</span>
+      </button>
+      <span className="kx-danger-sep">·</span>
+    </>
+  );
 }
 
 // Prefill the GitHub bug-report template with the running version.
@@ -924,27 +969,45 @@ function EngineBadge() {
 
 // One check for the whole panel — once on open, then hourly, so a release lands
 // on a panel left open — and the install's outcome, which both screens show.
+// The check follows the running channel; a press on the other channel installs it.
 function useUpdate() {
-  const [latest, setLatest] = useState<string | null>(null);
+  const [info, setInfo] = useState<VersionInfo | null>(null);
+  const [target, setTarget] = useState<string | null>(null); // what the strip offers or installs
   const [state, setState] = useState<'idle' | 'running' | 'done' | 'quit'>('idle');
   const [err, setErr] = useState('');
+  const [note, setNote] = useState('');
+  const idle = useRef(true); // the hourly check must not retarget an install in flight
+  idle.current = state === 'idle';
 
+  const check = (fresh = false) =>
+    api
+      .version(fresh)
+      .then((v) => {
+        setInfo(v);
+        if (idle.current) setTarget(v.stale ? v[channelOf(v.current)] : null);
+        return v;
+      })
+      .catch(() => null); // no server, no strip
   useEffect(() => {
-    const check = () =>
-      api
-        .version()
-        .then((v) => setLatest(v.stale ? v.latest : null))
-        .catch(() => {}); // no server, no strip
     void check();
     const t = setInterval(check, 60 * 60 * 1000);
     return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const run = () => {
+  const checkNow = () => {
+    setNote('checking…');
+    void check(true).then((v) => {
+      setNote(v ? (v.stale ? '' : 'up to date') : 'could not reach npm');
+      setTimeout(() => setNote(''), 3000);
+    });
+  };
+  const run = (tag?: Channel, version?: string) => {
+    if (version) setTarget(version);
     setErr('');
     setState('running');
     api
-      .selfUpdate()
+      .selfUpdate(tag)
       .then(() => setState('done'))
       .catch((e) => {
         setErr((e as Error).message);
@@ -957,11 +1020,11 @@ function useUpdate() {
       .then(() => setState('quit'))
       .catch((e) => setErr((e as Error).message));
   };
-  return { latest, state, err, run, quit };
+  return { info, target, state, err, note, checkNow, run, quit };
 }
 
 // Under the heading of either screen, only when a managed install has a newer version.
-function UpdateStrip({ latest, state, err, run, quit }: ReturnType<typeof useUpdate>) {
+function UpdateStrip({ target: latest, state, err, run, quit }: ReturnType<typeof useUpdate>) {
   if (!latest) return null;
   if (state === 'quit') {
     return (
@@ -989,7 +1052,7 @@ function UpdateStrip({ latest, state, err, run, quit }: ReturnType<typeof useUpd
   return (
     <div className="kx-update">
       <span>Version {pretty(latest)} is out.</span>
-      <button className="btn btn-primary" disabled={state === 'running'} onClick={run}>
+      <button className="btn btn-primary" disabled={state === 'running'} onClick={() => run()}>
         {state === 'running' ? 'Updating…' : 'Update now'}
       </button>
       {err && (

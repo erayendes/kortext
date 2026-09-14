@@ -1,34 +1,41 @@
 import { spawn } from 'node:child_process';
 
 // Cache registry version checks for an hour; failures hide the update notice.
-const LATEST_URL = 'https://registry.npmjs.org/kortext/latest';
+const TAGS_URL = 'https://registry.npmjs.org/-/package/kortext/dist-tags';
 const CACHE_MS = 60 * 60 * 1000;
 
-let cached: { at: number; version: string } | null = null;
+export type Tags = { latest?: string; beta?: string };
+let cached: { at: number; tags: Tags } | null = null;
 
-export async function latestVersion(): Promise<string | null> {
-  if (cached && Date.now() - cached.at < CACHE_MS) return cached.version;
+/** npm's dist-tags — `latest` and, while one is out, `beta` — cached for an hour. */
+export async function distTags(fresh = false): Promise<Tags> {
+  if (!fresh && cached && Date.now() - cached.at < CACHE_MS) return cached.tags;
   try {
-    const res = await fetch(LATEST_URL, { signal: AbortSignal.timeout(4000) });
-    if (!res.ok) return null;
-    const { version } = (await res.json()) as { version?: string };
-    if (!version) return null;
-    cached = { at: Date.now(), version };
-    return version;
+    const res = await fetch(TAGS_URL, { signal: AbortSignal.timeout(4000) });
+    if (!res.ok) return {};
+    const tags = (await res.json()) as Tags;
+    cached = { at: Date.now(), tags };
+    return tags;
   } catch {
-    return null;
+    return {};
   }
 }
 
-/** Compare the first three numeric version components, ignoring prerelease suffixes. */
+/** A pre-release runs on the beta channel; anything else on latest. */
+export const channelOf = (version: string): 'latest' | 'beta' =>
+  version.includes('-') ? 'beta' : 'latest';
+
+/** Compare the three numeric components, then the pre-release number; a release beats its own betas. */
 export function isNewer(latest: string, current: string): boolean {
-  const parts = (v: string) =>
-    v
-      .split('-')[0]
-      .split('.')
-      .map((n) => Number(n) || 0);
+  const parts = (v: string) => {
+    const [core, pre] = v.split('-');
+    const n = core.split('.').map((x) => Number(x) || 0);
+    // ponytail: only `beta.N` is ever published; no full semver precedence
+    n[3] = pre ? Number(pre.replace(/\D/g, '')) || 0 : Infinity;
+    return n;
+  };
   const [a, b] = [parts(latest), parts(current)];
-  for (let i = 0; i < 3; i++) if ((a[i] ?? 0) !== (b[i] ?? 0)) return (a[i] ?? 0) > (b[i] ?? 0);
+  for (let i = 0; i < 4; i++) if ((a[i] ?? 0) !== (b[i] ?? 0)) return (a[i] ?? 0) > (b[i] ?? 0);
   return false;
 }
 

@@ -112,6 +112,15 @@ export interface Readiness {
   checkedAt: string;
 }
 
+export type Channel = 'latest' | 'beta';
+export type VersionInfo = {
+  current: string;
+  latest: string | null;
+  beta: string | null;
+  stale: boolean;
+};
+export const channelOf = (v: string): Channel => (v.includes('-') ? 'beta' : 'latest');
+
 export const api = {
   health: () =>
     req<{ ok: boolean; db: string; version: string; companion: boolean }>('/api/health'),
@@ -121,8 +130,12 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ archived }),
     }),
-  version: () => req<{ current: string; latest: string | null; stale: boolean }>('/api/version'),
-  selfUpdate: () => req<{ ok: boolean; output: string }>('/api/version/update', { method: 'POST' }),
+  version: (fresh = false) => req<VersionInfo>(`/api/version${fresh ? '?fresh=1' : ''}`),
+  selfUpdate: (tag?: Channel) =>
+    req<{ ok: boolean; output: string }>('/api/version/update', {
+      method: 'POST',
+      body: JSON.stringify(tag ? { tag } : {}),
+    }),
   quit: () => req<{ ok: boolean }>('/api/quit', { method: 'POST' }),
   engines: () => req<{ engines: EngineInfo[]; selected: string | null }>('/api/engines'),
   selectEngine: (id: string) =>
