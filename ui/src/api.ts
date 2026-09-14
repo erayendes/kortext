@@ -87,6 +87,7 @@ export interface EngineInfo {
   models?: string[];
   efforts?: string[];
   about?: Record<string, string>;
+  label?: Record<string, string>;
   untested?: boolean;
 }
 

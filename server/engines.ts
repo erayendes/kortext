@@ -25,6 +25,9 @@ export interface EngineSpec {
   /** One line per model and per level, for the picker — what the CLI's own
    *  picker says, kept short. Missing means the name alone. */
   about?: Record<string, string>;
+  /** What the picker shows for an id, when the CLI's own picker shows
+   *  something other than the id — `opus[1m]` reads "Opus (1M context)". */
+  label?: Record<string, string>;
   /** Set when the CLI takes the prompt as an argument: the flag it follows,
    *  or '' when it is the last positional argument. */
   promptFlag?: string;
@@ -52,13 +55,13 @@ export const ENGINES: EngineSpec[] = [
     args: ['--print', '--dangerously-skip-permissions'],
     modelFlag: '--model',
     effortFlag: '--effort',
-    // The CLI's own picker, in its order.
-    efforts: ['low', 'medium', 'high', 'xhigh', 'max'],
-    // Aliases the CLI resolves to its latest of each tier, as its picker lists them.
-    models: ['opus', 'fable', 'sonnet', 'haiku'],
-    // What the CLI's own picker says, in its order and words.
+    // The CLI's own slider, in its order; ultracode is xhigh plus workflows.
+    efforts: ['low', 'medium', 'high', 'xhigh', 'max', 'ultracode'],
+    // As the CLI's own picker lists them; `opus[1m]` is the 1M-context alias.
+    models: ['opus[1m]', 'fable', 'sonnet', 'haiku'],
+    label: { 'opus[1m]': 'Opus (1M context)', fable: 'Fable', sonnet: 'Sonnet', haiku: 'Haiku' },
     about: {
-      opus: 'Opus 5 with 1M context · recommended',
+      'opus[1m]': 'Opus 5 with 1M context · recommended',
       fable: 'Fable 5.1 · most capable',
       sonnet: 'Sonnet 5 · efficient',
       haiku: 'Haiku 4.5 · fastest',
@@ -67,6 +70,7 @@ export const ENGINES: EngineSpec[] = [
       high: 'the CLI default',
       xhigh: 'smarter',
       max: 'smarter · spends limits fastest',
+      ultracode: 'xhigh + workflows',
     },
     installHint: 'npm install -g @anthropic-ai/claude-code',
   },
@@ -80,8 +84,10 @@ export const ENGINES: EngineSpec[] = [
     // codex has no flag; the config key is overridden on the command line. The
     // levels and models are the CLI's own picker, in its order.
     effortPrefix: '-c model_reasoning_effort=',
-    efforts: ['low', 'medium', 'high', 'xhigh', 'max'],
+    // The picker's "More reasoning…" opens ultra and max; both take on the command line.
+    efforts: ['low', 'medium', 'high', 'xhigh', 'ultra', 'max'],
     models: ['gpt-6-astra', 'gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.5'],
+    label: { xhigh: 'extra high' },
     // What the CLI's own picker says, in its order and words.
     about: {
       'gpt-6-astra': 'Our most capable model for complex, demanding work',
@@ -93,6 +99,7 @@ export const ENGINES: EngineSpec[] = [
       medium: 'Balances speed and reasoning depth for everyday tasks · the CLI default',
       high: 'Greater reasoning depth for complex problems',
       xhigh: 'Extra high reasoning depth for complex problems',
+      ultra: 'More reasoning',
       max: 'More reasoning · consumes usage limits faster',
     },
     installHint: 'npm install -g @openai/codex',
@@ -122,15 +129,18 @@ export const ENGINES: EngineSpec[] = [
       'claude-opus-4-6-thinking',
       'gpt-oss-120b',
     ],
-    // What the CLI's own picker says, in its order and words.
-    about: {
-      'gemini-3.8-flash': 'Gemini 3.8 Flash · current default',
+    label: {
+      'gemini-3.8-flash': 'Gemini 3.8 Flash',
       'gemini-3.7-flash': 'Gemini 3.7 Flash',
       'gemini-3.6-flash': 'Gemini 3.6 Flash',
       'gemini-3.1-pro': 'Gemini 3.1 Pro',
       'claude-sonnet-4-6': 'Claude Sonnet 4.6 (Thinking)',
       'claude-opus-4-6-thinking': 'Claude Opus 4.6 (Thinking)',
       'gpt-oss-120b': 'GPT-OSS 120B (Medium)',
+    },
+    // What the CLI's own picker says, in its order and words.
+    about: {
+      'gemini-3.8-flash': 'current default',
       low: 'Fastest, lightest reasoning',
       medium: 'Balanced',
       high: 'Deepest reasoning for complex problems — slower but stronger · the CLI default',

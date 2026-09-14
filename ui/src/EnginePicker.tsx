@@ -39,6 +39,7 @@ export function EnginePicker({
   const models = spec?.models ?? [];
   const levels = spec?.efforts ?? [];
   const about = (key: string) => spec?.about?.[key] ?? '';
+  const label = (key: string) => spec?.label?.[key] ?? key;
 
   // Escape closes; ↑↓ walk the models, ←→ the levels, as the CLIs do.
   useEffect(() => {
@@ -117,7 +118,7 @@ export function EnginePicker({
               <PickRow
                 key={m}
                 on={model === m}
-                name={m}
+                name={label(m)}
                 about={about(m)}
                 onPick={() => pickModel(m)}
               />
@@ -141,7 +142,7 @@ export function EnginePicker({
                   className={`kx-segment-btn${effort === l ? ' on' : ''}`}
                   onClick={() => pickEffort(l)}
                 >
-                  {l}
+                  {label(l)}
                 </button>
               ))}
             </div>
