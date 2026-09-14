@@ -303,25 +303,46 @@ struct SettingsView: View {
     @State private var loginItem = SMAppService.mainApp.status == .enabled
 
     var body: some View {
-        VStack(spacing: 0) {
-            Row(icon: "power", title: "Launch at login", sub: "The server starts with it.", on: loginItem) {
-                loginItem.toggle()
-                try? loginItem ? SMAppService.mainApp.register() : SMAppService.mainApp.unregister()
+        // Two cards, like the project cards: the app's own switches, then the links out.
+        VStack(spacing: 10) {
+            Card {
+                Row(icon: "power", title: "Launch at login", sub: "The server starts with it.", on: loginItem) {
+                    loginItem.toggle()
+                    try? loginItem ? SMAppService.mainApp.register() : SMAppService.mainApp.unregister()
+                }
+                Divider().padding(.leading, 14)
+                Row(icon: "bell", title: "Notify me", sub: "When a document waits on you.", on: notifications) {
+                    notifications.toggle()
+                    if notifications { model.ensureNotifications() }
+                }
+                Divider().padding(.leading, 14)
+                Row(icon: "arrow.down.circle", title: "Check for updates", sub: model.update ?? (model.version.map { "kortext \($0)" } ?? nil)) { model.checkUpdates() }
             }
-            Row(icon: "bell", title: "Notify when a document waits", on: notifications) {
-                notifications.toggle()
-                if notifications { model.ensureNotifications() }
+            Card {
+                Row(icon: "ladybug", title: "Report an issue") {
+                    var u = "https://github.com/erayendes/kortext/issues/new?template=bug_report.yml"
+                    if let v = model.version { u += "&version=\(v)" }
+                    NSWorkspace.shared.open(URL(string: u)!)
+                }
+                Divider().padding(.leading, 14)
+                Row(icon: "heart", title: "Support Kortext") { NSWorkspace.shared.open(URL(string: "https://buymeacoffee.com/erayendes")!) }
+                Divider().padding(.leading, 14)
+                Row(icon: "xmark.circle", title: "Quit Kortext", trailing: "⌘Q") { NSApp.terminate(nil) }
             }
-            Row(icon: "arrow.down.circle", title: "Check for updates", sub: model.update ?? (model.version.map { "kortext \($0)" } ?? nil)) { model.checkUpdates() }
-            Row(icon: "ladybug", title: "Something wrong? Report an issue") {
-                var u = "https://github.com/erayendes/kortext/issues/new?template=bug_report.yml"
-                if let v = model.version { u += "&version=\(v)" }
-                NSWorkspace.shared.open(URL(string: u)!)
-            }
-            Row(icon: "heart", title: "Like it? Support Kortext") { NSWorkspace.shared.open(URL(string: "https://buymeacoffee.com/erayendes")!) }
-            Row(icon: "xmark.circle", title: "Quit Kortext", trailing: "⌘Q") { NSApp.terminate(nil) }
         }
-        .padding(.vertical, 6)
+        .padding(12)
+    }
+}
+
+/// The project card's shell, for anything else that groups rows.
+struct Card<Content: View>: View {
+    @ViewBuilder let content: Content
+    var body: some View {
+        VStack(spacing: 0) { content }
+            .padding(.vertical, 4)
+            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(.regularMaterial))
+            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color.primary.opacity(0.08), lineWidth: 1))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
 
@@ -340,7 +361,7 @@ struct Row: View {
             HStack(spacing: 10) {
                 Icon(name: icon, size: 13, color: Kx.fgSecondary).frame(width: 18)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(title).font(Kx.sans(13)).foregroundStyle(Kx.fg)
+                    Text(title).font(Kx.sans(13)).foregroundStyle(Kx.fg).lineLimit(1)
                     if let sub { Text(sub).font(Kx.sans(11)).foregroundStyle(Kx.fgMuted).lineLimit(1) }
                 }
                 Spacer()
