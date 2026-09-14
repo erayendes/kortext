@@ -1165,7 +1165,7 @@ function Field({
   );
 }
 
-/** The engine line as a control: `codex · default · high ↓` opens the picker. */
+/** The engine line as a control: `codex · default · high ›` opens the picker. */
 function EngineButton({
   engines,
   engine,
@@ -1182,12 +1182,12 @@ function EngineButton({
   if (engines.length === 0) return null;
   return (
     <button
-      className="btn kx-engine-btn mono"
+      className="btn btn-link-primary kx-engine-btn mono"
       onClick={onOpen}
       title="The CLI that writes this project's documents, its model and effort — press to change"
     >
       {engineLine(engines, engine, model, effort)}
-      <span aria-hidden="true">↓</span>
+      <span aria-hidden="true">›</span>
     </button>
   );
 }

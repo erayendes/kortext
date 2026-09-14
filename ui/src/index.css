@@ -1558,17 +1558,11 @@ a.btn {
   padding-top: 12px;
   border-top: 1px solid var(--border);
 }
-/* The engine control reads as the line it was — mono, quiet — with an arrow that says it opens. */
+/* The engine control reads as the line it was — mono, quiet, a link — with a chevron that says it opens. */
 .kx-engine-btn {
   font-size: var(--fs-label);
   font-weight: 400;
-  color: var(--fg-secondary);
-  border-color: var(--border-strong);
-  background: none;
-}
-.kx-engine-btn:hover {
-  color: var(--fg);
-  border-color: var(--border-strong);
+  padding-left: 0;
 }
 .kx-engine-line {
   font-size: var(--fs-label);
