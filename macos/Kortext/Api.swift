@@ -42,12 +42,15 @@ enum Api {
         return try await get("/api/projects/\(id)/docs", R.self).docs
     }
     static func version() async throws -> Version { try await get("/api/version", Version.self) }
-    static func post(_ path: String, _ body: [String: Any] = [:]) async throws {
+    @discardableResult
+    static func post(_ path: String, _ body: [String: Any] = [:]) async throws -> Bool {
         var req = URLRequest(url: base.appending(path: path))
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
-        _ = try await URLSession.shared.data(for: req)
+        req.timeoutInterval = 180   // npm install takes a while
+        let (_, resp) = try await URLSession.shared.data(for: req)
+        return (resp as? HTTPURLResponse)?.statusCode == 200
     }
     static func readiness(_ id: Int) async throws -> Readiness? {
         struct R: Decodable { let readiness: Readiness? }

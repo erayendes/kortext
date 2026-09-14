@@ -70,9 +70,22 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
         }
     }
     var pendingUpdate = false
+    /// Install, then restart the server ourselves: the process on the port is still the old
+    /// one until it goes down and comes back. A refused install (a step running) says so.
     func applyUpdate() {
         update = "updating…"
-        Task { try? await Api.post("/api/version/update"); pendingUpdate = false; update = "installed · restart the server" }
+        Task {
+            guard (try? await Api.post("/api/version/update")) == true else { update = "could not update — a step may be running"; return }
+            pendingUpdate = false
+            update = "installed · restarting the server…"
+            Shell.run("kortext --stop")
+            Shell.run("kortext --no-open")
+            for _ in 0..<20 {
+                try? await Task.sleep(for: .seconds(1))
+                if let h = await Api.health() { version = h.version; update = "v\(h.version) · up to date"; await poll(); return }
+            }
+            update = "installed · press ⏻ to start the server"
+        }
     }
 
     func start() {
