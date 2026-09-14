@@ -135,11 +135,6 @@ struct ProjectCard: View {
                 Text(p.project.name.uppercased()).font(.system(size: 10, weight: .medium)).tracking(0.9).foregroundStyle(Color.primary.opacity(0.5)).lineLimit(1)
                 Spacer()
                 Text("\(p.project.docCounts.settled)/\(p.project.docCounts.total)").font(Kx.mono(10)).foregroundStyle(Color.primary.opacity(0.35))
-                if !p.writing.isEmpty {
-                    Button { model.pause(p) } label: { Icon(name: "pause.fill", size: 10, color: Kx.fgSecondary).frame(width: 16, height: 16) }.buttonStyle(.plain).help("Pause")
-                } else if (p.project.paused ?? 0) == 1, !p.complete {
-                    Button { model.resume(p) } label: { Icon(name: "play.fill", size: 10, color: Kx.fgSecondary).frame(width: 16, height: 16) }.buttonStyle(.plain).help("Continue")
-                }
             }
             .padding(.horizontal, 14).padding(.top, 11).padding(.bottom, 4)
             ForEach(rows) { w in WaitingRow(w: w) }
@@ -200,25 +195,22 @@ struct WaitingRow: View {
     @EnvironmentObject var model: Model
     let w: Model.Waiting
     @State private var hover = false
-    private var isWriting: Bool { if case .writing = w.why { return true }; return false }
 
     var body: some View {
-        Button { model.openPanel(project: w.project.id, doc: w.rel) } label: {
-            HStack(spacing: 10) {
-                Text(w.rel).font(Kx.mono(13, .medium)).foregroundStyle(isWriting ? Kx.fgMuted : Kx.fg)
+        Button { model.openPanel(project: w.project.id, doc: w.doc.rel) } label: {
+            HStack(spacing: 6) {
+                Text(w.doc.rel).font(Kx.mono(13, .medium)).foregroundStyle(w.needs ? Kx.fg : Kx.fgMuted)
                 Spacer(minLength: 0)
-                switch w.why {
-                case .approve: Pill(kind: .approve, text: "Approve")
-                case .failed: Pill(kind: .failed, text: "Failed")
-                case .questions(let n): Pill(kind: .questions, text: n == 1 ? "1 question" : "\(n) questions")
-                case .writing: Pill(kind: .writing, text: "Writing")
-                }
+                // The panel's row: the detail badge, then the state — waiting says nothing beside a badge.
+                if w.needs, let d = w.doc.detail, ["approve", "review", "recheck"].contains(d) { Pill(kind: .detail(d), text: d) }
+                if w.doc.state != "waiting" { Pill(kind: .state(w.doc.state), text: w.doc.state == "writing" || w.doc.state == "reading" ? "\(w.doc.state)…" : w.doc.state) }
             }
-            .padding(.horizontal, 14).padding(.vertical, 9)
-            .background(hover ? Kx.bgHover : .clear)
+            .padding(.horizontal, 14).padding(.vertical, 7)
+            .background(hover && w.needs ? Kx.bgHover : .clear)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .disabled(!w.needs)   // a step in flight is a fact, not a decision — nothing to open
         .onHover { hover = $0 }
     }
 }

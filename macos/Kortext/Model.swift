@@ -27,37 +27,33 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
     private var seenNotReady: Set<Int> = []
     private var primed = false                   // first poll only records, never notifies
 
+    /// One row per document the panel would list under Action needed or Doing,
+    /// with the panel's own section, state and detail — the server decides all three.
     struct Waiting: Identifiable {
-        enum Why { case approve, failed, questions(Int), writing }
-        let project: ProjectState; let rel: String; let why: Why
-        var id: String { "\(project.id)/\(rel)" }
+        let project: ProjectState; let doc: Doc
+        var id: String { "\(project.id)/\(doc.rel)" }
+        var needs: Bool { doc.section == "needs" }
     }
-    /// Every document that waits on the human: a draft to approve, a failed step, a brief with questions.
     var waiting: [Waiting] {
         projects.flatMap { p -> [Waiting] in
             var out: [Waiting] = []
-            if p.notReady { out.append(Waiting(project: p, rel: "BRIEF.md", why: .questions(p.questions))) }
-            for d in p.docs {
-                if d.status == "draft" { out.append(Waiting(project: p, rel: d.rel, why: .approve)) }
-                else if d.state == "failed" { out.append(Waiting(project: p, rel: d.rel, why: .failed)) }
-            }
-            for j in p.writing { out.append(Waiting(project: p, rel: j.doc_rel, why: .writing)) }
+            // A brief the gate sent back: the panel shows its questions as a card; here it is a review row.
+            if p.notReady { out.append(Waiting(project: p, doc: Doc(rel: "BRIEF.md", status: "approved", state: "waiting", detail: "review", section: "needs"))) }
+            out += p.docs.filter { $0.section == "needs" }.map { Waiting(project: p, doc: $0) }
+            out += p.docs.filter { $0.section == "doing" }.map { Waiting(project: p, doc: $0) }
             return out
         }
     }
     /// The badge counts decisions, not work in flight.
-    var draftCount: Int { waiting.filter { if case .writing = $0.why { return false }; return true }.count }
+    var draftCount: Int { waiting.filter(\.needs).count }
     /// Projects with something to show: a row, a step in flight, or a pause to lift.
-    var shown: [ProjectState] { projects.filter { p in waiting.contains { $0.project.id == p.id } || (p.project.paused ?? 0) == 1 && !p.complete } }
+    var shown: [ProjectState] { projects.filter { p in waiting.contains { $0.project.id == p.id } } }
     var anyRunning: Bool { projects.contains { $0.running != nil } }
     var runningLine: (project: ProjectState, job: Job)? {
         for p in projects { if let j = p.running { return (p, j) } }
         return nil
     }
-    func pause(_ p: ProjectState) { Task { try? await Api.post("/api/projects/\(p.id)/pause", ["paused": true]); await poll() } }
-    /// A paused project with work left: Continue is the unpause, as on the panel.
-    var pausedLine: ProjectState? { projects.first { ($0.project.paused ?? 0) == 1 && !$0.complete } }
-    func resume(_ p: ProjectState) { Task { try? await Api.post("/api/projects/\(p.id)/pause", ["paused": false]); await poll() } }
+
 
     // Settings › Check for updates: the daemon knows both versions.
     @Published var update: String? = nil       // what the last check said
@@ -159,16 +155,18 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
     }
 
     static let demo: [ProjectState] = {
-        func p(_ id: Int, _ code: String, _ name: String, _ docs: [Doc], notReady: Bool = false, writing: [String] = []) -> ProjectState {
+        func p(_ id: Int, _ code: String, _ name: String, _ docs: [Doc], notReady: Bool = false) -> ProjectState {
             var s = ProjectState(project: Project(id: id, name: name, code: code, docCounts: .init(settled: 3, total: 15), doc_lang: "Turkish", paused: 0))
             s.docs = docs; s.notReady = notReady; s.questions = 3
-            s.writing = writing.enumerated().map { Job(id: 900 + $0.offset, doc_rel: $0.element, status: "running", error: nil) }
             return s
         }
         return [
-            p(90, "ACME", "Acme Billing", [Doc(rel: "PRODUCT.md", status: "draft", state: "waiting", detail: "approve"),
-                                          Doc(rel: "ARCHITECTURE.md", status: "uninitialized", state: "failed", detail: nil)],
-              writing: ["STACK.md", "STRUCTURE.md", "DESIGN.md"]),
+            p(90, "ACME", "Acme Billing", [Doc(rel: "PRODUCT.md", status: "draft", state: "waiting", detail: "approve", section: "needs"),
+                                          Doc(rel: "API.md", status: "draft", state: "waiting", detail: "review", section: "needs"),
+                                          Doc(rel: "ARCHITECTURE.md", status: "uninitialized", state: "failed", detail: "draft", section: "needs"),
+                                          Doc(rel: "STACK.md", status: "uninitialized", state: "writing", detail: "draft", section: "doing"),
+                                          Doc(rel: "STRUCTURE.md", status: "uninitialized", state: "writing", detail: "draft", section: "doing"),
+                                          Doc(rel: "DESIGN.md", status: "approved", state: "reading", detail: "recheck", section: "doing")]),
             p(91, "MILO", "Milowda", [], notReady: true),
         ]
     }()

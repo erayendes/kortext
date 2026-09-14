@@ -23,6 +23,7 @@ enum Kx {
     static let amber = dyn("#9a6a16", "#d3a55e")
     static let violet = dyn("#5b4bcc", "#8b7df0")
     static let blue = dyn("#2563c9", "#5e9bf0")
+    static let pink = dyn("#c02a72", "#ee7bb0")
 
     static func sans(_ size: CGFloat, _ weight: Font.Weight = .regular) -> Font { .system(size: size, weight: weight) }
     static func mono(_ size: CGFloat, _ weight: Font.Weight = .regular) -> Font { .system(size: size, weight: weight, design: .monospaced) }
@@ -39,39 +40,31 @@ struct Icon: View {
     }
 }
 
-/// A tinted capsule: the state and its word.
+/// The panel's badge: a detail (what is owed) or a state (what is happening), in the panel's colours.
 struct Pill: View {
-    enum Kind { case approve, failed, questions, writing }
+    enum Kind { case detail(String), state(String) }
     let kind: Kind; let text: String
     var body: some View {
-        let c: Color = switch kind { case .approve: Kx.violet; case .failed: Kx.red; case .questions: Kx.amber; case .writing: Kx.blue }
+        let c: Color = switch kind {
+        case .detail("approve"): Kx.violet
+        case .detail("review"): Kx.pink
+        case .detail("recheck"): Kx.amber
+        case .state("failed"): Kx.red
+        case .state("writing"), .state("reading"): Kx.blue
+        case .state("paused"): Kx.amber
+        default: Kx.fgSecondary
+        }
         Text(text).font(Kx.sans(11, .medium)).foregroundStyle(c)
             .padding(.horizontal, 8).frame(height: 20)
             .background(c.opacity(0.09)).clipShape(Capsule())
     }
 }
 
+
 extension NSColor {
     convenience init(hex: String) {
         var v: UInt64 = 0
         Scanner(string: String(hex.dropFirst())).scanHexInt64(&v)
         self.init(red: CGFloat((v >> 16) & 0xff) / 255, green: CGFloat((v >> 8) & 0xff) / 255, blue: CGFloat(v & 0xff) / 255, alpha: 1)
-    }
-}
-
-/// The same capsule as a control: the chain's Pause / Continue on a project card.
-struct PillButton: View {
-    let kind: Pill.Kind; let icon: String; let text: String; let action: () -> Void
-    var body: some View {
-        let c: Color = switch kind { case .approve: Kx.violet; case .failed: Kx.red; case .questions: Kx.amber; case .writing: Kx.blue }
-        Button(action: action) {
-            HStack(spacing: 4) {
-                Image(systemName: icon).font(.system(size: 8, weight: .bold)).foregroundStyle(c)
-                Text(text).font(Kx.sans(11, .medium)).foregroundStyle(c)
-            }
-            .padding(.horizontal, 8).frame(height: 20)
-            .background(c.opacity(0.09)).clipShape(Capsule())
-        }
-        .buttonStyle(.plain)
     }
 }

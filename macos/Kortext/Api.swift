@@ -10,7 +10,7 @@ struct Project: Decodable, Identifiable {
 }
 struct Job: Decodable { let id: Int; let doc_rel: String; let status: String; let error: String? }
 struct Doc: Decodable, Identifiable {
-    let rel: String; let status: String; let state: String; let detail: String?
+    let rel: String; let status: String; let state: String; let detail: String?; let section: String
     var id: String { rel }
 }
 struct Readiness: Decodable { let ready: Bool; let questions: [String] }
