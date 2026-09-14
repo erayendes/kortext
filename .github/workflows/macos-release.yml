@@ -19,7 +19,7 @@ jobs:
     permissions:
       contents: write # the appcast commit on main and the release asset
     env:
-      SIGN_IDENTITY: "Developer ID Application: Eray Endes (926AC5V2UG)"
+      SIGN_IDENTITY: 'Developer ID Application: Eray Endes (926AC5V2UG)'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -151,6 +151,7 @@ jobs:
           gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Kortext $TAG" \
             --notes "See [the changelog](https://github.com/${GITHUB_REPOSITORY}/blob/${TAG}/docs/CHANGELOG.md)."
           gh release upload "$TAG" dist/Kortext.zip --clobber
-          gh release edit "$TAG" --notes "$(gh release view "$TAG" --json body -q .body)
-
-**macOS menu bar app:** [Kortext.zip](https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/Kortext.zip) · SHA256 \`${SHA256}\`"
+          gh release view "$TAG" --json body -q .body > /tmp/notes.md
+          printf '\n\n**macOS menu bar app:** [Kortext.zip](https://github.com/%s/releases/download/%s/Kortext.zip) · SHA256 `%s`\n' \
+            "$GITHUB_REPOSITORY" "$TAG" "$SHA256" >> /tmp/notes.md
+          gh release edit "$TAG" --notes-file /tmp/notes.md

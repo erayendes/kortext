@@ -1423,20 +1423,6 @@ function AddProject({
           later.
         </span>
       )}
-      {/* The engine as the project screen shows it — its line, and Change model opening the same picker. */}
-      {engines.length > 0 && (
-        <div className="kx-form-row kx-form-engine">
-          <span
-            className="kx-engine-line mono"
-            title="The CLI that writes this project's documents, its model and effort"
-          >
-            {[engine ?? engines[0]?.id, model || 'default', effort].filter(Boolean).join(' · ')}
-          </span>
-          <button className="btn btn-link-primary" onClick={() => setPicking(true)}>
-            Change model
-          </button>
-        </div>
-      )}
       <EnginePicker
         open={picking}
         onClose={() => setPicking(false)}
@@ -1454,7 +1440,13 @@ function AddProject({
         onEffort={setEffort}
         onError={setErr}
       />
+      {/* As the project screen: the actions in one row, the engine line under them. */}
       <div className="kx-form-row">
+        {engines.length > 0 && (
+          <button className="btn btn-link-primary" onClick={() => setPicking(true)}>
+            Change model
+          </button>
+        )}
         <button className="btn btn-primary" onClick={submit}>
           Initialize
         </button>
@@ -1463,6 +1455,14 @@ function AddProject({
         </button>
         {err && <span className="kx-field-err">{err}</span>}
       </div>
+      {engines.length > 0 && (
+        <span
+          className="kx-engine-line mono"
+          title="The CLI that writes this project's documents, its model and effort"
+        >
+          {[engine ?? engines[0]?.id, model || 'default', effort].filter(Boolean).join(' · ')}
+        </span>
+      )}
     </div>
   );
 }

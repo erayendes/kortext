@@ -1552,10 +1552,6 @@ a.btn {
 /* Under the buttons: what runs this project, as one faint mono line — the
    CLI, its model, its effort. Reading only; Change model, above it, opens
    the picker. */
-/* Add project: the engine line and its Change model, level, before Initialize. */
-.kx-form-engine {
-  align-items: baseline;
-}
 .kx-engine-line {
   font-size: var(--fs-label);
   color: var(--fg-secondary);
