@@ -2000,6 +2000,18 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   font-size: var(--fs-body);
   line-height: 1.55;
 }
+/* The drawer is 880 wide for the bands, tables, code and the design page;
+   prose keeps a reading measure. Left-aligned, so the room stays on the right. */
+.kx-h1,
+.kx-h2,
+.kx-h3,
+.kx-h4,
+.kx-para,
+.kx-bullet,
+.kx-ordered,
+.kx-quote {
+  max-width: 78ch;
+}
 .kx-block {
   padding: 3px 8px;
   border-radius: 5px;

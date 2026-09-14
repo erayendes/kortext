@@ -340,6 +340,12 @@ for good on the second click.
 
 ## 10 · Document view
 
+The drawer is **880px** wide (`94vw` at most): the bands, tables, code blocks and the design
+page use all of it. Prose does not — headings, paragraphs, lists and quotes stop at **78ch**,
+left-aligned, so a line never runs past the length an eye carries and the room stays on the
+right. The drawer was 720 and read as cramped where a request and its thread stacked; the text
+was never the problem, so the text kept its measure.
+
 The markdown the panel renders, on the same seven sizes: body `--fs-body`, headings
 `--fs-title` / `--fs-section` / `--fs-heading` — 20 / 18 / 16, all `600`, none underlined. A
 fourth level (`####`, `.kx-h4`) is not a heading but a label: the mono `--fs-micro` eyebrow the

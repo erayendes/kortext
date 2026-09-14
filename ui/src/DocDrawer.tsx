@@ -687,7 +687,7 @@ export function DocDrawer({
     });
 
   return (
-    <Drawer open={!!doc} onClose={onClose} width={720}>
+    <Drawer open={!!doc} onClose={onClose} width={880}>
       <div className="dr-head">
         <div className="dr-ident">
           <div className="dr-title">

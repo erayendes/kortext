@@ -4,6 +4,8 @@
 
 ## [Yayımlanmamış]
 
+- **Daha geniş çekmece.** 720'den 880px'e; bantlar, tablolar, kod ve tasarım sayfası için.
+  Düz yazı 78 karakterlik ölçüsünü korur.
 - **İstek başına tek karar.** İsteyen belgede kabul edilen istek hedefe işaretli olarak iner —
   *accepted there* — aynı kişiye ikinci kez sorulmaz; işaret yine kaldırılabilir ve istek hedefin
   bir sonraki yeniden yazımına oradaki her şeyle birlikte girer. Send, Accept oldu.
