@@ -1340,7 +1340,7 @@ a.btn {
   /* Inline flow, not flex: the warning wraps as a sentence and Yes / No follow its last line.
      Text sits 12px in on every line; the first link's box reaches back to the column edge. */
   display: block;
-  margin-top: 6px;
+  margin: 2px 0 14px;
   padding-left: 12px;
   line-height: 30px;
 }

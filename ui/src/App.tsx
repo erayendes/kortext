@@ -1647,78 +1647,6 @@ function ProjectScreen({
           <span className="kx-card-path mono" title={project.repo_path}>
             {shortPath(project.repo_path)}
           </span>
-          {/* The project's own actions, under the head while ⚙ is on. Each one is
-              armed and confirmed here and nowhere else. */}
-          {tools && (
-            <div className="kx-danger-zone">
-              {arming === 'restart' ? (
-                <>
-                  <span className="kx-arm-warn">
-                    Reset the analysis documents? Your brief stays. Press Start when ready.
-                  </span>
-                  <button className="btn btn-link-warning" disabled={busy} onClick={doRestart}>
-                    Yes, restart
-                  </button>
-                  <button className="btn btn-link-primary" onClick={() => setArming(null)}>
-                    No
-                  </button>
-                </>
-              ) : arming === 'archive' ? (
-                <>
-                  <span className="kx-arm-warn">
-                    {project.archived
-                      ? 'Bring it back into the project list?'
-                      : 'Fold it away? The repo and its documents are untouched.'}
-                  </span>
-                  <button className="btn btn-link-success" disabled={busy} onClick={doArchive}>
-                    {project.archived ? 'Yes, unarchive' : 'Yes, archive'}
-                  </button>
-                  <button className="btn btn-link-primary" onClick={() => setArming(null)}>
-                    No
-                  </button>
-                </>
-              ) : arming === 'cancel' ? (
-                <>
-                  <span className="kx-arm-warn">
-                    Remove Kortext's analysis, including the brief and edits in .kortext/, its
-                    contract entries, logs and project registration? The rest of the project stays.
-                  </span>
-                  <button className="btn btn-link-danger" disabled={busy} onClick={doCancel}>
-                    Yes, remove
-                  </button>
-                  <button className="btn btn-link-primary" onClick={() => setArming(null)}>
-                    No
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    className="btn btn-link-warning"
-                    disabled={busy}
-                    onClick={() => setArming('restart')}
-                  >
-                    Restart analysis
-                  </button>
-                  <span className="kx-danger-sep">·</span>
-                  <button
-                    className="btn btn-link-success"
-                    disabled={busy}
-                    onClick={() => setArming('archive')}
-                  >
-                    {project.archived ? 'Unarchive project' : 'Archive project'}
-                  </button>
-                  <span className="kx-danger-sep">·</span>
-                  <button
-                    className="btn btn-link-danger"
-                    disabled={busy}
-                    onClick={() => setArming('cancel')}
-                  >
-                    Remove project
-                  </button>
-                </>
-              )}
-            </div>
-          )}
         </div>
         {/* After the handshake kortext has retired; the engine and its controls go with it. */}
         {!settled && (
@@ -1747,6 +1675,77 @@ function ProjectScreen({
           </div>
         )}
       </div>
+      {/* Under the head, the full width, while ⚙ is on: the project's own actions. */}
+      {tools && (
+        <div className="kx-danger-zone">
+          {arming === 'restart' ? (
+            <>
+              <span className="kx-arm-warn">
+                Reset the analysis documents? Your brief stays. Press Start when ready.
+              </span>
+              <button className="btn btn-link-warning" disabled={busy} onClick={doRestart}>
+                Yes, restart
+              </button>
+              <button className="btn btn-link-primary" onClick={() => setArming(null)}>
+                No
+              </button>
+            </>
+          ) : arming === 'archive' ? (
+            <>
+              <span className="kx-arm-warn">
+                {project.archived
+                  ? 'Bring it back into the project list?'
+                  : 'Fold it away? The repo and its documents are untouched.'}
+              </span>
+              <button className="btn btn-link-success" disabled={busy} onClick={doArchive}>
+                {project.archived ? 'Yes, unarchive' : 'Yes, archive'}
+              </button>
+              <button className="btn btn-link-primary" onClick={() => setArming(null)}>
+                No
+              </button>
+            </>
+          ) : arming === 'cancel' ? (
+            <>
+              <span className="kx-arm-warn">
+                Remove Kortext's analysis, including the brief and edits in .kortext/, its contract
+                entries, logs and project registration? The rest of the project stays.
+              </span>
+              <button className="btn btn-link-danger" disabled={busy} onClick={doCancel}>
+                Yes, remove
+              </button>
+              <button className="btn btn-link-primary" onClick={() => setArming(null)}>
+                No
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                className="btn btn-link-warning"
+                disabled={busy}
+                onClick={() => setArming('restart')}
+              >
+                Restart analysis
+              </button>
+              <span className="kx-danger-sep">·</span>
+              <button
+                className="btn btn-link-success"
+                disabled={busy}
+                onClick={() => setArming('archive')}
+              >
+                {project.archived ? 'Unarchive project' : 'Archive project'}
+              </button>
+              <span className="kx-danger-sep">·</span>
+              <button
+                className="btn btn-link-danger"
+                disabled={busy}
+                onClick={() => setArming('cancel')}
+              >
+                Remove project
+              </button>
+            </>
+          )}
+        </div>
+      )}
       {strip}
       {err && <div className="kx-error">{err}</div>}
       <EnginePicker
