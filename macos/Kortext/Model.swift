@@ -84,13 +84,6 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
         }
         Task {
             _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge])
-            // ponytail: KORTEXT_DEMO=1 fires the four sample notifications on launch — for screenshots, nothing else.
-            if ProcessInfo.processInfo.environment["KORTEXT_DEMO"] != nil {
-                notify("HYDRA", "LEGAL.md hazır — onay bekliyor")
-                notify("HYDRA", "ARCHITECTURE.md yazılamadı", "claude: rate limit reached, retry after 60s")
-                notify("MILO", "Brief too thin — answer the questions")
-                notify("NORD", "Hazır — AGENTS.md devrede", "14 belge onaylandı")
-            }
         }
         Task {
             while true {
@@ -118,8 +111,6 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
             observeGate(s)
             next.append(s)
         }
-        // ponytail: KORTEXT_DEMO=1 adds two sample projects so the popover can be photographed with rows in it.
-        if ProcessInfo.processInfo.environment["KORTEXT_DEMO"] != nil { next += Self.demo }
         projects = next
         primed = true
     }
@@ -153,23 +144,6 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
         let info = r.notification.request.content.userInfo
         await MainActor.run { openPanel(project: info["project"] as? Int, doc: info["doc"] as? String) }
     }
-
-    static let demo: [ProjectState] = {
-        func p(_ id: Int, _ code: String, _ name: String, _ docs: [Doc], notReady: Bool = false) -> ProjectState {
-            var s = ProjectState(project: Project(id: id, name: name, code: code, docCounts: .init(settled: 3, total: 15), doc_lang: "Turkish", paused: 0))
-            s.docs = docs; s.notReady = notReady; s.questions = 3
-            return s
-        }
-        return [
-            p(90, "ACME", "Acme Billing", [Doc(rel: "PRODUCT.md", status: "draft", state: "waiting", detail: "approve", section: "needs"),
-                                          Doc(rel: "API.md", status: "draft", state: "waiting", detail: "review", section: "needs"),
-                                          Doc(rel: "ARCHITECTURE.md", status: "uninitialized", state: "failed", detail: "draft", section: "needs"),
-                                          Doc(rel: "STACK.md", status: "uninitialized", state: "writing", detail: "draft", section: "doing"),
-                                          Doc(rel: "STRUCTURE.md", status: "uninitialized", state: "writing", detail: "draft", section: "doing"),
-                                          Doc(rel: "DESIGN.md", status: "approved", state: "reading", detail: "recheck", section: "doing")]),
-            p(91, "MILO", "Milowda", [], notReady: true),
-        ]
-    }()
 
     /// Settings › notifications: ask if never asked; if refused, the only fix is System Settings.
     func ensureNotifications() {
