@@ -14,3 +14,6 @@ archive
 # Citation metadata follows the CFF convention (and the other repos' style):
 # double quotes, written by hand.
 CITATION.cff
+
+# The design system page is generated from the panel CSS, not hand-formatted.
+dev/DESIGN.html

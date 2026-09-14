@@ -1,0 +1,3617 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kortext Panel Design System</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Overpass+Mono:wght@400;500;600;700&display=swap">
+<style>/* Panel styles and design tokens; see dev/DESIGN.md. */
+
+:root {
+  /* Neutral colors */
+
+  --gray-300: #e0e0e4;
+  --gray-400: #c6c6cc;
+
+  /* semantic surfaces */
+  --bg: #ffffff;
+  --bg-subtle: #fbfbfc;
+  --bg-muted: #f5f5f6;
+  --bg-inset: #f7f7f8;
+  --bg-hover: #f2f2f4;
+  --bg-active: #ececef;
+  --border: #eaeaec;
+  --border-strong: #dcdce0;
+
+  /* text */
+  --fg: #18181b;
+  --fg-secondary: #51515a;
+  --fg-muted: #76767f;
+  --fg-faint: #a3a3ad;
+
+  /* Primary action colors */
+  --accent: #18181b;
+  --accent-hover: #000000;
+  --accent-fg: #ffffff;
+  --accent-tint: #f4f4f5;
+  --accent-tint-border: #e2e2e6;
+  --accent-ring: rgba(24, 24, 27, 0.16);
+
+  /* status — bare colour + bg + border */
+  --green: #157a52;
+  --green-bg: #eaf5ef;
+  --green-border: #cfe9dd;
+  --amber: #9a6a16;
+  --amber-bg: #faf2e2;
+  --amber-border: #ecdcb8;
+  --red: #c5392f;
+  --red-bg: #fbeceb;
+  --red-border: #f1cfcc;
+  --blue: #2563c9;
+  --blue-bg: #eaf1fc;
+  --violet: #5b4bcc;
+  --violet-bg: #efedfb;
+  --violet-border: #dad5f4;
+  --pink: #c02a72;
+  --pink-bg: #fdebf3;
+  --pink-border: #f6cede;
+
+  /* radius */
+  --r-sm: 4px;
+  --r-md: 6px;
+  --r-lg: 9px;
+  --r-pill: 999px;
+
+  /* control heights */
+  --control-h: 30px;
+
+  /* Typography roles */
+  --fs-title: 20px;
+  --fs-section: 18px;
+  --fs-heading: 16px;
+  --fs-body: 13px;
+  --fs-ui: 12px;
+  --fs-label: 11px;
+  --fs-micro: 10px;
+  /* Spacing scale */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+
+  --border-hover: #c6c6cc;
+
+  /* type */
+  --font-sans: 'Barlow', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'Overpass Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* shadow */
+  --shadow-xs: 0 1px 1px rgba(24, 24, 27, 0.04);
+
+  --shadow-lg: 0 12px 32px rgba(24, 24, 27, 0.12), 0 2px 6px rgba(24, 24, 27, 0.06);
+
+  --speed: 130ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+
+  /* Shared surface aliases */
+  --bg-elev: var(--bg);
+  --panel: var(--bg-subtle);
+  --card: var(--bg);
+  --hover: var(--bg-hover);
+  --hover-strong: var(--bg-active);
+  --fg-mid: var(--fg-secondary);
+  --accent-hi: var(--accent-hover);
+  --accent-soft: var(--accent-tint);
+  --accent-line: var(--accent-tint-border);
+  --col-bg: var(--bg-inset);
+}
+
+/* ---------- dark theme ---------- */
+/* Repeat dark values for explicit and OS-selected themes to avoid a script-dependent theme flash. */
+:root[data-theme='dark'] {
+  --border-hover: #3a3a40;
+
+  --gray-300: #2c2c31;
+  --gray-400: #3a3a40;
+
+  --bg: #0a0a0b;
+  --bg-subtle: #0e0e10;
+  --bg-muted: #161618;
+  --bg-inset: #121214;
+  --bg-hover: #1a1a1d;
+  --bg-active: #212126;
+  --border: #2a2a30;
+  --border-strong: #3a3a42;
+
+  --fg: #ededef;
+  --fg-secondary: #9c9ca5;
+  --fg-muted: #6e6e77;
+  --fg-faint: #54545c;
+
+  /* Dark-theme primary action colors */
+  --accent: #ededef;
+  --accent-hover: #cfcfd4;
+  --accent-fg: #0a0a0b;
+  --accent-tint: #1c1c20;
+  --accent-tint-border: #2a2a30;
+  --accent-ring: rgba(237, 237, 239, 0.16);
+
+  --green: #46c08a;
+  --green-bg: #10231b;
+  --green-border: #1d3b2e;
+  --amber: #d3a55e;
+  --amber-bg: #241c0e;
+  --amber-border: #3a2e16;
+  --red: #e0726a;
+  --red-bg: #26120f;
+  --red-border: #3d201c;
+  --blue: #5e9bf0;
+  --blue-bg: #0f1c30;
+  --violet: #8b7df0;
+  --violet-bg: #171530;
+  --violet-border: #272350;
+  --pink: #ee7bb0;
+  --pink-bg: #2b1220;
+  --pink-border: #4a2038;
+
+  --shadow-xs: 0 1px 1px rgba(0, 0, 0, 0.4);
+
+  --shadow-lg: 0 14px 36px rgba(0, 0, 0, 0.6);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --border-hover: #3a3a40;
+
+    --gray-300: #2c2c31;
+    --gray-400: #3a3a40;
+
+    --bg: #0a0a0b;
+    --bg-subtle: #0e0e10;
+    --bg-muted: #161618;
+    --bg-inset: #121214;
+    --bg-hover: #1a1a1d;
+    --bg-active: #212126;
+    --border: #2a2a30;
+    --border-strong: #3a3a42;
+
+    --fg: #ededef;
+    --fg-secondary: #9c9ca5;
+    --fg-muted: #6e6e77;
+    --fg-faint: #54545c;
+
+    /* Dark-theme primary action colors */
+    --accent: #ededef;
+    --accent-hover: #cfcfd4;
+    --accent-fg: #0a0a0b;
+    --accent-tint: #1c1c20;
+    --accent-tint-border: #2a2a30;
+    --accent-ring: rgba(237, 237, 239, 0.16);
+
+    --green: #46c08a;
+    --green-bg: #10231b;
+    --green-border: #1d3b2e;
+    --amber: #d3a55e;
+    --amber-bg: #241c0e;
+    --amber-border: #3a2e16;
+    --red: #e0726a;
+    --red-bg: #26120f;
+    --red-border: #3d201c;
+    --blue: #5e9bf0;
+    --blue-bg: #0f1c30;
+    --violet: #8b7df0;
+    --violet-bg: #171530;
+    --violet-border: #272350;
+    --pink: #ee7bb0;
+    --pink-bg: #2b1220;
+    --pink-border: #4a2038;
+
+    --shadow-xs: 0 1px 1px rgba(0, 0, 0, 0.4);
+
+    --shadow-lg: 0 14px 36px rgba(0, 0, 0, 0.6);
+  }
+}
+
+
+
+* {
+  box-sizing: border-box;
+  border-color: var(--border);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  font-feature-settings: 'cv01', 'ss01', 'tnum';
+}
+.mono {
+  font-family: var(--font-mono);
+  letter-spacing: 0;
+  font-feature-settings: 'tnum' 1;
+}
+::selection {
+  background: var(--accent-tint);
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--gray-300);
+  border-radius: 999px;
+  border: 3px solid var(--bg);
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--gray-400);
+  background-clip: padding-box;
+}
+.logo {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 600;
+  font-size: var(--fs-ui);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+}
+
+/* ---------- shell ---------- */
+#shell {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  position: relative;
+  z-index: 1;
+}
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 36px;
+  margin: 0 8px;
+  padding: 0 8px;
+  border-radius: 7px;
+  color: var(--fg-muted);
+  cursor: pointer;
+  font-weight: 450;
+  font-size: var(--fs-body);
+  transition: 0.12s;
+  position: relative;
+}
+.nav:hover {
+  background: var(--hover);
+  color: var(--fg-mid);
+}
+.nav.active {
+  background: var(--hover-strong);
+  color: var(--fg);
+}
+.nav.active::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 7px;
+  bottom: 7px;
+  width: 2px;
+  border-radius: 0 2px 2px 0;
+  background: var(--accent);
+}
+.nav svg {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--bg-muted);
+  box-sizing: border-box;
+  color: var(--fg-muted);
+  transition: 0.12s;
+}
+.nav:hover svg {
+  color: var(--fg-mid);
+  border-color: var(--border-strong);
+}
+.nav.active svg {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+  color: var(--accent-hi);
+}
+.nav .hint {
+  margin-left: auto;
+  font-size: var(--fs-micro);
+  color: var(--fg-faint);
+}
+#main {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+}
+
+/* ---------- generic ---------- */
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  color: var(--fg-muted);
+  font-size: var(--fs-ui);
+  background: var(--bg);
+  cursor: pointer;
+}
+.pill:hover {
+  border-color: var(--border-strong);
+  color: var(--fg-mid);
+}
+.live {
+  position: relative;
+}
+.live::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: inherit;
+  opacity: 0.25;
+  animation: ping 1.8s ease-out infinite;
+}
+@keyframes ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.3;
+  }
+  80%,
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+/* Loading spinner */
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.spin {
+  animation: spin 0.9s linear infinite;
+}
+.ring {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  position: relative;
+  flex-shrink: 0;
+}
+.work {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--card);
+}
+.tag {
+  font-size: 10.5px;
+  padding: 1px 7px;
+  border-radius: 5px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.wg {
+  font-size: var(--fs-micro);
+  padding: 0 4px;
+  height: 14px;
+  border-radius: 3px;
+  display: inline-flex;
+  align-items: center;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--fg-faint);
+  background: var(--bg-muted);
+}
+.wg.done {
+  color: var(--green);
+  background: rgba(76, 183, 130, 0.13);
+}
+.prog {
+  height: 4px;
+  border-radius: 3px;
+  background: var(--bg-active);
+  overflow: hidden;
+}
+.prog > i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 3px;
+}
+.tl {
+  width: 360px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--border);
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+}
+.col {
+  width: 272px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--col-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px;
+}
+.gate {
+  width: 16px;
+  height: 15px;
+  border-radius: 4px;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--red);
+  background: rgba(204, 107, 107, 0.1);
+  border: 1px solid rgba(204, 107, 107, 0.25);
+  font-family: var(--font-mono);
+}
+.gate.done {
+  background: rgba(76, 183, 130, 0.14);
+  color: var(--green);
+  border-color: rgba(76, 183, 130, 0.25);
+}
+.gate.na {
+  background: transparent;
+  color: var(--fg-muted);
+  border-color: var(--border-strong);
+  opacity: 0.6;
+}
+.prov {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 25px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  font-size: 11.5px;
+  color: var(--fg-mid);
+  font-family: var(--font-mono);
+}
+.prov .d {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+/* ---------- item detail (right drawer) ---------- */
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 60;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.drawer-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* box-shadow only when open — when closed (translateX 100%, off-screen right)
+   a left-projecting shadow (-18px) bleeds back onto the viewport's right edge. */
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 464px;
+  max-width: 94vw;
+  background: var(--bg-elev);
+  border-left: 1px solid var(--border-strong);
+  z-index: 61;
+  transform: translateX(100%);
+  transition: transform 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+}
+.drawer.open {
+  transform: translateX(0);
+  box-shadow: -18px 0 50px rgba(0, 0, 0, 0.4);
+}
+.dr-head {
+  min-height: 52px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--border);
+}
+.dr-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 18px 28px;
+}
+.dr-title {
+  font-size: var(--fs-section);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-bottom: 6px;
+  line-height: 1.35;
+}
+.dr-foot {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  padding: 13px 18px;
+  display: flex;
+  gap: 8px;
+}
+
+/* Monospace content */
+.term {
+  position: fixed;
+  right: 16px;
+  bottom: 48px;
+  z-index: 46;
+  width: 486px;
+  max-width: calc(100vw - 32px);
+  height: 344px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-radius: 11px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+}
+.term.open {
+  display: flex;
+}
+.t-line {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ---------- footer ---------- */
+.footer {
+  height: 34px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 12px;
+  border-top: 1px solid var(--border);
+  background: var(--panel);
+  font-size: var(--fs-label);
+  color: var(--fg-muted);
+  position: relative;
+  z-index: 5;
+}
+.input {
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--fg);
+  padding: 8px 11px;
+  border-radius: 6px;
+  font-size: var(--fs-body);
+  font-family: inherit;
+  transition: 0.12s;
+  outline: none;
+}
+.input::placeholder {
+  color: var(--fg-faint);
+}
+.input:hover {
+  border-color: var(--border-strong);
+}
+.input:focus {
+  border-color: var(--accent-line);
+}
+.input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Use the full viewport width for drawers on narrow screens. */
+@media (max-width: 560px) {
+  .drawer {
+    width: 100%;
+    max-width: 100%;
+    border-left: none;
+  }
+}
+
+/* Buttons */
+/* Shared button sizing, typography, focus and disabled states; variants define appearance. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: var(--control-h);
+  padding: 0 11px;
+  font-size: var(--fs-body);
+  font-weight: 500;
+  line-height: 1;
+  border-radius: var(--r-md);
+  border: 1px solid transparent;
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+  font-family: inherit;
+  transition:
+    background var(--speed) var(--ease),
+    border-color var(--speed) var(--ease),
+    box-shadow var(--speed) var(--ease),
+    color var(--speed) var(--ease);
+}
+.btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+.btn .ic {
+  width: 14px;
+  height: 14px;
+  flex: none;
+}
+
+/* Apply button layout to links used as actions. */
+a.btn {
+  text-decoration: none;
+}
+
+/* Keep project preview styles isolated inside the iframe. */
+.dr-body-preview {
+  padding: 0;
+  overflow: hidden;
+}
+.dr-body-preview > *:not(.kx-doc-preview) {
+  display: none;
+}
+.kx-doc-preview {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+/* Define hover styling per variant to avoid base-rule overrides. */
+.btn:hover {
+  background: none;
+  border-color: transparent;
+}
+.btn[disabled] {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* Solid buttons */
+.btn-primary {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-color: var(--accent);
+}
+.btn-primary:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+.btn-secondary {
+  background: var(--bg);
+  color: var(--fg);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-xs);
+}
+.btn-secondary:hover {
+  background: var(--bg-active);
+  border-color: var(--border-hover);
+}
+.btn-success {
+  background: var(--green-bg);
+  color: var(--green);
+  border-color: var(--green-border);
+}
+.btn-success:hover {
+  background: var(--green-bg);
+  color: var(--green);
+  border-color: var(--green);
+}
+.btn-danger {
+  background: var(--red-bg);
+  color: var(--red);
+  border-color: var(--red-border);
+}
+.btn-danger:hover {
+  background: var(--red-bg);
+  color: var(--red);
+  border-color: var(--red);
+}
+
+/* Link buttons */
+.btn-link-primary,
+.btn-link-success,
+.btn-link-danger {
+  height: var(--control-h);
+  padding: 0 12px;
+  border-radius: var(--r-sm);
+  background: none;
+  border-color: transparent;
+}
+.btn-link-primary {
+  color: var(--fg-secondary);
+}
+.btn-link-primary:hover {
+  background: var(--bg-active);
+  border-color: var(--border-strong);
+  color: var(--fg);
+}
+.btn-link-success {
+  color: var(--green);
+}
+.btn-link-success:hover {
+  background: var(--green-bg);
+  border-color: var(--green-border);
+  color: var(--green);
+}
+.btn-link-danger {
+  color: var(--red);
+}
+.btn-link-danger:hover {
+  background: var(--red-bg);
+  border-color: var(--red-border);
+  color: var(--red);
+}
+
+/* Compact dismiss control for inline note chips. */
+.btn-x {
+  height: auto;
+  padding: 0 4px;
+  font-size: var(--fs-heading);
+  margin-left: auto;
+  background: none;
+  border-color: transparent;
+  color: var(--fg-faint);
+}
+.btn-x:hover {
+  background: none;
+  border-color: transparent;
+  color: var(--fg-secondary);
+}
+
+/* Replace the native select arrow with a chevron that inherits the text color. */
+.select {
+  height: var(--control-h);
+  padding: 0 30px 0 12px;
+  font-family: inherit;
+  font-size: var(--fs-ui);
+  font-weight: 500;
+  line-height: 1;
+  color: var(--fg);
+  background-color: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  transition:
+    background-color var(--speed) var(--ease),
+    border-color var(--speed) var(--ease),
+    box-shadow var(--speed) var(--ease);
+}
+.select:hover {
+  background-color: var(--bg-active);
+  border-color: var(--border-hover);
+}
+.select:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-ring);
+  border-color: var(--accent);
+}
+.select[disabled] {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.seg {
+  display: inline-flex;
+  padding: 2px;
+  gap: 2px;
+  background: var(--bg-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+.seg button {
+  height: calc(var(--control-h) - 6px);
+  padding: 0 10px;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: var(--fs-ui);
+  font-weight: 500;
+  color: var(--fg-muted);
+  border-radius: calc(var(--r-md) - 2px);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background var(--speed) var(--ease),
+    color var(--speed) var(--ease);
+}
+.seg button:hover {
+  color: var(--fg-secondary);
+}
+.seg button.on {
+  background: var(--bg);
+  color: var(--fg);
+  box-shadow: var(--shadow-xs);
+}
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 20px;
+  padding: 0 8px;
+  font-size: var(--fs-ui);
+  font-weight: 500;
+  line-height: 1;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--border);
+  background: var(--bg-muted);
+  color: var(--fg-secondary);
+  white-space: nowrap;
+}
+@keyframes kx-pulse {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1.7);
+    opacity: 0;
+  }
+}
+
+/* Agent label */
+.agent {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-ui);
+  font-weight: 500;
+  color: var(--fg-secondary);
+  white-space: nowrap;
+}
+
+/* Inputs */
+.input {
+  height: var(--control-h);
+  width: 100%;
+  padding: 0 10px;
+  font-size: var(--fs-body);
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  outline: none;
+  font-family: inherit;
+  transition:
+    border-color var(--speed) var(--ease),
+    box-shadow var(--speed) var(--ease);
+}
+.input::placeholder {
+  color: var(--fg-faint);
+}
+.input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+.secondary {
+  color: var(--fg-secondary);
+}
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hr {
+  height: 1px;
+  background: var(--border);
+  border: 0;
+  margin: 0;
+}
+
+/* Application layout */
+.app {
+  display: grid;
+  grid-template-columns: 248px 1fr;
+  grid-template-rows: 1fr auto;
+  height: 100%;
+  transition: grid-template-columns 260ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* content */
+.content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.pad {
+  padding: 22px 26px 40px;
+  max-width: 1180px;
+}
+.full {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Footer */
+.footer {
+  grid-column: 2;
+  height: 30px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 14px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-subtle);
+  font-size: var(--fs-label);
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+
+@media (max-width: 920px) {
+  .app {
+    grid-template-columns: 1fr;
+  }
+  .footer {
+    grid-column: 1;
+  }
+}
+
+/* Cards and progress */
+.card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+}
+.progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--bg-active);
+  overflow: hidden;
+}
+.progress > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+}
+.progress.thin {
+  height: 4px;
+}
+.detail {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 480px;
+  max-width: 94vw;
+  background: var(--bg);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  z-index: 92;
+  transform: translateX(100%);
+  transition: transform 200ms var(--ease);
+  display: flex;
+  flex-direction: column;
+}
+.detail.show {
+  transform: translateX(0);
+}
+.board {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 2px 26px 26px;
+  height: calc(100vh - 180px);
+}
+.gate {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  color: var(--fg-faint);
+}
+.full > .board {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+}
+
+/* Document reader */
+.reader {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  height: calc(100vh - 150px);
+  overflow: hidden;
+}
+.full > .reader {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+  margin: 0 26px 22px;
+}
+.ic.spin {
+  animation: kx-spin 0.8s linear infinite;
+}
+@keyframes kx-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Application header */
+.kx-shell {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--fg);
+  display: flex;
+  flex-direction: column;
+}
+.kx-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--border);
+}
+/* Use separate wordmark images for light and dark themes. */
+.kx-logo {
+  height: 20px;
+  width: auto;
+  display: block;
+}
+.kx-logo-dark {
+  display: none;
+}
+:root[data-theme='dark'] .kx-logo-light {
+  display: none;
+}
+:root[data-theme='dark'] .kx-logo-dark {
+  display: block;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .kx-logo-light {
+    display: none;
+  }
+  :root:not([data-theme='light']) .kx-logo-dark {
+    display: block;
+  }
+}
+.kx-main {
+  max-width: 860px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 26px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.kx-main-nav {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 8px;
+}
+.kx-nav-status {
+  font-size: var(--fs-ui);
+  color: var(--fg-muted);
+  margin-left: auto;
+}
+.kx-arm-warn {
+  font-size: var(--fs-ui);
+  color: var(--red);
+}
+.kx-danger-zone {
+  margin-top: 28px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+}
+.kx-danger-sep {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--border-strong, var(--border));
+  user-select: none;
+}
+.kx-statusbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  /* Keep both status lines visible; clip long messages individually so the popover is not clipped. */
+  white-space: nowrap;
+  flex-shrink: 0;
+  height: 52px;
+  padding: 0 12px;
+  margin-top: auto;
+  border-top: 1px solid var(--border);
+  background: var(--bg-subtle);
+  font-size: var(--fs-label);
+  color: var(--fg-muted);
+}
+/* Align server status and the issue-report link in one column. */
+.kx-statusbar-lines {
+  display: flex;
+  flex-direction: column;
+  /* 4px puts ~20.5px between the two line tops, a tenth more than they had. */
+  gap: 4px;
+  min-width: 0;
+}
+.kx-statusbar-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+/* A line with nothing in it still holds a line's worth of height, which is what
+   keeps the credit column as tall as the status column beside it. */
+.kx-statusbar-line:empty {
+  min-height: 1lh;
+}
+/* Align the report icon with the status dot without shifting the text column. */
+.kx-report {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.kx-report svg {
+  flex: none;
+  margin: 0 -2px;
+}
+.kx-made-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--fg-faint);
+  cursor: pointer;
+}
+.kx-made-trigger:hover {
+  color: var(--fg-muted);
+}
+.kx-made-by {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--fg-faint);
+}
+.kx-support {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--fg-faint);
+}
+.kx-support:hover {
+  color: var(--fg-muted);
+}
+.kx-made-pop {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 10px);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 260px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--bg);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  white-space: nowrap;
+  cursor: default;
+}
+.kx-made-pop-head {
+  color: var(--fg-faint);
+}
+.kx-made-pop-row {
+  display: flex;
+  gap: 10px;
+  color: inherit;
+  text-decoration: none;
+}
+.kx-made-pop-name {
+  min-width: 62px;
+  color: var(--fg);
+}
+.kx-made-pop-what {
+  color: var(--fg-muted);
+}
+.kx-made-pop-link {
+  margin-top: 2px;
+  color: var(--fg-faint);
+  text-decoration: none;
+}
+.kx-made-pop-link:hover {
+  color: var(--fg-muted);
+}
+.kx-statusbar-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  color: var(--fg-faint);
+  text-decoration: none;
+}
+.kx-statusbar-link:hover {
+  color: var(--fg-muted);
+}
+.kx-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+.kx-dot-up {
+  background: var(--green);
+}
+.kx-dot-down {
+  background: var(--red);
+}
+.kx-status-name {
+  color: var(--fg-muted);
+}
+.kx-status-warn {
+  color: var(--red);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kx-power {
+  display: inline-flex;
+  align-items: center;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--fg-faint);
+  cursor: pointer;
+}
+.kx-power:hover,
+.kx-power-armed {
+  color: var(--red);
+}
+.kx-copy-cmd {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: none;
+  padding: 1px 7px;
+  font-size: var(--fs-micro);
+  color: inherit;
+  cursor: pointer;
+}
+.kx-copy-cmd:hover {
+  border-color: var(--red);
+}
+.kx-copy-cmd-hint {
+  opacity: 0.7;
+}
+.kx-proj-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.kx-main-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.kx-main-head h1 {
+  font-size: var(--fs-title);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-right: auto;
+}
+.kx-main-title {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-right: auto;
+  min-width: 0;
+}
+.kx-main-title h1 {
+  margin: 0;
+  line-height: 1.2;
+}
+.kx-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 12px;
+}
+.kx-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--card);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color var(--speed) var(--ease),
+    background var(--speed) var(--ease);
+}
+.kx-card:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-hover);
+}
+.kx-card-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+.kx-card-code {
+  font-size: var(--fs-label);
+  font-weight: 600;
+  color: var(--fg-muted);
+  padding-right: 9px;
+  border-right: 1px solid var(--border-strong);
+}
+.kx-card-name {
+  font-size: var(--fs-heading);
+  font-weight: 550;
+}
+.kx-card-path {
+  font-size: var(--fs-label);
+  color: var(--fg-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.kx-card-counts {
+  font-size: var(--fs-micro);
+  color: var(--fg-muted);
+}
+.kx-card-counts.done {
+  color: var(--green);
+}
+.kx-empty {
+  padding: 34px 22px;
+  border: 1px dashed var(--border);
+  border-radius: var(--r-lg);
+  color: var(--fg-mid);
+  font-size: var(--fs-body);
+  text-align: center;
+}
+.kx-siblings {
+  margin-top: 34px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.kx-siblings-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--fs-label);
+  color: var(--fg-faint);
+}
+.kx-siblings-close {
+  display: inline-flex;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--fg-faint);
+  opacity: 0.45;
+  cursor: pointer;
+}
+.kx-siblings-close:hover {
+  opacity: 1;
+}
+.kx-siblings-close-armed {
+  color: var(--red);
+  opacity: 1;
+}
+.kx-slider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--bg-subtle);
+  font-size: var(--fs-label);
+}
+.kx-slide {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+  /* Animate carousel entry from the right. */
+  animation: kx-slide-in 320ms ease;
+}
+@keyframes kx-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kx-slide {
+    animation: none;
+  }
+}
+.kx-slide-name {
+  color: var(--fg);
+}
+.kx-slide-what {
+  color: var(--fg-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kx-slide-dots {
+  display: inline-flex;
+  gap: 5px;
+}
+.kx-slide-dot {
+  width: 5px;
+  height: 5px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--border-strong);
+  cursor: pointer;
+}
+.kx-slide-dot-on {
+  background: var(--fg-muted);
+}
+.kx-sib-soon {
+  font-size: var(--fs-micro);
+  color: var(--fg-faint);
+}
+.kx-sib-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 13px 15px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--bg-subtle);
+}
+.kx-sib-name {
+  font-size: var(--fs-ui);
+  color: var(--fg);
+}
+.kx-sib-what {
+  font-size: var(--fs-label);
+  color: var(--fg-muted);
+  white-space: normal;
+}
+.kx-sib-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 10px;
+}
+.kx-sib-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--fs-micro);
+  color: var(--fg-faint);
+}
+.kx-sib-goes {
+  display: inline-flex;
+  color: var(--fg-faint);
+}
+a.kx-sib-card:hover .kx-sib-goes {
+  color: var(--fg);
+}
+a.kx-sib-card {
+  text-decoration: none;
+}
+a.kx-sib-card:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-muted);
+}
+a.kx-made-pop-row:hover .kx-made-pop-name {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.kx-error {
+  margin: 10px 22px 0;
+  padding: 8px 12px;
+  border-radius: var(--r-md);
+  background: rgba(204, 107, 107, 0.1);
+  color: var(--red);
+  font-size: var(--fs-ui);
+}
+.kx-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--card);
+  max-width: 480px;
+}
+.kx-form-row {
+  display: flex;
+  gap: 8px;
+}
+.kx-input {
+  height: var(--control-h);
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg);
+  color: var(--fg);
+  font-size: var(--fs-body);
+  font-family: inherit;
+}
+.kx-input:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-ring);
+  border-color: var(--accent);
+}
+
+/* Project and document controls */
+.kx-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  margin-left: 6px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  font-family: var(--font-mono);
+}
+.kx-cmd-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--card);
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition:
+    border-color var(--speed) var(--ease),
+    background var(--speed) var(--ease);
+}
+.kx-cmd-card:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-hover);
+}
+.kx-cmd-card.copied {
+  border-color: var(--green-border);
+  background: var(--green-bg);
+}
+.kx-cmd-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.kx-cmd-title {
+  font-size: var(--fs-heading);
+  font-weight: 600;
+}
+.kx-cmd-copy {
+  font-size: var(--fs-label);
+  color: var(--fg-faint);
+  white-space: nowrap;
+}
+.kx-cmd-card:hover .kx-cmd-copy {
+  color: var(--fg-secondary);
+}
+.kx-cmd-card.copied .kx-cmd-copy {
+  color: var(--green);
+}
+.kx-cmd {
+  display: block;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  font-size: var(--fs-ui);
+  color: var(--fg);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.kx-cmd-hint {
+  font-size: var(--fs-label);
+  color: var(--fg-faint);
+}
+
+/* Document list and drawer */
+.kx-docs {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.kx-doc-group {
+  font-size: var(--fs-label);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-faint);
+  margin-bottom: 8px;
+}
+.kx-doc-details > summary.kx-doc-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  padding: 6px 0;
+  margin-bottom: 4px;
+}
+.kx-doc-details > summary.kx-doc-group::-webkit-details-marker {
+  display: none;
+}
+.kx-doc-details > summary.kx-doc-group::before {
+  content: '▸';
+  display: inline-block;
+  font-size: var(--fs-micro);
+  color: var(--fg-faint);
+  transition: transform var(--speed) var(--ease);
+}
+.kx-doc-details[open] > summary.kx-doc-group::before {
+  transform: rotate(90deg);
+}
+.kx-doc-count {
+  margin-left: auto;
+  font-size: var(--fs-label);
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.kx-doc-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--card);
+  cursor: pointer;
+  text-align: left;
+  margin-bottom: 5px;
+  font-family: inherit;
+  transition: border-color var(--speed) var(--ease);
+}
+.kx-doc-row:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-hover);
+}
+.kx-doc-name {
+  font-size: var(--fs-body);
+  font-weight: 550;
+  color: var(--fg);
+}
+.kx-doc-author {
+  font-size: var(--fs-micro);
+  color: var(--fg-faint);
+}
+.kx-doc-spacer {
+  flex: 1;
+}
+
+/* Status colors: approved green, writing blue, pending violet, paused amber and failed red. */
+/* Every state is the same pill, sized to the longest word it can carry, so a
+   column of them reads as one column rather than a ragged edge. */
+.kx-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 20px;
+  padding: 0 8px;
+  font-size: var(--fs-ui);
+  font-weight: 500;
+  line-height: 1;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-muted);
+  color: var(--fg-secondary);
+  white-space: nowrap;
+}
+/* The dot is the state's colour; the word is the state. */
+.kx-status::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  flex: none;
+}
+.kx-status-writing,
+.kx-status-reading {
+  background: var(--blue-bg);
+  border-color: var(--blue-border, var(--blue-bg));
+  color: var(--blue);
+}
+.kx-status-writing::before,
+.kx-status-reading::before {
+  animation: kx-pulse 1.4s ease-in-out infinite;
+}
+.kx-status-paused {
+  background: var(--amber-bg);
+  border-color: var(--amber-border);
+  color: var(--amber);
+}
+.kx-status-draft {
+  background: var(--violet-bg);
+  border-color: var(--violet-border);
+  color: var(--violet);
+}
+.kx-status-approved {
+  background: var(--green-bg);
+  border-color: var(--green-border);
+  color: var(--green);
+}
+/* A run that errored. `paused` is prime's own stop and stays amber; this is red
+   because it asks for a Retry. */
+.kx-status-failed {
+  background: var(--red-bg);
+  border-color: var(--red-border);
+  color: var(--red);
+}
+
+/* Render status separately from request and dependency badges. */
+/* waiting and n/a are the quiet, no-action states — a pill like the rest, in
+   the muted ground rather than a colour that asks for something. */
+.kx-status-waiting {
+  background: var(--bg-muted);
+  color: var(--fg-secondary);
+}
+.kx-status-not-applicable {
+  background: transparent;
+  color: var(--fg-muted);
+}
+.kx-doc-changebar .kx-thread {
+  margin-top: 8px;
+  background: var(--bg-surface, transparent);
+}
+/* Who reads this one. Blue because it is neither work nor a warning — it is the
+   blast radius of a change, stated before the change is made. */
+.kx-doc-readbar {
+  margin: var(--sp-3) 0 8px;
+  padding: 8px 12px;
+  border-radius: var(--r-md);
+  background: var(--blue-bg);
+  color: var(--fg-secondary);
+  font-size: var(--fs-ui);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.kx-readbar-head {
+  font-family: var(--font-mono);
+  color: var(--blue);
+  font-weight: 600;
+  font-size: var(--fs-micro);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.kx-doc-readbar .mono {
+  color: var(--blue);
+}
+/* A reader that does not exist yet: named, but greyed — it is coming, not gone. */
+.kx-doc-readbar .kx-reader-unwritten {
+  color: var(--fg-muted);
+}
+.kx-doc-dependbar {
+  margin: var(--sp-3) 0 8px;
+  padding: 8px 12px;
+  border-radius: var(--r-md);
+  background: transparent;
+  border: 1px solid var(--pink-border);
+  color: var(--fg-secondary);
+  font-size: var(--fs-ui);
+}
+.kx-doc-dependbar .mono {
+  color: var(--pink);
+}
+.kx-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  margin-left: 0;
+  font-family: var(--font-sans);
+  font-size: var(--fs-ui);
+  font-weight: 500;
+  line-height: 1;
+  border-radius: var(--r-pill);
+  border: 1px solid transparent;
+}
+/* The word in brackets: which kind of waiting, writing or pausing. It carries
+   the urgency; the state word beside it stays quiet. */
+.kx-badge-approve {
+  color: var(--violet);
+  border-color: var(--violet-border);
+  background: var(--violet-bg);
+}
+.kx-badge-review {
+  color: var(--pink);
+  border-color: var(--pink-border);
+  background: var(--pink-bg);
+}
+.kx-badge-recheck {
+  color: var(--amber);
+  border-color: var(--amber-border);
+  background: var(--amber-bg);
+}
+/* The quiet one. `.kx-badge` is declared twice and the earlier one paints a
+   solid accent, so a badge that sets only its text colour comes out as the
+   loudest pill on the row — the opposite of what this means. (`draft` and
+   `queue` are never drawn; see SILENT_BADGES.) */
+.kx-badge-revision {
+  color: var(--fg-muted);
+  background: var(--bg-muted);
+  border-color: var(--border);
+}
+/* Distinguish requests from dependency notices. */
+.kx-badge-change {
+  background: var(--pink-bg);
+  color: var(--pink);
+  border-color: var(--pink-border, transparent);
+}
+.dr-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-4) 18px;
+  border-bottom: 1px solid var(--border);
+}
+.dr-ident {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.dr-ident .kx-doc-author {
+  font-size: var(--fs-label);
+}
+.dr-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+  font-size: var(--fs-title);
+  font-weight: 650;
+}
+.dr-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.dr-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px;
+}
+.dr-foot {
+  border-top: 1px solid var(--border);
+  padding: 12px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--bg-subtle);
+  flex: none;
+}
+
+@media (max-width: 480px) {
+  .dr-head {
+    flex-wrap: wrap;
+  }
+  .dr-actions {
+    margin-left: auto;
+  }
+}
+
+.kx-block:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 2px;
+}
+.kx-doc {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--fs-body);
+  line-height: 1.55;
+}
+.kx-block {
+  padding: 3px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+/* Question numbers match their note labels. */
+.kx-qno {
+  display: inline-block;
+  min-width: 1.4em;
+  margin-right: var(--sp-2);
+  color: var(--fg-faint);
+  font-size: var(--fs-label);
+}
+.kx-block:hover {
+  background: var(--bg-hover);
+}
+.kx-block.selected {
+  background: var(--bg-hover);
+  box-shadow: inset 3px 0 0 var(--blue);
+  border-radius: 0;
+}
+.kx-block.noted {
+  color: var(--fg-faint);
+}
+.kx-h1 {
+  font-size: var(--fs-title);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 8px 0 6px;
+}
+.kx-h2 {
+  font-size: var(--fs-section);
+  font-weight: 600;
+  margin: 14px 0 2px;
+}
+.kx-h3 {
+  font-size: var(--fs-heading);
+  font-weight: 600;
+  margin: 8px 0 2px;
+}
+/* The fourth level is a label, not a heading: the group label from the panel,
+   with its rule running to the edge. */
+.kx-h4 {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: 10px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-secondary);
+}
+.kx-h4::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--border);
+}
+
+/* Use an inset shadow so selection and note bars replace the quote bar instead of overlapping it. */
+.kx-quote {
+  color: var(--fg-secondary);
+  margin-left: 8px;
+  padding-left: 12px;
+  box-shadow: inset 2px 0 0 var(--border-strong);
+  border-radius: 0;
+}
+/* A hanging dash, faint; a nested item steps in by one dash-width (the depth
+   margin comes from the source). */
+.kx-bullet {
+  padding-left: 24px;
+  text-indent: -16px;
+}
+.kx-bullet::before {
+  content: '–';
+  display: inline-block;
+  width: 16px;
+  text-indent: 0;
+  color: var(--fg-faint);
+}
+/* The number is a label beside the text, in the meta size and family. */
+.kx-ordered {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  padding-left: 8px;
+}
+.kx-ol-n {
+  flex: none;
+  width: 22px;
+  font-size: var(--fs-label);
+  color: var(--fg-muted);
+}
+.kx-ordered > .kx-removed-body {
+  width: 100%;
+  padding-left: 22px;
+}
+
+/* Suppress the bullet when a question number supplies the marker. */
+.kx-block.kx-numbered {
+  padding-left: 8px;
+  text-indent: 0;
+}
+.kx-block.kx-numbered::before {
+  content: none;
+}
+.kx-codewrap {
+  position: relative;
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 10px 12px;
+}
+.kx-codewrap pre {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-ui);
+  line-height: 1.55;
+  white-space: pre;
+  overflow-x: auto;
+}
+.kx-copy {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 7px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm, 5px);
+  background: var(--bg);
+  color: var(--fg-muted);
+  font-size: var(--fs-label);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.kx-codewrap:hover .kx-copy,
+.kx-copy:focus-visible {
+  opacity: 1;
+}
+.kx-copy:hover {
+  color: var(--fg);
+  border-color: var(--border-strong);
+}
+.kx-copy-label {
+  line-height: 1;
+}
+
+/* Inline code reads as a token inside the sentence, not as a second typeface. */
+.kx-block code,
+.kx-req-text code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--bg-inset);
+  border-radius: 4px;
+  padding: 0.12em 0.34em;
+}
+.kx-codewrap pre code,
+.kx-alert-head code {
+  background: none;
+  padding: 0;
+}
+
+.kx-bullet + .kx-bullet,
+.kx-ordered + .kx-ordered {
+  margin-top: 2px;
+}
+.kx-mermaid {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg);
+  overflow-x: auto;
+}
+.kx-mermaid-svg {
+  display: flex;
+  justify-content: center;
+}
+.kx-mermaid-svg svg {
+  max-width: 100%;
+  height: auto;
+}
+.kx-table table {
+  border-collapse: collapse;
+  font-size: var(--fs-ui);
+  width: 100%;
+}
+.kx-table th,
+.kx-table td {
+  padding: 6px 10px 6px 0;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border);
+}
+.kx-table th {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-secondary);
+  border-bottom-color: var(--border-strong);
+}
+.kx-blank {
+  height: 8px;
+}
+.kx-editor {
+  width: 100%;
+  min-height: 60vh;
+  font-size: var(--fs-ui);
+  line-height: 1.6;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg);
+  color: var(--fg);
+  resize: vertical;
+}
+
+/* Allow the browser resize handle to follow the theme. */
+.kx-editor::-webkit-resizer {
+  background: var(--bg);
+}
+/* The tray never takes the document's room: four rows show, the rest scroll,
+   and the summary with Apply stays put beneath. */
+.kx-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: 150px;
+  overflow-y: auto;
+  flex: none;
+}
+.kx-note .btn-x {
+  flex: none;
+}
+/* The tray's own head, in the register the panels above use. */
+.kx-notes-title {
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-secondary);
+}
+.kx-note {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-ui);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+/* A row that leads somewhere — the line, the question, the request. */
+.kx-note[role='button'] {
+  cursor: pointer;
+}
+.kx-note[role='button']:hover {
+  border-color: var(--border-strong);
+}
+.kx-note-body {
+  flex: 1;
+  min-width: 0;
+}
+/* The mark, not an excerpt of the line: short enough to never squeeze the note
+   beside it, and a button when it can walk you back to the line it marks. */
+.kx-note-exc {
+  font-size: var(--fs-label);
+  color: var(--fg-muted);
+  flex-shrink: 0;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+button.kx-note-exc {
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+button.kx-note-exc:hover {
+  color: var(--fg-base);
+  text-decoration: underline;
+}
+.kx-note-input {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  justify-content: flex-end;
+}
+.kx-note-input .kx-input {
+  flex: 1;
+}
+
+/* Plan summary */
+.kx-plan {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.kx-plan-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--card);
+}
+
+/* Add-project: browse + brief */
+.kx-form {
+  max-width: 640px;
+}
+.kx-path {
+  flex: 1;
+}
+.kx-brief {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.kx-brief-head .seg {
+  flex: none;
+}
+
+.kx-brief-head {
+  gap: var(--sp-3);
+}
+.kx-brief-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.kx-brief-text {
+  min-height: 180px;
+  font-size: var(--fs-ui);
+}
+.kx-drop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  padding: 16px;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--r-lg);
+  background: var(--bg-subtle);
+  font-size: var(--fs-ui);
+  color: var(--fg-mid);
+  cursor: pointer;
+  text-align: center;
+  position: relative;
+}
+.kx-drop:hover {
+  background: var(--bg-hover);
+  border-color: var(--gray-400);
+}
+.kx-drop input[type='file'] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* Engine and job status */
+.kx-theme {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 29px;
+  height: 29px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: none;
+  color: var(--fg-muted);
+  cursor: pointer;
+}
+.kx-theme:hover {
+  background: var(--bg-hover);
+  color: var(--fg);
+}
+.kx-engine {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-ui);
+  color: var(--fg-mid);
+}
+.kx-engine-select {
+  font-family: var(--font-mono);
+}
+.kx-update {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 22px 0;
+  padding: 8px 12px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  font-size: var(--fs-ui);
+}
+.kx-update-err {
+  color: var(--red);
+  font-size: var(--fs-label);
+}
+.kx-engine-warn {
+  font-size: var(--fs-label);
+  color: var(--red);
+  background: rgba(204, 107, 107, 0.08);
+  padding: 4px 10px;
+  border-radius: var(--r-md);
+}
+.kx-engine-warn code {
+  font-size: var(--fs-micro);
+}
+.kx-running {
+  font-size: var(--fs-ui);
+  color: var(--accent);
+  animation: kx-pulse 1.4s ease-in-out infinite;
+}
+@keyframes kx-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+.kx-doc-row.failed {
+  border-color: rgba(204, 107, 107, 0.5);
+}
+/* The failure reason beside the name: one line, cut with an ellipsis, the
+   whole text in the tooltip. */
+.kx-doc-why {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-micro);
+  color: var(--red);
+}
+.kx-doc-fail {
+  font-size: var(--fs-micro);
+  color: var(--red);
+  background: rgba(204, 107, 107, 0.1);
+  padding: 2px 7px;
+  border-radius: 5px;
+}
+
+.kx-code-input {
+  width: 130px;
+  flex: none;
+}
+.kx-field {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.kx-code-field {
+  flex: none;
+}
+.kx-field .kx-input {
+  width: 100%;
+}
+.kx-field-err {
+  color: var(--red);
+  font-size: var(--fs-label);
+}
+.kx-input-bad,
+.kx-input-bad:focus {
+  border-color: var(--red);
+}
+
+/* Inline Q&A */
+.kx-explain {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: var(--sp-3);
+  border-left: 2px solid var(--border);
+  background: var(--bg-subtle);
+  font-size: var(--fs-ui);
+}
+.kx-explain-q {
+  font-weight: 600;
+  color: var(--fg);
+}
+.kx-explain-a {
+  color: var(--fg-mid);
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+/* Align thread content with the selected block. */
+.kx-thread {
+  margin: var(--sp-3) 8px var(--sp-4) 8px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.kx-thread-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.kx-thread-actions {
+  display: flex;
+  gap: var(--sp-2);
+  justify-content: flex-end;
+}
+.kx-thread-text {
+  height: auto;
+  min-height: var(--control-h);
+  resize: vertical;
+  font-family: inherit;
+  padding: var(--sp-2) var(--sp-3);
+  line-height: 1.5;
+}
+.kx-explain-who {
+  font-size: var(--fs-micro);
+  color: var(--fg-faint);
+  letter-spacing: 0.02em;
+}
+.kx-thread-input .kx-input {
+  flex: 1;
+  height: 30px;
+  font-size: var(--fs-ui);
+}
+
+/* Analysis completion */
+.kx-version {
+  font-size: var(--fs-micro);
+  color: var(--fg-muted);
+}
+
+/* Highlight unanswered question sections. */
+.kx-card-action {
+  margin-left: auto;
+}
+.kx-doc-changebar {
+  margin: var(--sp-3) 0 8px;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  background: var(--amber-bg);
+  border: 1px solid var(--amber-border);
+  font-size: var(--fs-ui);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+/* The same head as the blue panel's, in this panel's colour, with the one
+   sentence that explains it underneath. */
+.kx-changebar-title {
+  color: var(--amber);
+  font-weight: 600;
+  font-size: var(--fs-micro);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.kx-changebar-title + .kx-changebar-head {
+  margin-top: -4px;
+}
+.kx-changebar-head {
+  color: var(--amber);
+  font-weight: 600;
+}
+/* Boxes, not bullets: the box is ticked once the row has its answer or its
+   decision. It is drawn, not pressed — the row is the control. */
+.kx-changebar-list {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.kx-changebar-list > li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: var(--sp-2);
+  align-items: baseline;
+}
+.kx-changebar-list > li > .kx-thread {
+  grid-column: 2;
+}
+.kx-req-check {
+  cursor: pointer;
+  margin: 0;
+  position: relative;
+  top: 2px;
+}
+/* One drawn box for both the list and the body: a hairline square that fills
+   with the accent when it is on. The browser's own box ignores the theme. */
+.kx-req-check,
+.kx-task-box {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--bg);
+  flex: none;
+  transition:
+    background var(--speed) var(--ease),
+    border-color var(--speed) var(--ease);
+}
+.kx-req-check:checked,
+.kx-task-box:checked {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  /* The tick is a mask, not an image: an image cannot read a token, and the
+     dark theme's accent is light, so a white tick vanished there. */
+  background-image: none;
+}
+.kx-req-check:checked::after,
+.kx-task-box:checked::after {
+  content: '';
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--accent-fg);
+  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M20 6 9 17l-5-5'/></svg>") center / 11px 11px no-repeat;
+  mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M20 6 9 17l-5-5'/></svg>") center / 11px 11px no-repeat;
+}
+
+/* Render actions per revision request. */
+/* Two groups in one list. The label separates them without a second box —
+   the point of the pass is fewer boxes, not more. */
+/* The rule sits after the label, not between the rows: INCOMING ———— */
+.kx-changebar-group {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-secondary);
+}
+.kx-changebar-group::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--amber-border);
+}
+.kx-changebar-group + .kx-changebar-list {
+  margin-top: -4px;
+}
+/* What the button will do with this row, before it is pressed. */
+.kx-req-state {
+  margin-left: 6px;
+  font-size: var(--fs-micro);
+  color: var(--fg-muted);
+}
+.kx-changebar-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+.kx-changebar-actions .kx-cmd-hint {
+  margin-right: auto;
+}
+/* What the button will send, in words, before it is pressed. */
+.kx-changebar-summary {
+  margin-right: auto;
+  color: var(--fg-secondary);
+  font-size: var(--fs-ui);
+}
+/* A change request's status in the body: one word, three colours, in place of
+   a box that looked like work. Amber waits, green was taken, red was refused. */
+.kx-outcome {
+  flex: none;
+  align-self: baseline;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: 999px;
+  margin-right: var(--sp-2);
+  border: 1px solid transparent;
+}
+/* What this document asks of another: quiet, because nothing is decided here. */
+.kx-outcome-outgoing {
+  color: var(--fg-muted);
+  background: var(--bg-muted);
+  border-color: var(--border);
+}
+.kx-outcome-waiting {
+  color: var(--amber);
+  background: var(--amber-bg);
+  border-color: var(--amber-border);
+}
+.kx-outcome-accepted {
+  color: var(--green);
+  background: var(--green-bg);
+  border-color: var(--green-border, transparent);
+}
+.kx-outcome-denied {
+  color: var(--red);
+  background: var(--red-bg);
+  border-color: var(--red-border);
+}
+/* A decision is one block: the request, and the reason under it in a quieter
+   colour. No bullet, no rail — bullets look like work, and the two lines are
+   one thing, selected together. */
+.kx-block.kx-decision-request::before {
+  content: none;
+}
+.kx-block.kx-decision-request {
+  padding-left: 8px;
+  text-indent: 0;
+  margin-top: 6px;
+}
+.kx-decision-why {
+  color: var(--fg-secondary);
+  margin-top: 2px;
+}
+.kx-decision-why-label {
+  color: var(--fg-muted);
+}
+/* A decision in the footer tray, said in one word and coloured by it. */
+.kx-decision {
+  font-weight: 600;
+}
+.kx-decision-accept {
+  color: var(--green);
+}
+.kx-decision-deny {
+  color: var(--red);
+}
+
+/* What this write changed, in the document rather than in a separate view: the
+   new text carries a green rail, and what it replaced folds away beneath it. */
+/* A changed block carries no colour of its own — the [+] at its head is the
+   mark, and pressing it unfolds the text it replaced, faded, underneath. */
+.kx-removed-toggle {
+  border: 0;
+  background: none;
+  padding: 0;
+  margin-left: var(--sp-2);
+  color: var(--green);
+  font-size: var(--fs-label);
+}
+button.kx-removed-toggle {
+  cursor: pointer;
+}
+button.kx-removed-toggle:hover {
+  text-decoration: underline;
+}
+/* The old text starts where the new text starts — same edge, quieter. */
+.kx-removed-body {
+  margin-top: 4px;
+  text-indent: 0;
+  color: var(--fg-muted);
+  font-size: var(--fs-label);
+  white-space: pre-wrap;
+}
+
+/* A row is selected by clicking it; the input opens underneath. */
+/* "new" is a fact, not a control: faint, and not underlined on hover. */
+.kx-new-mark {
+  margin-left: var(--sp-2);
+  color: var(--fg-faint);
+  font-size: var(--fs-label);
+}
+.kx-req-text {
+  cursor: pointer;
+}
+.kx-req-text:hover {
+  text-decoration: underline;
+  text-decoration-color: var(--border-strong);
+}
+.kx-req-open > .kx-req-text {
+  font-weight: 600;
+}
+
+.kx-doc-askbar {
+  margin: var(--sp-4) 18px 0;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-md);
+  background: var(--amber-bg);
+  border: 1px solid var(--amber-border);
+  color: var(--amber);
+  font-size: var(--fs-ui);
+}
+.kx-block.open-q {
+  background: none;
+}
+.kx-block.kx-h2.open-q {
+  background: none;
+  font-weight: 650;
+}
+.kx-block.open-q + .kx-blank {
+  background: none;
+}
+
+/* An open change request carries its own WAITING label; the line needs no
+   ground of its own on top of it. */
+
+/* Remove the question background once the note bar indicates an answer. */
+.kx-block.open-q.noted {
+  background: none;
+}
+
+/* Collapsed archived-project list */
+.kx-archive {
+  margin: 18px 22px 0;
+}
+.kx-archive > .kx-doc-group {
+  color: var(--fg-muted, inherit);
+}
+.kx-archive .kx-grid {
+  margin-top: 10px;
+  padding: 0;
+}
+.kx-archive .kx-card {
+  opacity: 0.72;
+}
+
+/* Readiness questions shown when analysis is blocked. */
+.kx-gate {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 18px;
+  border: none;
+  border-radius: var(--r-lg);
+  background: var(--blue-bg);
+}
+.kx-gate h3 {
+  margin: 0;
+  font-size: var(--fs-heading);
+  font-weight: 650;
+  color: var(--blue);
+}
+.kx-gate p {
+  margin: 0;
+  font-size: var(--fs-ui);
+  color: var(--blue);
+  opacity: 0.8;
+  max-width: 68ch;
+}
+.kx-gate-questions {
+  margin: 2px 0 2px;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: var(--fs-body);
+}
+.kx-handshake {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid rgba(52, 146, 90, 0.35);
+  border-radius: var(--r-lg);
+  background: rgba(52, 146, 90, 0.06);
+}
+.kx-handshake-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.kx-handshake-title {
+  font-size: var(--fs-heading);
+  font-weight: 650;
+  color: var(--green, #2f7d4f);
+}
+/* The handover, in the head's quiet register: a count, not a badge. */
+.kx-handshake-count {
+  font-size: var(--fs-label);
+  color: var(--fg-secondary);
+}
+.kx-handshake-kopeng {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Install card */
+.kx-handshake-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kx-handshake-plan {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg);
+}
+
+/* Diff markers for the full-document proposal editor. */
+.kx-diff-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: var(--sp-3) 0 var(--sp-2);
+}
+/* Which recorded version the body is read against — a date beside the name,
+   quiet until you go near it. Choosing one paints the diff; nothing else. */
+.kx-diff-pick {
+  font-size: var(--fs-label);
+  color: var(--fg-secondary);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 2px 6px;
+}
+.kx-diff-pick:hover,
+.kx-diff-pick:focus {
+  border-color: var(--border-strong);
+}
+.kx-diff {
+  min-height: 60vh;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg);
+  overflow: auto;
+  padding: 12px 0;
+  font-size: var(--fs-ui);
+  line-height: 1.6;
+}
+.kx-diff > div {
+  display: flex;
+  gap: var(--sp-2);
+  padding: 0 12px;
+  white-space: pre-wrap;
+  min-height: 1.6em;
+}
+.kx-diff-sign {
+  flex-shrink: 0;
+  width: 1ch;
+  opacity: 0.7;
+}
+.kx-diff-same {
+  color: var(--fg);
+}
+.kx-diff-del {
+  background: var(--red-bg);
+  color: var(--red);
+}
+.kx-diff-add {
+  background: var(--green-bg);
+  color: var(--green);
+}
+
+/* `- [ ] …` renders as the box it means; the bullet dot would be a second marker. */
+.kx-task {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: baseline;
+  padding-left: 20px;
+  text-indent: 0;
+}
+.kx-task::before {
+  content: none;
+}
+.kx-task-text {
+  min-width: 0;
+}
+.kx-task-box {
+  margin: 0;
+  position: relative;
+  top: 2px;
+  pointer-events: none;
+}
+
+/* GitHub alerts — `> [!NOTE]` and friends. The kind is the colour and the
+   label; the body is ordinary document text. */
+.kx-alert {
+  margin: 4px 0 4px 8px;
+  padding: 2px 12px;
+  box-shadow: inset 2px 0 0 var(--kx-alert);
+  border-radius: 0;
+}
+.kx-alert-head {
+  display: block;
+  color: var(--kx-alert);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+.kx-alert-icon {
+  display: none;
+}
+.kx-alert-body {
+  color: var(--fg);
+  white-space: pre-wrap;
+}
+.kx-alert-note {
+  --kx-alert: var(--blue);
+  --kx-alert-bg: var(--blue-bg);
+}
+.kx-alert-tip {
+  --kx-alert: var(--green);
+  --kx-alert-bg: var(--green-bg);
+}
+.kx-alert-important {
+  --kx-alert: var(--violet);
+  --kx-alert-bg: var(--violet-bg);
+}
+.kx-alert-warning {
+  --kx-alert: var(--amber);
+  --kx-alert-bg: var(--amber-bg);
+}
+.kx-alert-caution {
+  --kx-alert: var(--red);
+  --kx-alert-bg: var(--red-bg);
+}
+
+/* Syntax highlighting token styles */
+.hl-com {
+  color: var(--fg-faint);
+  font-style: italic;
+}
+.hl-str {
+  color: var(--green);
+}
+.hl-kw {
+  color: var(--violet);
+  font-weight: 500;
+}
+.hl-key {
+  color: var(--blue);
+}
+.hl-num {
+  color: var(--amber);
+}
+.hl-flag {
+  color: var(--fg-muted);
+}
+
+/* ---- page chrome (ds-*) ---- */
+.ds-top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:16px;height:48px;padding:0 22px;background:color-mix(in oklab,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
+.ds-wordmark{display:flex;align-items:center;gap:9px;font-weight:600;font-size:var(--fs-heading)}
+.ds-k{width:22px;height:22px;border-radius:6px;background:var(--accent);color:var(--accent-fg);display:grid;place-items:center;font-weight:600;font-size:13px}
+.ds-sep{width:1px;height:18px;background:var(--border)}
+.ds-sub{font-weight:400;color:var(--fg-muted);font-size:var(--fs-ui)}
+.ds-ctrls{margin-left:auto;display:flex;align-items:center;gap:8px}
+.ds-ctrl-label{font-size:var(--fs-micro);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--fg-faint)}
+.ds-wrap{max-width:900px;margin:0 auto;padding:36px 22px 120px}
+.ds-eyebrow{font-size:var(--fs-label);color:var(--fg-faint);letter-spacing:.04em}
+.ds-lede h1{font-size:26px;font-weight:650;letter-spacing:-.01em;margin-top:6px}
+.ds-lede p{color:var(--fg-secondary);font-size:var(--fs-heading);line-height:1.6;margin-top:10px;max-width:66ch}
+.ds-block{margin-top:48px}
+.ds-block>h2{font-size:var(--fs-label);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--fg-faint);display:flex;align-items:center;gap:10px}
+.ds-block>h2::after{content:'';flex:1;border-top:1px solid var(--border)}
+.ds-desc{color:var(--fg-secondary);font-size:var(--fs-body);max-width:66ch;margin-top:8px;line-height:1.6}
+.ds-surface{margin-top:14px;background:var(--bg-subtle);border:1px solid var(--border);border-radius:var(--r-lg);padding:20px}
+.ds-label{font-size:var(--fs-micro);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--fg-faint);margin-bottom:10px}
+.ds-label code,.ds-desc code,.ds-note code,.ds-principles code,.ds-gaps code,.ds-sub code{font-family:var(--font-mono);font-size:.92em;background:var(--bg-inset);border:1px solid var(--border);border-radius:4px;padding:.05em .3em;text-transform:none;letter-spacing:0}
+.ds-code{margin:0;font-family:var(--font-mono);font-size:var(--fs-ui);line-height:1.55;background:var(--bg-inset);border:1px solid var(--border);border-radius:var(--r-md);padding:10px 12px;overflow-x:auto}
+.ds-principles{display:flex;flex-direction:column;gap:10px;font-size:var(--fs-body);line-height:1.55}
+.ds-principles>div{padding-left:12px;box-shadow:inset 3px 0 0 var(--border-strong)}
+.ds-never{box-shadow:inset 3px 0 0 var(--red)!important;color:var(--fg-secondary)}
+.ds-swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.ds-sw{height:64px;border:1px solid var(--border);border-radius:var(--r-md);padding:8px 10px;display:flex;flex-direction:column;justify-content:flex-end;gap:1px;font-size:var(--fs-label)}
+.ds-sw i{font-style:normal;color:var(--fg-muted);font-size:var(--fs-micro)}
+.ds-sw-sm{width:150px;height:48px;justify-content:center}
+.ds-textsteps{display:flex;flex-direction:column;gap:6px;font-size:var(--fs-heading)}
+.ds-textsteps .mono{font-size:var(--fs-label);margin-left:8px;opacity:.8}
+.ds-cluster{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.ds-states{border-collapse:collapse;font-size:var(--fs-body);width:100%}
+.ds-states th{font-size:var(--fs-micro);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--fg-faint);text-align:left;padding:4px 10px 8px 0;border-bottom:1px solid var(--border)}
+.ds-states td{padding:7px 10px 7px 0;border-bottom:1px solid var(--border-faint,var(--border));vertical-align:middle}
+.ds-states tr:last-child td{border-bottom:none}
+.ds-dot{display:inline-block;width:22px;height:22px;border-radius:6px;border:1px solid var(--border);vertical-align:middle}
+.ds-dot-none,.ds-none{color:var(--fg-faint);border:none;width:auto;font-size:var(--fs-label)}
+.ds-alert-mini{display:inline-block;padding:2px 8px;border-left:3px solid var(--kx-alert);background:var(--kx-alert-bg);color:var(--kx-alert);font-weight:600;font-size:var(--fs-ui);border-radius:0 4px 4px 0}
+.ds-type{display:flex;flex-direction:column}
+.ds-type-row{display:grid;grid-template-columns:190px 1fr auto;gap:16px;align-items:baseline;padding:9px 0;border-bottom:1px solid var(--border)}
+.ds-type-row:last-child{border-bottom:none}
+.ds-type-meta{font-size:var(--fs-label);color:var(--fg-muted)}
+.ds-type-where{font-size:var(--fs-micro);color:var(--fg-faint);text-transform:uppercase;letter-spacing:.06em}
+.ds-sample{font-size:var(--fs-body);max-width:66ch;line-height:1.6}
+.ds-space{display:flex;flex-direction:column;gap:8px;font-size:var(--fs-body)}
+.ds-space>div{display:flex;align-items:center;gap:12px}
+.ds-space i{display:inline-block;height:18px;background:var(--accent);border-radius:2px;flex:none}
+.ds-space .mono{color:var(--fg-muted);font-size:var(--fs-label)}
+.ds-rbox{width:150px;height:64px;border:1px solid var(--border);background:var(--bg);display:flex;flex-direction:column;justify-content:center;padding:0 12px;font-size:var(--fs-label);gap:1px}
+.ds-rbox i{font-style:normal;color:var(--fg-muted);font-size:var(--fs-micro)}
+.ds-motion{display:inline-flex;align-items:center;gap:8px;font-size:var(--fs-ui);color:var(--fg-secondary)}
+.ds-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ds-row .select{width:auto}
+.ds-note{margin-top:14px;font-size:var(--fs-ui);color:var(--fg-secondary);line-height:1.55;max-width:70ch}
+.ds-grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+@media(max-width:640px){.ds-grid3{grid-template-columns:1fr}.ds-type-row{grid-template-columns:1fr}}
+.ds-bands{display:flex;flex-direction:column;gap:12px}
+.ds-bands>*{margin:0!important}
+.ds-docsurface{background:var(--bg)}
+.ds-rules{display:grid;grid-template-columns:1fr 1fr;gap:24px;font-size:var(--fs-body)}
+.ds-rules ul{margin:0;padding-left:18px;line-height:1.7}
+.ds-gaps{display:flex;flex-direction:column;gap:10px;font-size:var(--fs-body);line-height:1.55}
+.ds-gaps>div{display:grid;grid-template-columns:110px 1fr;gap:12px;align-items:baseline}
+.ds-gap-k{font-size:var(--fs-label);color:var(--amber)}
+.ds-wrap .kx-notes{margin:0}
+
+.ds-grid2{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+@media(max-width:640px){.ds-grid2{grid-template-columns:1fr}}
+.ds-fontrow{padding:6px 0;border-bottom:1px solid var(--border);font-size:var(--fs-heading)}
+.ds-fontrow:last-child{border-bottom:none}
+.ds-logo-box{display:flex;flex-direction:column;gap:10px;align-items:flex-start;justify-content:center;padding:18px 22px;border:1px solid var(--border);border-radius:var(--r-md);min-width:180px}
+.ds-logo-box .mono{font-size:var(--fs-micro);color:var(--fg-faint)}
+.ds-icons{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.ds-icon{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--bg);font-size:var(--fs-label);color:var(--fg-secondary)}
+.ds-icon svg,.ds-icon input{flex:none}
+.ds-merge td{vertical-align:top;font-size:var(--fs-ui)}
+.ds-wrap .kx-dot{position:relative}
+.ds-spin{display:inline-block;width:14px;height:14px;border-radius:50%;border:2px solid var(--border);border-top-color:var(--fg);animation:spin .8s linear infinite}
+</style>
+</head>
+<body>
+<div class="ds-top">
+  <span class="ds-wordmark"><span class="ds-k mono">k</span>kortext<span class="ds-sep"></span><span class="ds-sub">dev/DESIGN.md · canlı <code>ui/src/index.css</code></span></span>
+  <span class="ds-ctrls">
+    <span class="ds-ctrl-label">Theme</span>
+    <span class="seg" id="theme-seg"><button data-t="">Auto</button><button data-t="light">Light</button><button data-t="dark">Dark</button></span>
+  </span>
+</div>
+
+<div class="ds-wrap">
+<div class="ds-lede">
+  <div class="ds-eyebrow mono">dev/DESIGN.md · 2026-09-12 · after the merge</div>
+  <h1>Kortext design system</h1>
+  <p>12 Eylül birleşmesinden sonraki sistem. Her şey panelin kendi CSS'iyle çizildi: <code>ui/src/index.css</code> olduğu gibi gömülü, sınıflar panelin sınıfları. <code>dev/DESIGN.md</code> argümanı, bu sayfa görünümü; bölüm numaraları belgenin.</p>
+</div>
+
+<!-- 0 -->
+<section class="ds-block">
+  <h2>0 · Principles</h2>
+  <div class="ds-surface ds-principles">
+    <div><b>Quiet is correct.</b> Bir düzine ajan paralel çalışsa da ekran sakin. Renk ancak söyleyecek bir şeyi olunca girer.</div>
+    <div><b>Colour carries meaning.</b> Yeşil onay, kırmızı hata, pembe talep. Süs rengi yok.</div>
+    <div><b>Every token names a job, not a size.</b> <code>--fs-body</code> nereye gittiğini söyler; <code>--fs-13</code> sadece sayı.</div>
+    <div><b>Machine and human write differently.</b> Yol, id, komut — mono. İnsanın okuduğu her cümle — Barlow.</div>
+    <div><b>One configuration.</b> Tek eksen: tema.</div>
+    <div class="ds-never"><b>Never:</b> gradient, emoji, süs SVG, sol kenarı renkli yuvarlak kart, Inter/Roboto.</div>
+  </div>
+</section>
+
+<!-- 1 -->
+<section class="ds-block">
+  <h2>1 · Theme</h2>
+  <p class="ds-desc">Üç durum. <b>Auto</b> işletim sistemini izler, ilk açılış budur; <b>Light</b> ve <b>Dark</b> kullanıcının seçimi, <code>localStorage</code>'da tutulur. Yukarıdaki anahtar bu sayfayı değiştirir.</p>
+  <div class="ds-surface">
+    <div class="ds-label">Tek kontrol — <code>.kx-theme</code>, başlıkta bir ikon; öznitelik yoksa auto</div>
+    <pre class="ds-code">:root                    { /* light */ }
+:root[data-theme='dark'] { /* dark */ }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) { /* dark, ikinci kez */ }
+}</pre>
+  </div>
+</section>
+
+
+<section class="ds-block">
+  <h2>Wordmark</h2>
+  <p class="ds-desc">Başlıkta bir çizim, sağda tema düğmesi, başka hiçbir şey. Tema başına bir SVG (<code>kortext-logo.svg</code> / <code>-dark.svg</code>), CSS ile değişir; 20px yükseklik.</p>
+  <div class="ds-surface">
+    <div class="ds-cluster" style="gap:24px;align-items:stretch">
+      <div class="ds-logo-box" style="background:#fff"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMzQ0IiBoZWlnaHQ9IjMzNCIgdmlld0JveD0iODYgMzQwIDEzNDQgMzM0IiByb2xlPSJpbWciIGFyaWEtbGFiZWxsZWRieT0idGl0bGUgZGVzY3JpcHRpb24iPgogIDx0aXRsZSBpZD0idGl0bGUiPmtvcnRleHQg4oCUIGZpbGxlZCB2ZXJzaW9uPC90aXRsZT4KICA8ZGVzYyBpZD0iZGVzY3JpcHRpb24iPktvcnRleHQgZmlsbGVkIHZhcmlhbnQ6IGxpZ2h0IGdyYXkga29yLCBibHVlcHJpbnQgYmx1ZSB0ZSBhbmQgbGVmdCB4IGNvbXBvbmVudCwgZGFyayBmaW5hbCBjb21wb25lbnQuIE9yaWdpbmFsIHZlY3RvciBnZW9tZXRyeSBwcmVzZXJ2ZWQuPC9kZXNjPgogIAoKICA8IS0tIFBlbmNpbCBjb25zdHJ1Y3Rpb24gbWFya3MgdHJhY2VkIGZyb20gdGhlIHJlZmVyZW5jZS4gLS0+CiAgPGcgaWQ9InNrZXRjaC1ndWlkZXMiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzY1NjU2NSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIj4KICAgIDxwYXRoIG9wYWNpdHk9Ii4yNSIgc3Ryb2tlLXdpZHRoPSIuOCIgZD0iTTEwMiAzODBIMTg1IE0xMDIgNjMySDM0OCBNMTIxIDM1NlY2NTUgTTE2OSAzNTZWNjQzIE0yMjMgNDQ0SDMxMCBNMjQ4IDQzN0wxNjEgNTMyIE0yMTUgNTIwTDMxMiA2NDcgTTE4OSA1NDVMMjY1IDY1MCBNNDg1IDQ0NEg2NTUgTTUxNCA2MzJINTk0IE01MzUgNDI4VjY1MyBNNTcxIDQzMFY2NTAgTTYzNiA0MjVWNDk1Ii8+CiAgICA8cGF0aCBvcGFjaXR5PSIuMTMiIHN0cm9rZS13aWR0aD0iLjciIGQ9Ik0xMDQgMzc5TDE3NyAzODEgTTEyMiAzNThMMTIwIDY1MSBNMTY3IDM2NEwxNjkgNjQ1IE0xMDIgNjMzTDMyMiA2MzEgTTIyMyA0NDJMMzA2IDQ0NSBNNDg3IDQ0M0w2NTAgNDQ1IE01MzMgNDI3TDUzNyA2NDggTTU3MSA0MzVMNTY5IDY0NiBNNjM1IDQyN0w2MzcgNDkxIE01MTUgNjMzTDU5MiA2MzAiLz4KICAgIDxwYXRoIG9wYWNpdHk9Ii4xMiIgc3Ryb2tlLXdpZHRoPSIuNyIgc3Ryb2tlLWRhc2hhcnJheT0iNSAzIDEgMyIgZD0iTTI5NyA2MzJINTM0IE00ODYgNDQ0SDY2OCIvPgogIDwvZz4KCiAgPCEtLSBPcmlnaW5hbCByZWZlcmVuY2UgZ2VvbWV0cnkgd2l0aCBsaWdodCBncmF5IGZpbGwuIC0tPgogIDxnIGlkPSJrb3IiIGZpbGw9IiNlNWU3ZWIiIGZpbGwtcnVsZT0iZXZlbm9kZCIgc3Ryb2tlPSIjNTU1NTU1IiBzdHJva2Utd2lkdGg9IjIuMTUiIHN0cm9rZS1saW5lam9pbj0ibWl0ZXIiPgogICAgPHBhdGggaWQ9ImsiIGQ9Ik0xMjIgMzgwSDE2OFY1MjJMMjQ2IDQ0NEgyOTdMMjE2IDUyMUwyOTggNjMxSDI1MEwxOTEgNTQ4TDE2OCA1NzFWNjMxSDEyMloiLz4KICAgIDxwYXRoIGlkPSJvIiBkPSJNNDAxIDQ0MkMzNDUgNDQyIDMwNiA0ODIgMzA2IDUzN0MzMDYgNTk1IDM0NSA2MzQgNDAxIDYzNEM0NTkgNjM0IDQ5NyA1OTQgNDk3IDUzN0M0OTcgNDgyIDQ1OCA0NDIgNDAxIDQ0MlogTTQwMSA0NzdDMzY2IDQ3NyAzNDQgNTAxIDM0NCA1MzdDMzQ0IDU3NCAzNjcgNTk5IDQwMSA1OTlDNDM2IDU5OSA0NjAgNTc0IDQ2MCA1MzdDNDYwIDUwMSA0MzcgNDc3IDQwMSA0NzdaIi8+CiAgICA8cGF0aCBpZD0iciIgZD0iTTUzNiA0NDRINTcxVjQ3MkM1ODIgNDUyIDYwNCA0NDAgNjM1IDQ0M1Y0ODFDNjA5IDQ3NCA1ODkgNDgyIDU3OCA1MDBDNTczIDUwOSA1NzIgNTE4IDU3MiA1MzJWNjMxSDUzNloiLz4KICA8L2c+CiAgPGcgaWQ9InBlbmNpbC1lZGdlIiBmaWxsPSJub25lIiBzdHJva2U9IiM2ODY4NjgiIHN0cm9rZS13aWR0aD0iLjYiIG9wYWNpdHk9Ii4zMiI+CiAgICA8cGF0aCBkPSJNMTIzLjQgMzgxTDE2Ni44IDM3OS43TDE2OC44IDUyMy4zTDI0NyA0NDUgTTEyMi45IDM4MkwxMjAuOSA2MzAuMkwxNjYuOCA2MzIgTTIxNSA1MjBMMjk5IDYzMyBNMzA3LjMgNTM2QzMwNiA0ODQgMzQ0IDQ0MC43IDQwMSA0NDAuOEM0NjAgNDQyLjggNDk4LjYgNDg0IDQ5OCA1MzdDNDk4IDU5NSA0NTggNjM1LjIgNDAxIDYzMy4xQzM0MyA2MzQuOCAzMDQuOSA1OTQgMzA3LjMgNTM2IE0zNDQuOCA1MzhDMzQ0IDUwMSAzNjYgNDc1LjYgNDAxIDQ3NS44QzQzOCA0NzcgNDYxIDUwMSA0NjEuNCA1MzcgTTUzNC42IDQ0NC44TDUzNi44IDYzMiBNNTczIDQ3MkM1ODcgNDUwIDYwNyA0NDAgNjM1LjYgNDQxLjciLz4KICA8L2c+CgogIDwhLS0gQmx1ZXByaW50IGNvbnN0cnVjdGlvbiBsaW5lcywgcmV0YWluZWQgd2l0aG91dCBkaWFnb25hbCBoYXRjaGluZy4gLS0+CiAgPGcgaWQ9ImJsdWVwcmludC1ndWlkZXMiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzE3NmJmZiIgc3Ryb2tlLXdpZHRoPSIuOCI+CiAgICA8cGF0aCBvcGFjaXR5PSIuMzIiIGQ9Ik02ODEgMzkySDc1OSBNNzAxIDM3NlY2NTIgTTc0MiAzNzlWNjQ2IE02NzIgNDI3VjQ5NCBNNzkyIDQyNlY0OTQgTTY1NSA0NDRIMTAxMCBNNjU1IDQ3N0gxMDE2IE02ODUgNTk3SDEwMDggTTgyOSA0MzBWNjQ1IE05OTkgNDMwVjY0NiBNODE3IDUwMkgxMDA3IE03OTMgNTIwSDEwMjMgTTc5MiA1NTBIMTAyMyBNODEzIDU3MkgxMDA4IE04NjYgNDc0VjYzMSBNOTY2IDQ3NVY2MjkgTTkxNyA0NDJWNjMzIE05NjEgNTYzTDEwMDggNTk3Ii8+CiAgICA8cGF0aCBvcGFjaXR5PSIuNDgiIHN0cm9rZS1kYXNoYXJyYXk9IjggNCIgZD0iTTcxNiAzNjZWNjU1IE02NzYgNjMxSDExMzAgTTY1NCA0NzdIMTAxNiBNNzg3IDUyMEgxMDI1IE03ODggNTUwSDEwMjMgTTc5MyA1OTNWNjUzIE04MzAgNDMwVjY0OSBNMTAwMCA0MzBWNjQ5Ii8+CiAgICA8cGF0aCBvcGFjaXR5PSIuNjgiIHN0cm9rZS1kYXNoYXJyYXk9IjcgMyAyIDMiIGQ9Ik0xMDMyIDQxNFY2NTggTTExMTMgNDI2VjY0NyBNMTAyMyA0NDNIMTEzMSBNMTA5MiA1MzdIMTE4NiBNMTAxOSA2MzJIMTEzMiIvPgogICAgPHBhdGggb3BhY2l0eT0iLjM0IiBkPSJNMTAzMiA0MzBMMTA0MiA0NDMgTTEwOTUgNDM1TDExMDEgNDQzIE0xMDk0IDYzMUwxMTA1IDYxNyBNMTAzMiA2MzZMMTA0MyA2MjIiLz4KICA8L2c+CgogIDxnIGlkPSJibHVlcHJpbnQiIGZpbGw9IiMwODY1ZmYiIGZpbGwtcnVsZT0iZXZlbm9kZCIgc3Ryb2tlPSIjMDg2NWZmIiBzdHJva2Utd2lkdGg9IjIuMSIgc3Ryb2tlLWxpbmVqb2luPSJtaXRlciI+CiAgICA8cGF0aCBpZD0iYmx1ZS10IiBkPSJNNzAyIDM5M0g3NDNWNDQ0SDc5MlY0NzdINzQzVjU3MUM3NDMgNTkxIDc1MyA2MDAgNzc0IDYwMEM3ODEgNjAwIDc4NyA1OTkgNzkzIDU5NlY2MzBDNzg0IDYzMyA3NzQgNjM0IDc2NCA2MzRDNzIzIDYzNCA3MDIgNjE0IDcwMiA1NzVWNDc3SDY3MlY0NDRINzAyWiIvPgogICAgPHBhdGggaWQ9ImUiIGQ9Ik0xMDAwIDU1MEg4NjZDODcwIDU4MSA4ODggNTk5IDkxOCA1OTlDOTQwIDU5OSA5NTYgNTkwIDk2NyA1NzJMOTk3IDU5MUM5NzkgNjE5IDk1MyA2MzMgOTE4IDYzM0M4NjUgNjMzIDgzMCA1OTYgODMwIDUzOUM4MzAgNDg0IDg2NSA0NDEgOTE3IDQ0MUM5NjcgNDQxIDEwMDAgNDc5IDEwMDAgNTM1WiBNODY2IDUyMEg5NjdDOTY0IDQ5MiA5NDYgNDc0IDkxNyA0NzRDODkwIDQ3NCA4NzAgNDkxIDg2NiA1MjBaIi8+CiAgICA8cGF0aCBpZD0ieC1ibHVlIiBkPSJNMTA0MSA0NDNIMTA5NEwxMTcwIDUzN0wxMDk0IDYzMkgxMDQxTDExMTUgNTM3WiIvPgogIDwvZz4KCiAgPGcgaWQ9ImZpbmFsIiBmaWxsPSIjMjAyMTIzIj4KICAgIDxwYXRoIGlkPSJ4LWZpbmFsIiBkPSJNMTIxOSA0NDJIMTI2OEwxMTk0IDUzMkwxMTcwIDUwMlogTTExOTQgNTQ0TDEyNjggNjMySDEyMTlMMTE3MCA1NzNaIi8+CiAgICA8cGF0aCBpZD0iZmluYWwtdCIgZD0iTTEzMzAgMzg3SDEzNjVWNDQySDE0MTJWNDc0SDEzNjVWNTc2QzEzNjUgNTk1IDEzNzMgNjAzIDEzODkgNjAzQzEzOTggNjAzIDE0MDYgNjAxIDE0MTQgNTk4VjYzMEMxNDA2IDYzMyAxMzk3IDYzNSAxMzg1IDYzNUMxMzQ5IDYzNSAxMzMwIDYxNSAxMzMwIDU3OFY0NzRIMTMwMlY0NDJIMTMzMFoiLz4KICA8L2c+Cjwvc3ZnPgo=" alt="kortext" style="height:20px"><span class="mono">light</span></div>
+      <div class="ds-logo-box" style="background:#0a0a0b"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMzQ0IiBoZWlnaHQ9IjMzNCIgdmlld0JveD0iODYgMzQwIDEzNDQgMzM0IiByb2xlPSJpbWciIGFyaWEtbGFiZWxsZWRieT0idGl0bGUgZGVzY3JpcHRpb24iPgogIDx0aXRsZSBpZD0idGl0bGUiPmtvcnRleHQg4oCUIGZpbGxlZCBkYXJrIG1vZGU8L3RpdGxlPgogIDxkZXNjIGlkPSJkZXNjcmlwdGlvbiI+RGFyayBtb2RlIGZpbGxlZCBLb3J0ZXh0IHdvcmRtYXJrLiBMaWdodCBncmF5IHNrZXRjaCBsZXR0ZXJpbmcsIGJyaWdodCBibHVlcHJpbnQgYmx1ZSwgb2ZmLXdoaXRlIGZpbmFsIGxldHRlcmluZyBvbiBhIGNoYXJjb2FsIGJhY2tncm91bmQuIE9yaWdpbmFsIGdlb21ldHJ5IHByZXNlcnZlZC48L2Rlc2M+CiAgCgogIDwhLS0gUGVuY2lsIGNvbnN0cnVjdGlvbiBtYXJrcyB0cmFjZWQgZnJvbSB0aGUgcmVmZXJlbmNlLiAtLT4KICA8ZyBpZD0ic2tldGNoLWd1aWRlcyIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYWJiM2MyIiBzdHJva2UtbGluZWNhcD0icm91bmQiPgogICAgPHBhdGggb3BhY2l0eT0iLjI1IiBzdHJva2Utd2lkdGg9Ii44IiBkPSJNMTAyIDM4MEgxODUgTTEwMiA2MzJIMzQ4IE0xMjEgMzU2VjY1NSBNMTY5IDM1NlY2NDMgTTIyMyA0NDRIMzEwIE0yNDggNDM3TDE2MSA1MzIgTTIxNSA1MjBMMzEyIDY0NyBNMTg5IDU0NUwyNjUgNjUwIE00ODUgNDQ0SDY1NSBNNTE0IDYzMkg1OTQgTTUzNSA0MjhWNjUzIE01NzEgNDMwVjY1MCBNNjM2IDQyNVY0OTUiLz4KICAgIDxwYXRoIG9wYWNpdHk9Ii4xMyIgc3Ryb2tlLXdpZHRoPSIuNyIgZD0iTTEwNCAzNzlMMTc3IDM4MSBNMTIyIDM1OEwxMjAgNjUxIE0xNjcgMzY0TDE2OSA2NDUgTTEwMiA2MzNMMzIyIDYzMSBNMjIzIDQ0MkwzMDYgNDQ1IE00ODcgNDQzTDY1MCA0NDUgTTUzMyA0MjdMNTM3IDY0OCBNNTcxIDQzNUw1NjkgNjQ2IE02MzUgNDI3TDYzNyA0OTEgTTUxNSA2MzNMNTkyIDYzMCIvPgogICAgPHBhdGggb3BhY2l0eT0iLjEyIiBzdHJva2Utd2lkdGg9Ii43IiBzdHJva2UtZGFzaGFycmF5PSI1IDMgMSAzIiBkPSJNMjk3IDYzMkg1MzQgTTQ4NiA0NDRINjY4Ii8+CiAgPC9nPgoKICA8IS0tIE9yaWdpbmFsIHJlZmVyZW5jZSBnZW9tZXRyeSB3aXRoIGxpZ2h0IGdyYXkgZmlsbC4gLS0+CiAgPGcgaWQ9ImtvciIgZmlsbD0iIzljYTNhZiIgZmlsbC1ydWxlPSJldmVub2RkIiBzdHJva2U9IiM5Y2EzYWYiIHN0cm9rZS13aWR0aD0iMi4xNSIgc3Ryb2tlLWxpbmVqb2luPSJtaXRlciI+CiAgICA8cGF0aCBpZD0iayIgZD0iTTEyMiAzODBIMTY4VjUyMkwyNDYgNDQ0SDI5N0wyMTYgNTIxTDI5OCA2MzFIMjUwTDE5MSA1NDhMMTY4IDU3MVY2MzFIMTIyWiIvPgogICAgPHBhdGggaWQ9Im8iIGQ9Ik00MDEgNDQyQzM0NSA0NDIgMzA2IDQ4MiAzMDYgNTM3QzMwNiA1OTUgMzQ1IDYzNCA0MDEgNjM0QzQ1OSA2MzQgNDk3IDU5NCA0OTcgNTM3QzQ5NyA0ODIgNDU4IDQ0MiA0MDEgNDQyWiBNNDAxIDQ3N0MzNjYgNDc3IDM0NCA1MDEgMzQ0IDUzN0MzNDQgNTc0IDM2NyA1OTkgNDAxIDU5OUM0MzYgNTk5IDQ2MCA1NzQgNDYwIDUzN0M0NjAgNTAxIDQzNyA0NzcgNDAxIDQ3N1oiLz4KICAgIDxwYXRoIGlkPSJyIiBkPSJNNTM2IDQ0NEg1NzFWNDcyQzU4MiA0NTIgNjA0IDQ0MCA2MzUgNDQzVjQ4MUM2MDkgNDc0IDU4OSA0ODIgNTc4IDUwMEM1NzMgNTA5IDU3MiA1MTggNTcyIDUzMlY2MzFINTM2WiIvPgogIDwvZz4KICA8ZyBpZD0icGVuY2lsLWVkZ2UiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2FhYjJjMCIgc3Ryb2tlLXdpZHRoPSIuNiIgb3BhY2l0eT0iLjMyIj4KICAgIDxwYXRoIGQ9Ik0xMjMuNCAzODFMMTY2LjggMzc5LjdMMTY4LjggNTIzLjNMMjQ3IDQ0NSBNMTIyLjkgMzgyTDEyMC45IDYzMC4yTDE2Ni44IDYzMiBNMjE1IDUyMEwyOTkgNjMzIE0zMDcuMyA1MzZDMzA2IDQ4NCAzNDQgNDQwLjcgNDAxIDQ0MC44QzQ2MCA0NDIuOCA0OTguNiA0ODQgNDk4IDUzN0M0OTggNTk1IDQ1OCA2MzUuMiA0MDEgNjMzLjFDMzQzIDYzNC44IDMwNC45IDU5NCAzMDcuMyA1MzYgTTM0NC44IDUzOEMzNDQgNTAxIDM2NiA0NzUuNiA0MDEgNDc1LjhDNDM4IDQ3NyA0NjEgNTAxIDQ2MS40IDUzNyBNNTM0LjYgNDQ0LjhMNTM2LjggNjMyIE01NzMgNDcyQzU4NyA0NTAgNjA3IDQ0MCA2MzUuNiA0NDEuNyIvPgogIDwvZz4KCiAgPCEtLSBCbHVlcHJpbnQgY29uc3RydWN0aW9uIGxpbmVzLCByZXRhaW5lZCB3aXRob3V0IGRpYWdvbmFsIGhhdGNoaW5nLiAtLT4KICA8ZyBpZD0iYmx1ZXByaW50LWd1aWRlcyIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNjA5Y2ZmIiBzdHJva2Utd2lkdGg9Ii44Ij4KICAgIDxwYXRoIG9wYWNpdHk9Ii4zMiIgZD0iTTY4MSAzOTJINzU5IE03MDEgMzc2VjY1MiBNNzQyIDM3OVY2NDYgTTY3MiA0MjdWNDk0IE03OTIgNDI2VjQ5NCBNNjU1IDQ0NEgxMDEwIE02NTUgNDc3SDEwMTYgTTY4NSA1OTdIMTAwOCBNODI5IDQzMFY2NDUgTTk5OSA0MzBWNjQ2IE04MTcgNTAySDEwMDcgTTc5MyA1MjBIMTAyMyBNNzkyIDU1MEgxMDIzIE04MTMgNTcySDEwMDggTTg2NiA0NzRWNjMxIE05NjYgNDc1VjYyOSBNOTE3IDQ0MlY2MzMgTTk2MSA1NjNMMTAwOCA1OTciLz4KICAgIDxwYXRoIG9wYWNpdHk9Ii40OCIgc3Ryb2tlLWRhc2hhcnJheT0iOCA0IiBkPSJNNzE2IDM2NlY2NTUgTTY3NiA2MzFIMTEzMCBNNjU0IDQ3N0gxMDE2IE03ODcgNTIwSDEwMjUgTTc4OCA1NTBIMTAyMyBNNzkzIDU5M1Y2NTMgTTgzMCA0MzBWNjQ5IE0xMDAwIDQzMFY2NDkiLz4KICAgIDxwYXRoIG9wYWNpdHk9Ii42OCIgc3Ryb2tlLWRhc2hhcnJheT0iNyAzIDIgMyIgZD0iTTEwMzIgNDE0VjY1OCBNMTExMyA0MjZWNjQ3IE0xMDIzIDQ0M0gxMTMxIE0xMDkyIDUzN0gxMTg2IE0xMDE5IDYzMkgxMTMyIi8+CiAgICA8cGF0aCBvcGFjaXR5PSIuMzQiIGQ9Ik0xMDMyIDQzMEwxMDQyIDQ0MyBNMTA5NSA0MzVMMTEwMSA0NDMgTTEwOTQgNjMxTDExMDUgNjE3IE0xMDMyIDYzNkwxMDQzIDYyMiIvPgogIDwvZz4KCiAgPGcgaWQ9ImJsdWVwcmludCIgZmlsbD0iIzA4NjVmZiIgZmlsbC1ydWxlPSJldmVub2RkIiBzdHJva2U9IiMwODY1ZmYiIHN0cm9rZS13aWR0aD0iMi4xIiBzdHJva2UtbGluZWpvaW49Im1pdGVyIj4KICAgIDxwYXRoIGlkPSJibHVlLXQiIGQ9Ik03MDIgMzkzSDc0M1Y0NDRINzkyVjQ3N0g3NDNWNTcxQzc0MyA1OTEgNzUzIDYwMCA3NzQgNjAwQzc4MSA2MDAgNzg3IDU5OSA3OTMgNTk2VjYzMEM3ODQgNjMzIDc3NCA2MzQgNzY0IDYzNEM3MjMgNjM0IDcwMiA2MTQgNzAyIDU3NVY0NzdINjcyVjQ0NEg3MDJaIi8+CiAgICA8cGF0aCBpZD0iZSIgZD0iTTEwMDAgNTUwSDg2NkM4NzAgNTgxIDg4OCA1OTkgOTE4IDU5OUM5NDAgNTk5IDk1NiA1OTAgOTY3IDU3Mkw5OTcgNTkxQzk3OSA2MTkgOTUzIDYzMyA5MTggNjMzQzg2NSA2MzMgODMwIDU5NiA4MzAgNTM5QzgzMCA0ODQgODY1IDQ0MSA5MTcgNDQxQzk2NyA0NDEgMTAwMCA0NzkgMTAwMCA1MzVaIE04NjYgNTIwSDk2N0M5NjQgNDkyIDk0NiA0NzQgOTE3IDQ3NEM4OTAgNDc0IDg3MCA0OTEgODY2IDUyMFoiLz4KICAgIDxwYXRoIGlkPSJ4LWJsdWUiIGQ9Ik0xMDQxIDQ0M0gxMDk0TDExNzAgNTM3TDEwOTQgNjMySDEwNDFMMTExNSA1MzdaIi8+CiAgPC9nPgoKICA8ZyBpZD0iZmluYWwiIGZpbGw9IiNmNGY1ZjciPgogICAgPHBhdGggaWQ9IngtZmluYWwiIGQ9Ik0xMjE5IDQ0MkgxMjY4TDExOTQgNTMyTDExNzAgNTAyWiBNMTE5NCA1NDRMMTI2OCA2MzJIMTIxOUwxMTcwIDU3M1oiLz4KICAgIDxwYXRoIGlkPSJmaW5hbC10IiBkPSJNMTMzMCAzODdIMTM2NVY0NDJIMTQxMlY0NzRIMTM2NVY1NzZDMTM2NSA1OTUgMTM3MyA2MDMgMTM4OSA2MDNDMTM5OCA2MDMgMTQwNiA2MDEgMTQxNCA1OThWNjMwQzE0MDYgNjMzIDEzOTcgNjM1IDEzODUgNjM1QzEzNDkgNjM1IDEzMzAgNjE1IDEzMzAgNTc4VjQ3NEgxMzAyVjQ0MkgxMzMwWiIvPgogIDwvZz4KPC9zdmc+Cg==" alt="kortext" style="height:20px"><span class="mono" style="color:#54545c">dark</span></div>
+      <div class="ds-logo-box" style="background:#fff"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMzQ0IiBoZWlnaHQ9IjMzNCIgdmlld0JveD0iODYgMzQwIDEzNDQgMzM0IiByb2xlPSJpbWciIGFyaWEtbGFiZWxsZWRieT0idGl0bGUgZGVzY3JpcHRpb24iPgogIDx0aXRsZSBpZD0idGl0bGUiPmtvcnRleHQg4oCUIGZpbGxlZCB2ZXJzaW9uPC90aXRsZT4KICA8ZGVzYyBpZD0iZGVzY3JpcHRpb24iPktvcnRleHQgZmlsbGVkIHZhcmlhbnQ6IGxpZ2h0IGdyYXkga29yLCBibHVlcHJpbnQgYmx1ZSB0ZSBhbmQgbGVmdCB4IGNvbXBvbmVudCwgZGFyayBmaW5hbCBjb21wb25lbnQuIE9yaWdpbmFsIHZlY3RvciBnZW9tZXRyeSBwcmVzZXJ2ZWQuPC9kZXNjPgogIAoKICA8IS0tIFBlbmNpbCBjb25zdHJ1Y3Rpb24gbWFya3MgdHJhY2VkIGZyb20gdGhlIHJlZmVyZW5jZS4gLS0+CiAgPGcgaWQ9InNrZXRjaC1ndWlkZXMiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzY1NjU2NSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIj4KICAgIDxwYXRoIG9wYWNpdHk9Ii4yNSIgc3Ryb2tlLXdpZHRoPSIuOCIgZD0iTTEwMiAzODBIMTg1IE0xMDIgNjMySDM0OCBNMTIxIDM1NlY2NTUgTTE2OSAzNTZWNjQzIE0yMjMgNDQ0SDMxMCBNMjQ4IDQzN0wxNjEgNTMyIE0yMTUgNTIwTDMxMiA2NDcgTTE4OSA1NDVMMjY1IDY1MCBNNDg1IDQ0NEg2NTUgTTUxNCA2MzJINTk0IE01MzUgNDI4VjY1MyBNNTcxIDQzMFY2NTAgTTYzNiA0MjVWNDk1Ii8+CiAgICA8cGF0aCBvcGFjaXR5PSIuMTMiIHN0cm9rZS13aWR0aD0iLjciIGQ9Ik0xMDQgMzc5TDE3NyAzODEgTTEyMiAzNThMMTIwIDY1MSBNMTY3IDM2NEwxNjkgNjQ1IE0xMDIgNjMzTDMyMiA2MzEgTTIyMyA0NDJMMzA2IDQ0NSBNNDg3IDQ0M0w2NTAgNDQ1IE01MzMgNDI3TDUzNyA2NDggTTU3MSA0MzVMNTY5IDY0NiBNNjM1IDQyN0w2MzcgNDkxIE01MTUgNjMzTDU5MiA2MzAiLz4KICAgIDxwYXRoIG9wYWNpdHk9Ii4xMiIgc3Ryb2tlLXdpZHRoPSIuNyIgc3Ryb2tlLWRhc2hhcnJheT0iNSAzIDEgMyIgZD0iTTI5NyA2MzJINTM0IE00ODYgNDQ0SDY2OCIvPgogIDwvZz4KCiAgPCEtLSBPcmlnaW5hbCByZWZlcmVuY2UgZ2VvbWV0cnkgd2l0aCBsaWdodCBncmF5IGZpbGwuIC0tPgogIDxnIGlkPSJrb3IiIGZpbGw9IiNlNWU3ZWIiIGZpbGwtcnVsZT0iZXZlbm9kZCIgc3Ryb2tlPSIjNTU1NTU1IiBzdHJva2Utd2lkdGg9IjIuMTUiIHN0cm9rZS1saW5lam9pbj0ibWl0ZXIiPgogICAgPHBhdGggaWQ9ImsiIGQ9Ik0xMjIgMzgwSDE2OFY1MjJMMjQ2IDQ0NEgyOTdMMjE2IDUyMUwyOTggNjMxSDI1MEwxOTEgNTQ4TDE2OCA1NzFWNjMxSDEyMloiLz4KICAgIDxwYXRoIGlkPSJvIiBkPSJNNDAxIDQ0MkMzNDUgNDQyIDMwNiA0ODIgMzA2IDUzN0MzMDYgNTk1IDM0NSA2MzQgNDAxIDYzNEM0NTkgNjM0IDQ5NyA1OTQgNDk3IDUzN0M0OTcgNDgyIDQ1OCA0NDIgNDAxIDQ0MlogTTQwMSA0NzdDMzY2IDQ3NyAzNDQgNTAxIDM0NCA1MzdDMzQ0IDU3NCAzNjcgNTk5IDQwMSA1OTlDNDM2IDU5OSA0NjAgNTc0IDQ2MCA1MzdDNDYwIDUwMSA0MzcgNDc3IDQwMSA0NzdaIi8+CiAgICA8cGF0aCBpZD0iciIgZD0iTTUzNiA0NDRINTcxVjQ3MkM1ODIgNDUyIDYwNCA0NDAgNjM1IDQ0M1Y0ODFDNjA5IDQ3NCA1ODkgNDgyIDU3OCA1MDBDNTczIDUwOSA1NzIgNTE4IDU3MiA1MzJWNjMxSDUzNloiLz4KICA8L2c+CiAgPGcgaWQ9InBlbmNpbC1lZGdlIiBmaWxsPSJub25lIiBzdHJva2U9IiM2ODY4NjgiIHN0cm9rZS13aWR0aD0iLjYiIG9wYWNpdHk9Ii4zMiI+CiAgICA8cGF0aCBkPSJNMTIzLjQgMzgxTDE2Ni44IDM3OS43TDE2OC44IDUyMy4zTDI0NyA0NDUgTTEyMi45IDM4MkwxMjAuOSA2MzAuMkwxNjYuOCA2MzIgTTIxNSA1MjBMMjk5IDYzMyBNMzA3LjMgNTM2QzMwNiA0ODQgMzQ0IDQ0MC43IDQwMSA0NDAuOEM0NjAgNDQyLjggNDk4LjYgNDg0IDQ5OCA1MzdDNDk4IDU5NSA0NTggNjM1LjIgNDAxIDYzMy4xQzM0MyA2MzQuOCAzMDQuOSA1OTQgMzA3LjMgNTM2IE0zNDQuOCA1MzhDMzQ0IDUwMSAzNjYgNDc1LjYgNDAxIDQ3NS44QzQzOCA0NzcgNDYxIDUwMSA0NjEuNCA1MzcgTTUzNC42IDQ0NC44TDUzNi44IDYzMiBNNTczIDQ3MkM1ODcgNDUwIDYwNyA0NDAgNjM1LjYgNDQxLjciLz4KICA8L2c+CgogIDwhLS0gQmx1ZXByaW50IGNvbnN0cnVjdGlvbiBsaW5lcywgcmV0YWluZWQgd2l0aG91dCBkaWFnb25hbCBoYXRjaGluZy4gLS0+CiAgPGcgaWQ9ImJsdWVwcmludC1ndWlkZXMiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzE3NmJmZiIgc3Ryb2tlLXdpZHRoPSIuOCI+CiAgICA8cGF0aCBvcGFjaXR5PSIuMzIiIGQ9Ik02ODEgMzkySDc1OSBNNzAxIDM3NlY2NTIgTTc0MiAzNzlWNjQ2IE02NzIgNDI3VjQ5NCBNNzkyIDQyNlY0OTQgTTY1NSA0NDRIMTAxMCBNNjU1IDQ3N0gxMDE2IE02ODUgNTk3SDEwMDggTTgyOSA0MzBWNjQ1IE05OTkgNDMwVjY0NiBNODE3IDUwMkgxMDA3IE03OTMgNTIwSDEwMjMgTTc5MiA1NTBIMTAyMyBNODEzIDU3MkgxMDA4IE04NjYgNDc0VjYzMSBNOTY2IDQ3NVY2MjkgTTkxNyA0NDJWNjMzIE05NjEgNTYzTDEwMDggNTk3Ii8+CiAgICA8cGF0aCBvcGFjaXR5PSIuNDgiIHN0cm9rZS1kYXNoYXJyYXk9IjggNCIgZD0iTTcxNiAzNjZWNjU1IE02NzYgNjMxSDExMzAgTTY1NCA0NzdIMTAxNiBNNzg3IDUyMEgxMDI1IE03ODggNTUwSDEwMjMgTTc5MyA1OTNWNjUzIE04MzAgNDMwVjY0OSBNMTAwMCA0MzBWNjQ5Ii8+CiAgICA8cGF0aCBvcGFjaXR5PSIuNjgiIHN0cm9rZS1kYXNoYXJyYXk9IjcgMyAyIDMiIGQ9Ik0xMDMyIDQxNFY2NTggTTExMTMgNDI2VjY0NyBNMTAyMyA0NDNIMTEzMSBNMTA5MiA1MzdIMTE4NiBNMTAxOSA2MzJIMTEzMiIvPgogICAgPHBhdGggb3BhY2l0eT0iLjM0IiBkPSJNMTAzMiA0MzBMMTA0MiA0NDMgTTEwOTUgNDM1TDExMDEgNDQzIE0xMDk0IDYzMUwxMTA1IDYxNyBNMTAzMiA2MzZMMTA0MyA2MjIiLz4KICA8L2c+CgogIDxnIGlkPSJibHVlcHJpbnQiIGZpbGw9IiMwODY1ZmYiIGZpbGwtcnVsZT0iZXZlbm9kZCIgc3Ryb2tlPSIjMDg2NWZmIiBzdHJva2Utd2lkdGg9IjIuMSIgc3Ryb2tlLWxpbmVqb2luPSJtaXRlciI+CiAgICA8cGF0aCBpZD0iYmx1ZS10IiBkPSJNNzAyIDM5M0g3NDNWNDQ0SDc5MlY0NzdINzQzVjU3MUM3NDMgNTkxIDc1MyA2MDAgNzc0IDYwMEM3ODEgNjAwIDc4NyA1OTkgNzkzIDU5NlY2MzBDNzg0IDYzMyA3NzQgNjM0IDc2NCA2MzRDNzIzIDYzNCA3MDIgNjE0IDcwMiA1NzVWNDc3SDY3MlY0NDRINzAyWiIvPgogICAgPHBhdGggaWQ9ImUiIGQ9Ik0xMDAwIDU1MEg4NjZDODcwIDU4MSA4ODggNTk5IDkxOCA1OTlDOTQwIDU5OSA5NTYgNTkwIDk2NyA1NzJMOTk3IDU5MUM5NzkgNjE5IDk1MyA2MzMgOTE4IDYzM0M4NjUgNjMzIDgzMCA1OTYgODMwIDUzOUM4MzAgNDg0IDg2NSA0NDEgOTE3IDQ0MUM5NjcgNDQxIDEwMDAgNDc5IDEwMDAgNTM1WiBNODY2IDUyMEg5NjdDOTY0IDQ5MiA5NDYgNDc0IDkxNyA0NzRDODkwIDQ3NCA4NzAgNDkxIDg2NiA1MjBaIi8+CiAgICA8cGF0aCBpZD0ieC1ibHVlIiBkPSJNMTA0MSA0NDNIMTA5NEwxMTcwIDUzN0wxMDk0IDYzMkgxMDQxTDExMTUgNTM3WiIvPgogIDwvZz4KCiAgPGcgaWQ9ImZpbmFsIiBmaWxsPSIjMjAyMTIzIj4KICAgIDxwYXRoIGlkPSJ4LWZpbmFsIiBkPSJNMTIxOSA0NDJIMTI2OEwxMTk0IDUzMkwxMTcwIDUwMlogTTExOTQgNTQ0TDEyNjggNjMySDEyMTlMMTE3MCA1NzNaIi8+CiAgICA8cGF0aCBpZD0iZmluYWwtdCIgZD0iTTEzMzAgMzg3SDEzNjVWNDQySDE0MTJWNDc0SDEzNjVWNTc2QzEzNjUgNTk1IDEzNzMgNjAzIDEzODkgNjAzQzEzOTggNjAzIDE0MDYgNjAxIDE0MTQgNTk4VjYzMEMxNDA2IDYzMyAxMzk3IDYzNSAxMzg1IDYzNUMxMzQ5IDYzNSAxMzMwIDYxNSAxMzMwIDU3OFY0NzRIMTMwMlY0NDJIMTMzMFoiLz4KICA8L2c+Cjwvc3ZnPgo=" alt="kortext" style="height:40px"><span class="mono">2×</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="ds-block">
+  <h2>Fonts</h2>
+  <p class="ds-desc">İki aile. <b>Barlow</b> insanın dilini yazar — 400 gövde, 500 kontrol ve etiket, 600 her başlık; daha ağırı yok. <b>Overpass Mono</b> makinenin sahip olduğu her şeyi — yol, id, komut, zaman; 400 ve 500. Test: kullanıcı ezberden yazamıyorsa, mono.</p>
+  <div class="ds-surface">
+    <div class="ds-grid2">
+      <div>
+        <div class="ds-label">Barlow — human</div>
+        <div class="ds-fontrow" style="font-weight:400">Regular 400 — Sulak is a water-tracking app.</div>
+        <div class="ds-fontrow" style="font-weight:500">Medium 500 — Approve · Cancel · Add note</div>
+        <div class="ds-fontrow" style="font-weight:600">Semibold 600 — Personal Data per Flow</div>
+        <div class="ds-fontrow" style="font-size:20px;font-weight:600;letter-spacing:-.01em">Title 20 — Product</div>
+        <div class="ds-fontrow mono" style="font-size:11px;color:var(--fg-muted)">font-feature-settings: "cv01","ss01","tnum"</div>
+      </div>
+      <div>
+        <div class="ds-label">Overpass Mono — machine</div>
+        <div class="ds-fontrow mono">ARCHITECTURE.md · .github/workflows/ci.yml</div>
+        <div class="ds-fontrow mono">product-manager · +prime · claude</div>
+        <div class="ds-fontrow mono">12.11.2026 14:28:45 · v3.1.4 · 3441</div>
+        <div class="ds-fontrow mono" style="font-weight:500">npx kortext --no-open</div>
+        <div class="ds-fontrow mono" style="font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--fg-secondary)">Eyebrow 10 · Questions · Related documents</div>
+      </div>
+    </div>
+    <p class="ds-note">Panel bu fontları kendisi yüklemiyor — makinede kurulu değilse sistem fontu görünür. Bu sayfa Google Fonts'tan yüklüyor.</p>
+  </div>
+</section>
+
+<section class="ds-block">
+  <h2>Iconography</h2>
+  <p class="ds-desc">Kütüphane yok; her ikon kendi bileşeninde çizili inline SVG, <code>currentColor</code> ile metnin rengini alır. Lucide çizgi diliyle: 24 ızgara, 2px çizgi, yuvarlak uç. Süs ikonu yok — her biri bir kontrolün üstünde durur.</p>
+  <div class="ds-surface">
+    <div class="ds-icons">
+      <div class="ds-icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a7 7 0 1 0 10 10"/></svg><span>theme · auto</span></div>
+      <div class="ds-icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg><span>theme · light</span></div>
+      <div class="ds-icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg><span>theme · dark</span></div>
+      <div class="ds-icon"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M8 1.8v5.4"/><path d="M4.6 3.9a5 5 0 106.8 0"/></svg><span>power · stop server</span></div>
+      <div class="ds-icon" style="color:var(--red)"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M8 1.8v5.4"/><path d="M4.6 3.9a5 5 0 106.8 0"/></svg><span>power · armed</span></div>
+      <div class="ds-icon"><svg viewBox="0 0 12 12" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round"><ellipse cx="6" cy="7" rx="2.6" ry="3.2"/><path d="M6 3.8V3M4.6 2.2 6 3.4l1.4-1.2"/><path d="M3.4 5.2 1.7 4.4M3.2 7.3H1.4M3.4 9.2l-1.6.9M8.6 5.2l1.7-.8M8.8 7.3h1.8M8.6 9.2l1.6.9"/></svg><span>bug · report an issue</span></div>
+      <div class="ds-icon"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg><span>close · ×</span></div>
+      <div class="ds-icon"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M5.5 1.5h7a1 1 0 011 1v7h-1.5V3H5.5V1.5zM3 4.5h6.5a1 1 0 011 1v7a1 1 0 01-1 1H3a1 1 0 01-1-1v-7a1 1 0 011-1zm.5 1.5v6h5.5V6H3.5z"/></svg><span>copy</span></div>
+      <div class="ds-icon" style="color:var(--green)"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M13.5 4.5l-7 7-4-4 1.1-1.1L6.5 9.3l5.9-5.9 1.1 1.1z"/></svg><span>copied ✓</span></div>
+      <div class="ds-icon"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg><span>chevron · select</span></div>
+      <div class="ds-icon"><span style="font-size:10px;color:var(--fg-faint)">▸</span><span>disclosure · group</span></div>
+      <div class="ds-icon"><span class="kx-dot kx-dot-up" style="display:inline-block"></span><span>dot · server up</span></div>
+      <div class="ds-icon"><span class="kx-dot kx-dot-down" style="display:inline-block"></span><span>dot · server down</span></div>
+      <div class="ds-icon"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg><span>github mark</span></div>
+      <div class="ds-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg><span>external link</span></div>
+      <div class="ds-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="m19 8 3 8a5 5 0 0 1-6 0zV7"/><path d="M3 7h1a17 17 0 0 0 8-2 17 17 0 0 0 8 2h1"/><path d="m5 8 3 8a5 5 0 0 1-6 0zV7"/><path d="M7 21h10"/></svg><span>licence · MIT</span></div>
+      <div class="ds-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5"/></svg><span>heart · milowda</span></div>
+      <div class="ds-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 14h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 16"/><path d="m7 20 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 15 6 6"/><path d="M19.5 8.5c.7-.7 1.5-1.6 1.5-2.7A2.73 2.73 0 0 0 16 4a2.78 2.78 0 0 0-5 1.8c0 1.2.8 2 1.5 2.8L16 12Z"/></svg><span>hand-heart · support</span></div>
+      <div class="ds-icon"><input type="checkbox" class="kx-req-check" checked><span>check · on</span></div>
+      <div class="ds-icon"><input type="checkbox" class="kx-req-check"><span>check · off</span></div>
+    </div>
+    <p class="ds-note">Callout ikonları (NOTE/TIP/…) artık çizilmiyor — callout'un kendi kelimesi var.</p>
+  </div>
+</section>
+
+<!-- 2 -->
+<section class="ds-block">
+  <h2>2 · Colour</h2>
+  <p class="ds-desc"><b>Surfaces</b> sırayla yükselir — <code>--bg</code> zemin, <code>--bg-active</code> tepe. Yüksek = açık (dark'ta da: daha az siyah).</p>
+  <div class="ds-surface">
+    <div class="ds-label">Surfaces</div>
+    <div class="ds-swatches">
+      <div class="ds-sw" style="background:var(--bg)"><span class="mono">--bg</span><i>the page</i></div>
+      <div class="ds-sw" style="background:var(--bg-subtle)"><span class="mono">--bg-subtle</span><i>card, panel</i></div>
+      <div class="ds-sw" style="background:var(--bg-muted)"><span class="mono">--bg-muted</span><i>sunken well</i></div>
+      <div class="ds-sw" style="background:var(--bg-inset)"><span class="mono">--bg-inset</span><i>code box</i></div>
+      <div class="ds-sw" style="background:var(--bg-hover)"><span class="mono">--bg-hover</span><i>under cursor</i></div>
+      <div class="ds-sw" style="background:var(--bg-active)"><span class="mono">--bg-active</span><i>pressed</i></div>
+      <div class="ds-sw" style="background:var(--border)"><span class="mono">--border</span><i>default line</i></div>
+      <div class="ds-sw" style="background:var(--border-strong)"><span class="mono">--border-strong</span><i>control edge</i></div>
+      <div class="ds-sw" style="background:var(--border-hover)"><span class="mono">--border-hover</span><i>under cursor</i></div>
+    </div>
+    <div class="ds-label" style="margin-top:22px">Text — dört basamak, önem düşer</div>
+    <div class="ds-textsteps">
+      <div style="color:var(--fg)">Read this <span class="mono">--fg</span></div>
+      <div style="color:var(--fg-secondary)">Secondary <span class="mono">--fg-secondary</span></div>
+      <div style="color:var(--fg-muted)">Muted <span class="mono">--fg-muted</span></div>
+      <div style="color:var(--fg-faint)">Just needs to exist <span class="mono">--fg-faint</span></div>
+    </div>
+    <div class="ds-label" style="margin-top:22px">Accent — tek ve nötr; birincil eylem siyah</div>
+    <div class="ds-cluster">
+      <div class="ds-sw ds-sw-sm" style="background:var(--accent);color:var(--accent-fg)"><span class="mono">--accent</span></div>
+      <div class="ds-sw ds-sw-sm" style="background:var(--accent-tint);border-color:var(--accent-tint-border)"><span class="mono">--accent-tint</span></div>
+      <div class="ds-sw ds-sw-sm" style="box-shadow:0 0 0 3px var(--accent-ring)"><span class="mono">--accent-ring</span></div>
+    </div>
+    <div class="ds-label" style="margin-top:22px">State colours — arayüzdeki tek nötr olmayan renkler; her biri üçlü (text · bg · border), küme kapalı</div>
+    <table class="ds-states">
+      <thead><tr><th>token</th><th>text</th><th>bg</th><th>border</th><th>reads as</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">--green</td><td><span class="ds-dot" style="background:var(--green)"></span></td><td><span class="ds-dot" style="background:var(--green-bg)"></span></td><td><span class="ds-dot" style="background:var(--green-border)"></span></td><td>approved, passed</td></tr>
+        <tr><td class="mono">--amber</td><td><span class="ds-dot" style="background:var(--amber)"></span></td><td><span class="ds-dot" style="background:var(--amber-bg)"></span></td><td><span class="ds-dot" style="background:var(--amber-border)"></span></td><td>your turn, paused</td></tr>
+        <tr><td class="mono">--red</td><td><span class="ds-dot" style="background:var(--red)"></span></td><td><span class="ds-dot" style="background:var(--red-bg)"></span></td><td><span class="ds-dot" style="background:var(--red-border)"></span></td><td>failed, destructive</td></tr>
+        <tr><td class="mono">--blue</td><td><span class="ds-dot" style="background:var(--blue)"></span></td><td><span class="ds-dot" style="background:var(--blue-bg)"></span></td><td><span class="ds-dot ds-dot-none">—</span></td><td>writing, info</td></tr>
+        <tr><td class="mono">--violet</td><td><span class="ds-dot" style="background:var(--violet)"></span></td><td><span class="ds-dot" style="background:var(--violet-bg)"></span></td><td><span class="ds-dot" style="background:var(--violet-border)"></span></td><td>in review</td></tr>
+        <tr><td class="mono">--pink</td><td><span class="ds-dot" style="background:var(--pink)"></span></td><td><span class="ds-dot" style="background:var(--pink-bg)"></span></td><td><span class="ds-dot" style="background:var(--pink-border)"></span></td><td>a demand, a moving input</td></tr>
+      </tbody>
+    </table>
+    <div class="ds-label" style="margin-top:22px">One palette, three contexts</div>
+    <table class="ds-states ds-ctx">
+      <thead><tr><th>colour</th><th>in a row (state)</th><th>in a body (alert)</th><th>in a block (syntax)</th></tr></thead>
+      <tbody>
+        <tr><td style="color:var(--green)">green</td><td><span class="kx-status kx-status-approved">approved</span></td><td><span class="ds-alert-mini kx-alert-tip">Tip</span></td><td><code class="hl-str">"string"</code></td></tr>
+        <tr><td style="color:var(--amber)">amber</td><td><span class="kx-status kx-status-paused">paused</span></td><td><span class="ds-alert-mini kx-alert-warning">Warning</span></td><td><code class="hl-num">3441</code></td></tr>
+        <tr><td style="color:var(--violet)">violet</td><td><span class="kx-badge kx-badge-approve">approve</span></td><td><span class="ds-alert-mini kx-alert-important">Important</span></td><td><code class="hl-kw">const</code></td></tr>
+        <tr><td style="color:var(--blue)">blue</td><td><span class="kx-status kx-status-writing">writing</span></td><td><span class="ds-alert-mini kx-alert-note">Note</span></td><td><code class="hl-key">"key"</code></td></tr>
+        <tr><td style="color:var(--red)">red</td><td><span class="kx-status kx-status-failed">failed</span></td><td><span class="ds-alert-mini kx-alert-caution">Caution</span></td><td class="ds-none">—</td></tr>
+        <tr><td style="color:var(--pink)">pink</td><td><span class="kx-badge kx-badge-review">review</span></td><td class="ds-none">—</td><td class="ds-none">—</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 3 -->
+<section class="ds-block">
+  <h2>3 · Typography</h2>
+  <p class="ds-desc">Yedi rol, işe göre adlandırılmış: 20 · 18 · 16 · 13 · 12 · 11 · 10. Ağırlık üç: 400 gövde, 500 kontrol, 600 başlık.</p>
+  <div class="ds-surface">
+    <div class="ds-type">
+      <div class="ds-type-row"><span class="mono ds-type-meta">--fs-title · 20 · 600</span><span style="font-size:var(--fs-title);font-weight:600;letter-spacing:-.01em">The single title of a page or document</span><span class="ds-type-where">h1</span></div>
+      <div class="ds-type-row"><span class="mono ds-type-meta">--fs-section · 18 · 600</span><span style="font-size:var(--fs-section);font-weight:600">A section inside a document</span><span class="ds-type-where">h2</span></div>
+      <div class="ds-type-row"><span class="mono ds-type-meta">--fs-heading · 16 · 600</span><span style="font-size:var(--fs-heading);font-weight:600">Card name, drawer title, a sub-section</span><span class="ds-type-where">h3</span></div>
+      <div class="ds-type-row"><span class="mono ds-type-meta">--fs-body · 13 · 400</span><span style="font-size:var(--fs-body)">Prose, inputs, buttons — the base. Every sentence a human reads sits here.</span><span class="ds-type-where">body</span></div>
+      <div class="ds-type-row"><span class="mono ds-type-meta">--fs-ui · 12 · 500</span><span style="font-size:var(--fs-ui);font-weight:500">Controls, pills, panel chrome</span><span class="ds-type-where">ui</span></div>
+      <div class="ds-type-row"><span class="mono ds-type-meta">--fs-label · 11 · 500</span><span style="font-size:var(--fs-label);font-weight:500">Meta, id, counter, footer</span><span class="ds-type-where">label</span></div>
+      <div class="ds-type-row"><span class="mono ds-type-meta">--fs-micro · 10 · 600</span><span class="mono" style="font-size:var(--fs-micro);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--fg-secondary)">Mono eyebrow — group label, h4, table head</span><span class="ds-type-where">micro</span></div>
+    </div>
+    <div class="ds-label" style="margin-top:22px">Mono, yanındaki düzyazıyla aynı boyda — <code>.mono</code> yalnız aileyi değiştirir</div>
+    <p class="ds-sample">The architect wrote <span class="mono">ARCHITECTURE.md</span> at <span class="mono">12.11.2026 14:28:45</span>; run <span class="mono">npx kortext</span> to open the panel on port <span class="mono">3441</span>.</p>
+  </div>
+</section>
+
+<!-- 4 -->
+<section class="ds-block">
+  <h2>4 · Spacing</h2>
+  <p class="ds-desc">Altı adım, hepsi 4'ün katı. Arada bir şey yok — 13px olmayınca hizasız bir şey de olmuyor.</p>
+  <div class="ds-surface">
+    <div class="ds-space">
+      <div><i style="width:var(--sp-1)"></i><span class="mono">--sp-1</span> 4 · icon to text</div>
+      <div><i style="width:var(--sp-2)"></i><span class="mono">--sp-2</span> 8 · inside a control</div>
+      <div><i style="width:var(--sp-3)"></i><span class="mono">--sp-3</span> 12 · card padding</div>
+      <div><i style="width:var(--sp-4)"></i><span class="mono">--sp-4</span> 16 · within a section</div>
+      <div><i style="width:var(--sp-5)"></i><span class="mono">--sp-5</span> 24 · between sections</div>
+      <div><i style="width:var(--sp-6)"></i><span class="mono">--sp-6</span> 32 · page edge</div>
+    </div>
+  </div>
+</section>
+
+<!-- 5 -->
+<section class="ds-block">
+  <h2>5 · Radius, shadow, motion</h2>
+  <div class="ds-surface">
+    <div class="ds-cluster">
+      <div class="ds-rbox" style="border-radius:var(--r-sm)"><span class="mono">--r-sm</span> 4<i>control</i></div>
+      <div class="ds-rbox" style="border-radius:var(--r-md)"><span class="mono">--r-md</span> 6<i>card</i></div>
+      <div class="ds-rbox" style="border-radius:var(--r-lg)"><span class="mono">--r-lg</span> 9<i>panel</i></div>
+      <div class="ds-rbox" style="border-radius:var(--r-pill);width:auto;padding:0 18px"><span class="mono">--r-pill</span> 999<i>badge</i></div>
+    </div>
+    <div class="ds-label" style="margin-top:22px">İki yükseklik, arası yok</div>
+    <div class="ds-cluster">
+      <div class="ds-rbox" style="box-shadow:var(--shadow-xs);border-radius:var(--r-sm)"><span class="mono">--shadow-xs</span><i>slightly off the page</i></div>
+      <div class="ds-rbox" style="box-shadow:var(--shadow-lg);border-radius:var(--r-lg)"><span class="mono">--shadow-lg</span><i>above it</i></div>
+    </div>
+    <div class="ds-label" style="margin-top:22px">Motion — <code>--speed</code> 130ms · <code>--ease</code> cubic-bezier(0.2,0,0,1)</div>
+    <div class="ds-cluster" style="align-items:center;gap:18px">
+      <span class="ds-motion"><span class="live"></span> 1.8s status ping</span>
+      <span class="ds-motion"><span class="kx-status kx-status-writing">writing</span> 1.4s pulse</span>
+      <span class="ds-motion"><span class="ring"></span> 0.8s spinner</span>
+    </div>
+  </div>
+</section>
+
+<!-- 6 -->
+<section class="ds-block">
+  <h2>6 · Buttons</h2>
+  <p class="ds-desc">Tek yükseklik — tek satırlık input'un yüksekliği (<code>--control-h</code>, 30px), <code>--r-md</code> köşe, <code>--fs-body</code> yazı. İki aile: <b>solid</b> kutusunu hep gösterir; <b>link</b> yalnız hover'da, o zaman da solid ikizine dönüşür. Ekran başına bir primary.</p>
+  <div class="ds-surface">
+    <div class="ds-label">Solid</div>
+    <div class="ds-cluster">
+      <button class="btn btn-primary">Start</button>
+      <button class="btn btn-secondary">Cancel</button>
+      <button class="btn btn-success">Approve</button>
+      <button class="btn btn-danger">Delete project</button>
+      <button class="btn btn-primary" disabled>Start</button>
+    </div>
+    <div class="ds-label" style="margin-top:18px">Link — hover'da solid ikizi</div>
+    <div class="ds-cluster">
+      <button class="btn btn-link-primary">Close</button>
+      <button class="btn btn-link-primary">Edit</button>
+      <button class="btn btn-link-primary">Ask</button>
+      <button class="btn btn-link-primary">Add note</button>
+      <button class="btn btn-link-success">Archive</button>
+      <button class="btn btn-link-danger">Remove from list</button>
+    </div>
+    <div class="ds-label" style="margin-top:18px">Chip'in içindeki × — <code>.btn-x</code>, aileyi taşır yüksekliği değil</div>
+    <div class="kx-notes" style="margin:0">
+      <div class="kx-note"><span class="kx-note-body"><span class="kx-note-exc mono">Q1</span> Hesap yaşa göre değişiyor mu?</span><button class="btn-x" aria-label="Remove">×</button></div>
+    </div>
+    <div class="ds-label" style="margin-top:18px">Kontrol satırı — input, button, select, segment aynı hizada</div>
+    <div class="ds-row">
+      <input class="input" placeholder="Project name" style="max-width:220px">
+      <button class="btn btn-primary">Create</button>
+      <select class="select"><option>claude</option><option>codex</option><option>gemini</option></select>
+      <span class="seg"><button class="on">Write</button><button>Upload</button></span>
+      <button class="btn btn-link-primary">Example ↓</button>
+    </div>
+    <p class="ds-note">Action Needed listesinde sıra: kabul eden tik, sonra <i>Say why</i>, sonra satırın altındaki thread (Ask · Add note). Hepsini gönderen düğme listenin altında, grubun değil.</p>
+  </div>
+</section>
+
+<!-- 7 -->
+<section class="ds-block">
+  <h2>7 · Inputs</h2>
+  <div class="ds-surface">
+    <div class="ds-grid3">
+      <div>
+        <div class="ds-label">.input</div>
+        <input class="input" placeholder="Placeholder">
+        <input class="input" value="Filled" style="margin-top:8px">
+        <input class="input" value="Disabled" disabled style="margin-top:8px">
+      </div>
+      <div>
+        <div class="ds-label">.select — ok inline SVG, tema rengi</div>
+        <select class="select"><option>Auto</option><option>Light</option><option>Dark</option></select>
+        <select class="select" disabled style="margin-top:8px"><option>Disabled</option></select>
+      </div>
+      <div>
+        <div class="ds-label">.seg — "hangisi açık", "hangisine basıldı" değil</div>
+        <span class="seg"><button class="on">Write</button><button>Upload</button></span>
+        <div style="margin-top:8px"><span class="seg"><button>Auto</button><button class="on">Light</button><button>Dark</button></span></div>
+        <div class="ds-label" style="margin-top:18px">Checkbox — çizilmiş, accent dolgu</div>
+        <div class="ds-cluster" style="gap:14px"><input type="checkbox" class="kx-req-check" checked><input type="checkbox" class="kx-req-check"><span class="ds-none">liste</span><input type="checkbox" class="kx-task-box" checked><input type="checkbox" class="kx-task-box"><span class="ds-none">gövde, salt okunur</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 8 -->
+<section class="ds-block">
+  <h2>8 · State vocabulary</h2>
+  <p class="ds-desc">Sistemin kalbi. Bir belge <b>tam olarak bir</b> durumda — nerede olduğu. Rozetler üstüne biner — ne borçlu olduğu. İki soru, iki gösterim.</p>
+  <div class="ds-surface">
+    <div class="ds-label">State — <code>.kx-status</code>: 20px hap, nokta + kelime, durumun tonunda kenarlık</div>
+    <table class="ds-states">
+      <tbody>
+        <tr><td><span class="kx-status kx-status-waiting">waiting</span></td><td>queued — or written and waiting for you, which the <code>approve</code> badge says</td><td class="ds-none">neutral</td></tr>
+        <tr><td><span class="kx-status kx-status-writing">writing</span></td><td>the agent is writing it now</td><td class="ds-none">blue, the dot pulses</td></tr>
+        <tr><td><span class="kx-status kx-status-reading">reading</span></td><td>a recheck is running against it now — the agent reads, it does not write</td><td class="ds-none">blue, the dot pulses</td></tr>
+        <tr><td><span class="kx-status kx-status-paused">paused</span></td><td>writing was stopped</td><td class="ds-none">amber</td></tr>
+        <tr><td><span class="kx-status kx-status-approved">approved</span></td><td>you approved it</td><td class="ds-none">green</td></tr>
+        <tr><td><span class="kx-status kx-status-failed">failed</span></td><td>the last attempt fell over — asks for a Retry</td><td class="ds-none">red</td></tr>
+        <tr><td><span class="kx-status kx-status-not-applicable">n/a</span></td><td>considered, deliberately skipped</td><td class="ds-none">no ground, faint outline</td></tr>
+      </tbody>
+    </table>
+    <div class="ds-label" style="margin-top:22px">Badge — <code>.kx-badge</code>: yuvarlak hap, noktasız — ne borçlu, hangi tür bekleyiş</div>
+    <table class="ds-states">
+      <tbody>
+        <tr><td><span class="kx-badge kx-badge-review">review</span></td><td>Action Needed items stand on this document — questions, incoming or outgoing requests; the tooltip lists them</td><td class="ds-none">pink · Action needed</td></tr>
+        <tr><td><span class="kx-badge kx-badge-approve">approve</span></td><td>nothing open — approve it</td><td class="ds-none">violet · Action needed</td></tr>
+        <tr><td><span class="kx-badge kx-badge-recheck">recheck</span></td><td>an input moved; read again when it settles — the tooltip names the input</td><td class="ds-none">amber · To do while queued, Doing while <code>reading</code></td></tr>
+        <tr><td><span class="kx-badge kx-badge-revision">revision</span></td><td>the run is a rewrite of what already stands, not a first draft</td><td class="ds-none">muted · Doing</td></tr>
+      </tbody>
+    </table>
+    <p class="ds-note">Rozet yalnız durumun söylemediğini söylerken çizilir. <code>queue</code> ve <code>draft</code> veride var, ekranda yok: To do'da <code>waiting</code> zaten sırada demek, <code>writing</code> zaten ilk taslak — yalnız yeniden yazım bir kelime ister, o da <code>revision</code>.</p>
+    <p class="ds-note"><b>A badge beats the state.</b> <code>failed</code> durumu ya da <code>review</code> rozeti taşıyan her şey <b>Action needed</b>'a gider. Hareket eden girdi haber, iş değil — rozet olmaz; <code>recheck</code> tooltip'te söyler, drawer'daki band adını verir.</p>
+  </div>
+</section>
+
+<!-- 9 -->
+<section class="ds-block">
+  <h2>9 · Rows, cards, bands</h2>
+  <p class="ds-desc">Bir belge satırı soldan sağa: <b>name</b>, <b>author</b>, <b>what it owes</b>, <b>where it is</b>. Durum en sonda — en son ona bakarsın.</p>
+  <div class="ds-surface">
+    <div class="ds-label">Document list</div>
+    <div class="kx-docs">
+      <details class="kx-doc-details" open><summary class="kx-doc-group">Action needed <span class="kx-doc-count">2</span></summary>
+        <button class="kx-doc-row"><span class="kx-doc-name">PRODUCT</span><span class="kx-doc-author mono">product-owner</span><span class="kx-doc-spacer"></span><span class="kx-badge kx-badge-review">review</span><span class="kx-status kx-status-waiting">waiting</span></button>
+        <button class="kx-doc-row failed"><span class="kx-doc-name">API</span><span class="kx-doc-author mono">architect</span><span class="kx-doc-why mono" title="codex CLI failed (exit 1): You've hit your usage limit. Try again at 12:49.">codex CLI failed (exit 1): You've hit your usage limit. Try again at 12:49.</span><span class="kx-doc-spacer"></span><span class="btn btn-secondary">Retry</span><span class="kx-status kx-status-failed">failed</span></button>
+      </details>
+      <details class="kx-doc-details" open><summary class="kx-doc-group">Doing <span class="kx-doc-count">2</span></summary>
+        <button class="kx-doc-row"><span class="kx-doc-name">SECURITY</span><span class="kx-doc-author mono">security-lead</span><span class="kx-doc-spacer"></span><span class="kx-status kx-status-writing">writing</span></button>
+        <button class="kx-doc-row"><span class="kx-doc-name">STACK</span><span class="kx-doc-author mono">cto</span><span class="kx-doc-spacer"></span><span class="kx-badge kx-badge-recheck" title="Being read again now">recheck</span><span class="kx-status kx-status-reading">reading</span></button>
+      </details>
+      <details class="kx-doc-details" open><summary class="kx-doc-group">To do <span class="kx-doc-count">3</span></summary>
+        <button class="kx-doc-row"><span class="kx-doc-name">DATABASE</span><span class="kx-doc-author mono">architect</span><span class="kx-doc-spacer"></span><span class="kx-badge kx-badge-recheck" title="Waiting on STACK.md to settle, then read again">recheck</span><span class="kx-status kx-status-waiting">waiting</span></button>
+        <button class="kx-doc-row"><span class="kx-doc-name">TEST</span><span class="kx-doc-author mono">qa-engineer</span><span class="kx-doc-spacer"></span><span class="kx-status kx-status-waiting">waiting</span></button>
+        <button class="kx-doc-row"><span class="kx-doc-name">LEGAL</span><span class="kx-doc-author mono">counsel</span><span class="kx-doc-spacer"></span><span class="kx-status kx-status-not-applicable">n/a</span></button>
+      </details>
+    </div>
+
+    <div class="ds-label" style="margin-top:22px">Command card — <code>.kx-cmd-card</code>, tıklayınca kopyalar; ipucu kartın içinde</div>
+    <button class="kx-cmd-card"><span class="kx-cmd-head"><span class="kx-cmd-title">Start the panel</span><span class="kx-cmd-copy">click to copy</span></span><code class="kx-cmd mono">npx kortext</code><span class="kx-cmd-hint">Opens on port 3441.</span></button>
+
+    <div class="ds-label" style="margin-top:22px">Bands — belgenin üstünde durur, rengi sıranın kimde olduğunu söyler</div>
+    <div class="ds-bands">
+      <div class="kx-gate"><h3>Reading the codebase</h3><p>The system is reading. 3 of 14 documents have their inputs; the rest wait on the scan.</p></div>
+
+      <div class="kx-doc-changebar">
+        <div class="kx-changebar-title">Action Needed</div>
+        <div class="kx-changebar-head">This document waits on you. Pick a row; what you decide collects below and goes with one Apply.</div>
+        <div class="kx-changebar-group">Questions</div>
+        <ul class="kx-changebar-list">
+          <li><input type="checkbox" class="kx-req-check" checked readonly><span><span class="kx-qno mono">#1</span>Hesap yaşa göre değişiyor mu?<span class="kx-req-state">answered</span></span></li>
+          <li><input type="checkbox" class="kx-req-check" readonly><span><span class="kx-qno mono">#2</span>Ücretsiz katman kaç kullanıcı taşıyacak?</span></li>
+        </ul>
+        <div class="kx-changebar-group">Incoming Requests</div>
+        <ul class="kx-changebar-list">
+          <li><input type="checkbox" class="kx-req-check" readonly><span><span class="mono">SECURITY.md</span> — Oturum süresini 24 saate indir.</span></li>
+        </ul>
+        <div class="kx-changebar-group">Outgoing Requests</div>
+        <ul class="kx-changebar-list">
+          <li><input type="checkbox" class="kx-req-check" readonly><span><span class="mono">STACK.md</span> — Postgres yerine SQLite ile başla.</span></li>
+        </ul>
+      </div>
+
+      <div class="kx-doc-readbar"><span class="kx-readbar-head">Related documents</span><span>Read by <span class="mono">STACK.md</span>, <span class="mono">ARCHITECTURE.md</span>, <span class="mono kx-reader-unwritten">API.md</span></span></div>
+
+      <div class="kx-doc-dependbar">Waits on <span class="mono">STACK.md</span> — it is being rewritten; this document is re-read when that settles.</div>
+
+      <div class="kx-doc-askbar" style="margin:0">2 open questions — answer them before approving.</div>
+    </div>
+    <p class="ds-note">Amber her yerde "sıra sende": paused, soru bandı, Action Needed bandı. Pembe satırdaki <code>review</code> rozetinde kalır — bekleyen bir şey var der; amber band onun cevaplandığı yer. Her bandın başlığı § 10'daki mono etiket.</p>
+  </div>
+</section>
+
+<!-- 10 -->
+<section class="ds-block">
+  <h2>10 · Document view</h2>
+  <p class="ds-desc">Panelin çizdiği markdown, aynı yedi boyda: başlıklar 20 / 18 / 16, çizgisiz; <code>####</code> panelin mono grup etiketi. Aşağıdaki gövde <code>.kx-doc</code> içinde, satırlar <code>.kx-block</code>.</p>
+  <div class="ds-surface ds-docsurface">
+    <div class="kx-doc">
+      <div class="kx-block kx-h1">Product</div>
+      <div class="kx-block">Sulak is a water-tracking app for households that share a meter. This paragraph is body text at <code>--fs-body</code>; inline code is a token inside the sentence.</div>
+      <div class="kx-blank"></div>
+      <div class="kx-block kx-h2">Goals</div>
+      <div class="kx-block kx-bullet">A hanging dash, faint</div>
+      <div class="kx-block kx-bullet" style="margin-left:18px">a nested item steps in by one dash, same dash</div>
+      <div class="kx-block kx-bullet">A wrapped line rejoins its own item instead of falling to the left margin, however long the sentence gets and however narrow the drawer is.</div>
+      <div class="kx-block kx-ordered"><span class="kx-ol-n mono">1.</span><span>The number is a label beside the text</span></div>
+      <div class="kx-block kx-ordered"><span class="kx-ol-n mono">2.</span><span>in the meta size and family</span></div>
+      <div class="kx-block kx-bullet kx-task"><input type="checkbox" class="kx-task-box" readonly tabindex="-1"><span class="kx-task-text">a task box, drawn read-only</span></div>
+      <div class="kx-block kx-bullet kx-task"><input type="checkbox" class="kx-task-box" checked readonly tabindex="-1"><span class="kx-task-text">the mark is placed by whoever wrote the document</span></div>
+      <div class="kx-blank"></div>
+      <div class="kx-block kx-h3">A third-level heading</div>
+      <div class="kx-block kx-h4">A fourth level is a label</div>
+      <div class="kx-block kx-quote">A blockquote has no ground: a 2px grey rail on the left, the same mechanism as the selection bar, so a blue selection replaces it.</div>
+      <div class="kx-block selected">A selected block — blue bar, hover ground.</div>
+      <div class="kx-block noted">A block with a note on it — the whole line goes faint.</div>
+      <div class="kx-blank"></div>
+      <div class="kx-block kx-alert kx-alert-note"><div class="kx-alert-head">Note</div><div class="kx-alert-body">Blue · a rail and a word, no ground, no icon.</div></div>
+      <div class="kx-block kx-alert kx-alert-tip"><div class="kx-alert-head">Tip</div><div class="kx-alert-body">Green · a better way.</div></div>
+      <div class="kx-block kx-alert kx-alert-important"><div class="kx-alert-head">Important</div><div class="kx-alert-body">Violet · needed to reach the goal.</div></div>
+      <div class="kx-block kx-alert kx-alert-warning"><div class="kx-alert-head">Warning</div><div class="kx-alert-body">Amber · needs attention to avoid a problem.</div></div>
+      <div class="kx-block kx-alert kx-alert-caution"><div class="kx-alert-head">Caution</div><div class="kx-alert-body">Red · consequences of an action.</div></div>
+      <div class="kx-blank"></div>
+      <div class="kx-block kx-codewrap"><pre><code><span class="hl-com">// six token kinds, our own painter</span>
+<span class="hl-kw">const</span> port = <span class="hl-num">3441</span>;
+<span class="hl-kw">export</span> <span class="hl-kw">const</span> name = <span class="hl-str">"kortext"</span>;
+{ <span class="hl-key">"status"</span>: <span class="hl-str">"approved"</span> }
+npx kortext <span class="hl-flag">--no-open</span></code></pre><button class="kx-copy"><span class="kx-copy-label">Copy</span></button></div>
+      <div class="kx-blank"></div>
+      <div class="kx-block kx-table"><table><thead><tr><th>Column</th><th>Type</th><th>Note</th></tr></thead><tbody><tr><td>id</td><td class="mono">integer</td><td>primary key</td></tr><tr><td>reading</td><td class="mono">real</td><td>m³, tabular numbers</td></tr></tbody></table></div>
+      <div class="kx-blank"></div>
+      <div class="kx-block kx-h2 open-q">Questions for Prime</div>
+      <div class="kx-block kx-bullet kx-numbered open-q"><span class="kx-qno mono">#1</span>Hesap yaşa göre değişiyor mu? — an open question, numbered, no ground</div>
+      <div class="kx-block kx-bullet kx-numbered open-q noted"><span class="kx-qno mono">#2</span>Ücretsiz katman kaç kullanıcı? — once noted, the line goes faint</div>
+      <div class="kx-blank"></div>
+      <div class="kx-block kx-h2">Decisions</div>
+      <div class="kx-block kx-decision-request"><span class="mono">SECURITY.md</span> — Oturum süresini 24 saate indir.<div class="kx-decision-why"><span class="kx-decision-why-label">Reason:</span> Alışkanlık verisi haftalık; kısa oturum kullanıcıyı kaybettirir.</div></div>
+      <div class="kx-blank"></div>
+      <div class="kx-block kx-h2">Change Requests</div>
+      <div class="kx-block kx-bullet kx-task"><span class="kx-outcome kx-outcome-waiting mono">waiting</span><span class="kx-task-text">legacy shape — <span class="mono">STACK.md</span>: chips survive only for lines written the old way</span></div>
+      <div class="kx-block kx-bullet kx-task"><span class="kx-outcome kx-outcome-accepted mono">accepted</span><span class="kx-task-text">legacy shape</span></div>
+      <div class="kx-block kx-bullet kx-task"><span class="kx-outcome kx-outcome-denied mono">denied</span><span class="kx-task-text">legacy shape</span></div>
+      <div class="kx-block kx-bullet kx-task"><span class="kx-outcome kx-outcome-outgoing mono">outgoing</span><span class="kx-task-text">legacy shape</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 11 -->
+<section class="ds-block">
+  <h2>11 · Writing</h2>
+  <div class="ds-surface ds-principles">
+    <div><b>Headings, code and names are always English.</b> Başlıklar yapıdır; başka belgeler onları adıyla anar.</div>
+    <div><b>Prose follows the chosen document language.</b> Seçim yoksa brief'in dili.</div>
+    <div><b>Product copy is in the interface language.</b> Belgenin dilinden farklı olabilir.</div>
+    <div><b>A name is never translated.</b> <code>PRODUCT.md</code> her dilde <code>PRODUCT.md</code>.</div>
+  </div>
+</section>
+
+<!-- 13 -->
+<section class="ds-block">
+  <h2>13 · Rules</h2>
+  <div class="ds-surface ds-rules">
+    <div><div class="ds-label" style="color:var(--green)">Do</div><ul><li>build from tokens</li><li>one primary button per screen</li><li>destructive action at the bottom, as a quiet link</li><li>state and debt shown separately</li><li>everything the machine owns in mono</li><li>auto as the initial theme; check light and dark on every change</li></ul></div>
+    <div><div class="ds-label" style="color:var(--red)">Don't</div><ul><li>invent a state colour — the set is closed</li><li>give a persona or category its own colour</li><li>half-pixel sizes</li><li>two button heights on one screen</li><li>a warning in colour alone</li><li>gradients, emoji, decorative SVG</li></ul></div>
+  </div>
+</section>
+
+<section class="ds-block">
+  <h2>14 · The merge</h2>
+  <p class="ds-desc">12 Eylül 2026. Üç çizim vardı — Haziran design system'i (<code>archive/concepts/</code>), panelin kendisi, gövde önerisi. Eray 26 öğede tek tek seçti; bu sayfa sonucu. Hangi parça nereden:</p>
+  <div class="ds-surface">
+    <table class="ds-states ds-merge">
+      <thead><tr><th>Haziran'dan</th><th>Panelden</th><th>Öneriden</th></tr></thead>
+      <tbody>
+        <tr><td>30px kontrol, <code>--r-md</code> köşe, butonda <code>--fs-body</code></td><td>buton aileleri (solid / link) ve hover'ları</td><td>gövde: tire liste, numara etiketi, alıntı rayı</td></tr>
+        <tr><td>noktalı durum etiketi (kare); rozet yuvarlak hap</td><td>kendi oklu select</td><td>zeminsiz callout — ray + mono kelime</td></tr>
+        <tr><td>accent dolgulu çizilmiş kutu</td><td>grup etiketi, belge satırı, iki band</td><td>satır tablo; fark işareti; silik notlu satır</td></tr>
+        <tr><td>yazı ölçeği — başlıklar 20 / 18 / 16</td><td>Decisions ve Findings olduğu gibi</td><td><code>####</code> olarak mono etiket</td></tr>
+      </tbody>
+    </table>
+    <p class="ds-note"><b>Çıkan kural:</b> panelin etiketleri ile belgenin etiketleri tek sözlük. Action Needed'daki grup etiketi, Related'ın başı, belgedeki <code>####</code> ve tablo başı aynı mono eyebrow. Okuyucu bir kez öğrenir.</p>
+  </div>
+</section>
+</div>
+
+<script>
+(function(){
+  var root=document.documentElement, seg=document.getElementById('theme-seg');
+  function paint(){var t=root.getAttribute('data-theme')||'';seg.querySelectorAll('button').forEach(function(b){b.classList.toggle('on',b.dataset.t===t);});}
+  seg.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;if(b.dataset.t)root.setAttribute('data-theme',b.dataset.t);else root.removeAttribute('data-theme');paint();});
+  paint();
+})();
+</script>
+
+</body>
+</html>
