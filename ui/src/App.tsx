@@ -1380,7 +1380,7 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
   const [engine, setEngine] = useState<string | null>(project.engine || null);
   const [model, setModel] = useState(project.model ?? '');
   const [effort, setEffort] = useState(project.effort ?? '');
-  // The engine line under the name says what runs; Change model, before
+  // The engine line under the buttons says what runs; Change model, before
   // Continue, opens the picker.
   const [picking, setPicking] = useState(false);
 
@@ -1480,6 +1480,27 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
           <span className="kx-card-path mono" title={project.repo_path}>
             {shortPath(project.repo_path)}
           </span>
+        </div>
+        <div className="kx-proj-side">
+          <div className="kx-proj-actions">
+            {engines.length > 0 && (
+              <button className="btn btn-link-primary" onClick={() => setPicking(true)}>
+                Change model
+              </button>
+            )}
+            {running ? (
+              <button className="btn btn-primary" disabled={busy} onClick={togglePause}>
+                ⏸ Pause
+              </button>
+            ) : (
+              // Offer Start when the chain is idle, even if the project is already unpaused.
+              pending && (
+                <button className="btn btn-primary" disabled={busy} onClick={start}>
+                  {hasJobs ? '▶ Continue' : '▶ Start'}
+                </button>
+              )
+            )}
+          </div>
           {engines.length > 0 && (
             <span
               className="kx-engine-line mono"
@@ -1487,25 +1508,6 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
             >
               {[engine ?? engines[0]?.id, model || 'default', effort].filter(Boolean).join(' · ')}
             </span>
-          )}
-        </div>
-        <div className="kx-proj-actions">
-          {engines.length > 0 && (
-            <button className="btn btn-link-primary" onClick={() => setPicking(true)}>
-              Change model
-            </button>
-          )}
-          {running ? (
-            <button className="btn btn-primary" disabled={busy} onClick={togglePause}>
-              ⏸ Pause
-            </button>
-          ) : (
-            // Offer Start when the chain is idle, even if the project is already unpaused.
-            pending && (
-              <button className="btn btn-primary" disabled={busy} onClick={start}>
-                {hasJobs ? '▶ Continue' : '▶ Start'}
-              </button>
-            )
           )}
         </div>
       </div>

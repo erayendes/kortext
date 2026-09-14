@@ -728,7 +728,7 @@ body {
 }
 .kx-pick {
   display: grid;
-  grid-template-columns: 14px 190px 1fr;
+  grid-template-columns: 14px minmax(190px, max-content) 1fr;
   align-items: center;
   gap: 10px;
   padding: 8px 12px;
@@ -763,8 +763,6 @@ body {
 }
 .kx-pick-name {
   font-size: var(--fs-ui);
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 .kx-pick-about {
@@ -1522,6 +1520,13 @@ a.btn {
   align-items: center;
   gap: 8px;
 }
+/* Right column of the head: the buttons, and under them the engine line. */
+.kx-proj-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 14px;
+}
 .kx-main-head {
   display: flex;
   align-items: center;
@@ -1544,8 +1549,8 @@ a.btn {
   margin: 0;
   line-height: 1.2;
 }
-/* Under the name: what runs this project, as one faint mono line — the CLI,
-   its model, its effort. Reading only; Change model, before Continue, opens
+/* Under the buttons: what runs this project, as one faint mono line — the
+   CLI, its model, its effort. Reading only; Change model, above it, opens
    the picker. */
 .kx-engine-line {
   font-size: var(--fs-label);
@@ -1923,8 +1928,9 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
 }
 .kx-doc-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 4px 10px;
   width: 100%;
   padding: 9px 12px;
   border: 1px solid var(--border);
@@ -2631,10 +2637,11 @@ button.kx-note-exc:hover {
 .kx-doc-row.failed {
   border-color: rgba(204, 107, 107, 0.5);
 }
-/* The failure reason beside the name: up to two lines, then an ellipsis; the
-   whole text in the tooltip and in the drawer. */
+/* The failure reason on its own line under the name: up to two lines, then
+   an ellipsis; the whole text in the tooltip and in the drawer. */
 .kx-doc-why {
-  flex: 1 1 0;
+  flex: 1 1 100%;
+  order: 10;
   min-width: 0;
   overflow: hidden;
   display: -webkit-box;
