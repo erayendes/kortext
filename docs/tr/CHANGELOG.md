@@ -2,6 +2,11 @@
 
 🇬🇧 [For English press 9](../CHANGELOG.md)
 
+## [Yayımlanmamış]
+
+- **Brief kabul etmez, taslak hazırlar.** Brief'e gelen bir istek, nedeni tooltip'te saklı
+  kapalı bir Accept yerine satırında **Draft the change** gösterir.
+
 ## [3.1.0] — 2026-09-14
 
 İlk açık sürüm.

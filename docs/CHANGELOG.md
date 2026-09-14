@@ -2,6 +2,11 @@
 
 🇹🇷 [For Turkish press 1](tr/CHANGELOG.md)
 
+## [Unreleased]
+
+- **The brief drafts, it does not accept.** A request aimed at the brief shows **Draft the
+  change** in its row instead of a disabled Accept whose reason lived in a tooltip.
+
 ## [3.1.0] — 2026-09-14
 
 The first public release.

@@ -50,6 +50,8 @@ Questions are for understanding, not for changing. That is why they are not save
 
 *Change Requests* — revision requests other documents sent to this one. `ENVIRONMENT` might say the log lines contradict the no-logs decision, for instance. Select the row, **Accept** or **Deny**. On Deny, write why. If the request is unclear, **Ask** the document that made it.
 
+On the brief there is no Accept — no persona wrote it, you did. The row offers **Draft the change** instead: the engine drafts the brief with the change made and opens it in the editor; **Save** keeps it and closes the request.
+
 **Apply** sends the lot at once. Your answers and the requests you accepted go into one rewrite. The ones you denied are written to the document's `## Decisions`, with your reason.
 
 **A document can ask another document for a change.** While the asking document is still a draft, the request sits under *Outgoing Requests*: **Send** or **Discard**. Nothing goes out until you send it; a document with an undecided request cannot be approved. Sent, it appears under *Incoming Requests* on the target document and waits for you. Accepted and written, it disappears; denied, it goes to `## Decisions` with your reason. You are not asked again; the agent writing the code reads it there.

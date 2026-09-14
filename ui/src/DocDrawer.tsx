@@ -814,6 +814,8 @@ export function DocDrawer({
                 [keyOut(r)]: { kind: 'outgoing', other: r.target, reason: r.reason, what, note },
               }))
             }
+            onDraft={written ? undefined : proposeFix}
+            drafting={busy}
           />
         )}
         {editing ? (
@@ -1033,11 +1035,6 @@ export function DocDrawer({
                       ? `${summary.join(' — ')}.`
                       : 'Nothing selected yet.'}
                 </span>
-                {!written && !sent && !writing && (
-                  <button className="btn btn-secondary" disabled={busy} onClick={proposeFix}>
-                    {busy ? 'Drafting…' : 'Draft the change'}
-                  </button>
-                )}
                 <button
                   className="btn btn-primary"
                   disabled={locked || sent || summary.length === 0}
@@ -1178,11 +1175,17 @@ function ActionNeeded({
   onNote,
   onDecide,
   onDecideOut,
+  onDraft,
+  drafting,
   answered,
   decided,
 }: {
   project: Project;
   doc: DocInfo;
+  /** On a document no agent writes — the brief — a request is not accepted but
+   *  drafted: the engine writes the change into the editor for prime to save. */
+  onDraft?: () => void;
+  drafting?: boolean;
   /** The bullets under the questions heading, numbered as the body numbers them. */
   questions: Array<{ index: number; no: number; text: string }>;
   explains: Explain[];
@@ -1331,11 +1334,8 @@ function ActionNeeded({
                         onDecide(r, what, note);
                         setOpen(null);
                       }}
-                      cannotAccept={
-                        doc.hasProducingStep
-                          ? undefined
-                          : 'No agent writes this document — press Draft the change below'
-                      }
+                      onDraft={onDraft}
+                      drafting={drafting}
                     />
                   )}
                 </li>
@@ -1819,7 +1819,8 @@ function LineThread({
   onAsk,
   onNote,
   onDecide,
-  cannotAccept,
+  onDraft,
+  drafting,
   verbs = ['Accept', 'Deny'],
 }: {
   thread: Explain[];
@@ -1833,7 +1834,9 @@ function LineThread({
    */
   onDecide?: (what: 'accept' | 'deny', note: string) => void;
   /** No agent writes this document, so nothing can be accepted on its behalf. */
-  cannotAccept?: string;
+  /** Set on the brief: the engine drafts the change instead of Accept. */
+  onDraft?: () => void;
+  drafting?: boolean;
   /** The two decision words — Accept · Deny by default, Send · Discard for an outgoing request. */
   verbs?: [string, string];
 }) {
@@ -1894,17 +1897,26 @@ function LineThread({
             </button>
             {onDecide ? (
               <>
-                <button
-                  className="btn btn-primary"
-                  disabled={!!cannotAccept}
-                  title={cannotAccept ?? ''}
-                  onClick={() => {
-                    onDecide('accept', text.trim());
-                    setText('');
-                  }}
-                >
-                  {verbs[0]}
-                </button>
+                {onDraft ? (
+                  <button
+                    className="btn btn-primary"
+                    disabled={drafting}
+                    title="No agent writes this document — the engine drafts the change into the editor, you save it"
+                    onClick={onDraft}
+                  >
+                    {drafting ? 'Drafting…' : 'Draft the change'}
+                  </button>
+                ) : (
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => {
+                      onDecide('accept', text.trim());
+                      setText('');
+                    }}
+                  >
+                    {verbs[0]}
+                  </button>
+                )}
                 <button
                   className="btn btn-secondary"
                   onClick={() => {

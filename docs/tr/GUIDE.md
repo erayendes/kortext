@@ -50,6 +50,8 @@ Sorular anlamak içindir, değiştirmek için değil. Bu yüzden kaydedilmezler.
 
 *Change Requests* — başka belgelerin bu belgeye gönderdiği revize istekleri. Örneğin `ENVIRONMENT`, log satırlarının log-yok kararıyla çeliştiğini söylüyor olabilir. Satırı seçin, **Accept** ya da **Deny**. Deny ise nedenini yazın. Eğer talep anlaşılmıyorsa **Ask** ile isteği yapan belgeye sorun.
 
+Brief'te Accept yoktur — onu bir persona değil siz yazdınız. Satırda onun yerine **Draft the change** durur: ajan, isteği işlenmiş brief'i taslak olarak hazırlar ve editörde açar; **Save** derseniz brief güncellenir, istek kapanır.
+
 **Apply** hepsini tek seferde gönderir. Yanıtlarınız ve kabul ettiğiniz istekler tek seferde yeniden yazıma girer. Reddettiklerinizse nedeniyle birlikte belgenin `## Decisions` bölümüne yazılır.
 
 **Bir belge başka bir belgeden değişiklik isteyebilir.** İsteyen belge hâlâ taslakken bu istek *Outgoing Requests* altında durur: **Send** ya da **Discard**. Siz göndermeden hiçbir şey çıkmaz; kararsız bir istek varken belge onaylanamaz. Gönderilince hedef belgede *Incoming Requests* altında görünür ve sizi bekler. Kabul edilip yazıldığında kaybolur; reddedildiğinde nedeniyle `## Decisions`'a iner. Bir daha sorulmaz; kod yazan ajan onu oradan okur.
