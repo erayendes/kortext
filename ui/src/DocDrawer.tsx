@@ -30,7 +30,7 @@ interface Outcome {
 }
 
 interface Decision {
-  /** An incoming request is accepted or denied; an outgoing one is sent or discarded. */
+  /** An incoming request is accepted or denied; an outgoing one is accepted (the target is rewritten with it) or discarded. */
   kind: 'incoming' | 'outgoing';
   /** The other document — who asked, or who is asked. */
   other: string;
@@ -568,7 +568,10 @@ export function DocDrawer({
       ? plural(accepting.length, 'request accepted', 'requests accepted')
       : null,
     denying.length > 0 ? plural(denying.length, 'request denied', 'requests denied') : null,
-    sending.length > 0 ? plural(sending.length, 'request sent', 'requests sent') : null,
+    sending.length > 0
+      ? plural(sending.length, 'request accepted', 'requests accepted') +
+        ` — ${[...new Set(sending.map((r) => r.other.replace(/\.md$/, '')))].join(', ')} will be rewritten`
+      : null,
     discarding.length > 0
       ? plural(discarding.length, 'request discarded', 'requests discarded')
       : null,
@@ -714,7 +717,7 @@ export function DocDrawer({
                   : doc.openQuestions
                     ? 'Answer the open questions in this document first'
                     : doc.outgoing.length > 0
-                      ? 'Send or discard the outgoing requests first'
+                      ? 'Accept or discard the outgoing requests first'
                       : ''
               }
               onClick={approve}
@@ -971,7 +974,7 @@ export function DocDrawer({
                     <span className="kx-note-body">
                       to <span className="mono">{r.target.replace(/\.md$/, '')}</span>{' '}
                       <span className={`kx-decision kx-decision-${d.what}`}>
-                        {d.what === 'accept' ? 'sent' : 'discarded'}
+                        {d.what === 'accept' ? 'accepted' : 'discarded'}
                       </span>
                     </span>
                     {!sent && !writing && (
@@ -1216,7 +1219,7 @@ function ActionNeeded({
   onAsk: (line: number, question: string) => void;
   onNote: (line: number, text: string) => void;
   onDecide: (r: { from: string; reason: string }, what: 'accept' | 'deny', note: string) => void;
-  /** Send or discard what this document asks of another. */
+  /** Accept or discard what this document asks of another — accepted, the target is rewritten with it. */
   onDecideOut: (
     r: { target: string; reason: string },
     what: 'accept' | 'deny',
@@ -1401,7 +1404,7 @@ function ActionNeeded({
                         onDecideOut(r, what, note);
                         setOpen(null);
                       }}
-                      verbs={['Send', 'Discard']}
+                      verbs={['Accept', 'Discard']}
                     />
                   )}
                 </li>
@@ -1860,7 +1863,7 @@ function LineThread({
   /** Set on the brief: the engine drafts the change instead of Accept. */
   onDraft?: () => void;
   drafting?: boolean;
-  /** The two decision words — Accept · Deny by default, Send · Discard for an outgoing request. */
+  /** The two decision words — Accept · Deny by default, Accept · Discard for an outgoing request. */
   verbs?: [string, string];
 }) {
   const [text, setText] = useState('');

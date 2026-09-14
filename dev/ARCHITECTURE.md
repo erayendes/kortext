@@ -126,11 +126,14 @@ previous text is restored). Side exits:
 means the document is waiting on a human. `## Change Requests` — one heading, two directions,
 told apart by one word. `` - `TARGET.md` — reason `` is what this document asks of another; the
 agent writes it while drafting, the panel lists it under Outgoing Requests, and prime presses
-Send or Discard — Send moves it (`deliverRequests`) into the target as `` - [ ] from `THIS.md` —
-reason ``, Discard deletes it. An undecided outgoing request holds approval, like an open
-question. (Documents approved before requests travelled are swept on listing.) That `from` line is the request's
-only home from then on: it is listed in the target's Action Needed and decided there. Accepted
-and written, it is removed — the text now says what it asked for, and git keeps the history.
+Accept or Discard — Accept moves it (`deliverRequests`) into the target as `` - [ ] from `THIS.md` —
+reason `` and, since the one person who could accept it there just did, starts the target's
+revision with it (`reviseDoc`, as if Accept were pressed on the target); Discard deletes it. A
+target not yet written keeps the line for its first draft; one being rewritten keeps it under
+its Incoming Requests for prime. An undecided outgoing request holds approval, like an open
+question. (Documents approved before requests travelled are swept on listing and land as
+incoming requests, decided at the target.) Accepted and written, the line is removed — the text
+now says what it asked for, and git keeps the history.
 Refused, it leaves the mailbox for `## Decisions`: `` - `FROM.md` — reason `` with
 `prime: why · date` beneath, no box and no word like "denied" — the ledger is the word. It is
 the one outcome the next writer cannot infer from the text, and the only reason it does not ask

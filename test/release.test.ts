@@ -261,7 +261,7 @@ test('approving records a version, and the body it records is the same document'
 });
 
 test('an outgoing request is sent or discarded by prime, and holds approval until then', async (t) => {
-  const { p, request } = await fixture(t);
+  const { p, db, request } = await fixture(t);
   const draft = [
     '---',
     'status: draft',
@@ -295,14 +295,25 @@ test('an outgoing request is sent or discarded by prime, and holds approval unti
   assert.equal(res.status, 200);
   assert.deepEqual(await res.json(), { applied: 0, denied: 0, sent: 1, discarded: 1 });
 
-  // The sent one lives in PRODUCT.md now; the discarded one lives nowhere.
+  // Both leave STACK.md at once; the discarded one lives nowhere.
   const stack = readFileSync(docPath(p, 'STACK.md'), 'utf8');
   assert.doesNotMatch(stack, /name the region|drop the free tier/);
-  assert.match(
-    readFileSync(docPath(p, 'PRODUCT.md'), 'utf8'),
-    /- \[ \] from `STACK\.md` — name the region/,
-  );
   assert.doesNotMatch(readFileSync(docPath(p, 'PRODUCT.md'), 'utf8'), /drop the free tier/);
+  // Sent by prime is accepted by prime: PRODUCT.md is rewritten with the
+  // request now, not parked as an incoming request for prime to accept again.
+  for (let i = 0; i < 200; i++) {
+    const job = listJobs(db, p.id).find((j) => j.doc_rel === 'PRODUCT.md');
+    if (job && job.status !== 'running') break;
+    await new Promise((r) => setTimeout(r, 25));
+  }
+  const product = readFileSync(docPath(p, 'PRODUCT.md'), 'utf8');
+  assert.match(product, /status: draft/);
+  assert.match(product, /Revision \d+/);
+  assert.doesNotMatch(product, /name the region/);
+  assert.match(
+    readFileSync(join(p.repo_path, 'prompts.txt'), 'utf8'),
+    /\[STACK\.md asks\] name the region/,
+  );
 
   // Nothing left to decide — approval passes.
   assert.equal(

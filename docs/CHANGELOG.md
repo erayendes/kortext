@@ -4,6 +4,9 @@
 
 ## [Unreleased]
 
+- **One decision per request.** Accepting an outgoing request on the document that asks
+  rewrites the target with it at once; it no longer lands there as an incoming request for the
+  same person to accept a second time. Send became Accept.
 - **A sent tray belongs to one document.** After Apply the tray stayed read-only — no ×, Apply
   greyed — on the next document opened, and forever when the rewrite landed while the drawer
   was closed, so notes from one document sat unticked on another. It now clears when the

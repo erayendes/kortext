@@ -153,7 +153,7 @@ Open any document. Everything you can do to it is here:
 | action | what happens |
 | --- | --- |
 | **Approve** | `draft → approved`; the chain advances, this document's outgoing requests travel to their targets, and every approved reader of it is re-judged |
-| select a row in **Action Needed** | the row's moves open under it — a question takes **Ask** · **Add note**; an incoming request **Ask** · **Accept** · **Deny**; an outgoing one **Ask** · **Send** · **Discard** |
+| select a row in **Action Needed** | the row's moves open under it — a question takes **Ask** · **Add note**; an incoming request **Ask** · **Accept** · **Deny**; an outgoing one **Ask** · **Accept** · **Discard** |
 | **Ask** | the author persona answers, in the panel only — nothing is written |
 | **Apply** | one press sends everything the tray collected: answers and accepted requests go into one rewrite, denials into `## Decisions`, sent requests to their target now, discards out of the file |
 | select a line of the body → **Add note** | a revision note on that line; **Request revision** (or Apply) re-runs the author with it |
@@ -164,13 +164,13 @@ Open any document. Everything you can do to it is here:
 - [ ] Open questions block approval (the button says so on hover); outgoing requests still undecided block it too.
 - [ ] After Apply the drawer stays open: the tray goes read-only and says *sent; the document is being rewritten*, Approve / Edit / Apply are locked, and when the rewrite lands the body reloads and the tray empties.
 - [ ] A revision comes back with the answered questions **gone** from `## Questions for Prime`, the facts folded into the body, and the unanswered ones kept — the author may add new ones.
-- [ ] **Send** puts `- [ ] from \`SOURCE.md\` — …` under the target's `## Change Requests` at once, and the target climbs to **Action needed** with `review`, approved or not.
+- [ ] **Accept** on an outgoing request moves it out of this document and rewrites the target with it at once — no second Accept there. A target not yet written keeps the `- [ ] from \`SOURCE.md\` — …` line for its first draft; a target being rewritten keeps it under *Incoming Requests* for you.
 - [ ] **Deny** with a reason removes the `from` line and writes the request and the reason under `## Decisions`; **Accept** re-runs the author with it and the line is gone afterwards.
 - [ ] `## Decisions` and every `from` line survive the next rewrite untouched — the agent is told they are not its to drop, and kortext restores them if it drops them anyway.
 - [ ] The diff picker beside the name shows recorded versions; a rewritten block wears `[+]` and unfolds its old text; a run of new blocks says `new` once.
 - [ ] The brief has no producing step: **Edit** is the only way to change it.
 - [ ] **Edit** works while a recheck reads the document; only a run that writes it locks the drawer.
-- [ ] Notes in the tray keep their label (`#3` for a question, `#1` for a line) after Send moves
+- [ ] Notes in the tray keep their label (`#3` for a question, `#1` for a line) after Accept moves
       the text under them.
 
 ## 6 · Handshake
