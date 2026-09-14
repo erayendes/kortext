@@ -648,6 +648,13 @@ export function DocDrawer({
     setSelected(null);
     document.getElementById(id)?.scrollIntoView({ block: 'center' });
   };
+  // A placeholder the server named: the block that holds that line, scrolled to and selected.
+  const jumpToText = (line: string) => {
+    const hit = tokens.find((t) => t.text.split('\n').some((l) => l.trim() === line));
+    if (!hit) return;
+    document.getElementById(`kx-line-${hit.index}`)?.scrollIntoView({ block: 'center' });
+    setSelected(hit.index);
+  };
 
   const addLineNote = (line: number, text: string) => {
     const token = tokens.find((t) => t.index === line);
@@ -818,7 +825,11 @@ export function DocDrawer({
               <>
                 <ul className="kx-error-lines mono">
                   {placeholders.map((l) => (
-                    <li key={l}>{l}</li>
+                    <li key={l}>
+                      <button className="kx-error-line" onClick={() => jumpToText(l)}>
+                        {l}
+                      </button>
+                    </li>
                   ))}
                 </ul>
                 <button
