@@ -237,7 +237,7 @@ function CompanionStrip({ quiet }: { quiet: boolean }) {
       <span>Kortext can live in your menu bar — a notification when a document waits on you.</span>
       <span className="kx-companion-actions">
         <a
-          className="btn"
+          className="btn btn-primary"
           href="https://github.com/erayendes/kortext/releases/latest/download/Kortext.zip"
         >
           Download for macOS
