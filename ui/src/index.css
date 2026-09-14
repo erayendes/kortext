@@ -1562,9 +1562,8 @@ a.btn {
 .kx-engine-btn {
   font-size: var(--fs-label);
   font-weight: 400;
-  /* Even padding, and the left one pulled back so the text sits on the form's edge at rest. */
-  padding: 0 10px;
-  margin-left: -10px;
+  /* Same padding as the fields above, so the text and the hover box both sit on their edge. */
+  padding: 0 12px;
 }
 .kx-engine-line {
   font-size: var(--fs-label);
