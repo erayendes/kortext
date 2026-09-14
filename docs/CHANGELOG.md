@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- **The mark.** New wordmark and icon: outlines over sketch guides in light, solid in dark,
+  the `x` alone as the favicon. Panel header, README and favicon use them.
 - **A wider drawer.** 880px, up from 720, for the bands, tables, code and the design page;
   prose keeps a 78-character measure.
 - **One decision per request.** Accepting an outgoing request on the document that asks

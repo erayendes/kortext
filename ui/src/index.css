@@ -1,6 +1,9 @@
 /* Panel styles and design tokens; see dev/DESIGN.md. */
 
 :root {
+  /* The page's own answer to "light or dark" — what an <img> hands the SVG
+     inside it, so the wordmark's palette follows the panel's theme, not the OS. */
+  color-scheme: light;
   /* Neutral colors */
 
   --gray-300: #e0e0e4;
@@ -104,6 +107,7 @@
 /* ---------- dark theme ---------- */
 /* Repeat dark values for explicit and OS-selected themes to avoid a script-dependent theme flash. */
 :root[data-theme='dark'] {
+  color-scheme: dark;
   --border-hover: #3a3a40;
 
   --gray-300: #2c2c31;
@@ -155,6 +159,7 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
+    color-scheme: dark;
     --border-hover: #3a3a40;
 
     --gray-300: #2c2c31;

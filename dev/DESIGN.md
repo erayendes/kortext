@@ -306,8 +306,13 @@ says a demand exists, the amber band is where it is answered. The dependency ban
 hollow and framed because it asks nothing. Every band's head is the group label from § 10, in
 mono, so the panel's labels and the document's own labels are one thing.
 
-**Header.** The wordmark — a PNG per theme, swapped by CSS, so the drawing is right on the
-first frame — and, at the far right, the theme button. Nothing else, unless there is no agent
+**Header.** The wordmark — an SVG per theme, swapped by CSS, so the drawing is right on the
+first frame. Two drawings, not one recoloured: in light the letters are outlines over sketch
+guides (`kor` grey, `te` and half the `x` blueprint blue, `xt` solid ink); in dark they are solid.
+The outline strokes are set in screen pixels (`vector-effect: non-scaling-stroke`, 1.25px for
+letters, 0.6px for guides), so a mark drawn for a 1344px page still reads at the header's 20px.
+The favicon is the icon — the `x` alone, one file per theme, chosen by the `media` attribute on
+the `<link>`. And, at the far right, the theme button. Nothing else, unless there is no agent
 CLI at all: the engine belongs to a project, so its control sits on the project screen beside
 Start, at the same height as Start — two selects, the CLI and its model, `default` first in the
 second so the CLI's own choice is a word, not an empty box. A tagline in the chrome is a thing the reader learns once
