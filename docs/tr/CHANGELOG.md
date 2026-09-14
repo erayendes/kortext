@@ -7,7 +7,7 @@
 - **macOS için menü çubuğu uygulaması.** Sürümün yanında `Kortext.zip`, notarize edilmiş,
   kendini güncelleyen. Proje başına bir kart: sizi bekleyen belgeler — `approve`, `review`,
   `failed` — ve yazılmakta olanlar, gri; satıra basınca panel o belgede açılır. ⏻ sunucuyu
-  başlatır ya da iki basışta durdurup uygulamadan çıkar. Login'de açılınca sunucuyu da
+  başlatır ya da iki basışta durdurur; uygulama kalır. Login'de açılınca sunucuyu da
   kaldırır. Bir belge geldiğinde, bir adım başarısız olduğunda, bir brief geri döndüğünde ya da
   bir zincir tamamlandığında bildirim — projenin dilinde, paneli olayın olduğu yerde açan.
   Uygulaması olmayan Mac'te panel onu güncelleme şeridinin yerinde sunar — bir seferde tek
@@ -23,7 +23,10 @@
   Request revision'ın yanında, okumanız bitene kadar bekler.
 - **Stable version / Try beta version.** Uygulamanın ayarlarında iki satır; her biri kendi
   türünün en yenisini ve sizde kurulu olup olmadığını gösterir. Birine basınca kurulur —
-  sunucu yeniden başlar, uygulama aynı kanala geçer; ötekine basınca geri dönersiniz.
+  sunucu yeniden başlar, uygulama aynı kanala geçer; ötekine basınca geri dönersiniz. Panelin
+  durum çubuğu aynı çifti taşır: çalışan kanal bir basışta denetler, öteki bir basışta
+  kurulur. Güncelleme şeridi kanalınızı izler.
+- **Kısa sürümler** her yerde: `3.2-beta3`, `3.2`, `3.1.2`.
 - **Continue tutar** adım koşar görülene kadar; ikinci basış artık tekrar duraklatmaz. Başka
   yerden — menü çubuğu uygulaması, başka sekme — yapılan duraklatma panele ulaşır.
 - İki URL içeri girer: `/?project=<id>` ve `/?project=<id>&doc=<rel>`. Diğer araçlar

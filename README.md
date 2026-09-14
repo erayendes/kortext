@@ -174,7 +174,7 @@ What the background server prints collects in `~/.kortext/kortext.db.log`.
 
 Optional. `Kortext.zip` on the [latest release](https://github.com/erayendes/kortext/releases/latest) — notarized, updates itself. It needs kortext installed; it shows what waits on you, opens the panel on a document, starts and stops the server, and sends a notification when a document lands or a step fails. The panel offers it under the heading on a Mac that has none running.
 
-To try what is not released yet: `npm i -g kortext@beta`, and the app from the latest pre-release; the app's settings switch the package — and the app with it — between the beta and the stable version.
+To try what is not released yet: press **Try beta version** in the panel's status bar or the app's settings — or `npm i -g kortext@beta` by hand. **Use stable version** brings you back. The app follows the package's channel.
 
 ## Update and uninstall
 

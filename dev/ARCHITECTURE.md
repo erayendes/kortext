@@ -334,17 +334,25 @@ project yet: picks stay local and go with Initialize (`model` and `effort` in th
 The chrome around it. The **header** carries the wordmark (one PNG per theme), the no-CLI
 warning when there is nothing on the `PATH`, and at the far right one cycling **theme** button
 (auto → light → dark, remembered in `localStorage`, no attribute meaning auto). Under the heading of either screen the
-**update strip** appears only when npm carries a newer version and kortext runs from a global
-install — one check owned by `App` (`useUpdate`), asked of `/api/version` on open and hourly,
-while the server asks the registry at most hourly; **Update now** calls `/api/version/update`,
-and afterwards the strip offers **Quit** (`/api/quit`), because the process on screen is still
-the old one. The same slot carries the **companion strip** — "Kortext can live in your menu
+**update strip** appears only when npm carries a newer version on the running channel and
+kortext runs from a global install — one check owned by `App` (`useUpdate`), asked of
+`/api/version` on open and hourly, while the server asks the registry's dist-tags at most
+hourly; **Update now** calls `/api/version/update`, and afterwards the strip offers **Quit**
+(`/api/quit`), because the process on screen is still the old one. The channel is read from
+the running version — a pre-release is beta, anything else stable — and `isNewer` orders
+`beta.3 < beta.4 < 3.2.0`. The same slot carries the **companion strip** — "Kortext can live in your menu
 bar", **Download for macOS**, × — on a Mac, only while `/api/health` reports no companion, and
 never beside the update strip: one strip at a time, the update first. At the bottom, an application
-**status bar** (34px, never wrapping): the server dot — green while `/api/health` answers, red
-the moment it stops and green again on its own when it comes back — the version, the ⏻ button
-(two clicks, no `confirm()`), the restart command as a click-to-copy chip once the server is
-down, and the Milowda credit, a popover that lists the other tools only when clicked.
+**status bar** (34px, never wrapping), two lines. The first names the running channel —
+*Stable version 3.1.2* or *Beta version 3.2-beta3*, the short form of `pretty()`; a press
+asks `/api/version?fresh=1` and says *up to date* for three seconds or raises the strip — and
+the ⏻ button: green while `/api/health` answers, red the moment it stops and green again on
+its own when it comes back, two clicks to stop, no `confirm()`; the restart command follows as
+a click-to-copy chip once the server is down. The second line starts with the other channel —
+*Try beta version 3.2-beta3* or *Use stable version 3.1.2*, or *No beta version right now* — a
+press installs it (`{tag}`) and the strip takes it from there, downgrades included; then the
+bug report and the support link. Opposite, the Milowda credit, a popover that lists the other
+tools only when clicked.
 
 The **Milowda strip** names those tools once more where there is room: six cards under the
 project list, and on a project screen one full-width slide under the documents that advances
@@ -417,7 +425,7 @@ badges from the server's `section · state · detail`: `approve`, `review`, `rec
 `writing…`, `reading…`. A row that needs you opens the panel on that document; a row in flight
 is grey and inert. The list scrolls once its estimated height would outgrow the screen — the
 panel is sized when it opens, so the height is counted, not measured. The status bar is the
-panel's: ⏻ (green up, grey down; first press arms, second stops the server and quits the app;
+panel's: ⏻ (green up, grey down; first press arms, second stops the server — the app stays;
 down, it starts the server without opening a browser), *open panel*, and the credit. Settings,
 behind the wordmark or ⚙, one card of rows: launch at login (which also starts the server),
 notifications, **Stable version** and **Try beta version** (each row shows npm's newest for

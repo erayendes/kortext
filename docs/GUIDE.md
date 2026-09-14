@@ -97,9 +97,9 @@ From here on, Kortext is not in the loop.
 
 ## The panel itself
 
-**The status bar**, at the bottom. A green dot means the server is up. The ⏻ button stops it — never while a document is being written.
+**The status bar**, at the bottom. The first line names what runs — **Stable version 3.1.2**, or **Beta version 3.2-beta3** — and the ⏻ button, green while the server is up, red once it stops; two presses stop it, never while a document is being written. Press the version to check for updates: *up to date*, or the strip below. The second line offers the other channel — **Try beta version**, or **Use stable version** to come back — a press installs it, and the strip takes over.
 
-**The update strip**, under the heading of either screen, in blue, only when npm has a newer version — the panel looks once when opened and then every hour, so a release lands while it sits open. **Update now** installs it; then the strip offers **Quit** — press it, start kortext again, and the new version takes over.
+**The update strip**, under the heading of either screen, in blue, only when npm has a newer version on your channel — the panel looks once when opened and then every hour, so a release lands while it sits open. **Update now** installs it; then the strip offers **Quit** — press it, start kortext again, and the new version takes over.
 
 **Theme.** The button at the top right cycles auto → light → dark.
 

@@ -185,7 +185,7 @@ Kaldırmak yalnızca programı siler. Proje kaydınız ve loglar `~/.kortext/`'t
 
 İsteğe bağlı. [Son sürümdeki](https://github.com/erayendes/kortext/releases/latest) `Kortext.zip` — notarize edilmiş, kendini günceller. kortext'in kurulu olmasını ister; sizi bekleyen belgeleri gösterir, paneli belgenin üstünde açar, sunucuyu başlatır ve durdurur, bir belge geldiğinde ya da bir adım başarısız olduğunda bildirim gönderir. Çalışan uygulaması olmayan bir Mac'te panel onu başlığın altında sunar.
 
-Henüz yayınlanmamışı denemek için: `npm i -g kortext@beta`, uygulama da son ön sürümden; uygulamanın ayarları paketi — ve onunla uygulamayı — beta ile kararlı sürüm arasında geçirir.
+Henüz yayınlanmamışı denemek için: panelin durum çubuğunda ya da uygulamanın ayarlarında **Try beta version** — ya da elle `npm i -g kortext@beta`. **Use stable version** geri getirir. Uygulama paketin kanalını izler.
 
 ## Geliştirme
 

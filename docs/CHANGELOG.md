@@ -7,7 +7,7 @@
 - **A menu bar app for macOS.** `Kortext.zip` on the release, notarized, updating itself. One
   card per project with the documents that wait on you — `approve`, `review`, `failed` — and
   the ones being written, grey; a row opens the panel on that document. ⏻ starts the server
-  or, pressed twice, stops it and quits. Launch at login brings the server up with it. A
+  or, pressed twice, stops it; the app stays. Launch at login brings the server up with it. A
   notification when a document lands, a step fails, a brief is sent back or a chain settles,
   in the project's language, opening the panel where it happened. On a Mac without it, the
   panel offers it in the update strip's slot — one strip at a time.
@@ -22,7 +22,10 @@
   waits at the foot of the drawer, beside Request revision, until you are done reading.
 - **Stable version / Try beta version.** Two rows in the app's settings, each showing the
   newest of its kind and whether it is what you run. Press one to install it — the server
-  restarts and the app follows to the same channel; press the other to go back.
+  restarts and the app follows to the same channel; press the other to go back. The panel's
+  status bar carries the same pair: the running channel, a press away from a check, and the
+  other, a press away from installing it. The update strip follows your channel.
+- **Short versions** everywhere: `3.2-beta3`, `3.2`, `3.1.2`.
 - **Continue holds** until the step is seen running; a second press no longer pauses it
   again. A pause made elsewhere — the menu bar app, another tab — reaches the panel.
 - Two URLs reach in: `/?project=<id>` and `/?project=<id>&doc=<rel>`. The other tools sit

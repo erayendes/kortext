@@ -413,7 +413,16 @@ function OtherChannel({ info, run }: ReturnType<typeof useUpdate>) {
   if (!info) return null;
   const beta = channelOf(info.current) === 'beta';
   const other = beta ? info.latest : info.beta;
-  if (!other) return null; // no beta out right now
+  if (!other)
+    return (
+      <>
+        <span className="kx-version-btn kx-status-note">
+          <ChannelMark beta />
+          No beta version right now
+        </span>
+        <span className="kx-danger-sep">·</span>
+      </>
+    );
   return (
     <>
       <button

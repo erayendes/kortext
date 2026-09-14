@@ -92,9 +92,9 @@ Buradan sonra Kortext işin içinde değildir.
 
 ## Panelin kendisi
 
-**Durum çubuğu**, altta. Yeşil nokta sunucu ayakta demektir. ⏻ düğmesi kapatır ama bir belge yazılırken kapatmaz.
+**Durum çubuğu**, altta. İlk satır çalışanı söyler — **Stable version 3.1.2** ya da **Beta version 3.2-beta3** — ve ⏻ düğmesi: sunucu ayaktayken yeşil, durunca kırmızı; iki basış durdurur, bir belge yazılırken asla. Sürüme basınca güncelleme denetler: *up to date* ya da alttaki şerit. İkinci satır öteki kanalı sunar — **Try beta version**, ya da geri dönmek için **Use stable version** — basınca kurulur, gerisini şerit üstlenir.
 
-**Güncelleme şeridi**, iki ekranda da başlığın altında, mavi, yalnız npm'de yeni sürüm varsa görünür — panel açılışta bir kez, sonra her saat bakar; açık dururken çıkan sürüm de düşer. **Update now** kurar; sonra şerit **Quit** sunar — basın, kortext'i yeniden açın, yeni sürüm devreye girer.
+**Güncelleme şeridi**, iki ekranda da başlığın altında, mavi, yalnız npm'de kanalınızda yeni sürüm varsa görünür — panel açılışta bir kez, sonra her saat bakar; açık dururken çıkan sürüm de düşer. **Update now** kurar; sonra şerit **Quit** sunar — basın, kortext'i yeniden açın, yeni sürüm devreye girer.
 
 **Tema.** Sağ üstteki düğme auto → light → dark döner.
 
