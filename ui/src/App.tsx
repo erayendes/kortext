@@ -185,10 +185,40 @@ export function App() {
           <span className="kx-statusbar-line">
             <MadeBy />
           </span>
-          <span className="kx-statusbar-line" aria-hidden="true" />
+          <span className="kx-statusbar-line">
+            <Companion />
+          </span>
         </span>
       </footer>
     </div>
+  );
+}
+
+// The menu bar app, offered once on a Mac that has no copy of it talking to this
+// server. It sits in the credit's empty second line and says nothing once the
+// app is heard from; the empty line keeps the column's height either way.
+function Companion() {
+  const [companion, setCompanion] = useState(true);
+  useEffect(() => {
+    if (!navigator.platform.startsWith('Mac')) return;
+    const look = () =>
+      api.health().then(
+        (h) => setCompanion(h.companion),
+        () => {},
+      );
+    look();
+    const timer = setInterval(look, 30_000);
+    return () => clearInterval(timer);
+  }, []);
+  if (companion) return null;
+  return (
+    <a
+      className="kx-statusbar-link"
+      href="https://github.com/erayendes/kortext/releases/latest/download/Kortext.zip"
+      title="A menu bar app for macOS: what waits on you, and a notification when something new does"
+    >
+      Menu bar app for macOS
+    </a>
   );
 }
 

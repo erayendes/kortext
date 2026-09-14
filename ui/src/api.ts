@@ -108,7 +108,8 @@ export interface Readiness {
 }
 
 export const api = {
-  health: () => req<{ ok: boolean; db: string; version: string }>('/api/health'),
+  health: () =>
+    req<{ ok: boolean; db: string; version: string; companion: boolean }>('/api/health'),
   listProjects: () => req<{ projects: Project[] }>('/api/projects'),
   archiveProject: (projectId: number, archived: boolean) =>
     req<{ archived: number }>(`/api/projects/${projectId}/archive`, {

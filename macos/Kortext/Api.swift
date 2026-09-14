@@ -21,6 +21,7 @@ enum Api {
     static func get<T: Decodable>(_ path: String, _ type: T.Type) async throws -> T {
         var req = URLRequest(url: base.appending(path: path))
         req.timeoutInterval = 3
+        req.setValue("Kortext-mac/\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0")", forHTTPHeaderField: "User-Agent")
         let (data, _) = try await URLSession.shared.data(for: req)
         return try JSONDecoder().decode(T.self, from: data)
     }

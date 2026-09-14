@@ -119,8 +119,15 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     }
   })();
 
+  // The menu bar app polls with its own user agent; the panel hides its
+  // download line while one has been heard from lately.
+  let companionSeenAt = 0;
+  app.use('/api', (req, _res, next) => {
+    if (req.get('user-agent')?.startsWith('Kortext-mac/')) companionSeenAt = Date.now();
+    next();
+  });
   app.get('/api/health', (_req, res) => {
-    res.json({ ok: true, db: dbPath, version });
+    res.json({ ok: true, db: dbPath, version, companion: Date.now() - companionSeenAt < 30_000 });
   });
 
   const stepRunning = () =>
