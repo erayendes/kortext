@@ -131,7 +131,7 @@ export function App() {
             </button>
           </div>
           <UpdateStrip {...update} />
-          <CompanionStrip />
+          <CompanionStrip quiet={!!update.latest} />
           {projects.length === 0 && !adding && (
             <>
               <div className="kx-empty">
@@ -196,7 +196,8 @@ export function App() {
 // The menu bar app, offered in the update strip's slot on a Mac that has no
 // copy of it talking to this server. Quiet colours — an offer, not a warning —
 // and a × that keeps it away; it also goes on its own once the app is heard.
-function CompanionStrip() {
+// One strip at a time: while an update is on offer, this one waits its turn.
+function CompanionStrip({ quiet }: { quiet: boolean }) {
   const [companion, setCompanion] = useState(true);
   const [hidden, setHidden] = useState(() => {
     try {
@@ -216,7 +217,7 @@ function CompanionStrip() {
     const timer = setInterval(look, 30_000);
     return () => clearInterval(timer);
   }, [hidden]);
-  if (companion || hidden) return null;
+  if (quiet || companion || hidden) return null;
   const dismiss = () => {
     try {
       localStorage.setItem('kx-companion', 'hidden');
