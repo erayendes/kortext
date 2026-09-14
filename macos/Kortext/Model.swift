@@ -68,7 +68,7 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
 
     func status(_ tag: String) -> String {
         if pressed == tag, let n = note { return n }
-        guard let want = tags[tag] else { return "…" }
+        guard let want = tags[tag] else { return tags.isEmpty ? "…" : "No beta version right now" }
         return version == want ? "up to date" : "not installed"
     }
 
@@ -84,7 +84,7 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
         pressed = tag; note = "checking…"
         Task {
             tags = await Api.distTags()
-            guard let want = tags[tag] else { note = "could not reach npm"; return }
+            guard let want = tags[tag] else { note = tags.isEmpty ? "could not reach npm" : nil; return }
             if version == want { checkAppUpdate(); note = nil; return }
             if tag == "beta", !serverSwitches {
                 // The first beta is installed by hand; from then on the server can switch itself.
