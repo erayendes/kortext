@@ -3,30 +3,27 @@ import ServiceManagement
 
 @main
 struct KortextApp: App {
-    @StateObject private var model = Model()
-    @AppStorage("theme") private var theme = "auto"
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
+    var body: some Scene { Settings { EmptyView() } }
+}
 
-    var body: some Scene {
-        MenuBarExtra {
-            Popover()
-                .environmentObject(model)
-                .onAppear { applyTheme() }
-                .onChange(of: theme) { _, _ in applyTheme() }
-        } label: {
-            Label { if model.draftCount > 0 { Text("\(model.draftCount)") } } icon: {
-                Image("menubar").renderingMode(.template)
-                    .symbolEffect(.pulse, isActive: model.anyRunning)
-                    .opacity(model.version == nil ? 0.55 : 1)
-            }
-            .labelStyle(.titleAndIcon)
-            .task { model.start() }
-        }
-        .menuBarExtraStyle(.window)
+@MainActor
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    private var status: StatusController?
+    private let model = Model()
+
+    func applicationDidFinishLaunching(_ n: Notification) {
+        applyTheme()
+        NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: .main) { [weak self] _ in self?.applyTheme() }
+        model.start()
+        status = StatusController(model: model, content: Popover().environmentObject(model))
     }
 
-    // The panel's one setting: auto follows the OS, light and dark override it — for the whole app, so the token colours resolve.
+    // The panel's one setting: auto follows the OS, light and dark override it — app-wide, so the token colours resolve.
     private func applyTheme() {
-        NSApp.appearance = theme == "light" ? NSAppearance(named: .aqua) : theme == "dark" ? NSAppearance(named: .darkAqua) : nil
+        let theme = UserDefaults.standard.string(forKey: "theme") ?? "auto"
+        let want: NSAppearance? = theme == "light" ? NSAppearance(named: .aqua) : theme == "dark" ? NSAppearance(named: .darkAqua) : nil
+        if NSApp.appearance?.name != want?.name { NSApp.appearance = want }
     }
 }
 

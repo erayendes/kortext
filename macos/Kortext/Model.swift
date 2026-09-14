@@ -80,10 +80,10 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
             _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge])
             // ponytail: KORTEXT_DEMO=1 fires the four sample notifications on launch — for screenshots, nothing else.
             if ProcessInfo.processInfo.environment["KORTEXT_DEMO"] != nil {
-                notify("HYDRA", "LEGAL.md ready — awaiting approval")
-                notify("HYDRA", "ARCHITECTURE.md could not be written", "claude: rate limit reached, retry after 60s")
+                notify("HYDRA", "LEGAL.md hazır — onay bekliyor")
+                notify("HYDRA", "ARCHITECTURE.md yazılamadı", "claude: rate limit reached, retry after 60s")
                 notify("MILO", "Brief too thin — answer the questions")
-                notify("NORD", "Ready — AGENTS.md in force", "14 documents settled")
+                notify("NORD", "Hazır — AGENTS.md devrede", "14 belge onaylandı")
             }
         }
         Task {
@@ -125,8 +125,8 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
         seenJobs[job.id] = job.status
         guard primed, was == "running", job.status != "running" else { return }
         switch job.status {
-        case "done": notify(p.code, "\(job.doc_rel) ready — awaiting approval", project: p.id, doc: job.doc_rel)
-        case "failed": notify(p.code, "\(job.doc_rel) could not be written", job.error?.split(separator: "\n").first.map(String.init), project: p.id, doc: job.doc_rel)
+        case "done": notify(p.code, p.tr ? "\(job.doc_rel) hazır — onay bekliyor" : "\(job.doc_rel) ready — awaiting approval", project: p.id, doc: job.doc_rel)
+        case "failed": notify(p.code, p.tr ? "\(job.doc_rel) yazılamadı" : "\(job.doc_rel) could not be written", job.error?.split(separator: "\n").first.map(String.init), project: p.id, doc: job.doc_rel)
         default: break
         }
     }
@@ -135,11 +135,11 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
         let id = s.id
         if s.notReady, !seenNotReady.contains(id) {
             seenNotReady.insert(id)
-            if primed { notify(s.project.code, "Brief too thin — answer the questions", project: id, doc: "BRIEF.md") }
+            if primed { notify(s.project.code, s.project.tr ? "Brief yetersiz — soruları yanıtla" : "Brief too thin — answer the questions", project: id, doc: "BRIEF.md") }
         } else if !s.notReady { seenNotReady.remove(id) }
         if s.complete, !seenComplete.contains(id) {
             seenComplete.insert(id)
-            if primed { notify(s.project.code, "Ready — AGENTS.md in force", "\(s.project.docCounts.total) documents settled", project: id) }
+            if primed { notify(s.project.code, s.project.tr ? "Hazır — AGENTS.md devrede" : "Ready — AGENTS.md in force", s.project.tr ? "\(s.project.docCounts.total) belge onaylandı" : "\(s.project.docCounts.total) documents settled", project: id) }
         } else if !s.complete { seenComplete.remove(id) }
     }
 
@@ -152,7 +152,7 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
 
     static let demo: [ProjectState] = {
         func p(_ id: Int, _ code: String, _ name: String, _ docs: [Doc], notReady: Bool = false) -> ProjectState {
-            var s = ProjectState(project: Project(id: id, name: name, code: code, docCounts: .init(settled: 3, total: 15)))
+            var s = ProjectState(project: Project(id: id, name: name, code: code, docCounts: .init(settled: 3, total: 15), doc_lang: "Turkish"))
             s.docs = docs; s.notReady = notReady; s.questions = 3
             s.errors["ARCHITECTURE.md"] = "claude: rate limit reached, retry after 60s"; return s
         }
@@ -201,4 +201,9 @@ enum Shell {
         guard p.terminationStatus == 0 else { return nil }
         return String(data: out.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)
     }
+}
+
+extension Project {
+    /// The documents are written in this language; so is the nudge about them.
+    var tr: Bool { (doc_lang ?? "").lowercased().hasPrefix("tur") || (doc_lang ?? "").lowercased().hasPrefix("türk") }
 }
