@@ -154,13 +154,15 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
 }
 
 enum Shell {
-    // A GUI app's PATH does not know npm's global bin; a login shell does.
+    // A GUI app's PATH does not know npm's global bin. A login shell reads .zprofile
+    // (Homebrew); an interactive one also reads .zshrc, where nvm, fnm and volta live.
     @discardableResult
     static func run(_ cmd: String) -> String? {
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        p.arguments = ["-lc", cmd]
+        p.arguments = ["-lic", cmd]
         let out = Pipe(); p.standardOutput = out; p.standardError = FileHandle.nullDevice
+        p.standardInput = FileHandle.nullDevice
         try? p.run(); p.waitUntilExit()
         guard p.terminationStatus == 0 else { return nil }
         return String(data: out.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)
