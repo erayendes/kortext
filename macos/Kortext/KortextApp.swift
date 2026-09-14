@@ -88,7 +88,7 @@ struct Header: View {
             }.buttonStyle(.plain)
             Spacer()
             if settings { ThemeCycle() } else {
-                Button { settings = true } label: { Icon(name: "gearshape", size: 13) }.buttonStyle(.plain)
+                Button { settings = true } label: { Icon(name: "gearshape", size: 13).frame(width: 14) }.buttonStyle(.plain)
             }
         }
         .padding(.horizontal, 12).frame(height: 40)
@@ -250,9 +250,9 @@ struct StatusBar: View {
         HStack(spacing: 8) {
             if model.installed {
                 Button { power() } label: {
-                    Icon(name: "power", size: 12, color: armed ? Kx.red : up ? Kx.green : Kx.fgFaint, weight: .semibold).frame(width: 18, height: 18)
+                    Icon(name: "power", size: 12, color: armed ? Kx.red : up ? Kx.green : Kx.fgFaint, weight: .semibold).frame(width: 14, height: 18)
                 }
-                .buttonStyle(.plain).padding(.leading, -3)
+                .buttonStyle(.plain)
                 .help(!up ? "Start the server" : armed ? "Press again to quit Kortext and stop the server" : "Quit Kortext and stop the server")
             }
             if armed {
@@ -263,10 +263,10 @@ struct StatusBar: View {
             Spacer()
             if !armed {
                 Link("milowda", destination: URL(string: "https://milowda.com")!)
-                    .font(Kx.sans(11)).foregroundStyle(Kx.fgFaint).padding(.trailing, 4)
+                    .font(Kx.sans(11)).foregroundStyle(Kx.fgFaint)
             }
         }
-        .padding(.leading, 12).padding(.trailing, 8).frame(height: 40)
+        .padding(.horizontal, 12).frame(height: 40)
         .onChange(of: armed) { _, on in if on { Task { try? await Task.sleep(for: .seconds(4)); armed = false } } }
     }
 
@@ -285,7 +285,7 @@ struct ThemeCycle: View {
     var body: some View {
         let icon = theme == "light" ? "sun.max" : theme == "dark" ? "moon" : "circle.lefthalf.filled"
         Button { theme = theme == "auto" ? "light" : theme == "light" ? "dark" : "auto" } label: {
-            Icon(name: icon, size: 13).frame(width: 26, height: 26)
+            Icon(name: icon, size: 13).frame(width: 14, height: 26)
         }
         .buttonStyle(.plain)
         .help("Theme: \(theme)")
