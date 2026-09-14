@@ -4,6 +4,10 @@
 
 ## [Yayımlanmamış]
 
+- **Gönderilmiş tepsi tek belgeye aittir.** Apply'dan sonra tepsi bir sonraki açılan belgede de
+  salt okunur kalıyordu — × yok, Apply pasif — ve yeniden yazım çekmece kapalıyken inerse
+  sonsuza dek; bir belgenin notları başka belgede işaretsiz duruyordu. Artık belge, sürümü ya
+  da koşunun sonucu değişince temizleniyor.
 - **Öneri iste, yanıtı al.** Ask'in yanındaki **Suggest** tek kelime yazmadan yazara ne
   önerdiğini sorar; her yanıtın altındaki **Use as my answer** onu tek basışta sorunun notu
   yapar — istek satırında ise Accept ya da Deny için not kutusunu doldurur.

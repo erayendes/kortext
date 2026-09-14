@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+- **A sent tray belongs to one document.** After Apply the tray stayed read-only — no ×, Apply
+  greyed — on the next document opened, and forever when the rewrite landed while the drawer
+  was closed, so notes from one document sat unticked on another. It now clears when the
+  document, its version, or the run's outcome moves on.
 - **Suggest, then take the answer.** Beside Ask, **Suggest** asks the author what it would do
   without typing a word; under every reply, **Use as my answer** makes it your note on the
   question in one press — on a request row it fills the note box for Accept or Deny.

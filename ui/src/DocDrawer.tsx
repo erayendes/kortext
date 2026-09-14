@@ -135,6 +135,18 @@ export function DocDrawer({
   const [sent, setSent] = useState(false);
   const sentRef = useRef(false);
   sentRef.current = sent;
+  // What `sent` is about. The drawer stays mounted across documents and across
+  // close and reopen, so without this a tray sent on one document stayed
+  // read-only on the next, and stayed forever when the rewrite landed while
+  // the drawer was closed.
+  const sentFor = useRef<{ rel: string; version: string } | null>(null);
+  const clearSent = () => {
+    setSent(false);
+    sentRef.current = false;
+    sentFor.current = null;
+    setNotes([]);
+    setDecided({});
+  };
   const [landed, setLanded] = useState(0);
   const writing = doc?.state === 'writing';
   // No version means the text is still on its way (first open, or the reload
@@ -163,6 +175,7 @@ export function DocDrawer({
     setProposed(false);
     setRawEdit(false);
     setSelected(null);
+    if (sentRef.current && sentFor.current?.rel !== doc?.rel) clearSent();
     if (!sentRef.current) {
       setNotes([]);
       setDecided({});
@@ -190,6 +203,13 @@ export function DocDrawer({
           // on, what was noted on the old text is gone with it. What Apply
           // just sent is the exception — it stays on show, read-only, until
           // the rewrite it went into lands.
+          // Apply itself moves the file (a request ticked, a line removed), so
+          // the first read after it pins the version; a later read that finds
+          // another one means the rewrite landed while the drawer was closed.
+          if (sentRef.current && sentFor.current) {
+            if (sentFor.current.version === '') sentFor.current.version = r.version;
+            else if (sentFor.current.version !== r.version) clearSent();
+          }
           if (!sentRef.current) {
             const kept = loadDraft(project.id, doc.rel, r.version);
             setNotes(kept?.notes ?? []);
@@ -234,14 +254,16 @@ export function DocDrawer({
   const wasWriting = useRef(false);
   useEffect(() => {
     if (wasWriting.current && !writing) {
-      setSent(false);
-      sentRef.current = false;
-      setNotes([]);
-      setDecided({});
+      clearSent();
       setLanded((n) => n + 1);
     }
     wasWriting.current = writing;
   }, [writing]);
+  // A run that fell over rewrote nothing: what was sent comes back as a draft
+  // to edit or send again, not a read-only tray with no way out.
+  useEffect(() => {
+    if (doc?.state === 'failed' && sentRef.current) clearSent();
+  }, [doc?.state]);
 
   // Keep what the footer collected, so closing the drawer does not lose it.
   useEffect(() => {
@@ -570,6 +592,7 @@ export function DocDrawer({
       if (rewriting) {
         setSent(true);
         sentRef.current = true;
+        sentFor.current = { rel: doc.rel, version: '' };
       } else {
         setNotes([]);
         setDecided({});
