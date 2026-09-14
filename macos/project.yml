@@ -22,7 +22,7 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         SUFeedURL: https://raw.githubusercontent.com/erayendes/kortext/main/macos/appcast.xml
-        SUPublicEDKey: AL98f6dND8KQ8nhLPIcesddvzdSXi2d7jQ5AQ3PEbAY=
+        SUPublicEDKey: CE3Cn6zbYOA36WztPK3V0R7+8dqSCvn2lFbKSe255mA=
         SUEnableAutomaticChecks: true
     settings:
       base:
