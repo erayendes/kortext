@@ -12,7 +12,6 @@ targets:
       path: Kortext/Info.plist
       properties:
         LSUIElement: true
-        ATSApplicationFontsPath: "."
         CFBundleDisplayName: Kortext
         CFBundleShortVersionString: "0.1.0"
     settings:

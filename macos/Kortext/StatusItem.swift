@@ -11,6 +11,7 @@ final class StatusController: NSObject {
     private let panel: NSPanel
     private var bag = Set<AnyCancellable>()
     private var monitors: [Any] = []
+    private var host: NSView!
 
     init(model: Model, content: some View) {
         panel = NSPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel, .fullSizeContentView], backing: .buffered, defer: true)
@@ -21,11 +22,25 @@ final class StatusController: NSObject {
         panel.level = .popUpMenu
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.isMovable = false
+        // Glass: the system's popover material behind clear SwiftUI content.
+        let glass = NSVisualEffectView()
+        glass.material = .popover
+        glass.blendingMode = .behindWindow
+        glass.state = .active
+        glass.wantsLayer = true
+        glass.layer?.cornerRadius = 12
+        glass.layer?.masksToBounds = true
+        glass.layer?.borderWidth = 0.5
+        glass.layer?.borderColor = NSColor.separatorColor.cgColor
         let host = NSHostingView(rootView: content)
-        host.wantsLayer = true
-        host.layer?.cornerRadius = 12
-        host.layer?.masksToBounds = true
-        panel.contentView = host
+        host.translatesAutoresizingMaskIntoConstraints = false
+        glass.addSubview(host)
+        NSLayoutConstraint.activate([
+            host.leadingAnchor.constraint(equalTo: glass.leadingAnchor), host.trailingAnchor.constraint(equalTo: glass.trailingAnchor),
+            host.topAnchor.constraint(equalTo: glass.topAnchor), host.bottomAnchor.constraint(equalTo: glass.bottomAnchor),
+        ])
+        self.host = host
+        panel.contentView = glass
 
         item.button?.image = NSImage(named: "menubar")
         item.button?.image?.isTemplate = true
@@ -47,7 +62,6 @@ final class StatusController: NSObject {
 
     private func open() {
         guard let button = item.button, let win = button.window else { return }
-        let host = panel.contentView!
         host.layoutSubtreeIfNeeded()
         let size = host.fittingSize
         let anchor = win.convertToScreen(button.convert(button.bounds, to: nil))

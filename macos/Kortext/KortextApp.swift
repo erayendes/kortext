@@ -35,13 +35,12 @@ struct Popover: View {
     var body: some View {
         VStack(spacing: 0) {
             Header(settings: $settings)
-            Divider().overlay(Kx.border)
+            Divider()
             if settings { SettingsView() } else { Content() }
-            Divider().overlay(Kx.border)
+            Divider()
             StatusBar()
         }
         .frame(width: 300)
-        .background(Kx.bg)
     }
 }
 
@@ -54,7 +53,7 @@ struct Header: View {
             if settings {
                 Button("Done") { settings = false }.buttonStyle(.plain).font(Kx.sans(11, .medium)).foregroundStyle(Kx.fgSecondary)
             } else {
-                Button { settings = true } label: { Icon(name: "settings", size: 14) }.buttonStyle(.plain)
+                Button { settings = true } label: { Icon(name: "gearshape", size: 13) }.buttonStyle(.plain)
             }
         }
         .padding(.horizontal, 12).frame(height: 40)
@@ -112,7 +111,7 @@ struct Empty: View {
                      + Text(r.job.doc_rel).font(Kx.mono(12)).foregroundStyle(Kx.fgSecondary))
                     Spacer()
                     Button { model.pause(r.project) } label: {
-                        HStack(spacing: 4) { Icon(name: "pause", size: 11, color: Kx.fgSecondary); Text("Pause").font(Kx.sans(11, .medium)).foregroundStyle(Kx.fgSecondary) }
+                        HStack(spacing: 4) { Icon(name: "pause.fill", size: 9, color: Kx.fgSecondary); Text("Pause").font(Kx.sans(11, .medium)).foregroundStyle(Kx.fgSecondary) }
                             .padding(.horizontal, 8).frame(height: 22)
                             .overlay(RoundedRectangle(cornerRadius: 6).stroke(Kx.border, lineWidth: 1))
                     }.buttonStyle(.plain)
@@ -134,11 +133,11 @@ struct NotInstalled: View {
                 Button {
                     NSPasteboard.general.clearContents(); NSPasteboard.general.setString("npm i -g kortext", forType: .string); copied = true
                 } label: {
-                    HStack(spacing: 4) { Icon(name: copied ? "check" : "copy", size: 12, color: Kx.fgSecondary); Text(copied ? "Copied" : "Copy").font(Kx.sans(11, .medium)).foregroundStyle(Kx.fgSecondary) }
+                    HStack(spacing: 4) { Icon(name: copied ? "checkmark" : "doc.on.doc", size: 11, color: Kx.fgSecondary); Text(copied ? "Copied" : "Copy").font(Kx.sans(11, .medium)).foregroundStyle(Kx.fgSecondary) }
                 }.buttonStyle(.plain)
             }
             .padding(.horizontal, 10).padding(.vertical, 7)
-            .background(Kx.bgSubtle).overlay(RoundedRectangle(cornerRadius: 6).stroke(Kx.border, lineWidth: 1))
+            .background(Kx.card).overlay(RoundedRectangle(cornerRadius: 8).stroke(Kx.border, lineWidth: 1)).clipShape(RoundedRectangle(cornerRadius: 8))
         }
         .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 12).padding(.top, 18).padding(.bottom, 16)
     }
@@ -170,9 +169,9 @@ struct WaitingRow: View {
                 }
             }
             .padding(.horizontal, 12).padding(.vertical, 9)
-            .background(hover ? Kx.bgHover : Kx.bg)
-            .overlay(RoundedRectangle(cornerRadius: 6).stroke(hover ? Kx.borderStrong : Kx.border, lineWidth: 1))
-            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .background(hover ? Kx.bgHover : Kx.card)
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Kx.border, lineWidth: 1))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -192,21 +191,21 @@ struct StatusBar: View {
             Text("Kortext").font(Kx.sans(11, .medium)).foregroundStyle(Kx.fgMuted)
             if model.installed {
                 Button { power() } label: {
-                    Icon(name: "power", size: 11, color: armed ? Kx.red : up ? Kx.green : Kx.fgFaint).frame(width: 18, height: 18)
+                    Icon(name: "power", size: 12, color: armed ? Kx.red : up ? Kx.green : Kx.fgFaint, weight: .semibold).frame(width: 18, height: 18)
                 }
                 .buttonStyle(.plain).padding(.leading, -2)
                 .help(!up ? "Start the server" : armed ? "Press again to stop" : "Stop the server")
                 if armed {
                     Text("Press again to stop the server").font(Kx.sans(11, .medium)).foregroundStyle(Kx.red).lineLimit(1).fixedSize()
                         .padding(.horizontal, 8).frame(height: 20)
-                        .background(Kx.redBg).overlay(Capsule().stroke(Kx.redBorder, lineWidth: 1)).clipShape(Capsule())
+                        .background(Kx.red.opacity(0.14)).clipShape(Capsule())
                 }
             }
             Spacer()
             if !armed { Text("milowda").font(Kx.sans(11)).foregroundStyle(Kx.fgFaint).padding(.trailing, 4) }
         }
         .padding(.leading, 12).padding(.trailing, 8).frame(height: 40)
-        .background(Kx.bgSubtle)
+        .background(Color.primary.opacity(0.03))
         .onChange(of: armed) { _, on in if on { Task { try? await Task.sleep(for: .seconds(4)); armed = false } } }
     }
 
@@ -233,9 +232,9 @@ struct SettingsView: View {
                     Text("Theme").font(Kx.sans(13)).foregroundStyle(Kx.fg)
                     Spacer()
                     HStack(spacing: 2) {
-                        ForEach([("auto", "auto"), ("light", "sun"), ("dark", "moon")], id: \.0) { key, icon in
+                        ForEach([("auto", "circle.lefthalf.filled"), ("light", "sun.max"), ("dark", "moon")], id: \.0) { key, icon in
                             Button { theme = key } label: {
-                                Icon(name: icon, size: 15, color: theme == key ? Kx.fg : Kx.fgMuted)
+                                Icon(name: icon, size: 13, color: theme == key ? Kx.fg : Kx.fgMuted)
                                     .frame(width: 29, height: 29)
                                     .background(theme == key ? Kx.bgActive : .clear)
                                     .clipShape(RoundedRectangle(cornerRadius: 6))
@@ -244,13 +243,13 @@ struct SettingsView: View {
                     }
                 }
                 .padding(.vertical, 6)
-                Divider().overlay(Kx.border)
+                Divider()
                 Check(on: $loginItem, title: "Launch at login", sub: "The server starts with it, so the morning begins with the list, not with ⏻.")
                     .onChange(of: loginItem) { _, on in try? on ? SMAppService.mainApp.register() : SMAppService.mainApp.unregister() }
-                Divider().overlay(Kx.border)
+                Divider()
                 Check(on: $notifications, title: "Notify when a document waits on me",
                       sub: "A draft to approve, a failed step, a brief with questions, a finished chain.")
-                Divider().overlay(Kx.border)
+                Divider()
                 // The row is the control.
                 Button { model.applyUpdate() } label: {
                     HStack {
@@ -289,8 +288,8 @@ struct Check: View {
         Button { on.toggle() } label: {
             HStack(alignment: .top, spacing: 10) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 3).fill(on ? Kx.accent : Kx.bg)
-                    if on { Icon(name: "check", size: 10, color: Kx.accentFg) }
+                    RoundedRectangle(cornerRadius: 3).fill(on ? Kx.accent : Color.primary.opacity(0.06))
+                    if on { Icon(name: "checkmark", size: 9, color: Kx.accentFg, weight: .bold) }
                     else { RoundedRectangle(cornerRadius: 3).stroke(Kx.borderStrong, lineWidth: 1) }
                 }
                 .frame(width: 14, height: 14).padding(.top, 3)
