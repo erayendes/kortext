@@ -956,6 +956,35 @@ function ModelSelect({
   );
 }
 
+/** Reasoning effort, for the CLIs that have the notion; the rest show nothing. */
+function EffortSelect({
+  engine,
+  value,
+  onChange,
+}: {
+  engine: EngineInfo | undefined;
+  value: string;
+  onChange: (effort: string) => void;
+}) {
+  const levels = engine?.efforts ?? [];
+  if (levels.length === 0) return null;
+  return (
+    <select
+      className="select"
+      value={levels.includes(value) ? value : ''}
+      onChange={(e) => onChange(e.target.value)}
+      title="How hard that CLI thinks — claude --effort, codex model_reasoning_effort, agy --effort. Applies to steps that start after it."
+    >
+      <option value="">effort</option>
+      {levels.map((l) => (
+        <option key={l} value={l}>
+          {l}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 // Transfer = split into .kopeng/ files; the plan gets a summary + approve /
 // revise round — the last act of the handshake.
 function TransferPanel({ project }: { project: Project }) {
@@ -1411,6 +1440,7 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
   const [engines, setEngines] = useState<EngineInfo[]>([]);
   const [engine, setEngine] = useState<string | null>(project.engine || null);
   const [model, setModel] = useState(project.model ?? '');
+  const [effort, setEffort] = useState(project.effort ?? '');
 
   useEffect(() => {
     api
@@ -1517,7 +1547,10 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
               setEngine(id);
               api
                 .setProjectEngine(project.id, id)
-                .then((r) => setModel(r.model ?? ''))
+                .then((r) => {
+                  setModel(r.model ?? '');
+                  setEffort(r.effort ?? '');
+                })
                 .catch((e) => setErr((e as Error).message));
             }}
           />
@@ -1527,6 +1560,14 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
             onChange={(m) => {
               setModel(m);
               api.setProjectModel(project.id, m).catch((e) => setErr((e as Error).message));
+            }}
+          />
+          <EffortSelect
+            engine={engines.find((e) => e.id === (engine ?? engines[0]?.id))}
+            value={effort}
+            onChange={(lvl) => {
+              setEffort(lvl);
+              api.setProjectEffort(project.id, lvl).catch((e) => setErr((e as Error).message));
             }}
           />
 

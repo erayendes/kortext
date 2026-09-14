@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+- **Effort, per project.** A third dropdown beside the model, for the CLIs that have the
+  notion: `claude --effort`, codex's `model_reasoning_effort`, `agy --effort`.
+- The failure reason in a row wraps to two lines before it is cut; prose in the drawer runs to
+  100 characters.
 - **The mark.** New wordmark and icon: outlines over sketch guides in light, solid in dark,
   the `x` alone as the favicon. Panel header, README and favicon use them.
 - **A wider drawer.** 880px, up from 720, for the bands, tables, code and the design page;

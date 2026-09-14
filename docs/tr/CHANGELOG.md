@@ -4,6 +4,10 @@
 
 ## [Yayımlanmamış]
 
+- **Proje başına effort.** Modelin yanında üçüncü bir liste, bu kavramı bilen CLI'lar için:
+  `claude --effort`, codex'in `model_reasoning_effort`'u, `agy --effort`.
+- Satırdaki hata nedeni kesilmeden önce iki satıra sarar; çekmecede düz yazı 100 karaktere
+  kadar uzar.
 - **Logo.** Yeni yazı markası ve ikon: açık temada eskiz kılavuzları üzerinde çizgi harfler,
   koyuda dolu; favicon tek başına `x`. Panel başlığı, README ve favicon bunları kullanır.
 - **Daha geniş çekmece.** 720'den 880px'e; bantlar, tablolar, kod ve tasarım sayfası için.

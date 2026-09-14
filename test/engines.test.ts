@@ -24,6 +24,22 @@ test('the model rides after the flag, the workspace after its own, nothing when 
   ]);
   // No flag: the model is dropped, not passed as a stray argument.
   assert.deepEqual(engineArgs(spec('amp'), { model: 'x' }), spec('amp').args);
+  // Effort: a flag on claude, a config override on codex, nothing on gemini,
+  // and a level the CLI does not take is dropped.
+  assert.deepEqual(engineArgs(spec('claude'), { effort: 'high' }), [
+    ...spec('claude').args,
+    '--effort',
+    'high',
+  ]);
+  assert.deepEqual(engineArgs(spec('codex'), { model: 'gpt-6-astra', effort: 'low' }), [
+    ...spec('codex').args,
+    '-m',
+    'gpt-6-astra',
+    '-c',
+    'model_reasoning_effort=low',
+  ]);
+  assert.deepEqual(engineArgs(spec('claude'), { effort: 'ultra' }), spec('claude').args);
+  assert.deepEqual(engineArgs(spec('gemini'), { effort: 'high' }), spec('gemini').args);
   // Or it travels in the environment.
   assert.equal(engineEnv(spec('goose'), { model: 'm' })?.GOOSE_MODEL, 'm');
   assert.equal(engineEnv(spec('goose'), { model: 'm' })?.GOOSE_MODE, 'auto');
@@ -74,7 +90,11 @@ test('switching the CLI drops a model the new CLI does not know', async () => {
   await put('engine', { id: 'claude' });
   await put('model', { model: 'sonnet' });
   // codex does not know `sonnet`: the switch resets it to the CLI's default.
-  assert.deepEqual(await put('engine', { id: 'codex' }), { engine: 'codex', model: '' });
+  assert.deepEqual(await put('engine', { id: 'codex' }), {
+    engine: 'codex',
+    model: '',
+    effort: '',
+  });
   const row = () =>
     db.prepare('SELECT engine, model FROM projects WHERE id = ?').get(p.id) as {
       engine: string;

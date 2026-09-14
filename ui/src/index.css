@@ -2015,7 +2015,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
 .kx-bullet,
 .kx-ordered,
 .kx-quote {
-  max-width: 78ch;
+  max-width: 100ch;
 }
 .kx-block {
   padding: 3px 8px;
@@ -2454,14 +2454,16 @@ button.kx-note-exc:hover {
 .kx-doc-row.failed {
   border-color: rgba(204, 107, 107, 0.5);
 }
-/* The failure reason beside the name: one line, cut with an ellipsis, the
-   whole text in the tooltip. */
+/* The failure reason beside the name: up to two lines, then an ellipsis; the
+   whole text in the tooltip and in the drawer. */
 .kx-doc-why {
   flex: 1 1 0;
   min-width: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-height: 1.35;
   font-size: var(--fs-micro);
   color: var(--red);
 }

@@ -255,8 +255,8 @@ exist in the data and are never drawn: `waiting` in To do already means queued, 
 means a first draft — only a rewrite needs a word, and that word is `revision`. `failed` is a
 state, not a badge — the run fell over and asks for a Retry — and the row that carries it wears
 `revision` when the run that failed was one, `recheck` when it was a reading. The reason sits in
-the row itself (`.kx-doc-why`): one red micro line between the name and the button, cut with an
-ellipsis, whole in the tooltip — a refused Retry writes a new reason there, and a tooltip alone
+the row itself (`.kx-doc-why`): red micro text between the name and the button, two lines at
+most, then an ellipsis, whole in the tooltip — a refused Retry writes a new reason there, and a tooltip alone
 would hide that anything happened.
 
 A badge is the round pill without the dot: it says what is owed, and a debt has no motion to
@@ -314,8 +314,9 @@ letters, 0.6px for guides), so a mark drawn for a 1344px page still reads at the
 The favicon is the icon — the `x` alone, one file per theme, chosen by the `media` attribute on
 the `<link>`. And, at the far right, the theme button. Nothing else, unless there is no agent
 CLI at all: the engine belongs to a project, so its control sits on the project screen beside
-Start, at the same height as Start — two selects, the CLI and its model, `default` first in the
-second so the CLI's own choice is a word, not an empty box. A tagline in the chrome is a thing the reader learns once
+Start, at the same height as Start — three selects: the CLI, its model, its effort. `default`
+first in the model list and `effort` first in the third, so the CLI's own choice is a word, not an
+empty box; the third is drawn only for a CLI that has the notion. A tagline in the chrome is a thing the reader learns once
 and then reads forever. The theme button is the one preference that survived, and it is an
 icon, not a control row: it takes no width a heading would.
 
@@ -346,7 +347,7 @@ for good on the second click.
 ## 10 · Document view
 
 The drawer is **880px** wide (`94vw` at most): the bands, tables, code blocks and the design
-page use all of it. Prose does not — headings, paragraphs, lists and quotes stop at **78ch**,
+page use all of it. Prose does not — headings, paragraphs, lists and quotes stop at **100ch**,
 left-aligned, so a line never runs past the length an eye carries and the room stays on the
 right. The drawer was 720 and read as cramped where a request and its thread stacked; the text
 was never the problem, so the text kept its measure.

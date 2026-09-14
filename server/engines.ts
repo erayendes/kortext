@@ -15,6 +15,13 @@ export interface EngineSpec {
   modelFlag?: string;
   /** Or an environment variable that names it. */
   modelEnv?: string;
+  /** How reasoning effort travels, when the CLI has the notion: a flag that
+   *  takes the level, or a `-c key=` prefix the level is appended to. Absent
+   *  when it does not, and the panel shows no effort list. */
+  effortFlag?: string;
+  effortPrefix?: string;
+  /** The levels that CLI accepts, in order. */
+  efforts?: string[];
   /** Set when the CLI takes the prompt as an argument: the flag it follows,
    *  or '' when it is the last positional argument. */
   promptFlag?: string;
@@ -41,6 +48,8 @@ export const ENGINES: EngineSpec[] = [
     // stdin carries the step prompt.
     args: ['--print', '--dangerously-skip-permissions'],
     modelFlag: '--model',
+    effortFlag: '--effort',
+    efforts: ['low', 'medium', 'high', 'xhigh', 'max'],
     // Aliases the CLI resolves to its latest of each tier.
     models: ['fable', 'opus', 'sonnet', 'haiku'],
     installHint: 'npm install -g @anthropic-ai/claude-code',
@@ -52,6 +61,9 @@ export const ENGINES: EngineSpec[] = [
     // file; skip-git-repo-check: project may not be a git repo (yet).
     args: ['exec', '--sandbox', 'workspace-write', '--skip-git-repo-check'],
     modelFlag: '-m',
+    // codex has no flag; the config key is overridden on the command line.
+    effortPrefix: '-c model_reasoning_effort=',
+    efforts: ['low', 'medium', 'high'],
     models: ['gpt-6-astra', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.6-sol', 'gpt-5.4-mini'],
     installHint: 'npm install -g @openai/codex',
   },
@@ -66,6 +78,8 @@ export const ENGINES: EngineSpec[] = [
     // hunts for the repository with find and ls.
     cwdFlag: '--add-dir',
     modelFlag: '--model',
+    effortFlag: '--effort',
+    efforts: ['low', 'medium', 'high'],
     // `agy models` lists more; these are the tiers.
     models: [
       'gemini-3.8-flash-high',
@@ -180,13 +194,23 @@ export const ENGINES: EngineSpec[] = [
 /** The CLI's arguments with the project's model, when one is set. */
 export function engineArgs(
   engine: EngineSpec,
-  project: { model?: string; repo_path?: string },
+  project: { model?: string; effort?: string; repo_path?: string },
 ): string[] {
   const model = (project.model ?? '').trim();
+  const effort = (project.effort ?? '').trim();
+  const withEffort = effort && engine.efforts?.includes(effort);
   return [
     ...engine.args,
     ...(engine.cwdFlag && project.repo_path ? [engine.cwdFlag, project.repo_path] : []),
     ...(model && engine.modelFlag ? [engine.modelFlag, model] : []),
+    ...(withEffort && engine.effortFlag ? [engine.effortFlag, effort] : []),
+    // `-c key=value` is two argv entries: the flag, then key=value as one.
+    ...(withEffort && engine.effortPrefix
+      ? (() => {
+          const [flag, ...rest] = engine.effortPrefix.split(' ');
+          return [flag!, `${rest.join(' ')}${effort}`];
+        })()
+      : []),
   ];
 }
 

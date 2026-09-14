@@ -74,6 +74,8 @@ The engine — `claude`, `codex`, `antigravity` and the others in the list. The 
 
 The second dropdown is the **model**. `default` uses the CLI's own setting. Pick a model and it is passed to the CLI on every run (`claude --model`, `codex -m`).
 
+A third one, **effort**, appears for the CLIs that have the notion — `claude --effort`, codex's `model_reasoning_effort`, `agy --effort` — with the levels that CLI accepts. Like the model, it reaches the runs that start after you set it, and a level the next CLI does not take is dropped when you switch.
+
 - **Pause** stops new steps from starting; the running step stops too.
 - **Continue** picks up where it left off.
 - **Restart** deletes the analysis documents and keeps `BRIEF.md` as it is. The project comes back paused; **Start** begins again.
