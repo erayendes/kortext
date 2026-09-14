@@ -252,7 +252,7 @@ struct StatusBar: View {
             }
             Spacer()
             if !armed {
-                Link("milowda", destination: URL(string: "https://milowda.com")!)
+                Credit()
                     .font(Kx.sans(11)).foregroundStyle(Kx.fgFaint)
             }
         }
@@ -282,13 +282,24 @@ struct ThemeCycle: View {
     }
 }
 
+/// The credit, a link — opened by hand, since SwiftUI's Link is inert in a non-activating panel.
+struct Credit: View {
+    @State private var hover = false
+    var body: some View {
+        Button { NSWorkspace.shared.open(URL(string: "https://milowda.com")!) } label: {
+            Text("milowda").font(Kx.sans(11)).foregroundStyle(hover ? Kx.fgSecondary : Kx.fgFaint)
+        }
+        .buttonStyle(.plain).onHover { hover = $0 }
+    }
+}
+
 // The status bar's twin under settings: the theme where ⏻ was, the credit where it is.
 struct SettingsBar: View {
     var body: some View {
         HStack(spacing: 8) {
             ThemeCycle()
             Spacer()
-            Link("milowda", destination: URL(string: "https://milowda.com")!)
+            Credit()
                 .font(Kx.sans(11)).foregroundStyle(Kx.fgFaint)
         }
         .padding(.horizontal, 12).frame(height: 40)
