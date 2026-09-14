@@ -1481,6 +1481,7 @@ function ProjectScreen({
   const [status, setStatus] = useState('');
   const [hasJobs, setHasJobs] = useState(true); // pessimistic until the first poll
   const [pending, setPending] = useState(true); // any document still unwritten
+  const [settled, setSettled] = useState(false); // every document approved — the handshake
   const [checking, setChecking] = useState(false); // the gate is reading the brief
   const [err, setErr] = useState<string | null>(null);
   // Use in-place confirmation because embedded browsers may suppress native confirm dialogs.
@@ -1592,35 +1593,38 @@ function ProjectScreen({
             {shortPath(project.repo_path)}
           </span>
         </div>
-        <div className="kx-proj-side">
-          <div className="kx-proj-actions">
-            {engines.length > 0 && (
-              <button className="btn btn-link-primary" onClick={() => setPicking(true)}>
-                Change model
-              </button>
-            )}
-            {running ? (
-              <button className="btn btn-primary" disabled={busy} onClick={togglePause}>
-                ⏸ Pause
-              </button>
-            ) : (
-              // Offer Start when the chain is idle, even if the project is already unpaused.
-              pending && (
-                <button className="btn btn-primary" disabled={busy} onClick={start}>
-                  {hasJobs ? '▶ Continue' : '▶ Start'}
+        {/* After the handshake kortext has retired; the engine and its controls go with it. */}
+        {!settled && (
+          <div className="kx-proj-side">
+            <div className="kx-proj-actions">
+              {engines.length > 0 && (
+                <button className="btn btn-link-primary" onClick={() => setPicking(true)}>
+                  Change model
                 </button>
-              )
+              )}
+              {running ? (
+                <button className="btn btn-primary" disabled={busy} onClick={togglePause}>
+                  ⏸ Pause
+                </button>
+              ) : (
+                // Offer Start when the chain is idle, even if the project is already unpaused.
+                pending && (
+                  <button className="btn btn-primary" disabled={busy} onClick={start}>
+                    {hasJobs ? '▶ Continue' : '▶ Start'}
+                  </button>
+                )
+              )}
+            </div>
+            {engines.length > 0 && (
+              <span
+                className="kx-engine-line mono"
+                title="The CLI this project runs on, its model and effort"
+              >
+                {[engine ?? engines[0]?.id, model || 'default', effort].filter(Boolean).join(' · ')}
+              </span>
             )}
           </div>
-          {engines.length > 0 && (
-            <span
-              className="kx-engine-line mono"
-              title="The CLI this project runs on, its model and effort"
-            >
-              {[engine ?? engines[0]?.id, model || 'default', effort].filter(Boolean).join(' · ')}
-            </span>
-          )}
-        </div>
+        )}
       </div>
       {strip}
       {err && <div className="kx-error">{err}</div>}
@@ -1648,6 +1652,7 @@ function ProjectScreen({
         onHasJobs={setHasJobs}
         onPending={setPending}
         onChecking={setChecking}
+        onSettled={setSettled}
       />
       {/* Restart is armed and confirmed here and nowhere else. Asking on the
           header too painted the same question twice and took Start/Pause
@@ -1794,6 +1799,7 @@ function DocumentsTab({
   onHasJobs,
   onPending,
   onChecking,
+  onSettled,
 }: {
   project: Project;
   paused?: boolean;
@@ -1801,6 +1807,7 @@ function DocumentsTab({
   onHasJobs?: (has: boolean) => void;
   onPending?: (pending: boolean) => void;
   onChecking?: (checking: boolean) => void;
+  onSettled?: (settled: boolean) => void;
 }) {
   const [docs, setDocs] = useState<DocInfo[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -1876,6 +1883,10 @@ function DocumentsTab({
     onStatus?.(running.length > 0 ? `${running.map((j) => j.doc_rel).join(' · ')} writing…` : '');
     onHasJobs?.(jobs.length > 0);
     onPending?.(docs.some((d) => d.status === 'uninitialized'));
+    onSettled?.(
+      docs.length > 0 &&
+        docs.every((d) => d.status === 'approved' || d.status === 'not-applicable'),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     running.map((j) => j.id).join(','),
