@@ -164,6 +164,18 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
         ]
     }()
 
+    /// Settings › notifications: ask if never asked; if refused, the only fix is System Settings.
+    func ensureNotifications() {
+        Task {
+            let st = await UNUserNotificationCenter.current().notificationSettings()
+            switch st.authorizationStatus {
+            case .notDetermined: _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge])
+            case .denied: NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension")!)
+            default: break
+            }
+        }
+    }
+
     func notify(_ title: String, _ body: String, _ subtitle: String? = nil, project: Int? = nil, doc: String? = nil) {
         guard UserDefaults.standard.object(forKey: "notifications") as? Bool ?? true else { return }
         let c = UNMutableNotificationContent()

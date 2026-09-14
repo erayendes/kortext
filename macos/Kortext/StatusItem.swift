@@ -5,17 +5,23 @@ import Combine
 // The menu bar item and the panel under it. Not MenuBarExtra: that pins its
 // window to the icon's left edge; this one opens centred beneath the icon,
 // a little below the bar, the way a companion panel sits.
+// A borderless panel refuses key status by default; without it Esc never arrives and resigning key (a click elsewhere) is never reported.
+final class KeyPanel: NSPanel {
+    override var canBecomeKey: Bool { true }
+}
+
 @MainActor
-final class StatusController: NSObject {
+final class StatusController: NSObject, NSWindowDelegate {
     private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-    private let panel: NSPanel
+    private let panel: KeyPanel
     private var bag = Set<AnyCancellable>()
     private var monitors: [Any] = []
     private var host: NSView!
 
     init(model: Model, content: some View) {
-        panel = NSPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel, .fullSizeContentView], backing: .buffered, defer: true)
+        panel = KeyPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel, .fullSizeContentView], backing: .buffered, defer: true)
         super.init()
+        panel.delegate = self
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = true
@@ -70,17 +76,18 @@ final class StatusController: NSObject {
             origin.x = min(max(origin.x, screen.visibleFrame.minX + 8), screen.visibleFrame.maxX - size.width - 8)
         }
         panel.setFrame(NSRect(origin: origin, size: size), display: true)
-        panel.orderFrontRegardless()
-        panel.makeKey()
-        // Any click outside closes it, like a menu.
+        panel.makeKeyAndOrderFront(nil)
+        // Like a menu: a click anywhere else, or Esc, closes it.
         monitors = [
-            NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in self?.close() } as Any,
+            NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in Task { @MainActor in self?.close() } } as Any,
             NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { [weak self] e in
-                if e.keyCode == 53 { self?.close(); return nil }   // esc
+                if e.keyCode == 53 { Task { @MainActor in self?.close() }; return nil }
                 return e
             } as Any,
         ]
     }
+
+    func windowDidResignKey(_ n: Notification) { close() }
 
     private func close() {
         panel.orderOut(nil)

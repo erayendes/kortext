@@ -281,6 +281,7 @@ struct SettingsView: View {
                 Divider()
                 Check(on: $notifications, title: "Notify when a document waits on me",
                       sub: "A draft to approve, a failed step, a brief with questions, a finished chain.")
+                    .onChange(of: notifications) { _, on in if on { model.ensureNotifications() } }
                 Divider()
                 HStack {
                     Button("Quit the menu bar app") { NSApp.terminate(nil) }.buttonStyle(.plain).font(Kx.sans(11)).foregroundStyle(Kx.fgFaint)
