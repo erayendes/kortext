@@ -180,8 +180,8 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: UUID().uuidString, content: c, trigger: nil))
     }
 
-    /// ⏻ by hand: start the server and open the panel, as `kortext` itself does. (At login the server starts without it.)
-    func startDaemon() { Shell.run("kortext"); Task { try? await Task.sleep(for: .seconds(2)); await poll() } }
+    /// ⏻: start the server; the panel is a press away, not a browser window that opens itself.
+    func startDaemon() { Shell.run("kortext --no-open"); Task { try? await Task.sleep(for: .seconds(2)); await poll() } }
     /// ⏻: the server goes down with the app. A running step refuses (--stop does), so the app stays and says so.
     func quitAll() {
         Task {

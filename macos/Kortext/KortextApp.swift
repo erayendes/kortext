@@ -117,7 +117,7 @@ struct Content: View {
     }
     var body: some View {
         if !model.installed { NotInstalled() }
-        else if model.version == nil { Message(title: "Kortext is not running", sub: "Press ⏻ below to start the server and open the panel.") }
+        else if model.version == nil { Message(title: "Kortext is not running", sub: "Press ⏻ below to start the server.") }
         else if model.shown.isEmpty { Empty() }
         else {
             // One card per project, its documents as rows — the way mimir groups a provider's lines.
@@ -243,10 +243,10 @@ struct StatusBar: View {
                     Icon(name: "power", size: 12, color: armed ? Kx.red : up ? Kx.green : Kx.fgFaint, weight: .semibold).frame(width: 14, height: 18)
                 }
                 .buttonStyle(.plain).hand()
-                .help(!up ? "Start the server and open the panel" : armed ? "Press again to quit Kortext and stop the server" : "Quit Kortext and stop the server")
+                .help(!up ? "Start the server" : armed ? "Press again to quit Kortext and stop the server" : "Quit Kortext and stop the server")
                 if up, !armed {
                     Button { model.openPanel() } label: {
-                        Text("Open panel").font(Kx.sans(11)).foregroundStyle(Kx.fgSecondary)
+                        Text("open panel").font(Kx.sans(11)).foregroundStyle(Kx.fgSecondary)
                     }
                     .buttonStyle(.plain).hand().help("Open the panel in your browser")
                 }
