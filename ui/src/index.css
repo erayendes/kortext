@@ -1333,17 +1333,14 @@ a.btn {
   font-size: var(--fs-ui);
   color: var(--red);
 }
-/* Under the head while ⚙ is on: the project's actions, and the question one of them asks. */
+/* Under the path while ⚙ is on: the project's actions, and the question one of them asks.
+   Link buttons carry their own padding; pulled back so the first word sits on the path's edge. */
 .kx-danger-zone {
   display: flex;
-  justify-content: flex-end;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 14px;
-  padding: 6px 8px;
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  background: var(--bg-subtle);
+  gap: 6px;
+  margin: 6px 0 0 -12px;
 }
 .kx-gear {
   display: inline-flex;
@@ -1568,7 +1565,7 @@ a.btn {
 }
 .kx-main-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 14px;
 }
 .kx-main-head h1 {
