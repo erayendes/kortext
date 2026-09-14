@@ -36,7 +36,7 @@ Open any document from the list.
 **Approve** — the document becomes ground for the ones after it, and the chain moves on.
 
 **Ask** — select a line and ask your question. The persona that wrote the document answers about that passage.
-Questions are for understanding, not for changing. That is why they are not saved.
+Questions are for understanding, not for changing. That is why they are not saved. Unless you want to keep one: under every answer, **Use as my answer** takes it as your note — ask "what do you suggest?", read it, press once.
 
 **Add note** — your notes get the document rewritten. A note left on one of the document's open questions counts as the answer: the question disappears and the fact it established becomes part of the document.
 

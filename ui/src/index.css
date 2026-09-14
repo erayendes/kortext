@@ -2497,6 +2497,14 @@ button.kx-note-exc:hover {
   font-weight: 600;
   color: var(--fg);
 }
+/* Under an answer: take it as your own, one press. Link-weight, left, ui size. */
+.kx-explain-take {
+  align-self: flex-start;
+  height: auto;
+  padding: 2px 0;
+  margin-top: 4px;
+  font-size: var(--fs-ui);
+}
 .kx-explain-a {
   color: var(--fg-mid);
   white-space: pre-wrap;

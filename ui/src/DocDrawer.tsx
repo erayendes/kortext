@@ -1864,6 +1864,22 @@ function LineThread({
           <span className={`kx-explain-a${x.answer === null ? ' kx-running' : ''}`}>
             {x.answer === null ? 'writing an answer…' : <AnswerText text={x.answer} />}
           </span>
+          {/* "What do you suggest?" — and the suggestion is the answer. One press
+              takes it as the note on a question; on a request it fills the box,
+              since the decision there is Accept or Deny, not a note. */}
+          {x.answer !== null && (
+            <button
+              type="button"
+              className="btn btn-link-primary kx-explain-take"
+              onClick={() => {
+                const answer = x.answer ?? '';
+                if (onDecide) setText(answer);
+                else onNote(answer);
+              }}
+            >
+              {onDecide ? 'Use as my note' : 'Use as my answer'}
+            </button>
+          )}
         </div>
       ))}
       {(active || waiting) && (
