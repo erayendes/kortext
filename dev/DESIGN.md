@@ -314,9 +314,13 @@ letters, 0.6px for guides), so a mark drawn for a 1344px page still reads at the
 The favicon is the icon — the `x` alone, one file per theme, chosen by the `media` attribute on
 the `<link>`. And, at the far right, the theme button. Nothing else, unless there is no agent
 CLI at all: the engine belongs to a project, so its control sits on the project screen beside
-Start, at the same height as Start — three selects: the CLI, its model, its effort. `default`
-first in the model list and `effort` first in the third, so the CLI's own choice is a word, not an
-empty box; the third is drawn only for a CLI that has the notion. A tagline in the chrome is a thing the reader learns once
+Start — not as three selects standing beside it all day, but as one faint mono line under the
+project's path: `claude · sonnet · high`, dashed underline, a press. Pressed, the line becomes
+the three selects at fixed widths (120 · 190 · 100px, so a longer name never moves the row) and
+a *Done*; picking a model or an effort closes them, picking a CLI does not, since the model
+usually follows. `default` first in the model list and `effort` first in the third, so the
+CLI's own choice is a word, not an empty box; the third is drawn only for a CLI that has the
+notion. What is changed once a day should read all day and be a control only when asked. A tagline in the chrome is a thing the reader learns once
 and then reads forever. The theme button is the one preference that survived, and it is an
 icon, not a control row: it takes no width a heading would.
 

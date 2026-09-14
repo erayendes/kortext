@@ -70,7 +70,7 @@ Any document carrying a failure or something waiting on you rises to **Action ne
 
 ## Running, pausing, changing the engine
 
-The engine — `claude`, `codex`, `antigravity` and the others in the list. The dropdown shows what is installed. You choose it when adding the project, and you can change it whenever you like. When a quota runs out, changing it is all there is to do.
+The engine — `claude`, `codex`, `antigravity` and the others in the list. Under the project's name a line says what runs it — `claude · sonnet · high`. Press it and it becomes three dropdowns: the CLI (what is installed), its model, its effort. You choose the CLI when adding the project, and you can change it whenever you like. When a quota runs out, changing it is all there is to do.
 
 The second dropdown is the **model**. `default` uses the CLI's own setting. Pick a model and it is passed to the CLI on every run (`claude --model`, `codex -m`).
 

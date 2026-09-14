@@ -1375,6 +1375,47 @@ a.btn {
   margin: 0;
   line-height: 1.2;
 }
+/* Under the name: what runs this project, as one faint mono line. A press
+   swaps it for the three selects at fixed widths — the CLI, its model, its
+   effort — so a longer name never moves the row; a pick swaps it back. */
+.kx-engine-line {
+  align-self: flex-start;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: var(--fs-label);
+  color: var(--fg-secondary);
+  cursor: pointer;
+  border-bottom: 1px dashed var(--border-strong);
+  line-height: 1.4;
+}
+.kx-engine-line:hover {
+  color: var(--fg);
+  border-bottom-color: var(--fg-secondary);
+}
+.kx-engine-line:focus-visible {
+  outline: 2px solid var(--accent-ring);
+  outline-offset: 2px;
+}
+.kx-engine-tune {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+.kx-engine-tune > select {
+  text-overflow: ellipsis;
+}
+.kx-engine-tune > select:nth-of-type(1) {
+  width: 120px;
+}
+.kx-engine-tune > select:nth-of-type(2) {
+  width: 190px;
+}
+.kx-engine-tune > select:nth-of-type(3) {
+  width: 100px;
+}
 .kx-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));

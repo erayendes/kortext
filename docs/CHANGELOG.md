@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- **The engine line.** The CLI, model and effort sit under the project's name as one line —
+  `claude · sonnet · high` — and become three fixed-width dropdowns when pressed.
 - **Effort, per project.** A third dropdown beside the model, for the CLIs that have the
   notion: `claude --effort`, codex's `model_reasoning_effort`, `agy --effort` — with the levels
   and models each CLI's own picker offers.

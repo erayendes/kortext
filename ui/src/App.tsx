@@ -1441,6 +1441,9 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
   const [engine, setEngine] = useState<string | null>(project.engine || null);
   const [model, setModel] = useState(project.model ?? '');
   const [effort, setEffort] = useState(project.effort ?? '');
+  // The engine line under the name shows what runs; a press opens the three
+  // selects in its place, a pick closes them.
+  const [tuning, setTuning] = useState(false);
 
   useEffect(() => {
     api
@@ -1538,39 +1541,57 @@ function ProjectScreen({ project, onBack }: { project: Project; onBack: () => vo
           <span className="kx-card-path mono" title={project.repo_path}>
             {shortPath(project.repo_path)}
           </span>
+          {tuning ? (
+            <div className="kx-engine-tune">
+              <EngineSelect
+                engines={engines}
+                value={engine}
+                onChange={(id) => {
+                  setEngine(id);
+                  api
+                    .setProjectEngine(project.id, id)
+                    .then((r) => {
+                      setModel(r.model ?? '');
+                      setEffort(r.effort ?? '');
+                    })
+                    .catch((e) => setErr((e as Error).message));
+                }}
+              />
+              <ModelSelect
+                engine={engines.find((e) => e.id === (engine ?? engines[0]?.id))}
+                value={model}
+                onChange={(m) => {
+                  setModel(m);
+                  api.setProjectModel(project.id, m).catch((e) => setErr((e as Error).message));
+                  setTuning(false);
+                }}
+              />
+              <EffortSelect
+                engine={engines.find((e) => e.id === (engine ?? engines[0]?.id))}
+                value={effort}
+                onChange={(lvl) => {
+                  setEffort(lvl);
+                  api.setProjectEffort(project.id, lvl).catch((e) => setErr((e as Error).message));
+                  setTuning(false);
+                }}
+              />
+              <button className="btn btn-link-primary" onClick={() => setTuning(false)}>
+                Done
+              </button>
+            </div>
+          ) : (
+            engines.length > 0 && (
+              <button
+                className="kx-engine-line mono"
+                title="The CLI this project runs on, its model and effort — press to change"
+                onClick={() => setTuning(true)}
+              >
+                {[engine ?? engines[0]?.id, model || 'default', effort].filter(Boolean).join(' · ')}
+              </button>
+            )
+          )}
         </div>
         <div className="kx-proj-actions">
-          <EngineSelect
-            engines={engines}
-            value={engine}
-            onChange={(id) => {
-              setEngine(id);
-              api
-                .setProjectEngine(project.id, id)
-                .then((r) => {
-                  setModel(r.model ?? '');
-                  setEffort(r.effort ?? '');
-                })
-                .catch((e) => setErr((e as Error).message));
-            }}
-          />
-          <ModelSelect
-            engine={engines.find((e) => e.id === (engine ?? engines[0]?.id))}
-            value={model}
-            onChange={(m) => {
-              setModel(m);
-              api.setProjectModel(project.id, m).catch((e) => setErr((e as Error).message));
-            }}
-          />
-          <EffortSelect
-            engine={engines.find((e) => e.id === (engine ?? engines[0]?.id))}
-            value={effort}
-            onChange={(lvl) => {
-              setEffort(lvl);
-              api.setProjectEffort(project.id, lvl).catch((e) => setErr((e as Error).message));
-            }}
-          />
-
           {running ? (
             <button className="btn btn-primary" disabled={busy} onClick={togglePause}>
               ⏸ Pause
