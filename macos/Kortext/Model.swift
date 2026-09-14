@@ -66,9 +66,9 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
     /// The beta row, pressed: installed → say so; else arm once, then install `kortext@beta` and restart.
     var betaArmed = false
     func tryBeta() {
-        if onBeta { betaNote = "the beta is what runs now · Check for updates goes back to the release"; return }
+        if onBeta { betaNote = "running · Check for updates goes back"; return }
         guard let beta else { betaNote = "no beta on npm right now"; return }
-        if !betaArmed { betaArmed = true; betaNote = "install kortext \(beta)? press again"; return }
+        if !betaArmed { betaArmed = true; betaNote = "press again to install \(beta)"; return }
         betaArmed = false
         install(tag: "beta", label: "kortext \(beta)")
     }
@@ -81,7 +81,7 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
             guard let v = try? await Api.version() else { update = "v\(version ?? "") · offline"; return }
             pendingUpdate = v.stale || onBeta
             update = v.stale ? "kortext \(v.latest ?? "") available · click to update"
-                : onBeta ? "on the beta · click to go back to kortext \(v.latest ?? "the release")"
+                : onBeta ? "on the beta · click for kortext \(v.latest ?? "release")"
                 : "kortext \(v.current) · up to date"
         }
     }
