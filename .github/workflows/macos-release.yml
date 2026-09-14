@@ -1,0 +1,156 @@
+name: macOS app
+
+# The same tag that publishes the npm package (npm-publish.yml) builds, signs,
+# notarizes and ships the menu bar app: Kortext.zip on the GitHub release, and
+# a new item in macos/appcast.xml so installed copies update themselves.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  app:
+    runs-on: macos-15
+    timeout-minutes: 40
+    permissions:
+      contents: write # the appcast commit on main and the release asset
+    env:
+      SIGN_IDENTITY: "Developer ID Application: Eray Endes (926AC5V2UG)"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Version from the tag
+        id: version
+        env:
+          REF: ${{ github.ref_name }}
+        run: |
+          VERSION="${REF#v}"
+          # Monotonic CFBundleVersion: major*1_000_000 + minor*1_000 + patch.
+          IFS=. read -r maj min pat <<< "$VERSION"
+          echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "BUILD=$(( maj * 1000000 + min * 1000 + ${pat:-0} ))" >> "$GITHUB_OUTPUT"
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Build (unsigned; CI signs below)
+        env:
+          VERSION: ${{ steps.version.outputs.VERSION }}
+          BUILD: ${{ steps.version.outputs.BUILD }}
+        run: |
+          cd macos
+          xcodegen generate
+          xcodebuild -project Kortext.xcodeproj -scheme Kortext -configuration Release \
+            -derivedDataPath build \
+            MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD" \
+            CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO \
+            build | tail -3
+          mkdir -p ../dist
+          ditto build/Build/Products/Release/Kortext.app ../dist/Kortext.app
+
+      - name: Import signing certificate
+        env:
+          CERT_DATA: ${{ secrets.DEVELOPER_ID_CERT }}
+          CERT_PASSWORD: ${{ secrets.DEVELOPER_ID_CERT_PASSWORD }}
+        run: |
+          echo "$CERT_DATA" | base64 --decode > /tmp/cert.p12
+          security create-keychain -p "" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
+          security import /tmp/cert.p12 -k build.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+          rm /tmp/cert.p12
+
+      # Inside-out: Sparkle's helpers first, the framework, then the app. Not --deep.
+      - name: Sign (Developer ID, hardened runtime)
+        run: |
+          APP=dist/Kortext.app
+          B="$APP/Contents/Frameworks/Sparkle.framework/Versions/B"
+          sign() { codesign --force --options runtime --timestamp --sign "$SIGN_IDENTITY" "$@"; }
+          sign "$B/XPCServices/Downloader.xpc"
+          sign "$B/XPCServices/Installer.xpc"
+          sign "$B/Updater.app"
+          sign "$B/Autoupdate"
+          sign "$APP/Contents/Frameworks/Sparkle.framework"
+          sign "$APP"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+
+      - name: Notarize and staple
+        env:
+          NOTARIZATION_API_KEY: ${{ secrets.NOTARIZATION_API_KEY }}
+          NOTARIZATION_API_KEY_ID: ${{ secrets.NOTARIZATION_API_KEY_ID }}
+          NOTARIZATION_API_ISSUER: ${{ secrets.NOTARIZATION_API_ISSUER }}
+        run: |
+          echo "$NOTARIZATION_API_KEY" | base64 --decode > /tmp/AuthKey.p8
+          chmod 600 /tmp/AuthKey.p8
+          ditto -c -k --keepParent dist/Kortext.app /tmp/notarize.zip
+          xcrun notarytool submit /tmp/notarize.zip \
+            --key /tmp/AuthKey.p8 --key-id "$NOTARIZATION_API_KEY_ID" --issuer "$NOTARIZATION_API_ISSUER" --wait
+          xcrun stapler staple dist/Kortext.app
+          rm -f /tmp/notarize.zip /tmp/AuthKey.p8
+
+      # The asset is Kortext.zip — the appcast enclosure points at .../v${VERSION}/Kortext.zip.
+      - name: Package
+        id: pkg
+        run: |
+          (cd dist && zip -r --symlinks Kortext.zip Kortext.app --quiet)
+          echo "LENGTH=$(wc -c < dist/Kortext.zip | tr -d ' ')" >> "$GITHUB_OUTPUT"
+          echo "SHA256=$(shasum -a 256 dist/Kortext.zip | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+      - name: Sign the update for Sparkle
+        id: sparkle
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          SIGN_UPDATE="$(find macos/build/SourcePackages/artifacts -name sign_update -not -path '*/old_dsa*' -type f | head -1)"
+          KEY_DIR="$(mktemp -d)"
+          printf '%s' "$SPARKLE_PRIVATE_KEY" > "$KEY_DIR/key"
+          ED_SIG="$("$SIGN_UPDATE" --ed-key-file "$KEY_DIR/key" dist/Kortext.zip | grep -oE 'edSignature="[^"]+"' | cut -d'"' -f2)"
+          rm -rf "$KEY_DIR"
+          [ -n "$ED_SIG" ] || { echo "::error::sign_update produced no signature"; exit 1; }
+          echo "ED_SIG=$ED_SIG" >> "$GITHUB_OUTPUT"
+
+      # The tag was cut from main's HEAD, so main is the same tree; dist/ is untracked and survives.
+      - name: Appcast on main
+        env:
+          VERSION: ${{ steps.version.outputs.VERSION }}
+          BUILD: ${{ steps.version.outputs.BUILD }}
+          ED_SIG: ${{ steps.sparkle.outputs.ED_SIG }}
+          LENGTH: ${{ steps.pkg.outputs.LENGTH }}
+        run: |
+          # Release notes: this version's section of the changelog.
+          NOTES="$(awk -v v="$VERSION" '$0 ~ "^## \\["v"\\]"{c=1;next} c&&/^## \[/{c=0} c{print}' docs/CHANGELOG.md)"
+          [ -n "$NOTES" ] || NOTES="Kortext $VERSION."
+          printf '%s' "$NOTES" > /tmp/release_notes.md
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout main
+          python3 macos/script/gen_appcast_item.py \
+            --version "$VERSION" --build-number "$BUILD" \
+            --url "https://github.com/erayendes/kortext/releases/download/v${VERSION}/Kortext.zip" \
+            --signature "$ED_SIG" --length "$LENGTH" --notes "$NOTES" \
+            --appcast macos/appcast.xml
+          git add macos/appcast.xml
+          git commit -m "chore: appcast v$VERSION" || echo "appcast unchanged"
+          git push origin main
+
+      # npm-publish.yml creates the release for the same tag; whichever job is first creates it.
+      - name: Attach to the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.VERSION }}
+          SHA256: ${{ steps.pkg.outputs.SHA256 }}
+        run: |
+          TAG="v${VERSION}"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Kortext $TAG" \
+            --notes "See [the changelog](https://github.com/${GITHUB_REPOSITORY}/blob/${TAG}/docs/CHANGELOG.md)."
+          gh release upload "$TAG" dist/Kortext.zip --clobber
+          gh release edit "$TAG" --notes "$(gh release view "$TAG" --json body -q .body)
+
+**macOS menu bar app:** [Kortext.zip](https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/Kortext.zip) · SHA256 \`${SHA256}\`"

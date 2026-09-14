@@ -3,21 +3,33 @@ options:
   bundleIdPrefix: com.milowda
   deploymentTarget:
     macOS: "14.0"
+packages:
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    from: 2.7.0
 targets:
   Kortext:
     type: application
     platform: macOS
     sources: [Kortext]
+    dependencies:
+      - package: Sparkle
     info:
       path: Kortext/Info.plist
       properties:
         LSUIElement: true
         CFBundleDisplayName: Kortext
-        CFBundleShortVersionString: "0.1.0"
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        SUFeedURL: https://raw.githubusercontent.com/erayendes/kortext/main/macos/appcast.xml
+        SUPublicEDKey: AL98f6dND8KQ8nhLPIcesddvzdSXi2d7jQ5AQ3PEbAY=
+        SUEnableAutomaticChecks: true
     settings:
       base:
         SWIFT_VERSION: "5.0"
         PRODUCT_BUNDLE_IDENTIFIER: com.milowda.kortext
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        MARKETING_VERSION: "0.0.0"
+        CURRENT_PROJECT_VERSION: "0"
         CODE_SIGN_IDENTITY: "-"
         ENABLE_HARDENED_RUNTIME: false

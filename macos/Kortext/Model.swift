@@ -54,7 +54,10 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
 
     // Settings › Check for updates: the daemon knows both versions.
     @Published var update: String? = nil       // what the last check said
+    var checkAppUpdate: () -> Void = {}
+    /// The version pill: the app asks Sparkle about itself, the daemon about the npm package.
     func checkUpdates() {
+        checkAppUpdate()
         if pendingUpdate { return applyUpdate() }
         update = "checking…"
         Task {

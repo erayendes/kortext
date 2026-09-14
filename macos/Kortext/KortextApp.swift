@@ -1,5 +1,6 @@
 import SwiftUI
 import ServiceManagement
+import Sparkle
 
 @main
 struct KortextApp: App {
@@ -11,9 +12,12 @@ struct KortextApp: App {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var status: StatusController?
     private let model = Model()
+    // Sparkle keeps the app current from macos/appcast.xml; the npm package keeps itself current through the daemon.
+    private let updater = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
 
     func applicationDidFinishLaunching(_ n: Notification) {
         applyTheme()
+        model.checkAppUpdate = { [updater] in updater.checkForUpdates(nil) }
         NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification, object: nil, queue: .main) { [weak self] _ in self?.applyTheme() }
         model.start()
         status = StatusController(model: model, content: Popover().environmentObject(model))
