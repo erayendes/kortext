@@ -1904,6 +1904,17 @@ function LineThread({
             }}
           />
           <div className="kx-thread-actions">
+            {/* The question most rows get asked, without typing it. The author
+                answers in the document's language, and the reply carries
+                Use as my answer — so a question can be settled in two presses. */}
+            <button
+              className="btn btn-link-primary"
+              disabled={waiting}
+              title="Ask the author what it would suggest"
+              onClick={() => onAsk("What do you suggest? Answer in the document's language.")}
+            >
+              Suggest
+            </button>
             <button
               className="btn btn-link-primary"
               disabled={!text.trim()}

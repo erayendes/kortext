@@ -4,8 +4,9 @@
 
 ## [Yayımlanmamış]
 
-- **Yanıtı al.** Her Ask yanıtının altındaki **Use as my answer** onu tek basışta sorunun
-  notu yapar; istek satırında ise Accept ya da Deny için not kutusunu doldurur.
+- **Öneri iste, yanıtı al.** Ask'in yanındaki **Suggest** tek kelime yazmadan yazara ne
+  önerdiğini sorar; her yanıtın altındaki **Use as my answer** onu tek basışta sorunun notu
+  yapar — istek satırında ise Accept ya da Deny için not kutusunu doldurur.
 - **Tasarım önizlemesi tasarımcının yazdığını okur.** `--color-primary` kadar `color.primary`
   adları; tek satırda `light #X, dark #Y`; düz yazıda `space.md = 16`, px olarak çizilir. Eskiden
   "karar verilmiş token yok" diyen gerçek bir DESIGN.md artık paletini iki modda çiziyor.

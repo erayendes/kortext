@@ -4,8 +4,9 @@
 
 ## [Unreleased]
 
-- **Take the answer.** Under every Ask reply, **Use as my answer** makes it your note on the
-  question in one press; on a request row it fills the note box for Accept or Deny.
+- **Suggest, then take the answer.** Beside Ask, **Suggest** asks the author what it would do
+  without typing a word; under every reply, **Use as my answer** makes it your note on the
+  question in one press — on a request row it fills the note box for Accept or Deny.
 - **The design preview reads what designers write.** Tokens named `color.primary` as well as
   `--color-primary`; `light #X, dark #Y` on one bullet; `space.md = 16` in prose, drawn as px.
   A real DESIGN.md that used to render as "no decided tokens" now draws its palette in both
