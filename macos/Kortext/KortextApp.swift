@@ -4,63 +4,150 @@ import ServiceManagement
 @main
 struct KortextApp: App {
     @StateObject private var model = Model()
+    @AppStorage("theme") private var theme = "auto"
 
     var body: some Scene {
         MenuBarExtra {
-            Popover().environmentObject(model)
+            Popover()
+                .environmentObject(model)
+                .onAppear { applyTheme() }
+                .onChange(of: theme) { _, _ in applyTheme() }
         } label: {
-            let icon = model.version == nil ? "k.square" : "k.square.fill"
             Label { if model.draftCount > 0 { Text("\(model.draftCount)") } } icon: {
-                Image(systemName: icon)
+                Image("menubar").renderingMode(.template)
                     .symbolEffect(.pulse, isActive: model.anyRunning)
-                    .opacity(model.installed ? 1 : 0.4)
+                    .opacity(model.version == nil ? 0.55 : 1)
             }
             .labelStyle(.titleAndIcon)
             .task { model.start() }
         }
         .menuBarExtraStyle(.window)
     }
+
+    // The panel's one setting: auto follows the OS, light and dark override it — for the whole app, so the token colours resolve.
+    private func applyTheme() {
+        NSApp.appearance = theme == "light" ? NSAppearance(named: .aqua) : theme == "dark" ? NSAppearance(named: .darkAqua) : nil
+    }
 }
 
+// Header · body · status bar. The popover is the panel's vocabulary at 300 wide.
 struct Popover: View {
     @EnvironmentObject var model: Model
     @State private var settings = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if settings { Settings(done: { settings = false }) } else { WaitingList() }
-            Divider()
-            StatusBar(settings: $settings)
+        VStack(spacing: 0) {
+            Header(settings: $settings)
+            Divider().overlay(Kx.border)
+            if settings { SettingsView() } else { Content() }
+            Divider().overlay(Kx.border)
+            StatusBar()
         }
-        .frame(width: 340)
+        .frame(width: 300)
+        .background(Kx.bg)
     }
 }
 
-// The list is the popover: only what waits on the human, one line each, click to open.
-struct WaitingList: View {
-    @EnvironmentObject var model: Model
-
+struct Header: View {
+    @Binding var settings: Bool
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Text(title).font(.system(size: 13, weight: .medium))
-                Spacer()
-                if !model.waiting.isEmpty { Text("\(model.waiting.count)").font(.system(size: 11).monospacedDigit()).foregroundStyle(.secondary) }
+        HStack {
+            Image("wordmark").resizable().scaledToFit().frame(height: 14)
+            Spacer()
+            if settings {
+                Button("Done") { settings = false }.buttonStyle(.plain).font(Kx.sans(11, .medium)).foregroundStyle(Kx.fgSecondary)
+            } else {
+                Button { settings = true } label: { Icon(name: "settings", size: 14) }.buttonStyle(.plain)
             }
-            .padding(.horizontal, 14).padding(.top, 12).padding(.bottom, 6)
-            ForEach(model.waiting) { w in WaitingRow(w: w) }
         }
-        .padding(.bottom, 8)
-    }
-
-    private var title: String {
-        if !model.installed { return "Kortext is not installed" }
-        if model.version == nil { return "Kortext is not running" }
-        if model.waiting.isEmpty { return model.anyRunning ? "Writing — nothing waiting on you" : "Nothing waiting on you" }
-        return "Waiting on you"
+        .padding(.horizontal, 12).frame(height: 40)
     }
 }
 
+struct Eyebrow: View {
+    let text: String; var count: Int? = nil
+    var body: some View {
+        HStack {
+            Text(text.uppercased()).font(Kx.mono(10, .medium)).tracking(0.8).foregroundStyle(Kx.fgMuted)
+            Spacer()
+            if let count { Text("\(count)").font(Kx.mono(10)).foregroundStyle(Kx.fgFaint) }
+        }
+        .padding(.horizontal, 12).padding(.top, 12).padding(.bottom, 6)
+    }
+}
+
+struct Content: View {
+    @EnvironmentObject var model: Model
+    var body: some View {
+        if !model.installed { NotInstalled() }
+        else if model.version == nil { Message(title: "Kortext is not running", sub: "Press ⏻ below to start the server.") }
+        else if model.waiting.isEmpty { Empty() }
+        else {
+            VStack(spacing: 0) {
+                Eyebrow(text: "Waiting on you", count: model.waiting.count)
+                VStack(spacing: 5) { ForEach(model.waiting) { WaitingRow(w: $0) } }
+                    .padding(.horizontal, 12).padding(.bottom, 12)
+            }
+        }
+    }
+}
+
+struct Message: View {
+    let title: String; let sub: String
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title).font(Kx.sans(13, .medium)).foregroundStyle(Kx.fg)
+            Text(sub).font(Kx.sans(12)).foregroundStyle(Kx.fgMuted)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 12).padding(.vertical, 18)
+    }
+}
+
+// Nothing to decide; if a step is in flight, name it and offer the one control that stops it.
+struct Empty: View {
+    @EnvironmentObject var model: Model
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Nothing waiting on you").font(Kx.sans(13, .medium)).foregroundStyle(Kx.fg)
+            if let r = model.runningLine {
+                HStack(spacing: 8) {
+                    (Text("\(r.project.project.code) is writing ").font(Kx.sans(12)).foregroundStyle(Kx.fgMuted)
+                     + Text(r.job.doc_rel).font(Kx.mono(12)).foregroundStyle(Kx.fgSecondary))
+                    Spacer()
+                    Button { model.pause(r.project) } label: {
+                        HStack(spacing: 4) { Icon(name: "pause", size: 11, color: Kx.fgSecondary); Text("Pause").font(Kx.sans(11, .medium)).foregroundStyle(Kx.fgSecondary) }
+                            .padding(.horizontal, 8).frame(height: 22)
+                            .overlay(RoundedRectangle(cornerRadius: 6).stroke(Kx.border, lineWidth: 1))
+                    }.buttonStyle(.plain)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 12).padding(.vertical, 18)
+    }
+}
+
+struct NotInstalled: View {
+    @State private var copied = false
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Kortext is not installed").font(Kx.sans(13, .medium)).foregroundStyle(Kx.fg)
+            HStack(spacing: 8) {
+                Text("npm i -g kortext").font(Kx.mono(12)).foregroundStyle(Kx.fg)
+                Spacer()
+                Button {
+                    NSPasteboard.general.clearContents(); NSPasteboard.general.setString("npm i -g kortext", forType: .string); copied = true
+                } label: {
+                    HStack(spacing: 4) { Icon(name: copied ? "check" : "copy", size: 12, color: Kx.fgSecondary); Text(copied ? "Copied" : "Copy").font(Kx.sans(11, .medium)).foregroundStyle(Kx.fgSecondary) }
+                }.buttonStyle(.plain)
+            }
+            .padding(.horizontal, 10).padding(.vertical, 7)
+            .background(Kx.bgSubtle).overlay(RoundedRectangle(cornerRadius: 6).stroke(Kx.border, lineWidth: 1))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 12).padding(.top, 18).padding(.bottom, 16)
+    }
+}
+
+// One decision per row: the document, its project, why it waits. Click opens it in the panel.
 struct WaitingRow: View {
     @EnvironmentObject var model: Model
     let w: Model.Waiting
@@ -68,48 +155,62 @@ struct WaitingRow: View {
 
     var body: some View {
         Button { model.openPanel(project: w.project.id, doc: w.rel) } label: {
-            HStack(spacing: 8) {
-                Circle().fill(w.why == "failed" ? Color.red : Color.orange).frame(width: 7, height: 7)
-                Text(w.rel).font(.system(size: 12, design: .monospaced))
-                Text("|").foregroundStyle(.quaternary)
-                Text(w.project.project.code).font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary)
-                Spacer()
-                Text(w.why).font(.system(size: 11)).foregroundStyle(.secondary)
+            HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(w.rel).font(Kx.mono(13, .medium)).foregroundStyle(Kx.fg)
+                        Text(w.project.project.code).font(Kx.mono(10)).tracking(0.4).foregroundStyle(Kx.fgFaint)
+                    }
+                    if case .failed(let e?) = w.why {
+                        Text(e).font(Kx.mono(11)).foregroundStyle(Kx.red).lineLimit(1)
+                    }
+                }
+                Spacer(minLength: 0)
+                switch w.why {
+                case .approve: Pill(kind: .approve, text: "Approve")
+                case .failed: Pill(kind: .failed, text: "Failed")
+                case .questions(let n): Pill(kind: .questions, text: n == 1 ? "1 question" : "\(n) questions")
+                }
             }
-            .padding(.horizontal, 14).padding(.vertical, 5)
+            .padding(.horizontal, 12).padding(.vertical, 9)
+            .background(hover ? Kx.bgHover : Kx.bg)
+            .overlay(RoundedRectangle(cornerRadius: 6).stroke(hover ? Kx.borderStrong : Kx.border, lineWidth: 1))
+            .clipShape(RoundedRectangle(cornerRadius: 6))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .background(hover ? Color.primary.opacity(0.06) : .clear)
         .onHover { hover = $0 }
     }
 }
 
-// The panel's status bar, in miniature: dot · name · version · power. Nothing shown that is not true now.
+// The panel's status bar in miniature: dot · Kortext · ⏻ — and the credit opposite.
 struct StatusBar: View {
     @EnvironmentObject var model: Model
-    @Binding var settings: Bool
     @State private var armed = false
 
     var body: some View {
+        let up = model.version != nil
         HStack(spacing: 8) {
-            Circle().fill(model.version == nil ? Color.red : Color.green).frame(width: 7, height: 7)
-            Text("Kortext").font(.system(size: 12, weight: .medium))
-            if let v = model.version { Text(v).font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary) }
+            Circle().fill(up ? Kx.green : Kx.red).frame(width: 8, height: 8)
+            Text("Kortext").font(Kx.sans(11, .medium)).foregroundStyle(Kx.fgMuted)
             if model.installed {
-                Button { power() } label: { Image(systemName: "power").font(.system(size: 11, weight: .semibold)) }
-                    .buttonStyle(.plain).foregroundStyle(armed ? .red : .secondary)
-                    .help(model.version == nil ? "Start the server" : armed ? "Click again to stop" : "Stop the server")
-                if armed { Text("click again to stop").font(.system(size: 11)).foregroundStyle(.red) }
+                Button { power() } label: {
+                    Icon(name: "power", size: 11, color: armed ? Kx.red : up ? Kx.green : Kx.fgFaint).frame(width: 18, height: 18)
+                }
+                .buttonStyle(.plain).padding(.leading, -2)
+                .help(!up ? "Start the server" : armed ? "Press again to stop" : "Stop the server")
+                if armed {
+                    Text("Press again to stop the server").font(Kx.sans(11, .medium)).foregroundStyle(Kx.red).lineLimit(1).fixedSize()
+                        .padding(.horizontal, 8).frame(height: 20)
+                        .background(Kx.redBg).overlay(Capsule().stroke(Kx.redBorder, lineWidth: 1)).clipShape(Capsule())
+                }
             }
             Spacer()
-            Button { settings.toggle() } label: { Image(systemName: "gearshape").font(.system(size: 12)) }
-                .buttonStyle(.plain).foregroundStyle(settings ? .primary : .secondary)
+            if !armed { Text("milowda").font(Kx.sans(11)).foregroundStyle(Kx.fgFaint).padding(.trailing, 4) }
         }
-        .padding(.horizontal, 14).padding(.vertical, 9)
-        .onChange(of: armed) { _, on in
-            if on { Task { try? await Task.sleep(for: .seconds(4)); armed = false } }
-        }
+        .padding(.leading, 12).padding(.trailing, 8).frame(height: 40)
+        .background(Kx.bgSubtle)
+        .onChange(of: armed) { _, on in if on { Task { try? await Task.sleep(for: .seconds(4)); armed = false } } }
     }
 
     private func power() {
@@ -120,27 +221,90 @@ struct StatusBar: View {
     }
 }
 
-struct Settings: View {
-    let done: () -> Void
-    @State private var loginItem = SMAppService.mainApp.status == .enabled
+struct SettingsView: View {
+    @EnvironmentObject var model: Model
+    @AppStorage("theme") private var theme = "auto"
     @AppStorage("notifications") private var notifications = true
+    @State private var loginItem = SMAppService.mainApp.status == .enabled
+    @State private var hoverUpdate = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text("Settings").font(.system(size: 13, weight: .medium))
-                Spacer()
-                Button("Done", action: done).controlSize(.small)
+        VStack(spacing: 0) {
+            Eyebrow(text: "Settings")
+            VStack(spacing: 0) {
+                HStack {
+                    Text("Theme").font(Kx.sans(13)).foregroundStyle(Kx.fg)
+                    Spacer()
+                    HStack(spacing: 2) {
+                        ForEach([("auto", "auto"), ("light", "sun"), ("dark", "moon")], id: \.0) { key, icon in
+                            Button { theme = key } label: {
+                                Icon(name: icon, size: 15, color: theme == key ? Kx.fg : Kx.fgMuted)
+                                    .frame(width: 29, height: 29)
+                                    .background(theme == key ? Kx.bgActive : .clear)
+                                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                            }.buttonStyle(.plain)
+                        }
+                    }
+                }
+                .padding(.vertical, 6)
+                Divider().overlay(Kx.border)
+                Check(on: $loginItem, title: "Launch at login")
+                    .onChange(of: loginItem) { _, on in try? on ? SMAppService.mainApp.register() : SMAppService.mainApp.unregister() }
+                Divider().overlay(Kx.border)
+                Check(on: $notifications, title: "Notify when a document waits on me",
+                      sub: "A draft to approve, a failed step, a brief with questions, a finished chain.")
+                Divider().overlay(Kx.border)
+                // The row is the control.
+                Button { model.applyUpdate() } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("Check for updates").font(Kx.sans(13)).foregroundStyle(Kx.fg)
+                            Text(model.update ?? "kortext \(model.version ?? "—")").font(Kx.sans(11)).foregroundStyle(Kx.fgMuted)
+                        }
+                        Spacer()
+                        if let v = model.version {
+                            Text("v\(v)").font(Kx.mono(10)).foregroundStyle(Kx.fgMuted)
+                                .padding(.horizontal, 6).frame(height: 18)
+                                .overlay(Capsule().stroke(Kx.border, lineWidth: 1))
+                        }
+                    }
+                    .padding(8).background(hoverUpdate ? Kx.bgHover : .clear).clipShape(RoundedRectangle(cornerRadius: 6))
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain).padding(.horizontal, -8).padding(.top, 6)
+                .onHover { hoverUpdate = $0 }
+                HStack {
+                    Button("Quit the menu bar app") { NSApp.terminate(nil) }.buttonStyle(.plain).font(Kx.sans(11)).foregroundStyle(Kx.fgFaint)
+                    Spacer()
+                    Text("⌘Q").font(Kx.mono(10)).foregroundStyle(Kx.fgFaint)
+                }
+                .padding(.top, 12).padding(.bottom, 2)
             }
-            Toggle("Launch at login", isOn: $loginItem).toggleStyle(.checkbox)
-                .onChange(of: loginItem) { _, on in try? on ? SMAppService.mainApp.register() : SMAppService.mainApp.unregister() }
-            Toggle("Notify when a document waits on me", isOn: $notifications).toggleStyle(.checkbox)
-            Text("A draft to approve, a failed step, a brief with questions, a finished chain.")
-                .font(.system(size: 11)).foregroundStyle(.secondary).padding(.leading, 18).fixedSize(horizontal: false, vertical: true)
-            Divider().padding(.top, 2)
-            Button("Quit Kortext") { NSApp.terminate(nil) }.controlSize(.small)
+            .padding(.horizontal, 12).padding(.bottom, 12)
         }
-        .font(.system(size: 12))
-        .padding(14)
+    }
+}
+
+struct Check: View {
+    @Binding var on: Bool
+    let title: String; var sub: String? = nil
+    var body: some View {
+        Button { on.toggle() } label: {
+            HStack(alignment: .top, spacing: 10) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 3).fill(on ? Kx.accent : Kx.bg)
+                    if on { Icon(name: "check", size: 10, color: Kx.accentFg) }
+                    else { RoundedRectangle(cornerRadius: 3).stroke(Kx.borderStrong, lineWidth: 1) }
+                }
+                .frame(width: 14, height: 14).padding(.top, 3)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).font(Kx.sans(13)).foregroundStyle(Kx.fg)
+                    if let sub { Text(sub).font(Kx.sans(11)).foregroundStyle(Kx.fgMuted).fixedSize(horizontal: false, vertical: true) }
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.vertical, 9).contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }

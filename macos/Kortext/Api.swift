@@ -12,6 +12,7 @@ struct Doc: Decodable, Identifiable {
     var id: String { rel }
 }
 struct Readiness: Decodable { let ready: Bool; let questions: [String] }
+struct Version: Decodable { let current: String; let latest: String?; let stale: Bool }
 
 enum Api {
     static let base = URL(string: "http://127.0.0.1:3441")!
@@ -36,6 +37,14 @@ enum Api {
     static func docs(_ id: Int) async throws -> [Doc] {
         struct R: Decodable { let docs: [Doc] }
         return try await get("/api/projects/\(id)/docs", R.self).docs
+    }
+    static func version() async throws -> Version { try await get("/api/version", Version.self) }
+    static func post(_ path: String, _ body: [String: Any] = [:]) async throws {
+        var req = URLRequest(url: base.appending(path: path))
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        _ = try await URLSession.shared.data(for: req)
     }
     static func readiness(_ id: Int) async throws -> Readiness? {
         struct R: Decodable { let readiness: Readiness? }
