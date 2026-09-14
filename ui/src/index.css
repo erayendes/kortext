@@ -925,6 +925,7 @@ a.btn {
 /* Link buttons */
 .btn-link-primary,
 .btn-link-success,
+.btn-link-warning,
 .btn-link-danger {
   height: var(--control-h);
   padding: 0 12px;
@@ -947,6 +948,14 @@ a.btn {
   background: var(--green-bg);
   border-color: var(--green-border);
   color: var(--green);
+}
+.btn-link-warning {
+  color: var(--amber);
+}
+.btn-link-warning:hover {
+  background: var(--amber-bg);
+  border-color: var(--amber-border);
+  color: var(--amber);
 }
 .btn-link-danger {
   color: var(--red);
@@ -1324,12 +1333,42 @@ a.btn {
   font-size: var(--fs-ui);
   color: var(--red);
 }
+/* Under the head while ⚙ is on: the project's actions, and the question one of them asks. */
 .kx-danger-zone {
-  margin-top: 28px;
   display: flex;
   justify-content: flex-end;
   align-items: center;
   gap: 10px;
+  margin-bottom: 14px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg-subtle);
+}
+.kx-gear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  margin-left: 2px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--fg-faint);
+  cursor: pointer;
+}
+.kx-gear svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.kx-gear:hover,
+.kx-gear-on {
+  background: var(--bg-hover);
+  color: var(--fg);
 }
 .kx-danger-sep {
   font-family: var(--font-mono);

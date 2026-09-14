@@ -1522,6 +1522,19 @@ function ProjectScreen({
   const [effort, setEffort] = useState(project.effort ?? '');
   // The engine line beside the action says what runs; pressing it opens the picker.
   const [picking, setPicking] = useState(false);
+  // ⚙ beside the name opens the project's own actions under the head; Esc closes.
+  const [tools, setTools] = useState(false);
+  useEffect(() => {
+    if (!tools) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setTools(false);
+        setArming(null);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [tools]);
 
   useEffect(() => {
     api
@@ -1615,6 +1628,21 @@ function ProjectScreen({
           <div className="kx-card-head">
             {project.code && <span className="kx-card-code mono">{project.code}</span>}
             <h1>{project.name}</h1>
+            <button
+              className={tools ? 'kx-gear kx-gear-on' : 'kx-gear'}
+              onClick={() => {
+                setTools((t) => !t);
+                setArming(null);
+              }}
+              title="Restart, archive or remove this project"
+              aria-label="Project actions"
+              aria-expanded={tools}
+            >
+              <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            </button>
           </div>
           <span className="kx-card-path mono" title={project.repo_path}>
             {shortPath(project.repo_path)}
@@ -1648,6 +1676,78 @@ function ProjectScreen({
         )}
       </div>
       {strip}
+      {/* The project's own actions, under the head while ⚙ is on. Each one is
+          armed and confirmed here and nowhere else. */}
+      {tools && (
+        <div className="kx-danger-zone">
+          {arming === 'restart' ? (
+            <>
+              <span className="kx-arm-warn">
+                Reset the analysis documents? Your brief stays. Press Start when ready.
+              </span>
+              <button className="btn btn-link-warning" disabled={busy} onClick={doRestart}>
+                Yes, restart
+              </button>
+              <button className="btn btn-link-primary" onClick={() => setArming(null)}>
+                No
+              </button>
+            </>
+          ) : arming === 'archive' ? (
+            <>
+              <span className="kx-arm-warn">
+                {project.archived
+                  ? 'Bring it back into the project list?'
+                  : 'Fold it away? The repo and its documents are untouched.'}
+              </span>
+              <button className="btn btn-link-success" disabled={busy} onClick={doArchive}>
+                {project.archived ? 'Yes, unarchive' : 'Yes, archive'}
+              </button>
+              <button className="btn btn-link-primary" onClick={() => setArming(null)}>
+                No
+              </button>
+            </>
+          ) : arming === 'cancel' ? (
+            <>
+              <span className="kx-arm-warn">
+                Remove Kortext's analysis, including the brief and edits in .kortext/, its contract
+                entries, logs and project registration? The rest of the project stays.
+              </span>
+              <button className="btn btn-link-danger" disabled={busy} onClick={doCancel}>
+                Yes, remove
+              </button>
+              <button className="btn btn-link-primary" onClick={() => setArming(null)}>
+                No
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                className="btn btn-link-warning"
+                disabled={busy}
+                onClick={() => setArming('restart')}
+              >
+                Restart analysis
+              </button>
+              <span className="kx-danger-sep">·</span>
+              <button
+                className="btn btn-link-success"
+                disabled={busy}
+                onClick={() => setArming('archive')}
+              >
+                {project.archived ? 'Unarchive project' : 'Archive project'}
+              </button>
+              <span className="kx-danger-sep">·</span>
+              <button
+                className="btn btn-link-danger"
+                disabled={busy}
+                onClick={() => setArming('cancel')}
+              >
+                Remove project
+              </button>
+            </>
+          )}
+        </div>
+      )}
       {err && <div className="kx-error">{err}</div>}
       <EnginePicker
         open={picking}
@@ -1675,77 +1775,6 @@ function ProjectScreen({
         onChecking={setChecking}
         onSettled={setSettled}
       />
-      {/* Restart is armed and confirmed here and nowhere else. Asking on the
-          header too painted the same question twice and took Start/Pause
-          away while it was up. */}
-      <div className="kx-danger-zone">
-        {arming === 'restart' ? (
-          <>
-            <span className="kx-arm-warn">
-              Reset analysis documents? Your brief and .kopeng/ stay. Press Start when ready.
-            </span>
-            <button className="btn btn-link-danger" disabled={busy} onClick={doRestart}>
-              Yes, restart
-            </button>
-            <button className="btn btn-link-primary" onClick={() => setArming(null)}>
-              No
-            </button>
-          </>
-        ) : arming === 'archive' ? (
-          <>
-            <span className="kx-arm-warn">
-              {project.archived
-                ? 'Bring it back into the project list?'
-                : 'Fold it away? The repo and its documents are untouched.'}
-            </span>
-            <button className="btn btn-link-success" disabled={busy} onClick={doArchive}>
-              {project.archived ? 'Yes, unarchive' : 'Yes, archive'}
-            </button>
-            <button className="btn btn-link-primary" onClick={() => setArming(null)}>
-              No
-            </button>
-          </>
-        ) : arming === 'cancel' ? (
-          <>
-            <span className="kx-arm-warn">
-              Remove Kortext's analysis, including the brief and edits in .kortext/, its contract
-              entries, logs and project registration? The rest of the project stays.
-            </span>
-            <button className="btn btn-link-danger" disabled={busy} onClick={doCancel}>
-              Yes, remove
-            </button>
-            <button className="btn btn-link-primary" onClick={() => setArming(null)}>
-              No
-            </button>
-          </>
-        ) : (
-          <>
-            <button
-              className="btn btn-link-primary"
-              disabled={busy}
-              onClick={() => setArming('restart')}
-            >
-              Restart analysis
-            </button>
-            <span className="kx-danger-sep">·</span>
-            <button
-              className="btn btn-link-success"
-              disabled={busy}
-              onClick={() => setArming('archive')}
-            >
-              {project.archived ? 'Unarchive project' : 'Archive project'}
-            </button>
-            <span className="kx-danger-sep">·</span>
-            <button
-              className="btn btn-link-danger"
-              disabled={busy}
-              onClick={() => setArming('cancel')}
-            >
-              Remove project
-            </button>
-          </>
-        )}
-      </div>
     </main>
   );
 }
