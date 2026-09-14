@@ -1520,8 +1520,7 @@ function ProjectScreen({
   const [engine, setEngine] = useState<string | null>(project.engine || null);
   const [model, setModel] = useState(project.model ?? '');
   const [effort, setEffort] = useState(project.effort ?? '');
-  // The engine line under the buttons says what runs; Change model, before
-  // Continue, opens the picker.
+  // The engine line beside the action says what runs; pressing it opens the picker.
   const [picking, setPicking] = useState(false);
 
   useEffect(() => {
@@ -1625,11 +1624,13 @@ function ProjectScreen({
         {!settled && (
           <div className="kx-proj-side">
             <div className="kx-proj-actions">
-              {engines.length > 0 && (
-                <button className="btn btn-link-primary" onClick={() => setPicking(true)}>
-                  Change model
-                </button>
-              )}
+              <EngineButton
+                engines={engines}
+                engine={engine}
+                model={model}
+                effort={effort}
+                onOpen={() => setPicking(true)}
+              />
               {running ? (
                 <button className="btn btn-primary" disabled={busy} onClick={togglePause}>
                   ⏸ Pause
