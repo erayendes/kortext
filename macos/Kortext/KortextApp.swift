@@ -41,6 +41,7 @@ struct Popover: View {
             Header(settings: $settings)
             if settings {
                 SettingsView()
+                SettingsBar()
             } else {
                 Content()
                 StatusBar()
@@ -87,7 +88,7 @@ struct Header: View {
                 }
             }.buttonStyle(.plain)
             Spacer()
-            if settings { ThemeCycle() } else {
+            if !settings {
                 Button { settings = true } label: { Icon(name: "gearshape", size: 13).frame(width: 14) }.buttonStyle(.plain)
             }
         }
@@ -274,10 +275,23 @@ struct ThemeCycle: View {
     var body: some View {
         let icon = theme == "light" ? "sun.max" : theme == "dark" ? "moon" : "circle.lefthalf.filled"
         Button { theme = theme == "auto" ? "light" : theme == "light" ? "dark" : "auto" } label: {
-            Icon(name: icon, size: 13).frame(width: 14, height: 26)
+            Icon(name: icon, size: 13, color: Kx.fgSecondary).frame(width: 14, height: 18)
         }
         .buttonStyle(.plain)
         .help("Theme: \(theme)")
+    }
+}
+
+// The status bar's twin under settings: the theme where ⏻ was, the credit where it is.
+struct SettingsBar: View {
+    var body: some View {
+        HStack(spacing: 8) {
+            ThemeCycle()
+            Spacer()
+            Link("milowda", destination: URL(string: "https://milowda.com")!)
+                .font(Kx.sans(11)).foregroundStyle(Kx.fgFaint)
+        }
+        .padding(.horizontal, 12).frame(height: 40)
     }
 }
 
