@@ -66,10 +66,13 @@ def md_to_html(text):
     return "\n".join(out)
 
 
-def build_item(version, build_number, url, signature, length, notes, pub_date):
+def build_item(version, build_number, url, signature, length, notes, pub_date, channel=None):
+    # A pre-release rides the `beta` channel; an app on the release channel never sees it.
+    channel_line = f"      <sparkle:channel>{channel}</sparkle:channel>\n" if channel else ""
     return (
         f"    <item>\n"
         f"      <title>Kortext {version}</title>\n"
+        f"{channel_line}"
         f"      <sparkle:version>{build_number}</sparkle:version>\n"
         f"      <sparkle:shortVersionString>{version}</sparkle:shortVersionString>\n"
         f"      <pubDate>{pub_date}</pubDate>\n"
@@ -94,6 +97,7 @@ def main():
     parser.add_argument("--notes", required=True)
     parser.add_argument("--appcast", required=True)
     parser.add_argument("--date", default=None)
+    parser.add_argument("--channel", default=None)
     args = parser.parse_args()
 
     pub_date = args.date or datetime.datetime.utcnow().strftime(
@@ -118,7 +122,7 @@ def main():
 
     new_item = build_item(
         args.version, args.build_number, args.url,
-        args.signature, args.length, args.notes, pub_date
+        args.signature, args.length, args.notes, pub_date, args.channel
     )
     updated = content[:insert_at] + new_item + "\n" + content[insert_at:]
 
