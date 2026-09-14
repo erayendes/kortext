@@ -10,7 +10,6 @@ struct ProjectState: Identifiable {
     var failed: Job? = nil         // most recent failed job, if the last job failed
     var notReady = false
     var questions = 0
-    var errors: [String: String] = [:]     // doc rel → first line of the failed job's error
     var id: Int { project.id }
     var complete: Bool { project.docCounts.total > 0 && project.docCounts.settled == project.docCounts.total }
 }
@@ -28,7 +27,7 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
     private var primed = false                   // first poll only records, never notifies
 
     struct Waiting: Identifiable {
-        enum Why { case approve, failed(String?), questions(Int) }
+        enum Why { case approve, failed, questions(Int) }
         let project: ProjectState; let rel: String; let why: Why
         var id: String { "\(project.id)/\(rel)" }
     }
@@ -39,7 +38,7 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
             if p.notReady { out.append(Waiting(project: p, rel: "BRIEF.md", why: .questions(p.questions))) }
             for d in p.docs {
                 if d.status == "draft" { out.append(Waiting(project: p, rel: d.rel, why: .approve)) }
-                else if d.state == "failed" { out.append(Waiting(project: p, rel: d.rel, why: .failed(p.errors[d.rel]))) }
+                else if d.state == "failed" { out.append(Waiting(project: p, rel: d.rel, why: .failed)) }
             }
             return out
         }
@@ -108,9 +107,6 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
             if let j = try? await Api.jobs(p.id) {
                 s.running = j.running
                 if let last = j.jobs.first, last.status == "failed" { s.failed = last }
-                for job in j.jobs where job.status == "failed" {
-                    if s.errors[job.doc_rel] == nil, let e = job.error?.split(separator: "\n").first { s.errors[job.doc_rel] = String(e) }
-                }
                 for job in j.jobs.prefix(10) { observe(job, in: p) }
             }
             if let r = try? await Api.readiness(p.id) { s.notReady = !r.ready && !r.questions.isEmpty; s.questions = r.questions.count }
@@ -156,8 +152,7 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
     static let demo: [ProjectState] = {
         func p(_ id: Int, _ code: String, _ name: String, _ docs: [Doc], notReady: Bool = false) -> ProjectState {
             var s = ProjectState(project: Project(id: id, name: name, code: code, docCounts: .init(settled: 3, total: 15), doc_lang: "Turkish"))
-            s.docs = docs; s.notReady = notReady; s.questions = 3
-            s.errors["ARCHITECTURE.md"] = "claude: rate limit reached, retry after 60s"; return s
+            s.docs = docs; s.notReady = notReady; s.questions = 3; return s
         }
         return [
             p(90, "ACME", "Acme Billing", [Doc(rel: "PRODUCT.md", status: "draft", state: "waiting", detail: "approve"),

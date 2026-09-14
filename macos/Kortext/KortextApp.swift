@@ -182,12 +182,7 @@ struct WaitingRow: View {
     var body: some View {
         Button { model.openPanel(project: w.project.id, doc: w.rel) } label: {
             HStack(spacing: 10) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(w.rel).font(Kx.mono(13, .medium)).foregroundStyle(Kx.fg)
-                    if case .failed(let e?) = w.why {
-                        Text(e).font(Kx.mono(11)).foregroundStyle(Kx.red).lineLimit(3).fixedSize(horizontal: false, vertical: true)
-                    }
-                }
+                Text(w.rel).font(Kx.mono(13, .medium)).foregroundStyle(Kx.fg)
                 Spacer(minLength: 0)
                 switch w.why {
                 case .approve: Pill(kind: .approve, text: "Approve")
