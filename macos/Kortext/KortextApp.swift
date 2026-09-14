@@ -303,7 +303,7 @@ struct SettingsView: View {
     @State private var loginItem = SMAppService.mainApp.status == .enabled
 
     var body: some View {
-        // Two cards, like the project cards: the app's own switches, then the links out.
+        // One card, like a project card: every row the same height.
         VStack(spacing: 10) {
             Card {
                 Row(icon: "power", title: "Launch at login", sub: "The server starts with it.", on: loginItem) {
@@ -317,8 +317,7 @@ struct SettingsView: View {
                 }
                 Divider().padding(.leading, 14)
                 Row(icon: "arrow.down.circle", title: "Check for updates", sub: model.update ?? (model.version.map { "kortext \($0)" } ?? nil)) { model.checkUpdates() }
-            }
-            Card {
+                Divider().padding(.leading, 14)
                 Row(icon: "ladybug", title: "Report an issue") {
                     var u = "https://github.com/erayendes/kortext/issues/new?template=bug_report.yml"
                     if let v = model.version { u += "&version=\(v)" }
@@ -368,7 +367,7 @@ struct Row: View {
                 if on == true { Icon(name: "checkmark", size: 11, color: Kx.fg, weight: .semibold) }
                 if let trailing { Text(trailing).font(Kx.mono(10)).foregroundStyle(Kx.fgFaint) }
             }
-            .padding(.horizontal, 14).padding(.vertical, 7)
+            .padding(.horizontal, 14).frame(height: 46)
             .background(hover ? Kx.bgHover : .clear)
             .contentShape(Rectangle())
         }
