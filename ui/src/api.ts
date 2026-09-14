@@ -40,7 +40,8 @@ export interface DocInfo {
   dependentOn: string[];
   openQuestions: boolean;
   hasProducingStep: boolean;
-  revisionRequests: Array<{ from: string; reason: string }>;
+  /** `presumed`: accepted where it was asked — opens ticked here, still yours to untick. */
+  revisionRequests: Array<{ from: string; reason: string; presumed?: 'accept' }>;
   denied: Array<{ from: string; reason: string }>;
   outgoing: Array<{ target: string; reason: string }>;
   warnings: Array<{ subject: string; reason: string }>;

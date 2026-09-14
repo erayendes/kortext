@@ -127,13 +127,14 @@ means the document is waiting on a human. `## Change Requests` — one heading, 
 told apart by one word. `` - `TARGET.md` — reason `` is what this document asks of another; the
 agent writes it while drafting, the panel lists it under Outgoing Requests, and prime presses
 Accept or Discard — Accept moves it (`deliverRequests`) into the target as `` - [ ] from `THIS.md` —
-reason `` and, since the one person who could accept it there just did, starts the target's
-revision with it (`reviseDoc`, as if Accept were pressed on the target); Discard deletes it. A
-target not yet written keeps the line for its first draft; one being rewritten keeps it under
-its Incoming Requests for prime. An undecided outgoing request holds approval, like an open
-question. (Documents approved before requests travelled are swept on listing and land as
-incoming requests, decided at the target.) Accepted and written, the line is removed — the text
-now says what it asked for, and git keeps the history.
+reason `` with `` - accepted on THIS.md `` under it; Discard deletes it. `parseIncoming` reads
+that trailer as `presumed: 'accept'`, and the panel opens the target with the row ticked — the
+one person who could accept it there already did — but still unticks on request. Nothing is
+rewritten until the target's own Apply, so everything owed there goes into one rewrite. An
+undecided outgoing request holds approval, like an open question. (Documents approved before
+requests travelled are swept on listing and land without the trailer, decided at the target.)
+Accepted and written, the line is removed — the text now says what it asked for, and git keeps
+the history.
 Refused, it leaves the mailbox for `## Decisions`: `` - `FROM.md` — reason `` with
 `prime: why · date` beneath, no box and no word like "denied" — the ledger is the word. It is
 the one outcome the next writer cannot infer from the text, and the only reason it does not ask

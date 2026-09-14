@@ -4,9 +4,9 @@
 
 ## [Yayımlanmamış]
 
-- **İstek başına tek karar.** İsteyen belgede giden isteği kabul etmek hedefi o istekle hemen
-  yeniden yazdırır; aynı kişinin ikinci kez kabul etmesi için gelen istek olarak düşmüyor artık.
-  Send, Accept oldu.
+- **İstek başına tek karar.** İsteyen belgede kabul edilen istek hedefe işaretli olarak iner —
+  *accepted there* — aynı kişiye ikinci kez sorulmaz; işaret yine kaldırılabilir ve istek hedefin
+  bir sonraki yeniden yazımına oradaki her şeyle birlikte girer. Send, Accept oldu.
 - **Gönderilmiş tepsi tek belgeye aittir.** Apply'dan sonra tepsi bir sonraki açılan belgede de
   salt okunur kalıyordu — × yok, Apply pasif — ve yeniden yazım çekmece kapalıyken inerse
   sonsuza dek; bir belgenin notları başka belgede işaretsiz duruyordu. Artık belge, sürümü ya

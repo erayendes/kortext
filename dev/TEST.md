@@ -164,7 +164,7 @@ Open any document. Everything you can do to it is here:
 - [ ] Open questions block approval (the button says so on hover); outgoing requests still undecided block it too.
 - [ ] After Apply the drawer stays open: the tray goes read-only and says *sent; the document is being rewritten*, Approve / Edit / Apply are locked, and when the rewrite lands the body reloads and the tray empties.
 - [ ] A revision comes back with the answered questions **gone** from `## Questions for Prime`, the facts folded into the body, and the unanswered ones kept — the author may add new ones.
-- [ ] **Accept** on an outgoing request moves it out of this document and rewrites the target with it at once — no second Accept there. A target not yet written keeps the `- [ ] from \`SOURCE.md\` — …` line for its first draft; a target being rewritten keeps it under *Incoming Requests* for you.
+- [ ] **Accept** on an outgoing request moves it out of this document and files it at the target as `- [ ] from \`SOURCE.md\` — …` with `accepted on SOURCE.md` under it; the target opens with the row ticked and *accepted there* beside it, still yours to untick, and nothing is rewritten until the target's own Apply.
 - [ ] **Deny** with a reason removes the `from` line and writes the request and the reason under `## Decisions`; **Accept** re-runs the author with it and the line is gone afterwards.
 - [ ] `## Decisions` and every `from` line survive the next rewrite untouched — the agent is told they are not its to drop, and kortext restores them if it drops them anyway.
 - [ ] The diff picker beside the name shows recorded versions; a rewritten block wears `[+]` and unfolds its old text; a run of new blocks says `new` once.

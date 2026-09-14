@@ -54,7 +54,7 @@ On the brief there is no Accept — no persona wrote it, you did. The row offers
 
 **Apply** sends the lot at once. Your answers and the requests you accepted go into one rewrite. The ones you denied are written to the document's `## Decisions`, with your reason.
 
-**A document can ask another document for a change.** While the asking document is still a draft, the request sits under *Outgoing Requests*: **Accept** or **Discard**. Accept rewrites the target document with it right away — you decide once, here, not again there. A document with an undecided request cannot be approved. A target that is not written yet keeps the request for its first draft; one being rewritten at that moment keeps it under its *Incoming Requests* for you. Denied there, it goes to `## Decisions` with your reason. You are not asked again; the agent writing the code reads it there.
+**A document can ask another document for a change.** While the asking document is still a draft, the request sits under *Outgoing Requests*: **Accept** or **Discard**. A document with an undecided request cannot be approved. Accepted, it travels to the target and waits there under *Incoming Requests* — already ticked, marked *accepted there*. You decided once; you can still untick it. It goes into the target's next rewrite with everything else owed there, in one pass. Denied, it goes to `## Decisions` with your reason. You are not asked again; the agent writing the code reads it there.
 
 **Findings** — problems in files no document owns (a missing `.gitignore` entry, say), written into the document for your information. It asks nothing of you.
 

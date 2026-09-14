@@ -33,7 +33,7 @@ export interface DocInfo {
    * nobody has written yet they are not prime's to decide: they go into its
    * first write.
    */
-  revisionRequests: Array<{ from: string; reason: string }>;
+  revisionRequests: Array<{ from: string; reason: string; presumed?: 'accept' }>;
   /** Requests prime denied here. A record, not work: nothing asks about them again. */
   denied: Array<{ from: string; reason: string }>;
   /**
@@ -196,10 +196,18 @@ export const FINDINGS = /^(findings|warnings)$/i;
 export const QUESTIONS = /^(open )?questions( for prime)?$/i;
 
 /** What other documents asked of this one and prime has not decided yet. */
-export function parseIncoming(content: string): Array<{ from: string; reason: string }> {
+export function parseIncoming(
+  content: string,
+): Array<{ from: string; reason: string; presumed?: 'accept' }> {
   return parseMarkedList(content, CHANGE_REQUESTS)
     .filter((r) => r.incoming && !r.settled)
-    .map((r) => ({ from: r.subject, reason: r.reason }));
+    .map((r) =>
+      // Accepted where it was asked: the target opens with it ticked, and
+      // prime may still untick it.
+      /^accepted on /i.test(r.outcome)
+        ? { from: r.subject, reason: r.reason, presumed: 'accept' as const }
+        : { from: r.subject, reason: r.reason },
+    );
 }
 
 /**
@@ -500,8 +508,9 @@ export function appendIncomingRequest(
   target: string,
   from: string,
   reason: string,
+  trailer?: string,
 ): void {
-  appendListItem(project, target, 'Change Requests', from, reason, undefined, true);
+  appendListItem(project, target, 'Change Requests', from, reason, trailer, true);
 }
 
 /**
@@ -563,6 +572,9 @@ export function deliverRequests(
   project: Project,
   rel: string,
   only?: Array<{ target: string; reason: string }>,
+  /** Written under the line at the target — `accepted on THIS.md`, so the
+   *  target opens with the request already ticked; prime decided once. */
+  trailer?: string,
 ): number {
   const path = docPath(project, rel);
   if (!existsSync(path)) return 0;
@@ -599,7 +611,7 @@ export function deliverRequests(
     i--;
   }
   writeFileSync(path, lines.join('\n'), 'utf8');
-  for (const r of outgoing) appendIncomingRequest(project, r.target, rel, r.reason);
+  for (const r of outgoing) appendIncomingRequest(project, r.target, rel, r.reason, trailer);
   return outgoing.length;
 }
 

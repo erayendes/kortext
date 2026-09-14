@@ -54,7 +54,7 @@ Brief'te Accept yoktur — onu bir persona değil siz yazdınız. Satırda onun 
 
 **Apply** hepsini tek seferde gönderir. Yanıtlarınız ve kabul ettiğiniz istekler tek seferde yeniden yazıma girer. Reddettiklerinizse nedeniyle birlikte belgenin `## Decisions` bölümüne yazılır.
 
-**Bir belge başka bir belgeden değişiklik isteyebilir.** İsteyen belge hâlâ taslakken bu istek *Outgoing Requests* altında durur: **Accept** ya da **Discard**. Accept hedef belgeyi o istekle hemen yeniden yazdırır — bir kez burada karar verirsiniz, orada bir daha değil. Kararsız bir istek varken belge onaylanamaz. Henüz yazılmamış bir hedef isteği ilk taslağı için saklar; o an yeniden yazılmakta olan hedef ise *Incoming Requests* altında size bırakır. Orada reddederseniz nedeniyle `## Decisions`'a iner. Bir daha sorulmaz; kod yazan ajan onu oradan okur.
+**Bir belge başka bir belgeden değişiklik isteyebilir.** İsteyen belge hâlâ taslakken bu istek *Outgoing Requests* altında durur: **Accept** ya da **Discard**. Kararsız bir istek varken belge onaylanamaz. Kabul edilen istek hedefe gider ve orada *Incoming Requests* altında bekler — kutusu işaretli, yanında *accepted there* yazar. Bir kez karar verdiniz; yine de işareti kaldırabilirsiniz. Hedefin bir sonraki yeniden yazımına, oraya borçlu olunan her şeyle birlikte, tek seferde girer. Reddedilirse nedeniyle `## Decisions`'a iner. Bir daha sorulmaz; kod yazan ajan onu oradan okur.
 
 **Findings** — hiçbir belgenin sahiplenmediği dosyalardaki sorunları (bir `.gitignore` eksiği gibi), belgeye bilgilendirme için yazar. Sizden bir şey istemez.
 

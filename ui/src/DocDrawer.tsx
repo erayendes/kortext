@@ -213,7 +213,20 @@ export function DocDrawer({
           if (!sentRef.current) {
             const kept = loadDraft(project.id, doc.rel, r.version);
             setNotes(kept?.notes ?? []);
-            setDecided(kept?.decided ?? {});
+            // A request accepted where it was asked opens ticked here. A draft
+            // prime already saved on this version wins over the preset — an
+            // untick is a decision too.
+            const presumed: Record<string, Decision> = {};
+            for (const q of doc.revisionRequests)
+              if (q.presumed === 'accept')
+                presumed[keyOf(q)] = {
+                  kind: 'incoming',
+                  other: q.from,
+                  reason: q.reason,
+                  what: 'accept',
+                  note: '',
+                };
+            setDecided(kept?.decided ?? presumed);
           }
           void api
             .docHistory(project.id, doc.rel)
@@ -570,7 +583,7 @@ export function DocDrawer({
     denying.length > 0 ? plural(denying.length, 'request denied', 'requests denied') : null,
     sending.length > 0
       ? plural(sending.length, 'request accepted', 'requests accepted') +
-        ` — ${[...new Set(sending.map((r) => r.other.replace(/\.md$/, '')))].join(', ')} will be rewritten`
+        ` — ticked on ${[...new Set(sending.map((r) => r.other.replace(/\.md$/, '')))].join(', ')}, still yours to change there`
       : null,
     discarding.length > 0
       ? plural(discarding.length, 'request discarded', 'requests discarded')
@@ -1348,6 +1361,14 @@ function ActionNeeded({
                   <span className="kx-req-text" {...select(key)}>
                     <span className="mono">{r.from.replace(/\.md$/, '')}</span> —{' '}
                     <Inline text={r.reason} />
+                    {r.presumed === 'accept' && (
+                      <span
+                        className="kx-req-presumed mono"
+                        title="You accepted this where it was asked. Untick it here to change your mind."
+                      >
+                        accepted there
+                      </span>
+                    )}
                   </span>
                   {(talk.length > 0 || open === key) && (
                     <LineThread

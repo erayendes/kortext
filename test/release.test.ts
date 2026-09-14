@@ -295,25 +295,22 @@ test('an outgoing request is sent or discarded by prime, and holds approval unti
   assert.equal(res.status, 200);
   assert.deepEqual(await res.json(), { applied: 0, denied: 0, sent: 1, discarded: 1 });
 
-  // Both leave STACK.md at once; the discarded one lives nowhere.
+  // Both leave STACK.md at once; the discarded one lives nowhere. The
+  // accepted one lands at PRODUCT.md with the decision written under it, so
+  // the target opens with it ticked — prime decided once — and nothing is
+  // rewritten until PRODUCT's own Apply carries it with everything else owed.
   const stack = readFileSync(docPath(p, 'STACK.md'), 'utf8');
   assert.doesNotMatch(stack, /name the region|drop the free tier/);
-  assert.doesNotMatch(readFileSync(docPath(p, 'PRODUCT.md'), 'utf8'), /drop the free tier/);
-  // Sent by prime is accepted by prime: PRODUCT.md is rewritten with the
-  // request now, not parked as an incoming request for prime to accept again.
-  for (let i = 0; i < 200; i++) {
-    const job = listJobs(db, p.id).find((j) => j.doc_rel === 'PRODUCT.md');
-    if (job && job.status !== 'running') break;
-    await new Promise((r) => setTimeout(r, 25));
-  }
   const product = readFileSync(docPath(p, 'PRODUCT.md'), 'utf8');
-  assert.match(product, /status: draft/);
-  assert.match(product, /Revision \d+/);
-  assert.doesNotMatch(product, /name the region/);
-  assert.match(
-    readFileSync(join(p.repo_path, 'prompts.txt'), 'utf8'),
-    /\[STACK\.md asks\] name the region/,
+  assert.match(product, /- \[ \] from `STACK\.md` — name the region\n  - accepted on STACK\.md/);
+  assert.doesNotMatch(product, /drop the free tier/);
+  assert.equal(
+    listJobs(db, p.id).find((j) => j.doc_rel === 'PRODUCT.md'),
+    undefined,
   );
+  assert.deepEqual(listDocs(db, p, pkgRoot).find((d) => d.rel === 'PRODUCT.md')!.revisionRequests, [
+    { from: 'STACK.md', reason: 'name the region', presumed: 'accept' },
+  ]);
 
   // Nothing left to decide — approval passes.
   assert.equal(

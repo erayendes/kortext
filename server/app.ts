@@ -705,33 +705,11 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       return res.status(409).json({ error: 'there is nothing left to settle here' });
     }
     for (const r of discarding) discardOutgoing(project, doc.rel, r.target, r.reason);
-    if (sending.length > 0) {
-      deliverRequests(project, doc.rel, sending);
-      // Sent by prime IS accepted by prime — one person, one decision. The
-      // target is rewritten with the request now, as if Accept were pressed
-      // there. A target not yet written keeps the line for its first draft; one
-      // being rewritten keeps it for prime, so nothing is decided twice and
-      // nothing is lost.
-      const engineNow = engineFor(db, project);
-      const shelf = listDocs(db, project, pkgRoot);
-      const byTarget = new Map<string, string[]>();
-      for (const r of sending) {
-        const target = shelf.find((d) => d.rel === r.target);
-        if (!target || !target.hasProducingStep || target.status === 'uninitialized') continue;
-        if (runningDoc(db, project.id, r.target)) continue;
-        byTarget.set(r.target, [
-          ...(byTarget.get(r.target) ?? []),
-          `[${doc.rel} asks] ${r.reason}`,
-        ]);
-      }
-      if (engineNow)
-        for (const [target, notes] of byTarget) {
-          setFrontmatterStatus(docPath(project, target), 'draft');
-          void reviseDoc(db, project, target, notes, engineNow, pkgRoot).catch((err) =>
-            console.error(`sent request follow-up failed for ${target}:`, err),
-          );
-        }
-    }
+    // Accepted where it was asked: the line lands at the target with that
+    // written under it, and the target opens with it already ticked. Prime
+    // decided once; the target's own Apply carries it into one rewrite with
+    // everything else owed there, and prime can still untick it.
+    if (sending.length > 0) deliverRequests(project, doc.rel, sending, `accepted on ${doc.rel}`);
     // A refusal goes into the document's `## Decisions`, reason under it. That
     // line IS the record — the next agent to rewrite this document reads it
     // there, and the build phase inherits it from there.
