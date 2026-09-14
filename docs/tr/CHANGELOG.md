@@ -5,8 +5,8 @@
 ## [Yayımlanmamış]
 
 - **Proje başına effort.** Modelin yanında üçüncü bir liste, bu kavramı bilen CLI'lar için:
-  `claude --effort`, codex'in `model_reasoning_effort`'u — low, medium, high. Antigravity seviyeyi
-  model adında taşır; model listesi artık hepsini gösterir.
+  `claude --effort`, codex'in `model_reasoning_effort`'u, `agy --effort` — her CLI'ın kendi
+  seçicisinin sunduğu seviye ve modellerle.
 - Satırdaki hata nedeni kesilmeden önce iki satıra sarar; çekmecede düz yazı 100 karaktere
   kadar uzar.
 - **Logo.** Yeni yazı markası ve ikon: açık temada eskiz kılavuzları üzerinde çizgi harfler,

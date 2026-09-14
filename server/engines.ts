@@ -49,10 +49,10 @@ export const ENGINES: EngineSpec[] = [
     args: ['--print', '--dangerously-skip-permissions'],
     modelFlag: '--model',
     effortFlag: '--effort',
-    // The CLI takes xhigh and max too; three levels is what the panel offers everywhere.
-    efforts: ['low', 'medium', 'high'],
-    // Aliases the CLI resolves to its latest of each tier.
-    models: ['fable', 'opus', 'sonnet', 'haiku'],
+    // The CLI's own picker, in its order.
+    efforts: ['low', 'medium', 'high', 'xhigh', 'max'],
+    // Aliases the CLI resolves to its latest of each tier, as its picker lists them.
+    models: ['opus', 'fable', 'sonnet', 'haiku'],
     installHint: 'npm install -g @anthropic-ai/claude-code',
   },
   {
@@ -62,10 +62,11 @@ export const ENGINES: EngineSpec[] = [
     // file; skip-git-repo-check: project may not be a git repo (yet).
     args: ['exec', '--sandbox', 'workspace-write', '--skip-git-repo-check'],
     modelFlag: '-m',
-    // codex has no flag; the config key is overridden on the command line.
+    // codex has no flag; the config key is overridden on the command line. The
+    // levels and models are the CLI's own picker, in its order.
     effortPrefix: '-c model_reasoning_effort=',
-    efforts: ['low', 'medium', 'high'],
-    models: ['gpt-6-astra', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.6-sol', 'gpt-5.4-mini'],
+    efforts: ['low', 'medium', 'high', 'xhigh', 'max'],
+    models: ['gpt-6-astra', 'gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.5'],
     installHint: 'npm install -g @openai/codex',
   },
   {
@@ -79,17 +80,19 @@ export const ENGINES: EngineSpec[] = [
     // hunts for the repository with find and ls.
     cwdFlag: '--add-dir',
     modelFlag: '--model',
-    // No effort list: agy bakes the level into the model id (`gemini-3.8-flash-high`),
-    // and the ids below are exactly what `agy models` prints — pick the level there.
+    // `agy models` prints ids with the level baked in (gemini-3.8-flash-high);
+    // the CLI's own picker is a model and an effort apart, and --model takes
+    // the base id with --effort beside it — verified with a run.
+    effortFlag: '--effort',
+    efforts: ['low', 'medium', 'high'],
     models: [
-      'gemini-3.8-flash-high',
-      'gemini-3.8-flash-medium',
-      'gemini-3.8-flash-low',
-      'gemini-3.1-pro-high',
-      'gemini-3.1-pro-low',
-      'claude-opus-4-6-thinking',
+      'gemini-3.8-flash',
+      'gemini-3.7-flash',
+      'gemini-3.6-flash',
+      'gemini-3.1-pro',
       'claude-sonnet-4-6',
-      'gpt-oss-120b-medium',
+      'claude-opus-4-6-thinking',
+      'gpt-oss-120b',
     ],
     installHint: 'install Antigravity, then run: agy install',
   },
