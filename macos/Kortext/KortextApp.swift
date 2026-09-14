@@ -40,9 +40,13 @@ struct Popover: View {
         VStack(spacing: 0) {
             Header(settings: $settings)
             Divider()
-            if settings { SettingsView() } else { Content() }
-            Divider()
-            StatusBar()
+            if settings {
+                SettingsView()
+            } else {
+                Content()
+                Divider()
+                StatusBar()
+            }
         }
         .frame(width: 300)
         .background(Backdrop())
@@ -78,11 +82,15 @@ struct Header: View {
     @Binding var settings: Bool
     var body: some View {
         HStack {
-            Image("wordmark").resizable().scaledToFit().frame(height: 14)
-            Spacer()
             if settings {
-                Button("Done") { settings = false }.buttonStyle(.plain).font(Kx.sans(11, .medium)).foregroundStyle(Kx.fgSecondary)
+                Button { settings = false } label: {
+                    HStack(spacing: 5) { Icon(name: "chevron.left", size: 11, color: Kx.fgSecondary, weight: .semibold); Text("Kortext").font(Kx.sans(13, .medium)).foregroundStyle(Kx.fg) }
+                }.buttonStyle(.plain)
+                Spacer()
+                ThemeCycle()
             } else {
+                Image("wordmark").resizable().scaledToFit().frame(height: 14)
+                Spacer()
                 Button { settings = true } label: { Icon(name: "gearshape", size: 13) }.buttonStyle(.plain)
             }
         }
@@ -276,71 +284,75 @@ struct StatusBar: View {
     }
 }
 
+// The panel's one setting, as its header button: auto → light → dark, one glyph showing what is on.
+struct ThemeCycle: View {
+    @AppStorage("theme") private var theme = "auto"
+    var body: some View {
+        let icon = theme == "light" ? "sun.max" : theme == "dark" ? "moon" : "circle.lefthalf.filled"
+        Button { theme = theme == "auto" ? "light" : theme == "light" ? "dark" : "auto" } label: {
+            Icon(name: icon, size: 13).frame(width: 26, height: 26)
+        }
+        .buttonStyle(.plain)
+        .help("Theme: \(theme)")
+    }
+}
+
 struct SettingsView: View {
     @EnvironmentObject var model: Model
-    @AppStorage("theme") private var theme = "auto"
     @AppStorage("notifications") private var notifications = true
     @State private var loginItem = SMAppService.mainApp.status == .enabled
 
     var body: some View {
         VStack(spacing: 0) {
-            Eyebrow(text: "Settings")
-            VStack(spacing: 0) {
-                HStack {
-                    Text("Theme").font(Kx.sans(13)).foregroundStyle(Kx.fg)
-                    Spacer()
-                    HStack(spacing: 2) {
-                        ForEach([("auto", "circle.lefthalf.filled"), ("light", "sun.max"), ("dark", "moon")], id: \.0) { key, icon in
-                            Button { theme = key } label: {
-                                Icon(name: icon, size: 13, color: theme == key ? Kx.fg : Kx.fgMuted)
-                                    .frame(width: 29, height: 29)
-                                    .background(theme == key ? Kx.bgActive : .clear)
-                                    .clipShape(RoundedRectangle(cornerRadius: 6))
-                            }.buttonStyle(.plain)
-                        }
-                    }
-                }
-                .padding(.vertical, 6)
-                Divider()
-                Check(on: $loginItem, title: "Launch at login", sub: "The server starts with it, so the morning begins with the list, not with ⏻.")
-                    .onChange(of: loginItem) { _, on in try? on ? SMAppService.mainApp.register() : SMAppService.mainApp.unregister() }
-                Divider()
-                Check(on: $notifications, title: "Notify when a document waits on me",
-                      sub: "A draft to approve, a failed step, a brief with questions, a finished chain.")
-                    .onChange(of: notifications) { _, on in if on { model.ensureNotifications() } }
-                Divider()
-                HStack {
-                    Button("Quit the menu bar app") { NSApp.terminate(nil) }.buttonStyle(.plain).font(Kx.sans(11)).foregroundStyle(Kx.fgFaint)
-                    Spacer()
-                    Text("⌘Q").font(Kx.mono(10)).foregroundStyle(Kx.fgFaint)
-                }
-                .padding(.top, 12).padding(.bottom, 2)
+            Row(icon: "power", title: "Launch at login", sub: "The server starts with it.", on: loginItem) {
+                loginItem.toggle()
+                try? loginItem ? SMAppService.mainApp.register() : SMAppService.mainApp.unregister()
             }
-            .padding(.horizontal, 12).padding(.bottom, 12)
+            Row(icon: "bell", title: "Notify when a document waits", on: notifications) {
+                notifications.toggle()
+                if notifications { model.ensureNotifications() }
+            }
+            Row(icon: "arrow.down.circle", title: "Check for updates", sub: model.update ?? (model.version.map { "kortext \($0)" } ?? nil)) { model.checkUpdates() }
+            Row(icon: "ladybug", title: "Something wrong? Report an issue") {
+                var u = "https://github.com/erayendes/kortext/issues/new?template=bug_report.yml"
+                if let v = model.version { u += "&version=\(v)" }
+                NSWorkspace.shared.open(URL(string: u)!)
+            }
+            Row(icon: "heart", title: "Like it? Support Kortext") { NSWorkspace.shared.open(URL(string: "https://buymeacoffee.com/erayendes")!) }
+            Row(icon: "xmark.circle", title: "Quit Kortext", trailing: "⌘Q") { NSApp.terminate(nil) }
         }
+        .padding(.vertical, 6)
     }
 }
 
-struct Check: View {
-    @Binding var on: Bool
-    let title: String; var sub: String? = nil
+/// One settings row: a glyph, a title, an optional line under it; a checkmark when it is a toggle that is on.
+struct Row: View {
+    let icon: String
+    let title: String
+    var sub: String? = nil
+    var on: Bool? = nil
+    var trailing: String? = nil
+    let action: () -> Void
+    @State private var hover = false
+
     var body: some View {
-        Button { on.toggle() } label: {
-            HStack(alignment: .top, spacing: 10) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 3).fill(on ? Kx.accent : Color.primary.opacity(0.06))
-                    if on { Icon(name: "checkmark", size: 9, color: Kx.accentFg, weight: .bold) }
-                    else { RoundedRectangle(cornerRadius: 3).stroke(Kx.borderStrong, lineWidth: 1) }
-                }
-                .frame(width: 14, height: 14).padding(.top, 3)
-                VStack(alignment: .leading, spacing: 2) {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Icon(name: icon, size: 13, color: Kx.fgSecondary).frame(width: 18)
+                VStack(alignment: .leading, spacing: 1) {
                     Text(title).font(Kx.sans(13)).foregroundStyle(Kx.fg)
-                    if let sub { Text(sub).font(Kx.sans(11)).foregroundStyle(Kx.fgMuted).fixedSize(horizontal: false, vertical: true) }
+                    if let sub { Text(sub).font(Kx.sans(11)).foregroundStyle(Kx.fgMuted).lineLimit(1) }
                 }
-                Spacer(minLength: 0)
+                Spacer()
+                if on == true { Icon(name: "checkmark", size: 11, color: Kx.fg, weight: .semibold) }
+                if let trailing { Text(trailing).font(Kx.mono(10)).foregroundStyle(Kx.fgFaint) }
             }
-            .padding(.vertical, 9).contentShape(Rectangle())
+            .padding(.horizontal, 14).padding(.vertical, 7)
+            .background(hover ? Kx.bgHover : .clear)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .onHover { hover = $0 }
     }
 }
+
