@@ -55,63 +55,51 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
     }
 
 
-    // Settings › Check for updates: the daemon knows both versions.
-    @Published var update: String? = nil       // what the last check said
+    // One Kortext, one channel, one check. The package comes from npm, the app from
+    // Sparkle; the check brings whichever lags up to the channel's newest, and says so.
+    @Published var update: String? = nil
     var checkAppUpdate: () -> Void = {}
-    /// The beta channel: npm's `beta` dist-tag, looked up when settings open.
-    @Published var beta: String? = nil
-    @Published var betaNote: String? = nil     // what the beta row says under its title
-    var onBeta: Bool { (version ?? "").contains("-") }
-    func lookBeta() { Task { beta = await Api.distTags()["beta"] } }
-    /// The beta row, pressed: installed → say so; else arm once, then install `kortext@beta` and restart.
-    var betaArmed = false
-    /// Only a 3.2+ server knows the `tag` field; an older one would install the release again.
+    var channel: String { UserDefaults.standard.bool(forKey: "beta") ? "beta" : "latest" }
+    func setBeta(_ on: Bool) { UserDefaults.standard.set(on, forKey: "beta"); checkUpdates() }
+
+    /// Only a 3.2+ server knows the `tag` field; an older one always installs the release.
     var serverSwitches: Bool {
         let p = (version ?? "0").split(separator: ".").compactMap { Int($0.prefix { $0.isNumber }) }
         return p.count >= 2 && (p[0] > 3 || (p[0] == 3 && p[1] >= 2))
     }
-    func tryBeta() {
-        if onBeta { betaNote = "running · Check for updates goes back"; return }
-        guard let beta else { betaNote = "no beta on npm right now"; return }
-        if !serverSwitches {
-            // The first beta is installed by hand; from then on the app can switch.
-            NSPasteboard.general.clearContents(); NSPasteboard.general.setString("npm i -g kortext@beta", forType: .string)
-            betaNote = "copied — run it, then press ⏻"
-            return
-        }
-        if !betaArmed { betaArmed = true; betaNote = "press again to install \(pretty(beta))"; return }
-        betaArmed = false
-        install(tag: "beta", label: "kortext \(pretty(beta))")
-    }
-    /// The version pill: the app asks Sparkle about itself, the daemon about the npm package.
+
     func checkUpdates() {
-        checkAppUpdate()
-        if pendingUpdate { return applyUpdate() }
         update = "checking…"
         Task {
-            guard let v = try? await Api.version() else { update = "v\(version ?? "") · offline"; return }
-            pendingUpdate = v.stale || onBeta
-            update = v.stale ? "\(pretty(v.latest ?? "")) available · click to install"
-                : onBeta ? "click for the release, \(pretty(v.latest ?? ""))"
-                : "up to date"
+            let tags = await Api.distTags()
+            guard let want = tags[channel] else { update = "could not reach npm"; return }
+            if version == want {
+                checkAppUpdate()                       // the app looks after itself, on the same channel
+                update = "up to date"
+                return
+            }
+            if channel == "beta", !serverSwitches {
+                // The first beta is installed by hand; from then on the app can switch.
+                NSPasteboard.general.clearContents(); NSPasteboard.general.setString("npm i -g kortext@beta", forType: .string)
+                update = "copied npm i -g kortext@beta — run it, then ⏻"
+                return
+            }
+            install(tag: channel, to: want)
         }
     }
-    var pendingUpdate = false
+
     /// Install, then restart the server ourselves: the process on the port is still the old
     /// one until it goes down and comes back. A refused install (a step running) says so.
-    func applyUpdate() { install(tag: "latest", label: "the release") }
-    func install(tag: String, label: String) {
-        update = "installing \(label)…"
-        betaNote = nil
+    func install(tag: String, to want: String) {
+        update = "installing \(pretty(want))…"
         Task {
             guard (try? await Api.post("/api/version/update", ["tag": tag])) == true else { update = "not now — a step is running"; return }
-            pendingUpdate = false
             update = "installed · restarting…"
             Shell.run("kortext --stop")
             Shell.run("kortext --no-open")
             for _ in 0..<20 {
                 try? await Task.sleep(for: .seconds(1))
-                if let h = await Api.health() { version = h.version; update = "kortext \(pretty(h.version)) · up to date"; await poll(); return }
+                if let h = await Api.health() { version = h.version; update = "up to date"; checkAppUpdate(); await poll(); return }
             }
             update = "installed · press ⏻"
         }

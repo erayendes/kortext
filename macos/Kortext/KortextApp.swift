@@ -13,7 +13,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var status: StatusController?
     private let model = Model()
     // Sparkle keeps the app current from macos/appcast.xml; the npm package keeps itself current through the daemon.
-    private let updater = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+    private let channels = Channels()
+    private lazy var updater = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: channels, userDriverDelegate: nil)
 
     func applicationDidFinishLaunching(_ n: Notification) {
         applyTheme()
@@ -23,7 +24,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         status = StatusController(model: model, content: Popover().environmentObject(model))
     }
 
-    // The panel's one setting: auto follows the OS, light and dark override it — app-wide, so the token colours resolve.
+    // Sparkle asks which channels count; the beta switch answers.
+final class Channels: NSObject, SPUUpdaterDelegate {
+    func allowedChannels(for updater: SPUUpdater) -> Set<String> {
+        UserDefaults.standard.bool(forKey: "beta") ? ["beta"] : []
+    }
+}
+
+// The panel's one setting: auto follows the OS, light and dark override it — app-wide, so the token colours resolve.
     private func applyTheme() {
         let theme = UserDefaults.standard.string(forKey: "theme") ?? "auto"
         let want: NSAppearance? = theme == "light" ? NSAppearance(named: .aqua) : theme == "dark" ? NSAppearance(named: .darkAqua) : nil
@@ -315,6 +323,7 @@ struct SettingsBar: View {
 struct SettingsView: View {
     @EnvironmentObject var model: Model
     @AppStorage("notifications") private var notifications = true
+    @AppStorage("beta") private var beta = false
     @State private var loginItem = SMAppService.mainApp.status == .enabled
 
     var body: some View {
@@ -330,8 +339,10 @@ struct SettingsView: View {
                     if notifications { model.ensureNotifications() }
                 }
                 Row(icon: "arrow.down.circle", title: "Check for updates",
-                sub: model.update ?? ["app \(pretty(appVersion))", model.version.map { "kortext \(pretty($0))" }].compactMap { $0 }.joined(separator: " · ")) { model.checkUpdates() }
-            Row(icon: "flask", title: "Try the beta", sub: model.betaNote ?? model.beta.map { model.onBeta ? "\(pretty($0)) · installed" : pretty($0) } ?? "looking…") { model.tryBeta() }
+                sub: [model.version.map { "Kortext \(pretty($0))" }, model.update].compactMap { $0 }.joined(separator: " · ")) { model.checkUpdates() }
+            Row(icon: "flask", title: "Beta", sub: "Updates include betas.", on: beta) {
+                beta.toggle(); model.setBeta(beta)
+            }
                 Row(icon: "ladybug", title: "Report an issue") {
                     var u = "https://github.com/erayendes/kortext/issues/new?template=bug_report.yml"
                     if let v = model.version { u += "&version=\(v)" }
@@ -342,7 +353,6 @@ struct SettingsView: View {
             }
         }
         .padding(12)
-        .onAppear { model.lookBeta() }
     }
 }
 
