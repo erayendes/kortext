@@ -321,7 +321,7 @@ asked. A tagline in the chrome is a thing the reader learns once
 and then reads forever. The theme button is the one preference that survived, and it is an
 icon, not a control row: it takes no width a heading would.
 
-**Update strip** (`.kx-update`), under the header: present only when there is something to say
+**Update strip** (`.kx-update`), under the Projects heading: present only when there is something to say
 — a newer version on npm. Blue ground and border (the panel's one informational colour), one
 sentence, one primary button, and after the install one sentence again (quit and start
 again). An error keeps the strip and adds the command to run by hand. The panel asks once on

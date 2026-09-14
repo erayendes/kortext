@@ -94,7 +94,7 @@ Buradan sonra Kortext işin içinde değildir.
 
 **Durum çubuğu**, altta. Yeşil nokta sunucu ayakta demektir. ⏻ düğmesi kapatır ama bir belge yazılırken kapatmaz.
 
-**Güncelleme şeridi**, üstte, mavi, yalnız npm'de yeni sürüm varsa görünür — panel açılışta bir kez, sonra her saat bakar; açık dururken çıkan sürüm de düşer. **Update now** kurar; sonra kortext'i kapatıp yeniden açmanız gerekir.
+**Güncelleme şeridi**, Projects başlığının altında, mavi, yalnız npm'de yeni sürüm varsa görünür — panel açılışta bir kez, sonra her saat bakar; açık dururken çıkan sürüm de düşer. **Update now** kurar; sonra kortext'i kapatıp yeniden açmanız gerekir.
 
 **Tema.** Sağ üstteki düğme auto → light → dark döner.
 

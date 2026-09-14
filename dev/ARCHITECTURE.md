@@ -319,7 +319,7 @@ Approve. Destructive buttons arm in place — browsers silently suppress repeate
 
 The chrome around it. The **header** carries the wordmark (one PNG per theme), the no-CLI
 warning when there is nothing on the `PATH`, and at the far right one cycling **theme** button
-(auto → light → dark, remembered in `localStorage`, no attribute meaning auto). Under it the
+(auto → light → dark, remembered in `localStorage`, no attribute meaning auto). Under the Projects heading the
 **update strip** appears only when npm carries a newer version and kortext runs from a global
 install — the panel asks `/api/version` on open and hourly, the server asks the registry at
 most hourly; **Update now** calls `/api/version/update`, and afterwards the strip says to quit and

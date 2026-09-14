@@ -95,7 +95,6 @@ export function App() {
         <span className="kx-doc-spacer" />
         <ThemeSwitch />
       </header>
-      <UpdateStrip />
       {error && <div className="kx-error">{error}</div>}
       {selected ? (
         <ProjectScreen
@@ -114,6 +113,7 @@ export function App() {
               Add project
             </button>
           </div>
+          <UpdateStrip />
           {projects.length === 0 && !adding && (
             <>
               <div className="kx-empty">
@@ -838,7 +838,7 @@ function EngineBadge() {
   );
 }
 
-// Show self-update controls only when a managed install has a newer version available.
+// Under the Projects heading, only when a managed install has a newer version available.
 function UpdateStrip() {
   const [latest, setLatest] = useState<string | null>(null);
   const [state, setState] = useState<'idle' | 'running' | 'done'>('idle');

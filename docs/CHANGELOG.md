@@ -4,8 +4,8 @@
 
 ## [Unreleased]
 
-- **The update strip shows.** Blue, with a primary button, instead of a grey line that read
-  like any other card. The panel checks for a release when opened and then every hour, and
+- **The update strip shows.** Under the Projects heading, blue, the button at the right,
+  instead of a grey line under the header that read like any other card. The panel checks for a release when opened and then every hour, and
   the server asks npm at most hourly instead of every six — a release lands on a panel that
   has been open all day.
 

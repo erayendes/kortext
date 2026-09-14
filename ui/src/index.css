@@ -2599,8 +2599,10 @@ button.kx-note-exc:hover {
 .kx-update {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
   gap: 12px;
-  margin: 10px 22px 0;
+  margin-bottom: 14px;
   padding: 10px 14px;
   border-radius: var(--r-md);
   border: 1px solid var(--blue);
