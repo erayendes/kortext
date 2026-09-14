@@ -4,8 +4,9 @@
 
 ## [Unreleased]
 
-- **The update strip shows.** Under the Projects heading, blue, the button at the right,
-  instead of a grey line under the header that read like any other card. The panel checks for a release when opened and then every hour, and
+- **The update strip shows.** Under the heading of either screen, blue, the button at the
+  right, instead of a grey line under the header that read like any other card. After the
+  install it offers **Quit**, so the restart is one press and a `kortext`. The panel checks for a release when opened and then every hour, and
   the server asks npm at most hourly instead of every six — a release lands on a panel that
   has been open all day.
 

@@ -321,10 +321,11 @@ asked. A tagline in the chrome is a thing the reader learns once
 and then reads forever. The theme button is the one preference that survived, and it is an
 icon, not a control row: it takes no width a heading would.
 
-**Update strip** (`.kx-update`), under the Projects heading: present only when there is something to say
-— a newer version on npm. Blue ground and border (the panel's one informational colour), one
-sentence, one primary button, and after the install one sentence again (quit and start
-again). An error keeps the strip and adds the command to run by hand. The panel asks once on
+**Update strip** (`.kx-update`), under the heading of either screen: present only when there is
+something to say — a newer version on npm. Blue ground and border (the panel's one
+informational colour), one sentence, one primary button, and after the install one sentence
+again with **Quit** — the process on screen is still the old one; after the quit, one line
+saying to start `kortext` again. An error keeps the strip and adds the command to run by hand. The panel asks once on
 open and then hourly; the server asks npm at most hourly.
 
 **Status bar** (`.kx-statusbar`), 52px, never wrapping — an application's bar, not a web
