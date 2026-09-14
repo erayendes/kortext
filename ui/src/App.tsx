@@ -366,6 +366,13 @@ function CopyCommand({ command }: { command: string }) {
   );
 }
 
+// `3.2.0-beta.3` reads as `3.2-beta3`, `3.2.0` as `3.2`, `3.1.2` stays — the same short form as the app.
+export function pretty(v: string) {
+  const [core, pre] = v.split('-');
+  const short = core.replace(/\.0$/, '');
+  return pre ? `${short}-${pre.replace('.', '')}` : short;
+}
+
 // Display the running version, which can differ from the installed version after an update.
 function Version() {
   const [version, setVersion] = useState('');
@@ -375,7 +382,7 @@ function Version() {
       .then((h) => setVersion(h.version))
       .catch(() => {});
   }, []);
-  return version ? <span className="kx-version mono">v{version}</span> : null;
+  return version ? <span className="kx-version mono">v{pretty(version)}</span> : null;
 }
 
 // Prefill the GitHub bug-report template with the running version.
@@ -960,8 +967,8 @@ function UpdateStrip({ latest, state, err, run, quit }: ReturnType<typeof useUpd
     return (
       <div className="kx-update">
         <span>
-          Kortext stopped. Start it again — <code className="mono">kortext</code> — and {latest}{' '}
-          takes over.
+          Kortext stopped. Start it again — <code className="mono">kortext</code> — and{' '}
+          {pretty(latest)} takes over.
         </span>
       </div>
     );
@@ -970,7 +977,7 @@ function UpdateStrip({ latest, state, err, run, quit }: ReturnType<typeof useUpd
     return (
       <div className="kx-update">
         <span>
-          Updated to {latest}. This one still runs the old version — quit and start again.
+          Updated to {pretty(latest)}. This one still runs the old version — quit and start again.
         </span>
         <button className="btn btn-primary" onClick={quit}>
           Quit
@@ -981,7 +988,7 @@ function UpdateStrip({ latest, state, err, run, quit }: ReturnType<typeof useUpd
   }
   return (
     <div className="kx-update">
-      <span>Version {latest} is out.</span>
+      <span>Version {pretty(latest)} is out.</span>
       <button className="btn btn-primary" disabled={state === 'running'} onClick={run}>
         {state === 'running' ? 'Updating…' : 'Update now'}
       </button>
