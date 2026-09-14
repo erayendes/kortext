@@ -50,6 +50,9 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
         return nil
     }
     func pause(_ p: ProjectState) { Task { try? await Api.post("/api/projects/\(p.id)/pause", ["paused": true]); await poll() } }
+    /// A paused project with work left: Continue is the unpause, as on the panel.
+    var pausedLine: ProjectState? { projects.first { ($0.project.paused ?? 0) == 1 && !$0.complete } }
+    func resume(_ p: ProjectState) { Task { try? await Api.post("/api/projects/\(p.id)/pause", ["paused": false]); await poll() } }
 
     // Settings › Check for updates: the daemon knows both versions.
     @Published var update: String? = nil       // what the last check said
@@ -151,7 +154,7 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
 
     static let demo: [ProjectState] = {
         func p(_ id: Int, _ code: String, _ name: String, _ docs: [Doc], notReady: Bool = false) -> ProjectState {
-            var s = ProjectState(project: Project(id: id, name: name, code: code, docCounts: .init(settled: 3, total: 15), doc_lang: "Turkish"))
+            var s = ProjectState(project: Project(id: id, name: name, code: code, docCounts: .init(settled: 3, total: 15), doc_lang: "Turkish", paused: 0))
             s.docs = docs; s.notReady = notReady; s.questions = 3; return s
         }
         return [

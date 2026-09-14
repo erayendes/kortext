@@ -175,17 +175,30 @@ struct Empty: View {
                     (Text("\(r.project.project.code) is writing ").font(Kx.sans(12)).foregroundStyle(Kx.fgMuted)
                      + Text(r.job.doc_rel).font(Kx.mono(12)).foregroundStyle(Kx.fgSecondary))
                     Spacer()
-                    Button { model.pause(r.project) } label: {
-                        HStack(spacing: 4) { Icon(name: "pause.fill", size: 9, color: Kx.fgSecondary); Text("Pause").font(Kx.sans(11, .medium)).foregroundStyle(Kx.fgSecondary) }
-                            .padding(.horizontal, 8).frame(height: 22)
-                            .overlay(RoundedRectangle(cornerRadius: 6).stroke(Kx.border, lineWidth: 1))
-                    }.buttonStyle(.plain)
+                    SmallButton(icon: "pause.fill", title: "Pause") { model.pause(r.project) }
+                }
+            } else if let p = model.pausedLine {
+                HStack(spacing: 8) {
+                    Text("\(p.project.code) is paused").font(Kx.sans(12)).foregroundStyle(Kx.fgMuted)
+                    Spacer()
+                    SmallButton(icon: "play.fill", title: "Continue") { model.resume(p) }
                 }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading).padding(14)
         }
         .padding(12)
+    }
+}
+
+struct SmallButton: View {
+    let icon: String; let title: String; let action: () -> Void
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 4) { Icon(name: icon, size: 9, color: Kx.fgSecondary); Text(title).font(Kx.sans(11, .medium)).foregroundStyle(Kx.fgSecondary) }
+                .padding(.horizontal, 8).frame(height: 22)
+                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Kx.border, lineWidth: 1))
+        }.buttonStyle(.plain)
     }
 }
 

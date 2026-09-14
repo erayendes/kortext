@@ -6,6 +6,7 @@ struct Project: Decodable, Identifiable {
     struct Counts: Decodable { let settled: Int; let total: Int }
     let id: Int; let name: String; let code: String; let docCounts: Counts
     let doc_lang: String?
+    let paused: Int?
 }
 struct Job: Decodable { let id: Int; let doc_rel: String; let status: String; let error: String? }
 struct Doc: Decodable, Identifiable {
