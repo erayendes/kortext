@@ -3288,6 +3288,12 @@ button.kx-removed-toggle:hover {
   flex: 1;
   min-width: 0;
 }
+.kx-handshake-offer-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
 .kx-handshake-offer-title {
   font-weight: 600;
 }
