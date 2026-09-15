@@ -11,6 +11,9 @@
   zaten elinizdeyse atlayın; motoru ve modeli düğmenin üstünden seçersiniz. `DESIGN.md` proje
   klasöründe zaten olan bir tasarımı icat etmek yerine belgeliyor. El sıkışmadan sonra belge
   proje sahibinindir.
+- **n/a prime'ın kararı.** Yazarın "bu projeye gerekmez" dediği belge artık kendi başına
+  yerleşmiyor: Action Needed'a `n/a?` olarak gelir, *Approve n/a* yerleştirir. Bir not ve bir
+  revizyon yazarı geri gönderir, belgeyi yazar.
 - **Konuşma yanıtın olduğu yerde kalır.** Başka yere tıklayınca satırın soru kutusu katlanır;
   yanıta tıklayınca ek soru için yeniden açılır; üstündeki × konuşmayı kapatır. *Suggest* yalnız
   yazarın önerecek bir şeyi olduğu yerde — bir soruda ya da bir istekte — çıkar, düz satırda

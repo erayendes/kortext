@@ -1150,3 +1150,37 @@ test('an on-request document asked for and then stopped holds the handshake and 
   assert.equal(doc?.state, 'paused');
   rmSync(work, { recursive: true, force: true });
 });
+
+test("the agent's not-applicable is a proposal: a draft carrying applies: no, settled only by prime", async () => {
+  const { loadDocMap, readFrontmatter } = await import('../server/docs.js');
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Cli', repoPath: join(work, 'cli') }, pkgRoot);
+  approveBrief(p);
+  setFrontmatterStatus(docPath(p, 'PRODUCT.md'), 'approved');
+  setFrontmatterStatus(docPath(p, 'STACK.md'), 'approved');
+  // An engine that judges DESIGN.md not to apply: a title and one line.
+  const script = join(work, 'na-engine.sh');
+  writeFileSync(
+    script,
+    `#!/bin/sh
+prompt=$(cat)
+rel=$(printf '%s' "$prompt" | grep 'Produce EXACTLY' | sed 's/.*: \\.kortext\\///')
+printf -- '---\\nstatus: not-applicable\\nauthor: +designer\\n---\\n\\n# Design\\n\\nA CLI renders nothing.\\n' > ".kortext/$rel"
+`,
+  );
+  chmodSync(script, 0o755);
+  const engine = { id: 'mock', binary: script, args: [], installHint: '' };
+  const out = await runStep(db, p, loadDocMap(pkgRoot, 'new').get('DESIGN.md')!, engine, pkgRoot);
+  assert.ok(out.ok);
+  const fm = readFrontmatter(readFileSync(docPath(p, 'DESIGN.md'), 'utf8'));
+  assert.equal(fm.status, 'draft');
+  assert.equal(fm.applies, 'no');
+  const doc = listDocs(db, p, pkgRoot).find((d) => d.rel === 'DESIGN.md');
+  assert.equal(doc?.naProposed, true);
+  assert.equal(doc?.section, 'needs'); // prime's call, like any draft
+  // Its readers wait: nothing is settled by the agent's word alone.
+  const growth = listDocs(db, p, pkgRoot).find((d) => d.rel === 'GROWTH.md');
+  assert.equal(growth?.blocked, true);
+  rmSync(work, { recursive: true, force: true });
+});

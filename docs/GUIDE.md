@@ -11,7 +11,7 @@ Installation and the overview are in the [README](../README.md); this is what to
 Kortext runs **your** agent CLI inside your repo. Each analysis run produces one document and marks it as a draft.
 Only you approve drafts.
 
-- **Every document has a status.** `waiting` (its turn has not come, or it is written and waiting for your approval) → `writing` (being written now) → `approved`. Stop a run and it is `paused`, to be continued; a run that hits an error is `failed`, to be retried. A document the project has no use for shows as `n/a`.
+- **Every document has a status.** `waiting` (its turn has not come, or it is written and waiting for your approval) → `writing` (being written now) → `approved`. Stop a run and it is `paused`, to be continued; a run that hits an error is `failed`, to be retried. A document the author judges the project has no use for comes to you as `n/a?` — approve it and it settles as `n/a`; disagree, and a note sends the author back to write it.
 - **A badge may sit beside the status.** `approve` (waiting for your approval), `review` (it has questions or requests), `recheck` (a document it reads changed; it will be read again), `revision` (a rewrite, not a first draft).
 - **The order is not a preference.** A document is written only after everything it depends on is settled. `SECURITY` waiting for `ARCHITECTURE`, say. That is why approving one document starts another.
 - **The panel is the only place you work.**

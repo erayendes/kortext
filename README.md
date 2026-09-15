@@ -75,7 +75,7 @@ Kortext collects nothing, keeps no telemetry. I am very curious how much it gets
 
 5. When every document is approved or declared unnecessary, the analysis is complete. The documents are now the project's constitution and `AGENTS.md` is the handover. Copy one of the starter commands into your client — CLI or app, whichever you use — and start building.
 
-> A document can also close as `not-applicable`, with a reason: "this project does not need this one."
+> A document can also close as `not-applicable`, with a reason: "this project does not need this one." That too is the author's judgement — you approve it like any draft.
 
 ## Install
 

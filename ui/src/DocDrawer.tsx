@@ -748,11 +748,13 @@ export function DocDrawer({
                     ? 'Answer the open questions in this document first'
                     : doc.outgoing.length > 0
                       ? 'Accept or discard the outgoing requests first'
-                      : ''
+                      : doc.naProposed
+                        ? 'The author says this document does not apply here — approving agrees, and settles it as n/a. Disagree? Add a note and request a revision.'
+                        : ''
               }
               onClick={() => approve()}
             >
-              Approve
+              {doc.naProposed ? 'Approve n/a' : 'Approve'}
             </button>
           )}
           {!editing && doc.status !== 'uninitialized' && (
@@ -1174,6 +1176,8 @@ export function statusOf(doc: DocInfo): { key: string; label: string } {
   if (doc.state === 'writing') return { key: 'writing', label: 'writing…' };
   if (doc.state === 'reading') return { key: 'reading', label: 'reading…' };
   if (doc.state === 'n/a') return { key: 'not-applicable', label: 'n/a' };
+  // The agent's verdict, waiting for prime's: the word with a question mark.
+  if (doc.naProposed) return { key: 'not-applicable', label: 'n/a?' };
   return { key: doc.state, label: doc.state };
 }
 

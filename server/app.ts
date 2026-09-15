@@ -642,7 +642,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       // Template lines the agent never replaced. A real test approved a
       // DATABASE.md still carrying `### Table: `[table_name]``, which then reads
       // as an approved database design. Prime can still insist.
-      if (!force) {
+      if (!force && !doc.naProposed) {
         const left = unfilledPlaceholders(
           readFileSync(path, 'utf8'),
           templateFor(pkgRoot, doc.rel),
@@ -654,7 +654,8 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
           });
         }
       }
-      setFrontmatterStatus(path, 'approved');
+      // Prime agreeing that the document does not apply settles it as such.
+      setFrontmatterStatus(path, doc.naProposed ? 'not-applicable' : 'approved');
       // Every request this document sends went out with prime's Send before
       // approval could pass; this sweep is for documents approved before
       // requests travelled.

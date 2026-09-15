@@ -4,8 +4,9 @@
 
 > **Scope before writing.** Every step decides whether its document applies to THIS project
 > before it writes a line. The `n/a when` condition below each step is that test; when it is
-> met, the document is written with `status: not-applicable` and one line of reasoning, and
-> the flow carries on — a correct outcome, not a gap. Steps with no `n/a when` line always
+> met, the document is written with `status: not-applicable` and one line of reasoning — a
+> correct outcome, not a gap. It is a judgement, though, and prime confirms it like any
+> draft: the flow carries on once prime approves. Steps with no `n/a when` line always
 > apply. What the inputs do not say, no document may assume.
 
 > **The order is the argument.** Each document is written only once every fact it depends on

@@ -11,6 +11,9 @@
   your choice above it; skip it if the design is already in hand. `DESIGN.md` documents a
   design the project folder already holds instead of inventing one. After the handshake the
   document is the project owner's to update.
+- **n/a is prime's call.** A document the author judges not to apply no longer settles on its
+  own: it arrives as `n/a?` under Action Needed, and *Approve n/a* is what settles it. A note
+  and a revision send the author back to write it after all.
 - **The thread stays where the answer is.** A click elsewhere folds a line's question box; a
   click on the answer reopens it for the follow-up; × on the thread closes it. *Suggest* shows
   only where the author has something to suggest — a question or a request — not on a plain

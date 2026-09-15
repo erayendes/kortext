@@ -75,7 +75,7 @@ Kortext hiçbir bilgi almıyor, telemetry tutmuyor. Ama ne kadar kullanılacağ�
    
 5. Bütün belgeler onaylandığında ya da gerek yok dendiğinde analiz bitmiştir. Belgeler artık projenin anayasası, `AGENTS.md` de devir teslim metnidir. Başlangıç komutlarından birini kendi istemcinize — CLI ya da uygulama, hangisini kullanıyorsanız — kopyalayın ve yapmaya başlayın.
 
-> Bir belge "bu projede buna gerek yok" diyerek, gerekçesiyle, `not-applicable` olarak da kapanabilir.
+> Bir belge "bu projede buna gerek yok" diyerek, gerekçesiyle, `not-applicable` olarak da kapanabilir. O da yazarın kararıdır — her taslak gibi siz onaylarsınız.
 
 ## Kurulum
 

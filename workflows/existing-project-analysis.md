@@ -6,7 +6,8 @@
 > decides whether its document applies before it writes a line, and the `n/a when` condition
 > below each step is that test — read the code, do not assume the project is like other
 > projects. When the condition is met, the document is written with `status: not-applicable`
-> and one line of reasoning, and the flow carries on. Steps with no `n/a when` line always
+> and one line of reasoning; prime confirms it like any draft, and the flow carries on once
+> prime approves. Steps with no `n/a when` line always
 > apply. Absence of evidence is a finding, not a blank to fill.
 
 ## Technical Discovery

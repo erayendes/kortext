@@ -62,6 +62,8 @@ export interface DocInfo {
   detail: 'approve' | 'review' | 'queue' | 'recheck' | 'draft' | 'revision' | 'request' | null;
   /** An on-request document: offered at the handshake, never queued by the chain. */
   optional: boolean;
+  /** The agent says this document does not apply; approval settles it as `not-applicable`. */
+  naProposed: boolean;
   /** A recheck is queued or running against this document. */
   pendingRecheck: boolean;
 }
@@ -387,6 +389,27 @@ export function readFrontmatter(content: string): Record<string, string> {
   return out;
 }
 
+/**
+ * `applies: no` in the frontmatter: the agent judged the document not to apply.
+ * The status stays `draft` until prime agrees — approval then settles it as
+ * `not-applicable`. A rewrite that produces a real document drops the key.
+ */
+export function setApplies(path: string, applies: boolean): void {
+  const body = readFileSync(path, 'utf8');
+  const without = body.replace(/^applies:.*\n/m, '');
+  if (applies) {
+    writeFileSync(path, without, 'utf8');
+    return;
+  }
+  writeFileSync(
+    path,
+    /^status:.*$/m.test(without)
+      ? without.replace(/^(status:.*)$/m, '$1\napplies: no')
+      : without.replace('---\n', '---\napplies: no\n'),
+    'utf8',
+  );
+}
+
 export function setFrontmatterStatus(path: string, status: string): void {
   const body = readFileSync(path, 'utf8');
   if (/^status:/m.test(body)) {
@@ -655,6 +678,7 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
         openQuestions: status !== 'uninitialized' && hasOpenQuestions(body),
         hasProducingStep: map.has(rel),
         optional: map.get(rel)?.optional ?? false,
+        naProposed: status === 'draft' && fm.applies === 'no',
         // Read from the document's own section: what others asked of it is
         // filed here when they are approved, and decided here. An unwritten
         // document can already hold some — they go into its first write.

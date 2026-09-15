@@ -125,6 +125,10 @@ The file is the source of truth — no document state is kept in the database.
 an agent that writes `approved` is set back to `draft`; any other status fails the run and the
 previous text is restored). Side exits:
 `not-applicable` (the step judged it irrelevant; satisfies a dependency like `approved`), `log`.
+The agent never writes `not-applicable` into effect: a run that ends with it is turned into a
+`draft` carrying `applies: no` (`setApplies`), shown as `n/a?`, and prime's Approve — the same
+button, reading *Approve n/a* — settles it as `not-applicable`. A rewrite that produces a real
+document drops the key. So an n/a is a decision prime made, not one the agent slipped past.
 
 **Three sections are machine-read, two of them as work.** `## Questions for Prime` — non-empty
 means the document is waiting on a human. `## Change Requests` — one heading, two directions,

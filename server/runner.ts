@@ -15,6 +15,7 @@ import {
   removeRequest,
   recordVersion,
   restoreRequests,
+  setApplies,
   setFrontmatterStatus,
   templateFor,
   unfilledPlaceholders,
@@ -957,6 +958,9 @@ export async function runStep(
     }
     // A document that does not apply is a title and one line. Anything else is
     // the skeleton left standing, which the next author reads as work waiting.
+    // And it is the agent's judgement, not the outcome: the file goes to prime
+    // as a draft carrying `applies: no`, and only prime's approval settles it
+    // as not-applicable. A rewrite that turns out to apply drops the key.
     if (status === 'not-applicable') {
       const left = unfilledPlaceholders(written, templateFor(pkgRoot, step.output));
       if (left.length > 0) {
@@ -965,6 +969,10 @@ export async function runStep(
           `${step.output} is not-applicable but still carries the skeleton — delete it, leaving the title and the one line saying why: ${left.slice(0, 3).join(' / ')}`,
         );
       }
+      setFrontmatterStatus(outPath, 'draft');
+      setApplies(outPath, false);
+    } else {
+      setApplies(outPath, true);
     }
     // A skeleton is not a version of the document: recording it would make the
     // first draft read as a rewrite of the placeholders, every line marked.

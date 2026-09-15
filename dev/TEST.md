@@ -158,8 +158,9 @@ Open any document. Everything you can do to it is here:
 | **Apply** | one press sends everything the tray collected: answers and accepted requests go into one rewrite, denials into `## Decisions`, sent requests to their target now, discards out of the file |
 | select a line of the body → **Add note** | a revision note on that line; **Request revision** (or Apply) re-runs the author with it |
 | **Edit** | saves your text; an ordinary save does not close requests or remove open questions. With requests standing, a second button — **Save, requests done** — saves and closes them without a rewrite |
-| `not-applicable` | the step judged the document irrelevant and said why; it satisfies dependencies like an approval |
+| `n/a?` → **Approve n/a** | the step judged the document irrelevant and said why; the draft carries `applies: no` and waits for you. Approve settles it as `not-applicable`, which satisfies dependencies like an approval; a note and a revision send the author back to write it |
 
+- [ ] An agent's `not-applicable` lands under Action Needed as `n/a?` with `approve`; its readers stay blocked until **Approve n/a**; the file then reads `status: not-applicable`.
 - [ ] Ask answers about the selected row and writes nothing to disk — hash the file before and after.
 - [ ] **Suggest** shows on a question and on a request, not on a plain line of the body.
 - [ ] A click elsewhere folds the thread's box; a click on the answer reopens it under the same thread; **×** on the thread removes the questions and answers and the line stands.

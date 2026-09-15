@@ -57,6 +57,8 @@ export interface DocInfo {
   detail: 'approve' | 'review' | 'queue' | 'recheck' | 'draft' | 'revision' | 'request' | null;
   /** Written only when prime asks for it, at the handshake. */
   optional: boolean;
+  /** The agent says it does not apply; Approve settles it as n/a. */
+  naProposed: boolean;
   pendingRecheck: boolean;
 }
 
