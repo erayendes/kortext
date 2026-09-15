@@ -686,18 +686,6 @@ body {
   flex-direction: column;
   gap: 8px;
 }
-/* Add project › Design: the picker's list under a group label, and the
-   where-is-it field when a design is in hand. */
-.kx-design {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.kx-design-where {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
 /* The CLI as chips: the drawn box vocabulary, one on at a time. */
 .kx-chips {
   display: flex;

@@ -8,7 +8,7 @@
   queued by the chain: the brief a design AI needs — journeys, every screen with its states,
   the copy word for word — and the prompts to paste, one master and one per journey, for any
   design tool. Press *Write EXPERIENCE.md* on the handshake card; skip it if the design is
-  already in hand. Add project asks which — *To be made*, *Already in hand* (and where), *None* — and
+  already in hand. Add project asks which — *Design to be made*, *Design in hand* (and its folder), *No design* — and
   `DESIGN.md` documents a design in hand instead of inventing one. After the handshake the document is
   the project owner's to update.
 

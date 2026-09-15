@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { EnginePicker, PickRow } from './EnginePicker';
+import { EnginePicker } from './EnginePicker';
 import {
   api,
   type DocInfo,
@@ -1327,6 +1327,10 @@ function AddProject({
     const { path } = await api.pickDirectory();
     if (path) setRepoPath(path); // picked folder IS the project root
   };
+  const browseDesign = async () => {
+    const { path } = await api.pickDirectory();
+    if (path) setDesignRef(path);
+  };
 
   const uploadBrief = (file: File | undefined) => {
     if (!file) return;
@@ -1450,49 +1454,49 @@ function AddProject({
           onChange={(e) => setDocLang(e.target.value)}
         />
       </div>
-      {/* The design: the picker's own list — a mark, the word, one line about it —
-          under a group label, as Model sits in the engine picker. A design in hand
-          is read from the project folder: a headless CLI cannot open a Figma link. */}
+      {/* The design, in the form's own words: the New/Existing pair's buttons with
+          the line under them, and the project-folder row with Browse when the
+          design is in hand — a folder, since a headless CLI cannot open a Figma link. */}
       {kind === 'new' && (
-        <div className="kx-design">
-          <div className="kx-changebar-group">Design</div>
-          <div className="kx-picker-list" role="listbox" aria-label="Design">
-            <PickRow
-              mono={false}
-              on={design === 'make'}
-              name="To be made"
-              about="after the analysis — a brief for a design AI is offered at the end"
-              onPick={() => setDesign('make')}
-            />
-            <PickRow
-              mono={false}
-              on={design === 'have'}
-              name="Already in hand"
-              about="in the project folder — DESIGN.md documents it, invents nothing"
-              onPick={() => setDesign('have')}
-            />
-            <PickRow
-              mono={false}
-              on={design === 'none'}
-              name="None"
-              about="the product renders nothing — a CLI, a library, a service"
-              onPick={() => setDesign('none')}
-            />
+        <>
+          <div className="kx-form-row">
+            {(
+              [
+                ['make', 'Design to be made'],
+                ['have', 'Design in hand'],
+                ['none', 'No design'],
+              ] as const
+            ).map(([id, label]) => (
+              <button
+                key={id}
+                className={`btn ${design === id ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setDesign(id)}
+              >
+                {label}
+              </button>
+            ))}
           </div>
+          <span className="kx-cmd-hint">
+            {design === 'make'
+              ? 'The design comes after the analysis: once every document is settled, a brief for a design AI — EXPERIENCE.md — is offered.'
+              : design === 'have'
+                ? 'The design exists: DESIGN.md documents it instead of inventing one. Put the files in a folder — screens, tokens, exports; a Figma link cannot be read.'
+                : 'The product renders nothing — a CLI, a library, a service. DESIGN.md is marked not applicable.'}
+          </span>
           {design === 'have' && (
-            <div className="kx-design-where">
+            <div className="kx-form-row">
               <input
                 className="kx-input kx-path"
-                placeholder="Where — a folder in the project (design/), or the design system's name"
+                placeholder="Design folder (pick with Browse)"
                 value={designRef}
                 onChange={(e) => setDesignRef(e.target.value)}
               />
-              <span className="kx-cmd-hint">
-                Figma links cannot be read — export what matters (screens, tokens) into the folder.
-              </span>
+              <button className="btn btn-secondary" onClick={browseDesign}>
+                Browse…
+              </button>
             </div>
           )}
-        </div>
+        </>
       )}
       {kind === 'existing' && (
         <span className="kx-cmd-hint">
