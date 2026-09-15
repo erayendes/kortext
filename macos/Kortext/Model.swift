@@ -261,7 +261,11 @@ enum Shell {
 
 extension Project {
     /// The documents are written in this language; so is the nudge about them.
-    var tr: Bool { (doc_lang ?? "").lowercased().hasPrefix("tur") || (doc_lang ?? "").lowercased().hasPrefix("türk") }
+    var tr: Bool {
+        let l = (doc_lang ?? "").lowercased().trimmingCharacters(in: .whitespaces)
+        // The field is free text: Türkçe, Turkish, tr, tr-TR all count.
+        return l.hasPrefix("tur") || l.hasPrefix("türk") || l == "tr" || l.hasPrefix("tr-") || l.hasPrefix("tr_")
+    }
 }
 
 /// `3.2.0-beta.2` reads as `3.2-beta2`, `3.2.0` as `3.2`, `3.1.2` stays: the patch only when it says something.
