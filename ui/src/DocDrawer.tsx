@@ -2024,7 +2024,7 @@ function LineThread({
                 else onNote(answer);
               }}
             >
-              {onDecide ? 'Use as my note' : 'Use as my answer'}
+              {onDecide ? 'Use this as the note' : 'Use this answer'}
             </button>
           )}
         </div>
@@ -2053,7 +2053,7 @@ function LineThread({
           <div className="kx-thread-actions">
             {/* The question most rows get asked, without typing it. The author
                 answers in the document's language, and the reply carries
-                Use as my answer — so a question can be settled in two presses. */}
+                Use this answer — so a question can be settled in two presses. */}
             {suggest && (
               <button
                 className="btn btn-link-primary"

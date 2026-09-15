@@ -37,7 +37,7 @@ Open any document from the list.
 **Approve** — the document becomes ground for the ones after it, and the chain moves on.
 
 **Ask** — select a line and ask your question. The persona that wrote the document answers about that passage.
-Questions are for understanding, not for changing. That is why they are not saved: the thread lives in the panel, a click elsewhere folds its box away and a click on the answer opens it again for a follow-up, and **×** on the thread closes it for good. On one of the document's own questions, or on a request, **Suggest** asks the author what it would do without typing, and under every answer **Use as my answer** takes it as your note — a question settled in two presses. A plain line of the document has nothing to suggest, so there the buttons are Ask and Add note.
+Questions are for understanding, not for changing. That is why they are not saved: the thread lives in the panel, a click elsewhere folds its box away and a click on the answer opens it again for a follow-up, and **×** on the thread closes it for good. On one of the document's own questions, or on a request, **Suggest** asks the author what it would do without typing, and under every answer **Use this answer** takes it as your note — a question settled in two presses. A plain line of the document has nothing to suggest, so there the buttons are Ask and Add note.
 
 **Add note** — your notes get the document rewritten. A note left on one of the document's open questions counts as the answer: the question disappears and the fact it established becomes part of the document.
 
