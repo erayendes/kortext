@@ -21,6 +21,8 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
         didSet { UserDefaults.standard.set(channel == "beta", forKey: "beta") }  // Sparkle follows the server's channel
     }
     @Published var installed = true
+    /// "starting" | "stopping": the press was taken and health has not answered yet — ⏻ and the card wait, disabled.
+    @Published var busy: String? = nil
     @Published var projects: [ProjectState] = []
 
     // Poll deltas — what was true last time, so a change becomes one notification.
@@ -86,7 +88,7 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
             tags = await Api.distTags()
             guard let want = tags[tag] else { note = tags.isEmpty ? "could not reach npm" : nil; return }
             if version == want { checkAppUpdate(); note = nil; return }
-            if Shell.run("kortext --version")?.trimmingCharacters(in: .whitespacesAndNewlines) == want { await restart(); return }   // installed by hand, not yet running
+            if await Task.detached { Shell.run("kortext --version") }.value?.trimmingCharacters(in: .whitespacesAndNewlines) == want { await restart(); return }   // installed by hand, not yet running
             if tag == "beta", !serverSwitches {
                 // The first beta is installed by hand; from then on the server can switch itself.
                 NSPasteboard.general.clearContents(); NSPasteboard.general.setString("npm i -g kortext@beta", forType: .string)
@@ -100,8 +102,7 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
     /// Stop and start the server, then wait for `/api/health` to answer with the new version.
     func restart() async {
         note = "restarting…"
-        Shell.run("kortext --stop")
-        Shell.run("kortext --no-open")
+        await Task.detached { Shell.run("kortext --stop"); Shell.run("kortext --no-open") }.value
         for _ in 0..<20 {
             try? await Task.sleep(for: .seconds(1))
             if let h = await Api.health() { version = h.version; note = nil; checkAppUpdate(); await poll(); return }
@@ -126,7 +127,7 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
         // Opening the app means the server is wanted; a menu bar that says "not running" is no companion.
         // The server comes up quietly — the panel is a press away, not a browser window that opens itself.
         if installed {
-            Task { if await Api.health() == nil { Shell.run("kortext --no-open") } }
+            Task { if await Api.health() == nil { startDaemon() } }
         }
         Task {
             _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge])
@@ -214,9 +215,23 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
     }
 
     /// ⏻: start the server; the panel is a press away, not a browser window that opens itself.
-    func startDaemon() { Shell.run("kortext --no-open"); Task { try? await Task.sleep(for: .seconds(2)); await poll() } }
+    func startDaemon() { transition("starting", "kortext --no-open") { $0 != nil } }
     /// ⏻: stop the server; the app stays, dimmed, a press away from starting it again.
-    func stopDaemon() { Shell.run("kortext --stop"); Task { await poll() } }
+    func stopDaemon() { transition("stopping", "kortext --stop") { $0 == nil } }
+    /// Say what is happening at once, run the command off the main thread, then poll until health agrees (20 s at most).
+    private func transition(_ what: String, _ cmd: String, until done: @escaping (String?) -> Bool) {
+        guard busy == nil else { return }
+        busy = what
+        Task {
+            await Task.detached { Shell.run(cmd) }.value
+            for _ in 0..<20 {
+                await poll()
+                if done(version) { break }
+                try? await Task.sleep(for: .seconds(1))
+            }
+            busy = nil
+        }
+    }
     func openPanel(_ p: ProjectState? = nil, _ doc: Doc? = nil) { openPanel(project: p?.id, doc: doc?.rel) }
     func openPanel(project: Int?, doc: String?) {
         var c = URLComponents(url: Api.base, resolvingAgainstBaseURL: false)!

@@ -125,7 +125,10 @@ struct Content: View {
     }
     var body: some View {
         if !model.installed { NotInstalled() }
-        else if model.version == nil { Message(title: "Kortext is not running", sub: "Click to start the server.") { model.startDaemon() } }
+        else if model.version == nil {
+            if model.busy != nil { Message(title: "Kortext is starting", sub: "A moment — the server is coming up.") }
+            else { Message(title: "Kortext is not running", sub: "Click to start the server.") { model.startDaemon() } }
+        }
         else if model.shown.isEmpty { Empty() }
         else {
             // One card per project, its documents as rows — the way mimir groups a provider's lines.
@@ -267,14 +270,19 @@ struct StatusBar: View {
 
     var body: some View {
         let up = model.version != nil
+        let busy = model.busy != nil
         HStack(spacing: 8) {
             if model.installed {
+                // The press shows at once: a spinner where ⏻ was, the word beside it, until health answers.
                 Button { power() } label: {
-                    Icon(name: "power", size: 12, color: armed ? Kx.red : up ? Kx.green : Kx.fgFaint, weight: .semibold).frame(width: 14, height: 18)
+                    if busy { ProgressView().controlSize(.mini).frame(width: 14, height: 18) }
+                    else { Icon(name: "power", size: 12, color: armed ? Kx.red : up ? Kx.green : Kx.fgFaint, weight: .semibold).frame(width: 14, height: 18) }
                 }
-                .buttonStyle(.plain).hand()
+                .buttonStyle(.plain).hand().disabled(busy)
                 .help(!up ? "Start the server" : armed ? "Press again to stop the server" : "Stop the server")
-                if up, !armed {
+                if let b = model.busy {
+                    Text("\(b)…").font(Kx.sans(11)).foregroundStyle(Kx.fgMuted)
+                } else if up, !armed {
                     Button { model.openPanel() } label: {
                         Text("open panel").font(Kx.sans(11)).foregroundStyle(Kx.fgSecondary)
                     }

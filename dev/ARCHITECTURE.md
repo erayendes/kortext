@@ -427,7 +427,10 @@ badges from the server's `section · state · detail`: `approve`, `review`, `rec
 is grey and inert. The list scrolls once its estimated height would outgrow the screen — the
 panel is sized when it opens, so the height is counted, not measured. The status bar is the
 panel's: ⏻ (green up, grey down; first press arms, second stops the server — the app stays;
-down, it starts the server without opening a browser), *open panel*, and the credit. Settings,
+down, it starts the server without opening a browser; while the command runs and health has
+not answered, a spinner and *starting…* / *stopping…* stand in, disabled — the command runs off
+the main thread so the panel never freezes), *open panel*, and the credit. The message cards
+act: *not running* starts the server, *no project* and *nothing waiting* open the panel. Settings,
 behind the wordmark or ⚙, one card of rows: launch at login,
 notifications, **Stable version** and **Try beta version** (each row shows npm's newest for
 its dist-tag — `latest`, `beta` — and whether that is what runs here: *up to date* / *not
