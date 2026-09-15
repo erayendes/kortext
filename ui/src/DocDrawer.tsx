@@ -949,6 +949,10 @@ export function DocDrawer({
                       // way back in: the box reopens under it for the follow-up, without
                       // going up to the line to select it again.
                       onActivate={() => setSelected(t.index)}
+                      onClose={() => {
+                        setExplains((xs) => xs.filter((x) => x.line !== t.index));
+                        setSelected(null);
+                      }}
                       suggest={openQ.has(t.index)}
                       answerBy={answerBy}
                       onAsk={(q) => ask(t.index, q)}
@@ -1930,6 +1934,7 @@ function LineThread({
   onDecide,
   suggest,
   onActivate,
+  onClose,
   onDraft,
   drafting,
   verbs = ['Accept', 'Deny'],
@@ -1949,6 +1954,8 @@ function LineThread({
   suggest?: boolean;
   /** The thread was clicked while its box was closed: reopen it for a follow-up. */
   onActivate?: () => void;
+  /** × on the thread: the questions and answers go, the line stands as it was. */
+  onClose?: () => void;
   /** No agent writes this document, so nothing can be accepted on its behalf. */
   /** Set on the brief: the engine drafts the change instead of Accept. */
   onDraft?: () => void;
@@ -1980,6 +1987,18 @@ function LineThread({
         onActivate();
       }}
     >
+      {thread.length > 0 && onClose && (
+        <button
+          className="btn btn-x kx-thread-x"
+          title="Close — the questions and answers go, the line stays as it is"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
+        >
+          ×
+        </button>
+      )}
       {thread.map((x, i) => (
         <div key={i} className="kx-explain">
           <span className="kx-explain-who mono">prime</span>

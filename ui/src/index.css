@@ -2870,6 +2870,14 @@ button.kx-note-exc:hover {
   flex-direction: column;
   gap: var(--sp-3);
 }
+.kx-thread {
+  position: relative;
+}
+.kx-thread-x {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+}
 /* A thread whose box is closed is a way back in: the hand says so. */
 .kx-thread:not(:has(.kx-thread-input)) .kx-explain {
   cursor: pointer;
