@@ -173,6 +173,10 @@ What the background server prints collects in `~/.kortext/kortext.db.log`.
 
 ## The menu bar app (macOS)
 
+<p align="center">
+  <img src="docs/assets/app-popover.png" alt="The menu bar app: one card per project, the documents that wait on you" width="300">
+</p>
+
 Optional. `Kortext.zip` on the [latest release](https://github.com/erayendes/kortext/releases/latest) — notarized, updates itself. It needs kortext installed; it shows what waits on you, opens the panel on a document, starts and stops the server, and sends a notification when a document lands or a step fails. The panel offers it under the heading on a Mac that has none running.
 
 To try what is not released yet: press **Try beta version** in the panel's status bar or the app's settings — or `npm i -g kortext@beta` by hand. **Use stable version** brings you back. The app follows the package's channel.

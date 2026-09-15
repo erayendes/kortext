@@ -14,6 +14,11 @@ Uygulama noter tasdiklidir ve bundan sonra kendini günceller. — Kurmak için 
 
 ## Nasıl kullanılır
 
+<p>
+  <img src="../assets/app-popover.png" alt="Menü çubuğu uygulaması: proje başına bir kart, sizi bekleyen belgeler" width="300">
+  <img src="../assets/app-settings.png" alt="Ayarlar: login'de başlat, bildirimler, iki sürüm satırı" width="300">
+</p>
+
 Uygulamayı açtığınızda sunucu çalışmıyorsa arka planda başlatılır. Terminalden komut girmenize gerek kalmaz. 
 Menü çubuğundaki ikon, sizi bekleyen belge sayısını gösterir.
 

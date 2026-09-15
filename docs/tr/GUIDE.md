@@ -22,6 +22,8 @@ kortext --stop       # arka plandaki sunucuyu durdur
 
 ## Başlangıç
 
+![Proje listesi — proje başına bir kart, her birinde neyin yerine oturduğu](../assets/panel-projects.png)
+
 Kortext paneli sizi sezgisel olarak yönlendirecektir. 
 
 Projenizin adını ve vermek istediğiniz proje kodunu verdikten sonra yeni projenizin yazılacağı dizini ya da mevcut projenizin olduğu dizini seçin.
@@ -68,6 +70,8 @@ Ayrıca durumun yanında bir rozet görebilirsiniz.
 
 ## Bir belgeyi incelemek
 
+![Çekmecede bir belge: durumu, yazarı, sorduğu soru ve gelen istek](../assets/panel-document.png)
+
 Listeden herhangi bir belgeyi açın.
 
 **Approve** — belgenin onayı olur ve kendinden sonrakilerin referansı olur, zincir ilerler.
@@ -112,6 +116,8 @@ Ajanı’ı projeyi eklerken seçersiniz ama istediğiniz zaman değiştirebilir
 - **Remove** `.kortext/` klasörünü (brief dahil), `AGENTS.md`'deki Kortext bloğunu, `CLAUDE.md`'deki işaret satırını ve projenin loglarını siler; projeyi listeden çıkarır. `AGENTS.md` ve `CLAUDE.md`'deki kendi yazdıklarınız kalır.
 
 ## El sıkışma
+
+![El sıkışma kartı — üç başlangıç komutu ve isteğe bağlı EXPERIENCE.md teklifi](../assets/panel-handshake.png)
 
 Bütün belgeler onaylandığında analiz biter. Kart size üç başlangıç komutu verir; birini kendi ajanınıza kopyalayın. Ajan `AGENTS.md`'yi ve `.kortext/` belgelerini okuyarak başlar.
 

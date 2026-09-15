@@ -33,6 +33,10 @@ Diğer personalar; `product manager`, `architect`, `designer`, `growth expert`, 
 
 Brief referansıyla Kortext’in ürettiği belgeler; `PRODUCT.md`, `STACK.md`, `STRUCTURE.md`, `ARCHITECTURE.md`, `DESIGN.md`, `GROWTH.md`, `SECURITY.md`, `ENVIRONMENT.md`, `DATABASE.md`, `API.md`, `LEGAL.md`, `CONTENT.md`, `ENGINEERING.md`, `TEST.md`. Bir de en sonunda isteğe bağlı `EXPERIENCE.md` var.
 
+<p align="center">
+  <img src="../assets/panel-documents.png" alt="Analiz sürerken: belgeler gruplar altında, her birinin yazarı ve durumu" width="880">
+</p>
+
 Yazılan her bir belge incelemeniz için önünüze düşüyor. Üşenmeyin, okuyun. **Emin olun buna değecek.**
  
 Belgelerde **size yöneltilmiş sorular** olabilir, daha önceden yazılmış bir belgeye **değişiklik talebi** olabilir ya da yazılacak bir belgeye not olabilir. Bunlar modelin kendi bildirimleri. 

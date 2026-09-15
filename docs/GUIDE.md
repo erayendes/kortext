@@ -108,6 +108,11 @@ From here on, Kortext is not in the loop.
 
 ## The menu bar app
 
+<p>
+  <img src="assets/app-popover.png" alt="The popover: one card per project, the documents that wait on you" width="300">
+  <img src="assets/app-settings.png" alt="Settings: launch at login, notifications, the two version rows" width="300">
+</p>
+
 On a Mac, Kortext can live in the menu bar. The panel offers it under the heading — **Download for macOS** — until a copy is running; or fetch `Kortext.zip` from the latest release. It needs kortext installed; without it, it says so and copies the install command for you.
 
 Opening the app starts the server if it is not running — quietly, no browser window. The K in the menu bar shows how many documents wait on you. Open it: one card per project, the documents that need a decision in white with the panel's badges, the ones being written in grey. A row opens the panel on that document. At the bottom, ⏻ starts the server, or — pressed twice — stops it; the app stays. *open panel* beside it opens the panel in your browser.
