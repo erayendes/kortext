@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { EnginePicker } from './EnginePicker';
+import { EnginePicker, PickRow } from './EnginePicker';
 import {
   api,
   type DocInfo,
@@ -1450,47 +1450,48 @@ function AddProject({
           onChange={(e) => setDocLang(e.target.value)}
         />
       </div>
-      {/* The design, a section of its own like the brief: three ways it can stand,
-          one line under each saying what follows. A design in hand is read from
-          the project folder — a headless CLI cannot open a Figma link. */}
+      {/* The design: the picker's own list — a mark, the word, one line about it —
+          under a group label, as Model sits in the engine picker. A design in hand
+          is read from the project folder: a headless CLI cannot open a Figma link. */}
       {kind === 'new' && (
         <div className="kx-design">
-          <span className="kx-cmd-title">Design</span>
-          {(
-            [
-              ['make', 'To be made', 'After the analysis — a brief for a design AI is offered at the end.'],
-              ['have', 'Already in hand', 'Put the files in the project folder and say where; DESIGN.md documents that design instead of inventing one.'],
-              ['none', 'None', 'The product renders nothing — a CLI, a library, a service.'],
-            ] as const
-          ).map(([id, label, note]) => (
-            <label key={id} className={`kx-radio${design === id ? ' on' : ''}`}>
+          <div className="kx-changebar-group">Design</div>
+          <div className="kx-picker-list" role="listbox" aria-label="Design">
+            <PickRow
+              mono={false}
+              on={design === 'make'}
+              name="To be made"
+              about="after the analysis — a brief for a design AI is offered at the end"
+              onPick={() => setDesign('make')}
+            />
+            <PickRow
+              mono={false}
+              on={design === 'have'}
+              name="Already in hand"
+              about="in the project folder — DESIGN.md documents it, invents nothing"
+              onPick={() => setDesign('have')}
+            />
+            <PickRow
+              mono={false}
+              on={design === 'none'}
+              name="None"
+              about="the product renders nothing — a CLI, a library, a service"
+              onPick={() => setDesign('none')}
+            />
+          </div>
+          {design === 'have' && (
+            <div className="kx-design-where">
               <input
-                type="radio"
-                name="design"
-                checked={design === id}
-                onChange={() => setDesign(id)}
+                className="kx-input kx-path"
+                placeholder="Where — a folder in the project (design/), or the design system's name"
+                value={designRef}
+                onChange={(e) => setDesignRef(e.target.value)}
               />
-              <span className="kx-radio-text">
-                <span className="kx-radio-label">{label}</span>
-                <span className="kx-cmd-hint">{note}</span>
-                {/* The where-is-it field opens inside its own row, under the line it answers. */}
-                {id === 'have' && design === 'have' && (
-                  <span className="kx-design-where">
-                    <input
-                      className="kx-input kx-path"
-                      placeholder="Where — a folder in the project (design/), or the design system's name"
-                      value={designRef}
-                      onChange={(e) => setDesignRef(e.target.value)}
-                    />
-                    <span className="kx-cmd-hint">
-                      Figma links cannot be read — export what matters (screens, tokens) into the
-                      folder.
-                    </span>
-                  </span>
-                )}
+              <span className="kx-cmd-hint">
+                Figma links cannot be read — export what matters (screens, tokens) into the folder.
               </span>
-            </label>
-          ))}
+            </div>
+          )}
         </div>
       )}
       {kind === 'existing' && (

@@ -174,16 +174,20 @@ export function EnginePicker({
   );
 }
 
-function PickRow({
+/** One row of a pick list: a mark, the name, one line about it. The picker's
+ * names are identifiers and set in mono; a list of plain words passes `mono={false}`. */
+export function PickRow({
   on,
   name,
   about,
   onPick,
+  mono = true,
 }: {
   on: boolean;
   name: string;
   about: string;
   onPick: () => void;
+  mono?: boolean;
 }) {
   return (
     <button
@@ -193,7 +197,7 @@ function PickRow({
       onClick={onPick}
     >
       <span className="kx-pick-mark" aria-hidden />
-      <span className="kx-pick-name mono">{name}</span>
+      <span className={mono ? 'kx-pick-name mono' : 'kx-pick-name'}>{name}</span>
       <span className="kx-pick-about">{about}</span>
     </button>
   );
