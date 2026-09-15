@@ -123,8 +123,9 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
         loadTags()
         UNUserNotificationCenter.current().delegate = self
         installed = Shell.run("command -v kortext") != nil
-        // Launched at login means the server is wanted too; a menu bar that says "not running" every morning is no companion.
-        if installed, SMAppService.mainApp.status == .enabled {
+        // Opening the app means the server is wanted; a menu bar that says "not running" is no companion.
+        // The server comes up quietly — the panel is a press away, not a browser window that opens itself.
+        if installed {
             Task { if await Api.health() == nil { Shell.run("kortext --no-open") } }
         }
         Task {

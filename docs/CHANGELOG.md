@@ -7,7 +7,7 @@
 - **A menu bar app for macOS.** `Kortext.zip` on the release, notarized, updating itself. One
   card per project with the documents that wait on you — `approve`, `review`, `failed` — and
   the ones being written, grey; a row opens the panel on that document. ⏻ starts the server
-  or, pressed twice, stops it; the app stays. Launch at login brings the server up with it. A
+  or, pressed twice, stops it; the app stays. Opening the app brings the server up with it. A
   notification when a document lands, a step fails, a brief is sent back or a chain settles,
   in the project's language, opening the panel where it happened. On a Mac without it, the
   panel offers it in the update strip's slot — one strip at a time.

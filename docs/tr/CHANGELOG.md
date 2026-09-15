@@ -7,7 +7,7 @@
 - **macOS için menü çubuğu uygulaması.** Sürümün yanında `Kortext.zip`, notarize edilmiş,
   kendini güncelleyen. Proje başına bir kart: sizi bekleyen belgeler — `approve`, `review`,
   `failed` — ve yazılmakta olanlar, gri; satıra basınca panel o belgede açılır. ⏻ sunucuyu
-  başlatır ya da iki basışta durdurur; uygulama kalır. Login'de açılınca sunucuyu da
+  başlatır ya da iki basışta durdurur; uygulama kalır. Uygulama açılınca sunucuyu da
   kaldırır. Bir belge geldiğinde, bir adım başarısız olduğunda, bir brief geri döndüğünde ya da
   bir zincir tamamlandığında bildirim — projenin dilinde, paneli olayın olduğu yerde açan.
   Uygulaması olmayan Mac'te panel onu güncelleme şeridinin yerinde sunar — bir seferde tek

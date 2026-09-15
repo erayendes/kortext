@@ -329,7 +329,7 @@ struct SettingsView: View {
         // One card, like a project card: every row the same height.
         VStack(spacing: 10) {
             Card {
-                Row(icon: "power", title: "Launch at login", sub: "The server starts with it.", on: loginItem) {
+                Row(icon: "power", title: "Launch at login", sub: "Kortext opens when you sign in.", on: loginItem) {
                     loginItem.toggle()
                     try? loginItem ? SMAppService.mainApp.register() : SMAppService.mainApp.unregister()
                 }

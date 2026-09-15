@@ -102,9 +102,9 @@ Buradan sonra Kortext işin içinde değildir.
 
 Mac'te Kortext menü çubuğunda yaşayabilir. Panel onu başlığın altında sunar — **Download for macOS** — bir kopyası çalışana kadar; ya da son sürümden `Kortext.zip`'i alın. Kortext'in kurulu olması gerekir; değilse söyler ve kurulum komutunu sizin için kopyalar.
 
-Menü çubuğundaki K, kaç belgenin sizi beklediğini gösterir. Açın: proje başına bir kart, karar bekleyen belgeler beyaz ve panelin rozetleriyle, yazılmakta olanlar gri. Satıra basınca panel o belgede açılır. Altta ⏻ sunucuyu başlatır ya da — iki basışta — durdurur ve uygulamadan çıkar; yanındaki *open panel* paneli tarayıcıda açar.
+Uygulama açılınca sunucu çalışmıyorsa başlatır — sessizce, tarayıcı penceresi açmadan. Menü çubuğundaki K, kaç belgenin sizi beklediğini gösterir. Açın: proje başına bir kart, karar bekleyen belgeler beyaz ve panelin rozetleriyle, yazılmakta olanlar gri. Satıra basınca panel o belgede açılır. Altta ⏻ sunucuyu başlatır ya da — iki basışta — durdurur; uygulama kalır. yanındaki *open panel* paneli tarayıcıda açar.
 
-Bir şey değişince haber verir: bir belge geldi ve onay bekliyor, bir adım başarısız oldu, bir brief sorularla geri döndü, bir zincir tamamlandı. Bildirim paneli olayın olduğu yerde açar. Ayarlar, logonun arkasında: login'de başlat (sunucu da onunla açılır), bildirimler açık/kapalı ve iki sürüm satırı — **Stable version** ve **Try beta version**. Her biri kendi türünün en yenisini ve sizde kurulu olup olmadığını gösterir: *up to date* ya da *not installed*. Birine basınca o kurulur, sunucu yeniden başlar, uygulama da aynı kanala geçer. Ötekine basınca geri dönersiniz. Paket eskisi gibi panelden de güncellenir.
+Bir şey değişince haber verir: bir belge geldi ve onay bekliyor, bir adım başarısız oldu, bir brief sorularla geri döndü, bir zincir tamamlandı. Bildirim paneli olayın olduğu yerde açar. Ayarlar, logonun arkasında: login'de başlat, bildirimler açık/kapalı ve iki sürüm satırı — **Stable version** ve **Try beta version**. Her biri kendi türünün en yenisini ve sizde kurulu olup olmadığını gösterir: *up to date* ya da *not installed*. Birine basınca o kurulur, sunucu yeniden başlar, uygulama da aynı kanala geçer. Ötekine basınca geri dönersiniz. Paket eskisi gibi panelden de güncellenir.
 
 ## Bir şey ters gittiğinde
 

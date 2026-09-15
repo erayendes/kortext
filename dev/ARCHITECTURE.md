@@ -415,7 +415,8 @@ A menu bar app, `macos/`, that is a plain client of the REST surface above — t
 package; it ships as a notarized `Kortext.zip` on the GitHub release and keeps itself current
 through Sparkle (the feed is `appcast.xml` on the orphan branch `appcast`, written by the
 release workflow; `macos/appcast.xml` is the empty channel it starts from). Without it kortext
-works in full; without kortext it says so and copies `npm i -g kortext`.
+works in full; without kortext it says so and copies `npm i -g kortext`. Opening the app starts the
+server when it is down, without opening a browser; stopping the server never quits the app.
 
 **What it shows.** The K mark in the menu bar, dimmed while the server is down, with a count
 of decisions waiting. Its panel — `NSPanel` under the icon, centred, `hudWindow` / `popover`
@@ -427,7 +428,7 @@ is grey and inert. The list scrolls once its estimated height would outgrow the 
 panel is sized when it opens, so the height is counted, not measured. The status bar is the
 panel's: ⏻ (green up, grey down; first press arms, second stops the server — the app stays;
 down, it starts the server without opening a browser), *open panel*, and the credit. Settings,
-behind the wordmark or ⚙, one card of rows: launch at login (which also starts the server),
+behind the wordmark or ⚙, one card of rows: launch at login,
 notifications, **Stable version** and **Try beta version** (each row shows npm's newest for
 its dist-tag — `latest`, `beta` — and whether that is what runs here: *up to date* / *not
 installed* / *No beta version right now*; pressing a row installs its version through the
