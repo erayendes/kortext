@@ -2116,10 +2116,13 @@ function DocumentsTab({
   useEffect(() => {
     onStatus?.(running.length > 0 ? `${running.map((j) => j.doc_rel).join(' · ')} writing…` : '');
     onHasJobs?.(jobs.length > 0);
-    onPending?.(docs.some((d) => d.status === 'uninitialized'));
+    // An on-request document not asked for is not pending and does not unsettle
+    // the project: the head's engine and Start go when everything owed is in.
+    const owed = docs.filter((d) => !(d.optional && d.status === 'uninitialized'));
+    onPending?.(owed.some((d) => d.status === 'uninitialized'));
     onSettled?.(
-      docs.length > 0 &&
-        docs.every((d) => d.status === 'approved' || d.status === 'not-applicable'),
+      owed.length > 0 &&
+        owed.every((d) => d.status === 'approved' || d.status === 'not-applicable'),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
