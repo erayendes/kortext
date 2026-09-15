@@ -1,6 +1,6 @@
 # macOS Menü Çubuğu Uygulaması
 
-🇬🇧 [For English press 9](../GUIDE.md#the-menu-bar-app)
+🇬🇧 [For English press 9](../MACOS.md)
 
 Bu isteğe bağlı tamamlayıcı bir macOS uygulamasıdır. İkinci bir ürün değil, Kortext’in sürecini görmenizi kolaylaştıran bir penceredir. 
 

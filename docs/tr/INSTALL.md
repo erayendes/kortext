@@ -1,6 +1,6 @@
 # Kurulum
 
-🇬🇧 [For English press 9](../../README.md#install)
+🇬🇧 [For English press 9](../INSTALL.md)
 
 **Node 22 veya üstü** ve PATH'inizde en az bir ajan CLI'ı (`claude`, `codex`, `antigravity` ya da bir başkası) olsun yeter.
 
