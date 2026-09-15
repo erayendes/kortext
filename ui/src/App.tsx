@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { strToU8, zipSync } from 'fflate';
 import { EnginePicker } from './EnginePicker';
 import {
   api,
@@ -1594,7 +1595,39 @@ function ProjectScreen({
   const [checking, setChecking] = useState(false); // the gate is reading the brief
   const [err, setErr] = useState<string | null>(null);
   // Use in-place confirmation because embedded browsers may suppress native confirm dialogs.
-  const [arming, setArming] = useState<'restart' | 'archive' | 'cancel' | null>(null);
+  const [arming, setArming] = useState<'restart' | 'archive' | 'cancel' | 'export' | null>(null);
+  // The written documents, listed for export with a tick each; fetched when the row opens.
+  const [exportDocs, setExportDocs] = useState<DocInfo[]>([]);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const openExport = () => {
+    setArming('export');
+    void api.listDocs(project.id).then(({ docs }) => {
+      const written = docs.filter((d) => d.status !== 'uninitialized' && d.state !== 'n/a');
+      setExportDocs(written);
+      setPicked(new Set(written.map((d) => d.rel)));
+    });
+  };
+  const doExport = async () => {
+    setBusy(true);
+    try {
+      const files: Record<string, Uint8Array> = {};
+      for (const rel of picked) {
+        const { content } = await api.docContent(project.id, rel);
+        files[rel] = strToU8(content);
+      }
+      const url = URL.createObjectURL(new Blob([zipSync(files)], { type: 'application/zip' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${project.code || project.name}-kortext.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setArming(null);
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
   const [busy, setBusy] = useState(false);
   // An engine change applies to subsequent steps; active steps keep their current CLI.
   const [engines, setEngines] = useState<EngineInfo[]>([]);
@@ -1629,7 +1662,8 @@ function ProjectScreen({
   }, []);
 
   useEffect(() => {
-    if (!arming) return;
+    // A yes/no question times out; the export list waits for its ticks.
+    if (!arming || arming === 'export') return;
     const t = setTimeout(() => setArming(null), 5000);
     return () => clearTimeout(t);
   }, [arming]);
@@ -1799,6 +1833,46 @@ function ProjectScreen({
                 No
               </button>
             </>
+          ) : arming === 'export' ? (
+            <>
+              <span className="kx-arm-warn">Which documents go in the zip?</span>
+              <button
+                className="btn btn-link-primary"
+                onClick={() => setPicked(new Set(exportDocs.map((d) => d.rel)))}
+              >
+                All
+              </button>
+              <button className="btn btn-link-primary" onClick={() => setPicked(new Set())}>
+                None
+              </button>
+              <div className="kx-export-list">
+                {exportDocs.map((d) => (
+                  <label key={d.rel} className="kx-export-item">
+                    <input
+                      type="checkbox"
+                      checked={picked.has(d.rel)}
+                      onChange={(e) => {
+                        const next = new Set(picked);
+                        if (e.target.checked) next.add(d.rel);
+                        else next.delete(d.rel);
+                        setPicked(next);
+                      }}
+                    />
+                    <span className="mono">{d.rel}</span>
+                  </label>
+                ))}
+              </div>
+              <button
+                className="btn btn-link-success"
+                disabled={busy || picked.size === 0}
+                onClick={() => void doExport()}
+              >
+                Export {picked.size} {picked.size === 1 ? 'file' : 'files'}
+              </button>
+              <button className="btn btn-link-primary" onClick={() => setArming(null)}>
+                Cancel
+              </button>
+            </>
           ) : arming === 'cancel' ? (
             <>
               <span className="kx-arm-warn">
@@ -1828,6 +1902,10 @@ function ProjectScreen({
                 onClick={() => setArming('archive')}
               >
                 {project.archived ? 'Unarchive project' : 'Archive project'}
+              </button>
+              <span className="kx-danger-sep">·</span>
+              <button className="btn btn-link-primary" disabled={busy} onClick={openExport}>
+                Export documents
               </button>
               <span className="kx-danger-sep">·</span>
               <button

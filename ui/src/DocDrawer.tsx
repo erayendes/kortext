@@ -769,6 +769,24 @@ export function DocDrawer({
               Edit
             </button>
           )}
+          {/* A copy of the document as a file — .kortext/ is hidden, so a file
+              picker will not show it; a design AI wants EXPERIENCE.md handed over. */}
+          {!editing && doc.status !== 'uninitialized' && (
+            <button
+              className="btn btn-secondary"
+              title={`Save a copy of ${doc.name}.md`}
+              onClick={() => {
+                const url = URL.createObjectURL(new Blob([content], { type: 'text/markdown' }));
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${doc.name}.md`;
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+            >
+              Export
+            </button>
+          )}
           {/* Tokens read better drawn than tabulated, and the page is rendered
               from this same file so it is never out of date. The iframe keeps
               the project's palette and the panel's from leaking into each other. */}
