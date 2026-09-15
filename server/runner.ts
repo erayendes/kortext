@@ -161,6 +161,18 @@ export function buildStepPrompt(
       : '- Document language: write the PROSE in the language of .kortext/BRIEF.md; if there is no brief (existing project), match the language of the already-approved .kortext documents, else the language of the repo README; default to English.',
     "- ENGLISH ALWAYS, whatever the document language: the section headings (they are structure, and other documents cite them by name), code and code samples, identifiers, file and folder names, commands, environment-variable names, database table and column names, API paths and field names, branch and commit conventions, and every frontmatter key. Only the prose under the headings is written in the brief's language — never translate a name something is called by.",
     "- Product copy is the one exception: strings a user of the product will read (microcopy, error messages, page copy, email text) are written in the product's interface language from the brief — which may differ from the language of this document.",
+    // What prime said about the design when the project was added: the designer
+    // documents one in hand rather than inventing a second, and a product that
+    // renders nothing is the n/a case, said by the human rather than guessed.
+    ...(step.output === 'DESIGN.md' && project.design === 'have'
+      ? [
+          `- PRIME SAYS A DESIGN ALREADY EXISTS${project.design_ref ? `: ${project.design_ref}` : ''}. Read it — files in the folder, or what the reference points to — and DOCUMENT that design: its tokens, components and rules. Invent nothing beside it; where it is silent, say so and ask under \`## Questions for Prime\`.`,
+        ]
+      : step.output === 'DESIGN.md' && project.design === 'none'
+        ? [
+            '- PRIME SAYS THE PRODUCT RENDERS NOTHING — no visual surface. Unless the inputs plainly contradict that, this is the `n/a when` case: write status: not-applicable with one line saying so.',
+          ]
+        : []),
     '',
     'STEP DEFINITION (from the workflow):',
     workflowStepText.trim(),

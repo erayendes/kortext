@@ -6,6 +6,9 @@ export interface Project {
   engine?: string;
   model?: string;
   effort?: string;
+  /** What prime said when adding the project: a design to be made, one in hand, or none. */
+  design?: 'make' | 'have' | 'none';
+  design_ref?: string;
   paused?: number;
   archived?: number;
   created_at: string;
@@ -260,6 +263,8 @@ export const api = {
     engine?: string;
     model?: string;
     effort?: string;
+    design?: 'make' | 'have' | 'none';
+    designRef?: string;
   }) => req<{ project: Project }>('/api/projects', { method: 'POST', body: JSON.stringify(input) }),
   pickDirectory: () => req<{ path: string | null }>('/api/pick-directory', { method: 'POST' }),
   removeProject: (id: number) =>

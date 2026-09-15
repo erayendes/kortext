@@ -1219,10 +1219,6 @@ the others; everyone else only ever sees their own customers.
 
 English only in v1. A second language is a later decision, not v1 scope.
 
-## Design
-
-No design yet — it will be made after this analysis, by a design AI working from the documents.
-
 ## Key Performance Indicators (KPIs)
 
 Meeting notes written per active user per week; the share of customers carrying a note from
@@ -1297,6 +1293,10 @@ function AddProject({
   const [code, setCode] = useState('');
   const [repoPath, setRepoPath] = useState('');
   const [docLang, setDocLang] = useState('');
+  // The design: to be made after the analysis (EXPERIENCE.md is offered at the
+  // end), already in hand (DESIGN.md documents it — say where it is), or none.
+  const [design, setDesign] = useState<'make' | 'have' | 'none'>('make');
+  const [designRef, setDesignRef] = useState('');
   const [brief, setBrief] = useState('');
   const [briefMode, setBriefMode] = useState<'write' | 'upload'>('write');
   const [uploadName, setUploadName] = useState<string | null>(null);
@@ -1364,6 +1364,8 @@ function AddProject({
         code: code || undefined,
         brief: brief || undefined,
         docLang: docLang || undefined,
+        design: kind === 'new' ? design : undefined,
+        designRef: kind === 'new' && design === 'have' ? designRef.trim() || undefined : undefined,
       });
       onDone(project, brief.trim().length > 0);
     } catch (e) {
@@ -1448,6 +1450,37 @@ function AddProject({
           onChange={(e) => setDocLang(e.target.value)}
         />
       </div>
+      {kind === 'new' && (
+        <div className="kx-form-row kx-design-row">
+          <span className="kx-cmd-title">Design</span>
+          <div className="kx-chips">
+            {(
+              [
+                ['make', 'To be made', 'after the analysis — EXPERIENCE.md is offered at the end'],
+                ['have', 'Already in hand', 'DESIGN.md documents it — say where it is'],
+                ['none', 'None', 'the product renders nothing'],
+              ] as const
+            ).map(([id, label, note]) => (
+              <button
+                key={id}
+                className={`kx-chip${design === id ? ' on' : ''}`}
+                onClick={() => setDesign(id)}
+                title={note}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {design === 'have' && (
+            <input
+              className="kx-input kx-path"
+              placeholder="Where is it — a folder in the project, a link, or the design system's name"
+              value={designRef}
+              onChange={(e) => setDesignRef(e.target.value)}
+            />
+          )}
+        </div>
+      )}
       {kind === 'existing' && (
         <span className="kx-cmd-hint">
           No brief for an existing project — the code itself is the evidence. Nothing runs until you

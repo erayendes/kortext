@@ -18,10 +18,6 @@ approver: +prime
 
 - [Which language does the product speak to its users? If more than one, name them and say which is the default]
 
-## Design
-
-- [Is there a design already — files, a link, a design system — or will one be made after this analysis? Or does the product render nothing?]
-
 ## Key Performance Indicators (KPIs)
 
 - [What are the success criteria?]

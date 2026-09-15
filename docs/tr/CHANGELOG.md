@@ -8,8 +8,8 @@
   daha: tasarım yapay zekâsının ihtiyacı olan brief — yolculuklar, her ekran durumlarıyla,
   metinler birebir — ve yapıştırmaya hazır prompt'lar, bir ana ve yolculuk başına bir tane,
   herhangi bir tasarım aracı için. El sıkışma kartında *Write EXPERIENCE.md*'ye basın; tasarım
-  zaten elinizdeyse atlayın. Brief'e hangisi olduğunu söyleyen bir *Design* bölümü geldi;
-  `DESIGN.md` de mevcut tasarımı icat etmek yerine belgeliyor. El sıkışmadan sonra belge proje
+  zaten elinizdeyse atlayın. Proje eklerken hangisi olduğu soruluyor — *To be made*, *Already in hand* (ve nerede),
+  *None* — ve `DESIGN.md` eldeki tasarımı icat etmek yerine belgeliyor. El sıkışmadan sonra belge proje
   sahibinindir.
 
 - **macOS için menü çubuğu uygulaması.** Sürümün yanında `Kortext.zip`, notarize edilmiş,

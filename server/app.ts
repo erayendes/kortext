@@ -199,7 +199,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   });
 
   app.post('/api/projects', (req, res) => {
-    const { name, repoPath, kind, code, brief, docLang, engine } = req.body ?? {};
+    const { name, repoPath, kind, code, brief, docLang, engine, design, designRef } = req.body ?? {};
     // The picker's model and effort, chosen before the project existed; the
     // same words the PUT routes accept, and only ones the CLI knows.
     const spec = ENGINES.find((e) => e.id === engine);
@@ -212,7 +212,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     try {
       const project = createProject(
         db,
-        { name, repoPath, kind, code, brief, docLang, engine },
+        { name, repoPath, kind, code, brief, docLang, engine, design, designRef },
         pkgRoot,
       );
       // Nothing runs on Add — the project lands paused and the user presses
@@ -972,9 +972,12 @@ ${body}`,
     // What can still be asked for: an on-request document not yet written, whose
     // inputs all stand — an input ruled not-applicable takes the offer with it.
     const nap = new Set(all.filter((d) => d.status === 'not-applicable').map((d) => d.rel));
+    // EXPERIENCE.md is for a design still to be made: a design in hand, or no
+    // design at all, was said when the project was added, and takes the offer.
     const onRequest = all
       .filter((d) => d.optional && d.status === 'uninitialized' && !d.blocked)
       .filter((d) => !d.inputs.some((i) => nap.has(i)))
+      .filter((d) => d.rel !== 'EXPERIENCE.md' || (project.design ?? 'make') === 'make')
       .map((d) => d.rel);
     res.json({
       analysisComplete: analysisComplete(db, project, pkgRoot),

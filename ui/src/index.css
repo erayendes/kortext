@@ -686,6 +686,15 @@ body {
   flex-direction: column;
   gap: 8px;
 }
+/* Add project › Design: the word, the three chips, and the where-is-it field when one is in hand. */
+.kx-design-row {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.kx-design-row .kx-input {
+  flex: 1 1 100%;
+}
 /* The CLI as chips: the drawn box vocabulary, one on at a time. */
 .kx-chips {
   display: flex;
