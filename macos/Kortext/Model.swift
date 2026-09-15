@@ -48,8 +48,8 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
     }
     /// The badge counts decisions, not work in flight.
     var draftCount: Int { waiting.filter(\.needs).count }
-    /// Projects with something to show: a row, a step in flight, or a pause to lift.
-    var shown: [ProjectState] { projects.filter { p in waiting.contains { $0.project.id == p.id } } }
+    /// Projects with something to show: a row, a step in flight, or a chain that settled and was not archived.
+    var shown: [ProjectState] { projects.filter { p in p.complete || waiting.contains { $0.project.id == p.id } } }
     var anyRunning: Bool { projects.contains { $0.running != nil } }
     var runningLine: (project: ProjectState, job: Job)? {
         for p in projects { if let j = p.running { return (p, j) } }
@@ -144,7 +144,7 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
         version = h.version
         guard let list = try? await Api.projects() else { return }
         var next: [ProjectState] = []
-        for p in list {
+        for p in list where p.archived != 1 {   // folded away in the panel; folded away here too
             var s = ProjectState(project: p)
             if let d = try? await Api.docs(p.id) { s.docs = d }
             if let j = try? await Api.jobs(p.id) {

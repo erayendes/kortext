@@ -34,8 +34,17 @@ final class StatusController: NSObject, NSWindowDelegate {
         glass.material = NSApp.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? .hudWindow : .popover
         glass.blendingMode = .behindWindow
         glass.state = .active
+        // The layer's cornerRadius clips the content, not the blur — its corners stay square and white.
+        // A mask image clips the vibrancy itself; capInsets let one small image stretch to any size.
+        let r: CGFloat = 12
+        let mask = NSImage(size: NSSize(width: r * 2 + 1, height: r * 2 + 1), flipped: false) { rect in
+            NSColor.black.setFill(); NSBezierPath(roundedRect: rect, xRadius: r, yRadius: r).fill(); return true
+        }
+        mask.capInsets = NSEdgeInsets(top: r, left: r, bottom: r, right: r)
+        mask.resizingMode = .stretch
+        glass.maskImage = mask
         glass.wantsLayer = true
-        glass.layer?.cornerRadius = 12
+        glass.layer?.cornerRadius = r
         glass.layer?.masksToBounds = true
         glass.layer?.borderWidth = 0.5
         glass.layer?.borderColor = NSColor.separatorColor.cgColor

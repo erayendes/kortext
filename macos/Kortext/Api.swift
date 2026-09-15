@@ -7,6 +7,7 @@ struct Project: Decodable, Identifiable {
     let id: Int; let name: String; let code: String; let docCounts: Counts
     let doc_lang: String?
     let paused: Int?
+    let archived: Int?
 }
 struct Job: Decodable { let id: Int; let doc_rel: String; let status: String; let error: String? }
 struct Doc: Decodable, Identifiable {

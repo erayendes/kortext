@@ -138,7 +138,7 @@ struct Content: View {
                 }
             }
             .padding(12)
-            let estimate = 24 + CGFloat(model.shown.count) * 52 + CGFloat(model.waiting.count) * 34
+            let estimate = 24 + CGFloat(model.shown.count) * 52 + CGFloat(max(model.waiting.count, model.shown.count)) * 34
             if estimate > Self.cap {
                 ScrollView(.vertical, showsIndicators: false) { list }.frame(height: Self.cap)
             } else {
@@ -160,6 +160,10 @@ struct ProjectCard: View {
                 Text("\(p.project.docCounts.settled)/\(p.project.docCounts.total)").font(Kx.mono(10)).foregroundStyle(Color.primary.opacity(0.35))
             }
             .padding(.horizontal, 14).padding(.top, 11).padding(.bottom, 4)
+            if rows.isEmpty, p.complete {
+                Text("Every document is settled — AGENTS.md in force.").font(Kx.sans(12)).foregroundStyle(Kx.fgMuted)
+                    .fixedSize(horizontal: false, vertical: true).padding(.horizontal, 14).padding(.vertical, 7)
+            }
             ForEach(rows) { w in WaitingRow(w: w) }
         }
         .padding(.bottom, 4)
@@ -174,9 +178,10 @@ struct Message: View {
     let title: String; let sub: String
     var body: some View {
         Card {
+            // The panel is sized from the view's fitting size, where a Text claims one line; fixedSize makes it claim every line it wraps to.
             VStack(alignment: .leading, spacing: 4) {
-                Text(title).font(Kx.sans(13, .medium)).foregroundStyle(Kx.fg)
-                Text(sub).font(Kx.sans(12)).foregroundStyle(Kx.fgMuted)
+                Text(title).font(Kx.sans(13, .medium)).foregroundStyle(Kx.fg).fixedSize(horizontal: false, vertical: true)
+                Text(sub).font(Kx.sans(12)).foregroundStyle(Kx.fgMuted).fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading).padding(14)
         }
@@ -184,8 +189,13 @@ struct Message: View {
     }
 }
 
+// No project: say so. Projects, nothing to decide: the chain is idle — settled is a project card's word, said only when every document is.
 struct Empty: View {
-    var body: some View { Message(title: "Nothing waiting on you", sub: "Every document is settled, or the chain is idle.") }
+    @EnvironmentObject var model: Model
+    var body: some View {
+        if model.projects.isEmpty { Message(title: "No project yet", sub: "Open the panel to start one.") }
+        else { Message(title: "Nothing waiting on you", sub: "No step is running and nothing needs a decision.") }
+    }
 }
 
 struct NotInstalled: View {
