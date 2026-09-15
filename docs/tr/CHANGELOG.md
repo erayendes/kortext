@@ -8,8 +8,13 @@
   daha: tasarım yapay zekâsının ihtiyacı olan brief — yolculuklar, her ekran durumlarıyla,
   metinler birebir — ve yapıştırmaya hazır prompt'lar, bir ana ve yolculuk başına bir tane,
   herhangi bir tasarım aracı için. El sıkışma kartında *Write EXPERIENCE.md*'ye basın; tasarım
-  zaten elinizdeyse atlayın. `DESIGN.md` proje klasöründe zaten olan bir tasarımı icat etmek yerine belgeliyor. El sıkışmadan sonra belge proje
-  sahibinindir.
+  zaten elinizdeyse atlayın; motoru ve modeli düğmenin üstünden seçersiniz. `DESIGN.md` proje
+  klasöründe zaten olan bir tasarımı icat etmek yerine belgeliyor. El sıkışmadan sonra belge
+  proje sahibinindir.
+- **Konuşma yanıtın olduğu yerde kalır.** Başka yere tıklayınca satırın soru kutusu katlanır;
+  yanıta tıklayınca ek soru için yeniden açılır; üstündeki × konuşmayı kapatır. *Suggest* yalnız
+  yazarın önerecek bir şeyi olduğu yerde — bir soruda ya da bir istekte — çıkar, düz satırda
+  değil.
 
 - **macOS için menü çubuğu uygulaması.** Sürümün yanında `Kortext.zip`, notarize edilmiş,
   kendini güncelleyen. Proje başına bir kart: sizi bekleyen belgeler — `approve`, `review`,

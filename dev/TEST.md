@@ -161,6 +161,8 @@ Open any document. Everything you can do to it is here:
 | `not-applicable` | the step judged the document irrelevant and said why; it satisfies dependencies like an approval |
 
 - [ ] Ask answers about the selected row and writes nothing to disk — hash the file before and after.
+- [ ] **Suggest** shows on a question and on a request, not on a plain line of the body.
+- [ ] A click elsewhere folds the thread's box; a click on the answer reopens it under the same thread; **×** on the thread removes the questions and answers and the line stands.
 - [ ] Open questions block approval (the button says so on hover); outgoing requests still undecided block it too.
 - [ ] After Apply the drawer stays open: the tray goes read-only and says *sent; the document is being rewritten*, Approve / Edit / Apply are locked, and when the rewrite lands the body reloads and the tray empties.
 - [ ] A revision comes back with the answered questions **gone** from `## Questions for Prime`, the facts folded into the body, and the unanswered ones kept — the author may add new ones.
@@ -185,6 +187,27 @@ commands that copy on click. Kortext's job is over; the documents are the contra
 
 - [ ] The card appears only when the last document settles.
 - [ ] A starter command pasted into your own agent gets it reading `.kortext/` first.
+
+**On request.** On a new project the card also offers `EXPERIENCE.md` — *Designing with an
+AI?* — with the engine line above **Write EXPERIENCE.md**. Nothing in the chain writes it.
+→ `onRequest` in `GET …/handshake`, `POST …/docs/request`
+
+- [ ] `EXPERIENCE.md` sits in To do as `on request · waiting` through the whole chain, and the
+      project reads `15/15 documents settled` without it.
+- [ ] The offer is absent when `DESIGN.md` or `CONTENT.md` was ruled `not-applicable`, and on an
+      existing project (no skeleton is scaffolded there).
+- [ ] Press **Write EXPERIENCE.md**: the card yields, the row moves to Doing as `writing…`, and
+      the draft lands under Action Needed as `approve`; approve it and the card returns without
+      the offer.
+- [ ] Pause the project mid-write: the row reads `paused`, the card stays away, and Continue
+      resumes it — no second offer, no card beside a paused row.
+- [ ] While the project is paused before pressing, the button is disabled and says to Continue
+      first.
+- [ ] A project added before the step existed shows the offer once its project screen is
+      opened — the skeleton appears in `.kortext/` then.
+- [ ] The written document: Part 1 traces every fact to a document above (no invented screens),
+      copy is quoted from `CONTENT.md` word for word, and Part 2 is one master prompt plus one
+      prompt per journey, each a copyable block naming no design tool.
 
 ---
 

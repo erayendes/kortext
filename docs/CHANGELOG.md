@@ -7,10 +7,14 @@
 - **EXPERIENCE.md, on request.** One more document, offered at the handshake rather than
   queued by the chain: the brief a design AI needs — journeys, every screen with its states,
   the copy word for word — and the prompts to paste, one master and one per journey, for any
-  design tool. Press *Write EXPERIENCE.md* on the handshake card; skip it if the design is
-  already in hand. `DESIGN.md` documents a design the project folder already holds instead of inventing
-  one. After the handshake the document is
-  the project owner's to update.
+  design tool. Press *Write EXPERIENCE.md* on the handshake card, with the engine and model of
+  your choice above it; skip it if the design is already in hand. `DESIGN.md` documents a
+  design the project folder already holds instead of inventing one. After the handshake the
+  document is the project owner's to update.
+- **The thread stays where the answer is.** A click elsewhere folds a line's question box; a
+  click on the answer reopens it for the follow-up; × on the thread closes it. *Suggest* shows
+  only where the author has something to suggest — a question or a request — not on a plain
+  line.
 
 - **A menu bar app for macOS.** `Kortext.zip` on the release, notarized, updating itself. One
   card per project with the documents that wait on you — `approve`, `review`, `failed` — and

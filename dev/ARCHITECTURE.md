@@ -166,14 +166,18 @@ so the diamond graph does not collapse into traversal order.
 standing requests (plus a settled brief on a new project).
 
 **On request.** A step marked `- on request: yes` in the workflow (`DocStep.optional`) is one
-the chain never starts: `producibleSteps` skips it, `analysisComplete` and the project's
-`docCounts` leave it out while it is `uninitialized`, and it is scaffolded only on a project
-whose workflow has the step. It sits in To do as `waiting · on request`. Once every other
-document is settled, `GET …/handshake` lists it under `onRequest` (unless one of its inputs
-was ruled `not-applicable`) and the handshake card offers it with the engine control beside the button — the head's
+the chain never starts: `producibleSteps` skips it, and `analysisComplete` and the project's
+`docCounts` leave it out until it is *asked for* — `asked()`: a job exists for it, running,
+stopped or failed, whether or not the file has been written yet, so a run paused before its
+first line holds the handshake like any other document. It is scaffolded only on a project
+whose workflow has the step; a project from before the step existed gets the skeleton when
+`GET …/handshake` is read (`scaffoldOptional`, never a required one). It sits in To do as
+`waiting · on request`. Once every other document is settled, `GET …/handshake` lists it under
+`onRequest` (unless one of its inputs was ruled `not-applicable`, or it was already asked for) and the handshake card offers it with the engine control beside the button — the head's
 control left with the handshake, and this one step still picks its CLI, model and effort;
 `POST …/docs/request` runs the
-step, and from its first draft on it gates the handshake like any other document. Today there
+step (refused while the project is paused — the offer's button says so), and from then on it
+gates the handshake like any other document. Today there
 is one: `EXPERIENCE.md`, the brief and prompts a design AI works from — new projects only,
 after `CONTENT.md`; after the handshake it belongs to the project's owner.
 
@@ -314,7 +318,7 @@ No fs-watch — the panel polls (docs 3s, transfer 4s, handshake 5s).
 | `POST …/docs/retry` | repeats the latest failed/stopped document job with its saved notes, or resumes pending rechecks |
 | `POST …/docs/revise` | re-runs the producing step with notes (fire-and-forget, 202) |
 | `POST …/docs/settle-requests` | one press: the answers, the accepted requests and the denials of one document, in one rewrite |
-| `POST …/docs/explain` | line-anchored Q&A (synchronous, writes nothing) |
+| `POST …/docs/explain` | line-anchored Q&A (synchronous, writes nothing; the thread is drawer state — a click on it reopens its box, × drops it) |
 | `POST …/transfer` · `GET \| POST …/kopeng[/approve]` | split the work · plan summary · approve |
 | `GET …/handshake` | analysis done? kopeng installed? already transferred? which on-request documents can be asked for? |
 | `POST …/docs/request` | starts an on-request document (`EXPERIENCE.md`) — 202, the chain carries on after it |

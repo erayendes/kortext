@@ -37,7 +37,7 @@ Listeden herhangi bir belgeyi açın.
 **Approve** — belge kendinden sonrakilerin zemini olur, zincir ilerler.
 
 **Ask** — bir satır seçin ve sorunuzu sorun. Belgeyi yazan persona o pasaj hakkında yanıt verir.
-Sorular anlamak içindir, değiştirmek için değil. Bu yüzden kaydedilmezler. Birini tutmak isterseniz: **Suggest** yazmadan yazara "sen ne önerirsin?" der, her yanıtın altındaki **Use as my answer** de onu sizin notunuz yapar. Bir soru iki basışta kapanır.
+Sorular anlamak içindir, değiştirmek için değil. Bu yüzden kaydedilmezler: konuşma panelde yaşar, başka yere tıklayınca kutusu katlanır, yanıta tıklayınca ek soru için yeniden açılır, üstündeki **×** konuşmayı tamamen kapatır. Belgenin kendi sorularından birinde ya da bir istekte **Suggest** yazmadan yazara "sen ne önerirsin?" der, her yanıtın altındaki **Use as my answer** de onu sizin notunuz yapar — iki basışta kapanan soru. Belgenin düz bir satırında önerilecek bir şey yoktur; orada düğmeler Ask ve Add note'tur.
 
 **Add note** — notlarınız belgenin yeniden yazılmasını sağlar. Belgenin açık sorularından birine bırakılan not o sorunun yanıtı sayılır: soru kaybolur, ortaya koyduğu bilgi ise belgenin parçası olur.
 
