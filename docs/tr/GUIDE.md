@@ -23,7 +23,6 @@ Taslakları yalnızca siz onaylarsınız.
 **Yeni bir proje** yazdığınız brief'le oluşturulur. Brief ne yapıldığını, kimin için olduğunu, ürünün hangi dili konuştuğunu, işe yaradığını nasıl anlayacağınızı ve neyin kapsam dışı olduğunu söylemiyorsa analiz başlamaz — sorular gelir ve brief **Action needed**'a düşer.
 Soruları brief'te yanıtlayın ve onaylayın. Tekrar değerlendirmeye girer.
 
-Form **tasarımı** da sorar: **Design to be made** (varsayılan — analiz bitince tasarım yapay zekâsı için bir brief, `EXPERIENCE.md`, sunulur), **Design in hand** (dosyalar zaten proje klasöründe — ekranlar, token'lar, export'lar; Figma bağlantısı okunamaz — ve `DESIGN.md` icat etmek yerine o tasarımı belgeler) ya da **No design** (ürün hiçbir şey çizmiyor).
 
 **Bu kapı tek bir nedenle vardır.** Üç cümleden ürün gereksinimleri belgesi yazması istenen bir ajan yazar — ürünü uydurur, o kadar. Bir soru bir dakikaya mal olur; uydurulmuş bir ürün bütün analize.
 
@@ -90,7 +89,7 @@ Seçicinin ikinci bölümü **model**. `default` seçimi CLI'ın kendi ayarını
 
 Bütün belgeler onaylandığında analiz biter. Kart size üç başlangıç komutu verir; birini kendi ajanınıza kopyalayın. Ajan `AGENTS.md`'yi ve `.kortext/` belgelerini okuyarak başlar.
 
-Burada zincirin dışında bir belge daha sunulur: **EXPERIENCE.md**, ürünü tasarlayacak yapay zekâ için. Yolculukları, her ekranı durumlarıyla, metinleri birebir ve yapıştırmaya hazır prompt'ları taşır — bir ana prompt, yolculuk başına bir tane, herhangi bir tasarım aracı için. Yanındaki kontrolden motoru ve modeli seçin — tasarım brief'i güçlü bir model hak eder — **Write EXPERIENCE.md**'ye basın, tasarımcı yazar; ötekiler gibi onaylayın. Yalnız projeyi eklerken tasarımın yapılacağını söylediyseniz sunulur; eldeki tasarım ya da tasarımsızlık teklifi kaldırır. El sıkışmadan sonra belge sizindir: ürün değişince kendi ajanınıza güncelletin.
+Burada zincirin dışında bir belge daha sunulur: **EXPERIENCE.md**, ürünü tasarlayacak yapay zekâ için. Yolculukları, her ekranı durumlarıyla, metinleri birebir ve yapıştırmaya hazır prompt'ları taşır — bir ana prompt, yolculuk başına bir tane, herhangi bir tasarım aracı için. Yanındaki kontrolden motoru ve modeli seçin — tasarım brief'i güçlü bir model hak eder — **Write EXPERIENCE.md**'ye basın, tasarımcı yazar; ötekiler gibi onaylayın. Tasarım zaten elinizdeyse atlayın — belgeler, insan olan bir tasarımcıya yetecek kadar söyler. El sıkışmadan sonra belge sizindir: ürün değişince kendi ajanınıza güncelletin.
 
 Buradan sonra Kortext işin içinde değildir.
 

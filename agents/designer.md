@@ -44,7 +44,7 @@ Within +prime's vision, define the product's visual language and user experience
 
 `CONTENT.md` does not exist yet: copy is written into the components you name, so name them concretely rather than waiting for the words.
 
-If prime said a design already exists (the step prompt says so, and where it is), `DESIGN.md` documents it — its tokens, components and rules, taken from what prime supplied — and invents nothing beside it.
+If the project folder already holds a design — exports, screens, token files, a design-system dependency — `DESIGN.md` documents it, its tokens, components and rules, and invents nothing beside it.
 
 ### 1. Design System
 

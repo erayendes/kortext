@@ -1293,9 +1293,6 @@ function AddProject({
   const [code, setCode] = useState('');
   const [repoPath, setRepoPath] = useState('');
   const [docLang, setDocLang] = useState('');
-  // The design: to be made after the analysis (EXPERIENCE.md is offered at the
-  // end), already in hand (DESIGN.md documents it — say where it is), or none.
-  const [design, setDesign] = useState<'make' | 'have' | 'none'>('make');
   const [brief, setBrief] = useState('');
   const [briefMode, setBriefMode] = useState<'write' | 'upload'>('write');
   const [uploadName, setUploadName] = useState<string | null>(null);
@@ -1363,7 +1360,6 @@ function AddProject({
         code: code || undefined,
         brief: brief || undefined,
         docLang: docLang || undefined,
-        design: kind === 'new' ? design : undefined,
       });
       onDone(project, brief.trim().length > 0);
     } catch (e) {
@@ -1448,37 +1444,6 @@ function AddProject({
           onChange={(e) => setDocLang(e.target.value)}
         />
       </div>
-      {/* The design, in the form's own words: the New/Existing pair's buttons with
-          the line under them. A design in hand lives in the project folder like
-          everything else the designer reads — the line says so; nothing is picked. */}
-      {kind === 'new' && (
-        <>
-          <div className="kx-form-row">
-            {(
-              [
-                ['make', 'Design to be made'],
-                ['have', 'Design in hand'],
-                ['none', 'No design'],
-              ] as const
-            ).map(([id, label]) => (
-              <button
-                key={id}
-                className={`btn ${design === id ? 'btn-primary' : 'btn-secondary'}`}
-                onClick={() => setDesign(id)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <span className="kx-cmd-hint">
-            {design === 'make'
-              ? 'The design comes after the analysis: once every document is settled, a brief for a design AI — EXPERIENCE.md — is offered.'
-              : design === 'have'
-                ? 'The design exists: DESIGN.md documents it instead of inventing one. Put the files in the project folder before you start — screens, tokens, exports; a Figma link cannot be read.'
-                : 'The product renders nothing — a CLI, a library, a service. DESIGN.md is marked not applicable.'}
-          </span>
-        </>
-      )}
       {kind === 'existing' && (
         <span className="kx-cmd-hint">
           No brief for an existing project — the code itself is the evidence. Nothing runs until you

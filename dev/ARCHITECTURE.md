@@ -175,10 +175,7 @@ control left with the handshake, and this one step still picks its CLI, model an
 `POST …/docs/request` runs the
 step, and from its first draft on it gates the handshake like any other document. Today there
 is one: `EXPERIENCE.md`, the brief and prompts a design AI works from — new projects only,
-after `CONTENT.md`; after the handshake it belongs to the project's owner. Whether it is
-offered at all is `projects.design`, asked on Add project the way New/Existing is — three buttons and a line under them — `make` (the default;
-offered), `have` (the design is in the project folder like everything else the designer reads:
-the `DESIGN.md` prompt tells it to find and document that design, not invent one) and `none` (the `DESIGN.md` prompt names the n/a case).
+after `CONTENT.md`; after the handshake it belongs to the project's owner.
 
 ---
 

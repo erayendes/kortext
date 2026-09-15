@@ -59,7 +59,7 @@
    - n/a when: nothing crosses a program boundary: the product exposes no endpoint and calls no external service.
    - approver: +prime
 
-7. **+designer:** Produce `DESIGN.md`. Color palette, typography, component principles, responsive behavior, accessibility, core UI rules. The components named here are the ones `CONTENT.md` writes copy into and the surfaces `GROWTH.md` measures, so name them concretely. Where prime said, when adding the project, that a design already exists (the step prompt carries it, and where it is), document that one — its tokens, components and rules — rather than inventing a second.
+7. **+designer:** Produce `DESIGN.md`. Color palette, typography, component principles, responsive behavior, accessibility, core UI rules. The components named here are the ones `CONTENT.md` writes copy into and the surfaces `GROWTH.md` measures, so name them concretely. Where the project folder already holds a design — exports, screens, token files, a design-system dependency — document that one, its tokens, components and rules, rather than inventing a second.
    - inputs: `.kortext/PRODUCT.md`, `.kortext/STACK.md`
    - outputs: `.kortext/DESIGN.md`
    - n/a when: the product has no visual surface — a CLI, a library, or a service that renders nothing.

@@ -181,11 +181,9 @@ export function createProject(
     brief?: string;
     docLang?: string;
     engine?: string;
-    design?: string;
   },
   pkgRoot: string,
 ): Project {
-  const design = ['make', 'have', 'none'].includes(input.design ?? '') ? input.design! : 'make';
   const name = input.name.trim();
   // Compare real filesystem identities, including older registry entries that
   // stored an alias, before another project can own and reset these documents.
@@ -226,7 +224,7 @@ export function createProject(
   }
   const row = db
     .prepare(
-      'INSERT INTO projects (name, repo_path, kind, code, doc_lang, engine, design) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING *',
+      'INSERT INTO projects (name, repo_path, kind, code, doc_lang, engine) VALUES (?, ?, ?, ?, ?, ?) RETURNING *',
     )
     .get(
       name,
@@ -235,7 +233,6 @@ export function createProject(
       code,
       (input.docLang ?? '').trim(),
       (input.engine ?? '').trim(),
-      design,
     ) as Project;
   return row;
 }
