@@ -14,6 +14,10 @@
 - **n/a is prime's call.** A document the author judges not to apply no longer settles on its
   own: it arrives as `n/a?` under Action Needed, and *Approve n/a* is what settles it. A note
   and a revision send the author back to write it after all.
+- **Export.** A document leaves the panel as a file: **Export** in the drawer saves the open
+  one, **Export documents** under the project's gear lists every written document — All, None,
+  or pick — and downloads the chosen ones as one zip. `.kortext/` is a hidden folder a file
+  picker will not show; this is how `EXPERIENCE.md` reaches a design AI.
 - **The thread stays where the answer is.** A click elsewhere folds a line's question box; a
   click on the answer reopens it for the follow-up; × on the thread closes it. *Suggest* shows
   only where the author has something to suggest — a question or a request — not on a plain

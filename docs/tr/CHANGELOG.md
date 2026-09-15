@@ -14,6 +14,10 @@
 - **n/a artık prime'ın kararı.** Yazarın "bu projeye gerekmez" dediği belge artık kendiliğinden
   kesinleşmiyor: Action Needed'a `n/a?` olarak gelir, *Approve n/a* kesinleştirir. Katılmıyorsanız
   bir not bırakıp revizyon isteyin; yazar döner, belgeyi yazar.
+- **Export.** Belge panelden dosya olarak çıkar: çekmecedeki **Export** açık belgeyi indirir,
+  projenin dişlisindeki **Export documents** yazılmış her belgeyi tikli listeler — All, None ya
+  da seçin — ve seçtiklerinizi tek bir zip olarak indirir. `.kortext/` gizli bir klasördür,
+  dosya seçme penceresi göstermez; `EXPERIENCE.md` tasarım yapay zekâsına böyle ulaşır.
 - **Soru-cevap yanıtın yanında kalır.** Başka yere tıklayınca yazma kutusu kapanır; yanıta
   tıklayınca ek soru için yeniden açılır; üstündeki × soru-cevabı kaldırır. *Suggest* yalnız bir
   soruda ya da bir istekte görünür — yazarın önerecek bir şeyi olduğu yerde; düz bir satırda
