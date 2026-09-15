@@ -38,7 +38,7 @@ Kortext repo'nun köküne `.kortext/` dizinini ve içine belge iskeletlerini, bi
 
 Kortext, belgelerin bağımlılık sırasına uyan bir iş akışında adım adım çalışır. Her adım tek bir belge yazar — `PRODUCT.md`, `STACK.md`, `STRUCTURE.md`, `ARCHITECTURE.md`, `DESIGN.md`, `GROWTH.md`, `SECURITY.md`, `ENVIRONMENT.md`, `DATABASE.md`, `API.md`, `LEGAL.md`, `CONTENT.md`, `ENGINEERING.md`, `TEST.md`, `EXPERIENCE.md` (isteğe bağlı) — ve bunu bir persona olarak yapar: `product manager`, `architect`, `designer`, `growth expert`, `security engineer`, `DevOps engineer`, `DBA`, `compliance expert`, `copywriter` ve `QA engineer`.
 
-> Bir belge "bu projede buna gerek yok" gerekçesiyle, `not-applicable` olarak işaretlenebilir.
+> Bir belge "bu projede buna gerek yok" gerekçesiyle, `not-applicable` olarak önerebilir.
 
 Yazılan her belge onayınıza sunulur.
 
@@ -65,8 +65,8 @@ Belge durumları ise;
 Ayrıca durumun yanında bir rozet görebilirsiniz. 
 - `approve` → onayınızı bekliyor
 - `review` → soruları ya da istekleri var, incelemenizi bekliyor
-- `recheck` → okuduğu bir belge değişti, yeniden okunacak,
-- `revision` ilk yazım değil, yeniden yazım
+- `recheck` → okuduğu bir belge değişti, yeniden okunacak
+- `revision` → ilk yazım değil, yeniden yazım
 
 ## Bir belgeyi incelemek
 
@@ -83,7 +83,7 @@ Sorular anlamak içindir, değiştirmek için değil. Bu yüzden kaydedilmezler.
 
 **Add note** — notlarınız belgenin yeniden yazılmasını sağlar. Belgenin açık sorularından birine bırakılan not o sorunun yanıtı sayılır: soru kaybolur, ortaya koyduğu bilgi ise belgenin parçası olur.
 
-**Edit** — ajana gerek olmayan bir düzletme için dosyayı kendiniz yazın. Sadece metni günceller; değişiklik isteklerini kapatmaz, açık soruları silmez. İstekler varken ikinci bir düğme çıkar: **Save, requests done** — metni kaydeder ve istekleri kapatır.
+**Edit** — ajana gerek olmayan bir düzeltme için dosyayı kendiniz yazın. Sadece metni günceller; değişiklik isteklerini kapatmaz, açık soruları silmez. İstekler varken ikinci bir düğme çıkar: **Save, requests done** — metni kaydeder ve istekleri kapatır.
 
 **Preview** — yalnız `DESIGN.md`'de. Tasarımcının yazdığı token'ların — renkler, yazı tipleri, boşluklar, köşe yarıçapları, gölgeler — gerçeğe döndürülmüş ve görselleştirilmiş hali. Butonun rengini ve kenarlarını görmek HEX ve radius bilgisinden çok daha iyidir. Açık ve karanlık modu da destekler. Repo'nuzda `.kortext/DESIGN.html` olarak da durur.
 
@@ -107,7 +107,7 @@ Brief'te Accept yoktur — onu bir persona değil siz yazdınız. Satırda onun 
 
 Motor — `claude`, `codex`, `antigravity` ve listedeki diğerleri. 
 Sağda, düğmelerin altındaki satır onu neyin çalıştırdığını söyler — `claude · sonnet · high` — ve model seçiciyi açar. 
-Ajanı’ı projeyi eklerken seçersiniz ama istediğiniz zaman değiştirebilirsiniz. Kota bittiğinde de yapılacak tek şey değiştirmek. 
+Ajanı projeyi eklerken seçersiniz ama istediğiniz zaman değiştirebilirsiniz. Kota bittiğinde de yapılacak tek şey değiştirmek. 
 
 - **Pause** yeni adımların başlamasını durdurur; koşan adım da durur.
 - **Continue** kaldığı yerden devam eder.

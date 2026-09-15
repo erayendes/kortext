@@ -38,7 +38,7 @@ Kortext puts a `.kortext/` folder at the root of the repo, with the document ske
 
 Kortext works step by step, in the order the documents depend on each other. Each step writes one document — `PRODUCT.md`, `STACK.md`, `STRUCTURE.md`, `ARCHITECTURE.md`, `DESIGN.md`, `GROWTH.md`, `SECURITY.md`, `ENVIRONMENT.md`, `DATABASE.md`, `API.md`, `LEGAL.md`, `CONTENT.md`, `ENGINEERING.md`, `TEST.md`, `EXPERIENCE.md` — as a persona: `product manager`, `architect`, `designer`, `growth expert`, `security engineer`, `DevOps engineer`, `DBA`, `compliance expert`, `copywriter` and `QA engineer`.
 
-> A document can be marked `not-applicable`, with the reason "this project does not need this one."
+> A document can be proposed as `not-applicable`, with the reason "this project does not need this one."
 
 Every document written is put in front of you for approval.
 

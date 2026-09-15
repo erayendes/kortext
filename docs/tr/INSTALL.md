@@ -4,7 +4,7 @@
 
 **Node 22 veya üstü** ve PATH'inizde en az bir ajan CLI'ı (`claude`, `codex`, `antigravity` ya da bir başkası) olsun yeter.
 
-Sonrası terminale yazacağınız hepi topu tek bir komut; 
+Sonrası terminale yazacağınız hepi topu tek bir komut;
 
 ```sh
 npm install -g kortext
