@@ -47,7 +47,7 @@ kortext (npm package, installed globally)
 ├─ package content (embedded in prompts / scaffolded)
 │   workflows/ 3 · templates/ AGENTS.md + docs/ 15 skeletons (14 analysis + BRIEF) · agents/ 10 personas
 │
-└─ macos/ (SwiftUI, not in the npm package — see § 11)
+└─ macos-app/ (SwiftUI, not in the npm package — see § 11)
     Kortext/  KortextApp.swift · StatusItem.swift · Model.swift · Api.swift · Theme.swift
     project.yml (xcodegen) · appcast.xml (Sparkle feed) · script/gen_appcast_item.py
 ```
@@ -431,11 +431,11 @@ build → `node dist/index.js --help` smoke.
 
 ## 11 · macOS companion
 
-A menu bar app, `macos/`, that is a plain client of the REST surface above — the server gained
+A menu bar app, `macos-app/`, that is a plain client of the REST surface above — the server gained
 `companion` on `/api/health` and `paused` on `/jobs` for it, nothing else. It is not in the npm
 package; it ships as a notarized `Kortext.zip` on the GitHub release and keeps itself current
 through Sparkle (the feed is `appcast.xml` on the orphan branch `appcast`, written by the
-release workflow; `macos/appcast.xml` is the empty channel it starts from). Without it kortext
+release workflow; `macos-app/appcast.xml` is the empty channel it starts from). Without it kortext
 works in full; without kortext it says so and copies `npm i -g kortext`. Opening the app starts the
 server when it is down, without opening a browser; stopping the server never quits the app.
 

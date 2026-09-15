@@ -2,7 +2,7 @@ name: macOS app
 
 # The same tag that publishes the npm package (npm-publish.yml) builds, signs,
 # notarizes and ships the menu bar app: Kortext.zip on the GitHub release, and
-# a new item in macos/appcast.xml so installed copies update themselves.
+# a new item in macos-app/appcast.xml so installed copies update themselves.
 
 on:
   push:
@@ -48,7 +48,7 @@ jobs:
           VERSION: ${{ steps.version.outputs.VERSION }}
           BUILD: ${{ steps.version.outputs.BUILD }}
         run: |
-          cd macos
+          cd macos-app
           xcodegen generate
           xcodebuild -project Kortext.xcodeproj -scheme Kortext -configuration Release \
             -derivedDataPath build \
@@ -112,7 +112,7 @@ jobs:
         env:
           SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
         run: |
-          SIGN_UPDATE="$(find macos/build/SourcePackages/artifacts -name sign_update -not -path '*/old_dsa*' -type f | head -1)"
+          SIGN_UPDATE="$(find macos-app/build/SourcePackages/artifacts -name sign_update -not -path '*/old_dsa*' -type f | head -1)"
           KEY_DIR="$(mktemp -d)"
           printf '%s' "$SPARKLE_PRIVATE_KEY" > "$KEY_DIR/key"
           ED_SIG="$("$SIGN_UPDATE" --ed-key-file "$KEY_DIR/key" dist/Kortext.zip | grep -oE 'edSignature="[^"]+"' | cut -d'"' -f2)"
@@ -143,9 +143,9 @@ jobs:
             (cd /tmp/feed && git checkout -B appcast origin/appcast)
           else
             git worktree add --detach /tmp/feed
-            (cd /tmp/feed && git checkout --orphan appcast && git rm -rfq . && cp "$GITHUB_WORKSPACE/macos/appcast.xml" appcast.xml)
+            (cd /tmp/feed && git checkout --orphan appcast && git rm -rfq . && cp "$GITHUB_WORKSPACE/macos-app/appcast.xml" appcast.xml)
           fi
-          python3 macos/script/gen_appcast_item.py \
+          python3 macos-app/script/gen_appcast_item.py \
             --version "$VERSION" --build-number "$BUILD" \
             --url "https://github.com/erayendes/kortext/releases/download/v${VERSION}/Kortext.zip" \
             --signature "$ED_SIG" --length "$LENGTH" --notes "$NOTES" \
