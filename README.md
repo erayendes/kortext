@@ -7,6 +7,7 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/kortext"><img alt="npm" src="https://img.shields.io/npm/v/kortext.svg"></a>
+  <a href="https://github.com/erayendes/kortext/releases"><img alt="Kortext.app" src="https://img.shields.io/github/v/release/erayendes/kortext?include_prereleases&label=Kortext.app&logo=apple&logoColor=white"></a>
   <a href="https://github.com/erayendes/kortext/actions/workflows/kortext-ci.yml"><img alt="CI" src="https://github.com/erayendes/kortext/actions/workflows/kortext-ci.yml/badge.svg"></a>
   <img alt="Node" src="https://img.shields.io/node/v/kortext">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg"></a>
