@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../assets/kortext-logo-dark.svg">
-    <img src="../assets/kortext-logo-light.svg" alt="Kortext" width="420">
+    <source media="(prefers-color-scheme: dark)" srcset="../assets/social-preview-dark.png">
+    <img src="../assets/social-preview.png" alt="Kortext — yapay zekâyla geliştirmenin proje beyni" width="880">
   </picture>
 </p>
 

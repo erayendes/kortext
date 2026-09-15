@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/kortext-logo-dark.svg">
-    <img src="docs/assets/kortext-logo-light.svg" alt="Kortext" width="420">
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/social-preview-dark.png">
+    <img src="docs/assets/social-preview.png" alt="Kortext — the project brain for AI-driven development" width="880">
   </picture>
 </p>
 
