@@ -20,10 +20,12 @@ Yapay zekayla ürün geliştirirken hep aynı iki duvara çarpıyordum: projenin
 Biliyorum, siz de bu durumu yaşıyorsunuz, sadece henüz adını koyamadınız.
 Ama ben koydum. Adı **Kortext**.
 
+# Kortext
+
 Kortext, ürün geliştirmeye başlamadan önce yapay zekayla el sıkıştığınız bir **ürün anayasası**.
 
 Verdiğiniz **`BRIEF.md`** üzerinden alanında **uzman 10 farklı persona**nın hazırladığı **14 mimari belge** modelin her zaman başvuracağı tek gerçek kaynak oluyor.
-Eğer yazdığınız brief yeterli değilse, bunu belirtiyor. `BRIEF.md` için açıklamalar ve bir örneği panelde var. 
+Yazdığınız brief yeterli değilse Kortext bunu söylüyor. `BRIEF.md` için açıklamalar ve bir örnek panelde var.
 
 Tek bir insan rolü var, **`Prime`**. 
 Diğer personalar; `product manager`, `architect`, `designer`, `growth expert`, `security engineer`, `DevOps engineer`, `DBA`, `compliance expert`, `copywriter` ve `QA engineer`.
@@ -32,7 +34,7 @@ Brief referansıyla Kortext’in ürettiği belgeler; `PRODUCT.md`, `STACK.md`, 
 
 Yazılan her bir belge incelemeniz için önünüze düşüyor. Üşenmeyin, okuyun. **Emin olun buna değecek.**
  
-Belgelerde **size yönetilmiş sorular** olabilir, daha önceden yazılmış bir belgeye **değişiklik talebi** olabilir ya da yazılacak bir belgeye not olabilir. Bunlar modelin kendi bildirimleri. 
+Belgelerde **size yöneltilmiş sorular** olabilir, daha önceden yazılmış bir belgeye **değişiklik talebi** olabilir ya da yazılacak bir belgeye not olabilir. Bunlar modelin kendi bildirimleri. 
 Bunlarla birlikte istediğiniz satırı seçerek, soru sorabilir ve değişiklik talep edebilirsiniz.
 Eğer model bir belgede değişiklik isterse ve siz onaylarsanız, o belge tekrar pipeline’a girer.
 Belgelerin birbiriyle bu ilişkisi sebebiyle bazen bir döngü gibi bir belge bir kaç defa önünüze geliyor. Bunu yaparken epeyce token tüketiyor. Ama sonradan boşa gidecek zamanın ve tokenların önüne geçiyor. **Dip toplamda çok daha karlı**.
@@ -43,10 +45,14 @@ Kortext bu noktada görevini tamamlamış olacak. Herhangi bir giriş, anahtar y
 
 Bu arada, daha önce başlamış projeleri de unutmadım. Kortext, mevcut kod tabanını analiz ederek oradan da başlayabiliyor. Projenin durumuna göre yeni öneriler sunabilir. 
 
+Belge yazımını takip etmek için küçük bir MacOS menü bar uygulaması da hazırladım. Detayları MACOS.md’de.
+
+# Son söz
+
 Kortext'i tek başıma, akşamları yapıyorum ve MIT lisansıyla dağıtıyorum. 
 Eğer projeniz için doğru bir yol gösterici olduysa, işte tam olarak bunun için uğraştım. 
 Harika ürünleriniz olsun.
 
 MIT © Eray Endes
 
-INSTALL | GUIDE | SUPPORT | SECURITY | CHANGELOG
+[INSTALL](INSTALL.md) · [GUIDE](GUIDE.md) · [MACOS](MACOS.md) · [SUPPORT](../../.github/SUPPORT.md) · [SECURITY](../../.github/SECURITY.md) · [CHANGELOG](CHANGELOG.md)
