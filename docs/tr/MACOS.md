@@ -1,6 +1,6 @@
-# MacOS Menü Çubuğu Uygulaması
+# macOS Menü Çubuğu Uygulaması
 
-Bu isteğe bağlı tamamlayıcı bir MacOS uygulamasıdır. İkinci bir ürün değil, Kortext’in sürecini görmenizi kolaylaştıran bir penceredir. 
+Bu isteğe bağlı tamamlayıcı bir macOS uygulamasıdır. İkinci bir ürün değil, Kortext’in sürecini görmenizi kolaylaştıran bir penceredir. 
 
 ## Yükleme
 
@@ -12,14 +12,16 @@ Uygulama noter tasdiklidir ve bundan sonra kendini günceller. — Kurmak için 
 
 ## Nasıl kullanılır
 
-Sunucu çalışmıyorsa uygulamayı açtığınız ancak arka planda açılır. Terminalden komut girmenize gerek kalmaz. 
+Uygulamayı açtığınızda sunucu çalışmıyorsa arka planda başlatılır. Terminalden komut girmenize gerek kalmaz. 
 Menü çubuğundaki ikon, sizi bekleyen belge sayısını gösterir.
 
 Her proje için bir kart bulunur. Karar gerektiren bir satırı tıkladığınızda o belgeye ait panel açılır. Bekleyen belge olmadığında bu durum belirtilir.
 
 Alt kısımda bulunan ⏻ simgesi sunucuyu başlatır; iki kez tıklandığında ise durdurur. 
-Yanındaki “paneli aç” seçeneği, paneli tarayıcınızda açar.
+Yanındaki “open panel” seçeneği, paneli tarayıcınızda açar.
 
 ## Bildirimler
 
 Bir değişiklik olduğunda sizi bilgilendirir: Bir belge onay bekliyor, bir adım başarısız oldu, bir belge sorularla geri döndü, bir zincir tamamlandı. 
+
+Bildirime tıkladığınızda panelde o belge açılır.

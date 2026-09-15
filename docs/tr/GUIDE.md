@@ -2,12 +2,12 @@
 
 🇬🇧 [For English press 9]
 
-Genel bakış README, kurulum INSTALL'da; burası bir proje ekrana geldikten sonra ne yapılacağını anlatır.
+Genel bakış README, kurulum INSTALL'da; burası bir proje eklendikten geldikten sonra ne yapılacağını anlatır.
 
 ## Başlatma ve durdurma
 
 Kortext’i başlatmak için terminale `kortext` yazmanız yeterli. Başlattıktan sonra terminal penceresini kapatabilirsiniz; Kortext arka planda çalışmaya devam eder. 
-Sunucuyu durdurmak için panelin durum çubuğundaki ⏻ düğmesine basın. Ancak bir belge yazılırken kapanmaz.
+Sunucuyu durdurmak için panelin durum çubuğundaki ⏻ düğmesine basın. 
 
 Yeniden başlatmak için terminale tekrar `kortext` yazmanız yeter.
 Arka plandaki sunucunun yazdıkları `~/.kortext/kortext.db.log` dosyasında birikir.
@@ -34,7 +34,7 @@ Yeni bir proje içinse sizden brief bekleyecektir.
 
 Kortext repo'nun köküne `.kortext/` dizinini ve içine belge iskeletlerini, bir de `AGENTS.md` yerleştirir. `AGENTS.md` zaten varsa içine işaretli bir blok ekler; sizin yazdıklarınıza dokunmaz.
 
-Kortext, belgelerin bağımlılık sırasına uyan bir iş akışında adım adım çalışır. Her adım tek bir belge yazar — `PRODUCT.md`, `STACK.md`, `STRUCTURE.md`, `ARCHITECTURE.md`, `DESIGN.md`, `GROWTH.md`, `SECURITY.md`, `ENVIRONMENT.md`, `DATABASE.md`, `API.md`, `LEGAL.md`, `CONTENT.md`, `ENGINEERING.md`, `TEST.md`, `EXPERIENCE.md` — ve bunu bir persona olarak yapar: `product manager`, `architect`, `designer`, `growth expert`, `security engineer`, `DevOps engineer`, `DBA`, `compliance expert`, `copywriter` ve `QA engineer`.
+Kortext, belgelerin bağımlılık sırasına uyan bir iş akışında adım adım çalışır. Her adım tek bir belge yazar — `PRODUCT.md`, `STACK.md`, `STRUCTURE.md`, `ARCHITECTURE.md`, `DESIGN.md`, `GROWTH.md`, `SECURITY.md`, `ENVIRONMENT.md`, `DATABASE.md`, `API.md`, `LEGAL.md`, `CONTENT.md`, `ENGINEERING.md`, `TEST.md`, `EXPERIENCE.md` (isteğe bağlı) — ve bunu bir persona olarak yapar: `product manager`, `architect`, `designer`, `growth expert`, `security engineer`, `DevOps engineer`, `DBA`, `compliance expert`, `copywriter` ve `QA engineer`.
 
 > Bir belge "bu projede buna gerek yok" gerekçesiyle, `not-applicable` olarak işaretlenebilir.
 
@@ -75,11 +75,11 @@ Listeden herhangi bir belgeyi açın.
 **Ask** — bir satır seçin ve sorunuzu sorun. Belgeyi yazan persona o pasaj hakkında yanıt verir.
 Sorular anlamak içindir, değiştirmek için değil. Bu yüzden kaydedilmezler. Ama tutmak isterseniz **Use this answer**
 
-**Suggest** yazmadan yazara "sen ne önerirsin?" der, her yanıtın altındaki **Use this answer** de onu sizin notunuz yapar.
+**Suggest** yazarın önerisini alır.
 
 **Add note** — notlarınız belgenin yeniden yazılmasını sağlar. Belgenin açık sorularından birine bırakılan not o sorunun yanıtı sayılır: soru kaybolur, ortaya koyduğu bilgi ise belgenin parçası olur.
 
-**Edit** — ajana gerek olmayan bir sayı ya da bir cümle için dosyayı kendiniz yazın. Sadece metni günceller; değişiklik isteklerini kapatmaz, açık soruları silmez. İstekler varken ikinci bir düğme çıkar: **Save, requests done** — metni kaydeder ve istekleri kapatır.
+**Edit** — ajana gerek olmayan bir düzletme için dosyayı kendiniz yazın. Sadece metni günceller; değişiklik isteklerini kapatmaz, açık soruları silmez. İstekler varken ikinci bir düğme çıkar: **Save, requests done** — metni kaydeder ve istekleri kapatır.
 
 **Preview** — yalnız `DESIGN.md`'de. Tasarımcının yazdığı token'ların — renkler, yazı tipleri, boşluklar, köşe yarıçapları, gölgeler — gerçeğe döndürülmüş ve görselleştirilmiş hali. Butonun rengini ve kenarlarını görmek HEX ve radius bilgisinden çok daha iyidir. Açık ve karanlık modu da destekler. Repo'nuzda `.kortext/DESIGN.html` olarak da durur.
 
@@ -102,8 +102,7 @@ Brief'te Accept yoktur — onu bir persona değil siz yazdınız. Satırda onun 
 ## Çalıştırma, duraklatma, motoru değiştirme
 
 Motor — `claude`, `codex`, `antigravity` ve listedeki diğerleri. 
-Sağda, düğmelerin altındaki satır onu neyin çalıştırdığını söyler — `claude · sonnet · high`. 
-Continue'nun yanındaki **Change model** seçiciyi açar. 
+Sağda, düğmelerin altındaki satır onu neyin çalıştırdığını söyler — `claude · sonnet · high` — ve model seçiciyi açar. 
 Ajanı’ı projeyi eklerken seçersiniz ama istediğiniz zaman değiştirebilirsiniz. Kota bittiğinde de yapılacak tek şey değiştirmek. 
 
 - **Pause** yeni adımların başlamasını durdurur; koşan adım da durur.
@@ -120,18 +119,6 @@ Eğer henüz tasarımınız yoksa ve yapay zekaya yaptıracaksanız, isteğe ba�
 
 Buradan sonra Kortext işin içinde değildir.
 
-## Bir şey ters gittiğinde
-
-**Bir adım başarısız oldu.** Satırda nedeni yazar. En sık neden kurulu ama oturum açmamış bir CLI'dır: terminalde bir kez çalıştırın, sonra **Retry**.
-
-**Panel CLI bulamadı diyor.** `PATH`'inizde hiçbiri yok. Birini kurun ve sayfayı yenileyin.
-
-**Bir adım çok uzun sürüyor.** Adımlar dakikalar sürer; on beş dakikada durdurulur. 
-
-**Kortext bir adımın ortasında yeniden başladı.** Adım "kortext restarted mid-step — retry" ile işaretlenir. Retry'a basın.
-
-**Bir belge Action needed'dan çıkmıyor.** Açık bir soru, bekleyen bir istek ya da başarısız bir koşu vardır.
-
 ## Neresi nerede
 
 | | |
@@ -144,4 +131,4 @@ Buradan sonra Kortext işin içinde değildir.
 | `<repo>/.kortext/DESIGN.html` | `DESIGN.md`'nin görsel hali |
 
 > [!WARNING]
-> Belgeler projenini hafızası olarak düz markdown’dır. Commit’leyin. Repo'yu açan bir sonraki ajan bir satır yazmadan önce onları okur. 
+> Belgeler projenizin hafızası olan markdown dosyalardır. Commit’leyin. Repo'yu açan bir sonraki ajan bir satır yazmadan önce onları okur. 
