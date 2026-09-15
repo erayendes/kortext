@@ -131,8 +131,12 @@ jobs:
           ED_SIG: ${{ steps.sparkle.outputs.ED_SIG }}
           LENGTH: ${{ steps.pkg.outputs.LENGTH }}
         run: |
-          # Release notes: this version's section of the changelog; a beta has none yet.
-          NOTES="$(awk -v v="$VERSION" '$0 ~ "^## \\["v"\\]"{c=1;next} c&&/^## \[/{c=0} c{print}' docs/CHANGELOG.md)"
+          # Release notes: this version's section of the changelog. A beta has no
+          # section of its own yet — it ships what is under [Unreleased], which is
+          # exactly what the beta carries.
+          section() { awk -v v="$1" '$0 ~ "^## \\["v"\\]"{c=1;next} c&&/^## \[/{c=0} c{print}' docs/CHANGELOG.md; }
+          NOTES="$(section "$VERSION")"
+          [ -n "$NOTES" ] || NOTES="$(section Unreleased)"
           [ -n "$NOTES" ] || NOTES="Kortext $VERSION."
           printf '%s' "$NOTES" > /tmp/release_notes.md
           git config user.name "github-actions[bot]"
