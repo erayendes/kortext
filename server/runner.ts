@@ -166,7 +166,7 @@ export function buildStepPrompt(
     // renders nothing is the n/a case, said by the human rather than guessed.
     ...(step.output === 'DESIGN.md' && project.design === 'have'
       ? [
-          `- PRIME SAYS A DESIGN ALREADY EXISTS${project.design_ref ? `: ${project.design_ref}` : ''}. Read it — files in the folder, or what the reference points to — and DOCUMENT that design: its tokens, components and rules. Invent nothing beside it; where it is silent, say so and ask under \`## Questions for Prime\`.`,
+          '- PRIME SAYS A DESIGN ALREADY EXISTS, IN THIS PROJECT FOLDER. Find it — design files, exports, screenshots, token files, a design-system dependency — read it, and DOCUMENT that design: its tokens, components and rules. Invent nothing beside it; where it is silent, say so and ask under `## Questions for Prime`. If you find no design at all, say that under the same heading rather than inventing one.',
         ]
       : step.output === 'DESIGN.md' && project.design === 'none'
         ? [

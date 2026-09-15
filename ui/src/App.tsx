@@ -1296,7 +1296,6 @@ function AddProject({
   // The design: to be made after the analysis (EXPERIENCE.md is offered at the
   // end), already in hand (DESIGN.md documents it — say where it is), or none.
   const [design, setDesign] = useState<'make' | 'have' | 'none'>('make');
-  const [designRef, setDesignRef] = useState('');
   const [brief, setBrief] = useState('');
   const [briefMode, setBriefMode] = useState<'write' | 'upload'>('write');
   const [uploadName, setUploadName] = useState<string | null>(null);
@@ -1326,10 +1325,6 @@ function AddProject({
   const browse = async () => {
     const { path } = await api.pickDirectory();
     if (path) setRepoPath(path); // picked folder IS the project root
-  };
-  const browseDesign = async () => {
-    const { path } = await api.pickDirectory();
-    if (path) setDesignRef(path);
   };
 
   const uploadBrief = (file: File | undefined) => {
@@ -1369,7 +1364,6 @@ function AddProject({
         brief: brief || undefined,
         docLang: docLang || undefined,
         design: kind === 'new' ? design : undefined,
-        designRef: kind === 'new' && design === 'have' ? designRef.trim() || undefined : undefined,
       });
       onDone(project, brief.trim().length > 0);
     } catch (e) {
@@ -1455,8 +1449,8 @@ function AddProject({
         />
       </div>
       {/* The design, in the form's own words: the New/Existing pair's buttons with
-          the line under them, and the project-folder row with Browse when the
-          design is in hand — a folder, since a headless CLI cannot open a Figma link. */}
+          the line under them. A design in hand lives in the project folder like
+          everything else the designer reads — the line says so; nothing is picked. */}
       {kind === 'new' && (
         <>
           <div className="kx-form-row">
@@ -1480,22 +1474,9 @@ function AddProject({
             {design === 'make'
               ? 'The design comes after the analysis: once every document is settled, a brief for a design AI — EXPERIENCE.md — is offered.'
               : design === 'have'
-                ? 'The design exists: DESIGN.md documents it instead of inventing one. Put the files in a folder — screens, tokens, exports; a Figma link cannot be read.'
+                ? 'The design exists: DESIGN.md documents it instead of inventing one. Put the files in the project folder before you start — screens, tokens, exports; a Figma link cannot be read.'
                 : 'The product renders nothing — a CLI, a library, a service. DESIGN.md is marked not applicable.'}
           </span>
-          {design === 'have' && (
-            <div className="kx-form-row">
-              <input
-                className="kx-input kx-path"
-                placeholder="Design folder (pick with Browse)"
-                value={designRef}
-                onChange={(e) => setDesignRef(e.target.value)}
-              />
-              <button className="btn btn-secondary" onClick={browseDesign}>
-                Browse…
-              </button>
-            </div>
-          )}
         </>
       )}
       {kind === 'existing' && (

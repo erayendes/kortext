@@ -182,7 +182,6 @@ export function createProject(
     docLang?: string;
     engine?: string;
     design?: string;
-    designRef?: string;
   },
   pkgRoot: string,
 ): Project {
@@ -227,7 +226,7 @@ export function createProject(
   }
   const row = db
     .prepare(
-      'INSERT INTO projects (name, repo_path, kind, code, doc_lang, engine, design, design_ref) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING *',
+      'INSERT INTO projects (name, repo_path, kind, code, doc_lang, engine, design) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING *',
     )
     .get(
       name,
@@ -237,7 +236,6 @@ export function createProject(
       (input.docLang ?? '').trim(),
       (input.engine ?? '').trim(),
       design,
-      design === 'have' ? (input.designRef ?? '').trim() : '',
     ) as Project;
   return row;
 }

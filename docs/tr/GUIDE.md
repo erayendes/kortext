@@ -23,7 +23,7 @@ Taslakları yalnızca siz onaylarsınız.
 **Yeni bir proje** yazdığınız brief'le oluşturulur. Brief ne yapıldığını, kimin için olduğunu, ürünün hangi dili konuştuğunu, işe yaradığını nasıl anlayacağınızı ve neyin kapsam dışı olduğunu söylemiyorsa analiz başlamaz — sorular gelir ve brief **Action needed**'a düşer.
 Soruları brief'te yanıtlayın ve onaylayın. Tekrar değerlendirmeye girer.
 
-Form **tasarımı** da sorar: **Design to be made** (varsayılan — analiz bitince tasarım yapay zekâsı için bir brief, `EXPERIENCE.md`, sunulur), **Design in hand** (onu tutan klasörü seçin — ekranlar, token'lar, export'lar; Figma bağlantısı okunamaz — ve `DESIGN.md` icat etmek yerine o tasarımı belgeler) ya da **No design** (ürün hiçbir şey çizmiyor).
+Form **tasarımı** da sorar: **Design to be made** (varsayılan — analiz bitince tasarım yapay zekâsı için bir brief, `EXPERIENCE.md`, sunulur), **Design in hand** (dosyalar zaten proje klasöründe — ekranlar, token'lar, export'lar; Figma bağlantısı okunamaz — ve `DESIGN.md` icat etmek yerine o tasarımı belgeler) ya da **No design** (ürün hiçbir şey çizmiyor).
 
 **Bu kapı tek bir nedenle vardır.** Üç cümleden ürün gereksinimleri belgesi yazması istenen bir ajan yazar — ürünü uydurur, o kadar. Bir soru bir dakikaya mal olur; uydurulmuş bir ürün bütün analize.
 

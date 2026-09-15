@@ -199,7 +199,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   });
 
   app.post('/api/projects', (req, res) => {
-    const { name, repoPath, kind, code, brief, docLang, engine, design, designRef } = req.body ?? {};
+    const { name, repoPath, kind, code, brief, docLang, engine, design } = req.body ?? {};
     // The picker's model and effort, chosen before the project existed; the
     // same words the PUT routes accept, and only ones the CLI knows.
     const spec = ENGINES.find((e) => e.id === engine);
@@ -212,7 +212,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     try {
       const project = createProject(
         db,
-        { name, repoPath, kind, code, brief, docLang, engine, design, designRef },
+        { name, repoPath, kind, code, brief, docLang, engine, design },
         pkgRoot,
       );
       // Nothing runs on Add — the project lands paused and the user presses

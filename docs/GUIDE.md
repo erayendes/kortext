@@ -23,7 +23,7 @@ Only you approve drafts.
 **A new project** is created from the brief you write. If the brief does not say what is being built, who it is for, which language the product speaks, how you will know it worked, and what is out of scope, the analysis does not begin — questions come back and the brief drops to **Action needed**.
 Answer them in the brief and approve it. It is judged again.
 
-The form also asks about the **design**: **Design to be made** (the default — a brief for a design AI, `EXPERIENCE.md`, is offered when the analysis is done), **Design in hand** (pick the folder that holds it — screens, tokens, exports; a Figma link cannot be read — and `DESIGN.md` documents that design instead of inventing one), or **No design** (the product renders nothing).
+The form also asks about the **design**: **Design to be made** (the default — a brief for a design AI, `EXPERIENCE.md`, is offered when the analysis is done), **Design in hand** (the files are in the project folder already — screens, tokens, exports; a Figma link cannot be read — and `DESIGN.md` documents that design instead of inventing one), or **No design** (the product renders nothing).
 
 **This gate exists for one reason.** An agent asked to write a product requirements document from three sentences will write one — it will simply invent the product. A question costs a minute; an invented product costs the whole analysis.
 

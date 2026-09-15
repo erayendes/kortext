@@ -28,8 +28,7 @@ CREATE TABLE IF NOT EXISTS projects (
   engine TEXT NOT NULL DEFAULT '',    -- the agent CLI this project runs on
   model TEXT NOT NULL DEFAULT '',     -- the model that CLI is told to use; '' = the CLI's own default
   effort TEXT NOT NULL DEFAULT '',    -- reasoning effort passed to that CLI; '' = its default
-  design TEXT NOT NULL DEFAULT 'make',-- make | have | none: is a design to be made, in hand, or not a thing
-  design_ref TEXT NOT NULL DEFAULT '',-- where the design in hand is: a folder, a link, a system's name
+  design TEXT NOT NULL DEFAULT 'make',-- make | have | none: to be made, in the project folder, or not a thing
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE TABLE IF NOT EXISTS settings (
@@ -86,7 +85,6 @@ export function openDb(path = defaultDbPath()): Database.Database {
   }
   if (!(db.pragma('table_info(projects)') as { name: string }[]).some((c) => c.name === 'design')) {
     db.exec("ALTER TABLE projects ADD COLUMN design TEXT NOT NULL DEFAULT 'make'");
-    db.exec("ALTER TABLE projects ADD COLUMN design_ref TEXT NOT NULL DEFAULT ''");
   }
   return db;
 }
@@ -103,7 +101,6 @@ export interface Project {
   engine: string; // the agent CLI this project runs on; '' = whatever is installed
   model: string; // passed to that CLI's model flag; '' = the CLI's own default
   effort: string; // reasoning effort, passed as the spec says; '' = the CLI's default
-  design: 'make' | 'have' | 'none'; // to be made after the analysis · already in hand · the product renders nothing
-  design_ref: string; // where the design in hand is: a folder in the repo, a link, a design system's name
+  design: 'make' | 'have' | 'none'; // to be made after the analysis · in the project folder already · the product renders nothing
   created_at: string;
 }
