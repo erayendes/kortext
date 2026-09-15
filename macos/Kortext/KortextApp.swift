@@ -125,7 +125,7 @@ struct Content: View {
     }
     var body: some View {
         if !model.installed { NotInstalled() }
-        else if model.version == nil { Message(title: "Kortext is not running", sub: "Press ⏻ below to start the server.") }
+        else if model.version == nil { Message(title: "Kortext is not running", sub: "Click to start the server.") { model.startDaemon() } }
         else if model.shown.isEmpty { Empty() }
         else {
             // One card per project, its documents as rows — the way mimir groups a provider's lines.
@@ -174,17 +174,27 @@ struct ProjectCard: View {
     }
 }
 
+/// One card, two lines; with an action the whole card is the button — the sub line says what it does.
 struct Message: View {
     let title: String; let sub: String
+    var action: (() -> Void)? = nil
+    @State private var hover = false
     var body: some View {
-        Card {
-            // The panel is sized from the view's fitting size, where a Text claims one line; fixedSize makes it claim every line it wraps to.
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title).font(Kx.sans(13, .medium)).foregroundStyle(Kx.fg).fixedSize(horizontal: false, vertical: true)
-                Text(sub).font(Kx.sans(12)).foregroundStyle(Kx.fgMuted).fixedSize(horizontal: false, vertical: true)
+        Button { action?() } label: {
+            Card {
+                // The panel is sized from the view's fitting size, where a Text claims one line; fixedSize makes it claim every line it wraps to.
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title).font(Kx.sans(13, .medium)).foregroundStyle(Kx.fg).fixedSize(horizontal: false, vertical: true)
+                    Text(sub).font(Kx.sans(12)).foregroundStyle(Kx.fgMuted).fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading).padding(14)
+                .background(hover && action != nil ? Kx.bgHover : .clear)
             }
-            .frame(maxWidth: .infinity, alignment: .leading).padding(14)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
+        .disabled(action == nil)
+        .onHover { hover = $0; if action != nil { if $0 { NSCursor.pointingHand.push() } else { NSCursor.pop() } } }
         .padding(12)
     }
 }
@@ -193,8 +203,8 @@ struct Message: View {
 struct Empty: View {
     @EnvironmentObject var model: Model
     var body: some View {
-        if model.projects.isEmpty { Message(title: "No project yet", sub: "Open the panel to start one.") }
-        else { Message(title: "Nothing waiting on you", sub: "No step is running and nothing needs a decision.") }
+        if model.projects.isEmpty { Message(title: "No project yet", sub: "Click to open the panel and start one.") { model.openPanel() } }
+        else { Message(title: "Nothing waiting on you", sub: "No step is running and nothing needs a decision. Click to open the panel.") { model.openPanel() } }
     }
 }
 
@@ -204,18 +214,20 @@ struct NotInstalled: View {
         Card {
         VStack(alignment: .leading, spacing: 10) {
             Text("Kortext is not installed").font(Kx.sans(13, .medium)).foregroundStyle(Kx.fg)
-            HStack(spacing: 8) {
-                Text("npm i -g kortext").font(Kx.mono(12)).foregroundStyle(Kx.fg)
-                Spacer()
-                Button {
-                    NSPasteboard.general.clearContents(); NSPasteboard.general.setString("npm i -g kortext", forType: .string); copied = true
-                } label: {
+            // The whole command row copies — the word at its end only says so.
+            Button {
+                NSPasteboard.general.clearContents(); NSPasteboard.general.setString("npm i -g kortext", forType: .string); copied = true
+            } label: {
+                HStack(spacing: 8) {
+                    Text("npm i -g kortext").font(Kx.mono(12)).foregroundStyle(Kx.fg)
+                    Spacer()
                     HStack(spacing: 4) { Icon(name: copied ? "checkmark" : "doc.on.doc", size: 11, color: Kx.fgSecondary); Text(copied ? "Copied" : "Copy").font(Kx.sans(11, .medium)).foregroundStyle(Kx.fgSecondary) }
-                }.buttonStyle(.plain).hand()
-            }
-            .padding(.horizontal, 10).padding(.vertical, 7)
-            .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(.regularMaterial))
-            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(Color.primary.opacity(0.08), lineWidth: 1))
+                }
+                .padding(.horizontal, 10).padding(.vertical, 7)
+                .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(.regularMaterial))
+                .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(Color.primary.opacity(0.08), lineWidth: 1))
+                .contentShape(Rectangle())
+            }.buttonStyle(.plain).hand()
         }
         .frame(maxWidth: .infinity, alignment: .leading).padding(14)
         }
