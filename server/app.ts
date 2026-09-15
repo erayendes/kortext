@@ -188,7 +188,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       const docCounts = { settled: 0, total: 0 };
       try {
         for (const d of listDocs(db, p, pkgRoot)) {
-          if (d.optional && d.status === 'uninitialized' && !asked(db, p, d.rel)) continue;   // not asked for: not owed
+          if (d.optional && d.status === 'uninitialized' && !asked(db, p, d.rel)) continue; // not asked for: not owed
           docCounts.total++;
           if (d.status === 'approved' || d.status === 'not-applicable') docCounts.settled++;
         }
@@ -358,12 +358,15 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     const rel = String(req.body?.rel ?? '');
     const step = loadDocMap(pkgRoot, project.kind ?? 'new').get(rel);
     const doc = listDocs(db, project, pkgRoot).find((d) => d.rel === rel);
-    if (!step?.optional || !doc) return res.status(404).json({ error: 'not an on-request document' });
+    if (!step?.optional || !doc)
+      return res.status(404).json({ error: 'not an on-request document' });
     if (doc.status !== 'uninitialized' || asked(db, project, rel))
       return res.status(409).json({ error: `${rel} was already asked for — see it in the list` });
     if (doc.blocked) return res.status(409).json({ error: 'document inputs are not settled' });
     if (project.paused || runningDoc(db, project.id, rel))
-      return res.status(409).json({ error: 'Continue the project and wait for this document to finish' });
+      return res
+        .status(409)
+        .json({ error: 'Continue the project and wait for this document to finish' });
     const engine = engineFor(db, project);
     if (!engine) return res.status(409).json({ error: 'no agent CLI installed' });
     void runStep(db, project, step, engine, pkgRoot).then((out) => {
@@ -978,7 +981,10 @@ ${body}`,
     // inputs all stand — an input ruled not-applicable takes the offer with it.
     const nap = new Set(all.filter((d) => d.status === 'not-applicable').map((d) => d.rel));
     const onRequest = all
-      .filter((d) => d.optional && d.status === 'uninitialized' && !d.blocked && !asked(db, project, d.rel))
+      .filter(
+        (d) =>
+          d.optional && d.status === 'uninitialized' && !d.blocked && !asked(db, project, d.rel),
+      )
       .filter((d) => !d.inputs.some((i) => nap.has(i)))
       .map((d) => d.rel);
     res.json({

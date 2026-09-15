@@ -1912,9 +1912,9 @@ function ExperienceOffer({ project, paused }: { project: Project; paused?: boole
       <div className="kx-handshake-offer-text">
         <span className="kx-handshake-offer-title">Designing with an AI?</span>
         <span className="kx-cmd-hint">
-          EXPERIENCE.md gives it the journeys, every screen with its states, the copy word for
-          word, and the prompts to paste — one master, one per journey. Skip it if the design is
-          already in hand.
+          EXPERIENCE.md gives it the journeys, every screen with its states, the copy word for word,
+          and the prompts to paste — one master, one per journey. Skip it if the design is already
+          in hand.
         </span>
         {err && <span className="kx-error">{err}</span>}
       </div>

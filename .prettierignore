@@ -17,9 +17,9 @@ CITATION.cff
 
 # The design system page is generated from the panel CSS, not hand-formatted.
 dev/DESIGN.html
-macos/build/
-macos/Kortext.xcodeproj/
+macos-app/build/
+macos-app/Kortext.xcodeproj/
 
 # Xcode writes the asset catalog manifests; xcodegen reads project.yml as is.
-macos/Kortext/Assets.xcassets/
-macos/project.yml
+macos-app/Kortext/Assets.xcassets/
+macos-app/project.yml

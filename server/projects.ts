@@ -44,7 +44,8 @@ export function scaffoldProject(
   const map = loadDocMap(pkgRoot, opts.skipBrief ? 'existing' : 'new');
   const skip = new Set(['BRIEF.md']);
   if (existsSync(join(templates, 'docs'))) {
-    for (const f of readdirSync(join(templates, 'docs'))) if (f !== 'BRIEF.md' && !map.has(f)) skip.add(f);
+    for (const f of readdirSync(join(templates, 'docs')))
+      if (f !== 'BRIEF.md' && !map.has(f)) skip.add(f);
   }
   copyDirIfMissing(join(templates, 'docs'), kx, skip);
 
@@ -131,7 +132,11 @@ function installContract(repoPath: string, templates: string): void {
  * Put the missing ones on the shelf, so the offer can be made — never a required
  * one: those were there from the start, and a missing one is prime's doing.
  */
-export function scaffoldOptional(repoPath: string, pkgRoot: string, kind: 'new' | 'existing'): void {
+export function scaffoldOptional(
+  repoPath: string,
+  pkgRoot: string,
+  kind: 'new' | 'existing',
+): void {
   const kx = join(repoPath, '.kortext');
   if (!existsSync(kx)) return;
   for (const [rel, step] of loadDocMap(pkgRoot, kind)) {

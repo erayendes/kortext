@@ -102,7 +102,7 @@ export function producibleSteps(
   for (const doc of docs) {
     if (doc.status !== 'uninitialized' || doc.blocked || running.has(doc.rel)) continue;
     const step = map.get(doc.rel);
-    if (step && !step.optional) steps.push(step);   // on request: prime starts it, the chain never does
+    if (step && !step.optional) steps.push(step); // on request: prime starts it, the chain never does
   }
   return steps;
 }

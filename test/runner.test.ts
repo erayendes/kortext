@@ -1118,7 +1118,8 @@ test('an on-request document gates nothing until prime asks; asked for, it is a 
   const map = loadDocMap(pkgRoot, 'new');
   const step = map.get('EXPERIENCE.md');
   assert.ok(step?.optional, 'EXPERIENCE.md is written on request');
-  for (const rel of map.keys()) if (rel !== 'EXPERIENCE.md') setFrontmatterStatus(docPath(p, rel), 'approved');
+  for (const rel of map.keys())
+    if (rel !== 'EXPERIENCE.md') setFrontmatterStatus(docPath(p, rel), 'approved');
   // Every input stands, yet the chain never picks it up, and the handshake does not wait for it.
   assert.ok(!producibleSteps(db, p, pkgRoot).some((s) => s.output === 'EXPERIENCE.md'));
   assert.equal(analysisComplete(db, p, pkgRoot), true);
@@ -1140,11 +1141,14 @@ test('an on-request document asked for and then stopped holds the handshake and 
   const p = createProject(db, { name: 'Aurora', repoPath: join(work, 'aurora') }, pkgRoot);
   approveBrief(p);
   const map = loadDocMap(pkgRoot, 'new');
-  for (const rel of map.keys()) if (rel !== 'EXPERIENCE.md') setFrontmatterStatus(docPath(p, rel), 'approved');
+  for (const rel of map.keys())
+    if (rel !== 'EXPERIENCE.md') setFrontmatterStatus(docPath(p, rel), 'approved');
   assert.equal(analysisComplete(db, p, pkgRoot), true);
   // Asked for, and the run stopped before a line was written: the file is still
   // uninitialized, but the document is now owed — Continue or Retry, not the offer.
-  db.prepare("INSERT INTO jobs (project_id, doc_rel, kind, status) VALUES (?, 'EXPERIENCE.md', 'doc', 'stopped')").run(p.id);
+  db.prepare(
+    "INSERT INTO jobs (project_id, doc_rel, kind, status) VALUES (?, 'EXPERIENCE.md', 'doc', 'stopped')",
+  ).run(p.id);
   assert.equal(analysisComplete(db, p, pkgRoot), false);
   const doc = listDocs(db, p, pkgRoot).find((d) => d.rel === 'EXPERIENCE.md');
   assert.equal(doc?.state, 'paused');
