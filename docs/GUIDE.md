@@ -79,11 +79,11 @@ Open any document from the list.
 **Ask** — select a line and ask your question. The persona that wrote the document answers about that passage.
 Questions are for understanding, not for changing. That is why they are not saved. If you want to keep one: **Use this answer**
 
-**Suggest** asks the author "what would you suggest?" without typing; under every answer, **Use this answer** makes it your note.
+**Suggest** takes the author's suggestion.
 
 **Add note** — your notes get the document rewritten. A note left on one of the document's open questions counts as the answer: the question disappears and the fact it established becomes part of the document.
 
-**Edit** — for a number or a sentence that needs no agent, write the file yourself. It only updates the text; it does not close change requests or remove open questions. With requests standing, a second button appears: **Save, requests done** — saves the text and closes the requests.
+**Edit** — for a correction that needs no agent, write the file yourself. It only updates the text; it does not close change requests or remove open questions. With requests standing, a second button appears: **Save, requests done** — saves the text and closes the requests.
 
 **Preview** — on `DESIGN.md` only. The tokens the designer wrote — colours, typefaces, spacing, radii, shadows — made real and drawn. Seeing a button's colour and corners beats reading a HEX and a radius. Light and dark mode both. It also sits in your repo as `.kortext/DESIGN.html`.
 
@@ -106,8 +106,7 @@ The brief has no Accept — a persona did not write it, you did. In its place st
 ## Running, pausing, changing the engine
 
 The engine — `claude`, `codex`, `antigravity` and the others in the list.
-At the right, the line under the buttons says what runs it — `claude · sonnet · high`.
-**Change model** beside Continue opens the picker.
+At the right, the line under the buttons says what runs it — `claude · sonnet · high` — and opens the model picker.
 You pick the agent when adding the project, but you can change it whenever you like. When a quota runs out, changing it is all there is to do.
 
 - **Pause** stops new steps from starting; the running step stops too.
@@ -125,18 +124,6 @@ When every document is approved, the analysis is over. The card gives you three 
 If you have no design yet and an AI will make one, you can ask for the optional `EXPERIENCE.md`. It reads every document and leaves you holding a complete design brief.
 
 From here on, Kortext is not in the loop.
-
-## When something goes wrong
-
-**A step failed.** The row says why. The most common cause is a CLI that is installed but not signed in: run it once in the terminal, then **Retry**.
-
-**The panel says it found no CLI.** None is on your `PATH`. Install one and reload the page.
-
-**A step is taking too long.** Steps take minutes; at fifteen they are stopped.
-
-**Kortext restarted in the middle of a step.** The step is marked "kortext restarted mid-step — retry". Press Retry.
-
-**A document will not leave Action needed.** There is an open question, a standing request or a failed run.
 
 ## Where things live
 

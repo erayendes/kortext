@@ -23,7 +23,7 @@ npm install -g --allow-scripts=better-sqlite3 kortext
 ```
 
 > [!WARNING]
-> Windows support is experimental. Kortext is developed and tested on macOS and Linux. The Windows-specific parts were written, but have not been run on a real Windows machine.
+> Kortext is developed and tested on macOS and Linux. The Windows-specific parts were written, but have not been run on a real Windows machine.
 > If something does not work, please [open an issue](https://github.com/erayendes/kortext/issues); the fault is most likely not in your setup.
 
 # Update
@@ -36,7 +36,6 @@ By hand, or if the button fails:
 
 ```sh
 npm update -g kortext
-npm uninstall -g kortext
 ```
 
 # Uninstall
