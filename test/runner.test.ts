@@ -1132,3 +1132,21 @@ test('an on-request document gates nothing until prime asks; asked for, it is a 
   assert.equal(analysisComplete(db, p, pkgRoot), true);
   rmSync(work, { recursive: true, force: true });
 });
+
+test('an on-request document asked for and then stopped holds the handshake and is not offered again', async () => {
+  const { analysisComplete, loadDocMap } = await import('../server/docs.js');
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Aurora', repoPath: join(work, 'aurora') }, pkgRoot);
+  approveBrief(p);
+  const map = loadDocMap(pkgRoot, 'new');
+  for (const rel of map.keys()) if (rel !== 'EXPERIENCE.md') setFrontmatterStatus(docPath(p, rel), 'approved');
+  assert.equal(analysisComplete(db, p, pkgRoot), true);
+  // Asked for, and the run stopped before a line was written: the file is still
+  // uninitialized, but the document is now owed — Continue or Retry, not the offer.
+  db.prepare("INSERT INTO jobs (project_id, doc_rel, kind, status) VALUES (?, 'EXPERIENCE.md', 'doc', 'stopped')").run(p.id);
+  assert.equal(analysisComplete(db, p, pkgRoot), false);
+  const doc = listDocs(db, p, pkgRoot).find((d) => d.rel === 'EXPERIENCE.md');
+  assert.equal(doc?.state, 'paused');
+  rmSync(work, { recursive: true, force: true });
+});

@@ -1878,7 +1878,7 @@ function ProjectScreen({
 // works from. Offered here, after everything else settled, so a project whose
 // design is already in hand never pays for it. Pressing starts the step; the
 // handshake card yields to the chain until the document is approved.
-function ExperienceOffer({ project }: { project: Project }) {
+function ExperienceOffer({ project, paused }: { project: Project; paused?: boolean }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   // The engine control left the head with the handshake; this one step still
@@ -1927,7 +1927,12 @@ function ExperienceOffer({ project }: { project: Project }) {
           effort={effort}
           onOpen={() => setPicking(true)}
         />
-        <button className="btn btn-primary" onClick={ask} disabled={busy}>
+        <button
+          className="btn btn-primary"
+          onClick={ask}
+          disabled={busy || paused}
+          title={paused ? 'The project is paused — press Continue first' : undefined}
+        >
           {busy ? 'Starting…' : 'Write EXPERIENCE.md'}
         </button>
       </div>
@@ -1952,7 +1957,7 @@ function ExperienceOffer({ project }: { project: Project }) {
   );
 }
 
-function HandshakeCard({ project }: { project: Project }) {
+function HandshakeCard({ project, paused }: { project: Project; paused?: boolean }) {
   const [state, setState] = useState<HandshakeState | null>(null);
 
   useEffect(() => {
@@ -2001,7 +2006,9 @@ function HandshakeCard({ project }: { project: Project }) {
       {/* Kopeng is not released, so nothing advertises it: whoever has the
           binary sees the transfer panel, everyone else sees nothing rather
           than an install command that 404s. */}
-      {state.onRequest.includes('EXPERIENCE.md') && <ExperienceOffer project={project} />}
+      {state.onRequest.includes('EXPERIENCE.md') && (
+        <ExperienceOffer project={project} paused={paused} />
+      )}
       {state.kopengInstalled && <TransferPanel project={project} />}
       <div className="kx-handshake-cards">
         <span className="kx-cmd-hint">
@@ -2137,7 +2144,7 @@ function DocumentsTab({
 
   return (
     <div className="kx-docs">
-      <HandshakeCard project={project} />
+      <HandshakeCard project={project} paused={paused} />
       <ReadinessCard
         gate={gate}
         // An existing project has no brief to open — the evidence is its code.

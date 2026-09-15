@@ -741,6 +741,13 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
   return docs;
 }
 
+/** An on-request document that was asked for: still unwritten, but a job — running, stopped, failed — stands for it. */
+export function asked(db: Database.Database, project: Project, rel: string): boolean {
+  return (
+    !!db.prepare('SELECT 1 FROM jobs WHERE project_id = ? AND doc_rel = ? LIMIT 1').get(project.id, rel)
+  );
+}
+
 // The handshake is done when every document the workflow produces is settled
 // (approved or not-applicable). Docs without a producing step (unmapped
 // skeletons a project already carried) don't gate completion.
@@ -764,11 +771,10 @@ export function analysisComplete(
   const map = loadDocMap(pkgRoot, project.kind ?? 'new');
   const docs = listDocs(db, project, pkgRoot);
   const byRel = new Map(docs.map((d) => [d.rel, d.status]));
-  // An on-request document gates nothing until prime asks for it; once it is
-  // being written it is part of the analysis like any other.
-  const targets = [...map.keys()].filter(
-    (rel) => !(map.get(rel)?.optional && (byRel.get(rel) ?? 'uninitialized') === 'uninitialized'),
-  );
+  // An on-request document gates nothing until prime asks for it; from the
+  // moment it was asked for — a job exists, running, stopped or failed, whether
+  // or not the file was written yet — it is part of the analysis like any other.
+  const targets = [...map.keys()].filter((rel) => !(map.get(rel)?.optional && !asked(db, project, rel)));
   if (targets.length === 0) return false;
   const settled = (s: string | undefined) => s === 'approved' || s === 'not-applicable';
   // The brief gates the new-project flow even though no step produces it
