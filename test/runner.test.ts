@@ -1107,3 +1107,28 @@ test('Continue picks up a Kopeng re-split the pause stopped, with its notes', as
   assert.deepEqual(JSON.parse(jobs[0].notes), ['split the billing epic in two']);
   rmSync(work, { recursive: true, force: true });
 });
+
+test('an on-request document gates nothing until prime asks; asked for, it is a document like any other', async () => {
+  const { analysisComplete, loadDocMap } = await import('../server/docs.js');
+  const { producibleSteps } = await import('../server/runner.js');
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Aurora', repoPath: join(work, 'aurora') }, pkgRoot);
+  approveBrief(p);
+  const map = loadDocMap(pkgRoot, 'new');
+  const step = map.get('EXPERIENCE.md');
+  assert.ok(step?.optional, 'EXPERIENCE.md is written on request');
+  for (const rel of map.keys()) if (rel !== 'EXPERIENCE.md') setFrontmatterStatus(docPath(p, rel), 'approved');
+  // Every input stands, yet the chain never picks it up, and the handshake does not wait for it.
+  assert.ok(!producibleSteps(db, p, pkgRoot).some((s) => s.output === 'EXPERIENCE.md'));
+  assert.equal(analysisComplete(db, p, pkgRoot), true);
+  const before = listDocs(db, p, pkgRoot).find((d) => d.rel === 'EXPERIENCE.md');
+  assert.equal(before?.detail, 'request');
+  // Asked for: written as a draft, and now it holds the handshake until approved.
+  const out = await runStep(db, p, step!, mockEngine(work, 'ok'), pkgRoot);
+  assert.ok(out.ok);
+  assert.equal(analysisComplete(db, p, pkgRoot), false);
+  setFrontmatterStatus(docPath(p, 'EXPERIENCE.md'), 'approved');
+  assert.equal(analysisComplete(db, p, pkgRoot), true);
+  rmSync(work, { recursive: true, force: true });
+});

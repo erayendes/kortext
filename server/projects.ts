@@ -11,6 +11,7 @@ import {
 } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import type { Project } from './db.js';
+import { loadDocMap } from './docs.js';
 
 // Live workspace inside a registered repo:
 //   AGENTS.md      (repo root — the agent's entry contract)
@@ -38,7 +39,14 @@ export function scaffoldProject(
   const templates = join(pkgRoot, 'templates');
   installContract(repoPath, templates);
   // Initialize the brief separately so an empty template always starts as draft.
-  copyDirIfMissing(join(templates, 'docs'), kx, new Set(['BRIEF.md']));
+  // A template no step of this workflow writes (EXPERIENCE.md on an existing
+  // project) is not put on the shelf: it would wait there for nobody.
+  const map = loadDocMap(pkgRoot, opts.skipBrief ? 'existing' : 'new');
+  const skip = new Set(['BRIEF.md']);
+  if (existsSync(join(templates, 'docs'))) {
+    for (const f of readdirSync(join(templates, 'docs'))) if (f !== 'BRIEF.md' && !map.has(f)) skip.add(f);
+  }
+  copyDirIfMissing(join(templates, 'docs'), kx, skip);
 
   if (opts.skipBrief) return;
   const brief = join(repoPath, BRIEF_REL);

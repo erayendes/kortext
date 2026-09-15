@@ -165,6 +165,16 @@ so the diamond graph does not collapse into traversal order.
 `analysisComplete` = every mapped document `approved | not-applicable`, no open questions, no
 standing requests (plus a settled brief on a new project).
 
+**On request.** A step marked `- on request: yes` in the workflow (`DocStep.optional`) is one
+the chain never starts: `producibleSteps` skips it, `analysisComplete` and the project's
+`docCounts` leave it out while it is `uninitialized`, and it is scaffolded only on a project
+whose workflow has the step. It sits in To do as `waiting · on request`. Once every other
+document is settled, `GET …/handshake` lists it under `onRequest` (unless one of its inputs
+was ruled `not-applicable`) and the handshake card offers it; `POST …/docs/request` runs the
+step, and from its first draft on it gates the handshake like any other document. Today there
+is one: `EXPERIENCE.md`, the brief and prompts a design AI works from — new projects only,
+after `CONTENT.md`; after the handshake it belongs to the project's owner.
+
 ---
 
 ## 5 · The engine
@@ -304,7 +314,8 @@ No fs-watch — the panel polls (docs 3s, transfer 4s, handshake 5s).
 | `POST …/docs/settle-requests` | one press: the answers, the accepted requests and the denials of one document, in one rewrite |
 | `POST …/docs/explain` | line-anchored Q&A (synchronous, writes nothing) |
 | `POST …/transfer` · `GET \| POST …/kopeng[/approve]` | split the work · plan summary · approve |
-| `GET …/handshake` | analysis done? kopeng installed? already transferred? |
+| `GET …/handshake` | analysis done? kopeng installed? already transferred? which on-request documents can be asked for? |
+| `POST …/docs/request` | starts an on-request document (`EXPERIENCE.md`) — 202, the chain carries on after it |
 
 An unknown `/api` path returns JSON 404 rather than falling through to the SPA (which surfaced
 as `Unexpected token '<'`). Anything a fire-and-forget route (`revise`, `settle-requests`) could

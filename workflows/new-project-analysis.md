@@ -59,7 +59,7 @@
    - n/a when: nothing crosses a program boundary: the product exposes no endpoint and calls no external service.
    - approver: +prime
 
-7. **+designer:** Produce `DESIGN.md`. Color palette, typography, component principles, responsive behavior, accessibility, core UI rules. The components named here are the ones `CONTENT.md` writes copy into and the surfaces `GROWTH.md` measures, so name them concretely.
+7. **+designer:** Produce `DESIGN.md`. Color palette, typography, component principles, responsive behavior, accessibility, core UI rules. The components named here are the ones `CONTENT.md` writes copy into and the surfaces `GROWTH.md` measures, so name them concretely. Where `BRIEF.md` says a design already exists, document that one — its tokens, components and rules, from what prime supplied — rather than inventing a second.
    - inputs: `.kortext/PRODUCT.md`, `.kortext/STACK.md`
    - outputs: `.kortext/DESIGN.md`
    - n/a when: the product has no visual surface — a CLI, a library, or a service that renders nothing.
@@ -96,3 +96,15 @@
    - inputs: `.kortext/PRODUCT.md`, `.kortext/ENGINEERING.md`, `.kortext/LEGAL.md`
    - outputs: `.kortext/TEST.md`
    - approver: +prime
+
+## On request
+
+> Written only when prime asks — offered at the handshake, never queued by the chain. A
+> project whose design is already in hand, or whose product renders nothing, never sees it.
+
+1. **+designer:** Produce `EXPERIENCE.md`. The brief a design AI needs to design the product without asking: the journeys (who, why, which steps), the screen map and its navigation, every screen with its purpose, data, actions and states (empty, loading, error, first run), the copy word for word from `CONTENT.md`, the tokens and components from `DESIGN.md`, the platform and its constraints from `STACK.md`, and what not to do. Then the prompts, tool-agnostic and ready to paste: one master prompt that sets the product, the system and the rules and says how many section prompts follow, and one prompt per journey that stands on its own. After the handshake the document belongs to the project's owner, who updates it with their own agent.
+   - inputs: `.kortext/BRIEF.md`, `.kortext/PRODUCT.md`, `.kortext/STACK.md`, `.kortext/DESIGN.md`, `.kortext/CONTENT.md`
+   - outputs: `.kortext/EXPERIENCE.md`
+   - n/a when: the product has no visual surface, or the design is already in hand and no AI will be asked to design it.
+   - approver: +prime
+   - on request: yes

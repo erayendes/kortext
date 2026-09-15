@@ -1178,6 +1178,7 @@ const DETAIL_TITLE: Record<string, string> = {
   approve: 'Nothing open — approve it',
   review: 'Action Needed items stand on this document',
   queue: 'Not written yet',
+  request: 'Written only if you ask for it — offered once the analysis is complete',
   recheck: 'Waiting to be read again against an input that moved',
   draft: 'The first draft',
   revision: 'A rewrite of what already stands',
@@ -1208,7 +1209,7 @@ export function DocBadges({ doc }: { doc: DocInfo }) {
                   : (DETAIL_TITLE[doc.detail] ?? '')
           }
         >
-          {doc.detail}
+          {doc.detail === 'request' ? 'on request' : doc.detail}
         </span>
       )}
     </>

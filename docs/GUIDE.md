@@ -93,6 +93,8 @@ Once every document is settled the engine line and its buttons go — Kortext ha
 
 When every document is approved, the analysis is over. The card gives you three starter commands; copy one into your own agent. The agent begins by reading `AGENTS.md` and the `.kortext/` documents.
 
+One more document is on offer here, not in the chain: **EXPERIENCE.md**, for the AI that will design the product. It carries the journeys, every screen with its states, the copy word for word, and the prompts to paste — one master prompt, one per journey, for any design tool. Press **Write EXPERIENCE.md** and the designer writes it; approve it like the rest. Skip it if the design is already in hand — the brief's *Design* section is where you say which. After the handshake the document is yours: tell your own agent to update it when the product moves.
+
 From here on, Kortext is not in the loop.
 
 ## The panel itself

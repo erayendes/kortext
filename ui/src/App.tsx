@@ -1219,6 +1219,10 @@ the others; everyone else only ever sees their own customers.
 
 English only in v1. A second language is a later decision, not v1 scope.
 
+## Design
+
+No design yet — it will be made after this analysis, by a design AI working from the documents.
+
 ## Key Performance Indicators (KPIs)
 
 Meeting notes written per active user per week; the share of customers carrying a note from
@@ -1874,6 +1878,39 @@ function ProjectScreen({
   );
 }
 
+// The one document written only on request: the brief and prompts a design AI
+// works from. Offered here, after everything else settled, so a project whose
+// design is already in hand never pays for it. Pressing starts the step; the
+// handshake card yields to the chain until the document is approved.
+function ExperienceOffer({ project }: { project: Project }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const ask = () => {
+    setBusy(true);
+    setErr(null);
+    api.requestDoc(project.id, 'EXPERIENCE.md').catch((e: Error) => {
+      setErr(e.message);
+      setBusy(false);
+    });
+  };
+  return (
+    <div className="kx-handshake-offer">
+      <div>
+        <span className="kx-handshake-offer-title">Designing with an AI?</span>
+        <span className="kx-cmd-hint">
+          EXPERIENCE.md gives it the journeys, every screen with its states, the copy word for
+          word, and the prompts to paste — one master, one per journey. Skip it if the design is
+          already in hand.
+        </span>
+        {err && <span className="kx-error">{err}</span>}
+      </div>
+      <button className="btn btn-primary" onClick={ask} disabled={busy}>
+        {busy ? 'Starting…' : 'Write EXPERIENCE.md'}
+      </button>
+    </div>
+  );
+}
+
 function HandshakeCard({ project }: { project: Project }) {
   const [state, setState] = useState<HandshakeState | null>(null);
 
@@ -1923,6 +1960,7 @@ function HandshakeCard({ project }: { project: Project }) {
       {/* Kopeng is not released, so nothing advertises it: whoever has the
           binary sees the transfer panel, everyone else sees nothing rather
           than an install command that 404s. */}
+      {state.onRequest.includes('EXPERIENCE.md') && <ExperienceOffer project={project} />}
       {state.kopengInstalled && <TransferPanel project={project} />}
       <div className="kx-handshake-cards">
         <span className="kx-cmd-hint">

@@ -88,6 +88,8 @@ Seçicinin ikinci bölümü **model**. `default` seçimi CLI'ın kendi ayarını
 
 Bütün belgeler onaylandığında analiz biter. Kart size üç başlangıç komutu verir; birini kendi ajanınıza kopyalayın. Ajan `AGENTS.md`'yi ve `.kortext/` belgelerini okuyarak başlar.
 
+Burada zincirin dışında bir belge daha sunulur: **EXPERIENCE.md**, ürünü tasarlayacak yapay zekâ için. Yolculukları, her ekranı durumlarıyla, metinleri birebir ve yapıştırmaya hazır prompt'ları taşır — bir ana prompt, yolculuk başına bir tane, herhangi bir tasarım aracı için. **Write EXPERIENCE.md**'ye basın, tasarımcı yazar; ötekiler gibi onaylayın. Tasarım zaten elinizdeyse atlayın — hangisi olduğunu brief'in *Design* bölümünde söylersiniz. El sıkışmadan sonra belge sizindir: ürün değişince kendi ajanınıza güncelletin.
+
 Buradan sonra Kortext işin içinde değildir.
 
 ## Panelin kendisi

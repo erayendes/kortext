@@ -4,6 +4,14 @@
 
 ## [Unreleased]
 
+- **EXPERIENCE.md, on request.** One more document, offered at the handshake rather than
+  queued by the chain: the brief a design AI needs — journeys, every screen with its states,
+  the copy word for word — and the prompts to paste, one master and one per journey, for any
+  design tool. Press *Write EXPERIENCE.md* on the handshake card; skip it if the design is
+  already in hand. The brief gains a *Design* section that says which, and `DESIGN.md`
+  documents an existing design instead of inventing one. After the handshake the document is
+  the project owner's to update.
+
 - **A menu bar app for macOS.** `Kortext.zip` on the release, notarized, updating itself. One
   card per project with the documents that wait on you — `approve`, `review`, `failed` — and
   the ones being written, grey; a row opens the panel on that document. ⏻ starts the server

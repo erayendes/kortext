@@ -54,7 +54,9 @@ export interface DocInfo {
   conflicts: Array<{ from: string; reason: string }>;
   section: 'needs' | 'doing' | 'todo' | 'done';
   state: 'waiting' | 'writing' | 'reading' | 'paused' | 'failed' | 'approved' | 'n/a';
-  detail: 'approve' | 'review' | 'queue' | 'recheck' | 'draft' | 'revision' | null;
+  detail: 'approve' | 'review' | 'queue' | 'recheck' | 'draft' | 'revision' | 'request' | null;
+  /** Written only when prime asks for it, at the handshake. */
+  optional: boolean;
   pendingRecheck: boolean;
 }
 
@@ -77,6 +79,8 @@ export interface DocVersion {
 
 export interface HandshakeState {
   analysisComplete: boolean;
+  /** On-request documents not yet written, whose inputs all stand. */
+  onRequest: string[];
   kopengInstalled: boolean;
   transferred: boolean;
   /** Written documents. */
@@ -160,6 +164,11 @@ export const api = {
   runNext: (projectId: number) =>
     req<{ started: string }>(`/api/projects/${projectId}/run-next`, { method: 'POST' }),
   handshake: (projectId: number) => req<HandshakeState>(`/api/projects/${projectId}/handshake`),
+  requestDoc: (projectId: number, rel: string) =>
+    req<{ started: string }>(`/api/projects/${projectId}/docs/request`, {
+      method: 'POST',
+      body: JSON.stringify({ rel }),
+    }),
   readiness: (projectId: number) =>
     req<{ readiness: Readiness | null; checking: boolean }>(`/api/projects/${projectId}/readiness`),
   transfer: (projectId: number, notes?: string[]) =>

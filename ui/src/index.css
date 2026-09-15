@@ -2229,6 +2229,12 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   background: var(--bg-muted);
   border-color: var(--border);
 }
+/* On request: as quiet as revision — nothing is owed until prime asks. */
+.kx-badge-request {
+  color: var(--fg-muted);
+  background: var(--bg-muted);
+  border-color: var(--border);
+}
 /* Distinguish requests from dependency notices. */
 .kx-badge-change {
   background: var(--pink-bg);
@@ -3265,6 +3271,26 @@ button.kx-removed-toggle:hover {
   gap: 8px;
 }
 
+/* The offer: one on-request document, written on a press, skipped by doing nothing. */
+.kx-handshake-offer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg);
+}
+.kx-handshake-offer > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.kx-handshake-offer-title {
+  font-weight: 600;
+}
 .kx-handshake-plan {
   display: flex;
   flex-direction: column;

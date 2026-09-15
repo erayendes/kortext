@@ -9,6 +9,8 @@ export interface DocStep {
   inputs: string[];
   author: string | null;
   approver: string | null;
+  /** Written only when prime asks for it, at the handshake; the chain never starts it. */
+  optional?: boolean;
 }
 
 export interface DocInfo {
@@ -57,7 +59,9 @@ export interface DocInfo {
   /** The word after the name: what the document is doing, or waiting to do. */
   state: 'waiting' | 'writing' | 'reading' | 'paused' | 'failed' | 'approved' | 'n/a';
   /** The word in brackets: which kind of waiting, writing, pausing or failing. */
-  detail: 'approve' | 'review' | 'queue' | 'recheck' | 'draft' | 'revision' | null;
+  detail: 'approve' | 'review' | 'queue' | 'recheck' | 'draft' | 'revision' | 'request' | null;
+  /** An on-request document: offered at the handshake, never queued by the chain. */
+  optional: boolean;
   /** A recheck is queued or running against this document. */
   pendingRecheck: boolean;
 }
@@ -91,7 +95,8 @@ function fileDoc(doc: DocInfo, job: LastJob | null): Pick<DocInfo, 'section' | '
   // and the two share no button — Continue against Retry.
   if (job?.status === 'stopped') return at('doing', 'paused', pass);
   if (job?.status === 'failed') return at('needs', 'failed', pass);
-  if (doc.status === 'uninitialized') return at('todo', 'waiting', 'queue');
+  // An on-request document is not queued: it waits for prime's word, not for its inputs.
+  if (doc.status === 'uninitialized') return at('todo', 'waiting', doc.optional ? 'request' : 'queue');
   // Every open Action Needed item blocks approval, so one case covers them all:
   // questions left for prime, requests arriving from other documents, and
   // requests this one wants to send. Findings are not among them — they are
@@ -313,6 +318,7 @@ export function templateFor(pkgRoot: string, rel: string): string | null {
 //      - inputs: `.kortext/BRIEF.md`, …
 //      - outputs: `.kortext/STACK.md`
 //      - approver: +prime
+//      - on request: yes          (optional — offered at the handshake, never queued)
 // Returns one DocStep per output file.
 export function parseWorkflowSteps(md: string): DocStep[] {
   const steps: DocStep[] = [];
@@ -320,13 +326,15 @@ export function parseWorkflowSteps(md: string): DocStep[] {
   let inputs: string[] = [];
   let outputs: string[] = [];
   let approver: string | null = null;
+  let optional = false;
 
   const flush = () => {
-    for (const output of outputs) steps.push({ output, inputs, author, approver });
+    for (const output of outputs) steps.push({ output, inputs, author, approver, optional });
     author = null;
     inputs = [];
     outputs = [];
     approver = null;
+    optional = false;
   };
 
   for (const line of md.split('\n')) {
@@ -340,6 +348,7 @@ export function parseWorkflowSteps(md: string): DocStep[] {
     if (/^\s*-\s*inputs:/.test(line)) inputs = paths(line);
     else if (/^\s*-\s*outputs:/.test(line)) outputs = paths(line);
     else if (/^\s*-\s*approver:/.test(line)) approver = line.split('approver:')[1].trim();
+    else if (/^\s*-\s*on request:\s*yes/i.test(line)) optional = true;
   }
   flush();
   return steps;
@@ -645,6 +654,7 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
         dependentOn: [],
         openQuestions: status !== 'uninitialized' && hasOpenQuestions(body),
         hasProducingStep: map.has(rel),
+        optional: map.get(rel)?.optional ?? false,
         // Read from the document's own section: what others asked of it is
         // filed here when they are approved, and decided here. An unwritten
         // document can already hold some — they go into its first write.
@@ -754,7 +764,11 @@ export function analysisComplete(
   const map = loadDocMap(pkgRoot, project.kind ?? 'new');
   const docs = listDocs(db, project, pkgRoot);
   const byRel = new Map(docs.map((d) => [d.rel, d.status]));
-  const targets = [...map.keys()];
+  // An on-request document gates nothing until prime asks for it; once it is
+  // being written it is part of the analysis like any other.
+  const targets = [...map.keys()].filter(
+    (rel) => !(map.get(rel)?.optional && (byRel.get(rel) ?? 'uninitialized') === 'uninitialized'),
+  );
   if (targets.length === 0) return false;
   const settled = (s: string | undefined) => s === 'approved' || s === 'not-applicable';
   // The brief gates the new-project flow even though no step produces it

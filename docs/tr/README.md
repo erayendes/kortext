@@ -46,7 +46,7 @@ Bu arada, daha önce başlamış projeleri de unutmadım. Kortext, mevcut kod ta
 
 Tek bir insan rolü var, **Prime**. Diğer personalar; product manager, architect, designer, growth expert, security engineer, DevOps engineer, DBA, compliance expert, copywriter ve QA engineer.
 
-**BRIEF.md**, sizin verdiğiniz belge. Bu belgeden referansla Kortext’in ürettiği belgeler; `PRODUCT.md`, `STACK.md`, `STRUCTURE.md`, `ARCHITECTURE.md`, `DESIGN.md`, `GROWTH.md`, `SECURITY.md`, `ENVIRONMENT.md`, `DATABASE.md`, `API.md`, `LEGAL.md`, `CONTENT.md`, `ENGINEERING.md`, `TEST.md`
+**BRIEF.md**, sizin verdiğiniz belge. Bu belgeden referansla Kortext’in ürettiği belgeler; `PRODUCT.md`, `STACK.md`, `STRUCTURE.md`, `ARCHITECTURE.md`, `DESIGN.md`, `GROWTH.md`, `SECURITY.md`, `ENVIRONMENT.md`, `DATABASE.md`, `API.md`, `LEGAL.md`, `CONTENT.md`, `ENGINEERING.md`, `TEST.md` — ve sonda, isteğe bağlı, `EXPERIENCE.md`: tasarım yapay zekâsının çalışacağı brief ve prompt'lar
 
 `BRIEF.md`'nin bir örneği var. Eğer yazdığınız brief yeterli değilse, bunu belirtiyor.
 

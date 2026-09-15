@@ -46,7 +46,7 @@ And I have not forgotten projects that are already under way: Kortext can start 
 
 There is one human role, **Prime**. The other personas: product manager, architect, designer, growth expert, security engineer, DevOps engineer, DBA, compliance expert, copywriter and QA engineer.
 
-**BRIEF.md** is the document you provide. From it, Kortext produces `PRODUCT.md`, `STACK.md`, `STRUCTURE.md`, `ARCHITECTURE.md`, `DESIGN.md`, `GROWTH.md`, `SECURITY.md`, `ENVIRONMENT.md`, `DATABASE.md`, `API.md`, `LEGAL.md`, `CONTENT.md`, `ENGINEERING.md`, `TEST.md`.
+**BRIEF.md** is the document you provide. From it, Kortext produces `PRODUCT.md`, `STACK.md`, `STRUCTURE.md`, `ARCHITECTURE.md`, `DESIGN.md`, `GROWTH.md`, `SECURITY.md`, `ENVIRONMENT.md`, `DATABASE.md`, `API.md`, `LEGAL.md`, `CONTENT.md`, `ENGINEERING.md`, `TEST.md` — and, on request at the end, `EXPERIENCE.md`: the brief and prompts a design AI works from.
 
 There is a sample `BRIEF.md`. If the brief you wrote is not enough, Kortext says so.
 

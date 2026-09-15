@@ -1,6 +1,6 @@
 # designer
 
-- description: Designs the product's visual language and user experience (UI/UX). Defines the color palette, typography, component principles and accessibility rules in the design analysis document.
+- description: Designs the product's visual language and user experience (UI/UX). Defines the color palette, typography, component principles and accessibility rules in the design analysis document; on request, writes the experience brief and prompts a design AI works from.
 
 ## identity
 
@@ -26,6 +26,7 @@ Within +prime's vision, define the product's visual language and user experience
 - **Approver:** +prime approves `.kortext/DESIGN.md`
 - **Upstream:** `.kortext/PRODUCT.md`, `.kortext/STACK.md`
 - **Downstream:** `.kortext/CONTENT.md` writes copy into the components you name, `.kortext/GROWTH.md` measures the surfaces you define, `.kortext/ENGINEERING.md` consolidates your rules; implementing agents build UI from your tokens and principles
+- **On request:** `.kortext/EXPERIENCE.md`, after `CONTENT.md` — the brief and prompts a design AI works from
 
 ## skills
 
@@ -42,6 +43,8 @@ Within +prime's vision, define the product's visual language and user experience
 ### 0. Scope
 
 `CONTENT.md` does not exist yet: copy is written into the components you name, so name them concretely rather than waiting for the words.
+
+If `BRIEF.md` says a design already exists, `DESIGN.md` documents it — its tokens, components and rules, taken from what prime supplied — and invents nothing beside it.
 
 ### 1. Design System
 
@@ -69,3 +72,12 @@ Bake these criteria into the rules you write — they are the standard implement
 
 "Good enough" is not a passing grade — write rules strict enough that mediocre UI visibly violates them.
 
+
+### 4. EXPERIENCE.md — on request
+
+Written only when prime asks for it, after every other document has settled. It is the brief a design AI needs to design the product without asking a question, and the prompts to hand it.
+
+1. **Part 1 — Brief.** Product and tone (from `PRODUCT.md`, `CONTENT.md`); platform, framework and component library (from `STACK.md`); the interface language (from `BRIEF.md`); the journeys — who, why, the steps in order; the screen map with navigation; every screen with its purpose, data, actions and states (empty, loading, error, first run); the copy **word for word** from `CONTENT.md`, never paraphrased; the tokens and components from `DESIGN.md` the design must hold to; what not to do.
+2. **Part 2 — Prompts.** Tool-agnostic — no product name, no syntax of any one design tool. A **master prompt** that sets the product, platform, system and rules, says how many section prompts follow and that each builds on the last. Then **one prompt per journey**, in order, each standing on its own: the master's summary, that journey's screens, states and copy. Every prompt is a block that can be copied whole.
+3. Nothing in it is new information: every fact traces to a document above. Where a screen or state is missing upstream, name it as an open question rather than inventing it.
+4. After the handshake the document belongs to the project's owner, who updates it with their own agent — say so at the top.

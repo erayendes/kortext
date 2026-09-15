@@ -186,6 +186,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       const docCounts = { settled: 0, total: 0 };
       try {
         for (const d of listDocs(db, p, pkgRoot)) {
+          if (d.optional && d.status === 'uninitialized') continue;   // not asked for: not a document owed
           docCounts.total++;
           if (d.status === 'approved' || d.status === 'not-applicable') docCounts.settled++;
         }
@@ -345,6 +346,26 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
           if (out.ok) kickChain(project);
         });
     }
+    res.status(202).json({ started: rel });
+  });
+
+  // Prime asks for an on-request document — the one press that starts it.
+  app.post('/api/projects/:id/docs/request', (req, res) => {
+    const project = projectOr404(req.params.id, res);
+    if (!project) return;
+    const rel = String(req.body?.rel ?? '');
+    const step = loadDocMap(pkgRoot, project.kind ?? 'new').get(rel);
+    const doc = listDocs(db, project, pkgRoot).find((d) => d.rel === rel);
+    if (!step?.optional || !doc) return res.status(404).json({ error: 'not an on-request document' });
+    if (doc.status !== 'uninitialized') return res.status(409).json({ error: `${rel} is already written` });
+    if (doc.blocked) return res.status(409).json({ error: 'document inputs are not settled' });
+    if (project.paused || runningDoc(db, project.id, rel))
+      return res.status(409).json({ error: 'Continue the project and wait for this document to finish' });
+    const engine = engineFor(db, project);
+    if (!engine) return res.status(409).json({ error: 'no agent CLI installed' });
+    void runStep(db, project, step, engine, pkgRoot).then((out) => {
+      if (out.ok) kickChain(project);
+    });
     res.status(202).json({ started: rel });
   });
 
@@ -946,9 +967,18 @@ ${body}`,
     // The handover, counted rather than gated: a conflict or a finding is work
     // deferred to the build phase, and prime should see how much of it there is
     // without being asked to settle any of it here.
-    const docs = listDocs(db, project, pkgRoot).filter((d) => d.status !== 'uninitialized');
+    const all = listDocs(db, project, pkgRoot);
+    const docs = all.filter((d) => d.status !== 'uninitialized');
+    // What can still be asked for: an on-request document not yet written, whose
+    // inputs all stand — an input ruled not-applicable takes the offer with it.
+    const nap = new Set(all.filter((d) => d.status === 'not-applicable').map((d) => d.rel));
+    const onRequest = all
+      .filter((d) => d.optional && d.status === 'uninitialized' && !d.blocked)
+      .filter((d) => !d.inputs.some((i) => nap.has(i)))
+      .map((d) => d.rel);
     res.json({
       analysisComplete: analysisComplete(db, project, pkgRoot),
+      onRequest,
       kopengInstalled: onPath('kopeng'),
       transferred,
       documents: docs.length,

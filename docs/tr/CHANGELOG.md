@@ -4,6 +4,14 @@
 
 ## [Unreleased]
 
+- **EXPERIENCE.md, isteğe bağlı.** Zincirin sıraya koymadığı, el sıkışmada sunulan bir belge
+  daha: tasarım yapay zekâsının ihtiyacı olan brief — yolculuklar, her ekran durumlarıyla,
+  metinler birebir — ve yapıştırmaya hazır prompt'lar, bir ana ve yolculuk başına bir tane,
+  herhangi bir tasarım aracı için. El sıkışma kartında *Write EXPERIENCE.md*'ye basın; tasarım
+  zaten elinizdeyse atlayın. Brief'e hangisi olduğunu söyleyen bir *Design* bölümü geldi;
+  `DESIGN.md` de mevcut tasarımı icat etmek yerine belgeliyor. El sıkışmadan sonra belge proje
+  sahibinindir.
+
 - **macOS için menü çubuğu uygulaması.** Sürümün yanında `Kortext.zip`, notarize edilmiş,
   kendini güncelleyen. Proje başına bir kart: sizi bekleyen belgeler — `approve`, `review`,
   `failed` — ve yazılmakta olanlar, gri; satıra basınca panel o belgede açılır. ⏻ sunucuyu
