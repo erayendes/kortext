@@ -1922,11 +1922,8 @@ function ExperienceOffer({ project }: { project: Project }) {
         </span>
         {err && <span className="kx-error">{err}</span>}
       </div>
-      {/* The button, and under it the engine line — the head's own arrangement. */}
+      {/* The engine line first — pick what writes it — and the button under it. */}
       <div className="kx-handshake-offer-side">
-        <button className="btn btn-primary" onClick={ask} disabled={busy}>
-          {busy ? 'Starting…' : 'Write EXPERIENCE.md'}
-        </button>
         <EngineButton
           engines={engines}
           engine={engine}
@@ -1934,6 +1931,9 @@ function ExperienceOffer({ project }: { project: Project }) {
           effort={effort}
           onOpen={() => setPicking(true)}
         />
+        <button className="btn btn-primary" onClick={ask} disabled={busy}>
+          {busy ? 'Starting…' : 'Write EXPERIENCE.md'}
+        </button>
       </div>
       <EnginePicker
         open={picking}
