@@ -126,6 +126,19 @@ function installContract(repoPath: string, templates: string): void {
   writePointer(join(repoPath, 'CLAUDE.md'));
 }
 
+/**
+ * A project added before an on-request document existed has no skeleton for it.
+ * Put the missing ones on the shelf, so the offer can be made — never a required
+ * one: those were there from the start, and a missing one is prime's doing.
+ */
+export function scaffoldOptional(repoPath: string, pkgRoot: string, kind: 'new' | 'existing'): void {
+  const kx = join(repoPath, '.kortext');
+  if (!existsSync(kx)) return;
+  for (const [rel, step] of loadDocMap(pkgRoot, kind)) {
+    if (step.optional) copyIfMissing(join(pkgRoot, 'templates', 'docs', rel), join(kx, rel));
+  }
+}
+
 /** Remove the Kortext contract block and CLAUDE.md pointer, preserving user content. */
 export function uninstallContract(repoPath: string): void {
   removeContractBlock(join(repoPath, 'AGENTS.md'));

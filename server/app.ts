@@ -6,6 +6,7 @@ import {
   createProject,
   listProjects,
   removeProject,
+  scaffoldOptional,
   scaffoldProject,
   setArchived,
   uninstallContract,
@@ -969,6 +970,7 @@ ${body}`,
     // The handover, counted rather than gated: a conflict or a finding is work
     // deferred to the build phase, and prime should see how much of it there is
     // without being asked to settle any of it here.
+    scaffoldOptional(project.repo_path, pkgRoot, project.kind ?? 'new');
     const all = listDocs(db, project, pkgRoot);
     const docs = all.filter((d) => d.status !== 'uninitialized');
     // What can still be asked for: an on-request document not yet written, whose
