@@ -2870,6 +2870,10 @@ button.kx-note-exc:hover {
   flex-direction: column;
   gap: var(--sp-3);
 }
+/* A thread whose box is closed is a way back in: the hand says so. */
+.kx-thread:not(:has(.kx-thread-input)) .kx-explain {
+  cursor: pointer;
+}
 .kx-thread-input {
   display: flex;
   flex-direction: column;

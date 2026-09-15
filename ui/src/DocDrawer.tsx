@@ -945,6 +945,10 @@ export function DocDrawer({
                     <LineThread
                       thread={explains.filter((x) => x.line === t.index)}
                       active={selected === t.index}
+                      // A click on the thread itself — the answer you are reading — is a
+                      // way back in: the box reopens under it for the follow-up, without
+                      // going up to the line to select it again.
+                      onActivate={() => setSelected(t.index)}
                       suggest={openQ.has(t.index)}
                       answerBy={answerBy}
                       onAsk={(q) => ask(t.index, q)}
@@ -1925,6 +1929,7 @@ function LineThread({
   onNote,
   onDecide,
   suggest,
+  onActivate,
   onDraft,
   drafting,
   verbs = ['Accept', 'Deny'],
@@ -1942,6 +1947,8 @@ function LineThread({
   /** Offer "What do you suggest?" — on a question or a request, where the author
    * has something to decide; a plain line of the document has nothing to suggest. */
   suggest?: boolean;
+  /** The thread was clicked while its box was closed: reopen it for a follow-up. */
+  onActivate?: () => void;
   /** No agent writes this document, so nothing can be accepted on its behalf. */
   /** Set on the brief: the engine drafts the change instead of Accept. */
   onDraft?: () => void;
@@ -1964,7 +1971,15 @@ function LineThread({
     else onNote(t);
   };
   return (
-    <div className="kx-thread">
+    <div
+      className="kx-thread"
+      onClick={(e) => {
+        // Buttons in the thread do their own thing; a click on the words reopens the box.
+        if (active || !onActivate) return;
+        if ((e.target as HTMLElement).closest('button, textarea, a')) return;
+        onActivate();
+      }}
+    >
       {thread.map((x, i) => (
         <div key={i} className="kx-explain">
           <span className="kx-explain-who mono">prime</span>
