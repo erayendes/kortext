@@ -155,6 +155,7 @@ struct ProjectCard: View {
     @EnvironmentObject var model: Model
     let p: ProjectState
     let rows: [Model.Waiting]
+    @State private var hover = false
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 6) {
@@ -164,8 +165,15 @@ struct ProjectCard: View {
             }
             .padding(.horizontal, 14).padding(.top, 11).padding(.bottom, 4)
             if rows.isEmpty, p.complete {
-                Text("Every document is settled — AGENTS.md in force.").font(Kx.sans(12)).foregroundStyle(Kx.fgMuted)
-                    .fixedSize(horizontal: false, vertical: true).padding(.horizontal, 14).padding(.vertical, 7)
+                // A settled project's one line is a row too: click opens the project in the panel.
+                Button { model.openPanel(project: p.id, doc: nil) } label: {
+                    Text("Every document is settled — AGENTS.md in force.").font(Kx.sans(12)).foregroundStyle(Kx.fgMuted)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 14).padding(.vertical, 7)
+                        .background(hover ? Kx.bgHover : .clear)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain).hand().onHover { hover = $0 }
             }
             ForEach(rows) { w in WaitingRow(w: w) }
         }
