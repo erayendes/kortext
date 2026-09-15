@@ -945,6 +945,7 @@ export function DocDrawer({
                     <LineThread
                       thread={explains.filter((x) => x.line === t.index)}
                       active={selected === t.index}
+                      suggest={openQ.has(t.index)}
                       answerBy={answerBy}
                       onAsk={(q) => ask(t.index, q)}
                       onNote={(text) => {
@@ -1379,6 +1380,7 @@ function ActionNeeded({
                     <LineThread
                       thread={thread}
                       active={open === key}
+                      suggest
                       answerBy={answerBy}
                       onAsk={(text) => onAsk(q.index, text)}
                       onNote={(text) => {
@@ -1427,6 +1429,7 @@ function ActionNeeded({
                   {(talk.length > 0 || open === key) && (
                     <LineThread
                       thread={talk.map((c) => ({ line: null, question: c.q, answer: c.a }))}
+                      suggest
                       active={open === key}
                       answerBy={r.from.replace(/\.md$/, '')}
                       onAsk={(q) => askFrom(r, q)}
@@ -1471,6 +1474,7 @@ function ActionNeeded({
                   {(talk.length > 0 || open === key) && (
                     <LineThread
                       thread={talk.map((c) => ({ line: null, question: c.q, answer: c.a }))}
+                      suggest
                       active={open === key}
                       answerBy={doc.name}
                       onAsk={(q) => askOwn(r, q)}
@@ -1920,6 +1924,7 @@ function LineThread({
   onAsk,
   onNote,
   onDecide,
+  suggest,
   onDraft,
   drafting,
   verbs = ['Accept', 'Deny'],
@@ -1934,6 +1939,9 @@ function LineThread({
    * Ask · Accept · Deny, and whatever is in the box rides along as the note.
    */
   onDecide?: (what: 'accept' | 'deny', note: string) => void;
+  /** Offer "What do you suggest?" — on a question or a request, where the author
+   * has something to decide; a plain line of the document has nothing to suggest. */
+  suggest?: boolean;
   /** No agent writes this document, so nothing can be accepted on its behalf. */
   /** Set on the brief: the engine drafts the change instead of Accept. */
   onDraft?: () => void;
@@ -2008,14 +2016,16 @@ function LineThread({
             {/* The question most rows get asked, without typing it. The author
                 answers in the document's language, and the reply carries
                 Use as my answer — so a question can be settled in two presses. */}
-            <button
-              className="btn btn-link-primary"
-              disabled={waiting}
-              title="Ask the author what it would suggest"
-              onClick={() => onAsk("What do you suggest? Answer in the document's language.")}
-            >
-              Suggest
-            </button>
+            {suggest && (
+              <button
+                className="btn btn-link-primary"
+                disabled={waiting}
+                title="Ask the author what it would suggest"
+                onClick={() => onAsk("What do you suggest? Answer in the document's language.")}
+              >
+                Suggest
+              </button>
+            )}
             <button
               className="btn btn-link-primary"
               disabled={!text.trim()}
