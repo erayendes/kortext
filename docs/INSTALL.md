@@ -26,43 +26,6 @@ npm install -g --allow-scripts=better-sqlite3 kortext
 > Windows support is experimental. Kortext is developed and tested on macOS and Linux. The Windows-specific parts were written, but have not been run on a real Windows machine.
 > If something does not work, please [open an issue](https://github.com/erayendes/kortext/issues); the fault is most likely not in your setup.
 
-<details>
-<summary><b>Setting up Node 22 and an agent CLI</b></summary>
-<br/>
-
-**Node 22 on macOS**
-
-```sh
-brew install node@22
-```
-
-**Node 22 on Windows** — install Node 22 from **nodejs.org** (the LTS labelled v22.x). On the *Tools for Native Modules* screen, tick **"Automatically install the necessary tools"**; Kortext's SQLite binding needs them. `EACCES` or a permission error on the global install? Point npm's global folder at one you own instead of opening an admin shell:
-
-```powershell
-npm config set prefix "$env:APPDATA\npm"
-```
-
-and add `%APPDATA%\npm` to your `PATH`.
-
-**Linux**
-
-```sh
-sudo apt install -y curl build-essential python3      # gcc/make for the SQLite binding
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
-nvm install 22 && nvm alias default 22
-```
-
-Do not `sudo npm install -g`. On `EACCES`: `npm config set prefix ~/.npm-global`, then put `~/.npm-global/bin` on your `PATH`.
-
-**An agent CLI**
-
-```sh
-npm install -g @anthropic-ai/claude-code    # claude
-npm install -g @openai/codex                # codex
-npm install -g @google/gemini-cli           # gemini
-```
-</details>
-
 # Update
 
 When a new version is out, the panel says so in a blue strip under the heading — it checks when opened and then every hour.
@@ -73,6 +36,7 @@ By hand, or if the button fails:
 
 ```sh
 npm update -g kortext
+npm uninstall -g kortext
 ```
 
 # Uninstall

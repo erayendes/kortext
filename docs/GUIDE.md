@@ -107,6 +107,7 @@ The brief has no Accept — a persona did not write it, you did. In its place st
 
 The engine — `claude`, `codex`, `antigravity` and the others in the list.
 At the right, the line under the buttons says what runs it — `claude · sonnet · high`.
+**Change model** beside Continue opens the picker.
 You pick the agent when adding the project, but you can change it whenever you like. When a quota runs out, changing it is all there is to do.
 
 - **Pause** stops new steps from starting; the running step stops too.
