@@ -46,7 +46,7 @@ Bu arada, daha önce başlamış projeleri de unutmadım. Kortext, mevcut kod ta
 
 Tek bir insan rolü var, **Prime**. Diğer personalar; product manager, architect, designer, growth expert, security engineer, DevOps engineer, DBA, compliance expert, copywriter ve QA engineer.
 
-**BRIEF.md**, sizin verdiğiniz belge. Bu belgeden referansla Kortext’in ürettiği belgeler; `PRODUCT.md`, `STACK.md`, `STRUCTURE.md`, `ARCHITECTURE.md`, `DESIGN.md`, `GROWTH.md`, `SECURITY.md`, `ENVIRONMENT.md`, `DATABASE.md`, `API.md`, `LEGAL.md`, `CONTENT.md`, `ENGINEERING.md`, `TEST.md` — ve sonda, isteğe bağlı, `EXPERIENCE.md`: tasarım yapay zekâsının çalışacağı brief ve prompt'lar
+**BRIEF.md**, sizin verdiğiniz belge. Bu belgeden referansla Kortext’in ürettiği belgeler; `PRODUCT.md`, `STACK.md`, `STRUCTURE.md`, `ARCHITECTURE.md`, `DESIGN.md`, `GROWTH.md`, `SECURITY.md`, `ENVIRONMENT.md`, `DATABASE.md`, `API.md`, `LEGAL.md`, `CONTENT.md`, `ENGINEERING.md`, `TEST.md` — ve en sonda, isterseniz, `EXPERIENCE.md`: tasarımı yapacak yapay zekâ için brief ve prompt'lar
 
 `BRIEF.md`'nin bir örneği var. Eğer yazdığınız brief yeterli değilse, bunu belirtiyor.
 
@@ -75,7 +75,7 @@ Kortext hiçbir bilgi almıyor, telemetry tutmuyor. Ama ne kadar kullanılacağ�
    
 5. Bütün belgeler onaylandığında ya da gerek yok dendiğinde analiz bitmiştir. Belgeler artık projenin anayasası, `AGENTS.md` de devir teslim metnidir. Başlangıç komutlarından birini kendi istemcinize — CLI ya da uygulama, hangisini kullanıyorsanız — kopyalayın ve yapmaya başlayın.
 
-> Bir belge "bu projede buna gerek yok" diyerek, gerekçesiyle, `not-applicable` olarak da kapanabilir. O da yazarın kararıdır — her taslak gibi siz onaylarsınız.
+> Bir belge "bu projede buna gerek yok" diyerek, gerekçesiyle, `not-applicable` olarak da kapanabilir. Bu da yazarın kararıdır; her taslak gibi onayı sizden bekler.
 
 ## Kurulum
 

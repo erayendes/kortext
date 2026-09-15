@@ -4,19 +4,19 @@
 
 ## [Unreleased]
 
-- **EXPERIENCE.md, isteğe bağlı.** Zincirin sıraya koymadığı, el sıkışmada sunulan bir belge
-  daha: tasarım yapay zekâsının ihtiyacı olan brief — yolculuklar, her ekran durumlarıyla,
-  metinler birebir — ve yapıştırmaya hazır prompt'lar, bir ana ve yolculuk başına bir tane,
-  herhangi bir tasarım aracı için. El sıkışma kartında *Write EXPERIENCE.md*'ye basın; tasarım
-  zaten elinizdeyse atlayın; motoru ve modeli düğmenin üstünden seçersiniz. `DESIGN.md` proje
-  klasöründe zaten olan bir tasarımı icat etmek yerine belgeliyor. El sıkışmadan sonra belge
-  proje sahibinindir.
-- **n/a prime'ın kararı.** Yazarın "bu projeye gerekmez" dediği belge artık kendi başına
-  yerleşmiyor: Action Needed'a `n/a?` olarak gelir, *Approve n/a* yerleştirir. Bir not ve bir
-  revizyon yazarı geri gönderir, belgeyi yazar.
-- **Konuşma yanıtın olduğu yerde kalır.** Başka yere tıklayınca satırın soru kutusu katlanır;
-  yanıta tıklayınca ek soru için yeniden açılır; üstündeki × konuşmayı kapatır. *Suggest* yalnız
-  yazarın önerecek bir şeyi olduğu yerde — bir soruda ya da bir istekte — çıkar, düz satırda
+- **EXPERIENCE.md, isteğe bağlı.** Zincirin kendiliğinden yazmadığı, el sıkışmada sunulan
+  bir belge daha: tasarımı yapacak yapay zekânın ihtiyacı olan brief — yolculuklar, her ekran
+  durumlarıyla, metinler birebir — ve yapıştırmaya hazır prompt'lar: bir ana prompt, yolculuk
+  başına bir prompt, hangi tasarım aracı olursa olsun. El sıkışma kartında *Write
+  EXPERIENCE.md*'ye basın; motor ve model düğmenin üstündeki satırdan seçilir. Tasarım zaten
+  elinizdeyse atlayın. Proje klasöründe zaten bir tasarım varsa `DESIGN.md` yenisini uydurmaz,
+  onu belgeler. El sıkışmadan sonra belge proje sahibinindir.
+- **n/a artık prime'ın kararı.** Yazarın "bu projeye gerekmez" dediği belge artık kendiliğinden
+  kesinleşmiyor: Action Needed'a `n/a?` olarak gelir, *Approve n/a* kesinleştirir. Katılmıyorsanız
+  bir not bırakıp revizyon isteyin; yazar döner, belgeyi yazar.
+- **Soru-cevap yanıtın yanında kalır.** Başka yere tıklayınca yazma kutusu kapanır; yanıta
+  tıklayınca ek soru için yeniden açılır; üstündeki × soru-cevabı kaldırır. *Suggest* yalnız bir
+  soruda ya da bir istekte görünür — yazarın önerecek bir şeyi olduğu yerde; düz bir satırda
   değil.
 
 - **macOS için menü çubuğu uygulaması.** Sürümün yanında `Kortext.zip`, notarize edilmiş,

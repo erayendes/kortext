@@ -11,7 +11,7 @@ Kurulum ve genel bakış [README](README.md)'de; burası bir proje ekrana geldik
 Kortext **sizin** ajan CLI'ınızı repo'nun içinde çalıştırır. Her analiz koşusu bir belge üretir ve taslak olarak işaretlenir.
 Taslakları yalnızca siz onaylarsınız.
 
-- **Her belgenin bir durumu vardır.** `waiting` (sırası gelmedi ya da yazıldı, onayınızı bekliyor) → `writing` (şu an yazılıyor) → `approved`. Yazımı durdurursanız `paused` olur, devam ettirebilirsiniz; hata alırsa `failed` olur, yeniden başlatabilirsiniz. Yazarın projede işlevi olmadığına karar verdiği bir belge size `n/a?` olarak gelir — onaylarsanız `n/a` olarak yerleşir; katılmıyorsanız bir not yazarı geri gönderir, belgeyi yazar.
+- **Her belgenin bir durumu vardır.** `waiting` (sırası gelmedi ya da yazıldı, onayınızı bekliyor) → `writing` (şu an yazılıyor) → `approved`. Yazımı durdurursanız `paused` olur, devam ettirebilirsiniz; hata alırsa `failed` olur, yeniden başlatabilirsiniz. Yazar bir belgenin bu projede yeri olmadığına karar verirse belge size `n/a?` olarak gelir — onaylarsanız `n/a` olur; katılmıyorsanız bir not bırakın, yazar döner ve belgeyi yazar.
 - **Durumun yanında bir rozet olabilir.** `approve` (onayınızı bekliyor), `review` (soruları ya da istekleri var), `recheck` (okuduğu bir belge değişti, yeniden okunacak), `revision` (ilk yazım değil, yeniden yazım).
 - **Sıra bir tercih değildir.** Bir belge, bağlı olduğu her şey yerine oturduktan sonra yazılır. `SECURITY`'nin `ARCHITECTURE`'ı beklemesi gibi. Bir belgeyi onaylamanın başka belgeyi başlatması bundandır.
 - **Çalıştığınız tek yer paneldir.**
@@ -37,7 +37,7 @@ Listeden herhangi bir belgeyi açın.
 **Approve** — belge kendinden sonrakilerin zemini olur, zincir ilerler.
 
 **Ask** — bir satır seçin ve sorunuzu sorun. Belgeyi yazan persona o pasaj hakkında yanıt verir.
-Sorular anlamak içindir, değiştirmek için değil. Bu yüzden kaydedilmezler: konuşma panelde yaşar, başka yere tıklayınca kutusu katlanır, yanıta tıklayınca ek soru için yeniden açılır, üstündeki **×** konuşmayı tamamen kapatır. Belgenin kendi sorularından birinde ya da bir istekte **Suggest** yazmadan yazara "sen ne önerirsin?" der, her yanıtın altındaki **Use this answer** de onu sizin notunuz yapar — iki basışta kapanan soru. Belgenin düz bir satırında önerilecek bir şey yoktur; orada düğmeler Ask ve Add note'tur.
+Sorular anlamak içindir, değiştirmek için değil. Bu yüzden kaydedilmezler: soru-cevap panelde durur, başka yere tıklayınca yazma kutusu kapanır, yanıta tıklayınca ek soru için yeniden açılır, üstündeki **×** soru-cevabı kaldırır. Belgenin kendi sorularından birinde ya da bir istekte **Suggest** yazmadan yazara "sen ne önerirsin?" diye sorar; her yanıtın altındaki **Use this answer** o yanıtı sizin notunuz yapar — bir soru iki basışta kapanır. Belgenin düz bir satırında önerilecek bir şey yoktur; orada yalnız Ask ve Add note vardır.
 
 **Add note** — notlarınız belgenin yeniden yazılmasını sağlar. Belgenin açık sorularından birine bırakılan not o sorunun yanıtı sayılır: soru kaybolur, ortaya koyduğu bilgi ise belgenin parçası olur.
 
@@ -89,7 +89,7 @@ Seçicinin ikinci bölümü **model**. `default` seçimi CLI'ın kendi ayarını
 
 Bütün belgeler onaylandığında analiz biter. Kart size üç başlangıç komutu verir; birini kendi ajanınıza kopyalayın. Ajan `AGENTS.md`'yi ve `.kortext/` belgelerini okuyarak başlar.
 
-Burada zincirin dışında bir belge daha sunulur: **EXPERIENCE.md**, ürünü tasarlayacak yapay zekâ için. Yolculukları, her ekranı durumlarıyla, metinleri birebir ve yapıştırmaya hazır prompt'ları taşır — bir ana prompt, yolculuk başına bir tane, herhangi bir tasarım aracı için. Yanındaki kontrolden motoru ve modeli seçin — tasarım brief'i güçlü bir model hak eder — **Write EXPERIENCE.md**'ye basın, tasarımcı yazar; ötekiler gibi onaylayın. Tasarım zaten elinizdeyse atlayın — belgeler, insan olan bir tasarımcıya yetecek kadar söyler. El sıkışmadan sonra belge sizindir: ürün değişince kendi ajanınıza güncelletin.
+Bu kartta zincire ait olmayan bir belge daha sunulur: **EXPERIENCE.md**, ürünü tasarlayacak yapay zekâ için. Yolculukları, her ekranı durumlarıyla, metinleri birebir ve yapıştırmaya hazır prompt'ları taşır — bir ana prompt, yolculuk başına bir prompt, hangi tasarım aracı olursa olsun. Düğmenin üstündeki satırdan motoru ve modeli seçin — tasarım brief'i güçlü bir model hak eder — **Write EXPERIENCE.md**'ye basın; tasarımcı yazar, siz ötekiler gibi onaylarsınız. Tasarım zaten elinizdeyse atlayın; belgeler bir tasarımcıya zaten yeter. El sıkışmadan sonra belge sizindir: ürün değişince kendi ajanınıza güncelletin.
 
 Buradan sonra Kortext işin içinde değildir.
 
