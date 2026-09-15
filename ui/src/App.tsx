@@ -1450,35 +1450,47 @@ function AddProject({
           onChange={(e) => setDocLang(e.target.value)}
         />
       </div>
+      {/* The design, a section of its own like the brief: three ways it can stand,
+          one line under each saying what follows. A design in hand is read from
+          the project folder — a headless CLI cannot open a Figma link. */}
       {kind === 'new' && (
-        <div className="kx-form-row kx-design-row">
+        <div className="kx-design">
           <span className="kx-cmd-title">Design</span>
-          <div className="kx-chips">
-            {(
-              [
-                ['make', 'To be made', 'after the analysis — EXPERIENCE.md is offered at the end'],
-                ['have', 'Already in hand', 'DESIGN.md documents it — say where it is'],
-                ['none', 'None', 'the product renders nothing'],
-              ] as const
-            ).map(([id, label, note]) => (
-              <button
-                key={id}
-                className={`kx-chip${design === id ? ' on' : ''}`}
-                onClick={() => setDesign(id)}
-                title={note}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          {design === 'have' && (
-            <input
-              className="kx-input kx-path"
-              placeholder="Where is it — a folder in the project, a link, or the design system's name"
-              value={designRef}
-              onChange={(e) => setDesignRef(e.target.value)}
-            />
-          )}
+          {(
+            [
+              ['make', 'To be made', 'After the analysis — a brief for a design AI is offered at the end.'],
+              ['have', 'Already in hand', 'Put the files in the project folder and say where; DESIGN.md documents that design instead of inventing one.'],
+              ['none', 'None', 'The product renders nothing — a CLI, a library, a service.'],
+            ] as const
+          ).map(([id, label, note]) => (
+            <label key={id} className={`kx-radio${design === id ? ' on' : ''}`}>
+              <input
+                type="radio"
+                name="design"
+                checked={design === id}
+                onChange={() => setDesign(id)}
+              />
+              <span className="kx-radio-text">
+                <span className="kx-radio-label">{label}</span>
+                <span className="kx-cmd-hint">{note}</span>
+                {/* The where-is-it field opens inside its own row, under the line it answers. */}
+                {id === 'have' && design === 'have' && (
+                  <span className="kx-design-where">
+                    <input
+                      className="kx-input kx-path"
+                      placeholder="Where — a folder in the project (design/), or the design system's name"
+                      value={designRef}
+                      onChange={(e) => setDesignRef(e.target.value)}
+                    />
+                    <span className="kx-cmd-hint">
+                      Figma links cannot be read — export what matters (screens, tokens) into the
+                      folder.
+                    </span>
+                  </span>
+                )}
+              </span>
+            </label>
+          ))}
         </div>
       )}
       {kind === 'existing' && (
