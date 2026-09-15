@@ -87,6 +87,8 @@ Sorular anlamak içindir, değiştirmek için değil. Bu yüzden kaydedilmezler.
 
 **Preview** — yalnız `DESIGN.md`'de. Tasarımcının yazdığı token'ların — renkler, yazı tipleri, boşluklar, köşe yarıçapları, gölgeler — gerçeğe döndürülmüş ve görselleştirilmiş hali. Butonun rengini ve kenarlarını görmek HEX ve radius bilgisinden çok daha iyidir. Açık ve karanlık modu da destekler. Repo'nuzda `.kortext/DESIGN.html` olarak da durur.
 
+**Export** — açık belgenin bir kopyasını dosya olarak indirir. `.kortext/` gizli bir klasördür, dosya seçme penceresi göstermez; bir tasarım yapay zekasına `EXPERIENCE.md` vermenin yolu budur.
+
 **Action Needed** — belgenin üstünde. Bu belgenin sizden beklediği her şey, iki grupta toplanır.
 
 *Questions* — belgenin size sordukları. Birine tıklayın, yanıtlayın ve Add note. Tüm sorular yanıtlanmadan belge onaylanamaz.
@@ -113,6 +115,7 @@ Ajanı projeyi eklerken seçersiniz ama istediğiniz zaman değiştirebilirsiniz
 - **Continue** kaldığı yerden devam eder.
 - **Restart** analiz belgelerini siler, `BRIEF.md`'yi olduğu gibi korur. Proje duraklatılmış gelir; **Start** ile yeniden başlar.
 - **Archive** biten projeyi rafa kaldırır. Repo'ya dokunmaz.
+- **Export documents** yazılmış her belgeyi tikli listeler — **All**, **None** ya da seçin — ve seçtiklerinizi tek bir zip olarak indirir.
 - **Remove** `.kortext/` klasörünü (brief dahil), `AGENTS.md`'deki Kortext bloğunu, `CLAUDE.md`'deki işaret satırını ve projenin loglarını siler; projeyi listeden çıkarır. `AGENTS.md` ve `CLAUDE.md`'deki kendi yazdıklarınız kalır.
 
 ## El sıkışma

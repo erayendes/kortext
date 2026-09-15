@@ -87,6 +87,8 @@ Questions are for understanding, not for changing. That is why they are not save
 
 **Preview** — on `DESIGN.md` only. The tokens the designer wrote — colours, typefaces, spacing, radii, shadows — made real and drawn. Seeing a button's colour and corners beats reading a HEX and a radius. Light and dark mode both. It also sits in your repo as `.kortext/DESIGN.html`.
 
+**Export** — saves a copy of the open document as a file. `.kortext/` is a hidden folder, so a file picker will not show it; when a design AI wants `EXPERIENCE.md` handed over, this is the way.
+
 **Action Needed** — at the top of the document. Everything this document expects of you, in two groups.
 
 *Questions* — what the document asks you. Click one, answer, Add note. The document cannot be approved until every question is answered.
@@ -113,6 +115,7 @@ You pick the agent when adding the project, but you can change it whenever you l
 - **Continue** picks up where it left off.
 - **Restart** deletes the analysis documents and keeps `BRIEF.md` as it is. The project comes back paused; **Start** begins again.
 - **Archive** puts a finished project on the shelf. It does not touch the repo.
+- **Export documents** lists every written document with a tick — **All**, **None**, or pick — and downloads the chosen ones as one zip.
 - **Remove** deletes the `.kortext/` folder (brief included), the Kortext block in `AGENTS.md`, the pointer line in `CLAUDE.md` and the project's logs, and takes the project off the list. Your own text in `AGENTS.md` and `CLAUDE.md` stays.
 
 ## The handshake
