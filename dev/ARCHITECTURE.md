@@ -170,7 +170,9 @@ the chain never starts: `producibleSteps` skips it, `analysisComplete` and the p
 `docCounts` leave it out while it is `uninitialized`, and it is scaffolded only on a project
 whose workflow has the step. It sits in To do as `waiting · on request`. Once every other
 document is settled, `GET …/handshake` lists it under `onRequest` (unless one of its inputs
-was ruled `not-applicable`) and the handshake card offers it; `POST …/docs/request` runs the
+was ruled `not-applicable`) and the handshake card offers it with the engine control beside the button — the head's
+control left with the handshake, and this one step still picks its CLI, model and effort;
+`POST …/docs/request` runs the
 step, and from its first draft on it gates the handshake like any other document. Today there
 is one: `EXPERIENCE.md`, the brief and prompts a design AI works from — new projects only,
 after `CONTENT.md`; after the handshake it belongs to the project's owner.

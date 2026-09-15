@@ -1885,6 +1885,24 @@ function ProjectScreen({
 function ExperienceOffer({ project }: { project: Project }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // The engine control left the head with the handshake; this one step still
+  // needs one, and a design brief is the kind of writing a stronger model earns.
+  // Picks save to the project at once, and the step reads them when it starts.
+  const [engines, setEngines] = useState<EngineInfo[]>([]);
+  const [engine, setEngine] = useState<string | null>(project.engine || null);
+  const [model, setModel] = useState(project.model ?? '');
+  const [effort, setEffort] = useState(project.effort ?? '');
+  const [picking, setPicking] = useState(false);
+  useEffect(() => {
+    api
+      .engines()
+      .then(({ engines, selected }) => {
+        const usable = engines.filter((e) => e.available);
+        setEngines(usable);
+        setEngine((current) => current ?? selected ?? usable[0]?.id ?? null);
+      })
+      .catch(() => {});
+  }, []);
   const ask = () => {
     setBusy(true);
     setErr(null);
@@ -1895,7 +1913,7 @@ function ExperienceOffer({ project }: { project: Project }) {
   };
   return (
     <div className="kx-handshake-offer">
-      <div>
+      <div className="kx-handshake-offer-text">
         <span className="kx-handshake-offer-title">Designing with an AI?</span>
         <span className="kx-cmd-hint">
           EXPERIENCE.md gives it the journeys, every screen with its states, the copy word for
@@ -1904,9 +1922,35 @@ function ExperienceOffer({ project }: { project: Project }) {
         </span>
         {err && <span className="kx-error">{err}</span>}
       </div>
-      <button className="btn btn-primary" onClick={ask} disabled={busy}>
-        {busy ? 'Starting…' : 'Write EXPERIENCE.md'}
-      </button>
+      <div className="kx-proj-actions">
+        <EngineButton
+          engines={engines}
+          engine={engine}
+          model={model}
+          effort={effort}
+          onOpen={() => setPicking(true)}
+        />
+        <button className="btn btn-primary" onClick={ask} disabled={busy}>
+          {busy ? 'Starting…' : 'Write EXPERIENCE.md'}
+        </button>
+      </div>
+      <EnginePicker
+        open={picking}
+        onClose={() => setPicking(false)}
+        projectId={project.id}
+        engines={engines}
+        engine={engine ?? engines[0]?.id ?? ''}
+        model={model}
+        effort={effort}
+        onEngine={(id, m, lvl) => {
+          setEngine(id);
+          setModel(m);
+          setEffort(lvl);
+        }}
+        onModel={setModel}
+        onEffort={setEffort}
+        onError={setErr}
+      />
     </div>
   );
 }

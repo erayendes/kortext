@@ -3281,7 +3281,7 @@ button.kx-removed-toggle:hover {
   border-radius: var(--r-md);
   background: var(--bg);
 }
-.kx-handshake-offer > div {
+.kx-handshake-offer-text {
   display: flex;
   flex-direction: column;
   gap: 2px;
