@@ -1,53 +1,91 @@
-# Kortext — Kılavuz
+# Kortext — Kullanım Kılavuzu
 
-🇬🇧 [For English press 9](../GUIDE.md)
+🇬🇧 [For English press 9]
 
-Kurulum ve genel bakış [README](README.md)'de; burası bir proje ekrana geldikten sonra ne yapılacağını anlatır.
+Genel bakış README, kurulum INSTALL'da; burası bir proje ekrana geldikten sonra ne yapılacağını anlatır.
 
----
+## Başlatma ve durdurma
 
-## Zihinsel model
+Kortext’i başlatmak için terminale `kortext` yazmanız yeterli. Başlattıktan sonra terminal penceresini kapatabilirsiniz; Kortext arka planda çalışmaya devam eder. 
+Sunucuyu durdurmak için panelin durum çubuğundaki ⏻ düğmesine basın. Ancak bir belge yazılırken kapanmaz.
 
-Kortext **sizin** ajan CLI'ınızı repo'nun içinde çalıştırır. Her analiz koşusu bir belge üretir ve taslak olarak işaretlenir.
-Taslakları yalnızca siz onaylarsınız.
+Yeniden başlatmak için terminale tekrar `kortext` yazmanız yeter.
+Arka plandaki sunucunun yazdıkları `~/.kortext/kortext.db.log` dosyasında birikir.
 
-- **Her belgenin bir durumu vardır.** `waiting` (sırası gelmedi ya da yazıldı, onayınızı bekliyor) → `writing` (şu an yazılıyor) → `approved`. Yazımı durdurursanız `paused` olur, devam ettirebilirsiniz; hata alırsa `failed` olur, yeniden başlatabilirsiniz. Yazar bir belgenin bu projede yeri olmadığına karar verirse belge size `n/a?` olarak gelir — onaylarsanız `n/a` olur; katılmıyorsanız bir not bırakın, yazar döner ve belgeyi yazar.
-- **Durumun yanında bir rozet olabilir.** `approve` (onayınızı bekliyor), `review` (soruları ya da istekleri var), `recheck` (okuduğu bir belge değişti, yeniden okunacak), `revision` (ilk yazım değil, yeniden yazım).
-- **Sıra bir tercih değildir.** Bir belge, bağlı olduğu her şey yerine oturduktan sonra yazılır. `SECURITY`'nin `ARCHITECTURE`'ı beklemesi gibi. Bir belgeyi onaylamanın başka belgeyi başlatması bundandır.
-- **Çalıştığınız tek yer paneldir.**
+```sh
+kortext              # arka planda başlat, paneli aç
+kortext --stop       # arka plandaki sunucuyu durdur
+```
 
-![Proje listesi — proje başına bir kart, her birinde neyin yerine oturduğu](../assets/panel-projects.png)
+> [!TIP]
+> Ne düğme ne `--stop` koşan bir adımı yarıda keser; biri sürerken beklemenizi ister. Böylece bir analiz yazımın ortasında kesilmez.
 
 ## Başlangıç
 
-**Yeni bir proje** yazdığınız brief'le oluşturulur. Brief ne yapıldığını, kimin için olduğunu, ürünün hangi dili konuştuğunu, işe yaradığını nasıl anlayacağınızı ve neyin kapsam dışı olduğunu söylemiyorsa analiz başlamaz — sorular gelir ve brief **Action needed**'a düşer.
-Soruları brief'te yanıtlayın ve onaylayın. Tekrar değerlendirmeye girer.
+Kortext paneli sizi sezgisel olarak yönlendirecektir. 
 
+Projenizin adını ve vermek istediğiniz proje kodunu verdikten sonra yeni projenizin yazılacağı dizini ya da mevcut projenizin olduğu dizini seçin.
+Eğer mevcut projenize Kortext’i entegre edecekseniz, çalıştırmak istediğiniz modeli seçip başlatın.
+Yeni bir proje içinse sizden brief bekleyecektir. 
 
-**Bu kapı tek bir nedenle vardır.** Üç cümleden ürün gereksinimleri belgesi yazması istenen bir ajan yazar — ürünü uydurur, o kadar. Bir soru bir dakikaya mal olur; uydurulmuş bir ürün bütün analize.
+> [!IMPORTANT]
+> Brief ne yapıldığını, kimin için olduğunu, ürünün hangi dili konuştuğunu, işe yaradığını nasıl anlayacağınızı ve neyin kapsam dışı olduğunu söylemiyorsa analiz başlamaz — sorular gelir ve brief **Action needed**'a düşer. Soruları brief'te yanıtlayın ve onaylayın. Tekrar değerlendirmeye girer.
+> **Bu kapı tek bir nedenle vardır.** Üç cümleden ürün gereksinimleri belgesi yazması istenen bir ajan yazar — ürünü uydurur, o kadar. Bir soru bir dakikaya mal olur; uydurulmuş bir ürün bütün analize.
 
-Ya da **mevcut projeniz** için repo'sunu gösterin. Kortext kodu inceleyerek çalışmaya başlar.
+Kortext repo'nun köküne `.kortext/` dizinini ve içine belge iskeletlerini, bir de `AGENTS.md` yerleştirir. `AGENTS.md` zaten varsa içine işaretli bir blok ekler; sizin yazdıklarınıza dokunmaz.
+
+Kortext, belgelerin bağımlılık sırasına uyan bir iş akışında adım adım çalışır. Her adım tek bir belge yazar — `PRODUCT.md`, `STACK.md`, `STRUCTURE.md`, `ARCHITECTURE.md`, `DESIGN.md`, `GROWTH.md`, `SECURITY.md`, `ENVIRONMENT.md`, `DATABASE.md`, `API.md`, `LEGAL.md`, `CONTENT.md`, `ENGINEERING.md`, `TEST.md`, `EXPERIENCE.md` — ve bunu bir persona olarak yapar: `product manager`, `architect`, `designer`, `growth expert`, `security engineer`, `DevOps engineer`, `DBA`, `compliance expert`, `copywriter` ve `QA engineer`.
+
+> Bir belge "bu projede buna gerek yok" gerekçesiyle, `not-applicable` olarak işaretlenebilir.
+
+Yazılan her belge onayınıza sunulur.
+
+Herhangi bir belgeyi açın. Onaylayabilirsiniz; bir satır seçip “bunu neden böyle yazdın?" diye sorabilirsiniz (bu sohbet geçicidir, hiçbir yere yazılmaz); ya da notlar bırakıp revizyon isteyebilirsiniz. Revizyon istediğinizde belge yeniden yazılır.
+
+Bir belge, kendinden önce yazılmış bir belgede değişiklik talep edebilir ya da kendinden sonra yazılacak bir belge için not bırakabilir. Bunlar da sizin onayınıza tabidir. 
+
+Bütün belgeler onaylandığında ya da gerek yok dendiğinde analiz bitmiştir. Belgeler artık projenin anayasası, `AGENTS.md` de devir teslim metnidir. 
+Başlangıç komutlarından birini kendi istemcinize — CLI ya da uygulama, hangisini kullanıyorsanız — kopyalayın ve geliştirmeye başlayın.
+
+## Kavramlar
+
+Her belge bir grup altında durumlarına göre listelenir. Böylece hangi aşamada olduğunuzu net bir şekilde görebilirsiniz.
+`Action needed` · `Doing` · `To do` · `Done`. Sizden aksiyon bekleyen her belge **Action needed**'a çıkar.
+
+Belge durumları ise; 
+- `waiting` → sırası gelmedi ya da yazıldı, onayınızı bekliyor
+- `writing` → şu an yazılıyor
+- `approved` → onaylanmış
+- Yazımı durdurursanız `paused` olur, devam ettirebilirsiniz
+- Hata alırsa `failed` olur, yeniden başlatabilirsiniz.
+- Projede işlevi olmayan belgelerse `n/a` olarak görünür.
+
+Ayrıca durumun yanında bir rozet görebilirsiniz. 
+- `approve` → onayınızı bekliyor
+- `review` → soruları ya da istekleri var, incelemenizi bekliyor
+- `recheck` → okuduğu bir belge değişti, yeniden okunacak,
+- `revision` ilk yazım değil, yeniden yazım
 
 ## Bir belgeyi incelemek
 
 Listeden herhangi bir belgeyi açın.
 
-![Çekmecede bir belge: durumu, yazarı ve sorduğu sorular](../assets/panel-document.png)
-
-**Approve** — belge kendinden sonrakilerin zemini olur, zincir ilerler.
+**Approve** — belgenin onayı olur ve kendinden sonrakilerin referansı olur, zincir ilerler.
 
 **Ask** — bir satır seçin ve sorunuzu sorun. Belgeyi yazan persona o pasaj hakkında yanıt verir.
-Sorular anlamak içindir, değiştirmek için değil. Bu yüzden kaydedilmezler: soru-cevap panelde durur, başka yere tıklayınca yazma kutusu kapanır, yanıta tıklayınca ek soru için yeniden açılır, üstündeki **×** soru-cevabı kaldırır. Belgenin kendi sorularından birinde ya da bir istekte **Suggest** yazmadan yazara "sen ne önerirsin?" diye sorar; her yanıtın altındaki **Use this answer** o yanıtı sizin notunuz yapar — bir soru iki basışta kapanır. Belgenin düz bir satırında önerilecek bir şey yoktur; orada yalnız Ask ve Add note vardır.
+Sorular anlamak içindir, değiştirmek için değil. Bu yüzden kaydedilmezler. Ama tutmak isterseniz **Use this answer**
+
+**Suggest** yazmadan yazara "sen ne önerirsin?" der, her yanıtın altındaki **Use this answer** de onu sizin notunuz yapar.
 
 **Add note** — notlarınız belgenin yeniden yazılmasını sağlar. Belgenin açık sorularından birine bırakılan not o sorunun yanıtı sayılır: soru kaybolur, ortaya koyduğu bilgi ise belgenin parçası olur.
 
 **Edit** — ajana gerek olmayan bir sayı ya da bir cümle için dosyayı kendiniz yazın. Sadece metni günceller; değişiklik isteklerini kapatmaz, açık soruları silmez. İstekler varken ikinci bir düğme çıkar: **Save, requests done** — metni kaydeder ve istekleri kapatır.
 
-**Preview** — yalnız `DESIGN.md`'de. Tasarımcının yazdığı token'lar — renkler, yazı tipleri ve ölçeği, boşluklar, köşe yarıçapları, gölgeler — gerçeğe döndürülmüş ve görselleştirilmiş hali. Butonun rengini ve kenarlarını görmek HEX ve radius bilgisinden çok daha iyidir. Açık ve karanlık modu da destekler. Aynı sayfa repo'nuzda `.kortext/DESIGN.html` olarak da durur.
+**Preview** — yalnız `DESIGN.md`'de. Tasarımcının yazdığı token'ların — renkler, yazı tipleri, boşluklar, köşe yarıçapları, gölgeler — gerçeğe döndürülmüş ve görselleştirilmiş hali. Butonun rengini ve kenarlarını görmek HEX ve radius bilgisinden çok daha iyidir. Açık ve karanlık modu da destekler. Repo'nuzda `.kortext/DESIGN.html` olarak da durur.
 
 **Action Needed** — belgenin üstünde. Bu belgenin sizden beklediği her şey, iki grupta toplanır.
 
-*Questions* — belgenin size sordukları. Birine tıklayın, yanıtlayın ve Add note. Yanıtlanmadan belge onaylanamaz.
+*Questions* — belgenin size sordukları. Birine tıklayın, yanıtlayın ve Add note. Tüm sorular yanıtlanmadan belge onaylanamaz.
 
 *Change Requests* — başka belgelerin bu belgeye gönderdiği revize istekleri. Örneğin `ENVIRONMENT`, log satırlarının log-yok kararıyla çeliştiğini söylüyor olabilir. Satırı seçin, **Accept** ya da **Deny**. Deny ise nedenini yazın. Eğer talep anlaşılmıyorsa **Ask** ile isteği yapan belgeye sorun.
 
@@ -55,27 +93,18 @@ Brief'te Accept yoktur — onu bir persona değil siz yazdınız. Satırda onun 
 
 **Apply** hepsini tek seferde gönderir. Yanıtlarınız ve kabul ettiğiniz istekler tek seferde yeniden yazıma girer. Reddettiklerinizse nedeniyle birlikte belgenin `## Decisions` bölümüne yazılır.
 
-**Bir belge başka bir belgeden değişiklik isteyebilir.** İsteyen belge hâlâ taslakken bu istek *Outgoing Requests* altında durur: **Accept** ya da **Discard**. Kararsız bir istek varken belge onaylanamaz. Kabul edilen istek hedefe gider ve orada *Incoming Requests* altında bekler — kutusu işaretli, yanında *accepted there* yazar. Bir kez karar verdiniz; yine de işareti kaldırabilirsiniz. Hedefin bir sonraki yeniden yazımına, oraya borçlu olunan her şeyle birlikte, tek seferde girer. Reddedilirse nedeniyle `## Decisions`'a iner. Bir daha sorulmaz; kod yazan ajan onu oradan okur.
-
 **Findings** — hiçbir belgenin sahiplenmediği dosyalardaki sorunları (bir `.gitignore` eksiği gibi), belgeye bilgilendirme için yazar. Sizden bir şey istemez.
 
 **Related documents** — bu belgeyi okuyan belgeler. Bunu değiştirirseniz onlar da yeniden okunur. Henüz yazılmamış olanlar üstü çizili durur.
 
 **Recheck** — belge onaylı ama okuduğu bir belge değişti. Sizin işiniz değil; sırası gelince yeniden okunur ve yalnız gerçekten çelişki varsa size bir istek düşer.
 
-## Gruplar
-
-`Action needed` · `Doing` · `To do` · `Done`. Sonuncusu kapalı gelir.
-
-Bir hata ya da sizi bekleyen bir şey taşıyan her belge **Action needed**'a çıkar.
-
 ## Çalıştırma, duraklatma, motoru değiştirme
 
-Motor — `claude`, `codex`, `antigravity` ve listedeki diğerleri. Sağda, düğmelerin altındaki satır onu neyin çalıştırdığını söyler — `claude · sonnet · high`. Continue'nun yanındaki **Change model** seçiciyi açar: CLI (kurulu olanlar), her biri bir satır açıklamalı modeller, effort. Her seçim anında kaydedilir. CLI'ı projeyi eklerken seçersiniz ama istediğiniz zaman değiştirebilirsiniz. Kota bittiğinde de yapılacak tek şey değiştirmek. 
-
-Seçicinin ikinci bölümü **model**. `default` seçimi CLI'ın kendi ayarını kullanır. Bir model seçerseniz her koşuda CLI'a geçilir (`claude --model`, `codex -m`).
-
-Üçüncüsü, **effort**, bu kavramı bilen CLI'larda görünür — `claude --effort`, codex'in `model_reasoning_effort`'u, `agy --effort` — o CLI'ın kendi seçicisinin sunduğu seviyelerle. Model gibi, ayarladıktan sonra başlayan koşulara ulaşır; motoru değiştirdiğinizde yeni CLI'ın almadığı seviye düşer.
+Motor — `claude`, `codex`, `antigravity` ve listedeki diğerleri. 
+Sağda, düğmelerin altındaki satır onu neyin çalıştırdığını söyler — `claude · sonnet · high`. 
+Continue'nun yanındaki **Change model** seçiciyi açar. 
+Ajanı’ı projeyi eklerken seçersiniz ama istediğiniz zaman değiştirebilirsiniz. Kota bittiğinde de yapılacak tek şey değiştirmek. 
 
 - **Pause** yeni adımların başlamasını durdurur; koşan adım da durur.
 - **Continue** kaldığı yerden devam eder.
@@ -85,29 +114,11 @@ Seçicinin ikinci bölümü **model**. `default` seçimi CLI'ın kendi ayarını
 
 ## El sıkışma
 
-![El sıkışma kartı — tıklayınca kopyalanan üç başlangıç komutu](../assets/panel-handshake.png)
-
 Bütün belgeler onaylandığında analiz biter. Kart size üç başlangıç komutu verir; birini kendi ajanınıza kopyalayın. Ajan `AGENTS.md`'yi ve `.kortext/` belgelerini okuyarak başlar.
 
-Bu kartta zincire ait olmayan bir belge daha sunulur: **EXPERIENCE.md**, ürünü tasarlayacak yapay zekâ için. Yolculukları, her ekranı durumlarıyla, metinleri birebir ve yapıştırmaya hazır prompt'ları taşır — bir ana prompt, yolculuk başına bir prompt, hangi tasarım aracı olursa olsun. Düğmenin üstündeki satırdan motoru ve modeli seçin — tasarım brief'i güçlü bir model hak eder — **Write EXPERIENCE.md**'ye basın; tasarımcı yazar, siz ötekiler gibi onaylarsınız. Tasarım zaten elinizdeyse atlayın; belgeler bir tasarımcıya zaten yeter. El sıkışmadan sonra belge sizindir: ürün değişince kendi ajanınıza güncelletin.
+Eğer henüz tasarımınız yoksa ve yapay zekaya yaptıracaksanız, isteğe bağlı `EXPERIENCE.md` belgesini talep edebilirsiniz. Tüm belgeleri inceleyip tam bir tasarım brief’i sahibi olursunuz. 
 
 Buradan sonra Kortext işin içinde değildir.
-
-## Panelin kendisi
-
-**Durum çubuğu**, altta. İlk satır çalışanı söyler — **Stable version 3.1.2** ya da **Beta version 3.2-beta3** — ve ⏻ düğmesi: sunucu ayaktayken yeşil, durunca kırmızı; iki basış durdurur, bir belge yazılırken asla. Sürüme basınca güncelleme denetler: *up to date* ya da alttaki şerit. İkinci satır öteki kanalı sunar — **Try beta version**, ya da geri dönmek için **Use stable version** — basınca kurulur, gerisini şerit üstlenir.
-
-**Güncelleme şeridi**, iki ekranda da başlığın altında, mavi, yalnız npm'de kanalınızda yeni sürüm varsa görünür — panel açılışta bir kez, sonra her saat bakar; açık dururken çıkan sürüm de düşer. **Update now** kurar; sonra şerit **Quit** sunar — basın, kortext'i yeniden açın, yeni sürüm devreye girer.
-
-**Tema.** Sağ üstteki düğme auto → light → dark döner.
-
-## Menü çubuğu uygulaması
-
-Mac'te Kortext menü çubuğunda yaşayabilir. Panel onu başlığın altında sunar — **Download for macOS** — bir kopyası çalışana kadar; ya da son sürümden `Kortext.zip`'i alın. Kortext'in kurulu olması gerekir; değilse söyler ve kurulum komutunu sizin için kopyalar.
-
-Uygulama açılınca sunucu çalışmıyorsa başlatır — sessizce, tarayıcı penceresi açmadan. Menü çubuğundaki K, kaç belgenin sizi beklediğini gösterir. Açın: proje başına bir kart, karar bekleyen belgeler beyaz ve panelin rozetleriyle, yazılmakta olanlar gri. Satıra basınca panel o belgede açılır. Altta ⏻ sunucuyu başlatır ya da — iki basışta — durdurur; uygulama kalır. yanındaki *open panel* paneli tarayıcıda açar.
-
-Bir şey değişince haber verir: bir belge geldi ve onay bekliyor, bir adım başarısız oldu, bir brief sorularla geri döndü, bir zincir tamamlandı. Bildirim paneli olayın olduğu yerde açar. Ayarlar, logonun arkasında: login'de başlat, bildirimler açık/kapalı ve iki sürüm satırı — **Stable version** ve **Try beta version**. Her biri kendi türünün en yenisini ve sizde kurulu olup olmadığını gösterir: *up to date* ya da *not installed*. Birine basınca o kurulur, sunucu yeniden başlar, uygulama da aynı kanala geçer. Ötekine basınca geri dönersiniz. Paket eskisi gibi panelden de güncellenir.
 
 ## Bir şey ters gittiğinde
 
@@ -132,4 +143,5 @@ Bir şey değişince haber verir: bir belge geldi ve onay bekliyor, bir adım ba
 | `<repo>/.kortext/` | analiz belgeleri; yeni projede `BRIEF.md` de burada |
 | `<repo>/.kortext/DESIGN.html` | `DESIGN.md`'nin görsel hali |
 
-Belgeler düz markdown'dır. Commit'leyin: projenin hafızasıdır; repo'yu açan bir sonraki ajan bir satır yazmadan önce onları okur.
+> [!WARNING]
+> Belgeler projenini hafızası olarak düz markdown’dır. Commit’leyin. Repo'yu açan bir sonraki ajan bir satır yazmadan önce onları okur. 
