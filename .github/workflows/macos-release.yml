@@ -30,13 +30,21 @@ jobs:
         env:
           REF: ${{ github.ref_name }}
         run: |
+          # Only a tag names a version; a manual run from a branch would ship "main".
+          case "$REF" in v[0-9]*) ;; *) echo "not a version tag: $REF"; exit 1 ;; esac
           VERSION="${REF#v}"
-          # Monotonic CFBundleVersion: major*1_000_000 + minor*1_000 + patch, and a
-          # pre-release (3.2.0-beta.1) sits under its final (3.2.0) — patch*10 + beta.
+          # Monotonic CFBundleVersion: major*100_000_000 + minor*100_000 + patch*1_000,
+          # and a pre-release (3.2.0-beta.N) sits under its final (3.2.0): final - 1000 + N,
+          # so up to beta.999. The scale went up after 3.2.0-beta.7 (3001997) — every
+          # build after it has to stay above that number.
           BASE="${VERSION%%-*}"; PRE="${VERSION#"$BASE"}"; PRE="${PRE#-}"
           IFS=. read -r maj min pat <<< "$BASE"
-          BUILD=$(( maj * 1000000 + min * 1000 + ${pat:-0} * 10 ))
-          if [ -n "$PRE" ]; then BUILD=$(( BUILD - 10 + ${PRE##*.} )); fi
+          BUILD=$(( maj * 100000000 + min * 100000 + ${pat:-0} * 1000 ))
+          if [ -n "$PRE" ]; then
+            N="${PRE##*.}"
+            [ "$N" -ge 1 ] && [ "$N" -lt 1000 ] || { echo "pre-release number out of range: $PRE"; exit 1; }
+            BUILD=$(( BUILD - 1000 + N ))
+          fi
           echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
           echo "BUILD=$BUILD" >> "$GITHUB_OUTPUT"
 

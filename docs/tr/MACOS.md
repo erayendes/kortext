@@ -8,7 +8,7 @@ Bu isteğe bağlı tamamlayıcı bir macOS uygulamasıdır. İkinci bir ürün d
 
 Çalışması için öncelikle [Kortext’in yüklü olması](INSTALL.md) gerekir. Eğer yüklü değilse, uygulama bunu bildirir ve yükleme komutunu gösterir.
 
-En güncel sürüm: [Kortext.zip](https://github.com/erayendes/kortext/releases/latest/download/Kortext.zip) — bütün sürümler [GitHub Releases](https://github.com/erayendes/kortext/releases) altında. 
+Kortext.zip, [GitHub Releases](https://github.com/erayendes/kortext/releases) sayfasında onu taşıyan en yeni sürümün altında. 
 İndirdiğiniz arşivi açın, Kortext.app dosyasını /Applications klasörüne sürükleyin ve açın. 
 Uygulama noter tasdiklidir ve bundan sonra kendini günceller. — Kurmak için yapmanız gereken tek işlem budur.
 

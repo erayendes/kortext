@@ -8,7 +8,7 @@ An optional companion app for macOS. Not a second product — a window that make
 
 [Kortext must be installed](INSTALL.md) first. If it is not, the app says so and shows the install command.
 
-The latest version: [Kortext.zip](https://github.com/erayendes/kortext/releases/latest/download/Kortext.zip) — every version is under [GitHub Releases](https://github.com/erayendes/kortext/releases).
+Kortext.zip is under the newest release that carries it on [GitHub Releases](https://github.com/erayendes/kortext/releases).
 Open the archive, drag Kortext.app into /Applications and open it.
 The app is notarized, and from then on it updates itself. — That is the only thing you have to do to install it.
 
