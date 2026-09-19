@@ -64,6 +64,9 @@ function classifyLine(line: string): { kind: MdTokenKind; text: string; depth?: 
   // The marker stays in the text so the numbering survives; the kind exists so
   // the item is a block of its own rather than merged into the paragraph above.
   if (/^\s*\d+[.)] /.test(line)) return { kind: 'ordered', text: line.trim() };
+  // A display formula (`$$…$$` on its own line) is a paragraph holding one inline formula.
+  const display = /^\s*\$\$(.+)\$\$\s*$/.exec(line);
+  if (display) return { kind: 'para', text: `$${display[1].trim()}$` };
   return { kind: 'para', text: line };
 }
 
@@ -153,19 +156,72 @@ export type InlineSpan =
   | { type: 'text'; value: string }
   | { type: 'bold'; value: string }
   | { type: 'italic'; value: string }
-  | { type: 'code'; value: string };
+  | { type: 'code'; value: string }
+  | { type: 'math'; value: string };
+
+// ponytail: plain-text math. The agents write simple LaTeX (subscripts, \text,
+// \times, ≥, °C); this turns it into readable Unicode instead of shipping KaTeX.
+// Ceiling: \frac and \begin{cases} degrade to bracketed text — add KaTeX if
+// documents start leaning on them.
+const TEX_SYMBOLS: Record<string, string> = {
+  times: '×', ge: '≥', geq: '≥', le: '≤', leq: '≤', ne: '≠', neq: '≠', approx: '≈',
+  pm: '±', cdot: '·', dots: '…', ldots: '…', rightarrow: '→', to: '→', leftarrow: '←',
+  Delta: 'Δ', delta: 'δ', alpha: 'α', beta: 'β', mu: 'μ', sigma: 'σ', pi: 'π', infty: '∞',
+  sum: 'Σ', min: 'min', max: 'max', log: 'log', ln: 'ln', sqrt: '√', circ: '°', percent: '%',
+  left: '', right: '', quad: ' ', ' ': ' ', ',': ' ', ';': ' ', '_': '_', '%': '%', '\\': '; ',
+};
+
+// `\frac{a}{b}` → `(a)/(b)`, with brace-balanced arguments (a may hold `_{…}`).
+function replaceFrac(t: string): string {
+  const arg = (from: number): [string, number] | null => {
+    if (t[from] !== '{') return null;
+    let depth = 0;
+    for (let i = from; i < t.length; i++) {
+      if (t[i] === '{') depth++;
+      else if (t[i] === '}' && --depth === 0) return [t.slice(from + 1, i), i + 1];
+    }
+    return null;
+  };
+  let at: number;
+  while ((at = t.indexOf('\\frac')) !== -1) {
+    const a = arg(at + 5);
+    const b = a && arg(a[1]);
+    if (!a || !b) break;
+    t = `${t.slice(0, at)}(${a[0]})/(${b[0]})${t.slice(b[1])}`;
+  }
+  return t;
+}
+
+/** Reduce a LaTeX fragment to plain Unicode text. */
+export function deTex(src: string): string {
+  let t = src;
+  t = replaceFrac(t);
+  // \text{…} keeps its braces so the command pass cannot read into it (22^\circ\text{C}).
+  t = t.replace(/\\text\{([^{}]*)\}/g, '{$1}');
+  t = t.replace(/\\(begin|end)\{cases\}/g, (_, w: string) => (w === 'begin' ? '⟨' : '⟩'));
+  t = t.replace(/\\([A-Za-z]+|[\\ ,;_%])/g, (m, name: string) => TEX_SYMBOLS[name] ?? m.slice(1));
+  t = t.replace(/\^°/g, '°');
+  t = t.replace(/([ΔδαβμσπΣ]) (?=[A-Za-z])/g, '$1');
+  t = t.replace(/\s*&\s*/g, ' ');
+  t = t.replace(/[{}]/g, '');
+  t = t.replace(/⟨\s*/g, '{ ').replace(/\s*⟩/g, ' }');
+  return t.replace(/\s+/g, ' ').trim();
+}
 
 /**
- * Split a line into inline spans: `**bold**`, `*italic*` / `_italic_` and
- * `` `code` `` are recognised, everything else is plain text. Returned as data
- * so the renderer can emit real React nodes (no dangerouslySetInnerHTML).
+ * Split a line into inline spans: `**bold**`, `*italic*` / `_italic_`,
+ * `` `code` `` and `$math$` are recognised, everything else is plain text.
+ * Returned as data so the renderer can emit real React nodes (no
+ * dangerouslySetInnerHTML).
  *
  * Bold is matched before italic so `**x**` never reads as an empty emphasis.
+ * Math follows the pandoc rule — no space inside the dollars — so "$5 and $10"
+ * stays prose.
  */
 export function parseInline(text: string): InlineSpan[] {
   const spans: InlineSpan[] = [];
   const re =
-    /\*\*(.+?)\*\*|`(.+?)`|\*(\S(?:.*?\S)?)\*|(?<![A-Za-z0-9_])_(\S(?:.*?\S)?)_(?![A-Za-z0-9_])/g;
+    /\*\*(.+?)\*\*|`(.+?)`|\$(\S(?:[^$]*?\S)?)\$|\*(\S(?:.*?\S)?)\*|(?<![A-Za-z0-9_])_(\S(?:.*?\S)?)_(?![A-Za-z0-9_])/g;
   let last = 0;
   let m: RegExpExecArray | null;
 
@@ -175,7 +231,8 @@ export function parseInline(text: string): InlineSpan[] {
     }
     if (m[1] !== undefined) spans.push({ type: 'bold', value: m[1] });
     else if (m[2] !== undefined) spans.push({ type: 'code', value: m[2] });
-    else spans.push({ type: 'italic', value: m[3] ?? m[4] ?? '' });
+    else if (m[3] !== undefined) spans.push({ type: 'math', value: deTex(m[3]) });
+    else spans.push({ type: 'italic', value: m[4] ?? m[5] ?? '' });
     last = m.index + m[0].length;
   }
   if (last < text.length) {

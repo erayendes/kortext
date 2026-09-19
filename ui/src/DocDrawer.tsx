@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { Drawer } from './Drawer';
 import { highlight } from './highlight';
-import { parseInline, parseMarkdown, type AlertKind, type MdToken } from './markdown';
+import { deTex, parseInline, parseMarkdown, type AlertKind, type MdToken } from './markdown';
 import { api, type DocInfo, type DocVersion, type Project } from './api';
 
 // The two headings the drawer looks for, each accepting the name it used to
@@ -1901,11 +1901,25 @@ function ProposalDiff({
   );
 }
 
-// Backticks inside a bold span aren't caught by parseInline (its regex is
-// flat), so bold values get one more code-splitting pass here.
+// Backticks and $math$ inside a bold span aren't caught by parseInline (its
+// regex is flat), so bold values get one more code-and-math pass here.
 function CodeBits({ text }: { text: string }) {
-  const parts = text.split(/`([^`]+)`/);
-  return <>{parts.map((p, i) => (i % 2 ? <code key={i}>{p}</code> : p))}</>;
+  const parts = text.split(/(`[^`]+`|\$\S(?:[^$]*?\S)?\$)/);
+  return (
+    <>
+      {parts.map((p, i) =>
+        i % 2 === 0 ? (
+          p
+        ) : p.startsWith('`') ? (
+          <code key={i}>{p.slice(1, -1)}</code>
+        ) : (
+          <span key={i} className="kx-math">
+            {deTex(p.slice(1, -1))}
+          </span>
+        ),
+      )}
+    </>
+  );
 }
 
 // Parse inline Markdown in answers; pre-wrap preserves their line breaks.
@@ -1937,6 +1951,8 @@ function Inline({ text }: { text: string }) {
             </em>
           ) : s.type === 'code' ? (
             <code>{s.value}</code>
+          ) : s.type === 'math' ? (
+            <span className="kx-math">{s.value}</span>
           ) : (
             s.value
           )}
