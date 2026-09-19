@@ -41,3 +41,18 @@ test('parseMarkdown: a $$display$$ line is a paragraph holding one formula', () 
   assert.equal(tok.kind, 'para');
   assert.deepEqual(parseInline(tok.text), [{ type: 'math', value: 'ΔT = max(0, T - 22)' }]);
 });
+
+test('parseMarkdown: an unfenced box-drawing flow is one code block with its root line', () => {
+  const md = ['Intro sentence.', '', 'SCR-01 (Splash)', '│', '├──► SCR-02', '└──► SCR-03', '', 'After.'].join('\n');
+  const kinds = parseMarkdown(md).map((t) => t.kind);
+  assert.deepEqual(kinds, ['para', 'blank', 'code', 'blank', 'para']);
+  const code = parseMarkdown(md).find((t) => t.kind === 'code')!;
+  assert.equal(code.text, 'SCR-01 (Splash)\n│\n├──► SCR-02\n└──► SCR-03');
+  assert.deepEqual(parseMarkdown(md).map((t) => t.index), [0, 1, 2, 3, 4]);
+});
+
+test('parseMarkdown: --- on its own line is a rule, not prose', () => {
+  const toks = parseMarkdown('A\n\n---\n\nB');
+  assert.deepEqual(toks.map((t) => t.kind), ['para', 'blank', 'rule', 'blank', 'para']);
+  assert.equal(toks[2]!.selectable, false);
+});

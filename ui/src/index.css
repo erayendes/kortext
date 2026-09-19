@@ -2551,6 +2551,11 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
 .kx-blank {
   height: 8px;
 }
+.kx-rule {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 8px 0;
+}
 .kx-editor {
   width: 100%;
   min-height: 60vh;

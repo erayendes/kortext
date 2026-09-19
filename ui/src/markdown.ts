@@ -15,6 +15,7 @@ export type MdTokenKind =
   | 'para'
   | 'table'
   | 'code'
+  | 'rule'
   | 'blank';
 
 export type AlertKind = 'note' | 'tip' | 'important' | 'warning' | 'caution';
@@ -52,6 +53,7 @@ function isSeparatorRow(row: string): boolean {
 
 function classifyLine(line: string): { kind: MdTokenKind; text: string; depth?: number } {
   if (line.trim() === '') return { kind: 'blank', text: '' };
+  if (/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) return { kind: 'rule', text: '' };
   if (line.startsWith('#### ')) return { kind: 'h4', text: line.slice(5) };
   if (line.startsWith('### ')) return { kind: 'h3', text: line.slice(4) };
   if (line.startsWith('## ')) return { kind: 'h2', text: line.slice(3) };
@@ -74,6 +76,8 @@ function classifyLine(line: string): { kind: MdTokenKind; text: string; depth?: 
  * Parse markdown into a flat token list. Consecutive `|`-prefixed lines collapse
  * into a single `table` token (with header + rows) when they look like a table.
  */
+const BOX_RAIL = /^\s*[│├└┌┐┘┬┴┼─╭╮╰╯║╔╗╚╝╠╣═]/;
+
 export function parseMarkdown(md: string): MdToken[] {
   const lines = md.split('\n');
   const out: MdToken[] = [];
@@ -144,8 +148,27 @@ export function parseMarkdown(md: string): MdToken[] {
       continue;
     }
 
+    // An unfenced box-drawing diagram (│ ├──► …) would be merged into one
+    // paragraph; keep it as a code block instead, with the line above it as
+    // its root node — the agents draw flows this way without a fence.
+    if (BOX_RAIL.test(line)) {
+      const block: string[] = [];
+      const prev = out[out.length - 1];
+      if (prev && prev.kind === 'para') {
+        block.push(prev.text);
+        out.pop();
+        index = prev.index;
+      }
+      while (i < lines.length && (lines[i] ?? '').trim() !== '') {
+        block.push(lines[i] ?? '');
+        i++;
+      }
+      out.push({ kind: 'code', text: block.join('\n'), index: index++, selectable: true });
+      continue;
+    }
+
     const { kind, text, depth } = classifyLine(line);
-    out.push({ kind, text, depth, index: index++, selectable: kind !== 'blank' });
+    out.push({ kind, text, depth, index: index++, selectable: kind !== 'blank' && kind !== 'rule' });
     i++;
   }
 

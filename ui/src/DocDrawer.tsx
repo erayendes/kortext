@@ -320,7 +320,7 @@ export function DocDrawer({
       const after = tokens.slice(start + 1);
       const end = after.findIndex((t) => t.kind === 'h1' || t.kind === 'h2' || t.kind === 'h3');
       const body = end === -1 ? after : after.slice(0, end);
-      const used = body.some((t) => t.kind !== 'blank' && !/^\[.*\]$/.test(t.text.trim()));
+      const used = body.some((t) => t.kind !== 'blank' && t.kind !== 'rule' && !/^\[.*\]$/.test(t.text.trim()));
       return used ? tokens : [...tokens.slice(0, start), ...(end === -1 ? [] : after.slice(end))];
     };
     return dropEmpty(dropEmpty(all, QUESTIONS), CHANGE_REQUESTS);
@@ -435,7 +435,7 @@ export function DocDrawer({
     const isHead = (t: MdToken) => t.kind === 'h1' || t.kind === 'h2' || t.kind === 'h3';
     return kept.filter((t, i) => {
       if (!isHead(t) || !CHANGE_REQUESTS.test(t.text.trim())) return true;
-      const next = kept.slice(i + 1).find((u) => u.kind !== 'blank');
+      const next = kept.slice(i + 1).find((u) => u.kind !== 'blank' && u.kind !== 'rule');
       return !!next && !isHead(next);
     });
   }, [tokens, openQ, trailers, outcomes, doc?.status]);
@@ -485,7 +485,7 @@ export function DocDrawer({
       added = [];
     };
     for (const d of lcsDiff(before, after, (t) => `${t.kind}\u0000${t.text}`)) {
-      if (d.item.kind === 'blank') continue;
+      if (d.item.kind === 'blank' || d.item.kind === 'rule') continue;
       if (d.sign === '-') {
         removed.push(d.item);
         continue;
@@ -508,7 +508,7 @@ export function DocDrawer({
     const out = new Set<number>();
     let inRun = false;
     shown.forEach((t, i) => {
-      if (t.kind === 'blank') return;
+      if (t.kind === 'blank' || t.kind === 'rule') return;
       const isNew = changed.has(t.index) && !replaced.has(t.index);
       if (replaced.has(t.index) || (isNew && !inRun)) out.add(i);
       inRun = isNew;
@@ -1633,6 +1633,7 @@ function DocBlock({
     },
   };
   if (token.kind === 'blank') return <div className="kx-blank" />;
+  if (token.kind === 'rule') return <hr className="kx-rule" />;
   const cls = `kx-block kx-${token.kind}${selected ? ' selected' : ''}${noted ? ' noted' : ''}${openQuestion ? ' open-q' : ''}${changeRequest ? ' req-q' : ''}${questionNo || noteLabel ? ' kx-numbered' : ''}${changed ? ' kx-changed' : ''}${decision !== undefined ? ' kx-decision-request' : ''}`;
   if (token.kind === 'table' && token.table) {
     return (
