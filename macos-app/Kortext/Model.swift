@@ -69,9 +69,9 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
     }
 
 
-    // Two rows, one Kortext: stable and beta, each showing its newest and whether that is
-    // what runs here. Pressing one installs it (npm follows the tag, downgrades included) and
-    // restarts the server; Sparkle then brings the app to the same channel.
+    // One row, the running channel: its newest and whether that is what runs here. Pressing
+    // it installs (npm follows the tag) and restarts the server; Sparkle then brings the app
+    // along. The panel's status bar is where a channel is switched.
     @Published var tags: [String: String] = [:]   // npm dist-tags: latest, beta
     @Published var note: String? = nil            // what the pressed row is doing
     @Published var pressed: String? = nil         // "latest" | "beta"
@@ -80,7 +80,7 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
 
     func status(_ tag: String) -> String {
         if pressed == tag, let n = note { return n }
-        guard let want = tags[tag] else { return tags.isEmpty ? "…" : "No beta version right now" }
+        guard let want = tags[tag] else { return tags.isEmpty ? "…" : "nothing published" }
         return version == want ? "up to date" : tag == channel ? "update available" : "not installed"
     }
 

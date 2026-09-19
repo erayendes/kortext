@@ -375,10 +375,10 @@ struct SettingsView: View {
                     notifications.toggle()
                     if notifications { model.ensureNotifications() }
                 }
-                Row(icon: "arrow.down.circle", title: "Stable version",
-                    sub: [model.tags["latest"].map(pretty), model.status("latest")].compactMap { $0 }.joined(separator: " · ")) { model.pick("latest") }
-                Row(icon: "flask", title: "Try beta version",
-                    sub: [model.tags["beta"].map(pretty), model.status("beta")].compactMap { $0 }.joined(separator: " · ")) { model.pick("beta") }
+                // One row: the running version and whether its channel has a newer one; the
+                // press installs it. Switching channels is the panel's status bar, not this.
+                Row(icon: "arrow.down.circle", title: "Version",
+                    sub: [model.version.map(pretty), model.status(model.channel)].compactMap { $0 }.joined(separator: " · ")) { model.pick(model.channel) }
                 Row(icon: "ladybug", title: "Report an issue") {
                     var u = "https://github.com/erayendes/kortext/issues/new?template=bug_report.yml"
                     if let v = model.version { u += "&version=\(v)" }
