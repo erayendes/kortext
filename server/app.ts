@@ -65,6 +65,10 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { logRootDir, type Project } from './db.js';
 import { channelOf, distTags, isNewer, selfUpdate } from './update.js';
 
+// A model name rides on the CLI's command line, through a shell on Windows:
+// letters, digits and the few marks the pickers use, nothing a shell reads.
+const MODEL_NAME = /^[\w.\-\[\]:/@]{0,80}$/;
+
 export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string): express.Express {
   failStaleJobs(db);
   const app = express();
@@ -207,8 +211,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     const spec = ENGINES.find((e) => e.id === engine);
     const model = String(req.body?.model ?? '').trim();
     const effort = String(req.body?.effort ?? '').trim();
-    if (model.length > 80 || /[\s"'`]/.test(model))
-      return res.status(400).json({ error: 'a model name is one word' });
+    if (!MODEL_NAME.test(model)) return res.status(400).json({ error: 'a model name is one word' });
     if (effort && !spec?.efforts?.includes(effort))
       return res.status(400).json({ error: `${engine} takes no effort level "${effort}"` });
     try {
@@ -274,8 +277,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     const project = projectOr404(req.params.id, res);
     if (!project) return;
     const model = String(req.body?.model ?? '').trim();
-    if (model.length > 80 || /[\s"'`]/.test(model))
-      return res.status(400).json({ error: 'a model name is one word' });
+    if (!MODEL_NAME.test(model)) return res.status(400).json({ error: 'a model name is one word' });
     db.prepare('UPDATE projects SET model = ? WHERE id = ?').run(model, project.id);
     res.json({ model });
   });

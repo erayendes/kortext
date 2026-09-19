@@ -168,7 +168,13 @@ export function parseMarkdown(md: string): MdToken[] {
     }
 
     const { kind, text, depth } = classifyLine(line);
-    out.push({ kind, text, depth, index: index++, selectable: kind !== 'blank' && kind !== 'rule' });
+    out.push({
+      kind,
+      text,
+      depth,
+      index: index++,
+      selectable: kind !== 'blank' && kind !== 'rule',
+    });
     i++;
   }
 
@@ -187,11 +193,46 @@ export type InlineSpan =
 // Ceiling: \frac and \begin{cases} degrade to bracketed text — add KaTeX if
 // documents start leaning on them.
 const TEX_SYMBOLS: Record<string, string> = {
-  times: '×', ge: '≥', geq: '≥', le: '≤', leq: '≤', ne: '≠', neq: '≠', approx: '≈',
-  pm: '±', cdot: '·', dots: '…', ldots: '…', rightarrow: '→', to: '→', leftarrow: '←',
-  Delta: 'Δ', delta: 'δ', alpha: 'α', beta: 'β', mu: 'μ', sigma: 'σ', pi: 'π', infty: '∞',
-  sum: 'Σ', min: 'min', max: 'max', log: 'log', ln: 'ln', sqrt: '√', circ: '°', percent: '%',
-  left: '', right: '', quad: ' ', ' ': ' ', ',': ' ', ';': ' ', '_': '_', '%': '%', '\\': '; ',
+  times: '×',
+  ge: '≥',
+  geq: '≥',
+  le: '≤',
+  leq: '≤',
+  ne: '≠',
+  neq: '≠',
+  approx: '≈',
+  pm: '±',
+  cdot: '·',
+  dots: '…',
+  ldots: '…',
+  rightarrow: '→',
+  to: '→',
+  leftarrow: '←',
+  Delta: 'Δ',
+  delta: 'δ',
+  alpha: 'α',
+  beta: 'β',
+  mu: 'μ',
+  sigma: 'σ',
+  pi: 'π',
+  infty: '∞',
+  sum: 'Σ',
+  min: 'min',
+  max: 'max',
+  log: 'log',
+  ln: 'ln',
+  sqrt: '√',
+  circ: '°',
+  percent: '%',
+  left: '',
+  right: '',
+  quad: ' ',
+  ' ': ' ',
+  ',': ' ',
+  ';': ' ',
+  _: '_',
+  '%': '%',
+  '\\': '; ',
 };
 
 // `\frac{a}{b}` → `(a)/(b)`, with brace-balanced arguments (a may hold `_{…}`).

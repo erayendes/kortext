@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { openDb } from '../server/db.js';
@@ -29,6 +29,18 @@ import {
 } from '../server/docs.js';
 
 const pkgRoot = process.cwd();
+
+test('docPath refuses a shelf that a symlink carries out of the repo', () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const repo = join(work, 'repo');
+  const outside = join(work, 'outside');
+  mkdirSync(repo);
+  mkdirSync(outside);
+  symlinkSync(outside, join(repo, '.kortext'));
+  const p = { repo_path: repo } as Parameters<typeof docPath>[0];
+  assert.throws(() => docPath(p, 'STACK.md'), /outside the repo/);
+  rmSync(work, { recursive: true, force: true });
+});
 
 test('parseWorkflowSteps extracts inputs/outputs/author/approver per output', () => {
   const steps = parseWorkflowSteps(

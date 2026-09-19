@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, readFileSync, readdirSync, realpathSync, writeFileSync } from 'node:fs';
+import { dirname, join, sep } from 'node:path';
 import type Database from 'better-sqlite3';
 import type { Project } from './db.js';
 
@@ -815,13 +815,30 @@ export function analysisComplete(
   return targets.every((rel) => settled(byRel.get(rel)));
 }
 
+// The path with every symlink on it followed; a file not yet written resolves
+// through its nearest existing ancestor.
+function realPath(path: string): string {
+  return existsSync(path)
+    ? realpathSync.native(path)
+    : join(realPath(dirname(path)), path.slice(dirname(path).length + 1));
+}
+
+// A repo file kortext reads or writes must really live in the repo. A symlink
+// planted in a cloned repo (.kortext -> ~/.ssh) would otherwise carry the
+// write out; the repo root is the boundary, whatever the link says.
+export function insideRepo(repoPath: string, path: string): string {
+  const root = realPath(repoPath);
+  if (!realPath(path).startsWith(root + sep)) throw new Error(`outside the repo: ${path}`);
+  return path;
+}
+
 // rel names a document on the shelf ("STACK.md"). The pattern forbids traversal
 // ("." never starts the name) and anything outside .kortext/ itself.
 export function docPath(project: Project, rel: string): string {
   if (!/^[A-Za-z][\w.-]*\.md$/.test(rel)) {
     throw new Error(`bad doc path: ${rel}`);
   }
-  return join(project.repo_path, '.kortext', rel);
+  return insideRepo(project.repo_path, join(project.repo_path, '.kortext', rel));
 }
 
 export function docVersion(content: string): string {

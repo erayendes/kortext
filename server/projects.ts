@@ -11,7 +11,7 @@ import {
 } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import type { Project } from './db.js';
-import { loadDocMap } from './docs.js';
+import { insideRepo, loadDocMap } from './docs.js';
 
 // Live workspace inside a registered repo:
 //   AGENTS.md      (repo root — the agent's entry contract)
@@ -35,6 +35,7 @@ export function scaffoldProject(
 ): void {
   const kx = join(repoPath, '.kortext');
   mkdirSync(kx, { recursive: true });
+  insideRepo(repoPath, kx);
 
   const templates = join(pkgRoot, 'templates');
   installContract(repoPath, templates);
@@ -123,8 +124,11 @@ function removePointer(path: string): void {
 function installContract(repoPath: string, templates: string): void {
   const template = join(templates, 'AGENTS.md');
   if (!existsSync(template)) return;
-  writeContractBlock(join(repoPath, 'AGENTS.md'), readFileSync(template, 'utf8'));
-  writePointer(join(repoPath, 'CLAUDE.md'));
+  writeContractBlock(
+    insideRepo(repoPath, join(repoPath, 'AGENTS.md')),
+    readFileSync(template, 'utf8'),
+  );
+  writePointer(insideRepo(repoPath, join(repoPath, 'CLAUDE.md')));
 }
 
 /**
@@ -146,8 +150,8 @@ export function scaffoldOptional(
 
 /** Remove the Kortext contract block and CLAUDE.md pointer, preserving user content. */
 export function uninstallContract(repoPath: string): void {
-  removeContractBlock(join(repoPath, 'AGENTS.md'));
-  removePointer(join(repoPath, 'CLAUDE.md'));
+  removeContractBlock(insideRepo(repoPath, join(repoPath, 'AGENTS.md')));
+  removePointer(insideRepo(repoPath, join(repoPath, 'CLAUDE.md')));
 }
 
 function copyIfMissing(from: string, to: string): void {

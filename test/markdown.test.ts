@@ -16,11 +16,15 @@ test('deTex: the forms the documents use', () => {
   assert.equal(deTex('\\%50'), '%50');
   assert.equal(deTex('\\frac{a}{b}'), '(a)/(b)');
   assert.equal(
-    deTex('\\left( x \\times \\frac{t_{\\text{uyanık\\_geçen}}}{\\text{Toplam Uyanık Süre}} \\right)'),
+    deTex(
+      '\\left( x \\times \\frac{t_{\\text{uyanık\\_geçen}}}{\\text{Toplam Uyanık Süre}} \\right)',
+    ),
     '( x × (t_uyanık_geçen)/(Toplam Uyanık Süre) )',
   );
   assert.equal(
-    deTex('N = \\begin{cases} 1.20 & \\text{eğer Nem} > \\%65 \\\\ 1.00 & \\text{diğer} \\end{cases}'),
+    deTex(
+      'N = \\begin{cases} 1.20 & \\text{eğer Nem} > \\%65 \\\\ 1.00 & \\text{diğer} \\end{cases}',
+    ),
     'N = { 1.20 eğer Nem > %65 ; 1.00 diğer }',
   );
 });
@@ -43,16 +47,31 @@ test('parseMarkdown: a $$display$$ line is a paragraph holding one formula', () 
 });
 
 test('parseMarkdown: an unfenced box-drawing flow is one code block with its root line', () => {
-  const md = ['Intro sentence.', '', 'SCR-01 (Splash)', '│', '├──► SCR-02', '└──► SCR-03', '', 'After.'].join('\n');
+  const md = [
+    'Intro sentence.',
+    '',
+    'SCR-01 (Splash)',
+    '│',
+    '├──► SCR-02',
+    '└──► SCR-03',
+    '',
+    'After.',
+  ].join('\n');
   const kinds = parseMarkdown(md).map((t) => t.kind);
   assert.deepEqual(kinds, ['para', 'blank', 'code', 'blank', 'para']);
   const code = parseMarkdown(md).find((t) => t.kind === 'code')!;
   assert.equal(code.text, 'SCR-01 (Splash)\n│\n├──► SCR-02\n└──► SCR-03');
-  assert.deepEqual(parseMarkdown(md).map((t) => t.index), [0, 1, 2, 3, 4]);
+  assert.deepEqual(
+    parseMarkdown(md).map((t) => t.index),
+    [0, 1, 2, 3, 4],
+  );
 });
 
 test('parseMarkdown: --- on its own line is a rule, not prose', () => {
   const toks = parseMarkdown('A\n\n---\n\nB');
-  assert.deepEqual(toks.map((t) => t.kind), ['para', 'blank', 'rule', 'blank', 'para']);
+  assert.deepEqual(
+    toks.map((t) => t.kind),
+    ['para', 'blank', 'rule', 'blank', 'para'],
+  );
   assert.equal(toks[2]!.selectable, false);
 });

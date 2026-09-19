@@ -320,7 +320,9 @@ export function DocDrawer({
       const after = tokens.slice(start + 1);
       const end = after.findIndex((t) => t.kind === 'h1' || t.kind === 'h2' || t.kind === 'h3');
       const body = end === -1 ? after : after.slice(0, end);
-      const used = body.some((t) => t.kind !== 'blank' && t.kind !== 'rule' && !/^\[.*\]$/.test(t.text.trim()));
+      const used = body.some(
+        (t) => t.kind !== 'blank' && t.kind !== 'rule' && !/^\[.*\]$/.test(t.text.trim()),
+      );
       return used ? tokens : [...tokens.slice(0, start), ...(end === -1 ? [] : after.slice(end))];
     };
     return dropEmpty(dropEmpty(all, QUESTIONS), CHANGE_REQUESTS);
