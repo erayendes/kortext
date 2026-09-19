@@ -62,13 +62,14 @@
   --control-h: 30px;
 
   /* Typography roles */
-  --fs-title: 20px;
-  --fs-section: 18px;
-  --fs-heading: 16px;
-  --fs-body: 13px;
-  --fs-ui: 12px;
-  --fs-label: 11px;
-  --fs-micro: 10px;
+  --fs-title: 21px;
+  --fs-section: 19px;
+  --fs-heading: 17px;
+  --fs-body: 14px;
+  --fs-ui: 13px;
+  --fs-label: 12px;
+  --fs-micro: 11px;
+  --fs-doc: 15px;
   /* Spacing scale */
   --sp-1: 4px;
   --sp-2: 8px;
@@ -80,7 +81,7 @@
   --border-hover: #c6c6cc;
 
   /* type */
-  --font-sans: 'Barlow', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans: -apple-system, system-ui, 'Segoe UI', sans-serif;
   --font-mono: 'Overpass Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 
   /* shadow */
@@ -413,7 +414,7 @@ body {
   background: var(--card);
 }
 .tag {
-  font-size: 10.5px;
+  font-size: var(--fs-micro);
   padding: 1px 7px;
   border-radius: 5px;
   font-weight: 500;
@@ -498,7 +499,7 @@ body {
   padding: 0 10px;
   border-radius: 6px;
   border: 1px solid var(--border);
-  font-size: 11.5px;
+  font-size: var(--fs-label);
   color: var(--fg-mid);
   font-family: var(--font-mono);
 }
@@ -2320,7 +2321,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  font-size: var(--fs-body);
+  font-size: var(--fs-doc);
   line-height: 1.55;
 }
 /* The drawer is 880 wide for the bands, tables, code and the design page;

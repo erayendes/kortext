@@ -18,7 +18,7 @@ colour — if you see one, there is a reason.
 number. You pick the job.
 
 **Machine and human write differently.** Paths, ids, commands — mono. Every sentence a human
-reads — Barlow. Blur the two and both lose their credibility.
+reads — the system's own sans. Blur the two and both lose their credibility.
 
 **One configuration.** A setting nobody changes is not a setting. One axis survives: theme.
 
@@ -112,21 +112,26 @@ depending on where it is read.
 
 ## 3 · Typography
 
-Two families. **Barlow** writes the human's language — headings, sentences, buttons.
-**Overpass Mono** writes everything the machine owns — paths, ids, commands, timestamps. The
-test: if the user cannot type it from memory, it is mono.
+Two families, both the platform's own. The **system sans** (`-apple-system, system-ui`: SF Pro
+on macOS, Segoe UI on Windows) writes the human's language — headings, sentences, buttons.
+The **system mono** (`ui-monospace`: SF Mono on macOS) writes everything the machine owns —
+paths, ids, commands, timestamps. The test: if the user cannot type it from memory, it is mono.
+No webfont is shipped: Barlow was named in the stack until 2026-09-19 but never loaded, so
+every screen had already been the system font; the scale below is sized for SF Pro, one step
+above the macOS HIG so a 13px-native panel does not read small in a browser.
 
-Seven roles, named by job, not by number:
+Eight roles, named by job, not by number:
 
 | token | px | where |
 | --- | --- | --- |
-| `--fs-title` | 20 | the single title of a page or document (h1) |
-| `--fs-section` | 18 | a section inside a document (h2) |
-| `--fs-heading` | 16 | card name, drawer title, a sub-section (h3) |
-| `--fs-body` | 13 | prose, inputs, buttons — the base |
-| `--fs-ui` | 12 | controls, pills, panel chrome |
-| `--fs-label` | 11 | meta, id, counter, footer |
-| `--fs-micro` | 10 | mono eyebrow: group label, h4, table head |
+| `--fs-title` | 21 | the single title of a page or document (h1) |
+| `--fs-section` | 19 | a section inside a document (h2) |
+| `--fs-heading` | 17 | card name, drawer title, a sub-section (h3) |
+| `--fs-doc` | 15 | the rendered document — the reading measure |
+| `--fs-body` | 14 | prose, inputs, buttons — the base |
+| `--fs-ui` | 13 | controls, pills, panel chrome |
+| `--fs-label` | 12 | meta, id, counter, footer |
+| `--fs-micro` | 11 | mono eyebrow: group label, h4, table head — the floor, nothing below |
 
 Base: `font-family:var(--font-sans); font-size:var(--fs-body); line-height:1.5; color:var(--fg)`
 with `font-feature-settings:"cv01","ss01","tnum"` so numbers align in a column.
@@ -374,8 +379,8 @@ left-aligned, so a line never runs past the length an eye carries and the room s
 right. The drawer was 720 and read as cramped where a request and its thread stacked; the text
 was never the problem, so the text kept its measure.
 
-The markdown the panel renders, on the same seven sizes: body `--fs-body`, headings
-`--fs-title` / `--fs-section` / `--fs-heading` — 20 / 18 / 16, all `600`, none underlined. A
+The markdown the panel renders, on the same scale: body `--fs-doc`, headings
+`--fs-title` / `--fs-section` / `--fs-heading` — 21 / 19 / 17, all `600`, none underlined. A
 fourth level (`####`, `.kx-h4`) is not a heading but a label: the mono `--fs-micro` eyebrow the
 panel uses for its group labels, with the rule running out to the right edge. Whitespace and size
 carry the hierarchy; a line under a heading was one more thing to read.
@@ -492,7 +497,7 @@ now describes. What came from where:
 | control height 30px, `--r-md` corner, `--fs-body` on a button | the button families (solid / link) and their hover | the body: dash lists, numbered labels, quote rail |
 | the state pill with a dot; the badge as the same pill | the select with its own chevron | callouts with a rail and a mono word, no ground |
 | the drawn checkbox with accent fill | group labels, document rows, the two bands | table as rows; the diff mark; the faint noted line |
-| the type scale — 20 / 18 / 16 for the three headings | Decisions and Findings as they are | the mono eyebrow as `####` |
+| the type scale — 21 / 19 / 17 for the three headings | Decisions and Findings as they are | the mono eyebrow as `####` |
 
 The rule that fell out of it: **the panel's labels and the document's labels are one vocabulary.**
 A group label in the Action Needed band, the head of the Related band, an `####` in a document
