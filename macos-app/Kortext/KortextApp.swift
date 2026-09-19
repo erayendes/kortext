@@ -271,7 +271,7 @@ struct WaitingRow: View {
     }
 }
 
-// The status bar: ⏻ (server and app together) · the version, which checks for updates when clicked · the credit, a link.
+// The status bar: ⏻ (server and app together) · the name and its version, which opens the panel when clicked · the credit, a link.
 struct StatusBar: View {
     @EnvironmentObject var model: Model
     @State private var armed = false
@@ -290,9 +290,14 @@ struct StatusBar: View {
                 .help(!up ? "Start the server" : armed ? "Press again to stop the server" : "Stop the server")
                 if let b = model.busy {
                     Text("\(b)…").font(Kx.sans(11)).foregroundStyle(Kx.fgMuted)
-                } else if up, !armed {
+                } else if let v = model.version, !armed {
+                    // The panel's first line: the name and its version, the channel in the
+                    // version string. Here the press opens the panel; the gear holds the channels.
                     Button { model.openPanel() } label: {
-                        Text("open panel").font(Kx.sans(11)).foregroundStyle(Kx.fgSecondary)
+                        HStack(spacing: 5) {
+                            Text("Kortext").font(Kx.sans(11)).foregroundStyle(Kx.fgSecondary)
+                            Text(pretty(v)).font(Kx.mono(11)).foregroundStyle(Kx.fgMuted)
+                        }
                     }
                     .buttonStyle(.plain).hand().help("Open the panel in your browser")
                 }
