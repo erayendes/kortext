@@ -742,7 +742,81 @@ body {
   font-size: var(--fs-ui);
   color: var(--fg-faint);
   min-height: 1.4em;
-  padding-left: 12px;
+}
+.kx-picker-select {
+  max-width: 100%;
+  align-self: flex-start;
+}
+/* The effort as a slider: a hairline track, the accent thumb, the levels named
+   under the stops — each name is also a button to that stop. */
+.kx-range {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: var(--control-h);
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.kx-range::-webkit-slider-runnable-track {
+  height: 2px;
+  background: var(--border-strong);
+  border-radius: 999px;
+}
+.kx-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -6px;
+  border-radius: 999px;
+  background: var(--accent);
+  border: 2px solid var(--bg-elev);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.kx-range::-moz-range-track {
+  height: 2px;
+  background: var(--border-strong);
+  border-radius: 999px;
+}
+.kx-range::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--accent);
+  border: 2px solid var(--bg-elev);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.kx-range:focus-visible {
+  outline: none;
+}
+.kx-range:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+.kx-range-ticks {
+  display: flex;
+  justify-content: space-between;
+  margin-top: -6px;
+}
+.kx-range-tick {
+  flex: 1 1 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--fs-label);
+  color: var(--fg-faint);
+  cursor: pointer;
+  text-align: center;
+}
+.kx-range-tick:first-child {
+  text-align: left;
+}
+.kx-range-tick:last-child {
+  text-align: right;
+}
+.kx-range-tick.on {
+  color: var(--fg);
+  font-weight: 500;
 }
 
 /* Use the full viewport width for drawers on narrow screens. */

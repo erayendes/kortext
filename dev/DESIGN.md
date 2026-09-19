@@ -357,15 +357,18 @@ for good on the second click.
 
 The panel's one centered overlay, and the engine picker is its only tenant. The drawer's
 backdrop, the elevated surface, `--r-lg`, `--shadow-lg`; 600px wide, in the middle of the page
-because it is a decision, not a document. Three rows on one grid, one vocabulary — the earlier
-draft mixed chips, a bordered radio list and a segment bar, and read as three widgets:
+because it is a decision, not a document. Three rows on one grid — the label in a 64px left
+column, `--fs-ui` `500` in the secondary ink, on the control's centreline; no eyebrow, no rule —
+and each row takes the control its choice is shaped like:
 
-- the label in a 64px left column, `--fs-ui` `500` in the secondary ink, sitting on the chips'
-  centreline; no eyebrow, no rule;
-- the choices as **chips** in the right column: pill-shaped (`999px`), hairline border, no fill,
-  control height; the chosen one filled with the accent; an untested CLI carries the word;
-- one line under the chips in the faint ink about the chosen one (`about` from the engine
-  spec, "the CLI's own setting" for `default`). Effort is drawn only for a CLI that has the notion.
+- **CLI** — three names, one on: pill **chips** (`999px`, hairline, no fill; the chosen one
+  filled with the accent; an untested CLI carries the word).
+- **Model** — a short list with a line about each: the panel's `.select`, every option
+  "name — about", `default — the CLI's own setting` first.
+- **Effort** — an ordered scale: a **slider** (`.kx-range`: 2px track in `--border-strong`,
+  14px accent thumb) with the levels named under the stops in the label size, the chosen one in
+  the full ink; each name is also a button to its stop. One faint line under it about the level.
+  Drawn only for a CLI that has the notion.
 
 The names are sans, not mono: they are labels the user reads, not ids they would type.
 

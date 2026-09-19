@@ -1,8 +1,9 @@
 /**
  * The engine picker: what runs this project, chosen in one place. A centered
- * dialog over a dimmed page — the panel's first — with three rows that share
- * one vocabulary: a label on the left, chips on the right, one line under the
- * chips about the chosen one. Every pick saves at once; Done and Escape close.
+ * dialog over a dimmed page — the panel's first — with three rows on one grid:
+ * a label on the left; on the right the CLI as chips, the model as a select,
+ * the effort as a slider with its levels named under it and one line about the
+ * chosen one. Every pick saves at once; Done and Escape close.
  */
 import { useEffect } from 'react';
 import { api, type EngineInfo } from './api';
@@ -129,20 +130,47 @@ export function EnginePicker({
 
           <div className="kx-picker-label">Model</div>
           <div className="kx-picker-field">
-            <div className="kx-chips" role="radiogroup" aria-label="Model">
-              {chip(model === '', 'default', () => pickModel(''), "the CLI's own setting")}
-              {models.map((m) => chip(model === m, label(m), () => pickModel(m), about(m)))}
-            </div>
-            <div className="kx-picker-about">{model ? about(model) : "the CLI's own setting"}</div>
+            <select
+              className="select kx-picker-select"
+              aria-label="Model"
+              value={model}
+              onChange={(e) => pickModel(e.target.value)}
+            >
+              <option value="">default — the CLI's own setting</option>
+              {models.map((m) => (
+                <option key={m} value={m}>
+                  {label(m)}
+                  {about(m) ? ` — ${about(m)}` : ''}
+                </option>
+              ))}
+            </select>
           </div>
 
           {levels.length > 0 && (
             <>
               <div className="kx-picker-label">Effort</div>
               <div className="kx-picker-field">
-                <div className="kx-chips" role="radiogroup" aria-label="Effort">
-                  {chip(effort === '', 'default', () => pickEffort(''), "the CLI's own setting")}
-                  {levels.map((l) => chip(effort === l, label(l), () => pickEffort(l), about(l)))}
+                <input
+                  className="kx-range"
+                  type="range"
+                  aria-label="Effort"
+                  min={0}
+                  max={levels.length}
+                  step={1}
+                  value={Math.max(0, ['', ...levels].indexOf(effort))}
+                  onChange={(e) => pickEffort(['', ...levels][Number(e.target.value)] ?? '')}
+                />
+                <div className="kx-range-ticks" aria-hidden>
+                  {['', ...levels].map((l) => (
+                    <button
+                      key={l || 'default'}
+                      className={`kx-range-tick${effort === l ? ' on' : ''}`}
+                      tabIndex={-1}
+                      onClick={() => pickEffort(l)}
+                    >
+                      {l ? label(l) : 'default'}
+                    </button>
+                  ))}
                 </div>
                 <div className="kx-picker-about">
                   {effort ? about(effort) : "the CLI's own setting"}
