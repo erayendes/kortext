@@ -96,9 +96,10 @@ struct Header: View {
                 }
             }.buttonStyle(.plain).hand()
             Spacer()
-            if !settings {
-                Button { settings = true } label: { Icon(name: "gearshape", size: 13).frame(width: 14) }.buttonStyle(.plain).hand()
-            }
+            // The gear stays put: it opens the settings and closes them, so the hand need not move.
+            Button { settings.toggle() } label: {
+                Icon(name: "gearshape", size: 13, color: settings ? Kx.fg : Kx.fgMuted).frame(width: 14)
+            }.buttonStyle(.plain).hand().help(settings ? "Back" : "Settings")
         }
         .padding(.horizontal, 12).frame(height: 40)
     }
