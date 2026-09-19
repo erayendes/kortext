@@ -648,7 +648,7 @@ body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 560px;
+  width: 600px;
   max-width: 94vw;
   max-height: 90vh;
   overflow-y: auto;
@@ -682,12 +682,27 @@ body {
   gap: 10px;
   padding-top: 4px;
 }
-.kx-picker-section {
+/* The picker: three rows on one grid — the label in the left column, the chips
+   in the right, one line under the chips about the chosen one. One vocabulary. */
+.kx-picker {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  column-gap: var(--sp-3);
+  row-gap: var(--sp-4);
+  align-items: start;
+}
+.kx-picker-label {
+  font-size: var(--fs-ui);
+  font-weight: 500;
+  color: var(--fg-secondary);
+  line-height: var(--control-h);
+}
+.kx-picker-field {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  min-width: 0;
 }
-/* The CLI as chips: the drawn box vocabulary, one on at a time. */
 .kx-chips {
   display: flex;
   flex-wrap: wrap;
@@ -695,10 +710,10 @@ body {
 }
 .kx-chip {
   height: var(--control-h);
-  padding: 0 12px;
-  border-radius: var(--r-md);
+  padding: 0 11px;
+  border-radius: 999px;
   border: 1px solid var(--border);
-  background: var(--card);
+  background: transparent;
   color: var(--fg);
   font-size: var(--fs-ui);
   font-family: inherit;
@@ -706,9 +721,13 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  transition:
+    border-color var(--speed),
+    background var(--speed);
 }
 .kx-chip:hover {
   border-color: var(--border-strong);
+  background: var(--bg-subtle);
 }
 .kx-chip.on {
   background: var(--accent);
@@ -719,92 +738,11 @@ body {
   font-size: var(--fs-micro);
   opacity: 0.7;
 }
-/* The models: one row each, a mark, the name in mono, one line about it. */
-.kx-picker-list {
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  overflow: hidden;
-}
-.kx-pick {
-  display: grid;
-  grid-template-columns: 14px minmax(190px, max-content) 1fr;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  border: 0;
-  border-bottom: 1px solid var(--border);
-  background: var(--card);
-  color: var(--fg);
-  text-align: left;
-  font-family: inherit;
-  font-size: var(--fs-body);
-  cursor: pointer;
-}
-.kx-pick:last-child {
-  border-bottom: 0;
-}
-.kx-pick:hover {
-  background: var(--bg-subtle);
-}
-.kx-pick.on {
-  background: var(--accent-tint);
-}
-.kx-pick-mark {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  border: 1px solid var(--border-strong);
-  justify-self: center;
-}
-.kx-pick.on .kx-pick-mark {
-  background: var(--accent);
-  border-color: var(--accent);
-}
-.kx-pick-name {
-  font-size: var(--fs-ui);
-  white-space: nowrap;
-}
-.kx-pick-about {
-  font-size: var(--fs-ui);
-  color: var(--fg-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-/* The effort as a segment: one bar, equal parts, the chosen one filled. */
-.kx-segment {
-  display: flex;
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  overflow: hidden;
-  height: var(--control-h);
-}
-.kx-segment-btn {
-  flex: 1 1 0;
-  border: 0;
-  border-right: 1px solid var(--border);
-  background: var(--card);
-  color: var(--fg-secondary);
-  font-family: inherit;
-  font-size: var(--fs-ui);
-  cursor: pointer;
-}
-.kx-segment-btn:last-child {
-  border-right: 0;
-}
-.kx-segment-btn:hover {
-  color: var(--fg);
-}
-.kx-segment-btn.on {
-  background: var(--accent);
-  color: var(--accent-fg);
-}
 .kx-picker-about {
   font-size: var(--fs-ui);
-  color: var(--fg-secondary);
+  color: var(--fg-faint);
   min-height: 1.4em;
+  padding-left: 12px;
 }
 
 /* Use the full viewport width for drawers on narrow screens. */

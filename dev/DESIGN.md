@@ -356,17 +356,18 @@ for good on the second click.
 ## 9a · The dialog
 
 The panel's one centered overlay, and the engine picker is its only tenant. The drawer's
-backdrop, the elevated surface, `--r-lg`, `--shadow-lg`; 560px wide, in the middle of the page
-because it is a decision, not a document. Three sections under mono eyebrows, the way the CLIs'
-own pickers read:
+backdrop, the elevated surface, `--r-lg`, `--shadow-lg`; 600px wide, in the middle of the page
+because it is a decision, not a document. Three rows on one grid, one vocabulary — the earlier
+draft mixed chips, a bordered radio list and a segment bar, and read as three widgets:
 
-- **CLI** — chips, one on at a time: the drawn-box vocabulary at control height, the chosen one
-  filled with the accent; an untested one carries the word.
-- **Model** — one row each in a bordered list: a dot mark, the id in mono at a fixed 190px, one
-  line about it in the secondary ink. `default` first, "the CLI's own setting". The chosen row
-  sits on the accent tint.
-- **Effort** — a segment: one bar, equal parts, the chosen one filled; the line under it says
-  what the level means. Drawn only for a CLI that has the notion.
+- the label in a 64px left column, `--fs-ui` `500` in the secondary ink, sitting on the chips'
+  centreline; no eyebrow, no rule;
+- the choices as **chips** in the right column: pill-shaped (`999px`), hairline border, no fill,
+  control height; the chosen one filled with the accent; an untested CLI carries the word;
+- one line under the chips in the faint ink about the chosen one (`about` from the engine
+  spec, "the CLI's own setting" for `default`). Effort is drawn only for a CLI that has the notion.
+
+The names are sans, not mono: they are labels the user reads, not ids they would type.
 
 Every pick saves at once — there is no Apply for a preference. *Done* and Escape close; ↑↓ walk
 the models and ←→ the levels, as the CLIs do, and the footer says so in mono.

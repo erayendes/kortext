@@ -1,9 +1,8 @@
 /**
  * The engine picker: what runs this project, chosen in one place. A centered
- * dialog over a dimmed page — the panel's first — with three sections that
- * read like the CLIs' own pickers: the CLI as chips, its models as a list with
- * one line each, its effort as a segment with one line under it. Every pick
- * saves at once; Done and Escape close.
+ * dialog over a dimmed page — the panel's first — with three rows that share
+ * one vocabulary: a label on the left, chips on the right, one line under the
+ * chips about the chosen one. Every pick saves at once; Done and Escape close.
  */
 import { useEffect } from 'react';
 import { api, type EngineInfo } from './api';
@@ -88,6 +87,19 @@ export function EnginePicker({
       : guard(api.setProjectEffort(projectId, lvl).then(() => onEffort(lvl)));
 
   if (!open) return null;
+  const chip = (on: boolean, text: string, onPick: () => void, title?: string, note?: string) => (
+    <button
+      key={text}
+      className={`kx-chip${on ? ' on' : ''}`}
+      role="radio"
+      aria-checked={on}
+      title={title}
+      onClick={onPick}
+    >
+      {text}
+      {note && <span className="kx-chip-note">{note}</span>}
+    </button>
+  );
   return (
     <>
       <div className="drawer-backdrop open" onClick={onClose} aria-hidden />
@@ -99,69 +111,46 @@ export function EnginePicker({
           <span className="kx-dialog-hint">what runs this project — picks save at once</span>
         </div>
 
-        <div className="kx-picker-section">
-          <div className="kx-changebar-group">CLI</div>
-          <div className="kx-chips">
-            {engines.map((e) => (
-              <button
-                key={e.id}
-                className={`kx-chip${e.id === spec?.id ? ' on' : ''}`}
-                title={e.untested ? 'Prepared from its documentation, not yet run here' : undefined}
-                onClick={() => pickEngine(e.id)}
-              >
-                {e.id}
-                {e.untested && <span className="kx-chip-note">untested</span>}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="kx-picker-section">
-          <div className="kx-changebar-group">Model</div>
-          <div className="kx-picker-list" role="listbox" aria-label="Model">
-            <PickRow
-              on={model === ''}
-              name="default"
-              about="the CLI's own setting"
-              onPick={() => pickModel('')}
-            />
-            {models.map((m) => (
-              <PickRow
-                key={m}
-                on={model === m}
-                name={label(m)}
-                about={about(m)}
-                onPick={() => pickModel(m)}
-              />
-            ))}
-          </div>
-        </div>
-
-        {levels.length > 0 && (
-          <div className="kx-picker-section">
-            <div className="kx-changebar-group">Effort</div>
-            <div className="kx-segment" role="radiogroup" aria-label="Effort">
-              <button
-                className={`kx-segment-btn${effort === '' ? ' on' : ''}`}
-                onClick={() => pickEffort('')}
-              >
-                default
-              </button>
-              {levels.map((l) => (
-                <button
-                  key={l}
-                  className={`kx-segment-btn${effort === l ? ' on' : ''}`}
-                  onClick={() => pickEffort(l)}
-                >
-                  {label(l)}
-                </button>
-              ))}
-            </div>
-            <div className="kx-picker-about">
-              {effort ? about(effort) || ' ' : "the CLI's own setting"}
+        <div className="kx-picker">
+          <div className="kx-picker-label">CLI</div>
+          <div className="kx-picker-field">
+            <div className="kx-chips" role="radiogroup" aria-label="CLI">
+              {engines.map((e) =>
+                chip(
+                  e.id === spec?.id,
+                  e.id,
+                  () => pickEngine(e.id),
+                  e.untested ? 'Prepared from its documentation, not yet run here' : undefined,
+                  e.untested ? 'untested' : undefined,
+                ),
+              )}
             </div>
           </div>
-        )}
+
+          <div className="kx-picker-label">Model</div>
+          <div className="kx-picker-field">
+            <div className="kx-chips" role="radiogroup" aria-label="Model">
+              {chip(model === '', 'default', () => pickModel(''), "the CLI's own setting")}
+              {models.map((m) => chip(model === m, label(m), () => pickModel(m), about(m)))}
+            </div>
+            <div className="kx-picker-about">{model ? about(model) : "the CLI's own setting"}</div>
+          </div>
+
+          {levels.length > 0 && (
+            <>
+              <div className="kx-picker-label">Effort</div>
+              <div className="kx-picker-field">
+                <div className="kx-chips" role="radiogroup" aria-label="Effort">
+                  {chip(effort === '', 'default', () => pickEffort(''), "the CLI's own setting")}
+                  {levels.map((l) => chip(effort === l, label(l), () => pickEffort(l), about(l)))}
+                </div>
+                <div className="kx-picker-about">
+                  {effort ? about(effort) : "the CLI's own setting"}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
 
         <div className="kx-dialog-foot">
           <span className="kx-dialog-hint mono">↑↓ model · ←→ effort · esc</span>
@@ -171,30 +160,5 @@ export function EnginePicker({
         </div>
       </div>
     </>
-  );
-}
-
-function PickRow({
-  on,
-  name,
-  about,
-  onPick,
-}: {
-  on: boolean;
-  name: string;
-  about: string;
-  onPick: () => void;
-}) {
-  return (
-    <button
-      className={`kx-pick${on ? ' on' : ''}`}
-      role="option"
-      aria-selected={on}
-      onClick={onPick}
-    >
-      <span className="kx-pick-mark" aria-hidden />
-      <span className="kx-pick-name mono">{name}</span>
-      <span className="kx-pick-about">{about}</span>
-    </button>
   );
 }
