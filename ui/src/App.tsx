@@ -173,8 +173,9 @@ export function App() {
         </main>
       )}
 
-      {/* A status bar, not a page footer: two lines under one name — what is true
-          right now, and the way to say that it is not. The credit sits opposite,
+      {/* A status bar, not a page footer: the name and its version with the power
+          switch on the first line, the ways to talk back on the second — and the
+          other channel, when there is one to switch to. The credit sits opposite,
           so nothing in this column reads as branding. */}
       <footer className="kx-statusbar">
         <span className="kx-statusbar-lines">
@@ -182,10 +183,10 @@ export function App() {
             <ServerStatus {...update} />
           </span>
           <span className="kx-statusbar-line">
-            <OtherChannel {...update} />
             <ReportIssue />
             <span className="kx-danger-sep">·</span>
             <SupportWork />
+            <OtherChannel {...update} />
           </span>
         </span>
         <span className="kx-doc-spacer" />
@@ -306,9 +307,7 @@ function ServerStatus({ info, note, checkNow }: ReturnType<typeof useUpdate>) {
           onClick={checkNow}
           title="Check for updates"
         >
-          <ChannelMark beta={channelOf(info.current) === 'beta'} />
-          {channelOf(info.current) === 'beta' ? 'Beta version' : 'Stable version'}{' '}
-          <span className="kx-version mono">{pretty(info.current)}</span>
+          Kortext <span className="kx-version mono">{pretty(info.current)}</span>
         </button>
       )}
       {note && <span className="kx-status-note">· {note}</span>}
@@ -414,18 +413,11 @@ function OtherChannel({ info, run }: ReturnType<typeof useUpdate>) {
   if (!info) return null;
   const beta = channelOf(info.current) === 'beta';
   const other = beta ? info.latest : info.beta;
-  if (!other)
-    return (
-      <>
-        <span className="kx-version-btn kx-status-note">
-          <ChannelMark beta />
-          No beta version right now
-        </span>
-        <span className="kx-danger-sep">·</span>
-      </>
-    );
+  // Nothing to switch to says nothing: the name above already carries the channel.
+  if (!other) return null;
   return (
     <>
+      <span className="kx-danger-sep">·</span>
       <button
         className="kx-statusbar-link kx-version-btn"
         onClick={() => run(beta ? 'latest' : 'beta', other)}
@@ -435,7 +427,6 @@ function OtherChannel({ info, run }: ReturnType<typeof useUpdate>) {
         {beta ? 'Use stable version' : 'Try beta version'}{' '}
         <span className="kx-version mono">{pretty(other)}</span>
       </button>
-      <span className="kx-danger-sep">·</span>
     </>
   );
 }

@@ -335,13 +335,15 @@ open and then hourly; the server asks npm at most hourly.
 
 **Status bar** (`.kx-statusbar`), 52px, never wrapping — an application's bar, not a web
 page's footer. On the left two stacked lines (`.kx-statusbar-lines`), one column under the
-product's own name. First line: the server dot (`.kx-dot`, green up, red down, and the only
-thing said while all is well), `kortext` as a link to the repository, the running version in
-mono, the ⏻ button (`.kx-power`, armed state in red on the second click), and a warning span
-that only carries words when the dot cannot say it (armed, error, stopped). Second line, in the
-first line's own columns — a bug mark in the dot's slot, the words starting under `kortext` and
-at the same 11px: `Something wrong? Report an issue`, a link to the GitHub bug template with the
-running version already filled in — under the thing that broke, never next to the credit. On the right, that
+product's own name. First line: `Kortext` and the running version in mono — the version string
+carries the channel (`3.2-beta7`), so no word says *beta* or *stable* beside it — as one button
+that checks for updates; then the ⏻ button (`.kx-power`, armed state in red on the second
+click) and a note span that only carries words when the dot cannot say it (armed, error,
+stopped). Second line, at the same size: `Something wrong? Report an issue`, a link to the
+GitHub bug template with the running version already filled in; `Like it? Support Kortext`;
+and, only when there is one to switch to, the other channel — `Use stable version 3.1.0` on a
+beta, `Try beta version …` on a stable. Nothing says "no beta right now": an absence is not
+news. On the right, the
 credit: `milowda ♥ istanbul`, a button whose popover lists the other tools. Nothing in the bar
 is visible that is not true right now.
 
