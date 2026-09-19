@@ -41,9 +41,19 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
     var waiting: [Waiting] {
         projects.flatMap { p -> [Waiting] in
             var out: [Waiting] = []
-            // A brief the gate sent back: the panel shows its questions as a card; here it is a review row.
-            if p.notReady { out.append(Waiting(project: p, doc: Doc(rel: "BRIEF.md", status: "approved", state: "waiting", detail: "review", section: "needs"))) }
-            out += p.docs.filter { $0.section == "needs" }.map { Waiting(project: p, doc: $0) }
+            // A brief the gate sent back: the panel shows its questions as a card; here it is a
+            // review row. The server usually lists BRIEF.md under needs already (as "approve"),
+            // so that row is relabelled rather than doubled; a second row only when it is absent.
+            var needs = p.docs.filter { $0.section == "needs" }
+            if p.notReady {
+                if let i = needs.firstIndex(where: { $0.rel == "BRIEF.md" }) {
+                    let b = needs[i]
+                    needs[i] = Doc(rel: b.rel, status: b.status, state: b.state, detail: "review", section: b.section)
+                } else {
+                    out.append(Waiting(project: p, doc: Doc(rel: "BRIEF.md", status: "approved", state: "waiting", detail: "review", section: "needs")))
+                }
+            }
+            out += needs.map { Waiting(project: p, doc: $0) }
             out += p.docs.filter { $0.section == "doing" }.map { Waiting(project: p, doc: $0) }
             return out
         }
