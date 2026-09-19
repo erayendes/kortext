@@ -82,7 +82,7 @@
 
   /* type */
   --font-sans: -apple-system, system-ui, 'Segoe UI', sans-serif;
-  --font-mono: 'Overpass Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 
   /* shadow */
   --shadow-xs: 0 1px 1px rgba(24, 24, 27, 0.04);
