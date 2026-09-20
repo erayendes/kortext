@@ -49,7 +49,9 @@ export function selfUpdate(
   return new Promise((resolve) => {
     const proc = spawn(
       'npm',
-      ['install', '-g', '--allow-scripts=better-sqlite3', `kortext@${tag}`],
+      // --prefer-online: the panel saw the new tag on a fresh fetch; npm's cached
+      // packument may still say the old one and reinstall what is already there.
+      ['install', '-g', '--prefer-online', '--allow-scripts=better-sqlite3', `kortext@${tag}`],
       { shell: process.platform === 'win32' },
     );
     let output = '';
