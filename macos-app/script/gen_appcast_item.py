@@ -49,6 +49,9 @@ def md_to_html(text):
                 out.append("</ul>")
                 in_ul = False
             out.append(f"<p><b>{line[2:-2]}</b></p>")
+        # a hard-wrapped bullet continues on an indented line; it stays in the same item
+        elif in_ul and line[:1].isspace() and line.strip():
+            out[-1] = out[-1][:-5] + " " + inline(line.strip()) + "</li>"
         # blank line → close list if open
         elif line.strip() == "":
             if in_ul:
