@@ -265,6 +265,9 @@ export function parseWarnings(content: string): Array<{ subject: string; reason:
 }
 
 // Read questions only from the questions section; ignore template placeholders.
+// A line that says there is nothing here, in the forms agents write it.
+const NONE_LINE = /^[-*+]?\s*[*_]*\s*(none|nothing|n\/a|yok)\b/i;
+
 export function hasOpenQuestions(content: string): boolean {
   const lines = content.split('\n');
   let inSection = false;
@@ -277,6 +280,8 @@ export function hasOpenQuestions(content: string): boolean {
     if (!inSection) continue;
     const t = line.trim();
     if (t === '' || /^[-*+]?\s*\[[^\]]*\]$/.test(t)) continue;
+    // "*None — all resolved.*": a small model's way of leaving the section empty.
+    if (NONE_LINE.test(t)) continue;
     return true;
   }
   return false;

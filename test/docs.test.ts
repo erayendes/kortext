@@ -216,6 +216,10 @@ test('open questions are the ones a human still has to answer', () => {
 `;
   assert.equal(hasOpenQuestions(asked), true);
 
+  // haiku on a real run: the section "left empty" in words. Not a question.
+  const none = `# Doc\n\n## Questions for Prime\n\n*None — all stack choices were settled by the revision notes.*\n`;
+  assert.equal(hasOpenQuestions(none), false);
+
   // A question outside the section is not tracked — one place to look is the point.
   assert.equal(hasOpenQuestions('# Doc\n\n## Scope\n\n- Which region?\n'), false);
 });
