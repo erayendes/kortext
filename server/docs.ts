@@ -309,7 +309,12 @@ export function unfilledPlaceholders(content: string, template: string | null): 
     // An alert marker (`[!WARNING]`) and a task box (`[ ]`, `[x]`) are markdown,
     // not blanks to fill — a template ships them and a finished document keeps
     // them. Only the bracketed prose that is left counts.
-    const blanks = t.replace(/\[![A-Z]+\]/g, '').replace(/\[[ xX]\]/g, '');
+    // A route segment (`/uzmanlık/[slug]`) is a value, not a blank; a real API.md
+    // was refused for its own paths.
+    const blanks = t
+      .replace(/\[![A-Z]+\]/g, '')
+      .replace(/\[[ xX]\]/g, '')
+      .replace(/\/\[[\w.-]+\]/g, '');
     if (!t || !/\[[^\]]+\]/.test(blanks)) continue;
     if (/^#{1,6}\s/.test(t) || shipped.has(t)) out.push(t);
   }

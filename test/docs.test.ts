@@ -326,6 +326,9 @@ test('a template line the agent never replaced is unfilled; prose in brackets is
   ].join('\n');
   assert.deepEqual(unfilledPlaceholders(written, template), []);
 
+  // A dynamic route in a heading is a value: haiku's API.md was refused for `/yazılar/[slug]`.
+  assert.deepEqual(unfilledPlaceholders('#### `GET /yazılar/[slug]`\n', template), []);
+
   // A heading carrying a pattern is unfilled wherever it came from.
   assert.deepEqual(unfilledPlaceholders('### [Surface name]\n', null), ['### [Surface name]']);
 
