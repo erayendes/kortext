@@ -7,7 +7,38 @@
     <link>https://github.com/erayendes/kortext</link>
     <description>Kortext menu bar app update feed</description>
     <language>en</language>
-                                      <item>
+                                          <item>
+      <title>Kortext 3.2.0</title>
+      <sparkle:version>300200000</sparkle:version>
+      <sparkle:shortVersionString>3.2.0</sparkle:shortVersionString>
+      <pubDate>Sun, 20 Sep 2026 18:13:52 +0000</pubDate>
+      <description><![CDATA[
+<ul>
+<li><b>EXPERIENCE.md, on request.</b> One more document, offered at the handshake rather than queued by the chain: the brief a design AI needs — journeys, every screen with its states, the copy word for word — and the prompts to paste, one master and one per journey, for any design tool. Press *Write EXPERIENCE.md* on the handshake card, with the engine and model of your choice above it; skip it if the design is already in hand. `DESIGN.md` documents a design the project folder already holds instead of inventing one. After the handshake the document is the project owner's to update.</li>
+<li><b>n/a is prime's call.</b> A document the author judges not to apply no longer settles on its own: it arrives as `n/a?` under Action Needed, and *Approve n/a* is what settles it. A note and a revision send the author back to write it after all.</li>
+<li><b>Export.</b> A document leaves the panel as a file: <b>Export</b> in the drawer saves the open one, <b>Export documents</b> under the project's gear lists every written document — All, None, or pick — and downloads the chosen ones as one zip. `.kortext/` is a hidden folder a file picker will not show; this is how `EXPERIENCE.md` reaches a design AI.</li>
+<li><b>The thread stays where the answer is.</b> A click elsewhere folds a line's question box; a click on the answer reopens it for the follow-up; × on the thread closes it. *Suggest* shows only where the author has something to suggest — a question or a request — not on a plain line.</li>
+</ul>
+<ul>
+<li><b>A menu bar app for macOS.</b> `Kortext.zip` on the release, notarized, updating itself. One card per project with the documents that wait on you — `approve`, `review`, `failed` — and the ones being written, grey; a row opens the panel on that document. ⏻ starts the server or, pressed twice, stops it; the app stays. Opening the app brings the server up with it. A notification when a document lands, a step fails, a brief is sent back or a chain settles, in the project's language, opening the panel where it happened. On a Mac without it, the panel offers it in the update strip's slot — one strip at a time.</li>
+<li><b>The engine line is the control.</b> `codex · default · high ›` beside Start opens the picker; *Change model* is gone. Add project carries the same line and the same picker, the effort always named.</li>
+<li><b>⚙ beside the project's name</b> unfolds Restart, Archive and Remove under the path, each arming in place; the page's foot is empty. Restart wears amber. After the handshake the engine line and its controls go — kortext has retired from that project.</li>
+<li><b>Approve anyway.</b> A draft that still carries a template line verbatim is refused as before, but the panel now names the line — a click jumps to it — and the way to insist waits at the foot of the drawer, beside Request revision, until you are done reading.</li>
+<li><b>Stable version / Try beta version.</b> Two rows in the app's settings, each showing the newest of its kind and whether it is what you run. Press one to install it — the server restarts and the app follows to the same channel; press the other to go back. The panel's status bar carries the same pair: the running channel, a press away from a check, and the other, a press away from installing it. The update strip follows your channel.</li>
+<li><b>Short versions</b> everywhere: `3.2-beta3`, `3.2`, `3.1.2`.</li>
+<li><b>Continue holds</b> until the step is seen running; a second press no longer pauses it again. A pause made elsewhere — the menu bar app, another tab — reaches the panel.</li>
+<li>Two URLs reach in: `/?project=<id>` and `/?project=<id>&doc=<rel>`. The other tools sit under the documents, not above them. Remove's warning no longer mentions Kopeng.</li>
+</ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/erayendes/kortext/releases/download/v3.2.0/Kortext.zip"
+        sparkle:edSignature="WC6Bo4temhslsS84wiCMe7RjTfCIGG81GPiazFWgt7ZyD/qC8wKPGh195BQUNiAK789SrI8/T2PlW5TA/QsqAg=="
+        length="1382012"
+        type="application/octet-stream"
+        sparkle:minimumSystemVersion="14.0"/>
+    </item>
+
+<item>
       <title>Kortext 3.2.0-beta.9</title>
       <sparkle:channel>beta</sparkle:channel>
       <sparkle:version>300199009</sparkle:version>
