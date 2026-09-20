@@ -2,7 +2,7 @@
 
 🇬🇧 [For English press 9](../CHANGELOG.md)
 
-## [Unreleased]
+## [3.2.0] — 2026-09-20
 
 - **EXPERIENCE.md, isteğe bağlı.** Zincirin kendiliğinden yazmadığı, el sıkışmada sunulan
   bir belge daha: tasarımı yapacak yapay zekânın ihtiyacı olan brief — yolculuklar, her ekran

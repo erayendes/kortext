@@ -2,7 +2,7 @@
 
 🇹🇷 [For Turkish press 1](tr/CHANGELOG.md)
 
-## [Unreleased]
+## [3.2.0] — 2026-09-20
 
 - **EXPERIENCE.md, on request.** One more document, offered at the handshake rather than
   queued by the chain: the brief a design AI needs — journeys, every screen with its states,
