@@ -34,6 +34,17 @@ Yeni bir proje içinse sizden brief bekleyecektir.
 > Brief ne yapıldığını, kimin için olduğunu, ürünün hangi dili konuştuğunu, işe yaradığını nasıl anlayacağınızı ve neyin kapsam dışı olduğunu söylemiyorsa analiz başlamaz — sorular gelir ve brief **Action needed**'a düşer. Soruları brief'te yanıtlayın ve onaylayın. Tekrar değerlendirmeye girer.
 > **Bu kapı tek bir nedenle vardır.** Üç cümleden ürün gereksinimleri belgesi yazması istenen bir ajan yazar — ürünü uydurur, o kadar. Bir soru bir dakikaya mal olur; uydurulmuş bir ürün bütün analize.
 
+### Elinizde olan bir şey varsa
+
+Karar verilmiş bir şey — beğendiğiniz bir tasarım, kullanacağınız teknoloji, alınmış bir alan adı, uymanız gereken bir mevzuat, "bunu asla yapmayacağız" dediğiniz bir şey — brief'e yazılır. Brief her belgenin girdisidir; orada olan hiçbir şey yeniden icat edilmez, orada olmayan her şey ajanın takdirine kalır.
+
+- **Tasarım:** ekranları, export'ları, token dosyasını veya `.pen` dosyasını repo'da bir klasöre koyun (`design/` gibi) ve brief'te söyleyin: *"Tasarım hazır, `design/` referanstır; yeni tasarım önerilmeyecek."* `DESIGN.md` o tasarımı belgeler, yanına ikincisini uydurmaz. Beğendiğiniz bir web sitesiyse dosya yok; adresini ve neyi beğendiğinizi yazın — boşlukları, yazı tipini, koyu zemini. Ajan siteyi gezemez, tarifinizi uygular.
+- **Teknoloji:** *"Next.js ve Sanity, tartışmasız."* — `STACK.md` seçeneği tartışmaz, kararı yazar.
+- **Kural ve sınır:** *"Çerez yok, form yok, yalnız e-posta."* — `LEGAL.md`, `SECURITY.md` ve `GROWTH.md` bunu veri kabul eder.
+- **Kapsam dışı:** brief'in kendi bölümü var; oraya yazın. Yazılmayan şey kapsam içi sayılır.
+
+Kısa yeter; bir cümle bir soruyu keser. Brief'te olmayan her karar, ilk belgeden itibaren soru olarak geri gelir.
+
 Kortext repo'nun köküne `.kortext/` dizinini ve içine belge iskeletlerini, bir de `AGENTS.md` yerleştirir. `AGENTS.md` zaten varsa içine işaretli bir blok ekler; sizin yazdıklarınıza dokunmaz.
 
 Kortext, belgelerin bağımlılık sırasına uyan bir iş akışında adım adım çalışır. Her adım tek bir belge yazar — `PRODUCT.md`, `STACK.md`, `STRUCTURE.md`, `ARCHITECTURE.md`, `DESIGN.md`, `GROWTH.md`, `SECURITY.md`, `ENVIRONMENT.md`, `DATABASE.md`, `API.md`, `LEGAL.md`, `CONTENT.md`, `ENGINEERING.md`, `TEST.md`, `EXPERIENCE.md` (isteğe bağlı) — ve bunu bir persona olarak yapar: `product manager`, `architect`, `designer`, `growth expert`, `security engineer`, `DevOps engineer`, `DBA`, `compliance expert`, `copywriter` ve `QA engineer`.

@@ -34,6 +34,17 @@ For a new project it will wait for a brief.
 > If the brief does not say what is being built, who it is for, which language the product speaks, how you will know it worked, and what is out of scope, the analysis does not begin — questions come back and the brief drops to **Action needed**. Answer them in the brief and approve it. It is judged again.
 > **This gate exists for one reason.** An agent asked to write a product requirements document from three sentences will write one — it will simply invent the product. A question costs a minute; an invented product costs the whole analysis.
 
+### If you already have something
+
+Anything already decided — a design you like, the technology you will use, a domain you own, a regulation you must meet, a thing you will never do — goes in the brief. The brief is every document's input; nothing in it gets reinvented, and everything not in it is the agent's call.
+
+- **Design:** put the screens, exports, token file or `.pen` file in a folder in the repo (`design/`, say) and say so in the brief: *"The design is done; `design/` is the reference. No new design."* `DESIGN.md` documents that design and invents nothing beside it. If what you like is a website, there is no file; write the address and what you like about it — the spacing, the typeface, the dark ground. The agent cannot browse it; it applies your description.
+- **Technology:** *"Next.js and Sanity, not up for discussion."* — `STACK.md` does not weigh options, it records the decision.
+- **A rule or a limit:** *"No cookies, no forms, e-mail only."* — `LEGAL.md`, `SECURITY.md` and `GROWTH.md` take it as given.
+- **Out of scope:** the brief has a section for it; write it there. What is not written is in scope.
+
+Short is enough; one sentence closes one question. Every decision the brief leaves out comes back as a question from the first document on.
+
 Kortext puts a `.kortext/` folder at the root of the repo, with the document skeletons inside, and an `AGENTS.md` beside it. If `AGENTS.md` already exists, it adds a marked block and leaves your own text alone.
 
 Kortext works step by step, in the order the documents depend on each other. Each step writes one document — `PRODUCT.md`, `STACK.md`, `STRUCTURE.md`, `ARCHITECTURE.md`, `DESIGN.md`, `GROWTH.md`, `SECURITY.md`, `ENVIRONMENT.md`, `DATABASE.md`, `API.md`, `LEGAL.md`, `CONTENT.md`, `ENGINEERING.md`, `TEST.md`, `EXPERIENCE.md` — as a persona: `product manager`, `architect`, `designer`, `growth expert`, `security engineer`, `DevOps engineer`, `DBA`, `compliance expert`, `copywriter` and `QA engineer`.
