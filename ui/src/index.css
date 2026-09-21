@@ -566,31 +566,6 @@ body {
   position: relative;
   z-index: 5;
 }
-.input {
-  width: 100%;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  color: var(--fg);
-  padding: 8px 11px;
-  border-radius: 6px;
-  font-size: var(--fs-body);
-  font-family: inherit;
-  transition: 0.12s;
-  outline: none;
-}
-.input::placeholder {
-  color: var(--fg-faint);
-}
-.input:hover {
-  border-color: var(--border-strong);
-}
-.input:focus {
-  border-color: var(--accent-tint-border);
-}
-.input:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
 
 /* The dialog: the panel's one centered overlay, for the engine picker. Same
    backdrop as the drawer, the elevated surface, the large shadow; it sits in
@@ -1033,17 +1008,6 @@ a.btn {
   color: var(--fg-secondary);
   white-space: nowrap;
 }
-@keyframes kx-pulse {
-  0% {
-    transform: scale(0.6);
-    opacity: 0.6;
-  }
-  100% {
-    transform: scale(1.7);
-    opacity: 0;
-  }
-}
-
 /* Agent label */
 .agent {
   display: inline-flex;
@@ -1075,9 +1039,16 @@ a.btn {
 .input::placeholder {
   color: var(--fg-faint);
 }
+.input:hover {
+  border-color: var(--border-hover);
+}
 .input:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-ring);
+}
+.input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 .secondary {
   color: var(--fg-secondary);
@@ -1873,21 +1844,6 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
 }
 
 /* Project and document controls */
-.kx-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  margin-left: 6px;
-  border-radius: 8px;
-  background: var(--accent);
-  color: var(--accent-fg);
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  font-family: var(--font-mono);
-}
 .kx-cmd-card {
   display: flex;
   flex-direction: column;
@@ -2147,15 +2103,18 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
 .kx-badge {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  min-width: 16px;
   height: 20px;
   padding: 0 8px;
-  margin-left: 0;
   font-family: var(--font-sans);
   font-size: var(--fs-ui);
   font-weight: 500;
   line-height: 1;
   border-radius: var(--r-pill);
   border: 1px solid transparent;
+  background: var(--accent);
+  color: var(--accent-fg);
 }
 /* The word in brackets: which kind of waiting, writing or pausing. It carries
    the urgency; the state word beside it stays quiet. */
