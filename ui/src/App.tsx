@@ -1938,6 +1938,12 @@ function ProjectScreen({
         onChecking={setChecking}
         onSettled={setSettled}
         onPaused={setPaused}
+        // The handshake card offers the same picker the gear holds; opening it
+        // opens the gear so the row has somewhere to show.
+        onExport={() => {
+          setTools(true);
+          openExport();
+        }}
       />
     </main>
   );
@@ -2026,7 +2032,15 @@ function ExperienceOffer({ project, paused }: { project: Project; paused?: boole
   );
 }
 
-function HandshakeCard({ project, paused }: { project: Project; paused?: boolean }) {
+function HandshakeCard({
+  project,
+  paused,
+  onExport,
+}: {
+  project: Project;
+  paused?: boolean;
+  onExport?: () => void;
+}) {
   const [state, setState] = useState<HandshakeState | null>(null);
 
   useEffect(() => {
@@ -2070,6 +2084,16 @@ function HandshakeCard({ project, paused }: { project: Project; paused?: boolean
         <span className="kx-handshake-count mono">
           {state.documents} documents
           {state.handedOver > 0 && ` · ${state.handedOver} items handed to the build phase`}
+          {/* The documents are the deliverable; the way out of the hidden
+              .kortext/ folder is offered where the work ends, not only under the gear. */}
+          {onExport && (
+            <>
+              {' · '}
+              <button className="btn btn-link-primary" onClick={onExport}>
+                Export documents
+              </button>
+            </>
+          )}
         </span>
       </div>
       {/* Kopeng is not released, so nothing advertises it: whoever has the
@@ -2101,9 +2125,11 @@ function DocumentsTab({
   onChecking,
   onSettled,
   onPaused,
+  onExport,
 }: {
   project: Project;
   paused?: boolean;
+  onExport?: () => void;
   onStatus?: (text: string) => void;
   onHasJobs?: (has: boolean) => void;
   onPending?: (pending: boolean) => void;
@@ -2216,7 +2242,7 @@ function DocumentsTab({
 
   return (
     <div className="kx-docs">
-      <HandshakeCard project={project} paused={paused} />
+      <HandshakeCard project={project} paused={paused} onExport={onExport} />
       <ReadinessCard
         gate={gate}
         // An existing project has no brief to open — the evidence is its code.

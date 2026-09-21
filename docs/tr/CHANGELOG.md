@@ -2,6 +2,11 @@
 
 🇬🇧 [For English press 9](../CHANGELOG.md)
 
+## [Unreleased]
+
+- **Export, el sıkışma kartında.** Analiz bittiğinde **Export documents** belge sayısının
+  yanında durur; dişliyi açmak gerekmez. Aynı seçici: All, None ya da tek tek.
+
 ## [3.2.0] — 2026-09-20
 
 - **EXPERIENCE.md, isteğe bağlı.** Zincirin kendiliğinden yazmadığı, el sıkışmada sunulan

@@ -2,6 +2,11 @@
 
 🇹🇷 [For Turkish press 1](tr/CHANGELOG.md)
 
+## [Unreleased]
+
+- **Export, on the handshake card.** When the analysis is done, **Export documents** sits
+  beside the document count; no need to open the gear. The same picker: All, None, or pick.
+
 ## [3.2.0] — 2026-09-20
 
 - **EXPERIENCE.md, on request.** One more document, offered at the handshake rather than
