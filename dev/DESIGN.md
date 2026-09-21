@@ -73,8 +73,16 @@ auto.
 `#a3a3ad`/`#54545c` (just needs to exist).
 
 **Accent** is single and neutral. Kortext is not a brand show; the primary action is black,
-because it is the one thing that must be seen. `--accent` `#18181b` / dark `#ededef`, plus
-`--accent-fg`, `--accent-tint`, `--accent-tint-border`, `--accent-ring`.
+because it is the one thing that must be seen.
+
+| token | light | dark | used for |
+| --- | --- | --- | --- |
+| `--accent` | `#18181b` | `#ededef` | the primary button, the checked box, the chosen chip |
+| `--accent-hover` | `#000000` | `#cfcfd4` | the primary button under the cursor |
+| `--accent-fg` | `#ffffff` | `#0a0a0b` | text on the accent |
+| `--accent-tint` | `#f4f4f5` | `#1c1c20` | selection, the link button's hover ground |
+| `--accent-tint-border` | `#e2e2e6` | `#2a2a30` | the edge of a tinted control |
+| `--accent-ring` | `rgba(24,24,27,.16)` | `rgba(237,237,239,.16)` | the 3px focus ring |
 
 > In dark, `--accent-hover` is **darker**, not whiter: the accent there is already near white
 > (`#ededef`), so a white hover goes nowhere. A light-on-dark control darkens to respond —
@@ -83,14 +91,17 @@ because it is the one thing that must be seen. `--accent` `#18181b` / dark `#ede
 **State colours** are the only non-neutral colours in the interface. Each comes as a triple
 (text, background, border) and the set is closed.
 
-| token | light | dark | reads as |
+| token | light (text · bg · border) | dark (text · bg · border) | reads as |
 | --- | --- | --- | --- |
-| `--green` | `#157a52` | `#46c08a` | approved, passed |
-| `--amber` | `#9a6a16` | `#d3a55e` | your turn, paused |
-| `--red` | `#c5392f` | `#e0726a` | failed, destructive |
-| `--blue` | `#2563c9` | `#5e9bf0` | writing, info |
-| `--violet` | `#5b4bcc` | `#8b7df0` | in review |
-| `--pink` | `#c02a72` | `#ee7bb0` | a demand, a moving input |
+| `--green` | `#157a52` · `#eaf5ef` · `#cfe9dd` | `#46c08a` · `#10231b` · `#1d3b2e` | approved, passed |
+| `--amber` | `#9a6a16` · `#faf2e2` · `#ecdcb8` | `#d3a55e` · `#241c0e` · `#3a2e16` | your turn, paused |
+| `--red` | `#c5392f` · `#fbeceb` · `#f1cfcc` | `#e0726a` · `#26120f` · `#3d201c` | failed, destructive |
+| `--blue` | `#2563c9` · `#eaf1fc` · `#cbdcf6` | `#5e9bf0` · `#0f1c30` · `#1c3050` | writing, info |
+| `--violet` | `#5b4bcc` · `#efedfb` · `#dad5f4` | `#8b7df0` · `#171530` · `#272350` | in review |
+| `--pink` | `#c02a72` · `#fdebf3` · `#f6cede` | `#ee7bb0` · `#2b1220` · `#4a2038` | a demand, a moving input |
+
+The three are `--green`, `--green-bg`, `--green-border` and so on for each. A tinted ground in
+dark is the page black with the colour mixed in, never the light value dimmed.
 
 **One palette, three contexts.** These six speak three languages and never collide, because none
 stands next to another: state lives at the edge of a row, an alert inside a document body, syntax
@@ -112,10 +123,11 @@ depending on where it is read.
 
 ## 3 · Typography
 
-Two families, both the platform's own. The **system sans** (`-apple-system, system-ui`: SF Pro
-on macOS, Segoe UI on Windows) writes the human's language — headings, sentences, buttons.
-The **system mono** (`ui-monospace`: SF Mono on macOS) writes everything the machine owns —
-paths, ids, commands, timestamps. The test: if the user cannot type it from memory, it is mono.
+Two families, both the platform's own. The **system sans** (`--font-sans`: `-apple-system,
+system-ui, 'Segoe UI', sans-serif` — SF Pro on macOS, Segoe UI on Windows) writes the human's
+language — headings, sentences, buttons. The **system mono** (`--font-mono`: `ui-monospace,
+'SF Mono', Menlo, Consolas, monospace`) writes everything the machine owns — paths, ids,
+commands, timestamps. The test: if the user cannot type it from memory, it is mono.
 No webfont is shipped: Barlow was named in the stack until 2026-09-19 but never loaded, so
 every screen had already been the system font; the scale below is sized for SF Pro, one step
 above the macOS HIG so a 13px-native panel does not read small in a browser.
@@ -165,8 +177,20 @@ question, and the gap says so.
 Two elevations, nothing between: `--shadow-xs` is *slightly off the page* (a control),
 `--shadow-lg` *above it* (drawer, popover). Dark keeps the same two, blacker.
 
+| token | light | dark |
+| --- | --- | --- |
+| `--shadow-xs` | `0 1px 1px rgba(24,24,27,.04)` | `0 1px 1px rgba(0,0,0,.4)` |
+| `--shadow-lg` | `0 12px 32px rgba(24,24,27,.12), 0 2px 6px rgba(24,24,27,.06)` | `0 14px 36px rgba(0,0,0,.6)` |
+
+**Focus** is one ring for every control: `:focus-visible` drops the outline and draws
+`0 0 0 3px var(--accent-ring)` as a box-shadow — keyboard only, never on click. **Selection**
+is `--accent-tint`, no colour. The **scrollbar** is 10px, thumb in `--border-strong` on a 3px
+`--bg` gutter, `--border-hover` under the cursor. Three breakpoints, each one change: 920px the
+project grid drops to one column; 560px the drawer takes the full width; 480px the drawer head
+wraps.
+
 Transitions use `--speed` 130ms with `--ease` `cubic-bezier(0.2,0,0,1)`. Current animations also
-include the 1.8s status ping, 1.4s activity pulse, 0.8s/0.9s spinners and 320ms slide entry.
+include the 1.4s activity pulse, 0.8s/0.9s spinners and 320ms slide entry.
 Reduced-motion handling currently disables slide entry only; coverage of the remaining
 animations is still incomplete. The accessibility target is recorded in [PRODUCT.md](./PRODUCT.md).
 
@@ -310,10 +334,10 @@ One hint under the column. No prose about what the handshake means; the title sa
 | related `.kx-doc-readbar` | blue ground, mono head, no frame | who reads this document |
 | action needed `.kx-doc-changebar` | amber ground, amber frame and head | your turn: questions and requests |
 | dependency `.kx-doc-dependbar` | no ground, plain pink frame | news only: which input is moving |
-| open question `.kx-doc-askbar` | amber | yours, and it blocks approval |
 
-Amber is *your turn* everywhere — the `paused` state, the question band, the Action Needed band —
-so the one band that asks for a decision wears it too. Pink stays with the badges in the row: it
+Amber is *your turn* everywhere — the `paused` state, the Action Needed band — so the one band
+that asks for a decision wears it too. An open question is not a band of its own: it is a line
+in the Action Needed band, numbered (§ 10). Pink stays with the badges in the row: it
 says a demand exists, the amber band is where it is answered. The dependency band is
 hollow and framed because it asks nothing. Every band's head is the group label from § 10, in
 mono, so the panel's labels and the document's own labels are one thing.
@@ -482,7 +506,7 @@ survives).
 | rules | 1256 | 354 |
 | custom properties | 169 | 76 |
 
-Gone with it: the `--color-*` alias family, the unused greys, the ten persona colours `--a-*`,
+Gone with it: the `--color-*` alias family, the ten persona colours `--a-*`,
 `--radius-*`, `--shadow-md/pop`, `--sidebar-w` / `--header-h` / `--footer-h`, the `.kx-link*`
 family superseded by `.btn-link*`, and the `data-accent` / `data-density` / `data-radius`
 switches with their `--r-scale` / `--d-scale` multipliers — no code ever wrote those attributes,
@@ -492,8 +516,12 @@ Two things were left on purpose: `--sp-1`, `--sp-5` and `--sp-6` (a spacing scal
 invites hand-written pixels) and `var(--bg-surface, transparent)`, which reads an undefined
 token through a fallback and is therefore correct as written.
 
-The counts above are the sweep's own; the file has grown since with the drawer, the bands and the
-document view, and is measured again only when the next sweep is due.
+**Second sweep (2026-09-21).** A surface-alias family had survived the first — `--card`,
+`--panel`, `--bg-elev`, `--hover`, `--fg-mid`, `--accent-hi` and four more, each a `var()` of a
+real token — plus two greys and eight rules no component rendered (`.pill`, `.kx-dot`, `.live`
+and its ping, the old engine line and select, an error hint, a request state, the question band).
+All gone; every `var()` now names a token in § 2–5. `--blue-border` was added so the sixth triple
+is whole. The file is 3425 lines, measured this time with the drawer and the document view in it.
 
 ---
 

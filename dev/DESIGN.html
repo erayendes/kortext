@@ -7,6 +7,9 @@
 <style>/* Panel styles and design tokens; see dev/DESIGN.md. */
 
 :root {
+  /* The page's own answer to "light or dark" — what an <img> hands the SVG
+     inside it, so the wordmark's palette follows the panel's theme, not the OS. */
+  color-scheme: light;
   /* Neutral colors */
 
   --gray-300: #e0e0e4;
@@ -48,6 +51,7 @@
   --red-border: #f1cfcc;
   --blue: #2563c9;
   --blue-bg: #eaf1fc;
+  --blue-border: #cbdcf6;
   --violet: #5b4bcc;
   --violet-bg: #efedfb;
   --violet-border: #dad5f4;
@@ -95,22 +99,12 @@
   --speed: 130ms;
   --ease: cubic-bezier(0.2, 0, 0, 1);
 
-  /* Shared surface aliases */
-  --bg-elev: var(--bg);
-  --panel: var(--bg-subtle);
-  --card: var(--bg);
-  --hover: var(--bg-hover);
-  --hover-strong: var(--bg-active);
-  --fg-mid: var(--fg-secondary);
-  --accent-hi: var(--accent-hover);
-  --accent-soft: var(--accent-tint);
-  --accent-line: var(--accent-tint-border);
-  --col-bg: var(--bg-inset);
 }
 
 /* ---------- dark theme ---------- */
 /* Repeat dark values for explicit and OS-selected themes to avoid a script-dependent theme flash. */
 :root[data-theme='dark'] {
+  color-scheme: dark;
   --border-hover: #3a3a40;
 
   --gray-300: #2c2c31;
@@ -149,6 +143,7 @@
   --red-border: #3d201c;
   --blue: #5e9bf0;
   --blue-bg: #0f1c30;
+  --blue-border: #1c3050;
   --violet: #8b7df0;
   --violet-bg: #171530;
   --violet-border: #272350;
@@ -162,6 +157,7 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
+    color-scheme: dark;
     --border-hover: #3a3a40;
 
     --gray-300: #2c2c31;
@@ -200,6 +196,7 @@
     --red-border: #3d201c;
     --blue: #5e9bf0;
     --blue-bg: #0f1c30;
+    --blue-border: #1c3050;
     --violet: #8b7df0;
     --violet-bg: #171530;
     --violet-border: #272350;
@@ -213,7 +210,10 @@
   }
 }
 
-
+@theme inline {
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+}
 
 * {
   box-sizing: border-box;
@@ -221,7 +221,12 @@
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
-body { margin: 0; }
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
 body {
   background: var(--bg);
   color: var(--fg);
@@ -243,13 +248,13 @@ body {
   height: 10px;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--gray-300);
+  background: var(--border-strong);
   border-radius: 999px;
   border: 3px solid var(--bg);
   background-clip: padding-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--gray-400);
+  background: var(--border-hover);
   background-clip: padding-box;
 }
 .logo {
@@ -290,11 +295,11 @@ body {
   position: relative;
 }
 .nav:hover {
-  background: var(--hover);
-  color: var(--fg-mid);
+  background: var(--bg-hover);
+  color: var(--fg-secondary);
 }
 .nav.active {
-  background: var(--hover-strong);
+  background: var(--bg-active);
   color: var(--fg);
 }
 .nav.active::before {
@@ -320,13 +325,13 @@ body {
   transition: 0.12s;
 }
 .nav:hover svg {
-  color: var(--fg-mid);
+  color: var(--fg-secondary);
   border-color: var(--border-strong);
 }
 .nav.active svg {
-  background: var(--accent-soft);
-  border-color: var(--accent-line);
-  color: var(--accent-hi);
+  background: var(--accent-tint);
+  border-color: var(--accent-tint-border);
+  color: var(--accent-hover);
 }
 .nav .hint {
   margin-left: auto;
@@ -342,46 +347,6 @@ body {
 
 /* ---------- generic ---------- */
 
-.pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 24px;
-  padding: 0 9px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  color: var(--fg-muted);
-  font-size: var(--fs-ui);
-  background: var(--bg);
-  cursor: pointer;
-}
-.pill:hover {
-  border-color: var(--border-strong);
-  color: var(--fg-mid);
-}
-.live {
-  position: relative;
-}
-.live::after {
-  content: '';
-  position: absolute;
-  inset: -3px;
-  border-radius: 50%;
-  background: inherit;
-  opacity: 0.25;
-  animation: ping 1.8s ease-out infinite;
-}
-@keyframes ping {
-  0% {
-    transform: scale(1);
-    opacity: 0.3;
-  }
-  80%,
-  100% {
-    transform: scale(2.4);
-    opacity: 0;
-  }
-}
 
 /* Loading spinner */
 
@@ -404,10 +369,10 @@ body {
   border: 1px solid var(--border);
   border-radius: 10px;
   overflow: hidden;
-  background: var(--card);
+  background: var(--bg);
 }
 .tag {
-  font-size: 10.5px;
+  font-size: var(--fs-micro);
   padding: 1px 7px;
   border-radius: 5px;
   font-weight: 500;
@@ -445,7 +410,7 @@ body {
   width: 360px;
   flex-shrink: 0;
   border-left: 1px solid var(--border);
-  background: var(--panel);
+  background: var(--bg-subtle);
   display: flex;
   flex-direction: column;
 }
@@ -454,7 +419,7 @@ body {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  background: var(--col-bg);
+  background: var(--bg-inset);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 8px;
@@ -492,8 +457,8 @@ body {
   padding: 0 10px;
   border-radius: 6px;
   border: 1px solid var(--border);
-  font-size: 11.5px;
-  color: var(--fg-mid);
+  font-size: var(--fs-label);
+  color: var(--fg-secondary);
   font-family: var(--font-mono);
 }
 .prov .d {
@@ -526,7 +491,7 @@ body {
   bottom: 0;
   width: 464px;
   max-width: 94vw;
-  background: var(--bg-elev);
+  background: var(--bg);
   border-left: 1px solid var(--border-strong);
   z-index: 61;
   transform: translateX(100%);
@@ -576,7 +541,7 @@ body {
   width: 486px;
   max-width: calc(100vw - 32px);
   height: 344px;
-  background: var(--bg-elev);
+  background: var(--bg);
   border: 1px solid var(--border-strong);
   border-radius: 11px;
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
@@ -601,7 +566,7 @@ body {
   gap: 12px;
   padding: 0 12px;
   border-top: 1px solid var(--border);
-  background: var(--panel);
+  background: var(--bg-subtle);
   font-size: var(--fs-label);
   color: var(--fg-muted);
   position: relative;
@@ -609,7 +574,7 @@ body {
 }
 .input {
   width: 100%;
-  background: var(--card);
+  background: var(--bg);
   border: 1px solid var(--border);
   color: var(--fg);
   padding: 8px 11px;
@@ -626,11 +591,190 @@ body {
   border-color: var(--border-strong);
 }
 .input:focus {
-  border-color: var(--accent-line);
+  border-color: var(--accent-tint-border);
 }
 .input:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* The dialog: the panel's one centered overlay, for the engine picker. Same
+   backdrop as the drawer, the elevated surface, the large shadow; it sits in
+   the middle because it is a decision, not a document. */
+.kx-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px;
+  max-width: 94vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-lg);
+  z-index: 62;
+  padding: 18px 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.kx-dialog-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.kx-dialog-title {
+  font-size: var(--fs-section);
+  font-weight: 600;
+}
+.kx-dialog-hint {
+  font-size: var(--fs-ui);
+  color: var(--fg-faint);
+}
+.kx-dialog-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 4px;
+}
+/* The picker: three rows on one grid — the label in the left column, the chips
+   in the right, one line under the chips about the chosen one. One vocabulary. */
+.kx-picker {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  column-gap: var(--sp-3);
+  row-gap: var(--sp-4);
+  align-items: start;
+}
+.kx-picker-label {
+  font-size: var(--fs-ui);
+  font-weight: 500;
+  color: var(--fg-secondary);
+  line-height: var(--control-h);
+}
+.kx-picker-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.kx-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.kx-chip {
+  height: var(--control-h);
+  padding: 0 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--fg);
+  font-size: var(--fs-ui);
+  font-family: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition:
+    border-color var(--speed),
+    background var(--speed);
+}
+.kx-chip:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-subtle);
+}
+.kx-chip.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+}
+.kx-chip-note {
+  font-size: var(--fs-micro);
+  opacity: 0.7;
+}
+.kx-picker-about {
+  font-size: var(--fs-ui);
+  color: var(--fg-faint);
+  min-height: 1.4em;
+}
+.kx-picker-select {
+  max-width: 100%;
+  align-self: flex-start;
+}
+/* The effort as a slider: a hairline track, the accent thumb, the levels named
+   under the stops — each name is also a button to that stop. */
+.kx-range {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: var(--control-h);
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.kx-range::-webkit-slider-runnable-track {
+  height: 2px;
+  background: var(--border-strong);
+  border-radius: 999px;
+}
+.kx-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -6px;
+  border-radius: 999px;
+  background: var(--accent);
+  border: 2px solid var(--bg);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.kx-range::-moz-range-track {
+  height: 2px;
+  background: var(--border-strong);
+  border-radius: 999px;
+}
+.kx-range::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--accent);
+  border: 2px solid var(--bg);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.kx-range:focus-visible {
+  outline: none;
+}
+.kx-range:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+.kx-range-ticks {
+  display: flex;
+  justify-content: space-between;
+  margin-top: -6px;
+}
+.kx-range-tick {
+  flex: 1 1 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--fs-label);
+  color: var(--fg-faint);
+  cursor: pointer;
+  text-align: center;
+}
+.kx-range-tick:first-child {
+  text-align: left;
+}
+.kx-range-tick:last-child {
+  text-align: right;
+}
+.kx-range-tick.on {
+  color: var(--fg);
+  font-weight: 500;
 }
 
 /* Use the full viewport width for drawers on narrow screens. */
@@ -752,6 +896,7 @@ a.btn {
 /* Link buttons */
 .btn-link-primary,
 .btn-link-success,
+.btn-link-warning,
 .btn-link-danger {
   height: var(--control-h);
   padding: 0 12px;
@@ -774,6 +919,14 @@ a.btn {
   background: var(--green-bg);
   border-color: var(--green-border);
   color: var(--green);
+}
+.btn-link-warning {
+  color: var(--amber);
+}
+.btn-link-warning:hover {
+  background: var(--amber-bg);
+  border-color: var(--amber-border);
+  color: var(--amber);
 }
 .btn-link-danger {
   color: var(--red);
@@ -1147,16 +1300,74 @@ a.btn {
   color: var(--fg-muted);
   margin-left: auto;
 }
+/* The question is prose, grey; the answer that acts carries the colour. */
 .kx-arm-warn {
   font-size: var(--fs-ui);
-  color: var(--red);
+  color: var(--fg-secondary);
 }
+/* Under the path while ⚙ is on: the project's actions, and the question one of them asks.
+   The links keep their own 12px inset, as every link button does, so their hover boxes match;
+   the row starts on the column's edge and the first word sits 12px in, like the fields above. */
 .kx-danger-zone {
-  margin-top: 28px;
+  /* Inline flow, not flex: the warning wraps as a sentence and Yes / No follow its last line.
+     Text sits 12px in on every line; the first link's box reaches back to the column edge. */
+  display: block;
+  margin: 2px 0 14px;
+  padding-left: 12px;
+  line-height: 30px;
+}
+.kx-danger-zone > .btn:first-child {
+  margin-left: -12px;
+}
+.kx-danger-zone > * {
+  vertical-align: middle;
+}
+.kx-danger-zone .kx-danger-sep {
+  margin: 0 6px;
+}
+.kx-danger-zone .kx-arm-warn {
+  line-height: 1.5;
+  margin-right: 4px;
+}
+/* The export ticks: one document a line, in the mono the file list uses. */
+.kx-export-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 2px 16px;
+  margin: 6px 0;
+  line-height: 24px;
+}
+.kx-export-item {
   display: flex;
-  justify-content: flex-end;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  font-size: var(--fs-ui);
+  cursor: pointer;
+}
+.kx-gear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  margin-left: 2px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--fg-faint);
+  cursor: pointer;
+}
+.kx-gear svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.kx-gear:hover,
+.kx-gear-on {
+  background: var(--bg-hover);
+  color: var(--fg);
 }
 .kx-danger-sep {
   font-family: var(--font-mono);
@@ -1290,21 +1501,6 @@ a.btn {
 .kx-statusbar-link:hover {
   color: var(--fg-muted);
 }
-.kx-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex: none;
-}
-.kx-dot-up {
-  background: var(--green);
-}
-.kx-dot-down {
-  background: var(--red);
-}
-.kx-status-name {
-  color: var(--fg-muted);
-}
 .kx-status-warn {
   color: var(--red);
   min-width: 0;
@@ -1320,9 +1516,29 @@ a.btn {
   color: var(--fg-faint);
   cursor: pointer;
 }
+.kx-power-up {
+  color: var(--green);
+}
 .kx-power:hover,
-.kx-power-armed {
+.kx-power-arming,
+.kx-power-down {
   color: var(--red);
+}
+.kx-power:disabled {
+  cursor: default;
+}
+.kx-version-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--fg-muted);
+}
+.kx-version-btn svg {
+  flex: none;
+  margin: 0 -2px;
+}
+.kx-status-note {
+  color: var(--fg-faint);
 }
 .kx-copy-cmd {
   display: inline-flex;
@@ -1347,9 +1563,16 @@ a.btn {
   align-items: center;
   gap: 8px;
 }
+/* Right column of the head: the buttons, and under them the engine line. */
+.kx-proj-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 14px;
+}
 .kx-main-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 14px;
 }
 .kx-main-head h1 {
@@ -1369,6 +1592,22 @@ a.btn {
   margin: 0;
   line-height: 1.2;
 }
+/* Under the buttons: what runs this project, as one faint mono line — the
+   CLI, its model, its effort. Reading only; Change model, above it, opens
+   the picker. */
+/* Add project's last row, under a hairline: the engine control and the actions. */
+.kx-form-foot {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+/* The engine control reads as the line it was — mono, quiet, a link — with a chevron that says it opens. */
+.kx-engine-btn {
+  font-size: var(--fs-label);
+  font-weight: 400;
+  /* Same padding as the fields above, so the text and the hover box both sit on their edge. */
+  padding: 0 12px;
+}
 .kx-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
@@ -1382,7 +1621,7 @@ a.btn {
   padding: 14px 16px;
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
-  background: var(--card);
+  background: var(--bg);
   cursor: pointer;
   text-align: left;
   transition:
@@ -1429,7 +1668,7 @@ a.btn {
   padding: 34px 22px;
   border: 1px dashed var(--border);
   border-radius: var(--r-lg);
-  color: var(--fg-mid);
+  color: var(--fg-secondary);
   font-size: var(--fs-body);
   text-align: center;
 }
@@ -1578,6 +1817,29 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+.kx-error-lines {
+  margin: 6px 0 4px;
+  padding-left: 18px;
+  font-size: var(--fs-label);
+  color: var(--fg-secondary);
+}
+.kx-error-line {
+  border: 0;
+  padding: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+.kx-error-line:hover {
+  color: var(--fg);
+}
+/* In the drawer the box keeps the readbar's width, not the page's inset. */
+.dr-body > .kx-error {
+  margin: 10px 0 0;
+}
 .kx-error {
   margin: 10px 22px 0;
   padding: 8px 12px;
@@ -1593,7 +1855,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   padding: 16px;
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
-  background: var(--card);
+  background: var(--bg);
   max-width: 480px;
 }
 .kx-form-row {
@@ -1639,7 +1901,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   padding: 14px 16px;
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
-  background: var(--card);
+  background: var(--bg);
   width: 100%;
   text-align: left;
   font: inherit;
@@ -1740,13 +2002,14 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
 }
 .kx-doc-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 4px 10px;
   width: 100%;
   padding: 9px 12px;
   border: 1px solid var(--border);
   border-radius: var(--r-md);
-  background: var(--card);
+  background: var(--bg);
   cursor: pointer;
   text-align: left;
   margin-bottom: 5px;
@@ -1797,10 +2060,12 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   background: currentColor;
   flex: none;
 }
+/* A recheck in flight reads the document instead of writing it: same blue,
+   same pulse — the agent is on it either way. */
 .kx-status-writing,
 .kx-status-reading {
   background: var(--blue-bg);
-  border-color: var(--blue-border, var(--blue-bg));
+  border-color: var(--blue-border);
   color: var(--blue);
 }
 .kx-status-writing::before,
@@ -1924,6 +2189,12 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   background: var(--bg-muted);
   border-color: var(--border);
 }
+/* On request: as quiet as revision — nothing is owed until prime asks. */
+.kx-badge-request {
+  color: var(--fg-muted);
+  background: var(--bg-muted);
+  border-color: var(--border);
+}
 /* Distinguish requests from dependency notices. */
 .kx-badge-change {
   background: var(--pink-bg);
@@ -1994,8 +2265,20 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  font-size: var(--fs-body);
+  font-size: var(--fs-doc);
   line-height: 1.55;
+}
+/* The drawer is 880 wide for the bands, tables, code and the design page;
+   prose keeps a reading measure. Left-aligned, so the room stays on the right. */
+.kx-h1,
+.kx-h2,
+.kx-h3,
+.kx-h4,
+.kx-para,
+.kx-bullet,
+.kx-ordered,
+.kx-quote {
+  max-width: 100ch;
 }
 .kx-block {
   padding: 3px 8px;
@@ -2158,6 +2441,11 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   border-radius: 4px;
   padding: 0.12em 0.34em;
 }
+/* A formula is the machine's too, but not a token to copy: mono, no chip. */
+.kx-math {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
 .kx-codewrap pre code,
 .kx-alert-head code {
   background: none;
@@ -2207,6 +2495,11 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
 .kx-blank {
   height: 8px;
 }
+.kx-rule {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 8px 0;
+}
 .kx-editor {
   width: 100%;
   min-height: 60vh;
@@ -2251,7 +2544,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   gap: var(--sp-2);
   font-size: var(--fs-ui);
   padding: var(--sp-2) var(--sp-3);
-  background: var(--card);
+  background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--r-md);
 }
@@ -2309,7 +2602,7 @@ button.kx-note-exc:hover {
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: var(--r-md);
-  background: var(--card);
+  background: var(--bg);
 }
 
 /* Add-project: browse + brief */
@@ -2350,14 +2643,14 @@ button.kx-note-exc:hover {
   border-radius: var(--r-lg);
   background: var(--bg-subtle);
   font-size: var(--fs-ui);
-  color: var(--fg-mid);
+  color: var(--fg-secondary);
   cursor: pointer;
   text-align: center;
   position: relative;
 }
 .kx-drop:hover {
   background: var(--bg-hover);
-  border-color: var(--gray-400);
+  border-color: var(--border-hover);
 }
 .kx-drop input[type='file'] {
   position: absolute;
@@ -2388,20 +2681,46 @@ button.kx-note-exc:hover {
   align-items: center;
   gap: 6px;
   font-size: var(--fs-ui);
-  color: var(--fg-mid);
-}
-.kx-engine-select {
-  font-family: var(--font-mono);
+  color: var(--fg-secondary);
 }
 .kx-update {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin: 10px 22px 0;
-  padding: 8px 12px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 10px 14px;
   border-radius: var(--r-md);
-  border: 1px solid var(--border);
-  font-size: var(--fs-ui);
+  border: 1px solid var(--blue);
+  background: var(--blue-bg);
+  color: var(--fg);
+  font-size: var(--fs-body);
+  font-weight: 500;
+}
+/* The companion offer borrows the update strip's shape in the panel's own greys. */
+.kx-companion {
+  border-color: var(--border);
+  background: var(--bg-subtle);
+  font-weight: 400;
+  color: var(--fg-secondary);
+}
+.kx-companion-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.kx-companion-close {
+  border: 0;
+  background: none;
+  padding: 0 4px;
+  font-size: var(--fs-heading);
+  line-height: 1;
+  color: var(--fg-faint);
+  cursor: pointer;
+}
+.kx-companion-close:hover {
+  color: var(--fg);
 }
 .kx-update-err {
   color: var(--red);
@@ -2434,14 +2753,17 @@ button.kx-note-exc:hover {
 .kx-doc-row.failed {
   border-color: rgba(204, 107, 107, 0.5);
 }
-/* The failure reason beside the name: one line, cut with an ellipsis, the
-   whole text in the tooltip. */
+/* The failure reason on its own line under the name: up to two lines, then
+   an ellipsis; the whole text in the tooltip and in the drawer. */
 .kx-doc-why {
-  flex: 1 1 0;
+  flex: 1 1 100%;
+  order: 10;
   min-width: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-height: 1.35;
   font-size: var(--fs-micro);
   color: var(--red);
 }
@@ -2494,8 +2816,16 @@ button.kx-note-exc:hover {
   font-weight: 600;
   color: var(--fg);
 }
+/* Under an answer: take it as your own, one press. Link-weight, left, ui size. */
+.kx-explain-take {
+  align-self: flex-start;
+  height: auto;
+  padding: 2px 0;
+  margin-top: 4px;
+  font-size: var(--fs-ui);
+}
 .kx-explain-a {
-  color: var(--fg-mid);
+  color: var(--fg-secondary);
   white-space: pre-wrap;
   line-height: 1.5;
 }
@@ -2506,6 +2836,18 @@ button.kx-note-exc:hover {
   display: flex;
   flex-direction: column;
   gap: var(--sp-3);
+}
+.kx-thread {
+  position: relative;
+}
+.kx-thread-x {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+}
+/* A thread whose box is closed is a way back in: the hand says so. */
+.kx-thread:not(:has(.kx-thread-input)) .kx-explain {
+  cursor: pointer;
 }
 .kx-thread-input {
   display: flex;
@@ -2629,8 +2971,10 @@ button.kx-note-exc:hover {
   width: 100%;
   height: 100%;
   background: var(--accent-fg);
-  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M20 6 9 17l-5-5'/></svg>") center / 11px 11px no-repeat;
-  mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M20 6 9 17l-5-5'/></svg>") center / 11px 11px no-repeat;
+  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M20 6 9 17l-5-5'/></svg>")
+    center / 11px 11px no-repeat;
+  mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M20 6 9 17l-5-5'/></svg>")
+    center / 11px 11px no-repeat;
 }
 
 /* Render actions per revision request. */
@@ -2656,11 +3000,6 @@ button.kx-note-exc:hover {
   margin-top: -4px;
 }
 /* What the button will do with this row, before it is pressed. */
-.kx-req-state {
-  margin-left: 6px;
-  font-size: var(--fs-micro);
-  color: var(--fg-muted);
-}
 .kx-changebar-actions {
   display: flex;
   gap: 6px;
@@ -2775,6 +3114,14 @@ button.kx-removed-toggle:hover {
   color: var(--fg-faint);
   font-size: var(--fs-label);
 }
+/* "accepted there": the decision was made on the asking document; a faint
+   mono tag after the reason says so, and the ticked box says it is still yours. */
+.kx-req-presumed {
+  margin-left: 8px;
+  font-size: var(--fs-micro);
+  color: var(--fg-faint);
+  white-space: nowrap;
+}
 .kx-req-text {
   cursor: pointer;
 }
@@ -2786,15 +3133,6 @@ button.kx-removed-toggle:hover {
   font-weight: 600;
 }
 
-.kx-doc-askbar {
-  margin: var(--sp-4) 18px 0;
-  padding: var(--sp-2) var(--sp-3);
-  border-radius: var(--r-md);
-  background: var(--amber-bg);
-  border: 1px solid var(--amber-border);
-  color: var(--amber);
-  font-size: var(--fs-ui);
-}
 .kx-block.open-q {
   background: none;
 }
@@ -2872,8 +3210,15 @@ button.kx-removed-toggle:hover {
 }
 .kx-handshake-head {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.kx-handshake-head-text {
+  display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 .kx-handshake-title {
   font-size: var(--fs-heading);
@@ -2898,6 +3243,39 @@ button.kx-removed-toggle:hover {
   gap: 8px;
 }
 
+/* The offer: one on-request document, written on a press, skipped by doing
+   nothing. It sits among the command cards at their weight — same frame,
+   same title size — so it reads as one of the things to do, not a footnote. */
+.kx-handshake-offer {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--bg);
+}
+.kx-handshake-offer-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+.kx-handshake-offer-body {
+  font-size: var(--fs-ui);
+  color: var(--fg-secondary);
+}
+.kx-handshake-offer-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+.kx-handshake-offer-title {
+  font-size: var(--fs-heading);
+  font-weight: 600;
+}
 .kx-handshake-plan {
   display: flex;
   flex-direction: column;
@@ -3127,7 +3505,6 @@ button.kx-removed-toggle:hover {
 .ds-icon{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--bg);font-size:var(--fs-label);color:var(--fg-secondary)}
 .ds-icon svg,.ds-icon input{flex:none}
 .ds-merge td{vertical-align:top;font-size:var(--fs-ui)}
-.ds-wrap .kx-dot{position:relative}
 .ds-spin{display:inline-block;width:14px;height:14px;border-radius:50%;border:2px solid var(--border);border-top-color:var(--fg);animation:spin .8s linear infinite}
 </style>
 </head>
@@ -3229,8 +3606,6 @@ button.kx-removed-toggle:hover {
       <div class="ds-icon" style="color:var(--green)"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M13.5 4.5l-7 7-4-4 1.1-1.1L6.5 9.3l5.9-5.9 1.1 1.1z"/></svg><span>copied ✓</span></div>
       <div class="ds-icon"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg><span>chevron · select</span></div>
       <div class="ds-icon"><span style="font-size:10px;color:var(--fg-faint)">▸</span><span>disclosure · group</span></div>
-      <div class="ds-icon"><span class="kx-dot kx-dot-up" style="display:inline-block"></span><span>dot · server up</span></div>
-      <div class="ds-icon"><span class="kx-dot kx-dot-down" style="display:inline-block"></span><span>dot · server down</span></div>
       <div class="ds-icon"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg><span>github mark</span></div>
       <div class="ds-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg><span>external link</span></div>
       <div class="ds-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="m19 8 3 8a5 5 0 0 1-6 0zV7"/><path d="M3 7h1a17 17 0 0 0 8-2 17 17 0 0 0 8 2h1"/><path d="m5 8 3 8a5 5 0 0 1-6 0zV7"/><path d="M7 21h10"/></svg><span>licence · MIT</span></div>
@@ -3353,7 +3728,6 @@ button.kx-removed-toggle:hover {
     </div>
     <div class="ds-label" style="margin-top:22px">Motion — <code>--speed</code> 130ms · <code>--ease</code> cubic-bezier(0.2,0,0,1)</div>
     <div class="ds-cluster" style="align-items:center;gap:18px">
-      <span class="ds-motion"><span class="live"></span> 1.8s status ping</span>
       <span class="ds-motion"><span class="kx-status kx-status-writing">writing</span> 1.4s pulse</span>
       <span class="ds-motion"><span class="ring"></span> 0.8s spinner</span>
     </div>
@@ -3506,10 +3880,8 @@ button.kx-removed-toggle:hover {
       <div class="kx-doc-readbar"><span class="kx-readbar-head">Related documents</span><span>Read by <span class="mono">STACK.md</span>, <span class="mono">ARCHITECTURE.md</span>, <span class="mono kx-reader-unwritten">API.md</span></span></div>
 
       <div class="kx-doc-dependbar">Waits on <span class="mono">STACK.md</span> — it is being rewritten; this document is re-read when that settles.</div>
-
-      <div class="kx-doc-askbar" style="margin:0">2 open questions — answer them before approving.</div>
     </div>
-    <p class="ds-note">Amber her yerde "sıra sende": paused, soru bandı, Action Needed bandı. Pembe satırdaki <code>review</code> rozetinde kalır — bekleyen bir şey var der; amber band onun cevaplandığı yer. Her bandın başlığı § 10'daki mono etiket.</p>
+    <p class="ds-note">Amber her yerde "sıra sende": paused, Action Needed bandı; açık soru ayrı band değil, o bandın içinde numaralı bir satır. Pembe satırdaki <code>review</code> rozetinde kalır — bekleyen bir şey var der; amber band onun cevaplandığı yer. Her bandın başlığı § 10'daki mono etiket.</p>
   </div>
 </section>
 
