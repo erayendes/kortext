@@ -4,8 +4,9 @@
 
 ## [Unreleased]
 
-- **Export, el sıkışma kartında.** Analiz bittiğinde **Export documents** belge sayısının
-  yanında durur; dişliyi açmak gerekmez. Aynı seçici: All, None ya da tek tek.
+- **El sıkışma kartı sadeleşti.** Başlık ve belge sayısı solda, **Export documents** düğmesi
+  sağda; dişliyi açmak gerekmez. EXPERIENCE teklifi komut kartlarıyla aynı ağırlıkta ve en
+  üstte — karar bekleyen tek şey, üç başlama yolunun önünde. Açıklama metinleri gitti.
 
 ## [3.2.0] — 2026-09-20
 

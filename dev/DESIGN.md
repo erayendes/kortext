@@ -295,6 +295,13 @@ something.
 A command card (`.kx-cmd-card`) copies its content on click; the hint lives inside the card, not
 in a separate button.
 
+**The handshake card** (`.kx-handshake`, 2026-09-21) is a head and a column of cards. The head:
+the green title with the count under it in mono, and **Export documents** as a secondary button
+on the right — the documents are the deliverable, so the way out sits where the work ends. The
+column: the EXPERIENCE offer first, at the command cards' own weight (same frame, same title
+size, its engine line and the one primary button on the right), then the three command cards.
+One hint under the column. No prose about what the handshake means; the title says it.
+
 **Bands** sit above a document, and the colour says whose turn it is:
 
 | band | colour | means |

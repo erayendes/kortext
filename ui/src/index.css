@@ -3295,8 +3295,15 @@ button.kx-removed-toggle:hover {
 }
 .kx-handshake-head {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.kx-handshake-head-text {
+  display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 .kx-handshake-title {
   font-size: var(--fs-heading);
@@ -3321,22 +3328,28 @@ button.kx-removed-toggle:hover {
   gap: 8px;
 }
 
-/* The offer: one on-request document, written on a press, skipped by doing nothing. */
+/* The offer: one on-request document, written on a press, skipped by doing
+   nothing. It sits among the command cards at their weight — same frame,
+   same title size — so it reads as one of the things to do, not a footnote. */
 .kx-handshake-offer {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
+  gap: 16px;
+  padding: 14px 16px;
   border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  background: var(--bg);
+  border-radius: var(--r-lg);
+  background: var(--card);
 }
 .kx-handshake-offer-text {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   flex: 1;
   min-width: 0;
+}
+.kx-handshake-offer-body {
+  font-size: var(--fs-ui);
+  color: var(--fg-secondary);
 }
 .kx-handshake-offer-side {
   display: flex;
@@ -3345,6 +3358,7 @@ button.kx-removed-toggle:hover {
   gap: 6px;
 }
 .kx-handshake-offer-title {
+  font-size: var(--fs-heading);
   font-weight: 600;
 }
 .kx-handshake-plan {

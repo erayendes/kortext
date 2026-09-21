@@ -1986,7 +1986,7 @@ function ExperienceOffer({ project, paused }: { project: Project; paused?: boole
     <div className="kx-handshake-offer">
       <div className="kx-handshake-offer-text">
         <span className="kx-handshake-offer-title">Designing with an AI?</span>
-        <span className="kx-cmd-hint">
+        <span className="kx-handshake-offer-body">
           EXPERIENCE.md gives it the journeys, every screen with its states, the copy word for word,
           and the prompts to paste — one master, one per journey. Skip it if the design is already
           in hand.
@@ -2074,44 +2074,38 @@ function HandshakeCard({
   return (
     <div className="kx-handshake">
       <div className="kx-handshake-head">
-        <span className="kx-handshake-title">✓ Analysis complete — handshake done</span>
-        <span className="kx-cmd-hint">
-          Kortext's job is done; the documents are now the project's sacred guideline. From here on
-          it's between you and your client.
-        </span>
-        {/* A handover, not a warning: the items were deferred to the phase that
-            can finally decide them, and nothing here asks prime to do it now. */}
-        <span className="kx-handshake-count mono">
-          {state.documents} documents
-          {state.handedOver > 0 && ` · ${state.handedOver} items handed to the build phase`}
-          {/* The documents are the deliverable; the way out of the hidden
-              .kortext/ folder is offered where the work ends, not only under the gear. */}
-          {onExport && (
-            <>
-              {' · '}
-              <button className="btn btn-link-primary" onClick={onExport}>
-                Export documents
-              </button>
-            </>
-          )}
-        </span>
+        <div className="kx-handshake-head-text">
+          <span className="kx-handshake-title">✓ Analysis complete</span>
+          {/* A handover, not a warning: the items were deferred to the phase that
+              can finally decide them, and nothing here asks prime to do it now. */}
+          <span className="kx-handshake-count mono">
+            {state.documents} documents
+            {state.handedOver > 0 && ` · ${state.handedOver} handed to the build phase`}
+          </span>
+        </div>
+        {/* The documents are the deliverable; the way out of the hidden
+            .kortext/ folder is offered where the work ends, not only under the gear. */}
+        {onExport && (
+          <button className="btn btn-secondary" onClick={onExport}>
+            Export documents
+          </button>
+        )}
       </div>
       {/* Kopeng is not released, so nothing advertises it: whoever has the
           binary sees the transfer panel, everyone else sees nothing rather
           than an install command that 404s. */}
-      {state.onRequest.includes('EXPERIENCE.md') && (
-        <ExperienceOffer project={project} paused={paused} />
-      )}
       {state.kopengInstalled && <TransferPanel project={project} />}
       <div className="kx-handshake-cards">
-        <span className="kx-cmd-hint">
-          Click a card — the command is copied to your clipboard; paste it into your client (CLI or
-          app).
-        </span>
+        {/* The offer first, at the cards' own weight: the one thing still to
+            decide sits above the three ways to start. */}
+        {state.onRequest.includes('EXPERIENCE.md') && (
+          <ExperienceOffer project={project} paused={paused} />
+        )}
         {instructions.map((c) => (
           <CommandCard key={c.title} title={c.title} command={c.command} />
         ))}
       </div>
+      <span className="kx-cmd-hint">A card copies its command; paste it into your client.</span>
     </div>
   );
 }

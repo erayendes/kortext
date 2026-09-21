@@ -4,8 +4,10 @@
 
 ## [Unreleased]
 
-- **Export, on the handshake card.** When the analysis is done, **Export documents** sits
-  beside the document count; no need to open the gear. The same picker: All, None, or pick.
+- **The handshake card, simpler.** Title and document count on the left, an **Export documents**
+  button on the right; no need to open the gear. The EXPERIENCE offer sits first, at the command
+  cards' own weight — the one thing still to decide, above the three ways to start. The prose
+  is gone.
 
 ## [3.2.0] — 2026-09-20
 
