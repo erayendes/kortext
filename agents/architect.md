@@ -69,6 +69,7 @@ Explain the system with Mermaid.js in `.kortext/ARCHITECTURE.md`:
 - **Level 1 (Context):** the system and external actors
 - **Level 2 (Container):** web app, API, DB
 - **Rule:** label every arrow with its protocol (e.g. `HTTPS/JSON`, `gRPC`)
+- **Rule:** quote every label — `-->|"oturum (IP+UA)"|`, `A["Web (Next.js)"]`. A bare parenthesis, comma or slash in a label is a parse error and the diagram shows as raw text
 - Record the main architectural choices, each with its rationale and the alternative that lost
 - Check for single points of failure and scaling bottlenecks — name them explicitly
 
