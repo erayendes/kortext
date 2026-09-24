@@ -8,7 +8,7 @@ Replaces the old UAT + SIMULATION pair, both of which described the archived v3 
 (bootstrap wizard on `:3199`, one daemon per project, `kortext init/serve/purge`, worktrees,
 Board, deploy gates). None of that exists.
 
-**Example project:** *Acme CRM*, code `ACME`.
+**Example project:** *Acme CRM*, code `ACM`.
 
 ---
 
@@ -72,8 +72,8 @@ belongs to a project.
 
 ## 2 · Add a project
 
-**Add project** takes: name, code (2–8 letters, `ACME`; derived from the name when left
-empty, digits dropped — *365 Tracker* becomes `TRACK`), *New* or *Existing*, the folder (Browse
+**Add project** takes: name, code (exactly 3 letters or digits, `ACM`, `Q3X`; derived from the name when left
+empty, digits dropped — *365 Tracker* becomes `TRA`), *New* or *Existing*, the folder (Browse
 opens the macOS chooser; other platforms take a typed path), an optional document language, the
 **agent CLI** (the dropdown beside Initialize; later, **Change model** on the project screen — the choice is the project's, not the app's), and
 — for a new project — the brief, written in the form or uploaded.
@@ -216,7 +216,7 @@ AI?* — with the engine line above **Write EXPERIENCE.md**. Nothing in the chai
 
 With `kopeng` on the PATH, **Transfer to Kopeng** splits the work in one long run into
 `.kopeng/project.yaml` + `versions/` + `epics/` + `tasks/`, with ids carrying the project code
-(`ACME-E01`, `ACME-T001`). The panel summarises the plan; **Approve plan** is the last signature
+(`ACM-E01`, `ACM-T001`). The panel summarises the plan; **Approve plan** is the last signature
 of the handshake. Without kopeng installed, the button is replaced by an install card.
 
 - [ ] Transfer is refused while the analysis is incomplete.

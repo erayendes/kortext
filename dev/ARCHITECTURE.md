@@ -84,7 +84,7 @@ differs — otherwise approving would show "nothing changed" over a whole rewrit
 version for that reason: without it the head stops matching the file and the diff vanishes the
 moment prime approves. A picker in the diff bar reaches the older versions.
 
-`code` is the task-id prefix (`ACME-T001`), 2–8 letters A–Z, unique across projects. No migration
+`code` is the task-id prefix (`ACM-T001`), exactly 3 characters A–Z / 0–9, unique across projects. No migration
 framework: `openDb` creates tables `IF NOT EXISTS` and adds missing columns with `ALTER TABLE`.
 
 **Inside the repo** — the documents themselves, under the user's version control:

@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS projects (
   name TEXT NOT NULL,
   repo_path TEXT NOT NULL UNIQUE,
   kind TEXT NOT NULL DEFAULT 'new',   -- new | existing → which analysis workflow applies
-  code TEXT NOT NULL DEFAULT '',      -- task-id prefix, e.g. ACME
+  code TEXT NOT NULL DEFAULT '',      -- task-id prefix, e.g. ACM
   paused INTEGER NOT NULL DEFAULT 0,  -- 1 = the chain starts no new steps
   archived INTEGER NOT NULL DEFAULT 0,-- 1 = folded away in the panel; files untouched
   doc_lang TEXT NOT NULL DEFAULT '',  -- the language the documents are written in
@@ -90,7 +90,7 @@ export interface Project {
   name: string;
   repo_path: string;
   kind: 'new' | 'existing';
-  code: string; // task-id prefix, e.g. ACME
+  code: string; // task-id prefix, e.g. ACM
   paused: number; // 1 = the automatic chain does not start new steps
   archived: number; // 1 = finished with, folded away in the panel; files untouched
   doc_lang: string; // the language the documents are written in; '' = follow the brief

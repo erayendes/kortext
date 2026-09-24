@@ -18,11 +18,11 @@ Approved documents: `.kortext/PRODUCT.md`, `.kortext/ENGINEERING.md`,
 .kopeng/
 ├── project.yaml                  # name, code, status: draft, created
 ├── versions/
-│   └── v0.1.yaml                 # id, name, description, epics: [ACME-E01, …]
+│   └── v0.1.yaml                 # id, name, description, epics: [ACM-E01, …]
 ├── epics/
-│   └── ACME-E01.yaml             # id, name, version, description, tasks: [ACME-T001, …]
+│   └── ACM-E01.yaml             # id, name, version, description, tasks: [ACM-T001, …]
 └── tasks/
-    └── ACME-T001.md              # frontmatter + body (below)
+    └── ACM-T001.md              # frontmatter + body (below)
 ```
 
 **Task file** (`tasks/<ID>.md`) — frontmatter:

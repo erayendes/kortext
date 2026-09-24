@@ -503,15 +503,15 @@ test('symlink aliases and new folders below them cannot register twice', async (
   const alias = join(work, 'alias');
   symlinkSync(p.repo_path, alias, 'dir');
   assert.throws(
-    () => createProject(db, { name: 'Alias', code: 'ALIAS', repoPath: alias }, pkgRoot),
+    () => createProject(db, { name: 'Alias', code: 'ALI', repoPath: alias }, pkgRoot),
     /already the project/,
   );
-  createProject(db, { name: 'Child', code: 'CHILD', repoPath: join(alias, 'child') }, pkgRoot);
+  createProject(db, { name: 'Child', code: 'CHI', repoPath: join(alias, 'child') }, pkgRoot);
   assert.throws(
     () =>
       createProject(
         db,
-        { name: 'Again', code: 'AGAIN', repoPath: join(p.repo_path, 'child') },
+        { name: 'Again', code: 'AGA', repoPath: join(p.repo_path, 'child') },
         pkgRoot,
       ),
     /already the project/,

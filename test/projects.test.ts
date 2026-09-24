@@ -215,7 +215,7 @@ test('a project carries its own engine; a project without one falls back to the 
     { name: 'Acme', repoPath: join(work, 'a'), engine: 'codex' },
     pkgRoot,
   );
-  const b = createProject(db, { name: 'Beta', repoPath: join(work, 'b'), code: 'BETA' }, pkgRoot);
+  const b = createProject(db, { name: 'Beta', repoPath: join(work, 'b'), code: 'BET' }, pkgRoot);
   assert.equal(a.engine, 'codex');
   assert.equal(b.engine, '');
   // engineFor never returns an uninstalled CLI: with none installed on this
@@ -371,10 +371,14 @@ test('a name that starts with a digit still yields a code the registry accepts',
   const db = openDb(join(work, 'db.sqlite'));
   // Derived project codes must exclude digits to pass createProject validation.
   const p = createProject(db, { name: '365 Tracker', repoPath: join(work, 'tracker') }, pkgRoot);
-  assert.match(p.code, /^[A-Z]{2,8}$/);
-  assert.equal(deriveCode('2048 Game'), 'GAME');
-  assert.equal(deriveCode('2048'), 'PROJ', 'a name with no letters still gets a code');
-  assert.equal(deriveCode('A1 Tools'), 'ATOOL', 'digits inside the name are dropped too');
+  assert.match(p.code, /^[A-Z0-9]{3}$/);
+  assert.equal(deriveCode('2048 Game'), 'GAM');
+  assert.equal(deriveCode('2048'), 'PRJ', 'a name with no letters still gets a code');
+  assert.equal(deriveCode('A1 Tools'), 'ATO', 'digits inside the name are dropped too');
+  assert.equal(deriveCode('Go'), 'GOX', 'a short name is padded to three characters');
+  assert.equal(createProject(db, { name: 'Q3', code: 'q3x', repoPath: join(work, 'q3') }, pkgRoot).code, 'Q3X');
+  assert.throws(() => createProject(db, { name: 'Ab', code: 'AB', repoPath: join(work, 'ab') }, pkgRoot), /exactly 3/);
+  assert.throws(() => createProject(db, { name: 'Abcd', code: 'ABCD', repoPath: join(work, 'abcd') }, pkgRoot), /exactly 3/);
   rmSync(work, { recursive: true, force: true });
 });
 

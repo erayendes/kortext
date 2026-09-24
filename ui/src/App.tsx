@@ -1327,7 +1327,7 @@ function AddProject({
   const check = () => {
     const found: { name?: string; code?: string; repoPath?: string } = {};
     if (name.trim().length < 3) found.name = 'At least 3 characters.';
-    if (!/^[A-Z]{2,8}$/.test(code.trim())) found.code = '2–8 letters, no digits.';
+    if (!/^[A-Z0-9]{3}$/.test(code.trim())) found.code = 'Exactly 3 letters or digits.';
     // Require an absolute path because relative paths resolve against the server working directory.
     if (!repoPath.trim()) found.repoPath = 'Pick the project folder.';
     else if (!/^(\/|~\/|[A-Za-z]:[\\/])/.test(repoPath.trim())) {
@@ -1399,7 +1399,8 @@ function AddProject({
         <Field err={fieldErrs.code} className="kx-code-field">
           <input
             className={`kx-input mono kx-code-input${fieldErrs.code ? ' kx-input-bad' : ''}`}
-            placeholder="Code (ACME)"
+            placeholder="Code (ACM)"
+            maxLength={3}
             value={code}
             onChange={(e) => {
               setCode(e.target.value.toUpperCase());

@@ -185,12 +185,12 @@ export function listProjects(db: Database.Database): Project[] {
 
 // Derive an uppercase project code from the name when no code is supplied.
 export function deriveCode(name: string): string {
-  // Strip digits so derived codes pass the same validation as user-supplied codes.
+  // ponytail: derived codes stay letters-only; only typed codes carry digits.
   const cleaned = name
     .toUpperCase()
     .replace(/[ÇĞİIÖŞÜ]/g, (c) => 'CGIIOSU'['ÇĞİIÖŞÜ'.indexOf(c)] ?? c)
     .replace(/[^A-Z]/g, '');
-  return (cleaned.slice(0, 5) || 'PROJ').padEnd(2, 'X');
+  return (cleaned.slice(0, 3) || 'PRJ').padEnd(3, 'X');
 }
 
 export function createProject(
@@ -214,8 +214,8 @@ export function createProject(
   const code = (input.code ?? '').trim().toUpperCase() || deriveCode(name);
   if (!name) throw new Error('name is required');
   if (!repoPath) throw new Error('repoPath is required');
-  if (!/^[A-Z]{2,8}$/.test(code)) {
-    throw new Error(`code must be 2-8 letters, A-Z (got: ${code})`);
+  if (!/^[A-Z0-9]{3}$/.test(code)) {
+    throw new Error(`code must be exactly 3 letters or digits, A-Z 0-9 (got: ${code})`);
   }
   const codeTaken = db.prepare('SELECT name FROM projects WHERE code = ?').get(code) as
     { name: string } | undefined;
