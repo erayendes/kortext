@@ -1727,7 +1727,7 @@ function DocBlock({
             {outcome.state}
           </span>
           <span className="kx-task-text">
-            <Inline text={task ? (task[2] ?? '') : token.text} />
+            <Body text={task ? (task[2] ?? '') : token.text} />
           </span>
         </>
       ) : task ? (
@@ -1740,23 +1740,23 @@ function DocBlock({
             tabIndex={-1}
           />
           <span className="kx-task-text">
-            <Inline text={task[2] ?? ''} />
+            <Body text={task[2] ?? ''} />
           </span>
         </>
       ) : ordered ? (
         <>
           <span className="kx-ol-n mono">{ordered[1]}</span>
           <span>
-            <Inline text={ordered[2] ?? ''} />
+            <Body text={ordered[2] ?? ''} />
           </span>
         </>
       ) : (
-        <Inline text={token.text} />
+        <Body text={token.text} />
       )}
-      {/* A changed block wears a [+] at the end of its sentence rather than a
-          colour. Press it and what the text replaced unfolds beneath, faded; [−]
-          folds it back. A block that replaced nothing is simply new, and a quiet
-          word says so — once per run of new blocks, not on every line. */}
+      {/* A changed block wears a "changed" tag at the end of its sentence rather
+          than a colour. Press it and what the text replaced unfolds beneath,
+          faded; press again to fold it. A block that replaced nothing is simply
+          new, and a quiet tag says so — once per run of new blocks. */}
       {changed &&
         (replaced ? (
           <button
@@ -1766,8 +1766,9 @@ function DocBlock({
               setShowOld(!showOld);
             }}
             title={showOld ? 'Hide what this replaced' : 'Show what this replaced'}
+            aria-expanded={showOld}
           >
-            [{showOld ? '−' : '+'}]
+            changed {showOld ? '▴' : '▾'}
           </button>
         ) : (
           <span className="kx-new-mark mono" title="New since the last write">
@@ -1782,11 +1783,34 @@ function DocBlock({
       {showOld && replaced && (
         <div className="kx-removed-body">
           {replaced.map((t, i) => (
-            <div key={i}>{t.text}</div>
+            <div key={i}>
+              <Body text={t.text} />
+            </div>
           ))}
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * A block's words. A line the agent marked `**Suggestion —**` is its proposal,
+ * not something it found; a tag says so in place of the bold prefix, so the
+ * two never read alike.
+ */
+function Body({ text }: { text: string }) {
+  const m = text.match(/^\*\*Suggestion\s*[—–-]\*\*\s*/);
+  if (!m) return <Inline text={text} />;
+  return (
+    <>
+      <span
+        className="kx-sugg-tag mono"
+        title="The author proposes this; it was not found in the inputs. Approving the document accepts it."
+      >
+        suggestion
+      </span>
+      <Inline text={text.slice(m[0].length)} />
+    </>
   );
 }
 
