@@ -1453,7 +1453,7 @@ function ActionNeeded({
               return (
                 <li key={key} id={`kx-req-${i}`} className={open === key ? 'kx-req-open' : ''}>
                   <span className="kx-req-text" {...select(key)}>
-                    <span className="mono">{r.from.replace(/\.md$/, '')}</span> —{' '}
+                    <span className="mono">→ {r.from.replace(/\.md$/, '')}</span> —{' '}
                     <Inline text={r.reason} />
                     {decided[key] && <State what={decided[key].what} />}
                     {r.presumed === 'accept' && !decided[key] && (
@@ -1498,7 +1498,7 @@ function ActionNeeded({
               return (
                 <li key={key} id={`kx-out-${i}`} className={open === key ? 'kx-req-open' : ''}>
                   <span className="kx-req-text" {...select(key)}>
-                    <span className="mono">to {r.target.replace(/\.md$/, '')}</span> —{' '}
+                    <span className="mono">← {r.target.replace(/\.md$/, '')}</span> —{' '}
                     <Inline text={r.reason} />
                     {decided[key] && <State what={decided[key].what} />}
                   </span>
@@ -2083,7 +2083,15 @@ function LineThread({
             value={text}
             onChange={(e) => setText(e.target.value)}
           />
+          {/* Asking on the left, deciding on the right — the same corners in every box. */}
           <div className="kx-thread-actions">
+            <button
+              className="btn btn-link-primary"
+              disabled={!text.trim()}
+              onClick={() => send('ask')}
+            >
+              Ask
+            </button>
             {suggest && (
               <button
                 className="btn btn-link-primary"
@@ -2094,13 +2102,7 @@ function LineThread({
                 Get a suggestion
               </button>
             )}
-            <button
-              className="btn btn-link-primary"
-              disabled={!text.trim()}
-              onClick={() => send('ask')}
-            >
-              Ask
-            </button>
+            <span className="kx-thread-gap" />
             {onDecide ? (
               <>
                 <button

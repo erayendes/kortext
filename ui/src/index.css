@@ -2808,7 +2808,10 @@ button.kx-note-exc:hover {
 .kx-thread-actions {
   display: flex;
   gap: var(--sp-2);
-  justify-content: flex-end;
+  align-items: center;
+}
+.kx-thread-gap {
+  flex: 1;
 }
 .kx-thread-text {
   height: auto;
