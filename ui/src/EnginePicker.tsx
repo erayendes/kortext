@@ -38,7 +38,8 @@ export function EnginePicker({
 }: EnginePickerProps) {
   const spec = engines.find((e) => e.id === engine) ?? engines[0];
   const models = spec?.models ?? [];
-  const levels = spec?.efforts ?? [];
+  // Some models take fewer levels than their CLI, or none.
+  const levels = spec?.modelEfforts?.[model] ?? spec?.efforts ?? [];
   const about = (key: string) => spec?.about?.[key] ?? '';
   const label = (key: string) => spec?.label?.[key] ?? key;
 
@@ -78,10 +79,18 @@ export function EnginePicker({
             .setProjectEngine(projectId, id)
             .then((r) => onEngine(id, r.model ?? '', r.effort ?? '')),
         );
-  const pickModel = (m: string) =>
-    projectId === null
-      ? onModel(m)
-      : guard(api.setProjectModel(projectId, m).then(() => onModel(m)));
+  // A level the new model lacks drops to the default, as the server does.
+  const pickModel = (m: string) => {
+    if (projectId !== null)
+      return guard(
+        api.setProjectModel(projectId, m).then((r) => {
+          onModel(m);
+          onEffort(r.effort ?? '');
+        }),
+      );
+    onModel(m);
+    if (!(spec?.modelEfforts?.[m] ?? spec?.efforts ?? []).includes(effort)) onEffort('');
+  };
   const pickEffort = (lvl: string) =>
     projectId === null
       ? onEffort(lvl)

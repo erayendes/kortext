@@ -145,3 +145,17 @@ test('Add project takes the picker model and effort, and refuses a level the CLI
   server.close();
   rmSync(work, { recursive: true, force: true });
 });
+
+test('a level the model lacks never reaches the CLI', () => {
+  const agy = spec('antigravity');
+  // agy refuses the whole run: "--effort is not supported for model ...".
+  assert.ok(
+    !engineArgs(agy, { model: 'claude-opus-4-6-thinking', effort: 'high' }).includes('--effort'),
+  );
+  assert.ok(!engineArgs(agy, { model: 'gemini-3.1-pro', effort: 'medium' }).includes('--effort'));
+  assert.deepEqual(engineArgs(agy, { model: 'gemini-3.1-pro', effort: 'low' }).slice(-2), [
+    '--effort',
+    'low',
+  ]);
+  assert.deepEqual(engineArgs(agy, { effort: 'medium' }).slice(-2), ['--effort', 'medium']);
+});

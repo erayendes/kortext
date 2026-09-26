@@ -22,6 +22,9 @@ export interface EngineSpec {
   effortPrefix?: string;
   /** The levels that CLI accepts, in order. */
   efforts?: string[];
+  /** Models that accept fewer levels than `efforts` — none at all is `[]`.
+   *  The CLI refuses the whole run over a level its model lacks. */
+  modelEfforts?: Record<string, string[]>;
   /** One line per model and per level, for the picker — what the CLI's own
    *  picker says, kept short. Missing means the name alone. */
   about?: Record<string, string>;
@@ -120,6 +123,13 @@ export const ENGINES: EngineSpec[] = [
     // the base id with --effort beside it — verified with a run.
     effortFlag: '--effort',
     efforts: ['low', 'medium', 'high'],
+    // Verified with a run each: the CLI names what the model takes when refused.
+    modelEfforts: {
+      'gemini-3.1-pro': ['low', 'high'],
+      'claude-sonnet-4-6': [],
+      'claude-opus-4-6-thinking': [],
+      'gpt-oss-120b': ['medium'],
+    },
     models: [
       'gemini-3.8-flash',
       'gemini-3.7-flash',
@@ -248,6 +258,11 @@ export const ENGINES: EngineSpec[] = [
   },
 ];
 
+/** The levels a model accepts: its own list when the spec gives one, else the CLI's. */
+export function effortsFor(engine: EngineSpec | undefined, model = ''): string[] {
+  return engine?.modelEfforts?.[model.trim()] ?? engine?.efforts ?? [];
+}
+
 /** The CLI's arguments with the project's model, when one is set. */
 export function engineArgs(
   engine: EngineSpec,
@@ -255,7 +270,7 @@ export function engineArgs(
 ): string[] {
   const model = (project.model ?? '').trim();
   const effort = (project.effort ?? '').trim();
-  const withEffort = effort && engine.efforts?.includes(effort);
+  const withEffort = effort && effortsFor(engine, model).includes(effort);
   return [
     ...engine.args,
     ...(engine.cwdFlag && project.repo_path ? [engine.cwdFlag, project.repo_path] : []),

@@ -1269,7 +1269,8 @@ function EngineButton({
  * the CLI's own default, the effort by the level its spec marks as such. */
 function engineLine(engines: EngineInfo[], engine: string | null, model: string, effort: string) {
   const spec = engines.find((e) => e.id === engine) ?? engines[0];
-  const defaultEffort = spec?.efforts?.find((lvl) => /CLI default/.test(spec.about?.[lvl] ?? ''));
+  const levels = spec?.modelEfforts?.[model] ?? spec?.efforts ?? [];
+  const defaultEffort = levels.find((lvl) => /CLI default/.test(spec?.about?.[lvl] ?? ''));
   return [spec?.id, model || 'default', effort || defaultEffort || 'default'].join(' · ');
 }
 

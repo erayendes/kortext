@@ -97,6 +97,7 @@ export interface EngineInfo {
   installHint: string;
   models?: string[];
   efforts?: string[];
+  modelEfforts?: Record<string, string[]>;
   about?: Record<string, string>;
   label?: Record<string, string>;
   untested?: boolean;
@@ -152,7 +153,7 @@ export const api = {
       body: JSON.stringify({ id }),
     }),
   setProjectModel: (projectId: number, model: string) =>
-    req<{ model: string }>(`/api/projects/${projectId}/model`, {
+    req<{ model: string; effort: string }>(`/api/projects/${projectId}/model`, {
       method: 'PUT',
       body: JSON.stringify({ model }),
     }),
