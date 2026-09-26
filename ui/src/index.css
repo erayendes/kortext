@@ -2253,16 +2253,19 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   box-shadow: inset 3px 0 0 var(--blue);
   border-radius: 0;
 }
-/* A line carrying a note keeps its text as it is: a faint wash and the
-   note's number, blue like the note waiting in the footer. */
+/* A line carrying a note keeps its text as it is: a faint wash, and the
+   note's name at the end of the sentence, blue like the tags beside it. */
 .kx-block.noted {
   background: color-mix(in srgb, var(--blue) 7%, transparent);
 }
-.kx-block.noted .kx-qno {
+.kx-note-tag {
+  margin-left: var(--sp-2);
   padding: 1px 6px;
   border-radius: var(--r-sm);
   color: var(--blue);
-  background: color-mix(in srgb, var(--blue) 14%, transparent);
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  font-size: var(--fs-micro);
+  white-space: nowrap;
 }
 .kx-h1 {
   font-size: var(--fs-title);
@@ -3076,14 +3079,14 @@ button.kx-removed-toggle:hover {
   margin-left: var(--sp-2);
   padding: 1px 6px;
   border-radius: var(--r-sm);
-  color: var(--fg-muted);
-  background: color-mix(in srgb, currentColor 12%, transparent);
+  color: var(--violet);
+  background: color-mix(in srgb, currentColor 14%, transparent);
   font-size: var(--fs-micro);
 }
 /* The author's proposal, told apart from what it found. */
 .kx-sugg-tag {
   display: inline-block;
-  margin-right: 6px;
+  margin-left: var(--sp-2);
   padding: 1px 6px;
   border-radius: var(--r-sm);
   color: var(--amber);

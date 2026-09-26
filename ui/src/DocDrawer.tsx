@@ -1636,7 +1636,7 @@ function DocBlock({
   };
   if (token.kind === 'blank') return <div className="kx-blank" />;
   if (token.kind === 'rule') return <hr className="kx-rule" />;
-  const cls = `kx-block kx-${token.kind}${selected ? ' selected' : ''}${noted ? ' noted' : ''}${openQuestion ? ' open-q' : ''}${changeRequest ? ' req-q' : ''}${questionNo || noteLabel ? ' kx-numbered' : ''}${changed ? ' kx-changed' : ''}${decision !== undefined ? ' kx-decision-request' : ''}`;
+  const cls = `kx-block kx-${token.kind}${selected ? ' selected' : ''}${noted ? ' noted' : ''}${openQuestion ? ' open-q' : ''}${changeRequest ? ' req-q' : ''}${questionNo ? ' kx-numbered' : ''}${changed ? ' kx-changed' : ''}${decision !== undefined ? ' kx-decision-request' : ''}`;
   if (token.kind === 'table' && token.table) {
     return (
       <div className={cls} {...activation}>
@@ -1713,11 +1713,7 @@ function DocBlock({
       style={token.depth ? { marginLeft: token.depth * 18 } : undefined}
       {...activation}
     >
-      {questionNo ? (
-        <span className="kx-qno mono">#{questionNo}</span>
-      ) : noteLabel ? (
-        <span className="kx-qno mono">{noteLabel}</span>
-      ) : null}
+      {questionNo ? <span className="kx-qno mono">#{questionNo}</span> : null}
       {outcome ? (
         <>
           <span
@@ -1768,13 +1764,15 @@ function DocBlock({
             title={showOld ? 'Hide what this replaced' : 'Show what this replaced'}
             aria-expanded={showOld}
           >
-            changed {showOld ? '▴' : '▾'}
+            CHANGED {showOld ? '▴' : '▾'}
           </button>
         ) : (
           <span className="kx-new-mark mono" title="New since the last write">
-            new
+            NEW
           </span>
         ))}
+      {/* The note waiting in the footer, named as it is named there. */}
+      {noteLabel && !questionNo && <span className="kx-note-tag mono">NOTE {noteLabel}</span>}
       {decision !== undefined && decision !== '' && (
         <div className="kx-decision-why">
           <span className="kx-decision-why-label">Reason:</span> {decision}
@@ -1803,13 +1801,13 @@ function Body({ text }: { text: string }) {
   if (!m) return <Inline text={text} />;
   return (
     <>
+      <Inline text={text.slice(m[0].length)} />
       <span
         className="kx-sugg-tag mono"
         title="The author proposes this; it was not found in the inputs. Approving the document accepts it."
       >
-        suggestion
+        SUGGESTION
       </span>
-      <Inline text={text.slice(m[0].length)} />
     </>
   );
 }
