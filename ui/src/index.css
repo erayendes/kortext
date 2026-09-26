@@ -2887,8 +2887,12 @@ button.kx-note-exc:hover {
 /* The decision, one word after the row's text — no box to tick. */
 .kx-req-state {
   margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: var(--r-sm);
   font-size: var(--fs-micro);
   white-space: nowrap;
+  /* A tint of the word's own colour: blue answered, green accepted, red rejected. */
+  background: color-mix(in srgb, currentColor 14%, transparent);
 }
 /* One drawn box for both the list and the body: a hairline square that fills
    with the accent when it is on. The browser's own box ignores the theme. */
@@ -3027,7 +3031,7 @@ button.kx-note-exc:hover {
   color: var(--red);
 }
 .kx-decision-answered {
-  color: var(--green);
+  color: var(--blue);
 }
 
 /* What this write changed, in the document rather than in a separate view: the

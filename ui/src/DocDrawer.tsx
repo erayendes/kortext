@@ -1064,7 +1064,7 @@ export function DocDrawer({
                   >
                     <span className="kx-note-exc mono">outgoing #{i + 1}</span>
                     <span className="kx-note-body">
-                      to <span className="mono">{r.target.replace(/\.md$/, '')}</span>{' '}
+                      <span className="mono">← {r.target.replace(/\.md$/, '')}</span>{' '}
                       <span className={`kx-decision kx-decision-${d.what}`}>
                         {d.what === 'accept' ? 'accepted' : 'rejected'}
                       </span>
@@ -1106,9 +1106,9 @@ export function DocDrawer({
                       }
                     }}
                   >
-                    <span className="kx-note-exc mono">request #{i + 1}</span>
+                    <span className="kx-note-exc mono">incoming #{i + 1}</span>
                     <span className="kx-note-body">
-                      <span className="mono">{r.from.replace(/\.md$/, '')}</span>{' '}
+                      <span className="mono">→ {r.from.replace(/\.md$/, '')}</span>{' '}
                       <span className={`kx-decision kx-decision-${d.what}`}>
                         {d.what === 'accept' ? 'accepted' : 'rejected'}
                       </span>
