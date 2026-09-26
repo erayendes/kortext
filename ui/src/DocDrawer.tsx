@@ -587,8 +587,9 @@ export function DocDrawer({
   const summary = [
     answered > 0 && written ? plural(answered, 'question answered', 'questions answered') : null,
     remarks > 0 && written ? plural(remarks, 'note added', 'notes added') : null,
-    accepting.length > 0 && written
-      ? plural(accepting.length, 'request accepted', 'requests accepted')
+    accepting.length > 0
+      ? plural(accepting.length, 'request accepted', 'requests accepted') +
+        (written ? '' : ' — drafted into the editor for you to save')
       : null,
     denying.length > 0 ? plural(denying.length, 'request denied', 'requests denied') : null,
     sending.length > 0
@@ -614,6 +615,18 @@ export function DocDrawer({
       // Answers and accepted requests go into a rewrite, and the tray shows
       // them as sent until it lands. A send or a discard alone edits the file
       // at once and is done: nothing to wait for, so the tray empties.
+      // No agent writes this document: the accepted requests become one
+      // drafted change in the editor, which prime saves — what Draft the
+      // change on a row does, reached from the button everyone presses.
+      if (!written && accepting.length > 0) {
+        const rel = doc.rel;
+        const { proposal } = await api.proposeRevision(project.id, rel);
+        if (showing.current === rel) {
+          setDraft(proposal);
+          setProposed(true);
+          setEditing(true);
+        }
+      }
       const rewriting = written && (notes.length > 0 || accepting.length > 0);
       if (rewriting) {
         setSent(true);
@@ -1158,7 +1171,7 @@ export function DocDrawer({
                   title={
                     written
                       ? 'One rewrite carries the answers and the accepted changes together'
-                      : 'Denials are recorded as conflicts; nothing is rewritten'
+                      : 'Accepted requests are drafted into the editor for you to save; denials are recorded'
                   }
                 >
                   {/* The eye is on the button just pressed, not on the header badge. */}
