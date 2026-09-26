@@ -1161,7 +1161,8 @@ export function DocDrawer({
                       : 'Denials are recorded as conflicts; nothing is rewritten'
                   }
                 >
-                  Apply
+                  {/* The eye is on the button just pressed, not on the header badge. */}
+                  {sent || writing ? 'Writing…' : 'Apply'}
                 </button>
               </>
             ) : !written ? (
