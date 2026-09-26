@@ -154,6 +154,17 @@ export function DocDrawer({
   // be refused, so the buttons wait for it.
   const locked = busy || writing || !version;
   const [preview, setPreview] = useState(false); // DESIGN.md drawn, not read
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  // A click anywhere else closes the menu.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const away = (e: MouseEvent) => {
+      if (!menuRef.current?.contains(e.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener('mousedown', away);
+    return () => document.removeEventListener('mousedown', away);
+  }, [menuOpen]);
   const [proposed, setProposed] = useState(false); // the editor holds a draft the engine wrote
   const [rawEdit, setRawEdit] = useState(false); // …and you asked to type in it rather than read it
   const [err, setErr] = useState<string | null>(null);
@@ -711,6 +722,30 @@ export function DocDrawer({
       setRawEdit(false);
     });
 
+  // What stands between this draft and Approve, said in the footer.
+  const approveBlocked =
+    doc.openQuestions && doc.outgoing.length > 0
+      ? 'Answer the open questions and decide the outgoing requests first.'
+      : doc.openQuestions
+        ? 'Answer the open questions first.'
+        : doc.outgoing.length > 0
+          ? 'Decide the outgoing requests first.'
+          : null;
+  const footLine =
+    sent || writing
+      ? summary.length > 0
+        ? `${summary.join(' — ')} — sent; the document is being rewritten.`
+        : 'The document is being rewritten.'
+      : summary.length > 0
+        ? `${summary.join(' — ')}.`
+        : doc.status === 'draft'
+          ? doc.naProposed
+            ? 'The author says this document does not apply here.'
+            : (approveBlocked ?? '')
+          : !written
+            ? 'No agent writes this document — use Edit in ⋯ to change it yourself.'
+            : '';
+
   // Load the proposed revision into the editor; do not save it automatically.
   return (
     <Drawer open={!!doc} onClose={onClose} width={880}>
@@ -718,15 +753,22 @@ export function DocDrawer({
         <div className="dr-ident">
           <div className="dr-title">
             <span className="kx-doc-name">{doc.name}.md</span>
-            {/* Which earlier version the body is read against. A date is all it
-                needs to say; choosing one paints the diff, there is no second
-                step. */}
-            {against !== null && (
+            <StatusBadge doc={doc} />
+          </div>
+          {doc.author && (
+            <span className="kx-doc-author mono">{doc.author.replace(/^\+/, '')}</span>
+          )}
+        </div>
+        <div className="dr-actions">
+          {/* Which earlier version the body is read against. Choosing one paints
+              the diff; there is no second step. */}
+          {!editing && against !== null && (
+            <label className="kx-diff-label">
+              <span className="kx-diff-label-text">Changes since</span>
               <select
                 className="kx-diff-pick mono"
                 value={against}
                 aria-label="Show what changed since"
-                title="Show what changed since this version"
                 onChange={(e) => setAgainst(Number(e.target.value))}
               >
                 {versions
@@ -737,101 +779,67 @@ export function DocDrawer({
                     </option>
                   ))}
               </select>
-            )}
-            <StatusBadge doc={doc} />
-          </div>
-          {doc.author && (
-            <span className="kx-doc-author mono">{doc.author.replace(/^\+/, '')}</span>
+            </label>
           )}
-        </div>
-        <div className="dr-actions">
-          {!editing && doc.status === 'draft' && (
-            // Require open questions to be resolved before approval.
-            <button
-              className="btn btn-success"
-              disabled={locked || doc.openQuestions || doc.outgoing.length > 0}
-              title={
-                writing
-                  ? 'Being rewritten — wait for it to land'
-                  : doc.openQuestions
-                    ? 'Answer the open questions in this document first'
-                    : doc.outgoing.length > 0
-                      ? 'Accept or discard the outgoing requests first'
-                      : doc.naProposed
-                        ? 'The author says this document does not apply here — approving agrees, and settles it as n/a. Disagree? Add a note and request a revision.'
-                        : ''
-              }
-              onClick={() => approve()}
-            >
-              {doc.naProposed ? 'Approve n/a' : 'Approve'}
-            </button>
-          )}
+          {/* What is done to the document rather than decided about it. */}
           {!editing && doc.status !== 'uninitialized' && (
-            <button
-              className="btn btn-secondary"
-              disabled={locked}
-              onClick={() => {
-                setPreview(false);
-                setEditing(true);
-              }}
-            >
-              Edit
-            </button>
-          )}
-          {/* A copy of the document as a file — .kortext/ is hidden, so a file
-              picker will not show it; a design AI wants EXPERIENCE.md handed over. */}
-          {!editing && doc.status !== 'uninitialized' && (
-            <button
-              className="btn btn-secondary"
-              title={`Save a copy of ${doc.name}.md`}
-              onClick={() => {
-                const url = URL.createObjectURL(new Blob([content], { type: 'text/markdown' }));
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `${doc.name}.md`;
-                a.click();
-                URL.revokeObjectURL(url);
-              }}
-            >
-              Export
-            </button>
-          )}
-          {/* Tokens read better drawn than tabulated, and the page is rendered
-              from this same file so it is never out of date. The iframe keeps
-              the project's palette and the panel's from leaking into each other. */}
-          {!editing && doc.rel === 'DESIGN.md' && doc.status !== 'uninitialized' && (
-            <button className="btn btn-secondary" onClick={() => setPreview(!preview)}>
-              {preview ? 'Document' : 'Preview'}
-            </button>
-          )}
-          {editing && (
-            <>
-              <button className="btn btn-primary" disabled={busy} onClick={() => saveEdit()}>
-                Save
-              </button>
-              {!proposed && doc.revisionRequests.length > 0 && (
-                <button
-                  className="btn btn-primary"
-                  disabled={busy}
-                  title="Save this text and mark the incoming requests done — no rewrite by the agent"
-                  onClick={() => saveEdit(true)}
-                >
-                  Save, requests done
-                </button>
-              )}
+            <div className="kx-menu" ref={menuRef}>
               <button
-                className="btn btn-secondary"
-                disabled={busy}
-                onClick={() => {
-                  setEditing(false);
-                  setDraft(content);
-                  setProposed(false);
-                  setRawEdit(false);
-                }}
+                className="btn btn-secondary kx-menu-btn"
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                title="More"
+                onClick={() => setMenuOpen(!menuOpen)}
               >
-                Discard
+                ⋯
               </button>
-            </>
+              {menuOpen && (
+                <div className="kx-menu-list" role="menu">
+                  <button
+                    role="menuitem"
+                    disabled={locked}
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setPreview(false);
+                      setEditing(true);
+                    }}
+                  >
+                    Edit
+                  </button>
+                  {/* A copy of the document as a file — .kortext/ is hidden, so a
+                      file picker will not show it; a design AI wants it handed over. */}
+                  <button
+                    role="menuitem"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      const url = URL.createObjectURL(
+                        new Blob([content], { type: 'text/markdown' }),
+                      );
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `${doc.name}.md`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                  >
+                    Export
+                  </button>
+                  {/* Tokens read better drawn than tabulated; the page is rendered
+                      from this same file, so it is never out of date. */}
+                  {doc.rel === 'DESIGN.md' && (
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        setPreview(!preview);
+                      }}
+                    >
+                      {preview ? 'Document' : 'Preview'}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           )}
           <button className="btn btn-link-primary" onClick={onClose}>
             Close
@@ -998,6 +1006,43 @@ export function DocDrawer({
       </div>
       {/* The footer collects what the drawer decided — notes on lines, answers to
           questions, decisions on change requests — and sends it in one press. */}
+      {/* Editing: the buttons that finish the edit sit where Apply and Approve sit. */}
+      {editing && (
+        <div className="dr-foot">
+          <div className="kx-note-input">
+            <span className="kx-changebar-summary">
+              {proposed
+                ? 'Drafted by the agent — nothing is saved until you press Save.'
+                : 'Editing by hand.'}
+            </span>
+            <button
+              className="btn btn-secondary"
+              disabled={busy}
+              onClick={() => {
+                setEditing(false);
+                setDraft(content);
+                setProposed(false);
+                setRawEdit(false);
+              }}
+            >
+              Discard
+            </button>
+            {!proposed && doc.revisionRequests.length > 0 && (
+              <button
+                className="btn btn-secondary"
+                disabled={busy}
+                title="Save this text and mark the incoming requests done — no rewrite by the agent"
+                onClick={() => saveEdit(true)}
+              >
+                Save, requests done
+              </button>
+            )}
+            <button className="btn btn-primary" disabled={busy} onClick={() => saveEdit()}>
+              Save
+            </button>
+          </div>
+        </div>
+      )}
       {!editing && !preview && doc.status !== 'uninitialized' && (
         <div className="dr-foot">
           {notes.length > 0 || decisions.length > 0 ? (
@@ -1142,56 +1187,49 @@ export function DocDrawer({
             </span>
           )}
           <div className="kx-note-input">
-            {actionNeeded ? (
-              <>
-                <span className="kx-changebar-summary">
-                  {sent || writing
-                    ? summary.length > 0
-                      ? `${summary.join(' — ')} — sent; the document is being rewritten.`
-                      : 'The document is being rewritten.'
-                    : summary.length > 0
-                      ? `${summary.join(' — ')}.`
-                      : 'Nothing selected yet.'}
-                </span>
-                <button
-                  className="btn btn-primary"
-                  disabled={locked || sent || summary.length === 0}
-                  onClick={applyAll}
-                  title={
-                    written
-                      ? 'One rewrite carries the answers and the accepted changes together'
-                      : 'Accepted requests are drafted into the editor for you to save; denials are recorded'
-                  }
-                >
-                  {/* The eye is on the button just pressed, not on the header badge. */}
-                  {sent || writing ? 'Writing…' : 'Apply'}
-                </button>
-              </>
-            ) : !written ? (
-              <span className="kx-cmd-hint">
-                No agent writes this document — use Edit to change it yourself.
-              </span>
-            ) : (
-              <>
-                {placeholders.length > 0 && (
-                  <button
-                    className="btn btn-link-danger"
-                    disabled={busy}
-                    onClick={() => approve(true)}
-                    title="Approve with the template lines still in it"
-                  >
-                    Approve anyway
-                  </button>
-                )}
-                <button
-                  className="btn btn-primary"
-                  disabled={busy || notes.length === 0}
-                  onClick={requestRevision}
-                >
-                  Request revision{notes.length > 0 ? ` (${notes.length})` : ''}
-                </button>
-              </>
+            {/* One button finishes the document, and says what it will do. */}
+            {placeholders.length > 0 && (
+              <button
+                className="btn btn-link-danger"
+                disabled={busy}
+                onClick={() => approve(true)}
+                title="Approve with the template lines still in it"
+              >
+                Approve anyway
+              </button>
             )}
+            <span className="kx-changebar-summary">{footLine}</span>
+            {sent || writing ? (
+              <button className="btn btn-primary" disabled>
+                Writing…
+              </button>
+            ) : summary.length > 0 ? (
+              <button
+                className="btn btn-primary"
+                disabled={locked}
+                onClick={actionNeeded ? applyAll : requestRevision}
+                title={
+                  written
+                    ? 'One rewrite carries the answers and the accepted changes together'
+                    : 'Accepted requests are drafted into the editor for you to save; rejections are recorded'
+                }
+              >
+                Apply
+              </button>
+            ) : doc.status === 'draft' ? (
+              <button
+                className="btn btn-success"
+                disabled={locked || approveBlocked !== null}
+                title={
+                  doc.naProposed
+                    ? 'The author says this document does not apply here — approving agrees, and settles it as n/a. Disagree? Add a note and apply it.'
+                    : ''
+                }
+                onClick={() => approve()}
+              >
+                {doc.naProposed ? 'Approve n/a' : 'Approve'}
+              </button>
+            ) : null}
           </div>
         </div>
       )}

@@ -2180,6 +2180,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
 }
 .dr-actions {
   display: flex;
+  align-items: center;
   gap: 6px;
   flex-shrink: 0;
 }
@@ -3408,4 +3409,57 @@ button.kx-removed-toggle:hover {
 }
 .hl-flag {
   color: var(--fg-muted);
+}
+
+/* "Changes since" and its date read as one control. */
+.kx-diff-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.kx-diff-label-text {
+  font-size: var(--fs-label);
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+/* The ⋯ menu: what is done to the document, not decided about it. */
+.kx-menu {
+  position: relative;
+}
+.kx-menu-btn {
+  width: var(--control-h);
+  padding: 0;
+  letter-spacing: 1px;
+}
+.kx-menu-list {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 20;
+  min-width: 140px;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  background: var(--bg);
+  box-shadow: var(--shadow-md, 0 6px 20px rgba(0, 0, 0, 0.25));
+}
+.kx-menu-list > button {
+  text-align: left;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  font-size: var(--fs-body);
+  cursor: pointer;
+}
+.kx-menu-list > button:hover {
+  background: var(--bg-active);
+}
+.kx-menu-list > button[disabled] {
+  opacity: 0.45;
+  pointer-events: none;
 }
