@@ -537,3 +537,14 @@ test('sibling databases retain separate logs after both are opened', () => {
     rmSync(work, { recursive: true, force: true });
   }
 });
+
+test('Continue with an unapproved brief says so instead of starting nothing', async (t) => {
+  const { db, p, request } = await fixture(t);
+  db.prepare('UPDATE projects SET paused = 0').run();
+  // A brief edited outside the panel can lose its frontmatter: no status at all.
+  writeFileSync(docPath(p, 'BRIEF.md'), '# Brief\n\nRewritten by hand.\n');
+  const res = await request('run-next', {});
+  assert.equal(res.status, 409);
+  assert.match((await res.json()).error, /brief is not approved/);
+  assert.equal(listJobs(db, p.id).length, 0);
+});

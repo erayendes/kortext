@@ -311,6 +311,14 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     if (!project) return;
     const engine = engineFor(db, project);
     if (!engine) return res.status(409).json({ error: 'no agent CLI installed' });
+    // The readiness gate stops an unapproved brief without a word; say it here,
+    // or Continue answers "started" and nothing moves.
+    const brief = listDocs(db, project, pkgRoot).find((d) => d.rel === 'BRIEF.md');
+    if ((project.kind ?? 'new') === 'new' && brief?.status !== 'approved') {
+      return res
+        .status(409)
+        .json({ error: 'The brief is not approved — open BRIEF and approve it to continue.' });
+    }
     const step = nextStep(db, project, pkgRoot);
     if (!step) {
       return res.status(409).json({
