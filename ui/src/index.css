@@ -2898,7 +2898,7 @@ button.kx-note-exc:hover {
 /* The decision, one word after the row's text — no box to tick. */
 .kx-req-state {
   margin-left: 8px;
-  padding: 1px 7px;
+  padding: 1px 6px;
   border-radius: var(--r-sm);
   font-size: var(--fs-micro);
   white-space: nowrap;

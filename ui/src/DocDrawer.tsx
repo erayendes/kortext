@@ -1290,8 +1290,8 @@ function RelatedDocuments({ doc, docs }: { doc: DocInfo; docs: DocInfo[] }) {
 
 /** A row's decision, in one word after its text — where the checkbox used to be. */
 function State({ what }: { what: 'answered' | 'accept' | 'deny' }) {
-  const word = what === 'answered' ? 'answered' : what === 'accept' ? 'accepted' : 'rejected';
-  return <span className={`kx-req-state kx-decision kx-decision-${what}`}>{word}</span>;
+  const word = what === 'answered' ? 'ANSWERED' : what === 'accept' ? 'ACCEPTED' : 'REJECTED';
+  return <span className={`kx-req-state kx-decision-${what} mono`}>{word}</span>;
 }
 
 /**
@@ -1461,7 +1461,7 @@ function ActionNeeded({
                         className="kx-req-presumed mono"
                         title="You accepted this where it was asked. Untick it here to change your mind."
                       >
-                        accepted there
+                        ACCEPTED THERE
                       </span>
                     )}
                   </span>
