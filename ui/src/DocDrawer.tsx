@@ -2002,6 +2002,41 @@ function SuggestIcon() {
   );
 }
 
+// lucide check and x (ISC).
+function AcceptIcon() {
+  return (
+    <svg
+      className="ic"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+}
+function RejectIcon() {
+  return (
+    <svg
+      className="ic"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </svg>
+  );
+}
+
 /** What Get a suggestion asks; the thread shows the button's name instead. */
 const SUGGEST_PROMPT = "What do you suggest? Answer in the document's language.";
 
@@ -2151,6 +2186,7 @@ function LineThread({
                     setText('');
                   }}
                 >
+                  <RejectIcon />
                   {verbs[1]}
                 </button>
                 <button
@@ -2160,6 +2196,7 @@ function LineThread({
                     setText('');
                   }}
                 >
+                  <AcceptIcon />
                   {verbs[0]}
                 </button>
               </>
