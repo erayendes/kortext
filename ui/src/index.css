@@ -92,7 +92,6 @@
 
   --speed: 130ms;
   --ease: cubic-bezier(0.2, 0, 0, 1);
-
 }
 
 /* ---------- dark theme ---------- */
@@ -340,7 +339,6 @@ body {
 }
 
 /* ---------- generic ---------- */
-
 
 /* Loading spinner */
 
@@ -2880,22 +2878,17 @@ button.kx-note-exc:hover {
 }
 .kx-changebar-list > li {
   display: grid;
-  grid-template-columns: auto 1fr;
-  column-gap: var(--sp-2);
+  grid-template-columns: 1fr;
   align-items: baseline;
 }
-.kx-changebar-list > li > .kx-thread {
-  grid-column: 2;
-}
-.kx-req-check {
-  cursor: pointer;
-  margin: 0;
-  position: relative;
-  top: 2px;
+/* The decision, one word after the row's text — no box to tick. */
+.kx-req-state {
+  margin-left: 8px;
+  font-size: var(--fs-micro);
+  white-space: nowrap;
 }
 /* One drawn box for both the list and the body: a hairline square that fills
    with the accent when it is on. The browser's own box ignores the theme. */
-.kx-req-check,
 .kx-task-box {
   appearance: none;
   -webkit-appearance: none;
@@ -2909,7 +2902,6 @@ button.kx-note-exc:hover {
     background var(--speed) var(--ease),
     border-color var(--speed) var(--ease);
 }
-.kx-req-check:checked,
 .kx-task-box:checked {
   background-color: var(--accent);
   border-color: var(--accent);
@@ -2917,7 +2909,6 @@ button.kx-note-exc:hover {
      dark theme's accent is light, so a white tick vanished there. */
   background-image: none;
 }
-.kx-req-check:checked::after,
 .kx-task-box:checked::after {
   content: '';
   display: block;
@@ -3031,6 +3022,9 @@ button.kx-note-exc:hover {
 }
 .kx-decision-deny {
   color: var(--red);
+}
+.kx-decision-answered {
+  color: var(--green);
 }
 
 /* What this write changed, in the document rather than in a separate view: the

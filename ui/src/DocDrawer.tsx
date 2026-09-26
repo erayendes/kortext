@@ -591,13 +591,13 @@ export function DocDrawer({
       ? plural(accepting.length, 'request accepted', 'requests accepted') +
         (written ? '' : ' — drafted into the editor for you to save')
       : null,
-    denying.length > 0 ? plural(denying.length, 'request denied', 'requests denied') : null,
+    denying.length > 0 ? plural(denying.length, 'request rejected', 'requests rejected') : null,
     sending.length > 0
       ? plural(sending.length, 'request accepted', 'requests accepted') +
         ` — ticked on ${[...new Set(sending.map((r) => r.other.replace(/\.md$/, '')))].join(', ')}, still yours to change there`
       : null,
     discarding.length > 0
-      ? plural(discarding.length, 'request discarded', 'requests discarded')
+      ? plural(discarding.length, 'request rejected', 'requests rejected')
       : null,
   ].filter(Boolean);
   const applyAll = () =>
@@ -712,17 +712,6 @@ export function DocDrawer({
     });
 
   // Load the proposed revision into the editor; do not save it automatically.
-  const proposeFix = () =>
-    act(async () => {
-      const rel = doc.rel;
-      const { proposal } = await api.proposeRevision(project.id, rel);
-      // Ignore a proposal if the user has switched documents before it completes.
-      if (showing.current !== rel) return;
-      setDraft(proposal);
-      setProposed(true);
-      setEditing(true);
-    });
-
   return (
     <Drawer open={!!doc} onClose={onClose} width={880}>
       <div className="dr-head">
@@ -914,7 +903,7 @@ export function DocDrawer({
             explains={explains}
             answerBy={answerBy}
             onAsk={ask}
-            // A question has one answer. A second Add note replaces the first
+            // A question has one answer. A second Add answer replaces the first
             // rather than sending the agent two answers to reconcile.
             onNote={(line, text) => {
               setNotes((ns) => ns.filter((n) => n.line !== line));
@@ -934,8 +923,7 @@ export function DocDrawer({
                 [keyOut(r)]: { kind: 'outgoing', other: r.target, reason: r.reason, what, note },
               }))
             }
-            onDraft={written ? undefined : proposeFix}
-            drafting={busy}
+            onCloseThread={(line) => setExplains((xs) => xs.filter((x) => x.line !== line))}
           />
         )}
         {editing ? (
@@ -994,6 +982,7 @@ export function DocDrawer({
                         setSelected(null);
                       }}
                       suggest={openQ.has(t.index)}
+                      noteLabel={openQ.has(t.index) ? 'Add answer' : 'Add note'}
                       answerBy={answerBy}
                       onAsk={(q) => ask(t.index, q)}
                       onNote={(text) => {
@@ -1077,7 +1066,7 @@ export function DocDrawer({
                     <span className="kx-note-body">
                       to <span className="mono">{r.target.replace(/\.md$/, '')}</span>{' '}
                       <span className={`kx-decision kx-decision-${d.what}`}>
-                        {d.what === 'accept' ? 'accepted' : 'discarded'}
+                        {d.what === 'accept' ? 'accepted' : 'rejected'}
                       </span>
                     </span>
                     {!sent && !writing && (
@@ -1121,7 +1110,7 @@ export function DocDrawer({
                     <span className="kx-note-body">
                       <span className="mono">{r.from.replace(/\.md$/, '')}</span>{' '}
                       <span className={`kx-decision kx-decision-${d.what}`}>
-                        {d.what === 'accept' ? 'accepted' : 'denied'}
+                        {d.what === 'accept' ? 'accepted' : 'rejected'}
                       </span>
                       {d.note && ` — ${d.note}`}
                     </span>
@@ -1299,13 +1288,19 @@ function RelatedDocuments({ doc, docs }: { doc: DocInfo; docs: DocInfo[] }) {
   );
 }
 
+/** A row's decision, in one word after its text — where the checkbox used to be. */
+function State({ what }: { what: 'answered' | 'accept' | 'deny' }) {
+  const word = what === 'answered' ? 'answered' : what === 'accept' ? 'accepted' : 'rejected';
+  return <span className={`kx-req-state kx-decision kx-decision-${what}`}>{word}</span>;
+}
+
 /**
  * Everything owed on this document, in one list.
  *
  * Two groups, because they read differently — questions the agent left for
  * prime, and change requests arriving from other documents. The list only
- * selects: click a row and its moves open under it, Ask · Add note for a
- * question, Ask · Accept · Deny for a request. What prime decides collects in
+ * selects: click a row and its moves open under it, Get a suggestion · Ask ·
+ * Add answer for a question, Ask · Reject · Accept for a request. What prime decides collects in
  * the footer, beside the notes on lines, and goes out in one press from there.
  * One press, because both groups rewrite THIS document and a document is
  * rewritten once.
@@ -1320,17 +1315,14 @@ function ActionNeeded({
   onNote,
   onDecide,
   onDecideOut,
-  onDraft,
-  drafting,
+  onCloseThread,
   answered,
   decided,
 }: {
   project: Project;
   doc: DocInfo;
-  /** On a document no agent writes — the brief — a request is not accepted but
-   *  drafted: the engine writes the change into the editor for prime to save. */
-  onDraft?: () => void;
-  drafting?: boolean;
+  /** × on a question's thread: its questions and answers go. */
+  onCloseThread: (line: number) => void;
   /** The bullets under the questions heading, numbered as the body numbers them. */
   questions: Array<{ index: number; no: number; text: string }>;
   explains: Explain[];
@@ -1378,6 +1370,11 @@ function ActionNeeded({
       .catch((e) => fill(`— ${(e as Error).message}`));
   };
 
+  const closeChat = (key: string) => {
+    setChat((cs) => cs.filter((c) => c.key !== key));
+    setOpen(null);
+  };
+
   // A row is selected by clicking it, and the input opens underneath.
   const select = (key: string) => ({
     role: 'button' as const,
@@ -1415,23 +1412,22 @@ function ActionNeeded({
               const key = `q${q.index}`;
               return (
                 <li key={key} id={`kx-q-${q.index}`} className={open === key ? 'kx-req-open' : ''}>
-                  <input
-                    type="checkbox"
-                    className="kx-req-check"
-                    checked={answered.has(q.index)}
-                    readOnly
-                    tabIndex={-1}
-                    aria-hidden="true"
-                    onClick={() => setOpen(open === key ? null : key)}
-                  />
                   <span className="kx-req-text" {...select(key)}>
                     <span className="mono">#{q.no}</span> — <Inline text={q.text} />
+                    {answered.has(q.index) && <State what="answered" />}
                   </span>
                   {(thread.length > 0 || open === key) && (
                     <LineThread
                       thread={thread}
                       active={open === key}
                       suggest
+                      noteLabel="Add answer"
+                      placeholder="Your answer, or a question for the author"
+                      onActivate={() => setOpen(key)}
+                      onClose={() => {
+                        onCloseThread(q.index);
+                        setOpen(null);
+                      }}
                       answerBy={answerBy}
                       onAsk={(text) => onAsk(q.index, text)}
                       onNote={(text) => {
@@ -1456,19 +1452,11 @@ function ActionNeeded({
               const talk = chat.filter((c) => c.key === key);
               return (
                 <li key={key} id={`kx-req-${i}`} className={open === key ? 'kx-req-open' : ''}>
-                  <input
-                    type="checkbox"
-                    className="kx-req-check"
-                    checked={key in decided}
-                    readOnly
-                    tabIndex={-1}
-                    aria-hidden="true"
-                    onClick={() => setOpen(open === key ? null : key)}
-                  />
                   <span className="kx-req-text" {...select(key)}>
                     <span className="mono">{r.from.replace(/\.md$/, '')}</span> —{' '}
                     <Inline text={r.reason} />
-                    {r.presumed === 'accept' && (
+                    {decided[key] && <State what={decided[key].what} />}
+                    {r.presumed === 'accept' && !decided[key] && (
                       <span
                         className="kx-req-presumed mono"
                         title="You accepted this where it was asked. Untick it here to change your mind."
@@ -1480,8 +1468,10 @@ function ActionNeeded({
                   {(talk.length > 0 || open === key) && (
                     <LineThread
                       thread={talk.map((c) => ({ line: null, question: c.q, answer: c.a }))}
-                      suggest
                       active={open === key}
+                      placeholder="Question, or a reason for your decision (optional)"
+                      onActivate={() => setOpen(key)}
+                      onClose={() => closeChat(key)}
                       answerBy={r.from.replace(/\.md$/, '')}
                       onAsk={(q) => askFrom(r, q)}
                       onNote={() => {}}
@@ -1489,8 +1479,6 @@ function ActionNeeded({
                         onDecide(r, what, note);
                         setOpen(null);
                       }}
-                      onDraft={onDraft}
-                      drafting={drafting}
                     />
                   )}
                 </li>
@@ -1509,24 +1497,18 @@ function ActionNeeded({
               const talk = chat.filter((c) => c.key === key);
               return (
                 <li key={key} id={`kx-out-${i}`} className={open === key ? 'kx-req-open' : ''}>
-                  <input
-                    type="checkbox"
-                    className="kx-req-check"
-                    checked={key in decided}
-                    readOnly
-                    tabIndex={-1}
-                    aria-hidden="true"
-                    onClick={() => setOpen(open === key ? null : key)}
-                  />
                   <span className="kx-req-text" {...select(key)}>
                     <span className="mono">to {r.target.replace(/\.md$/, '')}</span> —{' '}
                     <Inline text={r.reason} />
+                    {decided[key] && <State what={decided[key].what} />}
                   </span>
                   {(talk.length > 0 || open === key) && (
                     <LineThread
                       thread={talk.map((c) => ({ line: null, question: c.q, answer: c.a }))}
-                      suggest
                       active={open === key}
+                      placeholder="Question about this request"
+                      onActivate={() => setOpen(key)}
+                      onClose={() => closeChat(key)}
                       answerBy={doc.name}
                       onAsk={(q) => askOwn(r, q)}
                       onNote={() => {}}
@@ -1534,7 +1516,6 @@ function ActionNeeded({
                         onDecideOut(r, what, note);
                         setOpen(null);
                       }}
-                      verbs={['Accept', 'Discard']}
                     />
                   )}
                 </li>
@@ -1984,6 +1965,9 @@ function Inline({ text }: { text: string }) {
   );
 }
 
+/** What Get a suggestion asks; the thread shows the button's name instead. */
+const SUGGEST_PROMPT = "What do you suggest? Answer in the document's language.";
+
 // Show inline Q&A and revision notes below the selected block.
 function LineThread({
   thread,
@@ -1995,9 +1979,9 @@ function LineThread({
   suggest,
   onActivate,
   onClose,
-  onDraft,
-  drafting,
-  verbs = ['Accept', 'Deny'],
+  verbs = ['Accept', 'Reject'],
+  noteLabel = 'Add note',
+  placeholder,
 }: {
   thread: Explain[];
   active: boolean;
@@ -2016,12 +2000,12 @@ function LineThread({
   onActivate?: () => void;
   /** × on the thread: the questions and answers go, the line stands as it was. */
   onClose?: () => void;
-  /** No agent writes this document, so nothing can be accepted on its behalf. */
-  /** Set on the brief: the engine drafts the change instead of Accept. */
-  onDraft?: () => void;
-  drafting?: boolean;
-  /** The two decision words — Accept · Deny by default, Accept · Discard for an outgoing request. */
+  /** The two decision words — Accept · Reject, for a request in either direction. */
   verbs?: [string, string];
+  /** What the primary button calls the text: Add answer on a question, Add note on a line. */
+  noteLabel?: string;
+  /** Says what the box takes on this kind of row. */
+  placeholder?: string;
 }) {
   const [text, setText] = useState('');
   const box = useRef<HTMLDivElement>(null);
@@ -2062,25 +2046,25 @@ function LineThread({
       {thread.map((x, i) => (
         <div key={i} className="kx-explain">
           <span className="kx-explain-who mono">prime</span>
-          <span className="kx-explain-q">{x.question}</span>
+          <span className="kx-explain-q">
+            {x.question === SUGGEST_PROMPT ? 'Get a suggestion' : x.question}
+          </span>
           <span className="kx-explain-who mono">{answerBy}</span>
           <span className={`kx-explain-a${x.answer === null ? ' kx-running' : ''}`}>
             {x.answer === null ? 'writing an answer…' : <AnswerText text={x.answer} />}
           </span>
-          {/* "What do you suggest?" — and the suggestion is the answer. One press
-              takes it as the note on a question; on a request it fills the box,
-              since the decision there is Accept or Deny, not a note. */}
+          {/* The answer goes into the box, not straight out: prime edits it and
+              then presses whatever the row's own button is. */}
           {x.answer !== null && (
             <button
               type="button"
               className="btn btn-link-primary kx-explain-take"
               onClick={() => {
-                const answer = x.answer ?? '';
-                if (onDecide) setText(answer);
-                else onNote(answer);
+                setText(x.answer ?? '');
+                onActivate?.();
               }}
             >
-              {onDecide ? 'Use this as the note' : 'Use this answer'}
+              Use this
             </button>
           )}
         </div>
@@ -2091,33 +2075,23 @@ function LineThread({
             className="kx-input kx-thread-text"
             autoFocus={active}
             rows={1}
+            // Enter is a new line everywhere; only a button sends.
             placeholder={
-              thread.length > 0
-                ? 'Follow-up question, or a note…  (Enter sends, Shift+Enter for a new line)'
-                : 'Ask about this line, or write a note…  (Enter sends, Shift+Enter for a new line)'
+              placeholder ??
+              (thread.length > 0 ? 'Follow-up question, or a note' : 'Question, or a note')
             }
             value={text}
             onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => {
-              // Shift+Enter is how you write a second line; Enter alone sends.
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                send('ask');
-              }
-            }}
           />
           <div className="kx-thread-actions">
-            {/* The question most rows get asked, without typing it. The author
-                answers in the document's language, and the reply carries
-                Use this answer — so a question can be settled in two presses. */}
             {suggest && (
               <button
                 className="btn btn-link-primary"
                 disabled={waiting}
                 title="Ask the author what it would suggest"
-                onClick={() => onAsk("What do you suggest? Answer in the document's language.")}
+                onClick={() => onAsk(SUGGEST_PROMPT)}
               >
-                Suggest
+                Get a suggestion
               </button>
             )}
             <button
@@ -2129,26 +2103,6 @@ function LineThread({
             </button>
             {onDecide ? (
               <>
-                {onDraft ? (
-                  <button
-                    className="btn btn-primary"
-                    disabled={drafting}
-                    title="No agent writes this document — the engine drafts the change into the editor, you save it"
-                    onClick={onDraft}
-                  >
-                    {drafting ? 'Drafting…' : 'Draft the change'}
-                  </button>
-                ) : (
-                  <button
-                    className="btn btn-primary"
-                    onClick={() => {
-                      onDecide('accept', text.trim());
-                      setText('');
-                    }}
-                  >
-                    {verbs[0]}
-                  </button>
-                )}
                 <button
                   className="btn btn-secondary"
                   onClick={() => {
@@ -2158,6 +2112,15 @@ function LineThread({
                 >
                   {verbs[1]}
                 </button>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => {
+                    onDecide('accept', text.trim());
+                    setText('');
+                  }}
+                >
+                  {verbs[0]}
+                </button>
               </>
             ) : (
               <button
@@ -2165,7 +2128,7 @@ function LineThread({
                 disabled={!text.trim()}
                 onClick={() => send('note')}
               >
-                Add note
+                {noteLabel}
               </button>
             )}
           </div>
