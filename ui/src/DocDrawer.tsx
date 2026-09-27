@@ -155,6 +155,8 @@ export function DocDrawer({
   const locked = busy || writing || !version;
   const [preview, setPreview] = useState(false); // DESIGN.md drawn, not read
   const [menuOpen, setMenuOpen] = useState(false);
+  // The engine is drafting the brief's change into the editor.
+  const [drafting, setDrafting] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   // A click anywhere else closes the menu.
   useEffect(() => {
@@ -631,7 +633,10 @@ export function DocDrawer({
       // change on a row does, reached from the button everyone presses.
       if (!written && accepting.length > 0) {
         const rel = doc.rel;
-        const { proposal } = await api.proposeRevision(project.id, rel);
+        setDrafting(true);
+        const { proposal } = await api
+          .proposeRevision(project.id, rel)
+          .finally(() => setDrafting(false));
         if (showing.current === rel) {
           setDraft(proposal);
           setProposed(true);
@@ -732,8 +737,9 @@ export function DocDrawer({
         : doc.outgoing.length > 0
           ? 'Decide the outgoing requests first.'
           : null;
-  const footLine =
-    sent || writing
+  const footLine = drafting
+    ? 'The agent is drafting the change — it opens in the editor for you to read and save.'
+    : sent || writing
       ? summary.length > 0
         ? `${summary.join(' — ')} — sent; the document is being rewritten.`
         : 'The document is being rewritten.'
@@ -1190,9 +1196,9 @@ export function DocDrawer({
               </button>
             )}
             <span className="kx-changebar-summary">{footLine}</span>
-            {sent || writing ? (
+            {sent || writing || drafting ? (
               <button className="btn btn-primary" disabled>
-                Writing…
+                {drafting ? 'Drafting…' : 'Writing…'}
               </button>
             ) : summary.length > 0 ? (
               <button
