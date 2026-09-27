@@ -11,6 +11,7 @@ import {
   docPath,
   listDocs,
   loadDocMap,
+  QUESTIONS,
   readFrontmatter,
   removeRequest,
   recordVersion,
@@ -609,6 +610,117 @@ async function runRecheck(
   } finally {
     run.done();
   }
+}
+
+/**
+ * Prime saved a hand edit, and nothing on the server knows what it changed. The
+ * author reads it against the text before: which requests standing on the
+ * document the new text now carries — those are removed as done — and where
+ * the edit contradicts the rest or leaves something unfinished — those become
+ * questions for prime. The save already set the document back to draft, so it
+ * comes to prime again either way.
+ */
+export async function reviewHandEdit(
+  db: Database.Database,
+  project: Project,
+  rel: string,
+  before: string,
+  engine: EngineSpec,
+  pkgRoot: string,
+): Promise<void> {
+  const job = db
+    .prepare("INSERT INTO jobs (project_id, doc_rel, kind) VALUES (?, ?, 'review') RETURNING *")
+    .get(project.id, rel) as Job;
+  const settle = (status: 'done' | 'failed' | 'stopped', error?: string) =>
+    db
+      .prepare("UPDATE jobs SET status = ?, error = ?, finished_at = datetime('now') WHERE id = ?")
+      .run(status, error ?? null, job.id);
+  const run = trackRun(project.id);
+  const tag = randomUUID().slice(0, 8);
+  // ponytail: .txt, not .md — listDocs scans .kortext/*.md and would list it as a document
+  const beforeRel = `.kortext/.review-${tag}-before.txt`;
+  const verdictRel = `.kortext/.review-${tag}.json`;
+  const beforePath = join(project.repo_path, beforeRel);
+  const verdictPath = join(project.repo_path, verdictRel);
+  const requests =
+    listDocs(db, project, pkgRoot).find((d) => d.rel === rel)?.revisionRequests ?? [];
+  const prompt = [
+    `Prime has just edited .kortext/${rel} by hand. The text before the edit is in ${beforeRel}.`,
+    '',
+    'Read both. Decide two things:',
+    '1. Which of the change requests below does the NEW text now carry? Count one only if the text fully does what it asks.',
+    ...(requests.length > 0
+      ? requests.map((r, i) => `   ${i + 1}. from ${r.from} — ${r.reason}`)
+      : ['   (there are none)']),
+    '2. Does the edit contradict another part of the document, or leave something it implies unfinished? Each such point is one question for prime, one sentence, in the language of the document.',
+    '',
+    'HARD RULES:',
+    `- Write your verdict to ${verdictRel} and NOTHING else. Modify no document.`,
+    '- Shape: { "carried": [the numbers of the requests the new text carries], "questions": ["…"] }',
+    "- Empty lists are the normal answer. The edit is prime's: never ask about wording you would have phrased differently.",
+  ].join('\n');
+  try {
+    writeFileSync(beforePath, before, 'utf8');
+    const start = readFileSync(docPath(project, rel), 'utf8');
+    const res = await spawnCli({
+      binary: engine.binary,
+      args: engineArgs(engine, liveProject(db, project)),
+      promptFlag: engine.promptFlag,
+      env: engineEnv(engine, liveProject(db, project)),
+      cwd: project.repo_path,
+      stdin: prompt,
+      logPath: logPathFor(db, `p${project.id}-review.log`),
+      signal: run.ctrl.signal,
+      timeoutMs: 5 * 60 * 1000,
+    });
+    if (res.aborted) return void settle('stopped', 'stopped by pause/restart/cancel');
+    if (res.exitCode !== 0 || !existsSync(verdictPath))
+      return void settle('failed', `${engine.id} returned no review of ${rel}`);
+    const verdict = JSON.parse(readFileSync(verdictPath, 'utf8')) as {
+      carried?: unknown;
+      questions?: unknown;
+    };
+    const carried = Array.isArray(verdict.carried) ? verdict.carried : [];
+    const questions = (Array.isArray(verdict.questions) ? verdict.questions : [])
+      .map((q) => String(q).replace(/\s+/g, ' ').trim())
+      .filter(Boolean);
+    if (readFileSync(docPath(project, rel), 'utf8') !== start)
+      return void settle('stopped', 'the document changed during the review — retry');
+    for (const n of carried) {
+      const r = requests[Number(n) - 1];
+      if (r) removeRequest(project, rel, r.from, r.reason);
+    }
+    if (questions.length > 0) appendQuestions(project, rel, questions);
+    settle('done');
+  } catch (err) {
+    settle('failed', (err as Error).message);
+  } finally {
+    rmSync(beforePath, { force: true });
+    rmSync(verdictPath, { force: true });
+    run.done();
+  }
+}
+
+/** One `- ` line per question at the end of `## Questions for Prime`, made when missing. */
+function appendQuestions(project: Project, rel: string, questions: string[]): void {
+  const path = docPath(project, rel);
+  const lines = readFileSync(path, 'utf8').split('\n');
+  const head = lines.findIndex((l) => {
+    const m = l.match(/^#{1,6}\s+(.*?)\s*$/);
+    return !!m && QUESTIONS.test(m[1]!);
+  });
+  const items = questions.map((q) => `- ${q}`);
+  if (head === -1) {
+    lines.push('', '## Questions for Prime', '', ...items);
+  } else {
+    let end = head + 1;
+    while (end < lines.length && !/^#{1,6}\s/.test(lines[end] ?? '')) end++;
+    let at = end;
+    while (at > head + 1 && (lines[at - 1] ?? '').trim() === '') at--;
+    // Right under the heading, a blank line first, as the templates have it.
+    lines.splice(at, 0, ...(at === head + 1 ? ['', ...items] : items));
+  }
+  writeFileSync(path, lines.join('\n'), 'utf8');
 }
 
 /** Queue rechecks for approved readers when their source is edited or approved. */

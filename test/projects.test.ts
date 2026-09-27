@@ -250,7 +250,8 @@ test('a save with no content is refused, not written over the document', async (
       .status,
     200,
   );
-  assert.equal(readFileSync(doc, 'utf8'), '# mine\n');
+  // A hand edit on a document an agent writes goes back to draft for review.
+  assert.equal(readFileSync(doc, 'utf8'), '---\nstatus: draft\n---\n\n# mine\n');
   server.close();
   rmSync(work, { recursive: true, force: true });
 });
@@ -376,9 +377,18 @@ test('a name that starts with a digit still yields a code the registry accepts',
   assert.equal(deriveCode('2048'), 'PRJ', 'a name with no letters still gets a code');
   assert.equal(deriveCode('A1 Tools'), 'ATO', 'digits inside the name are dropped too');
   assert.equal(deriveCode('Go'), 'GOX', 'a short name is padded to three characters');
-  assert.equal(createProject(db, { name: 'Q3', code: 'q3x', repoPath: join(work, 'q3') }, pkgRoot).code, 'Q3X');
-  assert.throws(() => createProject(db, { name: 'Ab', code: 'AB', repoPath: join(work, 'ab') }, pkgRoot), /exactly 3/);
-  assert.throws(() => createProject(db, { name: 'Abcd', code: 'ABCD', repoPath: join(work, 'abcd') }, pkgRoot), /exactly 3/);
+  assert.equal(
+    createProject(db, { name: 'Q3', code: 'q3x', repoPath: join(work, 'q3') }, pkgRoot).code,
+    'Q3X',
+  );
+  assert.throws(
+    () => createProject(db, { name: 'Ab', code: 'AB', repoPath: join(work, 'ab') }, pkgRoot),
+    /exactly 3/,
+  );
+  assert.throws(
+    () => createProject(db, { name: 'Abcd', code: 'ABCD', repoPath: join(work, 'abcd') }, pkgRoot),
+    /exactly 3/,
+  );
   rmSync(work, { recursive: true, force: true });
 });
 

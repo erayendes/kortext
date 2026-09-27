@@ -54,6 +54,7 @@ import {
   proposeRevision,
   removeRunLogs,
   recheckDependents,
+  reviewHandEdit,
   reviseDoc,
   resumeStoppedRevisions,
   runPlanning,
@@ -358,6 +359,16 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     if (!engine) return res.status(409).json({ error: 'no agent CLI installed' });
     if (job.kind === 'recheck') {
       void advance(db, project, engine, pkgRoot);
+    } else if (job.kind === 'review') {
+      // The text before the hand edit is the version recorded before the latest.
+      const prior = db
+        .prepare(
+          'SELECT content FROM doc_versions WHERE project_id = ? AND rel = ? ORDER BY id DESC LIMIT 1 OFFSET 1',
+        )
+        .get(project.id, rel) as { content: string } | undefined;
+      void reviewHandEdit(db, project, rel, prior?.content ?? '', engine, pkgRoot).then(() =>
+        kickChain(project),
+      );
     } else {
       const step = loadDocMap(pkgRoot, project.kind ?? 'new').get(rel);
       const doc = listDocs(db, project, pkgRoot).find((d) => d.rel === rel);
@@ -599,9 +610,13 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     try {
       const path = reviewedPath(project, req, res);
       if (!path) return;
-      const wasApproved =
-        listDocs(db, project, pkgRoot).find((d) => d.rel === String(rel))?.status === 'approved';
+      const doc = listDocs(db, project, pkgRoot).find((d) => d.rel === String(rel));
+      const wasApproved = doc?.status === 'approved';
       const priorText = readFileSync(path, 'utf8');
+      // A hand edit on a document an agent writes: nobody knows what it changed,
+      // so it goes back to draft and its author reviews it. The brief has no
+      // author; a drafted proposal was written from the requests it settles.
+      const handEdit = !settleRequests && !!doc?.hasProducingStep && content !== priorText;
       writeFileSync(path, content, 'utf8');
       recordVersion(
         db,
@@ -611,6 +626,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
         settleRequests ? 'proposal' : 'prime',
         priorText,
       );
+      if (handEdit) setFrontmatterStatus(path, 'draft');
       writeDesignPreview(project);
       // Saving a requested proposal settles its incoming revision requests.
       if (settleRequests) {
@@ -621,9 +637,17 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       }
       // Re-evaluate readiness and producibility after edits.
       kickChain(project);
-      // Recheck approved readers against the updated source document.
-      if (wasApproved) {
-        const engine = engineFor(db, project);
+      const engine = engineFor(db, project);
+      if (handEdit) {
+        // Its readers are read against it once prime approves it again.
+        // ponytail: a paused project skips the review — prime approves the draft
+        // unreviewed; queue it like rechecks if that turns out to matter.
+        if (engine && !project.paused)
+          void reviewHandEdit(db, project, String(rel), priorText, engine, pkgRoot).then(() =>
+            kickChain(project),
+          );
+      } else if (wasApproved) {
+        // Recheck approved readers against the updated source document.
         recheckDependents(db, project, String(rel), engine, pkgRoot);
       }
       const saved = readFileSync(path, 'utf8');

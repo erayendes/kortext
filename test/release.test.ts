@@ -68,7 +68,10 @@ process.stdin.on('end', async () => {
   const mode = fs.existsSync('mode.json') ? JSON.parse(fs.readFileSync('mode.json')) : {};
   if (mode.delay) await new Promise(r => setTimeout(r, mode.delay));
   if (mode.fail) process.exit(12);
-  if (prompt.includes('readiness gate')) {
+  if (prompt.includes('by hand')) {
+    const path = prompt.match(/Write your verdict to (\\S+) and NOTHING/)[1];
+    fs.writeFileSync(path, JSON.stringify({carried: [1], questions: ['Kaç üye olabilir?']}));
+  } else if (prompt.includes('readiness gate')) {
     fs.writeFileSync('.kortext/.readiness.json', JSON.stringify({ready: true}));
   } else if (prompt.includes('Write your verdict to')) {
     const path = prompt.match(/Write your verdict to (\\S+) and NOTHING/)[1];
@@ -418,33 +421,34 @@ test('approval and saving reject stale text and a writer in flight', async (t) =
   );
 });
 
-test('an approved edit while paused persists rechecks until Continue', async (t) => {
-  const { db, p, request, engine } = await fixture(t);
-  const original = readFileSync(docPath(p, 'PRODUCT.md'), 'utf8');
-  assert.equal(
-    (
-      await request(
-        'docs/content',
-        {
-          rel: 'PRODUCT.md',
-          expectedVersion: docVersion(original),
-          content: original + '\nNew requirement',
-        },
-        'PUT',
-      )
-    ).status,
-    200,
-  );
-  await wait();
-  const count = () =>
-    (db.prepare('SELECT count(*) n FROM pending_rechecks').get() as { n: number }).n;
-  assert.ok(count() > 0);
-  assert.equal(analysisComplete(db, p, pkgRoot), false);
-  assert.equal(listJobs(db, p.id).length, 0);
+test('a hand edit goes back to draft and its author reviews it', async (t) => {
+  const { db, p, request } = await fixture(t);
   db.prepare('UPDATE projects SET paused = 0').run();
-  await advance(db, p, engine, pkgRoot);
-  assert.equal(count(), 0);
-  assert.equal(analysisComplete(db, p, pkgRoot), true);
+  const path = docPath(p, 'PRODUCT.md');
+  writeFileSync(
+    path,
+    readFileSync(path, 'utf8') + '- [ ] from `STACK.md` — say which SMS provider sends the code\n',
+  );
+  const original = readFileSync(path, 'utf8');
+  const res = await request(
+    'docs/content',
+    {
+      rel: 'PRODUCT.md',
+      expectedVersion: docVersion(original),
+      content: original + '\nTwilio sends it.\n',
+    },
+    'PUT',
+  );
+  assert.equal(res.status, 200);
+  assert.match(readFileSync(path, 'utf8'), /status: draft/);
+  // Nothing checks a hand edit for its readers until prime approves it again.
+  const rechecks = db.prepare('SELECT count(*) n FROM pending_rechecks').get() as { n: number };
+  assert.equal(rechecks.n, 0);
+  await until(() => listJobs(db, p.id).some((j) => j.kind === 'review' && j.status !== 'running'));
+  assert.equal(listJobs(db, p.id).find((j) => j.kind === 'review')?.status, 'done');
+  const after = readFileSync(path, 'utf8');
+  assert.doesNotMatch(after, /from `STACK.md`/, 'the carried request is removed');
+  assert.match(after, /## Questions for Prime\n\n- Kaç üye olabilir\?/, 'the gap is a question');
 });
 
 test('interrupted rechecks survive reopening the database and retry once', async (t) => {
