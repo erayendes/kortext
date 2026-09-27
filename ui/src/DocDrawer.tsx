@@ -157,6 +157,9 @@ export function DocDrawer({
   const [menuOpen, setMenuOpen] = useState(false);
   // The engine is drafting the brief's change into the editor.
   const [drafting, setDrafting] = useState(false);
+  // A drafted change waiting for the reload after Apply: the reload resets the
+  // editor, so the draft is opened once the text has been read again.
+  const pendingProposal = useRef<{ rel: string; text: string } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   // A click anywhere else closes the menu.
   useEffect(() => {
@@ -215,6 +218,12 @@ export function DocDrawer({
           setContent(r.content);
           setVersion(r.version);
           setDraft(r.content);
+          if (pendingProposal.current?.rel === doc.rel) {
+            setDraft(pendingProposal.current.text);
+            setProposed(true);
+            setEditing(true);
+          }
+          pendingProposal.current = null;
           // A draft belongs to one version of the text: when the file moved
           // on, what was noted on the old text is gone with it. What Apply
           // just sent is the exception — it stays on show, read-only, until
@@ -615,16 +624,22 @@ export function DocDrawer({
   ].filter(Boolean);
   const applyAll = () =>
     act(async () => {
-      await api.settleRequests(project.id, {
-        rel: doc.rel,
-        apply: written
-          ? accepting.map(({ other, reason, note }) => ({ from: other, reason, note }))
-          : [],
-        deny: denying.map(({ other, reason, note }) => ({ from: other, reason, note })),
-        answers: written ? notes.map((n) => (n.excerpt ? `[${n.excerpt}] ${n.text}` : n.text)) : [],
-        send: sending.map(({ other, reason }) => ({ target: other, reason })),
-        discard: discarding.map(({ other, reason }) => ({ target: other, reason })),
-      });
+      // On the brief an accept is drafted, not settled: with nothing else
+      // decided there is nothing to send, and the server refuses an empty settle.
+      const settling = written || denying.length > 0 || sending.length > 0 || discarding.length > 0;
+      if (settling)
+        await api.settleRequests(project.id, {
+          rel: doc.rel,
+          apply: written
+            ? accepting.map(({ other, reason, note }) => ({ from: other, reason, note }))
+            : [],
+          deny: denying.map(({ other, reason, note }) => ({ from: other, reason, note })),
+          answers: written
+            ? notes.map((n) => (n.excerpt ? `[${n.excerpt}] ${n.text}` : n.text))
+            : [],
+          send: sending.map(({ other, reason }) => ({ target: other, reason })),
+          discard: discarding.map(({ other, reason }) => ({ target: other, reason })),
+        });
       // Answers and accepted requests go into a rewrite, and the tray shows
       // them as sent until it lands. A send or a discard alone edits the file
       // at once and is done: nothing to wait for, so the tray empties.
@@ -637,11 +652,7 @@ export function DocDrawer({
         const { proposal } = await api
           .proposeRevision(project.id, rel)
           .finally(() => setDrafting(false));
-        if (showing.current === rel) {
-          setDraft(proposal);
-          setProposed(true);
-          setEditing(true);
-        }
+        if (showing.current === rel) pendingProposal.current = { rel, text: proposal };
       }
       const rewriting = written && (notes.length > 0 || accepting.length > 0);
       if (rewriting) {
