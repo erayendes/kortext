@@ -709,11 +709,12 @@ export function DocDrawer({
       onClose();
     });
 
-  // Saving a proposal settles the requests it addresses; a hand edit settles
-  // them only when prime says so — the second button, drawn when requests stand.
-  const saveEdit = (settle = proposed) =>
+  // Saving a proposal settles the requests it was drafted from. A hand edit
+  // never does: nothing checks what it changed, so the requests stay open and
+  // are decided as any other — accepted, the agent rewrites with the edit in view.
+  const saveEdit = () =>
     act(async () => {
-      const saved = await api.saveDoc(project.id, doc.rel, draft, version, settle);
+      const saved = await api.saveDoc(project.id, doc.rel, draft, version, proposed);
       setContent(saved.content);
       setVersion(saved.version);
       setDraft(saved.content);
@@ -1027,16 +1028,6 @@ export function DocDrawer({
             >
               Discard
             </button>
-            {!proposed && doc.revisionRequests.length > 0 && (
-              <button
-                className="btn btn-secondary"
-                disabled={busy}
-                title="Save this text and mark the incoming requests done — no rewrite by the agent"
-                onClick={() => saveEdit(true)}
-              >
-                Save, requests done
-              </button>
-            )}
             <button className="btn btn-primary" disabled={busy} onClick={() => saveEdit()}>
               Save
             </button>
