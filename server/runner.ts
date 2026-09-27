@@ -24,7 +24,7 @@ import {
   type DocStep,
 } from './docs.js';
 import { scaffoldProject } from './projects.js';
-import { ensureReadiness } from './readiness.js';
+import { briefChanged, ensureReadiness } from './readiness.js';
 
 export interface Job {
   id: number;
@@ -374,6 +374,16 @@ export async function advance(
     } catch {
       /* repo may be gone; the gate below reports it */
     }
+    // A brief changed since it was last judged — in the panel or outside it —
+    // leaves every approved document that reads it to be read against it
+    // again. Queued now, run once the gate passes the new text.
+    // Only an approved brief: a draft is read against once prime approves it.
+    if (
+      (project.kind ?? 'new') === 'new' &&
+      briefChanged(project) &&
+      listDocs(db, project, pkgRoot).find((d) => d.rel === 'BRIEF.md')?.status === 'approved'
+    )
+      recheckDependents(db, project, 'BRIEF.md', null, pkgRoot);
     // Require readiness before analysis; cache new-project judgments by brief version.
     // Track the gate run so pause, restart and cancel can abort it.
     const gate = trackRun(project.id);

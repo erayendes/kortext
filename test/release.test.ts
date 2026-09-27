@@ -451,6 +451,25 @@ test('a hand edit goes back to draft and its author reviews it', async (t) => {
   assert.match(after, /## Questions for Prime\n\n- Kaç üye olabilir\?/, 'the gap is a question');
 });
 
+test('a brief rewritten outside the panel has its readers read against it again', async (t) => {
+  const { work, db, p, engine } = await fixture(t);
+  db.prepare('UPDATE projects SET paused = 0').run();
+  const brief = docPath(p, 'BRIEF.md');
+  writeFileSync(
+    join(p.repo_path, '.kortext', '.readiness.json'),
+    JSON.stringify({ ready: true, stage: 'judgment', questions: [], briefHash: 'judged-before' }),
+  );
+  // An editor saved it: no route ran, nothing was queued.
+  writeFileSync(brief, readFileSync(brief, 'utf8') + '\nPayments go through Paddle.\n');
+  await advance(db, p, engine, pkgRoot);
+  const checked = listJobs(db, p.id)
+    .filter((j) => j.kind === 'recheck')
+    .map((j) => j.doc_rel);
+  assert.ok(checked.includes('PRODUCT.md'), 'PRODUCT reads the brief');
+  assert.ok(checked.includes('STACK.md'), 'so does STACK');
+  assert.ok(existsSync(join(work, 'repo')));
+});
+
 test('interrupted rechecks survive reopening the database and retry once', async (t) => {
   const { db, p, engine, work } = await fixture(t);
   writeFileSync(join(p.repo_path, 'mode.json'), JSON.stringify({ delay: 300 }));

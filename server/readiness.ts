@@ -162,6 +162,19 @@ export function readReadiness(project: Project): Readiness | null {
   }
 }
 
+/**
+ * The brief no longer matches the version last judged. However it changed —
+ * saved in the panel or rewritten in an editor — what was judged against the
+ * old text is due to be read again. Null when nothing was judged yet.
+ */
+export function briefChanged(project: Project): boolean {
+  const cached = readReadiness(project);
+  if (!cached?.briefHash) return false;
+  const path = briefPath(project);
+  const content = existsSync(path) ? readFileSync(path, 'utf8') : '';
+  return createHash('sha256').update(content).digest('hex').slice(0, 16) !== cached.briefHash;
+}
+
 function write(project: Project, verdict: Readiness): Readiness {
   writeFileSync(cachePath(project), `${JSON.stringify(verdict, null, 2)}\n`, 'utf8');
   return verdict;

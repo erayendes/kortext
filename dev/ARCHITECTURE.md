@@ -280,6 +280,10 @@ write. A successful write settles it in the document that asked, as `folded into
 | `explainDoc` | line-anchored Q&A with the author persona | nothing — the answer lives in the panel |
 
 `recheckDependents` queues every approved reader when its source is edited or approved.
+The brief is also caught when it changes outside the panel: before the readiness gate, `advance`
+compares the approved brief with the hash last judged (`briefChanged`) and queues its readers.
+A hand edit on a document an agent writes sends it back to draft instead, and `reviewHandEdit`
+has its author read the edit: requests it carries are removed, gaps become questions for prime.
 The chain runs `pending_rechecks` inside its pool, up to three at once, never two on one reader. Pause and server restarts retain unfinished
 checks; Continue/Retry resumes them. A newer source change increments the generation so an older
 verdict cannot clear it. Pending checks prevent analysis completion.
