@@ -7,7 +7,36 @@
     <link>https://github.com/erayendes/kortext</link>
     <description>Kortext menu bar app update feed</description>
     <language>en</language>
-                                          <item>
+                                              <item>
+      <title>Kortext 3.3.0</title>
+      <sparkle:version>300300000</sparkle:version>
+      <sparkle:shortVersionString>3.3.0</sparkle:shortVersionString>
+      <pubDate>Mon, 28 Sep 2026 11:54:52 +0000</pubDate>
+      <description><![CDATA[
+<ul>
+<li><b>The document drawer, rebuilt.</b> At the top, the document's name and state; on the right <b>⋯</b>, <b>Approve</b> and <b>Close</b>. Edit and Export live in the ⋯ menu. Click the document's name and its earlier versions open; pick a date and the text shows what changed since that version.</li>
+<li><b>Asking on the left, deciding on the right.</b> In the box under a row, <b>Ask</b> and **Get a suggestion<b> are always on the left, the decisions on the right: </b>Add answer** on a question, <b>Add note</b> on a line, <b>Reject · Accept</b> on a request. Deny and Discard became one word: *Reject*. Enter starts a new line everywhere; a button sends. The checkboxes are gone.</li>
+<li><b>Requests show their direction with an arrow.</b> An incoming request reads `→ STACK`, an outgoing one `← BRIEF`.</li>
+<li><b>Tags.</b> A decided row says <b>ANSWERED</b>, <b>ACCEPTED</b> or <b>REJECTED</b>; in the text, a line ends with <b>NOTE #1</b>, <b>CHANGED</b>, <b>NEW</b> or <b>SUGGESTION</b>. Capitals belong to tags, not to buttons. <b>SUGGESTION</b> marks a line the persona did not find in the inputs but proposes itself.</li>
+<li><b>Apply opens once everything is decided.</b> Until then it says how many are (`2 of 3 decided`), so the document is rewritten once. While it is written, it reads <b>Writing…</b>.</li>
+<li><b>Apply on the brief really works.</b> The brief with the accepted requests worked in opens as a draft in the editor; <b>Save</b> updates the brief and closes the requests. Before, the button either stayed grey or the draft closed as soon as it opened.</li>
+<li><b>A hand edit is reviewed.</b> Correct a document an agent writes and save it, and it goes back to draft while its author reads your change: it closes the requests the change carries and asks you, as a question, about anything left open or contradicted. *Save, requests done* is gone.</li>
+<li><b>However the brief changes.</b> Change the brief outside the panel, in an editor, and the documents that read it are still checked again against the new brief.</li>
+<li><b>Continue says why.</b> With the brief unapproved, Continue no longer answers "started" and does nothing; it says the brief needs approving.</li>
+<li><b>Effort on Antigravity.</b> An effort level a model does not take never reaches the command; on a model switch an unfit level falls back to the default, and the picker offers only that model's levels. Before, the brief check failed on it and the chain stood still.</li>
+<li><b>The handshake card, simpler.</b> Title and document count on the left, an <b>Export documents</b> button on the right; no need to open the gear. The EXPERIENCE offer sits first, at the command cards' own weight — the one thing still to decide, above the three ways to start. The prose is gone.</li>
+<li><b>A project code is exactly three letters or digits.</b></li>
+</ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/erayendes/kortext/releases/download/v3.3.0/Kortext.zip"
+        sparkle:edSignature="lL5xHMPLu5hJC8zlWePgRsZ1yJmrXO5ox7DUhyl4RPxLw9g9OW8eUWNcoPSLe0LUIsLwrurQuFVqen4zTAOoDw=="
+        length="1382038"
+        type="application/octet-stream"
+        sparkle:minimumSystemVersion="14.0"/>
+    </item>
+
+<item>
       <title>Kortext 3.2.0</title>
       <sparkle:version>300200000</sparkle:version>
       <sparkle:shortVersionString>3.2.0</sparkle:shortVersionString>
