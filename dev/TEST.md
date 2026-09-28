@@ -153,11 +153,11 @@ Open any document. Everything you can do to it is here:
 | action | what happens |
 | --- | --- |
 | **Approve** | `draft → approved`; the chain advances, this document's outgoing requests travel to their targets, and every approved reader of it is re-judged |
-| select a row in **Action Needed** | the row's moves open under it — a question takes **Ask** · **Add note**; an incoming request **Ask** · **Accept** · **Deny**; an outgoing one **Ask** · **Accept** · **Discard** |
+| select a row in **Action Needed** | the row's moves open under it — a question takes **Ask** · **Get a suggestion** · **Add answer**; a request in either direction (`→ STACK` in, `← BRIEF` out) **Ask** · **Reject** · **Accept**. The row then wears ANSWERED, ACCEPTED or REJECTED |
 | **Ask** | the author persona answers, in the panel only — nothing is written |
-| **Apply** | one press sends everything the tray collected: answers and accepted requests go into one rewrite, denials into `## Decisions`, sent requests to their target now, discards out of the file |
-| select a line of the body → **Add note** | a revision note on that line; **Request revision** (or Apply) re-runs the author with it |
-| **Edit** | saves your text; an ordinary save does not close requests or remove open questions. With requests standing, a second button — **Save, requests done** — saves and closes them without a rewrite |
+| **Apply** | opens only when every row is decided (`2 of 3 decided` until then); one press sends everything the tray collected: answers and accepted requests go into one rewrite, rejections into `## Decisions`, sent requests to their target now, discards out of the file. On the brief, accepted requests are drafted into the editor instead, and Save settles them |
+| select a line of the body → **Add note** | a revision note on that line, NOTE #n at its end; **Apply** re-runs the author with it |
+| **⋯ → Edit** | on a document an agent writes, Save sends it back to draft and the author reviews the edit — requests it carries are removed, gaps become questions (skipped while the project is paused). On the brief, Save keeps it approved and its readers are re-judged |
 | `n/a?` → **Approve n/a** | the step judged the document irrelevant and said why; the draft carries `applies: no` and waits for you. Approve settles it as `not-applicable`, which satisfies dependencies like an approval; a note and a revision send the author back to write it |
 
 - [ ] An agent's `not-applicable` lands under Action Needed as `n/a?` with `approve`; its readers stay blocked until **Approve n/a**; the file then reads `status: not-applicable`.

@@ -213,17 +213,29 @@ because a rule there would quietly beat the variant's.
 | variant | when |
 |---|---|
 | `.btn-primary` | the real action — the one button that moves things on |
-| `.btn-secondary` | the alternative — cancel, close, decline |
+| `.btn-secondary` | the alternative — cancel, close, decline; Close and ⋯ in the drawer head; Ask and Get a suggestion, marked by an icon; Reject |
 | `.btn-success` | approval — **Approve** only |
 | `.btn-danger` | an irreversible action |
-| `.btn-link-primary` | secondary and quiet — Close, Edit, Ask, Add note |
+| `.btn-link-primary` | secondary and quiet — Use this under an answer, Example ↓ |
 | `.btn-link-success` | positive and quiet — Archive |
 | `.btn-link-danger` | destructive and quiet — the danger zone |
 | `.btn-x` | the × inside a chip. Carries the family, not the height; no hover, because it sits in a line you read, not a control you aim at |
 
-Action order in the Action Needed list: the tick that accepts, then `Say why`, then the thread
-(Ask · Add note) under the row — decision, then addition to the decision, then the question. The
-button that sends them all sits under the whole list, not under a group.
+**The box under a row or a line** has two corners, the same in every box. Left: asking, which
+changes nothing — **Ask** (message icon) and, on a question, **Get a suggestion** (lightbulb),
+both outlined. Right: the thing's own move, the main button last — **Add answer** on a question,
+**Add note** on a line of the body, **Reject · Accept** (✕ and ✓) on a request in either
+direction. Enter is a new line everywhere; only a button sends. The words were eight and are six:
+Deny and Discard are one *Reject*, the two "use this answer" buttons are one *Use this*, which
+fills the box rather than sending.
+
+**The drawer's two finishing buttons never change name or place.** **Approve** sits in the head;
+**Apply** sits alone at the bottom right. Apply opens only when every Action Needed row is decided
+— each question answered, each request accepted or rejected — with `2 of 3 decided` beside it
+until then, because it rewrites the document once. While the rewrite runs, or the brief's change is
+drafted, it reads **Writing…**. Approve opens when nothing collected is waiting to be sent, and
+says why in its tooltip when it is shut. A button that turned from Approve into Apply read as a
+different action each time.
 
 ---
 
@@ -234,8 +246,9 @@ button that sends them all sits under the whole list, not under a group.
 plus a 3px `--accent-ring`.
 
 **Checkbox.** Never the browser's: `appearance:none`, a 16px hairline square on `--r-sm` that
-fills with the accent and a white tick when on. The same drawing serves the Action Needed rows
-(`.kx-req-check`) and a `- [x]` in a document (`.kx-task-box`); only the cursor differs.
+fills with the accent and a white tick when on. It draws a `- [x]` in a document
+(`.kx-task-box`). The Action Needed rows lost theirs: a box that opened the row instead of ticking
+read as a promise it did not keep. A row says its decision in a tag (§ 10).
 
 **Select.** The native arrow ignores the theme and is drawn differently on every platform, so
 `appearance:none` kills it and the chevron comes back as an inline SVG that inherits the text
@@ -431,9 +444,20 @@ into that word's tooltip; the sentence stays in the file.
 
 An open question is always numbered `#n` (`.kx-qno`), and the dash is suppressed on that line —
 both fall into the same hanging indent and would overlap. The line has no ground of its own: the
-band above already says it is open. Once a note is added (`.noted`) the whole line turns
-`--fg-faint` — it has been dealt with, and the eye should pass it; a bar or a ground would keep
-pulling the eye back.
+band above already says it is open. A line carrying a note (`.noted`) keeps its text as it is,
+under a faint blue wash, with **NOTE #n** at the end of the sentence. (It used to fade to
+`--fg-faint`; a faded line read as deleted, not as waiting.)
+
+**Tags** are one family: mono, `--fs-micro`, capitals, a 6px-padded pill on a 14% tint of their
+own colour, at the end of the sentence they speak about. In the body: **NOTE #n** blue,
+**CHANGED ▾** green, **NEW** violet, **SUGGESTION** amber — the last replaces the agent's
+`**Suggestion —**` prefix, so its proposal never reads like something it found. In the Action
+Needed rows: **ANSWERED** blue, **ACCEPTED** green, **REJECTED** red, **ACCEPTED THERE** faint.
+Capitals belong to tags and only to tags: a button is written as a word, so what can be pressed
+and what only reports never look alike.
+
+**Requests carry their direction as an arrow**, not a word: `→ STACK` came in and changes this
+document, `← BRIEF` goes out and changes another.
 
 **Blockquote** has no ground: a 2px grey rail on the left in `--fg-secondary` ink. The rail is not
 a `border` but the **same mechanism as the selection bar** (`box-shadow: inset`), so a blue
@@ -465,12 +489,19 @@ as the first word of it. `- [ ]` and `- [x]` are drawn with the § 7 box, and th
 vertical lines. The head is the mono eyebrow. Cells keep their left edge on the text column and
 their right padding for breath.
 
-**What changed since.** The date beside the name picks a recorded version, and the body is read
-against it. A block that replaced an old one wears `[+]` after its last word — press it and the
-old text unfolds beneath, faded, on the same edge; `[−]` folds it back. A block that replaced
-nothing is simply new, and a faint `new` says so — once, on the first block of a run of new
-blocks, because a whole new section is one addition, not twelve. The word is not a control and
-does not underline; only the bracket is pressed.
+**What changed since.** The document's name opens its versions: a chevron beside it (it turns
+while the list is open, and darkens on hover — the name itself neither grows nor underlines), and
+under **Show changes since** the recorded dates, the current one ticked. The body is read against
+the one picked. A block that replaced an old one wears **CHANGED ▾** after its last word — press
+it and the old text unfolds beneath, faded and rendered, on the same edge. A block that replaced
+nothing wears **NEW** — once, on the first block of a run, because a whole new section is one
+addition, not twelve.
+
+**The head** is one line: the name (with the chevron when there are versions) and the status tag,
+both on the same 20px band; on the right **⋯**, **Approve**, **Close** — all outlined, Approve
+green. ⋯ holds what is done to the document rather than decided about it: Edit, Export, and on
+DESIGN.md Preview. Editing hides Close; Discard and Save sit at the bottom right, where Apply
+sits.
 
 **Proposal diff.** The agent's draft is shown in the editor itself, not in a second box: the whole
 document with the changed lines marked, removed in `--red-bg`, added in `--green-bg`, the line
