@@ -2782,10 +2782,7 @@ button.kx-note-exc:hover {
 /* Under an answer: take it as your own, one press. Link-weight, left, ui size. */
 .kx-explain-take {
   align-self: flex-start;
-  height: auto;
-  padding: 2px 0;
-  margin-top: 4px;
-  font-size: var(--fs-ui);
+  margin-top: 8px;
 }
 .kx-explain-a {
   color: var(--fg-secondary);

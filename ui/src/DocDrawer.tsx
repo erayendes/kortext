@@ -2247,12 +2247,27 @@ function LineThread({
           {x.answer !== null && (
             <button
               type="button"
-              className="btn btn-link-primary kx-explain-take"
+              className="btn btn-secondary kx-explain-take"
+              title="Put this answer in the box, to edit and send"
               onClick={() => {
                 setText(x.answer ?? '');
                 onActivate?.();
               }}
             >
+              {/* lucide corner-down-left (ISC): the answer goes down into the box */}
+              <svg
+                className="ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M20 4v7a4 4 0 0 1-4 4H4" />
+                <path d="m9 10-5 5 5 5" />
+              </svg>
               Use this
             </button>
           )}
