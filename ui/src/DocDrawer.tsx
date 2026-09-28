@@ -887,9 +887,12 @@ export function DocDrawer({
               {doc.naProposed ? 'Approve n/a' : 'Approve'}
             </button>
           )}
-          <button className="btn btn-link-primary" onClick={onClose}>
-            Close
-          </button>
+          {/* Editing is left by Discard or Save, at the bottom. */}
+          {!editing && (
+            <button className="btn btn-link-primary" onClick={onClose}>
+              Close
+            </button>
+          )}
         </div>
       </div>
       <div className={preview ? 'dr-body dr-body-preview' : 'dr-body'}>
