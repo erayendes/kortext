@@ -4,10 +4,11 @@ import { spawn } from 'node:child_process';
 const TAGS_URL = 'https://registry.npmjs.org/-/package/kortext/dist-tags';
 const CACHE_MS = 60 * 60 * 1000;
 
-export type Tags = { latest?: string };
+export type Tags = { latest?: string; beta?: string };
+export type Channel = 'latest' | 'beta';
 let cached: { at: number; tags: Tags } | null = null;
 
-/** npm's dist-tags — only `latest` is read — cached for an hour. */
+/** npm's dist-tags — `latest` and, while one is out, `beta` — cached for an hour. */
 export async function distTags(fresh = false): Promise<Tags> {
   if (!fresh && cached && Date.now() - cached.at < CACHE_MS) return cached.tags;
   try {
@@ -21,8 +22,7 @@ export async function distTags(fresh = false): Promise<Tags> {
   }
 }
 
-/** Compare the three numeric components, then the pre-release number; a release beats its own betas,
- *  so a leftover beta install is offered the release. */
+/** Compare the three numeric components, then the pre-release number; a release beats its own betas. */
 export function isNewer(latest: string, current: string): boolean {
   const parts = (v: string) => {
     const [core, pre] = v.split('-');
@@ -37,16 +37,31 @@ export function isNewer(latest: string, current: string): boolean {
 }
 
 /**
- * Update the global package and allow the SQLite binding install script.
- * Windows requires a shell for the npm .cmd shim; command arguments are fixed.
+ * What a channel would install over `current`, or null when it has nothing newer. Stable offers
+ * the release. Beta offers the beta while it is ahead of the release, else the release — so a
+ * beta user takes each release too, and stays on beta for the next one.
  */
-export function selfUpdate(): Promise<{ ok: boolean; output: string }> {
+export function offer(channel: Channel, tags: Tags, current: string): string | null {
+  const { latest, beta } = tags;
+  const want = channel === 'beta' && beta && (!latest || isNewer(beta, latest)) ? beta : latest;
+  return want && isNewer(want, current) ? want : null;
+}
+
+// What npm hands back as a version; anything else never reaches the command line.
+const VERSION = /^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$/;
+
+/**
+ * Update the global package and allow the SQLite binding install script.
+ * Windows requires a shell for the npm .cmd shim; the version is checked above, the rest is fixed.
+ */
+export function selfUpdate(version: string): Promise<{ ok: boolean; output: string }> {
+  if (!VERSION.test(version)) return Promise.resolve({ ok: false, output: `not a version: ${version}` });
   return new Promise((resolve) => {
     const proc = spawn(
       'npm',
       // --prefer-online: the panel saw the new tag on a fresh fetch; npm's cached
       // packument may still say the old one and reinstall what is already there.
-      ['install', '-g', '--prefer-online', '--allow-scripts=better-sqlite3', 'kortext@latest'],
+      ['install', '-g', '--prefer-online', '--allow-scripts=better-sqlite3', `kortext@${version}`],
       { shell: process.platform === 'win32' },
     );
     let output = '';

@@ -10,6 +10,7 @@ import {
   type KopengPlan,
   type Project,
   type Readiness,
+  type Channel,
   type VersionInfo,
 } from './api';
 import { DocBadges, DocDrawer, StatusBadge } from './DocDrawer';
@@ -255,7 +256,8 @@ function CompanionStrip({ quiet }: { quiet: boolean }) {
 }
 
 // Confirm shutdown in place because some embedded browsers suppress native dialogs.
-function ServerStatus({ info, note, checkNow }: ReturnType<typeof useUpdate>) {
+function ServerStatus(update: ReturnType<typeof useUpdate>) {
+  const { info, note } = update;
   const [phase, setPhase] = useState<'up' | 'arming' | 'down'>('up');
   const [err, setErr] = useState('');
 
@@ -297,15 +299,7 @@ function ServerStatus({ info, note, checkNow }: ReturnType<typeof useUpdate>) {
 
   return (
     <>
-      {info && (
-        <button
-          className="kx-statusbar-link kx-version-btn"
-          onClick={checkNow}
-          title="Check for updates"
-        >
-          Kortext <span className="kx-version mono">{pretty(info.current)}</span>
-        </button>
-      )}
+      {info && <VersionMenu {...update} info={info} />}
       {note && <span className="kx-status-note">· {note}</span>}
       {
         <button
@@ -378,6 +372,88 @@ export function pretty(v: string) {
   const [core, pre] = v.split('-');
   const short = core.replace(/\.0$/, '');
   return pre ? `${short}-${pre.replace('.', '')}` : short;
+}
+
+// The running version opens both channels: what each would install here, and which one this
+// install follows. A beta behind the release never shows. Picking the other channel switches
+// to it and installs what it offers; stable picked on a beta ahead of the release only switches.
+function VersionMenu({
+  info,
+  state,
+  checkNow,
+  run,
+}: ReturnType<typeof useUpdate> & { info: VersionInfo }) {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: MouseEvent) => {
+      if (!box.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const key = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', away);
+    document.addEventListener('keydown', key);
+    return () => {
+      document.removeEventListener('mousedown', away);
+      document.removeEventListener('keydown', key);
+    };
+  }, [open]);
+
+  const rows: { ch: Channel; name: string; shown: string | null }[] = [
+    { ch: 'latest', name: 'Stable', shown: info.latest },
+  ];
+  if (info.beta || info.channel === 'beta') rows.push({ ch: 'beta', name: 'Beta', shown: info.beta });
+  const action = (ch: Channel) => {
+    const offer = info.offers[ch];
+    // Stable picked while a beta ahead of it still runs: nothing to do until the release.
+    if (ch === info.channel && !offer && ch === 'latest' && info.current.includes('-'))
+      return 'the next release lands here';
+    if (ch === info.channel) return offer ? `Update to ${pretty(offer)}` : 'up to date';
+    return offer ? `Install ${pretty(offer)}` : 'Switch — the next release lands here';
+  };
+
+  return (
+    <span className="kx-made-by" ref={box}>
+      <button
+        className="kx-statusbar-link kx-version-btn"
+        onClick={() => {
+          if (!open) checkNow();
+          setOpen(!open);
+        }}
+        title="Versions"
+      >
+        Kortext <span className="kx-version mono">{pretty(info.current)}</span>
+      </button>
+      {open && (
+        <div className="kx-made-pop kx-version-pop">
+          <div className="kx-made-pop-head">Versions</div>
+          {rows.map(({ ch, name, shown }) => {
+            const here = ch === info.channel;
+            return (
+              <button
+                key={ch}
+                className="kx-made-pop-row kx-version-row"
+                disabled={state === 'running' || (here && !info.offers[ch])}
+                onClick={() => {
+                  setOpen(false);
+                  run(here ? undefined : ch);
+                }}
+              >
+                <span className="kx-made-pop-name">
+                  {name}
+                  {here && ' ✓'}
+                </span>
+                <span className="kx-version mono">{shown ? pretty(shown) : '—'}</span>
+                <span className="kx-made-pop-what">{action(ch)}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </span>
+  );
 }
 
 // Prefill the GitHub bug-report template with the running version.
@@ -933,7 +1009,7 @@ function useUpdate() {
       .version(fresh)
       .then((v) => {
         setInfo(v);
-        if (idle.current) setTarget(v.stale ? v.latest : null);
+        if (idle.current) setTarget(v.target);
         return v;
       })
       .catch(() => null); // no server, no strip
@@ -951,12 +1027,22 @@ function useUpdate() {
       setTimeout(() => setNote(''), 3000);
     });
   };
-  const run = () => {
+  // With a channel, prime picked it in the version menu: switch, then install what it offers.
+  // Nothing to install (stable picked on a beta ahead of the release) only switches.
+  const run = (channel?: Channel) => {
     setErr('');
     setState('running');
     api
-      .selfUpdate()
-      .then(() => setState('done'))
+      .selfUpdate(channel)
+      .then((r) => {
+        if (r.installed) {
+          setTarget(r.installed);
+          setState('done');
+        } else {
+          setState('idle');
+          void check(true);
+        }
+      })
       .catch((e) => {
         setErr((e as Error).message);
         setState('idle');

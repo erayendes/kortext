@@ -119,9 +119,16 @@ export interface Readiness {
   checkedAt: string;
 }
 
+export type Channel = 'latest' | 'beta';
 export type VersionInfo = {
   current: string;
+  channel: Channel;
   latest: string | null;
+  /** Only while it is ahead of the release. */
+  beta: string | null;
+  /** What picking each channel would install here; null = nothing newer. */
+  offers: Record<Channel, string | null>;
+  target: string | null;
   stale: boolean;
 };
 
@@ -135,8 +142,11 @@ export const api = {
       body: JSON.stringify({ archived }),
     }),
   version: (fresh = false) => req<VersionInfo>(`/api/version${fresh ? '?fresh=1' : ''}`),
-  selfUpdate: () =>
-    req<{ ok: boolean; output: string }>('/api/version/update', { method: 'POST' }),
+  selfUpdate: (channel?: Channel) =>
+    req<{ ok: boolean; output?: string; installed: string | null }>('/api/version/update', {
+      method: 'POST',
+      body: JSON.stringify(channel ? { channel } : {}),
+    }),
   quit: () => req<{ ok: boolean }>('/api/quit', { method: 'POST' }),
   engines: () => req<{ engines: EngineInfo[]; selected: string | null }>('/api/engines'),
   selectEngine: (id: string) =>

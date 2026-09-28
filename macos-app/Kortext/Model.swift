@@ -67,26 +67,30 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
     }
 
 
-    // One row: npm's newest release and whether that is what runs here. Pressing it
-    // installs it and restarts the server; Sparkle then brings the app along.
-    @Published var tags: [String: String] = [:]   // npm dist-tags; only `latest` is read
+    // One row: what the server's channel offers and whether that is what runs here. Pressing it
+    // installs it and restarts the server; Sparkle then brings the app along, on the same
+    // channel. The channel itself is picked in the panel's version menu.
+    @Published var offer: Version? = nil
     @Published var note: String? = nil            // what the pressed row is doing
     var checkAppUpdate: () -> Void = {}
 
     var status: String {
         if let n = note { return n }
-        guard let want = tags["latest"] else { return tags.isEmpty ? "…" : "nothing published" }
-        return version == want ? "up to date" : "update available"
+        guard let o = offer else { return "…" }
+        return o.want == nil ? "up to date" : "update available"
     }
 
-    func loadTags() { Task { tags = await Api.distTags() } }
+    func loadOffer(fresh: Bool = false) async {
+        offer = try? await Api.version(fresh: fresh)
+        if let c = offer?.channel { UserDefaults.standard.set(c == "beta", forKey: "beta") }  // Sparkle follows the server
+    }
 
     func pick() {
         note = "checking…"
         Task {
-            tags = await Api.distTags()
-            guard let want = tags["latest"] else { note = tags.isEmpty ? "could not reach npm" : nil; return }
-            if version == want { checkAppUpdate(); note = nil; return }
+            await loadOffer(fresh: true)
+            guard let o = offer else { note = "server not answering"; return }
+            guard let want = o.want else { checkAppUpdate(); note = nil; return }
             if await Task.detached { Shell.run("kortext --version") }.value?.trimmingCharacters(in: .whitespacesAndNewlines) == want { await restart(); return }   // installed by hand, not yet running
             install(to: want)
         }
@@ -108,14 +112,14 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
     func install(to want: String) {
         note = "installing \(pretty(want))…"
         Task {
-            // `tag` is for a 3.2–3.3 server, which would otherwise keep a beta on its beta; a newer one ignores it.
-            guard (try? await Api.post("/api/version/update", ["tag": "latest"])) == true else { note = "not now — a step is running"; return }
+            // No channel: the server installs what its own channel offers.
+            guard (try? await Api.post("/api/version/update")) == true else { note = "not now — a step is running"; return }
             await restart()
         }
     }
 
     func start() {
-        loadTags()
+        Task { await loadOffer() }
         UNUserNotificationCenter.current().delegate = self
         installed = Shell.run("command -v kortext") != nil
         // Opening the app means the server is wanted; a menu bar that says "not running" is no companion.

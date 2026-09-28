@@ -4,8 +4,12 @@
 
 ## [Unreleased]
 
-- **Beta önerisi kalktı.** Alt çubukta artık *Try beta version* görünmüyor; panel yalnızca
-  kararlı sürümü izliyor. Beta kurulu olan, kararlı sürümü normal bir güncelleme olarak görür.
+- **Kanalını seç.** Sol alttaki sürüme tıkla: *Stable* ve, kararlı sürümden yeni bir beta
+  varsa, *Beta* listelenir. Birini seçersin, Kortext onu kurar ve o kanaldan ilerler. Beta'da
+  her kararlı sürümü de alırsın, sonraki beta için beta'da kalırsın. Stable'a dönmek sürümü asla
+  düşürmez: bir sonraki kararlı sürümü bekler.
+- **Eski beta önerilmiyor.** Kararlı sürümden eski bir beta artık gösterilmez (3.3.0,
+  *Try beta version 3.2-beta9* gösteriyordu).
 
 ## [3.3.0] — 2026-09-28
 

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isNewer } from '../server/update.js';
+import { isNewer, offer } from '../server/update.js';
 import {
   cpSync,
   existsSync,
@@ -34,6 +34,21 @@ test('a newer release shows, an older or equal one does not', () => {
   assert.equal(isNewer('3.1.2', '3.2.0-beta.3'), false);
   // A prerelease suffix does not compare as newer than the corresponding numeric version.
   assert.equal(isNewer('3.2.0-rc.1', '3.2.0'), false);
+});
+
+test('each channel offers only what is ahead of the running version', () => {
+  const both = { latest: '1.3.0', beta: '1.4.0-beta.1' };
+  // On 1.2: stable offers 1.3, beta offers 1.4-beta.
+  assert.equal(offer('latest', both, '1.2.0'), '1.3.0');
+  assert.equal(offer('beta', both, '1.2.0'), '1.4.0-beta.1');
+  // On the beta, stable has nothing newer: switching back waits for 1.4, it never downgrades.
+  assert.equal(offer('latest', both, '1.4.0-beta.1'), null);
+  assert.equal(offer('beta', both, '1.4.0-beta.1'), null);
+  // The release overtakes a stale beta — 3.2-beta9 after 3.3 — and beta takes the release.
+  const stale = { latest: '3.3.0', beta: '3.2.0-beta.9' };
+  assert.equal(offer('beta', stale, '3.2.0-beta.9'), '3.3.0');
+  assert.equal(offer('beta', stale, '3.3.0'), null);
+  assert.equal(offer('latest', stale, '3.3.0'), null);
 });
 
 test(
@@ -72,6 +87,12 @@ const timer = setInterval(() => {
         { mode: 0o755 },
       );
     }
+    // npm's registry always has something newer, so every update reaches the npm stand-in.
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (url, init) =>
+      String(url).startsWith('https://registry.npmjs.org/')
+        ? Promise.resolve(Response.json({ latest: '99.0.0' }))
+        : realFetch(url, init);
     const oldPath = process.env.PATH;
     process.env.PATH = bin + delimiter + oldPath;
     forgetDetectedEngines();
@@ -195,6 +216,7 @@ const timer = setInterval(() => {
       await new Promise<void>((resolve) => server.close(() => resolve()));
       db.close();
       process.env.PATH = oldPath;
+      globalThis.fetch = realFetch;
       forgetDetectedEngines();
       rmSync(work, { recursive: true, force: true });
     }

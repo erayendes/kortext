@@ -15,7 +15,12 @@ struct Doc: Decodable, Identifiable {
     var id: String { rel }
 }
 struct Readiness: Decodable { let ready: Bool; let questions: [String] }
-struct Version: Decodable { let current: String; let latest: String?; let stale: Bool }
+struct Version: Decodable {
+    let current: String; let latest: String?; let stale: Bool
+    let channel: String?; let target: String?     // absent on a server before 3.4
+    /// What pressing the row installs; an older server only knows the release.
+    var want: String? { target ?? (stale ? latest : nil) }
+}
 
 enum Api {
     static let base = URL(string: "http://127.0.0.1:3441")!
@@ -42,13 +47,14 @@ enum Api {
         struct R: Decodable { let docs: [Doc] }
         return try await get("/api/projects/\(id)/docs", R.self).docs
     }
-    static func version() async throws -> Version { try await get("/api/version", Version.self) }
-    /// npm's dist-tags, asked of the registry itself — the daemon only knows `latest`.
-    static func distTags() async -> [String: String] {
-        var req = URLRequest(url: URL(string: "https://registry.npmjs.org/-/package/kortext/dist-tags")!)
-        req.timeoutInterval = 5
-        guard let (d, _) = try? await URLSession.shared.data(for: req) else { return [:] }
-        return (try? JSONDecoder().decode([String: String].self, from: d)) ?? [:]
+    /// `fresh` makes the server ask npm now, which can take its own few seconds.
+    static func version(fresh: Bool = false) async throws -> Version {
+        var url = base.appending(path: "/api/version")
+        if fresh { url.append(queryItems: [URLQueryItem(name: "fresh", value: "1")]) }
+        var req = URLRequest(url: url)
+        req.timeoutInterval = 8
+        let (data, _) = try await URLSession.shared.data(for: req)
+        return try JSONDecoder().decode(Version.self, from: data)
     }
     @discardableResult
     static func post(_ path: String, _ body: [String: Any] = [:]) async throws -> Bool {
