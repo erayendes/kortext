@@ -81,7 +81,7 @@ Beside the state you may see a badge:
 
 ## Reviewing a document
 
-![A document in the drawer: its status, its author, the question it asks and the request it received](assets/panel-document.png)
+![A document in the drawer: its status, the questions it asks, the requests it received and sent, and the CHANGED, NEW and SUGGESTION tags in its text](assets/panel-document.png)
 
 Open any document from the list.
 

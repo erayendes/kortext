@@ -81,7 +81,7 @@ Ayrıca durumun yanında bir rozet görebilirsiniz.
 
 ## Bir belgeyi incelemek
 
-![Çekmecede bir belge: durumu, yazarı, sorduğu soru ve gelen istek](../assets/panel-document.png)
+![Çekmecede bir belge: durumu, sorduğu sorular, gelen ve giden istekleri, metnindeki CHANGED, NEW ve SUGGESTION etiketleri](../assets/panel-document.png)
 
 Listeden herhangi bir belgeyi açın.
 
