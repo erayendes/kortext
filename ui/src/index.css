@@ -2826,6 +2826,10 @@ button.kx-note-exc:hover {
 .kx-thread-text {
   height: auto;
   min-height: var(--control-h);
+  /* Grow with what is typed, up to half the window; past that it scrolls.
+     ponytail: native field-sizing — a browser without it keeps the resize handle. */
+  field-sizing: content;
+  max-height: 50vh;
   resize: vertical;
   font-family: inherit;
   padding: var(--sp-2) var(--sp-3);
@@ -2838,7 +2842,6 @@ button.kx-note-exc:hover {
 }
 .kx-thread-input .kx-input {
   flex: 1;
-  height: 30px;
   font-size: var(--fs-ui);
 }
 
