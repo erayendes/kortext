@@ -748,21 +748,37 @@ export function DocDrawer({
         : doc.outgoing.length > 0
           ? 'Decide the outgoing requests first.'
           : null;
+  // Apply rewrites once, so it waits until every Action Needed row is
+  // decided: each question answered, each request accepted or rejected. Notes
+  // on lines are extra and never counted.
+  const answeredLines = new Set(notes.map((n) => n.line).filter((l) => l !== null));
+  const owed = actionNeeded
+    ? questions.length + doc.revisionRequests.length + doc.outgoing.length
+    : 0;
+  const settled = actionNeeded
+    ? questions.filter((q) => answeredLines.has(q.index)).length +
+      doc.revisionRequests.filter((r) => keyOf(r) in decided).length +
+      doc.outgoing.filter((r) => keyOut(r) in decided).length
+    : 0;
+  const undecided = owed - settled;
+  const canApply = summary.length > 0 && undecided === 0;
   const footLine = drafting
     ? 'The agent is drafting the change — it opens in the editor for you to read and save.'
     : sent || writing
       ? summary.length > 0
         ? `${summary.join(' — ')} — sent; the document is being rewritten.`
         : 'The document is being rewritten.'
-      : summary.length > 0
-        ? `${summary.join(' — ')}.`
-        : doc.status === 'draft'
-          ? doc.naProposed
-            ? 'The author says this document does not apply here.'
-            : (approveBlocked ?? '')
-          : !written
-            ? 'No agent writes this document — use Edit in ⋯ to change it yourself.'
-            : '';
+      : undecided > 0
+        ? `${settled} of ${owed} decided — decide the rest, then Apply.`
+        : summary.length > 0
+          ? `${summary.join(' — ')}.`
+          : doc.status === 'draft'
+            ? doc.naProposed
+              ? 'The author says this document does not apply here.'
+              : (approveBlocked ?? '')
+            : !written
+              ? 'No agent writes this document — use Edit in ⋯ to change it yourself.'
+              : '';
 
   // Load the proposed revision into the editor; do not save it automatically.
   return (
@@ -1195,7 +1211,6 @@ export function DocDrawer({
             </span>
           )}
           <div className="kx-note-input">
-            {/* One button finishes the document, and says what it will do. */}
             {placeholders.length > 0 && (
               <button
                 className="btn btn-link-danger"
@@ -1207,14 +1222,12 @@ export function DocDrawer({
               </button>
             )}
             <span className="kx-changebar-summary">{footLine}</span>
-            {sent || writing || drafting ? (
-              <button className="btn btn-primary" disabled>
-                {drafting ? 'Drafting…' : 'Writing…'}
-              </button>
-            ) : summary.length > 0 ? (
+            {/* Two buttons, always in the same place and always named the same:
+                Apply sends what was decided, Approve settles the document. */}
+            {(actionNeeded || notes.length > 0 || sent || writing || drafting) && (
               <button
                 className="btn btn-primary"
-                disabled={locked}
+                disabled={locked || sent || drafting || !canApply}
                 onClick={actionNeeded ? applyAll : requestRevision}
                 title={
                   written
@@ -1222,22 +1235,28 @@ export function DocDrawer({
                     : 'Accepted requests are drafted into the editor for you to save; rejections are recorded'
                 }
               >
-                Apply
+                {drafting ? 'Drafting…' : sent || writing ? 'Writing…' : 'Apply'}
               </button>
-            ) : doc.status === 'draft' ? (
+            )}
+            {doc.status === 'draft' && (
               <button
                 className="btn btn-success"
-                disabled={locked || approveBlocked !== null}
+                disabled={
+                  locked || sent || drafting || approveBlocked !== null || summary.length > 0
+                }
                 title={
-                  doc.naProposed
-                    ? 'The author says this document does not apply here — approving agrees, and settles it as n/a. Disagree? Add a note and apply it.'
-                    : ''
+                  summary.length > 0
+                    ? 'Apply what you decided first — the document is approved as it will be rewritten'
+                    : (approveBlocked ??
+                      (doc.naProposed
+                        ? 'The author says this document does not apply here — approving agrees, and settles it as n/a. Disagree? Add a note and apply it.'
+                        : ''))
                 }
                 onClick={() => approve()}
               >
                 {doc.naProposed ? 'Approve n/a' : 'Approve'}
               </button>
-            ) : null}
+            )}
           </div>
         </div>
       )}
