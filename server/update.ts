@@ -55,7 +55,8 @@ const VERSION = /^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$/;
  * Windows requires a shell for the npm .cmd shim; the version is checked above, the rest is fixed.
  */
 export function selfUpdate(version: string): Promise<{ ok: boolean; output: string }> {
-  if (!VERSION.test(version)) return Promise.resolve({ ok: false, output: `not a version: ${version}` });
+  if (!VERSION.test(version))
+    return Promise.resolve({ ok: false, output: `not a version: ${version}` });
   return new Promise((resolve) => {
     const proc = spawn(
       'npm',

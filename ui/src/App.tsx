@@ -404,7 +404,8 @@ function VersionMenu({
   const rows: { ch: Channel; name: string; shown: string | null }[] = [
     { ch: 'latest', name: 'Stable', shown: info.latest },
   ];
-  if (info.beta || info.channel === 'beta') rows.push({ ch: 'beta', name: 'Beta', shown: info.beta });
+  if (info.beta || info.channel === 'beta')
+    rows.push({ ch: 'beta', name: 'Beta', shown: info.beta });
   const action = (ch: Channel) => {
     const offer = info.offers[ch];
     // Stable picked while a beta ahead of it still runs: nothing to do until the release.
