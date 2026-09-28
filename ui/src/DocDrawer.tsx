@@ -2279,19 +2279,26 @@ function LineThread({
           <span className={`kx-explain-a${x.answer === null ? ' kx-running' : ''}`}>
             {x.answer === null ? 'writing an answer…' : <AnswerText text={x.answer} />}
           </span>
-          {/* The answer goes into the box, not straight out: prime edits it and
-              then presses whatever the row's own button is. */}
+          {/* On a question or a line the answer goes straight down, as if typed
+              and sent with the row's own button. A request still needs Accept or
+              Reject, so there the answer goes into the box and rides along as the note. */}
           {x.answer !== null && (
             <button
               type="button"
               className="btn btn-secondary kx-explain-take"
-              title="Put this answer in the box, to edit and send"
+              title={
+                onDecide
+                  ? 'Put this answer in the box, to send with Accept or Reject'
+                  : `${noteLabel} with this text`
+              }
               onClick={() => {
-                setText(x.answer ?? '');
-                onActivate?.();
+                if (onDecide) {
+                  setText(x.answer ?? '');
+                  onActivate?.();
+                } else onNote(x.answer ?? '');
               }}
             >
-              {/* lucide corner-down-left (ISC): the answer goes down into the box */}
+              {/* lucide corner-down-left (ISC): the answer goes down */}
               <svg
                 className="ic"
                 viewBox="0 0 24 24"
