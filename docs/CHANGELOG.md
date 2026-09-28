@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [3.3.1] — 2026-09-28
+
 - **Pick your channel.** Click the version at the bottom left: it lists *Stable* and, when there
   is one newer than the stable release, *Beta*. Pick one and Kortext installs it and keeps
   following that channel. On beta you also get every stable release, and stay on beta for the

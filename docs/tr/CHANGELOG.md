@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [3.3.1] — 2026-09-28
+
 - **Kanalını seç.** Sol alttaki sürüme tıkla: *Stable* ve, kararlı sürümden yeni bir beta
   varsa, *Beta* listelenir. Birini seçersin, Kortext onu kurar ve o kanaldan ilerler. Beta'da
   her kararlı sürümü de alırsın, sonraki beta için beta'da kalırsın. Stable'a dönmek sürümü asla
