@@ -161,6 +161,17 @@ export function DocDrawer({
   // editor, so the draft is opened once the text has been read again.
   const pendingProposal = useRef<{ rel: string; text: string } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  // The versions list, opened from the document's name.
+  const [versionsOpen, setVersionsOpen] = useState(false);
+  const versionsRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!versionsOpen) return;
+    const away = (e: MouseEvent) => {
+      if (!versionsRef.current?.contains(e.target as Node)) setVersionsOpen(false);
+    };
+    document.addEventListener('mousedown', away);
+    return () => document.removeEventListener('mousedown', away);
+  }, [versionsOpen]);
   // A click anywhere else closes the menu.
   useEffect(() => {
     if (!menuOpen) return;
@@ -809,28 +820,47 @@ export function DocDrawer({
       <div className="dr-head">
         <div className="dr-ident">
           <div className="dr-title">
-            <span className="kx-doc-name">{doc.name}.md</span>
+            {/* The name opens the versions: pick one and the body shows what
+                changed since it. The name itself looks as it always did. */}
+            {!editing && against !== null ? (
+              <div className="kx-menu" ref={versionsRef}>
+                <button
+                  className="kx-version-trigger"
+                  aria-haspopup="listbox"
+                  aria-expanded={versionsOpen}
+                  title="Show what changed since an earlier version"
+                  onClick={() => setVersionsOpen(!versionsOpen)}
+                >
+                  <span className="kx-doc-name">{doc.name}.md</span>
+                </button>
+                {versionsOpen && (
+                  <div className="kx-menu-list kx-versions" role="listbox">
+                    <div className="kx-versions-head">Show changes since</div>
+                    {versions
+                      .filter((v) => v.sha !== version)
+                      .map((v) => (
+                        <button
+                          key={v.id}
+                          role="option"
+                          aria-selected={v.id === against}
+                          className="mono"
+                          onClick={() => {
+                            setAgainst(v.id);
+                            setVersionsOpen(false);
+                          }}
+                        >
+                          <span className="kx-versions-tick">{v.id === against ? '✓' : ''}</span>
+                          {stamp(v.created_at)}
+                        </button>
+                      ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <span className="kx-doc-name">{doc.name}.md</span>
+            )}
             <StatusBadge doc={doc} />
           </div>
-          {/* Which earlier version the body is read against. Choosing one paints
-              the diff; there is no second step. */}
-          {!editing && against !== null && (
-            <select
-              className="kx-diff-pick mono"
-              value={against}
-              aria-label="Show what changed since"
-              title="Show what changed since this version"
-              onChange={(e) => setAgainst(Number(e.target.value))}
-            >
-              {versions
-                .filter((v) => v.sha !== version)
-                .map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {stamp(v.created_at)}
-                  </option>
-                ))}
-            </select>
-          )}
         </div>
         <div className="dr-actions">
           {/* What is done to the document rather than decided about it. */}

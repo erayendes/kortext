@@ -3276,21 +3276,6 @@ button.kx-removed-toggle:hover {
 }
 /* Which recorded version the body is read against — a date beside the name,
    quiet until you go near it. Choosing one paints the diff; nothing else. */
-.kx-diff-pick {
-  align-self: flex-start;
-  height: var(--control-h);
-  margin-top: 6px;
-  font-size: var(--fs-label);
-  color: var(--fg-secondary);
-  background: transparent;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--r-md);
-  padding: 0 8px;
-}
-.kx-diff-pick:hover,
-.kx-diff-pick:focus {
-  border-color: var(--border-strong);
-}
 .kx-diff {
   min-height: 60vh;
   border: 1px solid var(--border);
@@ -3414,17 +3399,6 @@ button.kx-removed-toggle:hover {
   color: var(--fg-muted);
 }
 
-/* "Changes since" and its date read as one control. */
-.kx-diff-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.kx-diff-label-text {
-  font-size: var(--fs-label);
-  color: var(--fg-muted);
-  white-space: nowrap;
-}
 /* The ⋯ menu: what is done to the document, not decided about it. */
 .kx-menu {
   position: relative;
@@ -3452,7 +3426,6 @@ button.kx-removed-toggle:hover {
 }
 .kx-menu-list > button {
   text-align: left;
-  font-weight: 400;
   padding: 7px 10px;
   border: 0;
   border-radius: var(--r-sm);
@@ -3460,6 +3433,7 @@ button.kx-removed-toggle:hover {
   color: var(--fg);
   font: inherit;
   font-size: var(--fs-body);
+  font-weight: 400;
   cursor: pointer;
 }
 .kx-menu-list > button:hover {
@@ -3468,4 +3442,39 @@ button.kx-removed-toggle:hover {
 .kx-menu-list > button[disabled] {
   opacity: 0.45;
   pointer-events: none;
+}
+
+/* The document's name, as a button that looks exactly like the name. */
+.kx-version-trigger {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.kx-version-trigger:hover .kx-doc-name,
+.kx-version-trigger[aria-expanded='true'] .kx-doc-name {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.kx-versions {
+  left: 0;
+  right: auto;
+  min-width: 200px;
+}
+.kx-versions-head {
+  padding: 6px 10px 4px;
+  font-size: var(--fs-micro);
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.kx-versions > button {
+  font-size: var(--fs-label);
+}
+.kx-versions-tick {
+  display: inline-block;
+  width: 1.2em;
+  color: var(--green);
 }
