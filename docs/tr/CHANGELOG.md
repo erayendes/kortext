@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [3.3.2] — 2026-09-28
+
 - **Menü çubuğu uygulaması: eski sunucuyla eski beta yok.** 3.3.0 sunucusuyla konuşurken
   uygulama *Beta 3.2-beta9* gösteriyordu; artık beta'yı yalnızca sunucu onun kararlı sürümden
   yeni olduğunu söylediğinde gösteriyor.

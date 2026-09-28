@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [3.3.2] — 2026-09-28
+
 - **Menu bar app: no stale beta against an older server.** Talking to a 3.3.0 server, the
   app showed *Beta 3.2-beta9*; it now shows a beta only when the server says it is ahead of the
   release.
