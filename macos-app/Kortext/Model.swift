@@ -161,8 +161,8 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
         seenJobs[job.id] = job.status
         guard primed, was == "running", job.status != "running" else { return }
         switch job.status {
-        case "done": notify(p.code, p.tr ? "\(job.doc_rel) hazır — onay bekliyor" : "\(job.doc_rel) ready — awaiting approval", project: p.id, doc: job.doc_rel)
-        case "failed": notify(p.code, p.tr ? "\(job.doc_rel) yazılamadı" : "\(job.doc_rel) could not be written", job.error?.split(separator: "\n").first.map(String.init), project: p.id, doc: job.doc_rel)
+        case "done": notify(p.name, p.tr ? "\(job.doc_rel) hazır — onay bekliyor" : "\(job.doc_rel) ready — awaiting approval", project: p.id, doc: job.doc_rel)
+        case "failed": notify(p.name, p.tr ? "\(job.doc_rel) yazılamadı" : "\(job.doc_rel) could not be written", job.error?.split(separator: "\n").first.map(String.init), project: p.id, doc: job.doc_rel)
         default: break
         }
     }
@@ -171,11 +171,11 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
         let id = s.id
         if s.notReady, !seenNotReady.contains(id) {
             seenNotReady.insert(id)
-            if primed { notify(s.project.code, s.project.tr ? "Brief yetersiz — soruları yanıtla" : "Brief too thin — answer the questions", project: id, doc: "BRIEF.md") }
+            if primed { notify(s.project.name, s.project.tr ? "Brief yetersiz — soruları yanıtla" : "Brief too thin — answer the questions", project: id, doc: "BRIEF.md") }
         } else if !s.notReady { seenNotReady.remove(id) }
         if s.complete, !seenComplete.contains(id) {
             seenComplete.insert(id)
-            if primed { notify(s.project.code, s.project.tr ? "Hazır — AGENTS.md devrede" : "Ready — AGENTS.md in force", s.project.tr ? "\(s.project.docCounts.total) belge onaylandı" : "\(s.project.docCounts.total) documents settled", project: id) }
+            if primed { notify(s.project.name, s.project.tr ? "Hazır — AGENTS.md devrede" : "Ready — AGENTS.md in force", s.project.tr ? "\(s.project.docCounts.total) belge onaylandı" : "\(s.project.docCounts.total) documents settled", project: id) }
         } else if !s.complete { seenComplete.remove(id) }
     }
 
