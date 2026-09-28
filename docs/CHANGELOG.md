@@ -4,10 +4,40 @@
 
 ## [Unreleased]
 
+## [3.3.0] — 2026-09-28
+
+- **The document drawer, rebuilt.** At the top, the document's name and state; on the right
+  **⋯**, **Approve** and **Close**. Edit and Export live in the ⋯ menu. Click the document's name
+  and its earlier versions open; pick a date and the text shows what changed since that version.
+- **Asking on the left, deciding on the right.** In the box under a row, **Ask** and **Get a
+  suggestion** are always on the left, the decisions on the right: **Add answer** on a question,
+  **Add note** on a line, **Reject · Accept** on a request. Deny and Discard became one word:
+  *Reject*. Enter starts a new line everywhere; a button sends. The checkboxes are gone.
+- **Requests show their direction with an arrow.** An incoming request reads `→ STACK`, an
+  outgoing one `← BRIEF`.
+- **Tags.** A decided row says **ANSWERED**, **ACCEPTED** or **REJECTED**; in the text, a line ends
+  with **NOTE #1**, **CHANGED**, **NEW** or **SUGGESTION**. Capitals belong to tags, not to
+  buttons. **SUGGESTION** marks a line the persona did not find in the inputs but proposes itself.
+- **Apply opens once everything is decided.** Until then it says how many are (`2 of 3
+  decided`), so the document is rewritten once. While it is written, it reads **Writing…**.
+- **Apply on the brief really works.** The brief with the accepted requests worked in opens as a
+  draft in the editor; **Save** updates the brief and closes the requests. Before, the button
+  either stayed grey or the draft closed as soon as it opened.
+- **A hand edit is reviewed.** Correct a document an agent writes and save it, and it goes back to
+  draft while its author reads your change: it closes the requests the change carries and asks
+  you, as a question, about anything left open or contradicted. *Save, requests done* is gone.
+- **However the brief changes.** Change the brief outside the panel, in an editor, and the
+  documents that read it are still checked again against the new brief.
+- **Continue says why.** With the brief unapproved, Continue no longer answers "started" and does
+  nothing; it says the brief needs approving.
+- **Effort on Antigravity.** An effort level a model does not take never reaches the command; on
+  a model switch an unfit level falls back to the default, and the picker offers only that
+  model's levels. Before, the brief check failed on it and the chain stood still.
 - **The handshake card, simpler.** Title and document count on the left, an **Export documents**
   button on the right; no need to open the gear. The EXPERIENCE offer sits first, at the command
   cards' own weight — the one thing still to decide, above the three ways to start. The prose
   is gone.
+- **A project code is exactly three letters or digits.**
 
 ## [3.2.0] — 2026-09-20
 

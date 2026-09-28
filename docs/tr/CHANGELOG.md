@@ -4,9 +4,39 @@
 
 ## [Unreleased]
 
+## [3.3.0] — 2026-09-28
+
+- **Belge penceresi baştan düzenlendi.** Üstte belgenin adı ve durumu, sağda **⋯**, **Approve**
+  ve **Close**. Edit ve Export ⋯ menüsünde. Belgenin adına tıklayınca eski sürümler açılır; bir
+  tarih seçince metin o sürümden bu yana neyin değiştiğini gösterir.
+- **Soru solda, karar sağda.** Bir satırın altındaki kutuda **Ask** ve **Get a suggestion** hep
+  solda, kararlar sağda: soruda **Add answer**, satırda **Add note**, istekte **Reject · Accept**.
+  Deny ile Discard tek kelime oldu: *Reject*. Enter her yerde yeni satır açar; göndermek için
+  düğmeye basılır. Checkbox'lar kalktı.
+- **İstekler yönünü okla söyler.** Gelen istek `→ STACK`, giden istek `← BRIEF`.
+- **Etiketler.** Karar verilen satırda **ANSWERED**, **ACCEPTED**, **REJECTED**; belge metninde
+  satır sonunda **NOTE #1**, **CHANGED**, **NEW**, **SUGGESTION**. Büyük harf yalnız etiketlerde,
+  düğmelerde değil. **SUGGESTION**, personanın girdilerde bulmadığı, kendi önerdiği satırı
+  gösterir.
+- **Apply her şeye karar verince açılır.** O zamana kadar yanında kaçına karar verildiği yazar
+  (`2 of 3 decided`); belge böylece tek seferde yeniden yazılır. Yazılırken **Writing…** der.
+- **Brief'te Apply gerçekten çalışıyor.** Kabul edilen istekleri işlenmiş brief taslak olarak
+  editörde açılır; **Save** brief'i günceller ve istekleri kapatır. Eskiden düğme ya gri kalıyor
+  ya da taslak açılır açılmaz kapanıyordu.
+- **Elle düzenleme incelenir.** Ajanın yazdığı bir belgeyi elle düzeltip kaydedince belge taslağa
+  döner ve yazarı değişikliğinizi okur: karşılanan istekleri kapatır, açık kalan ya da çelişen
+  yeri size soru olarak sorar. *Save, requests done* kalktı.
+- **Brief nereden değişirse değişsin.** Brief'i panelin dışında, bir editörde değiştirseniz de
+  onu okuyan belgeler yeni brief'e göre yeniden kontrol edilir.
+- **Continue sebebini söyler.** Brief onaylı değilken Continue artık "başladı" deyip hiçbir şey
+  yapmıyor; brief'in onaylanması gerektiğini söylüyor.
+- **Antigravity'de effort.** Bir modelin kabul etmediği effort seviyesi komuta hiç eklenmiyor;
+  model değişince uymayan seviye varsayılana düşüyor ve seçici yalnız o modelin seviyelerini
+  gösteriyor. Eskiden brief kontrolü bu yüzden düşüyor ve zincir duruyordu.
 - **El sıkışma kartı sadeleşti.** Başlık ve belge sayısı solda, **Export documents** düğmesi
   sağda; dişliyi açmak gerekmez. EXPERIENCE teklifi komut kartlarıyla aynı ağırlıkta ve en
   üstte — karar bekleyen tek şey, üç başlama yolunun önünde. Açıklama metinleri gitti.
+- **Proje kodu tam üç harf ya da rakam.**
 
 ## [3.2.0] — 2026-09-20
 
