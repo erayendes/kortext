@@ -763,7 +763,7 @@ export function DocDrawer({
   const undecided = owed - settled;
   const canApply = summary.length > 0 && undecided === 0;
   const footLine = drafting
-    ? 'The agent is drafting the change — it opens in the editor for you to read and save.'
+    ? 'The agent is writing the change — it opens in the editor for you to read and save.'
     : sent || writing
       ? summary.length > 0
         ? `${summary.join(' — ')} — sent; the document is being rewritten.`
@@ -814,6 +814,23 @@ export function DocDrawer({
                   ))}
               </select>
             </label>
+          )}
+          {!editing && doc.status === 'draft' && (
+            <button
+              className="btn btn-success"
+              disabled={locked || sent || drafting || approveBlocked !== null || summary.length > 0}
+              title={
+                summary.length > 0
+                  ? 'Apply what you decided first — the document is approved as it will be rewritten'
+                  : (approveBlocked ??
+                    (doc.naProposed
+                      ? 'The author says this document does not apply here — approving agrees, and settles it as n/a. Disagree? Add a note and apply it.'
+                      : ''))
+              }
+              onClick={() => approve()}
+            >
+              {doc.naProposed ? 'Approve n/a' : 'Approve'}
+            </button>
           )}
           {/* What is done to the document rather than decided about it. */}
           {!editing && doc.status !== 'uninitialized' && (
@@ -1222,8 +1239,7 @@ export function DocDrawer({
               </button>
             )}
             <span className="kx-changebar-summary">{footLine}</span>
-            {/* Two buttons, always in the same place and always named the same:
-                Apply sends what was decided, Approve settles the document. */}
+            {/* Apply sends what was decided; Approve, in the header, settles the document. */}
             {(actionNeeded || notes.length > 0 || sent || writing || drafting) && (
               <button
                 className="btn btn-primary"
@@ -1235,26 +1251,7 @@ export function DocDrawer({
                     : 'Accepted requests are drafted into the editor for you to save; rejections are recorded'
                 }
               >
-                {drafting ? 'Drafting…' : sent || writing ? 'Writing…' : 'Apply'}
-              </button>
-            )}
-            {doc.status === 'draft' && (
-              <button
-                className="btn btn-success"
-                disabled={
-                  locked || sent || drafting || approveBlocked !== null || summary.length > 0
-                }
-                title={
-                  summary.length > 0
-                    ? 'Apply what you decided first — the document is approved as it will be rewritten'
-                    : (approveBlocked ??
-                      (doc.naProposed
-                        ? 'The author says this document does not apply here — approving agrees, and settles it as n/a. Disagree? Add a note and apply it.'
-                        : ''))
-                }
-                onClick={() => approve()}
-              >
-                {doc.naProposed ? 'Approve n/a' : 'Approve'}
+                {sent || writing || drafting ? 'Writing…' : 'Apply'}
               </button>
             )}
           </div>
