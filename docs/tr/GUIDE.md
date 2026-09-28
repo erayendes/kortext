@@ -85,30 +85,38 @@ Ayrıca durumun yanında bir rozet görebilirsiniz.
 
 Listeden herhangi bir belgeyi açın.
 
-**Approve** — belgenin onayı olur ve kendinden sonrakilerin referansı olur, zincir ilerler.
+**Üst bar** — solda belgenin adı ve durumu, sağda **⋯**, **Approve** ve **Close**.
 
-**Ask** — bir satır seçin ve sorunuzu sorun. Belgeyi yazan persona o pasaj hakkında yanıt verir.
-Sorular anlamak içindir, değiştirmek için değil. Bu yüzden kaydedilmezler. Ama tutmak isterseniz **Use this answer**
+**Approve** — belgenin onayı olur ve kendinden sonrakilerin referansı olur, zincir ilerler. Cevaplanmamış soru ya da gönderilmeyi bekleyen bir karar varken kapalıdır; üstüne gelince nedenini söyler.
 
-**Suggest** yazarın önerisini alır.
+**Belgenin adı** — yanında aşağı bakan bir ok varsa belgenin eski sürümleri vardır. Ada tıklayın, bir tarih seçin: metin o sürümden bu yana neyin değiştiğini gösterir. Değişen satırın sonunda **CHANGED** etiketi durur, tıklarsanız eski hâli altında açılır. Yeni eklenen satırlarda **NEW** yazar.
 
-**Add note** — notlarınız belgenin yeniden yazılmasını sağlar. Belgenin açık sorularından birine bırakılan not o sorunun yanıtı sayılır: soru kaybolur, ortaya koyduğu bilgi ise belgenin parçası olur.
+**⋯** — belgeye yapılan işler, karar değil:
+- **Edit** — dosyayı kendiniz düzeltin. **Save** dediğinizde belge taslağa döner ve onu yazan persona değişikliğinizi okur: yaptığınız değişiklik bir isteği karşılıyorsa o isteği kapatır, belgenin başka bir yeriyle çelişiyor ya da yarım bir şey bırakıyorsa size soru olarak sorar. Sonra belge yeniden onayınıza gelir. Brief'i düzenlerseniz onu okuyan belgeler yeni brief'e göre yeniden kontrol edilir.
+- **Export** — açık belgenin bir kopyasını dosya olarak indirir. `.kortext/` gizli bir klasördür, dosya seçme penceresi göstermez; bir tasarım yapay zekasına `EXPERIENCE.md` vermenin yolu budur.
+- **Preview** — yalnız `DESIGN.md`'de. Tasarımcının yazdığı token'ların — renkler, yazı tipleri, boşluklar, köşe yarıçapları, gölgeler — gerçeğe döndürülmüş ve görselleştirilmiş hali. Butonun rengini ve kenarlarını görmek HEX ve radius bilgisinden çok daha iyidir. Açık ve karanlık modu da destekler. Repo'nuzda `.kortext/DESIGN.html` olarak da durur.
 
-**Edit** — ajana gerek olmayan bir düzeltme için dosyayı kendiniz yazın. Sadece metni günceller; değişiklik isteklerini kapatmaz, açık soruları silmez. İstekler varken ikinci bir düğme çıkar: **Save, requests done** — metni kaydeder ve istekleri kapatır.
+**Bir satıra tıklamak** — altında bir kutu açılır. Solda soru sormak, sağda karar vermek durur:
+- **Ask** — sorunuzu sorun, belgeyi yazan persona o pasaj hakkında yanıt verir. Sorular anlamak içindir, değiştirmek için değil; kaydedilmezler. Yanıtı kullanmak isterseniz altındaki **Use this** onu kutuya taşır.
+- **Add note** — satıra not düşer. Notlarınız **Apply** ile belgenin yeniden yazılmasını sağlar. Notlu satırın sonunda **NOTE #1** gibi bir etiket durur.
 
-**Preview** — yalnız `DESIGN.md`'de. Tasarımcının yazdığı token'ların — renkler, yazı tipleri, boşluklar, köşe yarıçapları, gölgeler — gerçeğe döndürülmüş ve görselleştirilmiş hali. Butonun rengini ve kenarlarını görmek HEX ve radius bilgisinden çok daha iyidir. Açık ve karanlık modu da destekler. Repo'nuzda `.kortext/DESIGN.html` olarak da durur.
+Enter her yerde yeni satır açar; göndermek için düğmeye basın.
 
-**Export** — açık belgenin bir kopyasını dosya olarak indirir. `.kortext/` gizli bir klasördür, dosya seçme penceresi göstermez; bir tasarım yapay zekasına `EXPERIENCE.md` vermenin yolu budur.
+**SUGGESTION** etiketli satırlar — bunu persona girdilerde bulmadı, kendisi öneriyor. Belgeyi onaylarsanız öneriyi de kabul etmiş olursunuz.
 
-**Action Needed** — belgenin üstünde. Bu belgenin sizden beklediği her şey, iki grupta toplanır.
+**Action Needed** — belgenin üstünde. Bu belgenin sizden beklediği her şey, üç grupta toplanır. Bir satıra tıklayın, altındaki kutuda kararınızı verin.
 
-*Questions* — belgenin size sordukları. Birine tıklayın, yanıtlayın ve Add note. Tüm sorular yanıtlanmadan belge onaylanamaz.
+*Questions* — belgenin size sordukları. Yanıtınızı yazın ve **Add answer**. Ne diyeceğinizi bilmiyorsanız **Get a suggestion** personanın önerisini alır. Tüm sorular yanıtlanmadan belge onaylanamaz.
 
-*Change Requests* — başka belgelerin bu belgeye gönderdiği revize istekleri. Örneğin `ENVIRONMENT`, log satırlarının log-yok kararıyla çeliştiğini söylüyor olabilir. Satırı seçin, **Accept** ya da **Deny**. Deny ise nedenini yazın. Eğer talep anlaşılmıyorsa **Ask** ile isteği yapan belgeye sorun.
+*Incoming Requests* — başka belgelerin bu belgeye gönderdiği değişiklik istekleri, `→ STACK` gibi. Örneğin `ENVIRONMENT`, log satırlarının log-yok kararıyla çeliştiğini söylüyor olabilir. **Accept** ya da **Reject**. Reject ise nedenini kutuya yazın; persona o konuyu bir daha açmaz. Talep anlaşılmıyorsa **Ask** ile isteği yapan belgeye sorun.
 
-Brief'te Accept yoktur — onu bir persona değil siz yazdınız. Satırda onun yerine **Draft the change** durur: ajan, isteği işlenmiş brief'i taslak olarak hazırlar ve editörde açar; **Save** derseniz brief güncellenir, istek kapanır.
+*Outgoing Requests* — bu belgenin başka belgelerden istedikleri, `← BRIEF` gibi. **Accept** derseniz istek karşı belgeye kabul edilmiş olarak gider; o belgede yeniden karar vermezsiniz, yalnız onun Apply'ına basarsınız. **Reject** isteği siler.
 
-**Apply** hepsini tek seferde gönderir. Yanıtlarınız ve kabul ettiğiniz istekler tek seferde yeniden yazıma girer. Reddettiklerinizse nedeniyle birlikte belgenin `## Decisions` bölümüne yazılır.
+Karar verdiğiniz satırın yanında **ANSWERED**, **ACCEPTED** ya da **REJECTED** yazar.
+
+**Apply** — her şeye karar verdiğinizde açılır; o zamana kadar yanında kaçına karar verdiğiniz yazar (`2 of 3 decided`). Yanıtlarınız ve kabul ettiğiniz istekler tek seferde yeniden yazıma girer. Reddettiklerinizse nedeniyle birlikte belgenin `## Decisions` bölümüne yazılır. Belge yazılırken düğme **Writing…** yazar.
+
+Brief'te Apply farklı çalışır, çünkü onu bir persona değil siz yazdınız. Ajan, kabul ettiğiniz istekleri işlenmiş brief'i taslak olarak hazırlar ve editörde açar; **Save** derseniz brief güncellenir, istekler kapanır. **Discard** derseniz hiçbir şey değişmez.
 
 **Findings** — hiçbir belgenin sahiplenmediği dosyalardaki sorunları (bir `.gitignore` eksiği gibi), belgeye bilgilendirme için yazar. Sizden bir şey istemez.
 

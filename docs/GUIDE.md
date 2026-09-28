@@ -85,30 +85,38 @@ Beside the state you may see a badge:
 
 Open any document from the list.
 
-**Approve** — the document is approved, becomes the reference for the ones after it, and the chain moves on.
+**The header** — the document's name and state on the left; **⋯**, **Approve** and **Close** on the right.
 
-**Ask** — select a line and ask your question. The persona that wrote the document answers about that passage.
-Questions are for understanding, not for changing. That is why they are not saved. If you want to keep one: **Use this answer**
+**Approve** — the document is approved, becomes the reference for the ones after it, and the chain moves on. It stays shut while a question is unanswered or a decision is waiting to be sent; hover it and it says why.
 
-**Suggest** takes the author's suggestion.
+**The document's name** — a downward arrow beside it means the document has earlier versions. Click the name and pick a date: the text shows what changed since that version. A changed line ends with a **CHANGED** tag; click it and its old text opens underneath. A newly added line says **NEW**.
 
-**Add note** — your notes get the document rewritten. A note left on one of the document's open questions counts as the answer: the question disappears and the fact it established becomes part of the document.
+**⋯** — things done to the document, not decisions:
+- **Edit** — correct the file yourself. When you **Save**, the document goes back to draft and the persona that wrote it reads your change: if the change carries a request, it closes that request; if it contradicts another part of the document or leaves something unfinished, it asks you as a question. Then the document comes back for your approval. Edit the brief, and the documents that read it are checked again against the new brief.
+- **Export** — saves a copy of the open document as a file. `.kortext/` is a hidden folder, so a file picker will not show it; when a design AI wants `EXPERIENCE.md` handed over, this is the way.
+- **Preview** — on `DESIGN.md` only. The tokens the designer wrote — colours, typefaces, spacing, radii, shadows — made real and drawn. Seeing a button's colour and corners beats reading a HEX and a radius. Light and dark mode both. It also sits in your repo as `.kortext/DESIGN.html`.
 
-**Edit** — for a correction that needs no agent, write the file yourself. It only updates the text; it does not close change requests or remove open questions. With requests standing, a second button appears: **Save, requests done** — saves the text and closes the requests.
+**Clicking a line** — a box opens under it. Asking sits on the left, deciding on the right:
+- **Ask** — ask your question; the persona that wrote the document answers about that passage. Questions are for understanding, not for changing; they are not saved. To use an answer, **Use this** under it puts it in the box.
+- **Add note** — leaves a note on the line. With **Apply**, your notes get the document rewritten. A noted line ends with a tag such as **NOTE #1**.
 
-**Preview** — on `DESIGN.md` only. The tokens the designer wrote — colours, typefaces, spacing, radii, shadows — made real and drawn. Seeing a button's colour and corners beats reading a HEX and a radius. Light and dark mode both. It also sits in your repo as `.kortext/DESIGN.html`.
+Enter starts a new line everywhere; press the button to send.
 
-**Export** — saves a copy of the open document as a file. `.kortext/` is a hidden folder, so a file picker will not show it; when a design AI wants `EXPERIENCE.md` handed over, this is the way.
+Lines tagged **SUGGESTION** — the persona did not find this in the inputs, it proposes it. Approving the document accepts the suggestion too.
 
-**Action Needed** — at the top of the document. Everything this document expects of you, in two groups.
+**Action Needed** — at the top of the document. Everything this document expects of you, in three groups. Click a row and decide in the box under it.
 
-*Questions* — what the document asks you. Click one, answer, Add note. The document cannot be approved until every question is answered.
+*Questions* — what the document asks you. Write your answer and **Add answer**. Not sure what to say? **Get a suggestion** takes the persona's suggestion. The document cannot be approved until every question is answered.
 
-*Change Requests* — revision requests other documents sent to this one. `ENVIRONMENT`, say, may be pointing out that the log lines contradict the no-logs decision. Select the row, **Accept** or **Deny**. Deny asks for a reason. If a request is unclear, **Ask** puts the question to the document that made it.
+*Incoming Requests* — change requests other documents sent to this one, such as `→ STACK`. `ENVIRONMENT`, say, may be pointing out that the log lines contradict the no-logs decision. **Accept** or **Reject**. If you reject, write the reason in the box; the persona will not raise the point again. If a request is unclear, **Ask** puts the question to the document that made it.
 
-The brief has no Accept — a persona did not write it, you did. In its place stands **Draft the change**: the agent prepares the brief with the request worked in as a draft and opens it in the editor; **Save** updates the brief and closes the request.
+*Outgoing Requests* — what this document asks of others, such as `← BRIEF`. **Accept**, and the request travels to that document already accepted; you do not decide it again there, you only press its Apply. **Reject** deletes the request.
 
-**Apply** sends it all at once. Your answers and the requests you accepted go into a single rewrite. The ones you denied are written, with the reason, under the document's `## Decisions`.
+A decided row says **ANSWERED**, **ACCEPTED** or **REJECTED** beside it.
+
+**Apply** — opens once you have decided everything; until then it says how many you have decided (`2 of 3 decided`). Your answers and the requests you accepted go into a single rewrite. The ones you rejected are written, with the reason, under the document's `## Decisions`. While the document is being written, the button reads **Writing…**.
+
+On the brief, Apply works differently, because a persona did not write it — you did. The agent prepares the brief with the requests you accepted worked in, as a draft, and opens it in the editor; **Save** updates the brief and closes the requests. **Discard** changes nothing.
 
 **Findings** — problems in files no document owns (a missing `.gitignore`, say), written into the document for your information. They ask nothing of you.
 
