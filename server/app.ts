@@ -65,7 +65,7 @@ import {
 import { isChecking, readReadiness } from './readiness.js';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { logRootDir, type Project } from './db.js';
-import { channelOf, distTags, isNewer, selfUpdate } from './update.js';
+import { distTags, isNewer, selfUpdate } from './update.js';
 
 // A model name rides on the CLI's command line, through a shell on Windows:
 // letters, digits and the few marks the pickers use, nothing a shell reads.
@@ -156,20 +156,18 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   // Offer self-update only for package paths under node_modules, excluding normal dev checkouts.
   const managed = pkgRoot.includes(`${sep}node_modules${sep}`);
 
-  // Both channels, and whether the running one has moved on; `?fresh=1` skips the hour's cache.
+  // The newest release, and whether this one is behind it; `?fresh=1` skips the hour's cache.
   app.get('/api/version', async (req, res) => {
     const tags = managed ? await distTags(req.query.fresh === '1') : {};
-    const want = tags[channelOf(version)];
     res.json({
       current: version,
       latest: tags.latest ?? null,
-      beta: tags.beta ?? null,
-      stale: !!want && isNewer(want, version),
+      stale: !!tags.latest && isNewer(tags.latest, version),
     });
   });
 
   // Installing replaces files on disk; the running process keeps its boot-time version until restarted.
-  app.post('/api/version/update', async (req, res) => {
+  app.post('/api/version/update', async (_req, res) => {
     if (!managed) return res.status(400).json({ error: 'not an npm install — update it yourself' });
     // Wait for active work before npm replaces files read by the runner.
     if (stepRunning()) {
@@ -177,11 +175,8 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     }
     updating = true;
     try {
-      // `tag` picks the channel; without one the running channel is kept. `latest` walks a beta back.
-      const tag = req.body?.tag;
-      const result = await selfUpdate(
-        tag === 'beta' || tag === 'latest' ? tag : channelOf(version),
-      );
+      // Always the release: a `tag` the menu bar app still sends is ignored, and a beta walks back.
+      const result = await selfUpdate();
       res.status(result.ok ? 200 : 500).json(result);
     } finally {
       updating = false;

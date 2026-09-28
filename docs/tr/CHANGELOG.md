@@ -4,6 +4,9 @@
 
 ## [Unreleased]
 
+- **Beta önerisi kalktı.** Alt çubukta artık *Try beta version* görünmüyor; panel yalnızca
+  kararlı sürümü izliyor. Beta kurulu olan, kararlı sürümü normal bir güncelleme olarak görür.
+
 ## [3.3.0] — 2026-09-28
 
 - **Belge penceresi baştan düzenlendi.** Üstte belgenin adı ve durumu, sağda **⋯**, **Approve**

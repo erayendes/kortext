@@ -1496,10 +1496,6 @@ a.btn {
   gap: 10px;
   color: var(--fg-muted);
 }
-.kx-version-btn svg {
-  flex: none;
-  margin: 0 -2px;
-}
 .kx-status-note {
   color: var(--fg-faint);
 }

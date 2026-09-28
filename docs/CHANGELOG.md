@@ -4,6 +4,9 @@
 
 ## [Unreleased]
 
+- **No more beta offer.** The status bar no longer shows *Try beta version*; the panel follows
+  the stable release only. A beta install is offered the stable release as a normal update.
+
 ## [3.3.0] — 2026-09-28
 
 - **The document drawer, rebuilt.** At the top, the document's name and state; on the right

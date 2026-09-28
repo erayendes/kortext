@@ -10,8 +10,6 @@ import {
   type KopengPlan,
   type Project,
   type Readiness,
-  channelOf,
-  type Channel,
   type VersionInfo,
 } from './api';
 import { DocBadges, DocDrawer, StatusBadge } from './DocDrawer';
@@ -174,8 +172,7 @@ export function App() {
       )}
 
       {/* A status bar, not a page footer: the name and its version with the power
-          switch on the first line, the ways to talk back on the second — and the
-          other channel, when there is one to switch to. The credit sits opposite,
+          switch on the first line, the ways to talk back on the second. The credit sits opposite,
           so nothing in this column reads as branding. */}
       <footer className="kx-statusbar">
         <span className="kx-statusbar-lines">
@@ -186,7 +183,6 @@ export function App() {
             <ReportIssue />
             <span className="kx-danger-sep">·</span>
             <SupportWork />
-            <OtherChannel {...update} />
           </span>
         </span>
         <span className="kx-doc-spacer" />
@@ -377,58 +373,11 @@ function CopyCommand({ command }: { command: string }) {
   );
 }
 
-// `3.2.0-beta.3` reads as `3.2-beta3`, `3.2.0` as `3.2`, `3.1.2` stays — the same short form as the app.
+// `3.2.0` reads as `3.2`, `3.1.2` stays (an old `3.2.0-beta.3` as `3.2-beta3`) — the same short form as the app.
 export function pretty(v: string) {
   const [core, pre] = v.split('-');
   const short = core.replace(/\.0$/, '');
   return pre ? `${short}-${pre.replace('.', '')}` : short;
-}
-
-function ChannelMark({ beta }: { beta: boolean }) {
-  return beta ? (
-    <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true" fill="none">
-      <path
-        d="M4.6 1.5h2.8M5 1.5v3.2L2.3 9.3a1 1 0 00.9 1.5h5.6a1 1 0 00.9-1.5L7 4.7V1.5"
-        stroke="currentColor"
-        strokeWidth="1"
-        strokeLinejoin="round"
-      />
-    </svg>
-  ) : (
-    <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true" fill="none">
-      <circle cx="6" cy="6" r="4.8" stroke="currentColor" strokeWidth="1" />
-      <path
-        d="M6 3.4v5M4 6.6 6 8.4l2-1.8"
-        stroke="currentColor"
-        strokeWidth="1"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-// The channel not running here — a press installs it, and the strip takes it from there.
-function OtherChannel({ info, run }: ReturnType<typeof useUpdate>) {
-  if (!info) return null;
-  const beta = channelOf(info.current) === 'beta';
-  const other = beta ? info.latest : info.beta;
-  // Nothing to switch to says nothing: the name above already carries the channel.
-  if (!other) return null;
-  return (
-    <>
-      <span className="kx-danger-sep">·</span>
-      <button
-        className="kx-statusbar-link kx-version-btn"
-        onClick={() => run(beta ? 'latest' : 'beta', other)}
-        title={beta ? 'Back to the stable version' : 'Install the beta'}
-      >
-        <ChannelMark beta={!beta} />
-        {beta ? 'Use stable version' : 'Try beta version'}{' '}
-        <span className="kx-version mono">{pretty(other)}</span>
-      </button>
-    </>
-  );
 }
 
 // Prefill the GitHub bug-report template with the running version.
@@ -970,7 +919,6 @@ function EngineBadge() {
 
 // One check for the whole panel — once on open, then hourly, so a release lands
 // on a panel left open — and the install's outcome, which both screens show.
-// The check follows the running channel; a press on the other channel installs it.
 function useUpdate() {
   const [info, setInfo] = useState<VersionInfo | null>(null);
   const [target, setTarget] = useState<string | null>(null); // what the strip offers or installs
@@ -985,7 +933,7 @@ function useUpdate() {
       .version(fresh)
       .then((v) => {
         setInfo(v);
-        if (idle.current) setTarget(v.stale ? v[channelOf(v.current)] : null);
+        if (idle.current) setTarget(v.stale ? v.latest : null);
         return v;
       })
       .catch(() => null); // no server, no strip
@@ -1003,12 +951,11 @@ function useUpdate() {
       setTimeout(() => setNote(''), 3000);
     });
   };
-  const run = (tag?: Channel, version?: string) => {
-    if (version) setTarget(version);
+  const run = () => {
     setErr('');
     setState('running');
     api
-      .selfUpdate(tag)
+      .selfUpdate()
       .then(() => setState('done'))
       .catch((e) => {
         setErr((e as Error).message);

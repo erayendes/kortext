@@ -302,7 +302,7 @@ No fs-watch — the panel polls (docs 3s, transfer 4s, handshake 5s).
 | --- | --- |
 | `GET /api/health` | ok · db path · the version actually **running** (the status bar's dot polls it) · `companion`, true while the menu bar app has polled in the last 30 s |
 | `GET /api/version` | current · newest on npm · whether the update strip shows |
-| `POST /api/version/update` | run `npm install -g kortext@latest` — or `@beta` with `{tag: "beta"}`; `latest` also walks a beta back to the release; 409 while a step runs — and while it runs, every other route but `/health` answers 409, so nothing reads or writes under a package being replaced |
+| `POST /api/version/update` | run `npm install -g kortext@latest` — always the release; a `tag` in the body is ignored, so a leftover beta walks back; 409 while a step runs — and while it runs, every other route but `/health` answers 409, so nothing reads or writes under a package being replaced |
 | `POST /api/quit` | stop the server (⏻ button, `--stop`); 409 while a step runs |
 | `GET \| POST /api/projects` | list (with per-group progress) · add (born paused; takes `model` and `effort` from the picker, checked against the CLI's spec) |
 | `DELETE /api/projects/:id` | unregister only; files untouched |
@@ -359,23 +359,21 @@ project yet: picks stay local and go with Initialize (`model` and `effort` in th
 The chrome around it. The **header** carries the wordmark (one PNG per theme), the no-CLI
 warning when there is nothing on the `PATH`, and at the far right one cycling **theme** button
 (auto → light → dark, remembered in `localStorage`, no attribute meaning auto). Under the heading of either screen the
-**update strip** appears only when npm carries a newer version on the running channel and
+**update strip** appears only when npm's `latest` is newer than the running version and
 kortext runs from a global install — one check owned by `App` (`useUpdate`), asked of
 `/api/version` on open and hourly, while the server asks the registry's dist-tags at most
 hourly; **Update now** calls `/api/version/update`, and afterwards the strip offers **Quit**
-(`/api/quit`), because the process on screen is still the old one. The channel is read from
-the running version — a pre-release is beta, anything else stable — and `isNewer` orders
-`beta.3 < beta.4 < 3.2.0`. The same slot carries the **companion strip** — "Kortext can live in your menu
+(`/api/quit`), because the process on screen is still the old one. There is one channel, the
+release; `isNewer` still orders `beta.3 < beta.4 < 3.2.0`, so a leftover beta install is offered
+the release. The same slot carries the **companion strip** — "Kortext can live in your menu
 bar", **Download for macOS**, × — on a Mac, only while `/api/health` reports no companion, and
 never beside the update strip: one strip at a time, the update first. At the bottom, an application
-**status bar** (34px, never wrapping), two lines. The first names the running channel —
-*Stable version 3.1.2* or *Beta version 3.2-beta3*, the short form of `pretty()`; a press
+**status bar** (34px, never wrapping), two lines. The first names the running version —
+*Kortext 3.3*, the short form of `pretty()`; a press
 asks `/api/version?fresh=1` and says *up to date* for three seconds or raises the strip — and
 the ⏻ button: green while `/api/health` answers, red the moment it stops and green again on
 its own when it comes back, two clicks to stop, no `confirm()`; the restart command follows as
-a click-to-copy chip once the server is down. The second line starts with the other channel —
-*Try beta version 3.2-beta3* or *Use stable version 3.1.2*, or *No beta version right now* — a
-press installs it (`{tag}`) and the strip takes it from there, downgrades included; then the
+a click-to-copy chip once the server is down. The second line carries the
 bug report and the support link. Opposite, the Milowda credit, a popover that lists the other
 tools only when clicked.
 

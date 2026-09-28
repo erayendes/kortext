@@ -4,10 +4,10 @@ import { spawn } from 'node:child_process';
 const TAGS_URL = 'https://registry.npmjs.org/-/package/kortext/dist-tags';
 const CACHE_MS = 60 * 60 * 1000;
 
-export type Tags = { latest?: string; beta?: string };
+export type Tags = { latest?: string };
 let cached: { at: number; tags: Tags } | null = null;
 
-/** npm's dist-tags — `latest` and, while one is out, `beta` — cached for an hour. */
+/** npm's dist-tags — only `latest` is read — cached for an hour. */
 export async function distTags(fresh = false): Promise<Tags> {
   if (!fresh && cached && Date.now() - cached.at < CACHE_MS) return cached.tags;
   try {
@@ -21,11 +21,8 @@ export async function distTags(fresh = false): Promise<Tags> {
   }
 }
 
-/** A pre-release runs on the beta channel; anything else on latest. */
-export const channelOf = (version: string): 'latest' | 'beta' =>
-  version.includes('-') ? 'beta' : 'latest';
-
-/** Compare the three numeric components, then the pre-release number; a release beats its own betas. */
+/** Compare the three numeric components, then the pre-release number; a release beats its own betas,
+ *  so a leftover beta install is offered the release. */
 export function isNewer(latest: string, current: string): boolean {
   const parts = (v: string) => {
     const [core, pre] = v.split('-');
@@ -43,15 +40,13 @@ export function isNewer(latest: string, current: string): boolean {
  * Update the global package and allow the SQLite binding install script.
  * Windows requires a shell for the npm .cmd shim; command arguments are fixed.
  */
-export function selfUpdate(
-  tag: 'latest' | 'beta' = 'latest',
-): Promise<{ ok: boolean; output: string }> {
+export function selfUpdate(): Promise<{ ok: boolean; output: string }> {
   return new Promise((resolve) => {
     const proc = spawn(
       'npm',
       // --prefer-online: the panel saw the new tag on a fresh fetch; npm's cached
       // packument may still say the old one and reinstall what is already there.
-      ['install', '-g', '--prefer-online', '--allow-scripts=better-sqlite3', `kortext@${tag}`],
+      ['install', '-g', '--prefer-online', '--allow-scripts=better-sqlite3', 'kortext@latest'],
       { shell: process.platform === 'win32' },
     );
     let output = '';
