@@ -135,8 +135,7 @@ export const api = {
       body: JSON.stringify({ archived }),
     }),
   version: (fresh = false) => req<VersionInfo>(`/api/version${fresh ? '?fresh=1' : ''}`),
-  selfUpdate: () =>
-    req<{ ok: boolean; output: string }>('/api/version/update', { method: 'POST' }),
+  selfUpdate: () => req<{ ok: boolean; output: string }>('/api/version/update', { method: 'POST' }),
   quit: () => req<{ ok: boolean }>('/api/quit', { method: 'POST' }),
   engines: () => req<{ engines: EngineInfo[]; selected: string | null }>('/api/engines'),
   selectEngine: (id: string) =>
