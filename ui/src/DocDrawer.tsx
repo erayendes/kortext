@@ -780,6 +780,29 @@ export function DocDrawer({
               ? 'No agent writes this document — use Edit in ⋯ to change it yourself.'
               : '';
 
+  const doEdit = () => {
+    setMenuOpen(false);
+    setPreview(false);
+    setEditing(true);
+  };
+  // A copy of the document as a file — .kortext/ is hidden, so a file picker
+  // will not show it; a design AI wants it handed over.
+  const doExport = () => {
+    setMenuOpen(false);
+    const url = URL.createObjectURL(new Blob([content], { type: 'text/markdown' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${doc.name}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+  // Tokens read better drawn than tabulated; the page is rendered from this
+  // same file, so it is never out of date.
+  const doPreview = () => {
+    setMenuOpen(false);
+    setPreview(!preview);
+  };
+
   // Load the proposed revision into the editor; do not save it automatically.
   return (
     <Drawer open={!!doc} onClose={onClose} width={880}>
@@ -788,66 +811,6 @@ export function DocDrawer({
           <div className="dr-title">
             <span className="kx-doc-name">{doc.name}.md</span>
             <StatusBadge doc={doc} />
-            {/* What is done to the document rather than decided about it. */}
-            {!editing && doc.status !== 'uninitialized' && (
-              <div className="kx-menu" ref={menuRef}>
-                <button
-                  className="btn btn-secondary kx-menu-btn"
-                  aria-haspopup="menu"
-                  aria-expanded={menuOpen}
-                  title="More"
-                  onClick={() => setMenuOpen(!menuOpen)}
-                >
-                  ⋯
-                </button>
-                {menuOpen && (
-                  <div className="kx-menu-list" role="menu">
-                    <button
-                      role="menuitem"
-                      disabled={locked}
-                      onClick={() => {
-                        setMenuOpen(false);
-                        setPreview(false);
-                        setEditing(true);
-                      }}
-                    >
-                      Edit
-                    </button>
-                    {/* A copy of the document as a file — .kortext/ is hidden, so a
-                        file picker will not show it; a design AI wants it handed over. */}
-                    <button
-                      role="menuitem"
-                      onClick={() => {
-                        setMenuOpen(false);
-                        const url = URL.createObjectURL(
-                          new Blob([content], { type: 'text/markdown' }),
-                        );
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `${doc.name}.md`;
-                        a.click();
-                        URL.revokeObjectURL(url);
-                      }}
-                    >
-                      Export
-                    </button>
-                    {/* Tokens read better drawn than tabulated; the page is rendered
-                        from this same file, so it is never out of date. */}
-                    {doc.rel === 'DESIGN.md' && (
-                      <button
-                        role="menuitem"
-                        onClick={() => {
-                          setMenuOpen(false);
-                          setPreview(!preview);
-                        }}
-                      >
-                        {preview ? 'Document' : 'Preview'}
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
           </div>
           {/* Which earlier version the body is read against. Choosing one paints
               the diff; there is no second step. */}
@@ -870,6 +833,35 @@ export function DocDrawer({
           )}
         </div>
         <div className="dr-actions">
+          {/* What is done to the document rather than decided about it. */}
+          {!editing && doc.status !== 'uninitialized' && (
+            <div className="kx-menu" ref={menuRef}>
+              <button
+                className="btn btn-secondary kx-menu-btn"
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                title="More"
+                onClick={() => setMenuOpen(!menuOpen)}
+              >
+                ⋯
+              </button>
+              {menuOpen && (
+                <div className="kx-menu-list" role="menu">
+                  <button role="menuitem" disabled={locked} onClick={doEdit}>
+                    Edit
+                  </button>
+                  <button role="menuitem" onClick={doExport}>
+                    Export
+                  </button>
+                  {doc.rel === 'DESIGN.md' && (
+                    <button role="menuitem" onClick={doPreview}>
+                      {preview ? 'Document' : 'Preview'}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
           {!editing && doc.status === 'draft' && (
             <button
               className="btn btn-success"

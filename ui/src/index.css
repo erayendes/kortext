@@ -3438,7 +3438,7 @@ button.kx-removed-toggle:hover {
 }
 .kx-menu-list {
   position: absolute;
-  left: 0;
+  right: 0;
   top: calc(100% + 4px);
   z-index: 20;
   min-width: 140px;
