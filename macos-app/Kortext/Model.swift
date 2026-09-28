@@ -78,11 +78,11 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
     var checkAppUpdate: () -> Void = {}
 
     var channel: String { offer?.channel ?? ((version ?? "").contains("-") ? "beta" : "latest") }
-    var channels: [String] { offer?.beta != nil || channel == "beta" ? ["latest", "beta"] : ["latest"] }
+    var channels: [String] { offer?.newBeta != nil || channel == "beta" ? ["latest", "beta"] : ["latest"] }
 
     /// The row's line under its name: npm's version on that channel, then what a press does.
     func line(_ ch: String) -> String {
-        let shown = ch == "latest" ? offer?.latest : offer?.beta
+        let shown = ch == "latest" ? offer?.latest : offer?.newBeta
         return [shown.map(pretty), status(ch)].compactMap { $0 }.joined(separator: " · ")
     }
 

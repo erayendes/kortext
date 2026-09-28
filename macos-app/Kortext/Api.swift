@@ -17,8 +17,12 @@ struct Doc: Decodable, Identifiable {
 struct Readiness: Decodable { let ready: Bool; let questions: [String] }
 struct Version: Decodable {
     let current: String; let latest: String?; let stale: Bool
-    // Absent on a server before 3.4, which only knows the release.
+    // `channel` and `offers` are absent on a server before 3.3.1, which only knows the release
+    // and hands its `beta` over as npm has it — even a beta behind the release (3.2-beta9 on 3.3).
     let channel: String?; let beta: String?; let offers: [String: String?]?
+    /// The beta worth showing: a newer server sends one only while it is ahead of the release;
+    /// an older one cannot be trusted with it.
+    var newBeta: String? { offers == nil ? nil : beta }
     /// What picking `channel` would install here; nil = nothing newer.
     func offer(_ channel: String) -> String? {
         if let offers { return offers[channel] ?? nil }
