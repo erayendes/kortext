@@ -924,7 +924,7 @@ export function DocDrawer({
           )}
           {/* Editing is left by Discard or Save, at the bottom. */}
           {!editing && (
-            <button className="btn btn-link-primary" onClick={onClose}>
+            <button className="btn btn-secondary" onClick={onClose}>
               Close
             </button>
           )}
