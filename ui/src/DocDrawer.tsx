@@ -832,6 +832,19 @@ export function DocDrawer({
                   onClick={() => setVersionsOpen(!versionsOpen)}
                 >
                   <span className="kx-doc-name">{doc.name}.md</span>
+                  {/* lucide chevron-down (ISC) */}
+                  <svg
+                    className="kx-version-chevron"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2.25}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
                 </button>
                 {versionsOpen && (
                   <div className="kx-menu-list kx-versions" role="listbox">

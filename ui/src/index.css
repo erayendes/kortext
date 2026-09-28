@@ -3445,7 +3445,20 @@ button.kx-removed-toggle:hover {
 }
 
 /* The document's name, as a button that looks exactly like the name. */
+.dr-title > .kx-menu {
+  display: inline-flex;
+}
+.dr-title > .kx-doc-name,
+.kx-version-trigger .kx-doc-name {
+  line-height: 20px;
+}
 .kx-version-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  /* The status tag beside it is 20px tall; the name spans the same band. */
+  height: 20px;
+  line-height: 20px;
   padding: 0;
   border: 0;
   background: none;
@@ -3477,4 +3490,13 @@ button.kx-removed-toggle:hover {
   display: inline-block;
   width: 1.2em;
   color: var(--green);
+}
+.kx-version-chevron {
+  width: 14px;
+  height: 14px;
+  color: var(--fg-muted);
+  transition: transform var(--speed) var(--ease);
+}
+.kx-version-trigger[aria-expanded='true'] .kx-version-chevron {
+  transform: rotate(180deg);
 }
