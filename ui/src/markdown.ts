@@ -38,7 +38,7 @@ export type MdToken = {
   selectable: boolean;
 };
 
-function tableCells(row: string): string[] {
+export function tableCells(row: string): string[] {
   return row
     .trim()
     .replace(/^\|/, '')
@@ -47,7 +47,7 @@ function tableCells(row: string): string[] {
     .map((c) => c.trim());
 }
 
-function isSeparatorRow(row: string): boolean {
+export function isSeparatorRow(row: string): boolean {
   return tableCells(row).every((c) => /^:?-+:?$/.test(c));
 }
 

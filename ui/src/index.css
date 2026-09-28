@@ -2785,6 +2785,11 @@ button.kx-note-exc:hover {
   white-space: pre-wrap;
   line-height: 1.5;
 }
+.kx-answer-table {
+  white-space: normal;
+  overflow-x: auto;
+  margin: var(--sp-2) 0;
+}
 
 /* Align thread content with the selected block. */
 .kx-thread {

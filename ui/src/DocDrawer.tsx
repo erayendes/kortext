@@ -1,7 +1,15 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Drawer } from './Drawer';
 import { highlight } from './highlight';
-import { deTex, parseInline, parseMarkdown, type AlertKind, type MdToken } from './markdown';
+import {
+  deTex,
+  isSeparatorRow,
+  parseInline,
+  parseMarkdown,
+  tableCells,
+  type AlertKind,
+  type MdToken,
+} from './markdown';
 import { api, type DocInfo, type DocVersion, type Project } from './api';
 
 // The two headings the drawer looks for, each accepting the name it used to
@@ -1735,28 +1743,7 @@ function DocBlock({
   if (token.kind === 'table' && token.table) {
     return (
       <div className={cls} {...activation}>
-        <table>
-          <thead>
-            <tr>
-              {token.table.header.map((h, i) => (
-                <th key={i}>
-                  <Inline text={h} />
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {token.table.rows.map((r, i) => (
-              <tr key={i}>
-                {r.map((c, j) => (
-                  <td key={j}>
-                    <Inline text={c} />
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <MdTable header={token.table.header} rows={token.table.rows} />
       </div>
     );
   }
@@ -2042,18 +2029,68 @@ function CodeBits({ text }: { text: string }) {
   );
 }
 
-// Parse inline Markdown in answers; pre-wrap preserves their line breaks.
-function AnswerText({ text }: { text: string }) {
+// The header is uppercased in CSS, which follows the element's lang: under the
+// page's "en", Turkish "İhtiyaç" becomes "İHTIYAÇ". A header row with Turkish
+// letters in it is tr. Only the header row: a Turkish document keeps English
+// headers ("Service", "Region"), which tr would turn into "SERVİCE".
+// ponytail: letter sniff; "Fiyat | Limit" has none and still reads as en.
+function MdTable({ header, rows }: { header: string[]; rows: string[][] }) {
   return (
-    <>
-      {text.split('\n').map((line, i) => (
-        <Fragment key={i}>
-          {i > 0 && '\n'}
-          <Inline text={line} />
-        </Fragment>
-      ))}
-    </>
+    <table>
+      <thead lang={/[çğıöşüİĞŞ]/i.test(header.join(' ')) ? 'tr' : undefined}>
+        <tr>
+          {header.map((h, i) => (
+            <th key={i}>
+              <Inline text={h} />
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((r, i) => (
+          <tr key={i}>
+            {r.map((c, j) => (
+              <td key={j}>
+                <Inline text={c} />
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
+}
+
+// Parse inline Markdown in answers; pre-wrap preserves their line breaks.
+// A `|` block with a separator row under its first line is a table.
+function AnswerText({ text }: { text: string }) {
+  const lines = text.split('\n');
+  const out: ReactNode[] = [];
+  let afterTable = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+    const next = lines[i + 1];
+    if (line.trim().startsWith('|') && next?.trim().startsWith('|') && isSeparatorRow(next)) {
+      let end = i + 2;
+      while (lines[end]?.trim().startsWith('|')) end++;
+      out.push(
+        <div key={i} className="kx-table kx-answer-table">
+          <MdTable header={tableCells(line)} rows={lines.slice(i + 2, end).map(tableCells)} />
+        </div>,
+      );
+      i = end - 1;
+      afterTable = true;
+      continue;
+    }
+    out.push(
+      <Fragment key={i}>
+        {i > 0 && !afterTable && '\n'}
+        <Inline text={line} />
+      </Fragment>,
+    );
+    afterTable = false;
+  }
+  return <>{out}</>;
 }
 
 function Inline({ text }: { text: string }) {
