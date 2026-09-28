@@ -229,7 +229,7 @@ export interface RunOutcome {
 // One chain loop per project, with capped parallel document runs.
 // Approvals wake the loop to fill available slots without waiting for a running step.
 const advancing = new Map<number, () => void>();
-const MAX_PARALLEL = 3;
+export const MAX_PARALLEL = 3;
 // Tries per document within one chain loop, before the loop leaves it alone.
 const MAX_STEP_ATTEMPTS = 3;
 

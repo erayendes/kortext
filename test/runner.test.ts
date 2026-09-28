@@ -27,6 +27,7 @@ import {
   runStep,
   runningJob,
   listJobs,
+  MAX_PARALLEL,
 } from '../server/runner.js';
 import type { EngineSpec } from '../server/engines.js';
 
@@ -306,7 +307,11 @@ test('advance runs independent steps in parallel (capped)', async () => {
     '---\nstatus: approved\nauthor: +mock\n---\n\n# Done\n',
     'utf8',
   );
-  // slow mock: each step sleeps 400ms — two sequential ≈ 800ms, parallel ≈ 400ms
+  // Each run logs its start, waits (up to 5s) until a second run has started,
+  // then logs its end. Parallel runs meet at that barrier; sequential ones never
+  // overlap. The log's line order proves it — no wall-clock threshold to flake.
+  const log = join(work, 'runs.log');
+  writeFileSync(log, '');
   const script = join(work, 'slow.sh');
   writeFileSync(
     script,
@@ -316,8 +321,11 @@ case "$prompt" in
   *readiness.json*) printf '{ "ready": true }\\n' > .kortext/.readiness.json; exit 0;;
 esac
 rel=$(printf '%s' "$prompt" | grep 'Produce EXACTLY' | sed 's/.*: \\.kortext\\///')
-sleep 0.4
+echo "start $rel" >> '${log}'
+i=0
+while [ "$(grep -c '^start' '${log}')" -lt 2 ] && [ $i -lt 50 ]; do sleep 0.1; i=$((i+1)); done
 printf -- '---\\nstatus: draft\\nauthor: +mock\\n---\\n\\n# Mock\\n' > ".kortext/$rel"
+echo "end $rel" >> '${log}'
 `,
   );
   chmodSync(script, 0o755);
@@ -331,15 +339,21 @@ printf -- '---\\nstatus: draft\\nauthor: +mock\\n---\\n\\n# Mock\\n' > ".kortext
     { id: 'slow', binary: script, args: [], installHint: '' },
     new AbortController().signal,
   );
-  const t0 = Date.now();
   await advance(db, p, { id: 'slow', binary: script, args: [], installHint: '' }, pkgRoot);
-  const elapsed = Date.now() - t0;
   const done = listJobs(db, p.id)
     .filter((j) => j.status === 'done')
     .map((j) => j.doc_rel)
     .sort();
   assert.deepEqual(done, ['STACK.md', 'STRUCTURE.md']);
-  assert.ok(elapsed < 750, `expected parallel (<750ms), took ${elapsed}ms`);
+  let live = 0;
+  let peak = 0;
+  const lines = readFileSync(log, 'utf8').trim().split('\n');
+  for (const line of lines) {
+    live += line.startsWith('start') ? 1 : -1;
+    peak = Math.max(peak, live);
+  }
+  assert.ok(peak >= 2, `expected overlapping runs, log was:\n${lines.join('\n')}`);
+  assert.ok(peak <= MAX_PARALLEL, `ran ${peak} at once, cap is ${MAX_PARALLEL}`);
   rmSync(work, { recursive: true, force: true });
 });
 
