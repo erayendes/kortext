@@ -17,9 +17,13 @@ struct Doc: Decodable, Identifiable {
 struct Readiness: Decodable { let ready: Bool; let questions: [String] }
 struct Version: Decodable {
     let current: String; let latest: String?; let stale: Bool
-    let channel: String?; let target: String?     // absent on a server before 3.4
-    /// What pressing the row installs; an older server only knows the release.
-    var want: String? { target ?? (stale ? latest : nil) }
+    // Absent on a server before 3.4, which only knows the release.
+    let channel: String?; let beta: String?; let offers: [String: String?]?
+    /// What picking `channel` would install here; nil = nothing newer.
+    func offer(_ channel: String) -> String? {
+        if let offers { return offers[channel] ?? nil }
+        return channel == "latest" && stale ? latest : nil
+    }
 }
 
 enum Api {

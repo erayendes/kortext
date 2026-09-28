@@ -441,6 +441,7 @@ function VersionMenu({
                   run(here ? undefined : ch);
                 }}
               >
+                <ChannelMark beta={ch === 'beta'} />
                 <span className="kx-made-pop-name">
                   {name}
                   {here && ' ✓'}
@@ -453,6 +454,31 @@ function VersionMenu({
         </div>
       )}
     </span>
+  );
+}
+
+// A flask for beta, an arrow into a circle for stable.
+function ChannelMark({ beta }: { beta: boolean }) {
+  return beta ? (
+    <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true" fill="none">
+      <path
+        d="M4.6 1.5h2.8M5 1.5v3.2L2.3 9.3a1 1 0 00.9 1.5h5.6a1 1 0 00.9-1.5L7 4.7V1.5"
+        stroke="currentColor"
+        strokeWidth="1"
+        strokeLinejoin="round"
+      />
+    </svg>
+  ) : (
+    <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true" fill="none">
+      <circle cx="6" cy="6" r="4.8" stroke="currentColor" strokeWidth="1" />
+      <path
+        d="M6 3.4v5M4 6.6 6 8.4l2-1.8"
+        stroke="currentColor"
+        strokeWidth="1"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 

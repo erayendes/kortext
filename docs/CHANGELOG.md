@@ -7,7 +7,8 @@
 - **Pick your channel.** Click the version at the bottom left: it lists *Stable* and, when there
   is one newer than the stable release, *Beta*. Pick one and Kortext installs it and keeps
   following that channel. On beta you also get every stable release, and stay on beta for the
-  next one. Going back to stable never downgrades: it waits for the next stable release.
+  next one. Going back to stable never downgrades: it waits for the next stable release. The
+  menu bar app's settings show the same two rows; a pick in either is a pick in both.
 - **No stale beta.** A beta older than the stable release is no longer offered (3.3.0 showed
   *Try beta version 3.2-beta9*).
 

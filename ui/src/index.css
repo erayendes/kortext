@@ -1509,6 +1509,12 @@ a.btn {
   text-align: left;
   cursor: pointer;
 }
+.kx-version-row svg {
+  flex: none;
+  align-self: center;
+  margin-right: -3px;
+  color: var(--fg-muted);
+}
 .kx-version-row:disabled {
   cursor: default;
 }

@@ -67,17 +67,34 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
     }
 
 
-    // One row: what the server's channel offers and whether that is what runs here. Pressing it
-    // installs it and restarts the server; Sparkle then brings the app along, on the same
-    // channel. The channel itself is picked in the panel's version menu.
+    // Two rows, as the panel's version menu: Stable, and Beta while a beta is ahead of the release
+    // or this install follows beta. A press on the followed channel installs its update; on the
+    // other, it switches (kept by the server, so the panel sees it too) and installs what that
+    // channel offers — stable picked on a beta ahead of the release only switches. Sparkle then
+    // brings the app along on the same channel.
     @Published var offer: Version? = nil
     @Published var note: String? = nil            // what the pressed row is doing
+    @Published var pressed: String? = nil         // "latest" | "beta"
     var checkAppUpdate: () -> Void = {}
 
-    var status: String {
-        if let n = note { return n }
+    var channel: String { offer?.channel ?? ((version ?? "").contains("-") ? "beta" : "latest") }
+    var channels: [String] { offer?.beta != nil || channel == "beta" ? ["latest", "beta"] : ["latest"] }
+
+    /// The row's line under its name: npm's version on that channel, then what a press does.
+    func line(_ ch: String) -> String {
+        let shown = ch == "latest" ? offer?.latest : offer?.beta
+        return [shown.map(pretty), status(ch)].compactMap { $0 }.joined(separator: " · ")
+    }
+
+    func status(_ ch: String) -> String {
+        if pressed == ch, let n = note { return n }
         guard let o = offer else { return "…" }
-        return o.want == nil ? "up to date" : "update available"
+        let want = o.offer(ch)
+        if ch == channel {
+            if want == nil, ch == "latest", (version ?? "").contains("-") { return "the next release lands here" }
+            return want.map { "update to \(pretty($0))" } ?? "up to date"
+        }
+        return want.map { "install \(pretty($0))" } ?? "switch — the next release lands here"
     }
 
     func loadOffer(fresh: Bool = false) async {
@@ -85,14 +102,18 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
         if let c = offer?.channel { UserDefaults.standard.set(c == "beta", forKey: "beta") }  // Sparkle follows the server
     }
 
-    func pick() {
-        note = "checking…"
+    func pick(_ ch: String) {
+        pressed = ch; note = "checking…"
         Task {
             await loadOffer(fresh: true)
             guard let o = offer else { note = "server not answering"; return }
-            guard let want = o.want else { checkAppUpdate(); note = nil; return }
+            guard let want = o.offer(ch) else {
+                if ch != channel { _ = try? await Api.post("/api/version/update", ["channel": ch]); await loadOffer() }  // switch only
+                else { checkAppUpdate() }
+                note = nil; return
+            }
             if await Task.detached { Shell.run("kortext --version") }.value?.trimmingCharacters(in: .whitespacesAndNewlines) == want { await restart(); return }   // installed by hand, not yet running
-            install(to: want)
+            install(channel: ch, to: want)
         }
     }
 
@@ -102,18 +123,18 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
         await Task.detached { Shell.run("kortext --stop"); Shell.run("kortext --no-open") }.value
         for _ in 0..<20 {
             try? await Task.sleep(for: .seconds(1))
-            if let h = await Api.health() { version = h.version; note = nil; checkAppUpdate(); await poll(); return }
+            if let h = await Api.health() { version = h.version; note = nil; await loadOffer(); checkAppUpdate(); await poll(); return }
         }
         note = "installed · press ⏻"
     }
 
     /// Install, then restart the server ourselves: the process on the port is still the old
     /// one until it goes down and comes back. A refused install (a step running) says so.
-    func install(to want: String) {
+    func install(channel: String, to want: String) {
         note = "installing \(pretty(want))…"
         Task {
-            // No channel: the server installs what its own channel offers.
-            guard (try? await Api.post("/api/version/update")) == true else { note = "not now — a step is running"; return }
+            // `tag` too: a 3.2–3.3 server only reads that name.
+            guard (try? await Api.post("/api/version/update", ["channel": channel, "tag": channel])) == true else { note = "not now — a step is running"; return }
             await restart()
         }
     }

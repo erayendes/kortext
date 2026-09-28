@@ -376,9 +376,11 @@ struct SettingsView: View {
                     notifications.toggle()
                     if notifications { model.ensureNotifications() }
                 }
-                // One row: the running version and whether its channel has a newer one; the press installs it.
-                Row(icon: "arrow.down.circle", title: "Version",
-                    sub: [model.version.map(pretty), model.status].compactMap { $0 }.joined(separator: " · ")) { model.pick() }
+                // Stable and Beta, as the panel's version menu; ✓ on the channel followed.
+                ForEach(model.channels, id: \.self) { ch in
+                    Row(icon: ch == "beta" ? "flask" : "arrow.down.circle", title: ch == "beta" ? "Beta" : "Stable",
+                        sub: model.line(ch), on: ch == model.channel) { model.pick(ch) }
+                }
                 Row(icon: "ladybug", title: "Report an issue") {
                     var u = "https://github.com/erayendes/kortext/issues/new?template=bug_report.yml"
                     if let v = model.version { u += "&version=\(v)" }

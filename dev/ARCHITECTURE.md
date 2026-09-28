@@ -461,11 +461,13 @@ not answered, a spinner and *starting…* / *stopping…* stand in, disabled —
 the main thread so the panel never freezes), *open panel*, and the credit. The message cards
 act: *not running* starts the server, *no project* and *nothing waiting* open the panel. Settings,
 behind the wordmark or ⚙, one card of rows: launch at login,
-notifications, **Version** (the running version and whether the server's channel offers a
-newer one, from `/api/version`: *up to date* / *update available*; a press installs it through
-the daemon, restarts the server, then asks Sparkle about the app — Sparkle allows the `beta`
-channel only while the server follows beta, so the app rides the package's channel; the channel
-itself is picked in the panel), report an issue, support, quit. Under it the bar's twin: the theme cycles
+notifications, **Stable** and **Beta** — the panel's version menu as rows, from `/api/version`:
+npm's version on each channel and what a press does, ✓ on the channel followed, Beta only while
+a beta is ahead of the release or the server follows beta. A press sends `{channel}` to
+`/api/version/update` through the daemon, so a pick here is the panel's pick too; it installs,
+restarts the server, then asks Sparkle about the app — Sparkle allows the `beta` channel only
+while the server follows beta, so the app rides the package's channel — report an issue,
+support, quit. Under it the bar's twin: the theme cycles
 auto → light → dark where ⏻ was, the credit opposite. Everything pressable shows the hand
 cursor; SwiftUI's `Link` is inert in a non-activating panel, so links open by hand. After an
 install the app stops and restarts the server itself and waits for `/api/health` to answer.

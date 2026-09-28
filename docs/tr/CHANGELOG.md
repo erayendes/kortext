@@ -7,7 +7,8 @@
 - **Kanalını seç.** Sol alttaki sürüme tıkla: *Stable* ve, kararlı sürümden yeni bir beta
   varsa, *Beta* listelenir. Birini seçersin, Kortext onu kurar ve o kanaldan ilerler. Beta'da
   her kararlı sürümü de alırsın, sonraki beta için beta'da kalırsın. Stable'a dönmek sürümü asla
-  düşürmez: bir sonraki kararlı sürümü bekler.
+  düşürmez: bir sonraki kararlı sürümü bekler. Menü çubuğu uygulamasının ayarlarında da aynı
+  iki satır var; birinde yaptığın seçim ötekinde de geçerli.
 - **Eski beta önerilmiyor.** Kararlı sürümden eski bir beta artık gösterilmez (3.3.0,
   *Try beta version 3.2-beta9* gösteriyordu).
 
