@@ -17,9 +17,7 @@ struct ProjectState: Identifiable {
 
 @MainActor
 final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate {
-    @Published var version: String? = nil {     // nil = daemon down
-        didSet { UserDefaults.standard.set(channel == "beta", forKey: "beta") }  // Sparkle follows the server's channel
-    }
+    @Published var version: String? = nil       // nil = daemon down
     @Published var installed = true
     /// "starting" | "stopping": the press was taken and health has not answered yet — ⏻ and the card wait, disabled.
     @Published var busy: String? = nil
@@ -69,43 +67,28 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
     }
 
 
-    // One row, the running channel: its newest and whether that is what runs here. Pressing
-    // it installs (npm follows the tag) and restarts the server; Sparkle then brings the app
-    // along. The panel's status bar is where a channel is switched.
-    @Published var tags: [String: String] = [:]   // npm dist-tags: latest, beta
+    // One row: npm's newest release and whether that is what runs here. Pressing it
+    // installs it and restarts the server; Sparkle then brings the app along.
+    @Published var tags: [String: String] = [:]   // npm dist-tags; only `latest` is read
     @Published var note: String? = nil            // what the pressed row is doing
-    @Published var pressed: String? = nil         // "latest" | "beta"
     var checkAppUpdate: () -> Void = {}
-    var channel: String { (version ?? "").contains("-") ? "beta" : "latest" }
 
-    func status(_ tag: String) -> String {
-        if pressed == tag, let n = note { return n }
-        guard let want = tags[tag] else { return tags.isEmpty ? "…" : "nothing published" }
-        return version == want ? "up to date" : tag == channel ? "update available" : "not installed"
-    }
-
-    /// Only a 3.2+ server knows the `tag` field; an older one always installs the release.
-    var serverSwitches: Bool {
-        let p = (version ?? "0").split(separator: ".").compactMap { Int($0.prefix { $0.isNumber }) }
-        return p.count >= 2 && (p[0] > 3 || (p[0] == 3 && p[1] >= 2))
+    var status: String {
+        if let n = note { return n }
+        guard let want = tags["latest"] else { return tags.isEmpty ? "…" : "nothing published" }
+        return version == want ? "up to date" : "update available"
     }
 
     func loadTags() { Task { tags = await Api.distTags() } }
 
-    func pick(_ tag: String) {
-        pressed = tag; note = "checking…"
+    func pick() {
+        note = "checking…"
         Task {
             tags = await Api.distTags()
-            guard let want = tags[tag] else { note = tags.isEmpty ? "could not reach npm" : nil; return }
+            guard let want = tags["latest"] else { note = tags.isEmpty ? "could not reach npm" : nil; return }
             if version == want { checkAppUpdate(); note = nil; return }
             if await Task.detached { Shell.run("kortext --version") }.value?.trimmingCharacters(in: .whitespacesAndNewlines) == want { await restart(); return }   // installed by hand, not yet running
-            if tag == "beta", !serverSwitches {
-                // The first beta is installed by hand; from then on the server can switch itself.
-                NSPasteboard.general.clearContents(); NSPasteboard.general.setString("npm i -g kortext@beta", forType: .string)
-                note = "copied npm i -g kortext@beta — run it, then press again"
-                return
-            }
-            install(tag: tag, to: want)
+            install(to: want)
         }
     }
 
@@ -122,10 +105,11 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
 
     /// Install, then restart the server ourselves: the process on the port is still the old
     /// one until it goes down and comes back. A refused install (a step running) says so.
-    func install(tag: String, to want: String) {
+    func install(to want: String) {
         note = "installing \(pretty(want))…"
         Task {
-            guard (try? await Api.post("/api/version/update", ["tag": tag])) == true else { note = "not now — a step is running"; return }
+            // `tag` is for a 3.2–3.3 server, which would otherwise keep a beta on its beta; a newer one ignores it.
+            guard (try? await Api.post("/api/version/update", ["tag": "latest"])) == true else { note = "not now — a step is running"; return }
             await restart()
         }
     }
@@ -278,7 +262,7 @@ extension Project {
     }
 }
 
-/// `3.2.0-beta.2` reads as `3.2-beta2`, `3.2.0` as `3.2`, `3.1.2` stays: the patch only when it says something.
+/// `3.2.0` reads as `3.2`, `3.1.2` stays: the patch only when it says something (an old `3.2.0-beta.2` as `3.2-beta2`).
 func pretty(_ v: String) -> String {
     let base = String(v.prefix { $0 != "-" }); let pre = v.dropFirst(base.count).dropFirst()
     var parts = base.split(separator: ".").map(String.init)

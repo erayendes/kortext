@@ -455,12 +455,9 @@ not answered, a spinner and *starting…* / *stopping…* stand in, disabled —
 the main thread so the panel never freezes), *open panel*, and the credit. The message cards
 act: *not running* starts the server, *no project* and *nothing waiting* open the panel. Settings,
 behind the wordmark or ⚙, one card of rows: launch at login,
-notifications, **Stable version** and **Try beta version** (each row shows npm's newest for
-its dist-tag — `latest`, `beta` — and whether that is what runs here: *up to date* / *not
-installed* / *No beta version right now*; pressing a row installs its version through the
-daemon, downgrades included, restarts the server, then asks Sparkle about the app — Sparkle
-allows the `beta` channel only while the running package is a pre-release, so the app follows
-the package's channel and never needs a switch of its own), report an issue, support, quit. Under it the bar's twin: the theme cycles
+notifications, **Version** (the running version and whether npm's `latest` is it: *up to date*
+/ *update available*; a press installs the release through the daemon, restarts the server,
+then asks Sparkle about the app — release channel only, no beta), report an issue, support, quit. Under it the bar's twin: the theme cycles
 auto → light → dark where ⏻ was, the credit opposite. Everything pressable shows the hand
 cursor; SwiftUI's `Link` is inert in a non-activating panel, so links open by hand. After an
 install the app stops and restarts the server itself and waits for `/api/health` to answer.
