@@ -3466,10 +3466,10 @@ button.kx-removed-toggle:hover {
   font: inherit;
   cursor: pointer;
 }
-.kx-version-trigger:hover .kx-doc-name,
-.kx-version-trigger[aria-expanded='true'] .kx-doc-name {
-  text-decoration: underline;
-  text-underline-offset: 3px;
+/* No underline: the chevron darkens to say the name can be pressed. */
+.kx-version-trigger:hover .kx-version-chevron,
+.kx-version-trigger[aria-expanded='true'] .kx-version-chevron {
+  color: var(--fg);
 }
 .kx-versions {
   left: 0;
