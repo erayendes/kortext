@@ -788,33 +788,88 @@ export function DocDrawer({
           <div className="dr-title">
             <span className="kx-doc-name">{doc.name}.md</span>
             <StatusBadge doc={doc} />
+            {/* What is done to the document rather than decided about it. */}
+            {!editing && doc.status !== 'uninitialized' && (
+              <div className="kx-menu" ref={menuRef}>
+                <button
+                  className="btn btn-secondary kx-menu-btn"
+                  aria-haspopup="menu"
+                  aria-expanded={menuOpen}
+                  title="More"
+                  onClick={() => setMenuOpen(!menuOpen)}
+                >
+                  ⋯
+                </button>
+                {menuOpen && (
+                  <div className="kx-menu-list" role="menu">
+                    <button
+                      role="menuitem"
+                      disabled={locked}
+                      onClick={() => {
+                        setMenuOpen(false);
+                        setPreview(false);
+                        setEditing(true);
+                      }}
+                    >
+                      Edit
+                    </button>
+                    {/* A copy of the document as a file — .kortext/ is hidden, so a
+                        file picker will not show it; a design AI wants it handed over. */}
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        const url = URL.createObjectURL(
+                          new Blob([content], { type: 'text/markdown' }),
+                        );
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `${doc.name}.md`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      }}
+                    >
+                      Export
+                    </button>
+                    {/* Tokens read better drawn than tabulated; the page is rendered
+                        from this same file, so it is never out of date. */}
+                    {doc.rel === 'DESIGN.md' && (
+                      <button
+                        role="menuitem"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          setPreview(!preview);
+                        }}
+                      >
+                        {preview ? 'Document' : 'Preview'}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-          {doc.author && (
-            <span className="kx-doc-author mono">{doc.author.replace(/^\+/, '')}</span>
-          )}
-        </div>
-        <div className="dr-actions">
           {/* Which earlier version the body is read against. Choosing one paints
               the diff; there is no second step. */}
           {!editing && against !== null && (
-            <label className="kx-diff-label">
-              <span className="kx-diff-label-text">Changes since</span>
-              <select
-                className="kx-diff-pick mono"
-                value={against}
-                aria-label="Show what changed since"
-                onChange={(e) => setAgainst(Number(e.target.value))}
-              >
-                {versions
-                  .filter((v) => v.sha !== version)
-                  .map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {stamp(v.created_at)}
-                    </option>
-                  ))}
-              </select>
-            </label>
+            <select
+              className="kx-diff-pick mono"
+              value={against}
+              aria-label="Show what changed since"
+              title="Show what changed since this version"
+              onChange={(e) => setAgainst(Number(e.target.value))}
+            >
+              {versions
+                .filter((v) => v.sha !== version)
+                .map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {stamp(v.created_at)}
+                  </option>
+                ))}
+            </select>
           )}
+        </div>
+        <div className="dr-actions">
           {!editing && doc.status === 'draft' && (
             <button
               className="btn btn-success"
@@ -831,66 +886,6 @@ export function DocDrawer({
             >
               {doc.naProposed ? 'Approve n/a' : 'Approve'}
             </button>
-          )}
-          {/* What is done to the document rather than decided about it. */}
-          {!editing && doc.status !== 'uninitialized' && (
-            <div className="kx-menu" ref={menuRef}>
-              <button
-                className="btn btn-secondary kx-menu-btn"
-                aria-haspopup="menu"
-                aria-expanded={menuOpen}
-                title="More"
-                onClick={() => setMenuOpen(!menuOpen)}
-              >
-                ⋯
-              </button>
-              {menuOpen && (
-                <div className="kx-menu-list" role="menu">
-                  <button
-                    role="menuitem"
-                    disabled={locked}
-                    onClick={() => {
-                      setMenuOpen(false);
-                      setPreview(false);
-                      setEditing(true);
-                    }}
-                  >
-                    Edit
-                  </button>
-                  {/* A copy of the document as a file — .kortext/ is hidden, so a
-                      file picker will not show it; a design AI wants it handed over. */}
-                  <button
-                    role="menuitem"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      const url = URL.createObjectURL(
-                        new Blob([content], { type: 'text/markdown' }),
-                      );
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `${doc.name}.md`;
-                      a.click();
-                      URL.revokeObjectURL(url);
-                    }}
-                  >
-                    Export
-                  </button>
-                  {/* Tokens read better drawn than tabulated; the page is rendered
-                      from this same file, so it is never out of date. */}
-                  {doc.rel === 'DESIGN.md' && (
-                    <button
-                      role="menuitem"
-                      onClick={() => {
-                        setMenuOpen(false);
-                        setPreview(!preview);
-                      }}
-                    >
-                      {preview ? 'Document' : 'Preview'}
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
           )}
           <button className="btn btn-link-primary" onClick={onClose}>
             Close
