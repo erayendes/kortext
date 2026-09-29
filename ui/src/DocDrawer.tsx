@@ -905,6 +905,12 @@ export function DocDrawer({
             </div>
           </div>
           <div className="dr-actions">
+            {/* The design is looked at often: its preview sits in view, not in the menu. */}
+            {!editing && doc.status !== 'uninitialized' && doc.rel === 'DESIGN.md' && (
+              <button className="btn btn-secondary" onClick={doPreview}>
+                {preview ? 'Document' : 'Preview'}
+              </button>
+            )}
             {/* What is done to the document rather than decided about it. */}
             {!editing && doc.status !== 'uninitialized' && (
               <div className="kx-menu" ref={menuRef}>
@@ -925,11 +931,6 @@ export function DocDrawer({
                     <button role="menuitem" onClick={doExport}>
                       Export
                     </button>
-                    {doc.rel === 'DESIGN.md' && (
-                      <button role="menuitem" onClick={doPreview}>
-                        {preview ? 'Document' : 'Preview'}
-                      </button>
-                    )}
                   </div>
                 )}
               </div>
