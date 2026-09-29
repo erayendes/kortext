@@ -819,14 +819,13 @@ a.btn {
   padding: 12px 20px;
   border-top: 1px solid var(--border);
 }
-/* In the preview: sits over a gap opened in the page under the selected row. */
+/* In the preview: sits over a gap opened in the page under the selected row,
+   flat like a line's thread in the document — the gap is its background. */
 .kx-ask-inline {
   position: absolute;
   max-height: 45%;
-  background: var(--bg);
-  border: 1px solid var(--border-strong);
-  border-radius: 10px;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);
+  padding: 8px 0;
+  border-top: 0;
 }
 .dr-foot > .kx-ask-box {
   max-height: 40vh;

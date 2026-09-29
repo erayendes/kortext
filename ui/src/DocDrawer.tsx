@@ -181,12 +181,16 @@ export function DocDrawer({
   // box sits over the gap — the page is another document, the box cannot go in it.
   const [pickAt, setPickAt] = useState<{ top: number; left: number; width: number } | null>(null);
   const gapRef = useRef<HTMLElement | null>(null);
+  // The selected row, marked as a selected line of the document is; `undo` puts it back.
+  const rowRef = useRef<{ undo: () => void } | null>(null);
   const placeRef = useRef(() => {});
   const boxRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!pick) {
       gapRef.current?.remove();
       gapRef.current = null;
+      rowRef.current?.undo();
+      rowRef.current = null;
       return;
     }
     const box = boxRef.current;
@@ -1043,6 +1047,7 @@ export function DocDrawer({
                   const text = (sel?.toString() ?? '').replace(/\s+/g, ' ').trim();
                   if (!sel || !text) return;
                   gapRef.current?.remove();
+                  rowRef.current?.undo();
                   const gap = page.createElement('div');
                   // A triple click ends the range at offset 0 of the next row: that
                   // row holds none of the text, so the row is where it began.
@@ -1051,8 +1056,18 @@ export function DocDrawer({
                     r.endOffset === 0 && r.endContainer !== r.startContainer
                       ? r.startContainer
                       : r.endContainer;
-                  rowOf(end).after(gap);
+                  const row = rowOf(end) as HTMLElement;
+                  row.after(gap);
                   gapRef.current = gap;
+                  // The panel's own colours, read here: the page has its own palette.
+                  const theme = getComputedStyle(document.documentElement);
+                  const was = [row.style.background, row.style.boxShadow];
+                  row.style.background = theme.getPropertyValue('--bg-hover');
+                  // Outside the row, to its left: the page gave the row no room for the bar.
+                  row.style.boxShadow = `-8px 0 0 ${theme.getPropertyValue('--bg-hover')}, -11px 0 0 ${theme.getPropertyValue('--blue')}`;
+                  rowRef.current = {
+                    undo: () => ([row.style.background, row.style.boxShadow] = was),
+                  };
                   const hit = tokensRef.current.find((t) => t.text.includes(text));
                   setExplains((xs) => xs.filter((x) => x.line !== -1));
                   setPick({ line: hit?.index ?? -1, text: text.slice(0, 300) });
