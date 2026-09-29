@@ -36,6 +36,8 @@ interface Note {
   excerpt: string;
   text: string;
 }
+// The thread of a question about the whole document, not one of its lines.
+const WHOLE = -2;
 const isQuestionNote = (n: Note) => n.line !== null && /^#\d+$/.test(n.excerpt);
 
 /** What became of a change request, read from its box and the line under it. */
@@ -174,6 +176,8 @@ export function DocDrawer({
   // Text selected in the preview: asked about like a line. `line` is the block of
   // DESIGN.md that holds it, when one does; -1 when the page drew it from elsewhere.
   const [pick, setPick] = useState<{ line: number; text: string } | null>(null);
+  // A question about the whole document, no line picked: its thread sits in the footer.
+  const [whole, setWhole] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   // The engine is drafting the brief's change into the editor.
   const [drafting, setDrafting] = useState(false);
@@ -222,6 +226,7 @@ export function DocDrawer({
   useEffect(() => {
     setEditing(false);
     setPreview(false);
+    setWhole(false);
     setProposed(false);
     setRawEdit(false);
     setSelected(null);
@@ -983,7 +988,7 @@ export function DocDrawer({
             />
           )}
           {preview && pick && (
-            <div className="kx-preview-ask">
+            <div className="kx-ask-box">
               <div className="kx-preview-quote">{pick.text}</div>
               <LineThread
                 thread={explains.filter((x) => x.line === pick.line)}
@@ -1188,6 +1193,25 @@ export function DocDrawer({
         )}
         {!editing && !preview && doc.status !== 'uninitialized' && (
           <div className="dr-foot">
+            {whole && (
+              <div className="kx-ask-box">
+                <LineThread
+                  thread={explains.filter((x) => x.line === WHOLE)}
+                  active
+                  answerBy={answerBy}
+                  placeholder="A question about the whole document, or a note"
+                  onAsk={(q) => ask(WHOLE, q, '')}
+                  onNote={(text) => {
+                    setNotes((ns) => [...ns, { line: null, excerpt: '', text }]);
+                    setWhole(false);
+                  }}
+                  onClose={() => {
+                    setExplains((xs) => xs.filter((x) => x.line !== WHOLE));
+                    setWhole(false);
+                  }}
+                />
+              </div>
+            )}
             {notes.length > 0 || decisions.length > 0 ? (
               <div className="kx-notes">
                 <div className="kx-notes-title">Actions</div>
@@ -1326,7 +1350,7 @@ export function DocDrawer({
               <span className="kx-cmd-hint">
                 {actionNeeded
                   ? 'Pick a row above, or click a line of the document — what you decide collects here.'
-                  : 'Click a line: chat with its author right below (Ask) or collect a revision note (Add note).'}
+                  : 'Click a line to ask about it or note it — or Ask below about the whole document.'}
               </span>
             )}
             <div className="kx-note-input">
@@ -1338,6 +1362,15 @@ export function DocDrawer({
                   title="Approve with the template lines still in it"
                 >
                   Approve anyway
+                </button>
+              )}
+              {!whole && (
+                <button
+                  className="btn btn-secondary"
+                  title="Ask about the whole document — no line needed"
+                  onClick={() => setWhole(true)}
+                >
+                  <AskIcon /> Ask
                 </button>
               )}
               <span className="kx-changebar-summary">{footLine}</span>
