@@ -798,15 +798,32 @@ a.btn {
 .dr-body-preview {
   padding: 0;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
-.dr-body-preview > *:not(.kx-doc-preview) {
+.dr-body-preview > *:not(.kx-doc-preview):not(.kx-preview-ask) {
   display: none;
 }
 .kx-doc-preview {
   width: 100%;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   border: 0;
   display: block;
+}
+/* Selected in the preview: asked about under the page, which stays in view. */
+.kx-preview-ask {
+  max-height: 45%;
+  overflow: auto;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+}
+.kx-preview-quote {
+  font-size: 13px;
+  color: var(--fg-muted);
+  border-left: 2px solid var(--border);
+  padding-left: 8px;
+  margin-bottom: 8px;
 }
 
 /* Define hover styling per variant to avoid base-rule overrides. */

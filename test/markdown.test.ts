@@ -75,3 +75,11 @@ test('parseMarkdown: --- on its own line is a rule, not prose', () => {
   );
   assert.equal(toks[2]!.selectable, false);
 });
+
+test('parseInline: a link is one span, code in its text included', () => {
+  assert.deepEqual(parseInline('aç: [`a/DESIGN.html`](file:///r/a/DESIGN.html) veya'), [
+    { type: 'text', value: 'aç: ' },
+    { type: 'link', value: '`a/DESIGN.html`', href: 'file:///r/a/DESIGN.html' },
+    { type: 'text', value: ' veya' },
+  ]);
+});

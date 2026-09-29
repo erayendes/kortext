@@ -1,4 +1,13 @@
-import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  Fragment,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { Drawer } from './Drawer';
 import { highlight } from './highlight';
 import {
@@ -162,6 +171,9 @@ export function DocDrawer({
   // be refused, so the buttons wait for it.
   const locked = busy || writing || !version;
   const [preview, setPreview] = useState(false); // DESIGN.md drawn, not read
+  // Text selected in the preview: asked about like a line. `line` is the block of
+  // DESIGN.md that holds it, when one does; -1 when the page drew it from elsewhere.
+  const [pick, setPick] = useState<{ line: number; text: string } | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   // The engine is drafting the brief's change into the editor.
   const [drafting, setDrafting] = useState(false);
@@ -373,6 +385,9 @@ export function DocDrawer({
     };
     return dropEmpty(dropEmpty(all, QUESTIONS), CHANGE_REQUESTS);
   }, [content]);
+  // The preview's selection handler is bound once per page load; it reads the latest tokens here.
+  const tokensRef = useRef(tokens);
+  tokensRef.current = tokens;
 
   // The answer names its own author. Asking the global engine setting instead
   // signed codex's answers as claude whenever the project ran on the other one.
@@ -688,7 +703,7 @@ export function DocDrawer({
     });
 
   // Keep multi-turn Q&A in drawer state only.
-  const ask = (line: number, question: string) => {
+  const ask = (line: number, question: string, excerpt?: string) => {
     const token = tokens.find((t) => t.index === line);
     const history = explains
       .filter((x) => x.line === line && x.answer !== null)
@@ -696,7 +711,7 @@ export function DocDrawer({
     const entry: Explain = { line, question, answer: null };
     setExplains((xs) => [...xs, entry]);
     api
-      .explainDoc(project.id, doc.rel, token?.text ?? '', question, history)
+      .explainDoc(project.id, doc.rel, excerpt ?? token?.text ?? '', question, history)
       .then((r) => {
         setAnswerBy(r.answeredBy);
         setExplains((xs) => xs.map((x) => (x === entry ? { ...x, answer: r.answer } : x)));
@@ -824,481 +839,528 @@ export function DocDrawer({
 
   // Load the proposed revision into the editor; do not save it automatically.
   return (
-    <Drawer open={!!doc} onClose={onClose} width={880}>
-      <div className="dr-head">
-        <div className="dr-ident">
-          <div className="dr-title">
-            {/* The name opens the versions: pick one and the body shows what
+    <LinkProject.Provider value={project}>
+      <Drawer open={!!doc} onClose={onClose} width={880}>
+        <div className="dr-head">
+          <div className="dr-ident">
+            <div className="dr-title">
+              {/* The name opens the versions: pick one and the body shows what
                 changed since it. The name itself looks as it always did. */}
-            {!editing && against !== null ? (
-              <div className="kx-menu" ref={versionsRef}>
-                <button
-                  className="kx-version-trigger"
-                  aria-haspopup="listbox"
-                  aria-expanded={versionsOpen}
-                  title="Show what changed since an earlier version"
-                  onClick={() => setVersionsOpen(!versionsOpen)}
-                >
-                  <span className="kx-doc-name">{doc.name}.md</span>
-                  {/* lucide chevron-down (ISC) */}
-                  <svg
-                    className="kx-version-chevron"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={2.25}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
+              {!editing && against !== null ? (
+                <div className="kx-menu" ref={versionsRef}>
+                  <button
+                    className="kx-version-trigger"
+                    aria-haspopup="listbox"
+                    aria-expanded={versionsOpen}
+                    title="Show what changed since an earlier version"
+                    onClick={() => setVersionsOpen(!versionsOpen)}
                   >
-                    <path d="m6 9 6 6 6-6" />
-                  </svg>
+                    <span className="kx-doc-name">{doc.name}.md</span>
+                    {/* lucide chevron-down (ISC) */}
+                    <svg
+                      className="kx-version-chevron"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2.25}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="m6 9 6 6 6-6" />
+                    </svg>
+                  </button>
+                  {versionsOpen && (
+                    <div className="kx-menu-list kx-versions" role="listbox">
+                      <div className="kx-versions-head">Show changes since</div>
+                      {versions
+                        .filter((v) => v.sha !== version)
+                        .map((v) => (
+                          <button
+                            key={v.id}
+                            role="option"
+                            aria-selected={v.id === against}
+                            className="mono"
+                            onClick={() => {
+                              setAgainst(v.id);
+                              setVersionsOpen(false);
+                            }}
+                          >
+                            <span className="kx-versions-tick">{v.id === against ? '✓' : ''}</span>
+                            {stamp(v.created_at)}
+                          </button>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <span className="kx-doc-name">{doc.name}.md</span>
+              )}
+              <StatusBadge doc={doc} />
+            </div>
+          </div>
+          <div className="dr-actions">
+            {/* What is done to the document rather than decided about it. */}
+            {!editing && doc.status !== 'uninitialized' && (
+              <div className="kx-menu" ref={menuRef}>
+                <button
+                  className="btn btn-secondary kx-menu-btn"
+                  aria-haspopup="menu"
+                  aria-expanded={menuOpen}
+                  title="More"
+                  onClick={() => setMenuOpen(!menuOpen)}
+                >
+                  ⋯
                 </button>
-                {versionsOpen && (
-                  <div className="kx-menu-list kx-versions" role="listbox">
-                    <div className="kx-versions-head">Show changes since</div>
-                    {versions
-                      .filter((v) => v.sha !== version)
-                      .map((v) => (
-                        <button
-                          key={v.id}
-                          role="option"
-                          aria-selected={v.id === against}
-                          className="mono"
-                          onClick={() => {
-                            setAgainst(v.id);
-                            setVersionsOpen(false);
-                          }}
-                        >
-                          <span className="kx-versions-tick">{v.id === against ? '✓' : ''}</span>
-                          {stamp(v.created_at)}
-                        </button>
-                      ))}
+                {menuOpen && (
+                  <div className="kx-menu-list" role="menu">
+                    <button role="menuitem" disabled={locked} onClick={doEdit}>
+                      Edit
+                    </button>
+                    <button role="menuitem" onClick={doExport}>
+                      Export
+                    </button>
+                    {doc.rel === 'DESIGN.md' && (
+                      <button role="menuitem" onClick={doPreview}>
+                        {preview ? 'Document' : 'Preview'}
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
-            ) : (
-              <span className="kx-doc-name">{doc.name}.md</span>
             )}
-            <StatusBadge doc={doc} />
+            {/* The preview is a look, not the document: nothing is approved from it. */}
+            {!editing && !preview && doc.status === 'draft' && (
+              <button
+                className="btn btn-success"
+                disabled={
+                  locked || sent || drafting || approveBlocked !== null || summary.length > 0
+                }
+                title={
+                  summary.length > 0
+                    ? 'Apply what you decided first — the document is approved as it will be rewritten'
+                    : (approveBlocked ??
+                      (doc.naProposed
+                        ? 'The author says this document does not apply here — approving agrees, and settles it as n/a. Disagree? Add a note and apply it.'
+                        : ''))
+                }
+                onClick={() => approve()}
+              >
+                {doc.naProposed ? 'Approve n/a' : 'Approve'}
+              </button>
+            )}
+            {/* Editing is left by Discard or Save, at the bottom. */}
+            {/* In the preview, Close goes back to the document, not out of it. */}
+            {!editing && (
+              <button
+                className="btn btn-secondary"
+                onClick={preview ? () => setPreview(false) : onClose}
+              >
+                Close
+              </button>
+            )}
           </div>
         </div>
-        <div className="dr-actions">
-          {/* What is done to the document rather than decided about it. */}
-          {!editing && doc.status !== 'uninitialized' && (
-            <div className="kx-menu" ref={menuRef}>
-              <button
-                className="btn btn-secondary kx-menu-btn"
-                aria-haspopup="menu"
-                aria-expanded={menuOpen}
-                title="More"
-                onClick={() => setMenuOpen(!menuOpen)}
-              >
-                ⋯
-              </button>
-              {menuOpen && (
-                <div className="kx-menu-list" role="menu">
-                  <button role="menuitem" disabled={locked} onClick={doEdit}>
-                    Edit
+        <div className={preview ? 'dr-body dr-body-preview' : 'dr-body'}>
+          {preview && (
+            // The preview document has independent theme controls.
+            <iframe
+              className="kx-doc-preview"
+              title={`${doc.name} — design tokens`}
+              src={`/api/projects/${project.id}/docs/design-preview`}
+              onLoad={(e) => {
+                setPick(null);
+                const win = e.currentTarget.contentWindow;
+                // Same origin: the selection is read straight out of the page.
+                win?.document.addEventListener('mouseup', () => {
+                  const text = (win.getSelection()?.toString() ?? '').replace(/\s+/g, ' ').trim();
+                  if (!text) return;
+                  const hit = tokensRef.current.find((t) => t.text.includes(text));
+                  setExplains((xs) => xs.filter((x) => x.line !== -1));
+                  setPick({ line: hit?.index ?? -1, text: text.slice(0, 300) });
+                });
+              }}
+            />
+          )}
+          {preview && pick && (
+            <div className="kx-preview-ask">
+              <div className="kx-preview-quote">{pick.text}</div>
+              <LineThread
+                thread={explains.filter((x) => x.line === pick.line)}
+                active
+                answerBy={answerBy}
+                onAsk={(q) => ask(pick.line, q, pick.text)}
+                onNote={(text) => {
+                  if (pick.line >= 0) addLineNote(pick.line, text);
+                  else
+                    setNotes((ns) => [
+                      ...ns,
+                      { line: null, excerpt: pick.text.slice(0, 60), text },
+                    ]);
+                  setPick(null);
+                }}
+                onClose={() => {
+                  setExplains((xs) => xs.filter((x) => x.line !== -1));
+                  setPick(null);
+                }}
+              />
+            </div>
+          )}
+          {err && (
+            <div className="kx-error">
+              {err}
+              {placeholders.length > 0 && (
+                <>
+                  <ul className="kx-error-lines mono">
+                    {placeholders.map((l) => (
+                      <li key={l}>
+                        <button className="kx-error-line" onClick={() => jumpToText(l)}>
+                          {l}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  <button
+                    className="btn btn-link-danger"
+                    disabled={busy}
+                    onClick={() => approve(true)}
+                  >
+                    Approve anyway
                   </button>
-                  <button role="menuitem" onClick={doExport}>
-                    Export
+                </>
+              )}
+            </div>
+          )}
+          {failedError && !editing && (
+            <div className="kx-doc-changebar">
+              <div className="kx-changebar-head">
+                The last attempt to write this document failed.
+              </div>
+              <div className="kx-cmd-hint">{failedError}</div>
+              {onRetry && (
+                <div className="kx-changebar-actions">
+                  <button className="btn btn-primary" onClick={onRetry}>
+                    Retry
                   </button>
-                  {doc.rel === 'DESIGN.md' && (
-                    <button role="menuitem" onClick={doPreview}>
-                      {preview ? 'Document' : 'Preview'}
-                    </button>
-                  )}
                 </div>
               )}
             </div>
           )}
-          {!editing && doc.status === 'draft' && (
-            <button
-              className="btn btn-success"
-              disabled={locked || sent || drafting || approveBlocked !== null || summary.length > 0}
-              title={
-                summary.length > 0
-                  ? 'Apply what you decided first — the document is approved as it will be rewritten'
-                  : (approveBlocked ??
-                    (doc.naProposed
-                      ? 'The author says this document does not apply here — approving agrees, and settles it as n/a. Disagree? Add a note and apply it.'
-                      : ''))
-              }
-              onClick={() => approve()}
-            >
-              {doc.naProposed ? 'Approve n/a' : 'Approve'}
-            </button>
+          {!editing && <RelatedDocuments doc={doc} docs={docs} />}
+          {doc.dependentOn.length > 0 && !editing && (
+            <div className="kx-doc-dependbar">
+              <span className="mono">
+                {doc.dependentOn.map((d) => d.replace(/\.md$/, '')).join(', ')}
+              </span>{' '}
+              — an input of this document is moving. Nothing is wrong yet; when it settles, this one
+              is read against it again and you are told if it has to change.
+            </div>
           )}
-          {/* Editing is left by Discard or Save, at the bottom. */}
-          {!editing && (
-            <button className="btn btn-secondary" onClick={onClose}>
-              Close
-            </button>
+          {actionNeeded && !editing && (
+            <ActionNeeded
+              project={project}
+              doc={doc}
+              questions={questions}
+              explains={explains}
+              answerBy={answerBy}
+              onAsk={ask}
+              // A question has one answer. A second Add answer replaces the first
+              // rather than sending the agent two answers to reconcile.
+              onNote={(line, text) => {
+                setNotes((ns) => ns.filter((n) => n.line !== line));
+                addLineNote(line, text);
+              }}
+              answered={new Set(notes.map((n) => n.line).filter((l): l is number => l !== null))}
+              decided={decided}
+              onDecide={(r, what, note) =>
+                setDecided((d) => ({
+                  ...d,
+                  [keyOf(r)]: { kind: 'incoming', other: r.from, reason: r.reason, what, note },
+                }))
+              }
+              onDecideOut={(r, what, note) =>
+                setDecided((d) => ({
+                  ...d,
+                  [keyOut(r)]: { kind: 'outgoing', other: r.target, reason: r.reason, what, note },
+                }))
+              }
+              onCloseThread={(line) => setExplains((xs) => xs.filter((x) => x.line !== line))}
+            />
+          )}
+          {editing ? (
+            <>
+              {proposed && (
+                <div className="kx-changebar-head">
+                  Drafted by the agent from the request above. Nothing is saved until you press Save
+                  — read it, change what you want, then Save and approve.
+                </div>
+              )}
+              {proposed && !rawEdit ? (
+                <ProposalDiff before={content} after={draft} onEdit={() => setRawEdit(true)} />
+              ) : (
+                <textarea
+                  className="kx-editor mono"
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                />
+              )}
+            </>
+          ) : (
+            <div className="kx-doc">
+              {shown.map((t, i) => (
+                <div key={t.index} id={`kx-line-${t.index}`}>
+                  <DocBlock
+                    token={t}
+                    changed={changed.has(t.index) && !records.has(t.index) && leads.has(i)}
+                    openQuestion={openQ.has(t.index)}
+                    questionNo={qNo.get(t.index)}
+                    noteLabel={lineLabel.get(t.index)}
+                    changeRequest={changeReq.has(t.index)}
+                    outcome={outcomes.get(t.index)}
+                    decision={ledger.get(t.index)}
+                    replaced={records.has(t.index) ? undefined : replaced.get(t.index)}
+                    selected={selected === t.index}
+                    noted={notes.some((n) => n.line === t.index)}
+                    onSelect={() => {
+                      // Let the user select text: a click that ends a selection
+                      // must not toggle the thread.
+                      if ((window.getSelection()?.toString() ?? '').trim()) return;
+                      if (doc.status === 'uninitialized') return;
+                      setSelected(selected === t.index ? null : t.index);
+                    }}
+                  />
+                  {(selected === t.index || explains.some((x) => x.line === t.index)) &&
+                    doc.status !== 'uninitialized' && (
+                      <LineThread
+                        thread={explains.filter((x) => x.line === t.index)}
+                        active={selected === t.index}
+                        // A click on the thread itself — the answer you are reading — is a
+                        // way back in: the box reopens under it for the follow-up, without
+                        // going up to the line to select it again.
+                        onActivate={() => setSelected(t.index)}
+                        onClose={() => {
+                          setExplains((xs) => xs.filter((x) => x.line !== t.index));
+                          setSelected(null);
+                        }}
+                        suggest={openQ.has(t.index)}
+                        noteLabel={openQ.has(t.index) ? 'Add answer' : 'Add note'}
+                        answerBy={answerBy}
+                        onAsk={(q) => ask(t.index, q)}
+                        onNote={(text) => {
+                          addLineNote(t.index, text);
+                          setSelected(null);
+                        }}
+                      />
+                    )}
+                </div>
+              ))}
+            </div>
           )}
         </div>
-      </div>
-      <div className={preview ? 'dr-body dr-body-preview' : 'dr-body'}>
-        {preview && (
-          // The preview document has independent theme controls.
-          <iframe
-            className="kx-doc-preview"
-            title={`${doc.name} — design tokens`}
-            src={`/api/projects/${project.id}/docs/design-preview`}
-          />
+        {/* The footer collects what the drawer decided — notes on lines, answers to
+          questions, decisions on change requests — and sends it in one press. */}
+        {/* Editing: the buttons that finish the edit sit where Apply and Approve sit. */}
+        {editing && (
+          <div className="dr-foot">
+            <div className="kx-note-input">
+              <span className="kx-changebar-summary">
+                {proposed
+                  ? 'Drafted by the agent — nothing is saved until you press Save.'
+                  : 'Editing by hand.'}
+              </span>
+              <button
+                className="btn btn-secondary"
+                disabled={busy}
+                onClick={() => {
+                  setEditing(false);
+                  setDraft(content);
+                  setProposed(false);
+                  setRawEdit(false);
+                }}
+              >
+                Discard
+              </button>
+              <button className="btn btn-primary" disabled={busy} onClick={() => saveEdit()}>
+                Save
+              </button>
+            </div>
+          </div>
         )}
-        {err && (
-          <div className="kx-error">
-            {err}
-            {placeholders.length > 0 && (
-              <>
-                <ul className="kx-error-lines mono">
-                  {placeholders.map((l) => (
-                    <li key={l}>
-                      <button className="kx-error-line" onClick={() => jumpToText(l)}>
-                        {l}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+        {!editing && !preview && doc.status !== 'uninitialized' && (
+          <div className="dr-foot">
+            {notes.length > 0 || decisions.length > 0 ? (
+              <div className="kx-notes">
+                <div className="kx-notes-title">Actions</div>
+                {/* Each row names what it is and where it came from, and clicking
+                  it goes there — the question or request in the list above, or
+                  the line in the document. */}
+                {notes.map((n, i) => {
+                  const isQuestion = isQuestionNote(n);
+                  const target =
+                    n.line === null ? null : isQuestion ? `kx-q-${n.line}` : `kx-line-${n.line}`;
+                  return (
+                    <div
+                      key={i}
+                      className="kx-note"
+                      role={target ? 'button' : undefined}
+                      tabIndex={target ? 0 : undefined}
+                      onClick={() => target && goTo(target)}
+                      onKeyDown={(e) => {
+                        if (target && (e.key === 'Enter' || e.key === ' ')) {
+                          e.preventDefault();
+                          goTo(target);
+                        }
+                      }}
+                    >
+                      <span className="kx-note-exc mono">
+                        {isQuestion ? 'question' : 'note'}{' '}
+                        {n.line !== null ? lineLabel.get(n.line) : n.excerpt}
+                      </span>
+                      <span className="kx-note-body">{n.text}</span>
+                      {!sent && !writing && (
+                        <button
+                          className="btn btn-x"
+                          title="Take it back"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setNotes(notes.filter((_, j) => j !== i));
+                          }}
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+                {doc.outgoing.map((r, i) => {
+                  const d = decided[keyOut(r)];
+                  if (!d) return null;
+                  const target = `kx-out-${i}`;
+                  return (
+                    <div
+                      key={target}
+                      className="kx-note"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => goTo(target)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          goTo(target);
+                        }
+                      }}
+                    >
+                      <span className="kx-note-exc mono">outgoing #{i + 1}</span>
+                      <span className="kx-note-body">
+                        <span className="mono">← {r.target.replace(/\.md$/, '')}</span>{' '}
+                        <span className={`kx-decision kx-decision-${d.what}`}>
+                          {d.what === 'accept' ? 'accepted' : 'rejected'}
+                        </span>
+                      </span>
+                      {!sent && !writing && (
+                        <button
+                          className="btn btn-x"
+                          title="Take the decision back"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDecided((all) => {
+                              const next = { ...all };
+                              delete next[keyOut(r)];
+                              return next;
+                            });
+                          }}
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+                {doc.revisionRequests.map((r, i) => {
+                  const d = decided[keyOf(r)];
+                  if (!d) return null;
+                  const target = `kx-req-${i}`;
+                  return (
+                    <div
+                      key={target}
+                      className="kx-note"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => goTo(target)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          goTo(target);
+                        }
+                      }}
+                    >
+                      <span className="kx-note-exc mono">incoming #{i + 1}</span>
+                      <span className="kx-note-body">
+                        <span className="mono">→ {r.from.replace(/\.md$/, '')}</span>{' '}
+                        <span className={`kx-decision kx-decision-${d.what}`}>
+                          {d.what === 'accept' ? 'accepted' : 'rejected'}
+                        </span>
+                        {d.note && ` — ${d.note}`}
+                      </span>
+                      {!sent && !writing && (
+                        <button
+                          className="btn btn-x"
+                          title="Take the decision back"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDecided((all) => {
+                              const next = { ...all };
+                              delete next[keyOf(r)];
+                              return next;
+                            });
+                          }}
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <span className="kx-cmd-hint">
+                {actionNeeded
+                  ? 'Pick a row above, or click a line of the document — what you decide collects here.'
+                  : 'Click a line: chat with its author right below (Ask) or collect a revision note (Add note).'}
+              </span>
+            )}
+            <div className="kx-note-input">
+              {placeholders.length > 0 && (
                 <button
                   className="btn btn-link-danger"
                   disabled={busy}
                   onClick={() => approve(true)}
+                  title="Approve with the template lines still in it"
                 >
                   Approve anyway
                 </button>
-              </>
-            )}
-          </div>
-        )}
-        {failedError && !editing && (
-          <div className="kx-doc-changebar">
-            <div className="kx-changebar-head">The last attempt to write this document failed.</div>
-            <div className="kx-cmd-hint">{failedError}</div>
-            {onRetry && (
-              <div className="kx-changebar-actions">
-                <button className="btn btn-primary" onClick={onRetry}>
-                  Retry
+              )}
+              <span className="kx-changebar-summary">{footLine}</span>
+              {/* Apply sends what was decided; Approve, in the header, settles the document. */}
+              {(actionNeeded || notes.length > 0 || sent || writing || drafting) && (
+                <button
+                  className="btn btn-primary"
+                  disabled={locked || sent || drafting || !canApply}
+                  onClick={actionNeeded ? applyAll : requestRevision}
+                  title={
+                    written
+                      ? 'One rewrite carries the answers and the accepted changes together'
+                      : 'Accepted requests are drafted into the editor for you to save; rejections are recorded'
+                  }
+                >
+                  {sent || writing || drafting ? 'Writing…' : 'Apply'}
                 </button>
-              </div>
-            )}
-          </div>
-        )}
-        {!editing && <RelatedDocuments doc={doc} docs={docs} />}
-        {doc.dependentOn.length > 0 && !editing && (
-          <div className="kx-doc-dependbar">
-            <span className="mono">
-              {doc.dependentOn.map((d) => d.replace(/\.md$/, '')).join(', ')}
-            </span>{' '}
-            — an input of this document is moving. Nothing is wrong yet; when it settles, this one
-            is read against it again and you are told if it has to change.
-          </div>
-        )}
-        {actionNeeded && !editing && (
-          <ActionNeeded
-            project={project}
-            doc={doc}
-            questions={questions}
-            explains={explains}
-            answerBy={answerBy}
-            onAsk={ask}
-            // A question has one answer. A second Add answer replaces the first
-            // rather than sending the agent two answers to reconcile.
-            onNote={(line, text) => {
-              setNotes((ns) => ns.filter((n) => n.line !== line));
-              addLineNote(line, text);
-            }}
-            answered={new Set(notes.map((n) => n.line).filter((l): l is number => l !== null))}
-            decided={decided}
-            onDecide={(r, what, note) =>
-              setDecided((d) => ({
-                ...d,
-                [keyOf(r)]: { kind: 'incoming', other: r.from, reason: r.reason, what, note },
-              }))
-            }
-            onDecideOut={(r, what, note) =>
-              setDecided((d) => ({
-                ...d,
-                [keyOut(r)]: { kind: 'outgoing', other: r.target, reason: r.reason, what, note },
-              }))
-            }
-            onCloseThread={(line) => setExplains((xs) => xs.filter((x) => x.line !== line))}
-          />
-        )}
-        {editing ? (
-          <>
-            {proposed && (
-              <div className="kx-changebar-head">
-                Drafted by the agent from the request above. Nothing is saved until you press Save —
-                read it, change what you want, then Save and approve.
-              </div>
-            )}
-            {proposed && !rawEdit ? (
-              <ProposalDiff before={content} after={draft} onEdit={() => setRawEdit(true)} />
-            ) : (
-              <textarea
-                className="kx-editor mono"
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-              />
-            )}
-          </>
-        ) : (
-          <div className="kx-doc">
-            {shown.map((t, i) => (
-              <div key={t.index} id={`kx-line-${t.index}`}>
-                <DocBlock
-                  token={t}
-                  changed={changed.has(t.index) && !records.has(t.index) && leads.has(i)}
-                  openQuestion={openQ.has(t.index)}
-                  questionNo={qNo.get(t.index)}
-                  noteLabel={lineLabel.get(t.index)}
-                  changeRequest={changeReq.has(t.index)}
-                  outcome={outcomes.get(t.index)}
-                  decision={ledger.get(t.index)}
-                  replaced={records.has(t.index) ? undefined : replaced.get(t.index)}
-                  selected={selected === t.index}
-                  noted={notes.some((n) => n.line === t.index)}
-                  onSelect={() => {
-                    // Let the user select text: a click that ends a selection
-                    // must not toggle the thread.
-                    if ((window.getSelection()?.toString() ?? '').trim()) return;
-                    if (doc.status === 'uninitialized') return;
-                    setSelected(selected === t.index ? null : t.index);
-                  }}
-                />
-                {(selected === t.index || explains.some((x) => x.line === t.index)) &&
-                  doc.status !== 'uninitialized' && (
-                    <LineThread
-                      thread={explains.filter((x) => x.line === t.index)}
-                      active={selected === t.index}
-                      // A click on the thread itself — the answer you are reading — is a
-                      // way back in: the box reopens under it for the follow-up, without
-                      // going up to the line to select it again.
-                      onActivate={() => setSelected(t.index)}
-                      onClose={() => {
-                        setExplains((xs) => xs.filter((x) => x.line !== t.index));
-                        setSelected(null);
-                      }}
-                      suggest={openQ.has(t.index)}
-                      noteLabel={openQ.has(t.index) ? 'Add answer' : 'Add note'}
-                      answerBy={answerBy}
-                      onAsk={(q) => ask(t.index, q)}
-                      onNote={(text) => {
-                        addLineNote(t.index, text);
-                        setSelected(null);
-                      }}
-                    />
-                  )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-      {/* The footer collects what the drawer decided — notes on lines, answers to
-          questions, decisions on change requests — and sends it in one press. */}
-      {/* Editing: the buttons that finish the edit sit where Apply and Approve sit. */}
-      {editing && (
-        <div className="dr-foot">
-          <div className="kx-note-input">
-            <span className="kx-changebar-summary">
-              {proposed
-                ? 'Drafted by the agent — nothing is saved until you press Save.'
-                : 'Editing by hand.'}
-            </span>
-            <button
-              className="btn btn-secondary"
-              disabled={busy}
-              onClick={() => {
-                setEditing(false);
-                setDraft(content);
-                setProposed(false);
-                setRawEdit(false);
-              }}
-            >
-              Discard
-            </button>
-            <button className="btn btn-primary" disabled={busy} onClick={() => saveEdit()}>
-              Save
-            </button>
-          </div>
-        </div>
-      )}
-      {!editing && !preview && doc.status !== 'uninitialized' && (
-        <div className="dr-foot">
-          {notes.length > 0 || decisions.length > 0 ? (
-            <div className="kx-notes">
-              <div className="kx-notes-title">Actions</div>
-              {/* Each row names what it is and where it came from, and clicking
-                  it goes there — the question or request in the list above, or
-                  the line in the document. */}
-              {notes.map((n, i) => {
-                const isQuestion = isQuestionNote(n);
-                const target =
-                  n.line === null ? null : isQuestion ? `kx-q-${n.line}` : `kx-line-${n.line}`;
-                return (
-                  <div
-                    key={i}
-                    className="kx-note"
-                    role={target ? 'button' : undefined}
-                    tabIndex={target ? 0 : undefined}
-                    onClick={() => target && goTo(target)}
-                    onKeyDown={(e) => {
-                      if (target && (e.key === 'Enter' || e.key === ' ')) {
-                        e.preventDefault();
-                        goTo(target);
-                      }
-                    }}
-                  >
-                    <span className="kx-note-exc mono">
-                      {isQuestion ? 'question' : 'note'}{' '}
-                      {n.line !== null ? lineLabel.get(n.line) : n.excerpt}
-                    </span>
-                    <span className="kx-note-body">{n.text}</span>
-                    {!sent && !writing && (
-                      <button
-                        className="btn btn-x"
-                        title="Take it back"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setNotes(notes.filter((_, j) => j !== i));
-                        }}
-                      >
-                        ×
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-              {doc.outgoing.map((r, i) => {
-                const d = decided[keyOut(r)];
-                if (!d) return null;
-                const target = `kx-out-${i}`;
-                return (
-                  <div
-                    key={target}
-                    className="kx-note"
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => goTo(target)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        goTo(target);
-                      }
-                    }}
-                  >
-                    <span className="kx-note-exc mono">outgoing #{i + 1}</span>
-                    <span className="kx-note-body">
-                      <span className="mono">← {r.target.replace(/\.md$/, '')}</span>{' '}
-                      <span className={`kx-decision kx-decision-${d.what}`}>
-                        {d.what === 'accept' ? 'accepted' : 'rejected'}
-                      </span>
-                    </span>
-                    {!sent && !writing && (
-                      <button
-                        className="btn btn-x"
-                        title="Take the decision back"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDecided((all) => {
-                            const next = { ...all };
-                            delete next[keyOut(r)];
-                            return next;
-                          });
-                        }}
-                      >
-                        ×
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-              {doc.revisionRequests.map((r, i) => {
-                const d = decided[keyOf(r)];
-                if (!d) return null;
-                const target = `kx-req-${i}`;
-                return (
-                  <div
-                    key={target}
-                    className="kx-note"
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => goTo(target)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        goTo(target);
-                      }
-                    }}
-                  >
-                    <span className="kx-note-exc mono">incoming #{i + 1}</span>
-                    <span className="kx-note-body">
-                      <span className="mono">→ {r.from.replace(/\.md$/, '')}</span>{' '}
-                      <span className={`kx-decision kx-decision-${d.what}`}>
-                        {d.what === 'accept' ? 'accepted' : 'rejected'}
-                      </span>
-                      {d.note && ` — ${d.note}`}
-                    </span>
-                    {!sent && !writing && (
-                      <button
-                        className="btn btn-x"
-                        title="Take the decision back"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDecided((all) => {
-                            const next = { ...all };
-                            delete next[keyOf(r)];
-                            return next;
-                          });
-                        }}
-                      >
-                        ×
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
+              )}
             </div>
-          ) : (
-            <span className="kx-cmd-hint">
-              {actionNeeded
-                ? 'Pick a row above, or click a line of the document — what you decide collects here.'
-                : 'Click a line: chat with its author right below (Ask) or collect a revision note (Add note).'}
-            </span>
-          )}
-          <div className="kx-note-input">
-            {placeholders.length > 0 && (
-              <button
-                className="btn btn-link-danger"
-                disabled={busy}
-                onClick={() => approve(true)}
-                title="Approve with the template lines still in it"
-              >
-                Approve anyway
-              </button>
-            )}
-            <span className="kx-changebar-summary">{footLine}</span>
-            {/* Apply sends what was decided; Approve, in the header, settles the document. */}
-            {(actionNeeded || notes.length > 0 || sent || writing || drafting) && (
-              <button
-                className="btn btn-primary"
-                disabled={locked || sent || drafting || !canApply}
-                onClick={actionNeeded ? applyAll : requestRevision}
-                title={
-                  written
-                    ? 'One rewrite carries the answers and the accepted changes together'
-                    : 'Accepted requests are drafted into the editor for you to save; rejections are recorded'
-                }
-              >
-                {sent || writing || drafting ? 'Writing…' : 'Apply'}
-              </button>
-            )}
           </div>
-        </div>
-      )}
-    </Drawer>
+        )}
+      </Drawer>
+    </LinkProject.Provider>
   );
 }
 
@@ -2093,12 +2155,49 @@ function AnswerText({ text }: { text: string }) {
   return <>{out}</>;
 }
 
+// Links open in a new tab, never over the panel. A file of the project — a
+// file:// link under its folder, or a relative path — is served by the
+// project's files route: the panel cannot follow file:// itself.
+const LinkProject = createContext<Project | null>(null);
+
+function linkTarget(href: string, project: Project | null): string | null {
+  if (/^https?:\/\//i.test(href)) return href;
+  if (!project) return null;
+  let path = href;
+  if (/^file:\/\//i.test(href)) {
+    try {
+      path = decodeURIComponent(href.replace(/^file:\/\//i, ''));
+    } catch {
+      return null;
+    }
+    const root = project.repo_path.replace(/\/$/, '') + '/';
+    if (!path.startsWith(root)) return null;
+    path = path.slice(root.length);
+  } else if (/^[a-z][\w+.-]*:|^#|^\//i.test(href)) return null;
+  const enc = path.split('/').map(encodeURIComponent).join('/');
+  return `/api/projects/${project.id}/files/${enc}`;
+}
+
 function Inline({ text }: { text: string }) {
+  const project = useContext(LinkProject);
   return (
     <>
       {parseInline(text).map((s, i) => (
         <Fragment key={i}>
-          {s.type === 'bold' ? (
+          {s.type === 'link' ? (
+            (() => {
+              const to = linkTarget(s.href, project);
+              return to ? (
+                <a href={to} target="_blank" rel="noopener noreferrer" title={s.href}>
+                  <CodeBits text={s.value} />
+                </a>
+              ) : (
+                <span title={s.href}>
+                  <CodeBits text={s.value} />
+                </span>
+              );
+            })()
+          ) : s.type === 'bold' ? (
             <strong>
               <CodeBits text={s.value} />
             </strong>
