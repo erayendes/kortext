@@ -2,7 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { contrast, parseDesignTokens, renderDesignPreview, typeRows } from '../server/design-preview.js';
+import {
+  contrast,
+  parseDesignTokens,
+  renderDesignPreview,
+  typeRows,
+} from '../server/design-preview.js';
 
 const filled = `---
 status: draft
@@ -199,4 +204,21 @@ test('a type role written for two contexts is two rows, each at its own size', (
     tracking: '',
   });
   assert.deepEqual([small?.context, small?.token, small?.size], ['', '--fs-label', '12px']);
+});
+
+test('a colour row may name an alias and carry both modes in one cell', () => {
+  const md = [
+    '| Token Name | HEX / RGB | Usage Context |',
+    '| :--- | :--- | :--- |',
+    '| `--bg` (`--color-bg-main`) | `#ffffff` (Light) / `#0a0a0b` (Dark) | page ground |',
+    '| `--accent-ring` | `rgba(24, 24, 27, 0.16)` / `rgba(237, 237, 239, 0.16)` | focus ring |',
+  ].join('\n');
+  const t = parseDesignTokens(md);
+  assert.deepEqual(
+    t.colors.map((c) => [c.name, c.value, c.dark, c.note]),
+    [
+      ['--bg', '#ffffff', '#0a0a0b', 'page ground'],
+      ['--accent-ring', 'rgba(24, 24, 27, 0.16)', 'rgba(237, 237, 239, 0.16)', 'focus ring'],
+    ],
+  );
 });

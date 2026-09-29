@@ -824,8 +824,11 @@ a.btn {
 .kx-ask-inline {
   position: absolute;
   max-height: 45%;
-  padding: 8px 0;
+  padding: 8px 10px;
   border-top: 0;
+  /* The page may be in the other theme: the box keeps the panel's own ground. */
+  background: var(--bg);
+  border-radius: 8px;
 }
 .dr-foot > .kx-ask-box {
   max-height: 40vh;

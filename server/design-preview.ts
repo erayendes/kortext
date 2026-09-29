@@ -143,7 +143,12 @@ export function parseDesignTokens(md: string): DesignTokens {
       }
       // `| Token | Light | Dark | Usage |` — the header is the only place that
       // says which column is which, so it is read before the rows.
-      if (lower.some((c) => /\bdark\b/.test(c)) && lower.some((c) => /token|name|light/.test(c))) {
+      // A row whose cell reads `#fff (Light) / #000 (Dark)` says dark too, but holds values.
+      if (
+        lower.some((c) => /\bdark\b/.test(c)) &&
+        lower.some((c) => /token|name|light/.test(c)) &&
+        !lower.some((c) => /#[0-9a-f]{3}|rgba?\(|hsla?\(|oklch\(/.test(c))
+      ) {
         darkColumn = lower.findIndex((c) => /\bdark\b/.test(c));
         header = null;
         continue;
@@ -168,8 +173,22 @@ export function parseDesignTokens(md: string): DesignTokens {
         header = null;
       }
       // A token row: the name cell, then the first cell holding a real value.
-      const name = row[0] ?? '';
+      // The name may carry an alias after it — `--bg` (`--color-bg-main`).
+      const name =
+        (row[0] ?? '').replace(/`/g, '').match(/^(--?[\w-]+|[a-z][\w-]*(?:\.[\w-]+)+)\b/i)?.[1] ??
+        '';
       if (!NAME.test(name)) continue;
+      // Both modes in one cell: `#fff` (Light) / `#0a0a0b` (Dark).
+      const pair = row
+        .slice(1)
+        .map((c) => variants(c.replace(/`/g, '')))
+        .find((vs) => vs.length === 2 && vs.every((v) => COLOR.test(v.value)));
+      if (pair) {
+        const light = pair.find((v) => /light/i.test(v.context)) ?? pair[0]!;
+        const dark = pair.find((v) => /dark/i.test(v.context)) ?? pair[1]!;
+        attach(name, light.value, row.length > 2 ? (row[row.length - 1] ?? '') : '', dark.value);
+        continue;
+      }
       const usable = (c: string, i: number) =>
         i !== darkColumn && decided(c) && (COLOR.test(c) || LENGTH.test(c));
       const value = row.slice(1).find((c, i) => usable(c, i + 1));

@@ -1050,7 +1050,12 @@ export function DocDrawer({
                   for (const same of [true, false])
                     for (const t of tokensRef.current) {
                       const row = t.table?.rows.find((r) =>
-                        r.some((c) => (same ? bare(c) === bare(needle) : c.includes(needle))),
+                        r.some((c) =>
+                          same
+                            ? // `--bg` (`--color-bg-main`): the name is the cell's first word.
+                              [bare(c), bare(c).split(/\s+/)[0]].includes(bare(needle))
+                            : c.includes(needle),
+                        ),
                       );
                       if (row) return { line: t.index, excerpt: row.join(' | ') };
                     }
@@ -1085,12 +1090,16 @@ export function DocDrawer({
                     rowOf(box).after(gap);
                   else row.after(gap);
                   gapRef.current = gap;
-                  // The panel's own colours, read here: the page has its own palette.
-                  const theme = getComputedStyle(document.documentElement);
+                  // The page has its own palette and may be in the other theme than the
+                  // panel: a see-through blue wash reads on both, the bar in the panel's blue.
+                  const blue = getComputedStyle(document.documentElement).getPropertyValue(
+                    '--blue',
+                  );
+                  const wash = `color-mix(in srgb, ${blue} 10%, transparent)`;
                   const was = [row.style.background, row.style.boxShadow];
-                  row.style.background = theme.getPropertyValue('--bg-hover');
+                  row.style.background = wash;
                   // Outside the row, to its left: the page gave the row no room for the bar.
-                  row.style.boxShadow = `-8px 0 0 ${theme.getPropertyValue('--bg-hover')}, -11px 0 0 ${theme.getPropertyValue('--blue')}`;
+                  row.style.boxShadow = `-8px 0 0 ${wash}, -11px 0 0 ${blue}`;
                   rowRef.current = {
                     el: row,
                     undo: () => ([row.style.background, row.style.boxShadow] = was),
