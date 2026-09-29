@@ -304,8 +304,8 @@ No fs-watch — the panel polls (docs 3s, transfer 4s, handshake 5s).
 | Route | Does |
 | --- | --- |
 | `GET /api/health` | ok · db path · the version actually **running** (the status bar's dot polls it) · `companion`, true while the menu bar app has polled in the last 30 s |
-| `GET /api/version` | current · newest on npm · whether the update strip shows |
-| `POST /api/version/update` | run `npm install -g kortext@latest` — always the release; a `tag` in the body is ignored, so a leftover beta walks back; 409 while a step runs — and while it runs, every other route but `/health` answers 409, so nothing reads or writes under a package being replaced |
+| `GET /api/version` | current · the channel this install follows · npm's `latest` and `beta` (a beta only while it is ahead of `latest`) · `offers`, what each channel would install here · `target`, the running channel's offer, which raises the update strip |
+| `POST /api/version/update` | `{channel?}` (older menu bar builds send `tag`) switches the channel, kept in `settings`; then runs `npm install -g kortext@<version>` for what the channel offers. Nothing newer — stable picked on a beta ahead of the release — only switches and answers `installed: null`: nothing is ever downgraded; 409 while a step runs — and while it runs, every other route but `/health` answers 409, so nothing reads or writes under a package being replaced |
 | `POST /api/quit` | stop the server (⏻ button, `--stop`); 409 while a step runs |
 | `GET \| POST /api/projects` | list (with per-group progress) · add (born paused; takes `model` and `effort` from the picker, checked against the CLI's spec) |
 | `DELETE /api/projects/:id` | unregister only; files untouched |
@@ -362,18 +362,24 @@ project yet: picks stay local and go with Initialize (`model` and `effort` in th
 The chrome around it. The **header** carries the wordmark (one PNG per theme), the no-CLI
 warning when there is nothing on the `PATH`, and at the far right one cycling **theme** button
 (auto → light → dark, remembered in `localStorage`, no attribute meaning auto). Under the heading of either screen the
-**update strip** appears only when npm's `latest` is newer than the running version and
+**update strip** appears only when the running channel offers something newer and
 kortext runs from a global install — one check owned by `App` (`useUpdate`), asked of
 `/api/version` on open and hourly, while the server asks the registry's dist-tags at most
 hourly; **Update now** calls `/api/version/update`, and afterwards the strip offers **Quit**
-(`/api/quit`), because the process on screen is still the old one. There is one channel, the
-release; `isNewer` still orders `beta.3 < beta.4 < 3.2.0`, so a leftover beta install is offered
-the release. The same slot carries the **companion strip** — "Kortext can live in your menu
+(`/api/quit`), because the process on screen is still the old one. Two channels, and the
+install follows the one prime picked (`settings.channel`; until a pick, a pre-release runs on
+beta). `offer()` decides what each would install: stable, the release when it is newer; beta,
+the beta while it is ahead of the release, else the release — so a beta user takes each
+release and stays on beta for the next one. `isNewer` orders `beta.3 < beta.4 < 3.2.0`, and a
+beta behind the release is never shown at all (the 3.3.0 bug: `3.2-beta9` offered on 3.3). The same slot carries the **companion strip** — "Kortext can live in your menu
 bar", **Download for macOS**, × — on a Mac, only while `/api/health` reports no companion, and
 never beside the update strip: one strip at a time, the update first. At the bottom, an application
 **status bar** (34px, never wrapping), two lines. The first names the running version —
-*Kortext 3.3*, the short form of `pretty()`; a press
-asks `/api/version?fresh=1` and says *up to date* for three seconds or raises the strip — and
+*Kortext 3.3*, the short form of `pretty()`; a press asks `/api/version?fresh=1` and opens
+the **version menu**: a *Stable* row and, while there is a beta ahead of the release or this
+install follows beta, a *Beta* row — each with npm's version and what a press does (*Update to
+…*, *Install …*, *up to date*, *Switch — the next release lands here*); ✓ marks the channel
+followed. A press on the other channel switches and installs its offer — and the ⏻ sits after it:
 the ⏻ button: green while `/api/health` answers, red the moment it stops and green again on
 its own when it comes back, two clicks to stop, no `confirm()`; the restart command follows as
 a click-to-copy chip once the server is down. The second line carries the
@@ -458,9 +464,13 @@ not answered, a spinner and *starting…* / *stopping…* stand in, disabled —
 the main thread so the panel never freezes), *open panel*, and the credit. The message cards
 act: *not running* starts the server, *no project* and *nothing waiting* open the panel. Settings,
 behind the wordmark or ⚙, one card of rows: launch at login,
-notifications, **Version** (the running version and whether npm's `latest` is it: *up to date*
-/ *update available*; a press installs the release through the daemon, restarts the server,
-then asks Sparkle about the app — release channel only, no beta), report an issue, support, quit. Under it the bar's twin: the theme cycles
+notifications, **Stable** and **Beta** — the panel's version menu as rows, from `/api/version`:
+npm's version on each channel and what a press does, ✓ on the channel followed, Beta only while
+a beta is ahead of the release or the server follows beta. A press sends `{channel}` to
+`/api/version/update` through the daemon, so a pick here is the panel's pick too; it installs,
+restarts the server, then asks Sparkle about the app — Sparkle allows the `beta` channel only
+while the server follows beta, so the app rides the package's channel — report an issue,
+support, quit. Under it the bar's twin: the theme cycles
 auto → light → dark where ⏻ was, the credit opposite. Everything pressable shows the hand
 cursor; SwiftUI's `Link` is inert in a non-activating panel, so links open by hand. After an
 install the app stops and restarts the server itself and waits for `/api/health` to answer.

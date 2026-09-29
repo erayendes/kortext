@@ -1496,6 +1496,31 @@ a.btn {
   gap: 10px;
   color: var(--fg-muted);
 }
+.kx-version-pop {
+  left: 0;
+  right: auto;
+}
+.kx-version-row {
+  align-items: baseline;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.kx-version-row svg {
+  flex: none;
+  align-self: center;
+  margin-right: -3px;
+  color: var(--fg-muted);
+}
+.kx-version-row:disabled {
+  cursor: default;
+}
+.kx-version-row:not(:disabled):hover .kx-made-pop-what {
+  color: var(--fg);
+}
 .kx-status-note {
   color: var(--fg-faint);
 }

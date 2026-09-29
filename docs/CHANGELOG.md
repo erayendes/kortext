@@ -4,8 +4,21 @@
 
 ## [Unreleased]
 
-- **No more beta offer.** The status bar no longer shows *Try beta version*; the panel follows
-  the stable release only. A beta install is offered the stable release as a normal update.
+## [3.3.2] — 2026-09-28
+
+- **Menu bar app: no stale beta against an older server.** Talking to a 3.3.0 server, the
+  app showed *Beta 3.2-beta9*; it now shows a beta only when the server says it is ahead of the
+  release.
+
+## [3.3.1] — 2026-09-28
+
+- **Pick your channel.** Click the version at the bottom left: it lists *Stable* and, when there
+  is one newer than the stable release, *Beta*. Pick one and Kortext installs it and keeps
+  following that channel. On beta you also get every stable release, and stay on beta for the
+  next one. Going back to stable never downgrades: it waits for the next stable release. The
+  menu bar app's settings show the same two rows; a pick in either is a pick in both.
+- **No stale beta.** A beta older than the stable release is no longer offered (3.3.0 showed
+  *Try beta version 3.2-beta9*).
 
 ## [3.3.0] — 2026-09-28
 

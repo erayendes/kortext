@@ -380,11 +380,15 @@ open and then hourly; the server asks npm at most hourly.
 **Status bar** (`.kx-statusbar`), 52px, never wrapping — an application's bar, not a web
 page's footer. On the left two stacked lines (`.kx-statusbar-lines`), one column under the
 product's own name. First line: `Kortext` and the running version in mono as one button
-that checks for updates; then the ⏻ button (`.kx-power`, armed state in red on the second
+that opens the version menu (the credit's popover, anchored left): *Stable* and, only while a
+beta is ahead of the release or this install follows beta, *Beta* — the channel's mark (an
+arrow into a circle, a flask), name, version in mono, and what a press does; ✓ on the channel
+followed. The menu bar app's settings carry the same two rows with the same SF Symbols. A beta behind the release is not news and never
+shows. Then the ⏻ button (`.kx-power`, armed state in red on the second
 click) and a note span that only carries words when the dot cannot say it (armed, error,
 stopped). Second line, at the same size: `Something wrong? Report an issue`, a link to the
 GitHub bug template with the running version already filled in; and `Like it? Support Kortext`.
-There is no beta channel to offer. On the right, the
+On the right, the
 credit: `milowda ♥ istanbul`, a button whose popover lists the other tools. Nothing in the bar
 is visible that is not true right now.
 

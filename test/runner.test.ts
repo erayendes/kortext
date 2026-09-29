@@ -420,6 +420,11 @@ test('a mid-run approval wakes the active chain and fills free pool slots', asyn
   setFrontmatterStatus(docPath(p, 'PRODUCT.md'), 'approved');
   // pre-write DESIGN as draft so only the STACK step is producible at loop start
   writeFileSync(docPath(p, 'DESIGN.md'), '---\nstatus: draft\nauthor: +mock\n---\n\n# D\n');
+  // Each run logs its start and end. STACK and STRUCTURE hold (up to 5s) until GROWTH has
+  // started, so GROWTH starting before either ends proves the approval woke the running
+  // chain; without the wake GROWTH waits for a finished step and the log says so.
+  const log = join(work, 'runs.log');
+  writeFileSync(log, '');
   const slow = join(work, 'slow.sh');
   writeFileSync(
     slow,
@@ -429,28 +434,36 @@ case "$prompt" in
   *readiness.json*) printf '{ "ready": true }\\n' > .kortext/.readiness.json; exit 0;;
 esac
 rel=$(printf '%s' "$prompt" | grep 'Produce EXACTLY' | sed 's/.*: \\.kortext\\///')
-sleep 0.6
+echo "start $rel" >> '${log}'
+i=0
+while [ "$rel" != GROWTH.md ] && ! grep -q '^start GROWTH.md' '${log}' && [ $i -lt 50 ]; do sleep 0.1; i=$((i+1)); done
 printf -- '---\\nstatus: draft\\nauthor: +mock\\n---\\n\\n# S\\n' > ".kortext/$rel"
+echo "end $rel" >> '${log}'
 `,
   );
   chmodSync(slow, 0o755);
   const engine = { id: 'slow', binary: slow, args: [], installHint: '' };
   const { advance } = await import('../server/runner.js');
 
-  const t0 = Date.now();
-  const loop = advance(db, p, engine, pkgRoot); // starts STACK + STRUCTURE (0.6s)
-  await new Promise((r) => setTimeout(r, 150));
+  const loop = advance(db, p, engine, pkgRoot); // starts STACK + STRUCTURE
+  for (let i = 0; i < 250 && !readFileSync(log, 'utf8').includes('start STACK.md'); i++) {
+    await new Promise((r) => setTimeout(r, 20));
+  }
   // mid-run: the DESIGN approval unlocks GROWTH; the nudge must start it NOW
   setFrontmatterStatus(docPath(p, 'DESIGN.md'), 'approved');
   await advance(db, p, engine, pkgRoot); // = kickChain from the approve route
   await loop;
-  const elapsed = Date.now() - t0;
   const done = listJobs(db, p.id)
     .filter((j) => j.status === 'done')
     .map((j) => j.doc_rel);
   assert.ok(done.includes('GROWTH.md'), `GROWTH should have run (done: ${done})`);
-  // sequential would be ≥1.2s (STACK finishes, then GROWTH); the wake overlaps them
-  assert.ok(elapsed < 1100, `expected overlap via wake (<1100ms), took ${elapsed}ms`);
+  const lines = readFileSync(log, 'utf8').trim().split('\n');
+  const growth = lines.indexOf('start GROWTH.md');
+  const stackEnd = lines.indexOf('end STACK.md');
+  assert.ok(
+    growth !== -1 && growth < stackEnd,
+    `GROWTH should start while STACK still runs, log was:\n${lines.join('\n')}`,
+  );
   rmSync(work, { recursive: true, force: true });
 });
 

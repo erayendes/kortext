@@ -13,7 +13,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var status: StatusController?
     private let model = Model()
     // Sparkle keeps the app current from macos/appcast.xml; the npm package keeps itself current through the daemon.
-    private lazy var updater = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+    private let channels = Channels()
+    private lazy var updater = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: channels, userDriverDelegate: nil)
 
     func applicationDidFinishLaunching(_ n: Notification) {
         applyTheme()
@@ -22,6 +23,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         model.start()
         status = StatusController(model: model, content: Popover().environmentObject(model))
     }
+
+    // Sparkle asks which channels count; the server's channel answers (Model keeps it in the defaults).
+final class Channels: NSObject, SPUUpdaterDelegate {
+    func allowedChannels(for updater: SPUUpdater) -> Set<String> {
+        UserDefaults.standard.bool(forKey: "beta") ? ["beta"] : []
+    }
+}
 
 // The panel's one setting: auto follows the OS, light and dark override it — app-wide, so the token colours resolve.
     private func applyTheme() {
@@ -368,9 +376,11 @@ struct SettingsView: View {
                     notifications.toggle()
                     if notifications { model.ensureNotifications() }
                 }
-                // One row: the running version and whether npm has a newer release; the press installs it.
-                Row(icon: "arrow.down.circle", title: "Version",
-                    sub: [model.version.map(pretty), model.status].compactMap { $0 }.joined(separator: " · ")) { model.pick() }
+                // Stable and Beta, as the panel's version menu; ✓ on the channel followed.
+                ForEach(model.channels, id: \.self) { ch in
+                    Row(icon: ch == "beta" ? "flask" : "arrow.down.circle", title: ch == "beta" ? "Beta" : "Stable",
+                        sub: model.line(ch), on: ch == model.channel) { model.pick(ch) }
+                }
                 Row(icon: "ladybug", title: "Report an issue") {
                     var u = "https://github.com/erayendes/kortext/issues/new?template=bug_report.yml"
                     if let v = model.version { u += "&version=\(v)" }

@@ -36,6 +36,7 @@ import {
   detectEngines,
   engineFor,
   forgetDetectedEngines,
+  getSetting,
   onPath,
   selectedEngine,
   setSetting,
@@ -65,7 +66,7 @@ import {
 import { isChecking, readReadiness } from './readiness.js';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { logRootDir, type Project } from './db.js';
-import { distTags, isNewer, selfUpdate } from './update.js';
+import { distTags, isNewer, offer, selfUpdate, type Channel } from './update.js';
 
 // A model name rides on the CLI's command line, through a shell on Windows:
 // letters, digits and the few marks the pickers use, nothing a shell reads.
@@ -156,28 +157,45 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
   // Offer self-update only for package paths under node_modules, excluding normal dev checkouts.
   const managed = pkgRoot.includes(`${sep}node_modules${sep}`);
 
-  // The newest release, and whether this one is behind it; `?fresh=1` skips the hour's cache.
+  // The channel prime picked; until one is picked, the running version says — a pre-release is beta.
+  const channel = (): Channel =>
+    (getSetting(db, 'channel') as Channel | null) ?? (version.includes('-') ? 'beta' : 'latest');
+
+  // Both channels and what each would install here; `?fresh=1` skips the hour's cache. A beta
+  // behind the release is no beta at all — it is never shown.
   app.get('/api/version', async (req, res) => {
     const tags = managed ? await distTags(req.query.fresh === '1') : {};
+    const offers = { latest: offer('latest', tags, version), beta: offer('beta', tags, version) };
+    const target = offers[channel()];
     res.json({
       current: version,
+      channel: channel(),
       latest: tags.latest ?? null,
-      stale: !!tags.latest && isNewer(tags.latest, version),
+      beta: tags.beta && (!tags.latest || isNewer(tags.beta, tags.latest)) ? tags.beta : null,
+      offers,
+      target,
+      stale: !!target,
     });
   });
 
   // Installing replaces files on disk; the running process keeps its boot-time version until restarted.
-  app.post('/api/version/update', async (_req, res) => {
+  // `channel` switches first (the menu bar app's older builds call it `tag`), then whatever the
+  // channel offers is installed. Nothing newer — stable picked from a beta ahead of the
+  // release — only switches: the next release lands here, nothing is downgraded.
+  app.post('/api/version/update', async (req, res) => {
     if (!managed) return res.status(400).json({ error: 'not an npm install — update it yourself' });
+    const picked = req.body?.channel ?? req.body?.tag;
+    if (picked === 'latest' || picked === 'beta') setSetting(db, 'channel', picked);
+    const want = offer(channel(), await distTags(true), version);
+    if (!want) return res.json({ ok: true, installed: null });
     // Wait for active work before npm replaces files read by the runner.
     if (stepRunning()) {
       return res.status(409).json({ error: 'a step is running — wait for it, then update' });
     }
     updating = true;
     try {
-      // Always the release: a `tag` the menu bar app still sends is ignored, and a beta walks back.
-      const result = await selfUpdate();
-      res.status(result.ok ? 200 : 500).json(result);
+      const result = await selfUpdate(want);
+      res.status(result.ok ? 200 : 500).json({ ...result, installed: result.ok ? want : null });
     } finally {
       updating = false;
     }

@@ -15,7 +15,20 @@ struct Doc: Decodable, Identifiable {
     var id: String { rel }
 }
 struct Readiness: Decodable { let ready: Bool; let questions: [String] }
-struct Version: Decodable { let current: String; let latest: String?; let stale: Bool }
+struct Version: Decodable {
+    let current: String; let latest: String?; let stale: Bool
+    // `channel` and `offers` are absent on a server before 3.3.1, which only knows the release
+    // and hands its `beta` over as npm has it — even a beta behind the release (3.2-beta9 on 3.3).
+    let channel: String?; let beta: String?; let offers: [String: String?]?
+    /// The beta worth showing: a newer server sends one only while it is ahead of the release;
+    /// an older one cannot be trusted with it.
+    var newBeta: String? { offers == nil ? nil : beta }
+    /// What picking `channel` would install here; nil = nothing newer.
+    func offer(_ channel: String) -> String? {
+        if let offers { return offers[channel] ?? nil }
+        return channel == "latest" && stale ? latest : nil
+    }
+}
 
 enum Api {
     static let base = URL(string: "http://127.0.0.1:3441")!
@@ -42,13 +55,14 @@ enum Api {
         struct R: Decodable { let docs: [Doc] }
         return try await get("/api/projects/\(id)/docs", R.self).docs
     }
-    static func version() async throws -> Version { try await get("/api/version", Version.self) }
-    /// npm's dist-tags, asked of the registry itself — the daemon only knows `latest`.
-    static func distTags() async -> [String: String] {
-        var req = URLRequest(url: URL(string: "https://registry.npmjs.org/-/package/kortext/dist-tags")!)
-        req.timeoutInterval = 5
-        guard let (d, _) = try? await URLSession.shared.data(for: req) else { return [:] }
-        return (try? JSONDecoder().decode([String: String].self, from: d)) ?? [:]
+    /// `fresh` makes the server ask npm now, which can take its own few seconds.
+    static func version(fresh: Bool = false) async throws -> Version {
+        var url = base.appending(path: "/api/version")
+        if fresh { url.append(queryItems: [URLQueryItem(name: "fresh", value: "1")]) }
+        var req = URLRequest(url: url)
+        req.timeoutInterval = 8
+        let (data, _) = try await URLSession.shared.data(for: req)
+        return try JSONDecoder().decode(Version.self, from: data)
     }
     @discardableResult
     static func post(_ path: String, _ body: [String: Any] = [:]) async throws -> Bool {
