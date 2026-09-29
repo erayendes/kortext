@@ -798,6 +798,7 @@ a.btn {
 .dr-body-preview {
   padding: 0;
   overflow: hidden;
+  position: relative;
   display: flex;
   flex-direction: column;
 }
@@ -818,17 +819,21 @@ a.btn {
   padding: 12px 20px;
   border-top: 1px solid var(--border);
 }
+/* In the preview: floats at the selection, over the page. */
+.kx-ask-inline {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  max-height: 45%;
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);
+}
 .dr-foot > .kx-ask-box {
   max-height: 40vh;
   padding: 0;
   border-top: 0;
-}
-.kx-preview-quote {
-  font-size: 13px;
-  color: var(--fg-muted);
-  border-left: 2px solid var(--border);
-  padding-left: 8px;
-  margin-bottom: 8px;
 }
 
 /* Define hover styling per variant to avoid base-rule overrides. */

@@ -176,6 +176,9 @@ export function DocDrawer({
   // Text selected in the preview: asked about like a line. `line` is the block of
   // DESIGN.md that holds it, when one does; -1 when the page drew it from elsewhere.
   const [pick, setPick] = useState<{ line: number; text: string } | null>(null);
+  // Where the box sits: under the selection, or over it when there is no room
+  // left beneath. Measured again as the page scrolls, so it stays with the text.
+  const [pickAt, setPickAt] = useState<{ top?: number; bottom?: number }>({});
   // A question about the whole document, no line picked: its thread sits in the footer.
   const [whole, setWhole] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -976,21 +979,39 @@ export function DocDrawer({
               src={`/api/projects/${project.id}/docs/design-preview`}
               onLoad={(e) => {
                 setPick(null);
-                const win = e.currentTarget.contentWindow;
+                const frame = e.currentTarget;
+                const win = frame.contentWindow;
+                if (!win) return;
+                let range: Range | null = null;
+                const place = () => {
+                  if (!range) return;
+                  const r = range.getBoundingClientRect();
+                  const f = frame.getBoundingClientRect();
+                  const body = frame.parentElement!.getBoundingClientRect();
+                  const y = f.top - body.top;
+                  setPickAt(
+                    r.bottom + 180 < f.height
+                      ? { top: y + r.bottom + 6 }
+                      : { bottom: body.height - (y + r.top) + 6 },
+                  );
+                };
                 // Same origin: the selection is read straight out of the page.
-                win?.document.addEventListener('mouseup', () => {
-                  const text = (win.getSelection()?.toString() ?? '').replace(/\s+/g, ' ').trim();
-                  if (!text) return;
+                win.document.addEventListener('mouseup', () => {
+                  const sel = win.getSelection();
+                  const text = (sel?.toString() ?? '').replace(/\s+/g, ' ').trim();
+                  if (!sel || !text) return;
+                  range = sel.getRangeAt(0).cloneRange();
+                  place();
                   const hit = tokensRef.current.find((t) => t.text.includes(text));
                   setExplains((xs) => xs.filter((x) => x.line !== -1));
                   setPick({ line: hit?.index ?? -1, text: text.slice(0, 300) });
                 });
+                win.addEventListener('scroll', place);
               }}
             />
           )}
           {preview && pick && (
-            <div className="kx-ask-box">
-              <div className="kx-preview-quote">{pick.text}</div>
+            <div className="kx-ask-box kx-ask-inline" style={pickAt}>
               <LineThread
                 thread={explains.filter((x) => x.line === pick.line)}
                 active
@@ -1192,7 +1213,9 @@ export function DocDrawer({
             </div>
           </div>
         )}
-        {!editing && !preview && doc.status !== 'uninitialized' && (
+        {/* The footer stays under the preview too: whole-document Ask, and the
+            notes taken on the drawn page, visible where they were taken. */}
+        {!editing && doc.status !== 'uninitialized' && (
           <div className="dr-foot">
             {whole && (
               <div className="kx-ask-box">
