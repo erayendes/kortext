@@ -1043,13 +1043,20 @@ export function DocDrawer({
                     '--blue',
                   );
                   const wash = `color-mix(in srgb, ${blue} 10%, transparent)`;
-                  const was = [head.style.background, head.style.boxShadow];
-                  head.style.background = wash;
-                  // Outside the heading, to its left: the page gave it no room for the bar.
-                  head.style.boxShadow = `-8px 0 0 ${wash}, -11px 0 0 ${blue}`;
+                  const was = [
+                    head.style.background,
+                    head.style.paddingLeft,
+                    head.style.marginLeft,
+                  ];
+                  // Widened 8px to the left, text kept in place: a 3px bar, then the wash.
+                  head.style.background = `linear-gradient(90deg, ${blue} 0 3px, ${wash} 3px)`;
+                  head.style.paddingLeft = '8px';
+                  head.style.marginLeft = '-8px';
                   rowRef.current = {
                     el: head,
-                    undo: () => ([head.style.background, head.style.boxShadow] = was),
+                    undo: () =>
+                      ([head.style.background, head.style.paddingLeft, head.style.marginLeft] =
+                        was),
                   };
                   const title = head.textContent?.trim() ?? '';
                   const desc = head.nextElementSibling?.matches('p.desc')
