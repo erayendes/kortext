@@ -804,7 +804,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
           );
           return found ? { ...found, note: String(r.note ?? '').trim() } : undefined;
         })
-        .filter((r): r is { from: string; reason: string; note: string } => !!r);
+        .filter((r): r is { from: string; reason: string; note: string; pending?: true } => !!r);
     const applying = pick(apply);
     const denying = pick(deny);
     const said = (Array.isArray(answers) ? answers : []).map(String).filter((a) => a.trim());
@@ -829,6 +829,11 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       return res.status(409).json({ error: 'there is nothing left to settle here' });
     }
     for (const r of discarding) discardOutgoing(project, doc.rel, r.target, r.reason);
+    // Accepted here while still waiting in its author's draft: file it here
+    // now, so the author stops offering it while this document is rewritten.
+    // A pending denial needs nothing — `markRequestHandled` settles the author.
+    for (const r of applying.filter((a) => a.pending))
+      deliverRequests(project, r.from, [{ target: doc.rel, reason: r.reason }]);
     // Accepted where it was asked: the line lands at the target with that
     // written under it, and the target opens with it already ticked. Prime
     // decided once; the target's own Apply carries it into one rewrite with

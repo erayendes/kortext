@@ -512,15 +512,38 @@ test('a change request does not leave its document until prime approves it', () 
   writeFileSync(docPath(p, 'SECURITY.md'), `---\nstatus: draft\n---\n\n${body}`, 'utf8');
 
   // Prime may still edit the draft and delete the reason, so it has not been
-  // asked for yet — it waits in the body where prime reads it before approving.
+  // sent yet — it waits in the body. The target shows it too, marked pending,
+  // so prime can decide it there before rewriting the target.
   const inbox = (rel: string) =>
     listDocs(db, p, pkgRoot).find((d) => d.rel === rel)!.revisionRequests;
-  assert.deepEqual(inbox('ENVIRONMENT.md'), []);
+  assert.deepEqual(inbox('ENVIRONMENT.md'), [
+    { from: 'SECURITY.md', reason: 'the logs must go', pending: true },
+  ]);
+  assert.match(readFileSync(docPath(p, 'SECURITY.md'), 'utf8'), /the logs must go/);
 
   setFrontmatterStatus(docPath(p, 'SECURITY.md'), 'approved');
   assert.deepEqual(inbox('ENVIRONMENT.md'), [{ from: 'SECURITY.md', reason: 'the logs must go' }]);
   // …and it travelled: the draft's own line is gone from SECURITY.md.
   assert.doesNotMatch(readFileSync(docPath(p, 'SECURITY.md'), 'utf8'), /the logs must go/);
+});
+
+test('a request still in its author draft is decided at its target, once', () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Early', repoPath: join(work, 'early') }, pkgRoot);
+  writeFileSync(docPath(p, 'STACK.md'), '---\nstatus: approved\n---\n\n# Stack\n', 'utf8');
+  const body = '## Change Requests\n\n- `STACK.md` — pin node 22\n- `STACK.md` — drop redis\n';
+  writeFileSync(docPath(p, 'STRUCTURE.md'), `---\nstatus: draft\n---\n\n${body}`, 'utf8');
+  const doc = (rel: string) => listDocs(db, p, pkgRoot).find((d) => d.rel === rel)!;
+
+  // STACK is back in front of prime, before its rewrite, not after.
+  assert.equal(doc('STACK.md').section, 'needs');
+  // Accepted and written at STACK, denied at STACK: STRUCTURE has nothing left to send.
+  removeRequest(p, 'STACK.md', 'STRUCTURE.md', 'pin node 22');
+  markRequestHandled(p, 'STACK.md', 'STRUCTURE.md', 'drop redis', 'redis stays');
+  assert.deepEqual(doc('STRUCTURE.md').outgoing, []);
+  assert.deepEqual(doc('STACK.md').revisionRequests, []);
+  assert.deepEqual(doc('STACK.md').denied, [{ from: 'STRUCTURE.md', reason: 'drop redis' }]);
 });
 
 test('a decision is the record, and it holds nothing up', () => {
