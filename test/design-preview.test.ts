@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { contrast, parseDesignTokens, renderDesignPreview } from '../server/design-preview.js';
+import { contrast, parseDesignTokens, renderDesignPreview, typeRows } from '../server/design-preview.js';
 
 const filled = `---
 status: draft
@@ -165,4 +165,38 @@ test('a declared dark palette repaints the swatches, not only the chrome', () =>
   const html = renderDesignPreview(withDark, 'demo');
   assert.doesNotMatch(html, /declares no dark palette/);
   assert.match(html, /:root\[data-theme="dark"\][^}]*#101013/);
+});
+
+test('a type role written for two contexts is two rows, each at its own size', () => {
+  const [marketing, app] = typeRows({
+    role: '`H1`',
+    family: '`var(--font-sans)`',
+    size: '`40px` (Marketing) / `21px` (`--fs-title` App)',
+    lineHeight: '`1.2`',
+    weight: '`700` (Marketing) / `600` (App)',
+    tracking: '`-0.02em`',
+  });
+  assert.deepEqual(marketing, {
+    role: 'H1',
+    context: 'Marketing',
+    token: '',
+    size: '40px',
+    weight: '700',
+    lineHeight: '1.2',
+    tracking: '-0.02em',
+  });
+  assert.deepEqual(
+    [app?.context, app?.token, app?.size, app?.weight],
+    ['App', '--fs-title', '21px', '600'],
+  );
+  // One context and no split: one row, the token still read.
+  const [small] = typeRows({
+    role: 'Small',
+    family: '',
+    size: '`12px` (`--fs-label`)',
+    lineHeight: '1.4',
+    weight: '400',
+    tracking: '',
+  });
+  assert.deepEqual([small?.context, small?.token, small?.size], ['', '--fs-label', '12px']);
 });

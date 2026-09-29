@@ -182,7 +182,7 @@ export function DocDrawer({
   const [pickAt, setPickAt] = useState<{ top: number; left: number; width: number } | null>(null);
   const gapRef = useRef<HTMLElement | null>(null);
   // The selected row, marked as a selected line of the document is; `undo` puts it back.
-  const rowRef = useRef<{ undo: () => void } | null>(null);
+  const rowRef = useRef<{ el: HTMLElement; undo: () => void } | null>(null);
   const placeRef = useRef(() => {});
   const boxRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -1041,22 +1041,27 @@ export function DocDrawer({
                     width: r.width,
                   });
                 };
-                // Same origin: the selection is read straight out of the page.
-                page.addEventListener('mouseup', () => {
-                  const sel = win.getSelection();
-                  const text = (sel?.toString() ?? '').replace(/\s+/g, ' ').trim();
-                  if (!sel || !text) return;
+                // The block of DESIGN.md a row or a selection comes from. A table is
+                // one block whose text is empty: its cells are searched instead.
+                const blockOf = (needle: string) => {
+                  // A cell that is the needle before one that merely mentions it.
+                  const bare = (c: string) => c.replace(/`/g, '').trim();
+                  for (const same of [true, false])
+                    for (const t of tokensRef.current) {
+                      const row = t.table?.rows.find((r) =>
+                        r.some((c) => (same ? bare(c) === bare(needle) : c.includes(needle))),
+                      );
+                      if (row) return { line: t.index, excerpt: row.join(' | ') };
+                    }
+                  const t = tokensRef.current.find((b) => b.text.includes(needle));
+                  return t ? { line: t.index, excerpt: t.text } : null;
+                };
+                // Marks the row as a picked line of the document is, opens the gap
+                // under it, and asks about `excerpt` — the source when one was found.
+                const open = (row: HTMLElement, needle: string, shown: string) => {
                   gapRef.current?.remove();
                   rowRef.current?.undo();
                   const gap = page.createElement('div');
-                  // A triple click ends the range at offset 0 of the next row: that
-                  // row holds none of the text, so the row is where it began.
-                  const r = sel.getRangeAt(0);
-                  const end =
-                    r.endOffset === 0 && r.endContainer !== r.startContainer
-                      ? r.startContainer
-                      : r.endContainer;
-                  const row = rowOf(end) as HTMLElement;
                   row.after(gap);
                   gapRef.current = gap;
                   // The panel's own colours, read here: the page has its own palette.
@@ -1066,11 +1071,44 @@ export function DocDrawer({
                   // Outside the row, to its left: the page gave the row no room for the bar.
                   row.style.boxShadow = `-8px 0 0 ${theme.getPropertyValue('--bg-hover')}, -11px 0 0 ${theme.getPropertyValue('--blue')}`;
                   rowRef.current = {
+                    el: row,
                     undo: () => ([row.style.background, row.style.boxShadow] = was),
                   };
-                  const hit = tokensRef.current.find((t) => t.text.includes(text));
+                  const hit = blockOf(needle);
                   setExplains((xs) => xs.filter((x) => x.line !== -1));
-                  setPick({ line: hit?.index ?? -1, text: text.slice(0, 300) });
+                  setPick({
+                    line: hit?.line ?? -1,
+                    text: (shown || hit?.excerpt || '').slice(0, 300),
+                  });
+                };
+                // Rows drawn from a token answer to a click, as lines of the document do.
+                const hover = page.createElement('style');
+                hover.textContent =
+                  '[data-src]{cursor:pointer}[data-src]:hover{background:rgb(127 127 127 / 0.06)}';
+                page.head.append(hover);
+                // Same origin: the selection is read straight out of the page.
+                page.addEventListener('mouseup', () => {
+                  const sel = win.getSelection();
+                  const text = (sel?.toString() ?? '').replace(/\s+/g, ' ').trim();
+                  if (!sel || !text) return;
+                  // A triple click ends the range at offset 0 of the next row: that
+                  // row holds none of the text, so the row is where it began.
+                  const r = sel.getRangeAt(0);
+                  const end =
+                    r.endOffset === 0 && r.endContainer !== r.startContainer
+                      ? r.startContainer
+                      : r.endContainer;
+                  const el = end.nodeType === 1 ? (end as Element) : end.parentElement!;
+                  const row = (el.closest('[data-src]') ?? rowOf(end)) as HTMLElement;
+                  open(row, text, text);
+                });
+                page.addEventListener('click', (ev) => {
+                  if ((win.getSelection()?.toString() ?? '').trim()) return;
+                  const row = (ev.target as Element).closest<HTMLElement>('[data-src]');
+                  if (!row) return;
+                  // A second click on the picked row closes it, as on a line.
+                  if (rowRef.current?.el === row) return setPick(null);
+                  open(row, row.dataset.src ?? '', '');
                 });
                 win.addEventListener('scroll', () => placeRef.current());
               }}
