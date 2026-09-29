@@ -819,11 +819,9 @@ a.btn {
   padding: 12px 20px;
   border-top: 1px solid var(--border);
 }
-/* In the preview: floats at the selection, over the page. */
+/* In the preview: sits over a gap opened in the page under the selected row. */
 .kx-ask-inline {
   position: absolute;
-  left: 16px;
-  right: 16px;
   max-height: 45%;
   background: var(--bg);
   border: 1px solid var(--border-strong);
