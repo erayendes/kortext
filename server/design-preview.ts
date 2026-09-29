@@ -351,7 +351,7 @@ function colorSection(
   const cards = painted
     .map(({ token, ref }) => {
       const darkValue = token.dark ?? token.value;
-      return `<div class="tok" data-src="${esc(token.name)}">
+      return `<div class="tok">
         <div class="chip" style="background:${ref}"></div>
         <div class="tk">
           <b>${esc(token.name)}</b>
@@ -429,7 +429,7 @@ function typeSection(type: TypeRole[], fonts: Token[]): string {
     .flatMap((r) =>
       typeRows(r).map((v) => {
         const style = `font-family:${esc(family(r.family))};font-size:${esc(safe(v.size) ?? '16px')};line-height:${esc(safe(v.lineHeight) ?? '1.5')};font-weight:${esc(safe(v.weight) ?? '400')};letter-spacing:${esc(safe(v.tracking) ?? 'normal')}`;
-        return `<div class="spec" data-src="${esc(r.role)}">
+        return `<div class="spec">
         <div class="tag"><b>${esc(v.role)}</b>${v.context ? `<span>· ${esc(v.context)}</span>` : ''}${v.token ? `<code>${esc(v.token)}</code>` : ''}<span class="nums">${esc([v.size, v.weight, v.lineHeight].filter(Boolean).join(' / '))}</span></div>
         <div class="sample" style="${style}">Grumpy wizards make toxic brew — 0123</div>
       </div>`;
@@ -453,7 +453,7 @@ function scaleSection(title: string, tokens: Token[], kind: 'bar' | 'box' | 'lis
           : kind === 'box'
             ? `<div class="box" style="border-radius:${esc(value)}"></div>`
             : `<span class="note">${esc(t.note)}</span>`;
-      return `<div class="scale-row" data-src="${esc(t.name)}"><code>${esc(t.name)}</code><span class="val">${esc(t.value)}</span>${demo}</div>`;
+      return `<div class="scale-row"><code>${esc(t.name)}</code><span class="val">${esc(t.value)}</span>${demo}</div>`;
     })
     .join('');
   return `<section><h2>${esc(title)}</h2><div class="surface">${items}</div></section>`;
@@ -465,7 +465,7 @@ function shadowSection(shadows: Token[]): string {
     .map((t) => {
       const value = safe(t.value);
       if (!value) return '';
-      return `<div class="shadow-cell" data-src="${esc(t.name)}"><div class="shadow-box" style="box-shadow:${esc(value)}"></div><code>${esc(t.name)}</code></div>`;
+      return `<div class="shadow-cell"><div class="shadow-box" style="box-shadow:${esc(value)}"></div><code>${esc(t.name)}</code></div>`;
     })
     .join('');
   return `<section><h2>Elevation</h2><div class="surface grid">${items}</div></section>`;

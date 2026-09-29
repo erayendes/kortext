@@ -1010,26 +1010,6 @@ export function DocDrawer({
                 const win = frame.contentWindow;
                 if (!win) return;
                 const page = win.document;
-                // The row the selection sits in: the first ancestor that is one of a
-                // stack of blocks, so the gap opens under the whole row, not in a cell.
-                const rowOf = (node: Node) => {
-                  let el = node.nodeType === 1 ? (node as Element) : node.parentElement!;
-                  while (el.parentElement && el.parentElement !== page.body) {
-                    const p = win.getComputedStyle(el.parentElement);
-                    const stacks =
-                      ['block', 'flow-root', 'list-item'].includes(p.display) ||
-                      (p.display.endsWith('flex') && p.flexDirection.startsWith('column')) ||
-                      (p.display.endsWith('grid') && p.gridTemplateColumns.split(' ').length === 1);
-                    if (
-                      stacks &&
-                      el.parentElement.children.length > 1 &&
-                      win.getComputedStyle(el).display !== 'inline'
-                    )
-                      return el;
-                    el = el.parentElement;
-                  }
-                  return el;
-                };
                 placeRef.current = () => {
                   const gap = gapRef.current;
                   if (!gap) return;
@@ -1042,53 +1022,20 @@ export function DocDrawer({
                     width: r.width,
                   });
                 };
-                // The block of DESIGN.md a row or a selection comes from. A table is
-                // one block whose text is empty: its cells are searched instead.
-                const blockOf = (needle: string) => {
-                  // A cell that is the needle before one that merely mentions it.
-                  const bare = (c: string) => c.replace(/`/g, '').trim();
-                  for (const same of [true, false])
-                    for (const t of tokensRef.current) {
-                      const row = t.table?.rows.find((r) =>
-                        r.some((c) =>
-                          same
-                            ? // `--bg` (`--color-bg-main`): the name is the cell's first word.
-                              [bare(c), bare(c).split(/\s+/)[0]].includes(bare(needle))
-                            : c.includes(needle),
-                        ),
-                      );
-                      if (row) return { line: t.index, excerpt: row.join(' | ') };
-                    }
-                  const t = tokensRef.current.find((b) => b.text.includes(needle));
-                  return t ? { line: t.index, excerpt: t.text } : null;
-                };
-                // Marks the row as a picked line of the document is, opens the gap
-                // under it, and asks about `excerpt` — the source when one was found.
-                const open = (row: HTMLElement, needle: string, shown: string) => {
+                // Only a section's heading is picked: the talk is about the section as
+                // a whole — Components, Color — never one card or row of it.
+                const hover = page.createElement('style');
+                hover.textContent = 'section>h2{cursor:pointer}section>h2:hover{color:var(--ink)}';
+                page.head.append(hover);
+                page.addEventListener('click', (ev) => {
+                  const head = (ev.target as Element).closest<HTMLElement>('section > h2');
+                  if (!head) return;
+                  // A second click on the picked heading closes it, as on a line.
+                  if (rowRef.current?.el === head) return setPick(null);
                   gapRef.current?.remove();
                   rowRef.current?.undo();
                   const gap = page.createElement('div');
-                  // Cells side by side — colour cards, shadows — take the gap as a
-                  // full-width line after the last cell beside the picked one, so it
-                  // opens under their row rather than as one more cell in it.
-                  const box = row.parentElement!;
-                  const lay = win.getComputedStyle(box);
-                  const grid = lay.display.endsWith('grid');
-                  const wraps = lay.display.endsWith('flex') && lay.flexWrap !== 'nowrap';
-                  if (grid || wraps) {
-                    const top = row.getBoundingClientRect().top;
-                    let last: Element = row;
-                    while (last.nextElementSibling?.getBoundingClientRect().top === top)
-                      last = last.nextElementSibling;
-                    if (grid) gap.style.gridColumn = '1 / -1';
-                    else gap.style.flexBasis = '100%';
-                    last.after(gap);
-                  } else if (
-                    lay.display.endsWith('flex') &&
-                    !lay.flexDirection.startsWith('column')
-                  )
-                    rowOf(box).after(gap);
-                  else row.after(gap);
+                  head.after(gap);
                   gapRef.current = gap;
                   // The page has its own palette and may be in the other theme than the
                   // panel: a see-through blue wash reads on both, the bar in the panel's blue.
@@ -1096,49 +1043,29 @@ export function DocDrawer({
                     '--blue',
                   );
                   const wash = `color-mix(in srgb, ${blue} 10%, transparent)`;
-                  const was = [row.style.background, row.style.boxShadow];
-                  row.style.background = wash;
-                  // Outside the row, to its left: the page gave the row no room for the bar.
-                  row.style.boxShadow = `-8px 0 0 ${wash}, -11px 0 0 ${blue}`;
+                  const was = [head.style.background, head.style.boxShadow];
+                  head.style.background = wash;
+                  // Outside the heading, to its left: the page gave it no room for the bar.
+                  head.style.boxShadow = `-8px 0 0 ${wash}, -11px 0 0 ${blue}`;
                   rowRef.current = {
-                    el: row,
-                    undo: () => ([row.style.background, row.style.boxShadow] = was),
+                    el: head,
+                    undo: () => ([head.style.background, head.style.boxShadow] = was),
                   };
-                  const hit = blockOf(needle);
+                  const title = head.textContent?.trim() ?? '';
+                  const desc = head.nextElementSibling?.matches('p.desc')
+                    ? head.nextElementSibling.textContent?.trim()
+                    : '';
+                  // The DESIGN.md heading the section is drawn from, when one names it;
+                  // Components has none — it is built from the tokens.
+                  const hit = tokensRef.current.find(
+                    (t) =>
+                      /^h[1-4]$/.test(t.kind) && t.text.toLowerCase().includes(title.toLowerCase()),
+                  );
                   setExplains((xs) => xs.filter((x) => x.line !== -1));
                   setPick({
-                    line: hit?.line ?? -1,
-                    text: (shown || hit?.excerpt || '').slice(0, 300),
+                    line: hit?.index ?? -1,
+                    text: `The preview's ${title} section${desc ? ` — ${desc}` : ''}`.slice(0, 300),
                   });
-                };
-                // Rows drawn from a token answer to a click, as lines of the document do.
-                const hover = page.createElement('style');
-                hover.textContent =
-                  '[data-src]{cursor:pointer}[data-src]:hover{background:rgb(127 127 127 / 0.06)}';
-                page.head.append(hover);
-                // Same origin: the selection is read straight out of the page.
-                page.addEventListener('mouseup', () => {
-                  const sel = win.getSelection();
-                  const text = (sel?.toString() ?? '').replace(/\s+/g, ' ').trim();
-                  if (!sel || !text) return;
-                  // A triple click ends the range at offset 0 of the next row: that
-                  // row holds none of the text, so the row is where it began.
-                  const r = sel.getRangeAt(0);
-                  const end =
-                    r.endOffset === 0 && r.endContainer !== r.startContainer
-                      ? r.startContainer
-                      : r.endContainer;
-                  const el = end.nodeType === 1 ? (end as Element) : end.parentElement!;
-                  const row = (el.closest('[data-src]') ?? rowOf(end)) as HTMLElement;
-                  open(row, text, text);
-                });
-                page.addEventListener('click', (ev) => {
-                  if ((win.getSelection()?.toString() ?? '').trim()) return;
-                  const row = (ev.target as Element).closest<HTMLElement>('[data-src]');
-                  if (!row) return;
-                  // A second click on the picked row closes it, as on a line.
-                  if (rowRef.current?.el === row) return setPick(null);
-                  open(row, row.dataset.src ?? '', '');
                 });
                 win.addEventListener('scroll', () => placeRef.current());
               }}
@@ -1508,7 +1435,9 @@ export function DocDrawer({
               <span className="kx-cmd-hint">
                 {actionNeeded
                   ? 'Pick a row above, or click a line of the document — what you decide collects here.'
-                  : 'Click a line to ask about it or note it — or Ask below about the whole document.'}
+                  : preview
+                    ? 'Click a section heading to talk about that section — or Ask below about the whole document.'
+                    : 'Click a line to ask about it or note it — or Ask below about the whole document.'}
               </span>
             )}
             <div className="kx-note-input">
