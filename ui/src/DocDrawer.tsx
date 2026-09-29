@@ -935,13 +935,14 @@ export function DocDrawer({
           </div>
           <div className="dr-actions">
             {/* The design is looked at often: its preview sits in view, not in the menu. */}
-            {!editing && doc.status !== 'uninitialized' && doc.rel === 'DESIGN.md' && (
+            {/* In the preview only Close shows, and it goes back to the document. */}
+            {!editing && !preview && doc.status !== 'uninitialized' && doc.rel === 'DESIGN.md' && (
               <button className="btn btn-secondary" onClick={doPreview}>
-                {preview ? 'Document' : 'Preview'}
+                Preview
               </button>
             )}
             {/* What is done to the document rather than decided about it. */}
-            {!editing && doc.status !== 'uninitialized' && (
+            {!editing && !preview && doc.status !== 'uninitialized' && (
               <div className="kx-menu" ref={menuRef}>
                 <button
                   className="btn btn-secondary kx-menu-btn"
