@@ -357,11 +357,17 @@ function colorSection(
 export function variants(cell: string): Array<{ value: string; context: string; token: string }> {
   return cell
     .split(/\s+\/\s+/)
-    .map((part) => ({
-      value: unwrap(part.replace(/\([^)]*\)/g, '')),
-      context: (part.match(/\(([^)]*)\)/)?.[1] ?? '').replace(/`?--[\w-]+`?/g, '').trim(),
-      token: part.match(/--[\w-]+/)?.[0] ?? '',
-    }))
+    .map((part) => {
+      // A context is a word — (Marketing), (App). `(11px – 14px)` is a note on
+      // the value, and stays with it.
+      const context = (part.match(/\(([^)]*)\)/)?.[1] ?? '').replace(/`?--[\w-]+`?/g, '').trim();
+      const word = /^[\p{L} /&-]*$/u.test(context);
+      return {
+        value: unwrap(word ? part.replace(/\([^)]*\)/g, '') : part).replace(/`/g, ''),
+        context: word ? context : '',
+        token: part.match(/--[\w-]+/)?.[0] ?? '',
+      };
+    })
     .filter((v) => v.value);
 }
 

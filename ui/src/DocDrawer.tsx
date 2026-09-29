@@ -1062,7 +1062,27 @@ export function DocDrawer({
                   gapRef.current?.remove();
                   rowRef.current?.undo();
                   const gap = page.createElement('div');
-                  row.after(gap);
+                  // Cells side by side — colour cards, shadows — take the gap as a
+                  // full-width line after the last cell beside the picked one, so it
+                  // opens under their row rather than as one more cell in it.
+                  const box = row.parentElement!;
+                  const lay = win.getComputedStyle(box);
+                  const grid = lay.display.endsWith('grid');
+                  const wraps = lay.display.endsWith('flex') && lay.flexWrap !== 'nowrap';
+                  if (grid || wraps) {
+                    const top = row.getBoundingClientRect().top;
+                    let last: Element = row;
+                    while (last.nextElementSibling?.getBoundingClientRect().top === top)
+                      last = last.nextElementSibling;
+                    if (grid) gap.style.gridColumn = '1 / -1';
+                    else gap.style.flexBasis = '100%';
+                    last.after(gap);
+                  } else if (
+                    lay.display.endsWith('flex') &&
+                    !lay.flexDirection.startsWith('column')
+                  )
+                    rowOf(box).after(gap);
+                  else row.after(gap);
                   gapRef.current = gap;
                   // The panel's own colours, read here: the page has its own palette.
                   const theme = getComputedStyle(document.documentElement);
