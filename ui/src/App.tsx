@@ -2317,9 +2317,12 @@ function DocumentsTab({
       />
       {err && <div className="kx-error">{err}</div>}
       {groups.map((g) => {
+        // An on-request document nobody asked for is no row: it is not owed, and
+        // a To do row left at the end reads as an analysis never finished. The
+        // handshake card offers it; asked for, it is listed like any other.
         const items = sortFor(
           g.key,
-          docs.filter((d) => d.section === g.key),
+          docs.filter((d) => d.section === g.key && d.detail !== 'request'),
         );
         if (items.length === 0) return null;
         return (
