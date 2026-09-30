@@ -307,3 +307,32 @@ export function parseInline(text: string): InlineSpan[] {
   }
   return spans;
 }
+
+/**
+ * The prompts a document hands on to another AI: every fenced block under a
+ * `##` heading that says prompts (EXPERIENCE.md's `## Part 2 — Prompts`),
+ * named by the heading above it.
+ */
+export function promptsOf(md: string): Array<{ title: string; text: string }> {
+  const out: Array<{ title: string; text: string }> = [];
+  let inPart = false;
+  let title = '';
+  let fence: string[] | null = null;
+  for (const line of md.split('\n')) {
+    if (fence) {
+      if (/^\s*```/.test(line)) {
+        out.push({ title, text: fence.join('\n').trim() });
+        fence = null;
+      } else fence.push(line);
+      continue;
+    }
+    const h = line.match(/^(#{1,6})\s+(.*?)\s*$/);
+    if (h) {
+      if (h[1]!.length <= 2) inPart = /prompt/i.test(h[2]!);
+      else if (inPart) title = h[2]!;
+      continue;
+    }
+    if (inPart && /^\s*```/.test(line)) fence = [];
+  }
+  return out;
+}

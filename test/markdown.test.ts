@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { deTex, parseInline, parseMarkdown } from '../ui/src/markdown.js';
+import { deTex, parseInline, parseMarkdown, promptsOf } from '../ui/src/markdown.js';
 
 // The LaTeX the agents actually write, reduced to readable Unicode.
 test('deTex: the forms the documents use', () => {
@@ -81,5 +81,32 @@ test('parseInline: a link is one span, code in its text included', () => {
     { type: 'text', value: 'aç: ' },
     { type: 'link', value: '`a/DESIGN.html`', href: 'file:///r/a/DESIGN.html' },
     { type: 'text', value: ' veya' },
+  ]);
+});
+
+test('promptsOf: each fenced block under Part 2, named by its heading', () => {
+  const md = [
+    '## Part 1 — Brief',
+    '```text',
+    'not a prompt',
+    '```',
+    '## Part 2 — Prompts',
+    '### Master prompt',
+    '```text',
+    'ROLE: designer',
+    '```',
+    '### Section prompts',
+    '#### Prompt 1 — Journey 1',
+    '```text',
+    'TASK: home',
+    '```',
+    '## Change Requests',
+    '```',
+    'not one either',
+    '```',
+  ].join('\n');
+  assert.deepEqual(promptsOf(md), [
+    { title: 'Master prompt', text: 'ROLE: designer' },
+    { title: 'Prompt 1 — Journey 1', text: 'TASK: home' },
   ]);
 });

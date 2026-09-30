@@ -11,6 +11,7 @@ import {
 import { Drawer } from './Drawer';
 import { highlight } from './highlight';
 import {
+  promptsOf,
   deTex,
   isSeparatorRow,
   parseInline,
@@ -172,7 +173,9 @@ export function DocDrawer({
   // after a rewrite): an approve or a save sent now would name no version and
   // be refused, so the buttons wait for it.
   const locked = busy || writing || !version;
-  const [preview, setPreview] = useState(false); // DESIGN.md drawn, not read
+  // DESIGN.md drawn, or EXPERIENCE.md's prompts laid out to copy — a look, not the document.
+  const [preview, setPreview] = useState(false);
+  const drawn = doc?.rel === 'DESIGN.md';
   // Text selected in the preview: asked about like a line. `line` is the block of
   // DESIGN.md that holds it, when one does; -1 when the page drew it from elsewhere.
   const [pick, setPick] = useState<{ line: number; text: string } | null>(null);
@@ -934,13 +937,16 @@ export function DocDrawer({
             </div>
           </div>
           <div className="dr-actions">
-            {/* The design is looked at often: its preview sits in view, not in the menu. */}
-            {/* In the preview only Close shows, and it goes back to the document. */}
-            {!editing && !preview && doc.status !== 'uninitialized' && doc.rel === 'DESIGN.md' && (
-              <button className="btn btn-secondary" onClick={doPreview}>
-                Preview
-              </button>
-            )}
+            {/* The design is looked at often, the prompts copied often: each sits in
+                view, not in the menu. In either only Close shows, back to the document. */}
+            {!editing &&
+              !preview &&
+              doc.status !== 'uninitialized' &&
+              (drawn || doc.rel === 'EXPERIENCE.md') && (
+                <button className="btn btn-secondary" onClick={doPreview}>
+                  {drawn ? 'Preview' : 'Prompts'}
+                </button>
+              )}
             {/* What is done to the document rather than decided about it. */}
             {!editing && !preview && doc.status !== 'uninitialized' && (
               <div className="kx-menu" ref={menuRef}>
@@ -997,8 +1003,13 @@ export function DocDrawer({
             )}
           </div>
         </div>
-        <div className={preview ? 'dr-body dr-body-preview' : 'dr-body'}>
-          {preview && (
+        <div
+          className={
+            preview ? `dr-body ${drawn ? 'dr-body-preview' : 'dr-body-prompts'}` : 'dr-body'
+          }
+        >
+          {preview && !drawn && <PromptList prompts={promptsOf(content)} />}
+          {preview && drawn && (
             // The preview document has independent theme controls.
             <iframe
               className="kx-doc-preview"
@@ -1442,9 +1453,11 @@ export function DocDrawer({
               <span className="kx-cmd-hint">
                 {actionNeeded
                   ? 'Pick a row above, or click a line of the document — what you decide collects here.'
-                  : preview
+                  : preview && drawn
                     ? 'Click a section heading to talk about that section — or Ask below about the whole document.'
-                    : 'Click a line to ask about it or note it — or Ask below about the whole document.'}
+                    : preview
+                      ? 'Copy a prompt and give it to the design AI with this file — or Ask below about the whole document.'
+                      : 'Click a line to ask about it or note it — or Ask below about the whole document.'}
               </span>
             )}
             <div className="kx-note-input">
@@ -1816,6 +1829,25 @@ function ActionNeeded({
           </ul>
         </>
       )}
+    </div>
+  );
+}
+
+// Each prompt whole, as the design AI will get it, with its own Copy.
+function PromptList({ prompts }: { prompts: Array<{ title: string; text: string }> }) {
+  if (prompts.length === 0)
+    return <p className="kx-cmd-hint">No prompts yet — Part 2 holds none in a code block.</p>;
+  return (
+    <div className="kx-prompts">
+      {prompts.map((p, i) => (
+        <section key={i} className="kx-prompt">
+          <div className="kx-prompt-head">
+            <span>{p.title}</span>
+            <CopyButton text={p.text} />
+          </div>
+          <pre className="kx-prompt-text">{p.text}</pre>
+        </section>
+      ))}
     </div>
   );
 }

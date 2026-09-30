@@ -812,6 +812,45 @@ a.btn {
   border: 0;
   display: block;
 }
+/* EXPERIENCE.md's prompts, laid out to copy: the document itself is hidden. */
+.dr-body-prompts > *:not(.kx-prompts):not(.kx-cmd-hint) {
+  display: none;
+}
+.kx-prompts {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.kx-prompt {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.kx-prompt-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-muted);
+  font-weight: 600;
+  font-size: 13px;
+}
+/* A code block hides its Copy until hovered; a prompt is here to be copied. */
+.kx-prompt-head .kx-copy {
+  position: static;
+  opacity: 1;
+  font-weight: 400;
+}
+.kx-prompt-text {
+  margin: 0;
+  padding: 12px;
+  max-height: 260px;
+  overflow: auto;
+  white-space: pre-wrap;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
 /* Asked about with no line in view: a selection in the preview, or the whole document. */
 .kx-ask-box {
   max-height: 45%;
