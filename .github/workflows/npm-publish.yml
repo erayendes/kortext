@@ -49,7 +49,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # The notes are this version's changelog section, the same either job writes.
+          python3 .github/scripts/release-notes.py "${GITHUB_REF_NAME#v}" > /tmp/changelog.md
           gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" \
             --title "Kortext $GITHUB_REF_NAME" \
             $( [[ "$GITHUB_REF_NAME" == *-* ]] && echo --prerelease ) \
-            --notes "See [the changelog](https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/docs/CHANGELOG.md)."
+            --notes-file /tmp/changelog.md

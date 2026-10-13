@@ -176,9 +176,11 @@ jobs:
           SHA256: ${{ steps.pkg.outputs.SHA256 }}
         run: |
           TAG="v${VERSION}"
+          # The notes are this version's changelog section, the same either job writes.
+          python3 .github/scripts/release-notes.py "$VERSION" > /tmp/changelog.md
           gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Kortext $TAG" \
             $( [[ "$TAG" == *-* ]] && echo --prerelease ) \
-            --notes "See [the changelog](https://github.com/${GITHUB_REPOSITORY}/blob/${TAG}/docs/CHANGELOG.md)."
+            --notes-file /tmp/changelog.md
           gh release upload "$TAG" dist/Kortext.zip --clobber
           gh release view "$TAG" --json body -q .body > /tmp/notes.md
           printf '\n\n**macOS menu bar app:** [Kortext.zip](https://github.com/%s/releases/download/%s/Kortext.zip) · SHA256 `%s`\n' \
