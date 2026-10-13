@@ -8,6 +8,7 @@ import { defaultDbPath, openDb } from './db.js';
 import { buildApp } from './app.js';
 import { abortAllRuns } from './runner.js';
 import { respawnDetached, serverUp, waitForServer } from './daemon.js';
+import { TOKEN_HEADER, readToken } from './token.js';
 
 const { values } = parseArgs({
   options: {
@@ -54,9 +55,10 @@ const DB_PATH = values.db ?? defaultDbPath();
 
 // Use the panel shutdown endpoint so CLI and UI enforce the same busy check.
 if (values.stop) {
-  const res = await fetch(`http://127.0.0.1:${PORT}/api/quit`, { method: 'POST' }).catch(
-    () => null,
-  );
+  const res = await fetch(`http://127.0.0.1:${PORT}/api/quit`, {
+    method: 'POST',
+    headers: { [TOKEN_HEADER]: readToken(DB_PATH) ?? '' },
+  }).catch(() => null);
   if (!res) {
     console.log(`nothing is running on port ${PORT}`);
     process.exit(0);
@@ -91,7 +93,7 @@ if (!process.env.KORTEXT_CHILD && !values['no-detach']) {
   }
   console.log(`${already ? 'kortext is already running' : 'kortext panel'}: ${url}`);
   console.log('You can close this window. Stop it with the ⏻ button in the panel.');
-  if (!values['no-open']) openBrowser(url);
+  if (!values['no-open']) openBrowser(withToken(url));
   process.exit(0);
 }
 
@@ -102,9 +104,11 @@ const app = buildApp(db, pkgRoot, DB_PATH);
 // Listen on IPv4 and, where available, IPv6 because localhost can resolve to either.
 app.listen(PORT, '127.0.0.1', () => {
   const url = `http://localhost:${PORT}`;
-  console.log(`kortext panel: ${url}`);
+  // The foreground server (npm run dev) prints the key's URL: open it once and
+  // the browser keeps the cookie — for the vite panel on :3442 too.
+  console.log(`kortext panel: ${withToken(url)}`);
   console.log(`db:            ${DB_PATH}`);
-  if (!values['no-open']) openBrowser(url);
+  if (!values['no-open']) openBrowser(withToken(url));
 });
 app.listen(PORT, '::1').on('error', () => {
   /* no IPv6 loopback on this machine; the IPv4 listener above is the panel */
@@ -117,6 +121,12 @@ for (const sig of ['SIGTERM', 'SIGINT'] as const) {
     abortAllRuns();
     setTimeout(() => process.exit(0), 1500).unref();
   });
+}
+
+/** The panel URL that hands the browser its key (see server/token.ts). */
+function withToken(url: string): string {
+  const token = readToken(DB_PATH);
+  return token ? `${url}/?token=${token}` : url;
 }
 
 function openBrowser(url: string): void {

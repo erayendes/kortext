@@ -162,6 +162,7 @@ From here on, Kortext is not in the loop.
 | `~/.kortext/kortext.db` | the project registry |
 | `~/.kortext/kortext.db.logs/` | the raw output of every CLI run |
 | `~/.kortext/kortext.db.log` | what the background server prints |
+| `~/.kortext/kortext.db.token` | the panel's key — only your user can read it; `kortext` and the menu bar app hand it to the browser |
 | `<repo>/AGENTS.md` | the agent's contract, in a marked block |
 | `<repo>/.kortext/` | the analysis documents; on a new project, `BRIEF.md` too |
 | `<repo>/.kortext/DESIGN.html` | `DESIGN.md`, drawn |

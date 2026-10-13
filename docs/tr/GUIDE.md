@@ -162,6 +162,7 @@ Buradan sonra Kortext işin içinde değildir.
 | `~/.kortext/kortext.db` | proje kaydı |
 | `~/.kortext/kortext.db.logs/` | her CLI koşusunun ham çıktısı |
 | `~/.kortext/kortext.db.log` | arka plan sunucusunun yazdıkları |
+| `~/.kortext/kortext.db.token` | panelin anahtarı — yalnız sizin kullanıcınız okuyabilir; `kortext` ve menü çubuğu uygulaması onu tarayıcıya verir |
 | `<repo>/AGENTS.md` | ajanın sözleşmesi, işaretli bir blok içinde |
 | `<repo>/.kortext/` | analiz belgeleri; yeni projede `BRIEF.md` de burada |
 | `<repo>/.kortext/DESIGN.html` | `DESIGN.md`'nin görsel hali |

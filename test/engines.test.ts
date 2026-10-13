@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { spawnCli } from '../server/cli-spawn.ts';
 import { ENGINES, engineArgs, engineEnv } from '../server/engines.ts';
+import { TOKEN_HEADER, ensureToken } from '../server/token.ts';
 
 const spec = (id: string) => ENGINES.find((e) => e.id === id)!;
 
@@ -84,7 +85,10 @@ test('switching the CLI drops a model the new CLI does not know', async () => {
   const put = (path: string, body: unknown) =>
     fetch(`http://127.0.0.1:${port}/api/projects/${p.id}/${path}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        [TOKEN_HEADER]: ensureToken(join(work, 'db.sqlite')),
+      },
       body: JSON.stringify(body),
     }).then((r) => r.json());
   await put('engine', { id: 'claude' });
@@ -120,7 +124,10 @@ test('Add project takes the picker model and effort, and refuses a level the CLI
   const post = (body: unknown) =>
     fetch(`http://127.0.0.1:${port}/api/projects`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        [TOKEN_HEADER]: ensureToken(join(work, 'db.sqlite')),
+      },
       body: JSON.stringify(body),
     }).then(async (r) => ({ status: r.status, body: await r.json() }));
   const ok = await post({

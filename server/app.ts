@@ -1,5 +1,6 @@
 import express from 'express';
 import type Database from 'better-sqlite3';
+import { TOKEN_COOKIE, TOKEN_HEADER, cookieToken, ensureToken, sameToken } from './token.js';
 import { existsSync, realpathSync, rmSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import {
@@ -98,6 +99,34 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       return res.status(403).json({ error: 'cross-origin requests are refused' });
     }
     next();
+  });
+
+  // Loopback is not enough: another account on this machine reaches it too.
+  // Every API call shows the token — the panel as a cookie, the CLI and the
+  // menu bar app as a header. Health stays open: it is how they find a server.
+  const token = ensureToken(dbPath);
+  const authed = (req: express.Request): boolean =>
+    sameToken(req.get(TOKEN_HEADER), token) || sameToken(cookieToken(req.headers.cookie), token);
+  app.use('/api', (req, res, next) => {
+    if (req.path === '/health' || authed(req)) return next();
+    res.status(401).json({ error: 'open Kortext from the menu bar app, or run `kortext`' });
+  });
+  // `kortext` and the menu bar app open the panel with ?token=; the browser
+  // keeps it as a cookie and the address bar loses it. Lax, not Strict: a link
+  // from a notification is a cross-site navigation and must still arrive.
+  app.get(/^\/(?!api\/)/, (req, res, next) => {
+    const given = req.query.token;
+    if (typeof given !== 'string') return next();
+    if (sameToken(given, token)) {
+      res.cookie(TOKEN_COOKIE, token, {
+        httpOnly: true,
+        sameSite: 'lax',
+        maxAge: 400 * 24 * 3600 * 1000,
+      });
+    }
+    const url = new URL(req.originalUrl, 'http://localhost');
+    url.searchParams.delete('token');
+    res.redirect(url.pathname + url.search);
   });
 
   app.use(express.json());
@@ -1096,9 +1125,32 @@ ${body}`,
   // Built panel (ui/dist) with SPA fallback; in dev the vite server proxies /api here.
   const uiDist = join(pkgRoot, 'ui', 'dist');
   if (existsSync(uiDist)) {
-    app.use(express.static(uiDist));
-    app.get(/^\/(?!api\/).*/, (_req, res) => res.sendFile(join(uiDist, 'index.html')));
+    app.use(express.static(uiDist, { index: false }));
+    app.get(/^\/(?!api\/).*/, (req, res) =>
+      authed(req)
+        ? res.sendFile(join(uiDist, 'index.html'))
+        : res.status(401).type('html').send(LOCKED_PAGE),
+    );
   }
 
   return app;
 }
+
+// What a browser without the token gets in place of the panel.
+const LOCKED_PAGE = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kortext</title>
+<style>
+  :root { color-scheme: light dark; --bg: #ffffff; --fg: #18181b; --muted: #51515a; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #0a0a0b; --fg: #ededef; --muted: #9c9ca5; } }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 0 16px;
+    background: var(--bg); color: var(--fg); font: 15px/1.5 -apple-system, system-ui, sans-serif; }
+  main { max-width: 420px; }
+  h1 { font-size: 17px; font-weight: 600; margin: 0 0 8px; }
+  p { margin: 0 0 8px; color: var(--muted); }
+  code { font: 13px ui-monospace, monospace; color: var(--fg); }
+</style></head>
+<body><main>
+  <h1>Open Kortext from the menu bar or the terminal</h1>
+  <p>This browser has not been handed Kortext's key yet. Click <b>open panel</b> in the menu bar app, or run <code>kortext</code> in a terminal — either opens the panel here and the browser remembers it.</p>
+</main></body></html>`;

@@ -49,7 +49,7 @@ Detaylı mimari için [dev/ARCHITECTURE.md](dev/ARCHITECTURE.md).
 
 ```bash
 npm install && npm --prefix ui install   # install deps (root + panel)
-npm run dev                   # server :3441 (tsx watch, --no-open)
+npm run dev                   # server :3441 (tsx watch, --no-open) — open the printed ?token= URL once
 npm run dev:web               # vite panel :3442 (proxy /api → 3441)
 npm test                      # node:test suite
 npm run build                 # tsc → dist/ + vite → ui/dist/

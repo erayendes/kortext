@@ -18,6 +18,7 @@ import { openDb } from '../server/db.js';
 import { createProject } from '../server/projects.js';
 import { forgetDetectedEngines } from '../server/engines.js';
 import { abortRuns, hasActiveRuns } from '../server/runner.js';
+import { TOKEN_HEADER, ensureToken } from '../server/token.js';
 
 test('a newer release shows, an older or equal one does not', () => {
   assert.equal(isNewer('3.2.0', '3.1.0'), true);
@@ -115,7 +116,7 @@ const timer = setInterval(() => {
     const request = (path: string, body: unknown = {}, method = 'POST') =>
       fetch(base + path, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', [TOKEN_HEADER]: ensureToken(dbPath) },
         body: JSON.stringify(body),
       });
     const waitFor = async (check: () => boolean) => {
@@ -157,23 +158,39 @@ const timer = setInterval(() => {
           .status,
         409,
       );
-      assert.equal((await fetch(base + route + '/docs')).status, 409);
+      assert.equal(
+        (await fetch(base + route + '/docs', { headers: { [TOKEN_HEADER]: ensureToken(dbPath) } }))
+          .status,
+        409,
+      );
       assert.equal((await fetch(base + '/health')).status, 200);
       assert.equal(readFileSync(join(project.repo_path, '.kortext', 'PRODUCT.md'), 'utf8'), before);
       assert.equal(db.prepare('SELECT 1 FROM jobs').get(), undefined);
       assert.equal(existsSync(join(work, 'claude.started')), false);
       release('npm');
       assert.equal((await update).status, 200);
-      assert.equal((await fetch(base + route + '/docs')).status, 200);
+      assert.equal(
+        (await fetch(base + route + '/docs', { headers: { [TOKEN_HEADER]: ensureToken(dbPath) } }))
+          .status,
+        200,
+      );
 
       // An unsuccessful install, including failure to spawn npm, releases the lock.
       writeFileSync(join(work, 'fail'), '');
       assert.equal((await request('/version/update')).status, 500);
-      assert.equal((await fetch(base + route + '/docs')).status, 200);
+      assert.equal(
+        (await fetch(base + route + '/docs', { headers: { [TOKEN_HEADER]: ensureToken(dbPath) } }))
+          .status,
+        200,
+      );
       renameSync(join(bin, 'npm'), join(bin, 'npm.disabled'));
       process.env.PATH = bin;
       assert.equal((await request('/version/update')).status, 500);
-      assert.equal((await fetch(base + route + '/docs')).status, 200);
+      assert.equal(
+        (await fetch(base + route + '/docs', { headers: { [TOKEN_HEADER]: ensureToken(dbPath) } }))
+          .status,
+        200,
+      );
       renameSync(join(bin, 'npm.disabled'), join(bin, 'npm'));
       process.env.PATH = bin + delimiter + oldPath;
 

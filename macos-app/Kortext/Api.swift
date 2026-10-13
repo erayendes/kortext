@@ -33,9 +33,20 @@ struct Version: Decodable {
 enum Api {
     static let base = URL(string: "http://127.0.0.1:3441")!
 
+    /// The key the server writes beside its database (server/token.ts); read on every call,
+    /// because the server makes a new one if the file is ever removed.
+    static var token: String? {
+        let file = FileManager.default.homeDirectoryForCurrentUser.appending(path: ".kortext/kortext.db.token")
+        return (try? String(contentsOf: file, encoding: .utf8))?.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    static func authorize(_ req: inout URLRequest) {
+        if let token { req.setValue(token, forHTTPHeaderField: "X-Kortext-Token") }
+    }
+
     static func get<T: Decodable>(_ path: String, _ type: T.Type) async throws -> T {
         var req = URLRequest(url: base.appending(path: path))
         req.timeoutInterval = 3
+        authorize(&req)
         req.setValue("Kortext-mac/\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0")", forHTTPHeaderField: "User-Agent")
         let (data, _) = try await URLSession.shared.data(for: req)
         return try JSONDecoder().decode(T.self, from: data)
@@ -61,6 +72,7 @@ enum Api {
         if fresh { url.append(queryItems: [URLQueryItem(name: "fresh", value: "1")]) }
         var req = URLRequest(url: url)
         req.timeoutInterval = 8
+        authorize(&req)
         let (data, _) = try await URLSession.shared.data(for: req)
         return try JSONDecoder().decode(Version.self, from: data)
     }
@@ -71,6 +83,7 @@ enum Api {
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
         req.timeoutInterval = 180   // npm install takes a while
+        authorize(&req)
         let (_, resp) = try await URLSession.shared.data(for: req)
         return (resp as? HTTPURLResponse)?.statusCode == 200
     }

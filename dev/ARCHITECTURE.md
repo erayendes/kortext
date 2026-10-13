@@ -65,7 +65,8 @@ non-`/api` path.
 ## 3 · Where data lives
 
 **Global — `~/.kortext/`** (one per machine, shared by all projects):
-`kortext.db` (SQLite, WAL, `foreign_keys = ON`) and `kortext.db.logs/p<id>-<doc>.log` (raw CLI output).
+`kortext.db` (SQLite, WAL, `foreign_keys = ON`), `kortext.db.logs/p<id>-<doc>.log` (raw CLI output) and
+`kortext.db.token` (the API key, mode 0600 — see § 6).
 With `--db /path/name.sqlite`, logs live in `/path/name.sqlite.logs/`; sibling databases stay isolated.
 
 | Table | Columns |
@@ -301,6 +302,17 @@ is a failure. **Approve plan** is the last signature of the handshake.
 
 No fs-watch — the panel polls (docs 3s, transfer 4s, handshake 5s).
 
+**Every route but `/api/health` wants the key** (`server/token.ts`). Loopback and the Host/Origin
+check keep out browsers and DNS rebinding, not another account on the same machine, so the server
+writes a random token to `<db>.token` (this user only) the first time it starts and keeps it.
+The CLI (`--stop`) and the menu bar app send it as `X-Kortext-Token`; the panel carries it as an
+HttpOnly `kortext_token` cookie. The browser gets the cookie from a link: `kortext` and the menu bar
+app open `/?token=…`, the server sets the cookie (SameSite=Lax, so a notification's link still
+arrives) and redirects to the same address without it. A browser without the cookie gets a page
+that says where to open Kortext from, not the panel; a panel that meets a 401 reloads onto it.
+`npm run dev` prints the key's URL — open it once and the cookie, which is per host and not per
+port, carries to Vite on :3442.
+
 | Route | Does |
 | --- | --- |
 | `GET /api/health` | ok · db path · the version actually **running** (the status bar's dot polls it) · `companion`, true while the menu bar app has polled in the last 30 s |
@@ -436,7 +448,7 @@ build → `node dist/index.js --help` smoke.
 - **No LLM API call, no key** — the user's own CLI and their own subscription.
 - **No dependency on Kopeng** — just `which kopeng`; the transfer button hides when it is absent.
 - **No fs-watch** — polling costs a few seconds and avoids per-platform event behaviour.
-- **No authentication** — `localhost` only, one user's machine.
+- **No accounts** — `localhost` only, one key per machine user (§ 6), no login.
 
 ---
 
@@ -482,7 +494,8 @@ on start, revision, recheck or the server going up or down — those live in the
 
 **Finding kortext.** A GUI app's `PATH` knows nothing of npm; the app runs `kortext` through
 `zsh -lic` so `.zprofile` (Homebrew) and `.zshrc` (nvm, fnm, volta) both count. Every request
-carries `User-Agent: Kortext-mac/<version>`; that is the companion signal.
+carries `User-Agent: Kortext-mac/<version>`; that is the companion signal. It also carries the key from
+`~/.kortext/kortext.db.token`, read afresh each time, and *open panel* adds it to the link.
 
 **Release.** `.github/workflows/macos-release.yml`, on the same `v*` tag as npm: xcodegen →
 Release build → Developer ID signature inside-out (Sparkle's XPCs first, no `--deep`) →

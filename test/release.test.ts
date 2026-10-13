@@ -25,6 +25,7 @@ import {
   removeRunLogs,
 } from '../server/runner.js';
 import { forgetDetectedEngines } from '../server/engines.js';
+import { TOKEN_HEADER, ensureToken } from '../server/token.js';
 
 const pkgRoot = process.cwd();
 const wait = (ms = 20) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -109,7 +110,7 @@ process.stdin.on('end', async () => {
   const request = (suffix: string, body: unknown, method = 'POST') =>
     fetch(`http://127.0.0.1:${port}/api/projects/${p.id}/${suffix}`, {
       method,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', [TOKEN_HEADER]: ensureToken(path) },
       body: JSON.stringify(body),
     });
   const engine = { id: 'stand-in', binary: script, args: [], installHint: '' };

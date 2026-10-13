@@ -4,6 +4,18 @@
 
 ## [Unreleased]
 
+- **Kortext yalnız size cevap verir.** Panelin artık bir anahtarı var; yalnız sizin kullanıcınızın
+  okuyabildiği bir dosyada duruyor. `kortext` ve menü çubuğu uygulaması paneli açarken onu
+  tarayıcınıza verir; aynı Mac'teki başka bir hesap ya da ağa erişip dosyalarınıza erişemeyen bir
+  uygulama artık ajan başlatamaz. Anahtarı hiç almamış bir tarayıcıya adresi elle yazarsanız,
+  Kortext'i nereden açacağınızı söyleyen bir sayfa çıkar. **Menü çubuğu uygulamasını Kortext'le
+  birlikte güncelleyin** — eski uygulama yeni sunucuyla konuşamaz.
+- **Güncel modeller.** Claude: Opus 5.5, Sonnet 5.5, Haiku 5.5. Codex: GPT-6.1-Sol, GPT-6-Sol ve
+  GPT-6-Luna listeye girdi. Antigravity: Gemini 3.8 Flash, Claude Opus 5.5, Claude Sonnet 5.5 ve
+  GPT-OSS 120B; artık sunmadığı eski modeller kalktı.
+- **Kılavuz, analiz sırasında ajanın neye dokunabildiğini** ve neden yalnız güvendiğiniz repo'ları
+  eklemeniz gerektiğini anlatıyor.
+
 ## [3.3.2] — 2026-09-28
 
 - **Menü çubuğu uygulaması: eski sunucuyla eski beta yok.** 3.3.0 sunucusuyla konuşurken

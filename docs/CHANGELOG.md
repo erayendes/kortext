@@ -4,6 +4,18 @@
 
 ## [Unreleased]
 
+- **Kortext answers only to you.** The panel now has a key, kept in a file only your user can
+  read. `kortext` and the menu bar app hand it to your browser when they open the panel; another
+  account on the same Mac, or an app that has the network but not your files, can no longer start
+  an agent. Typing the address by hand in a browser that has never had the key shows where to
+  open Kortext from. **Update the menu bar app together with Kortext** — an older app cannot talk
+  to the new server.
+- **Current models.** Claude: Opus 5.5, Sonnet 5.5, Haiku 5.5. Codex: GPT-6.1-Sol, GPT-6-Sol and
+  GPT-6-Luna join the list. Antigravity: Gemini 3.8 Flash, Claude Opus 5.5, Claude Sonnet 5.5 and
+  GPT-OSS 120B; the older ones it no longer offers are gone.
+- **The guide says what the agent can touch** during an analysis, and why to register only repos
+  you trust.
+
 ## [3.3.2] — 2026-09-28
 
 - **Menu bar app: no stale beta against an older server.** Talking to a 3.3.0 server, the

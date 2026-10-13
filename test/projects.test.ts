@@ -1,7 +1,15 @@
 import { docVersion } from '../server/docs.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  mkdtempSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { request as httpRequest } from 'node:http';
 import { join } from 'node:path';
@@ -16,6 +24,7 @@ import {
   BRIEF_REL,
   deriveCode,
 } from '../server/projects.js';
+import { TOKEN_HEADER, ensureToken } from '../server/token.js';
 
 const pkgRoot = process.cwd();
 
@@ -238,7 +247,10 @@ test('a save with no content is refused, not written over the document', async (
   const save = (body: unknown) =>
     fetch(`http://127.0.0.1:${port}/api/projects/${p.id}/docs/content`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        [TOKEN_HEADER]: ensureToken(join(work, 'db.sqlite')),
+      },
       body: JSON.stringify(body),
     });
 
@@ -272,7 +284,10 @@ test('a document being rewritten cannot be saved over, and an approved edit re-r
   );
   const res = await fetch(`http://127.0.0.1:${port}/api/projects/${p.id}/docs/content`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      [TOKEN_HEADER]: ensureToken(join(work, 'db.sqlite')),
+    },
     body: JSON.stringify({ rel: 'STACK.md', content: '# mine\n' }),
   });
   assert.equal(res.status, 409, 'a rewrite in flight refuses the save');
@@ -293,7 +308,10 @@ test('a plan with no tasks, or one whose split failed, cannot be approved', asyn
   mkdirSync(join(kopeng, 'tasks'), { recursive: true });
   writeFileSync(join(kopeng, 'project.yaml'), 'name: Plan\nstatus: draft\n');
   const approve = () =>
-    fetch(`http://127.0.0.1:${port}/api/projects/${p.id}/kopeng/approve`, { method: 'POST' });
+    fetch(`http://127.0.0.1:${port}/api/projects/${p.id}/kopeng/approve`, {
+      method: 'POST',
+      headers: { [TOKEN_HEADER]: ensureToken(join(work, 'db.sqlite')) },
+    });
   const status = () => readFileSync(join(kopeng, 'project.yaml'), 'utf8');
 
   // project.yaml stands, but the split that wrote it failed.
@@ -362,6 +380,45 @@ test('a cross-site page cannot reach the API, and the vite proxy still can', asy
     assert.equal(dev.status, 200, 'a loopback origin on another port is allowed');
   } finally {
     // A failed assertion above must not leave the listener holding the suite open.
+    server.close();
+    rmSync(work, { recursive: true, force: true });
+  }
+});
+
+test('the API answers only to its key: a header, or the cookie the panel link leaves', async () => {
+  const work = tempDir();
+  const db = openDb(join(work, 'db.sqlite'));
+  createProject(db, { name: 'Key', repoPath: join(work, 'key') }, pkgRoot);
+  const { buildApp } = await import('../server/app.js');
+  const server = buildApp(db, pkgRoot, join(work, 'db.sqlite')).listen(0);
+  const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
+  const token = ensureToken(join(work, 'db.sqlite'));
+  try {
+    assert.equal(statSync(join(work, 'db.sqlite.token')).mode & 0o777, 0o600, 'this user only');
+    assert.equal((await fetch(`${base}/api/projects`)).status, 401, 'no key, no answer');
+    const wrong = {
+      headers: { [TOKEN_HEADER]: token.replace(/^./, (c) => (c === 'a' ? 'b' : 'a')) },
+    };
+    assert.equal((await fetch(`${base}/api/projects`, wrong)).status, 401, 'a wrong key either');
+    assert.equal((await fetch(`${base}/api/health`)).status, 200, 'health finds the server');
+    assert.equal(
+      (await fetch(`${base}/api/projects`, { headers: { [TOKEN_HEADER]: token } })).status,
+      200,
+    );
+
+    // The menu bar app's link: the key becomes a cookie and leaves the address bar.
+    const link = await fetch(`${base}/?project=1&token=${token}`, { redirect: 'manual' });
+    assert.equal(link.status, 302);
+    assert.equal(link.headers.get('location'), '/?project=1');
+    const cookie = link.headers.get('set-cookie') ?? '';
+    assert.match(cookie, /HttpOnly/);
+    assert.match(cookie, /SameSite=Lax/);
+    const jar = cookie.split(';')[0];
+    assert.equal((await fetch(`${base}/api/projects`, { headers: { cookie: jar } })).status, 200);
+
+    const stray = await fetch(`${base}/?token=nope`, { redirect: 'manual' });
+    assert.equal(stray.headers.get('set-cookie'), null, 'a wrong key leaves no cookie');
+  } finally {
     server.close();
     rmSync(work, { recursive: true, force: true });
   }

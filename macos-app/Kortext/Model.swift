@@ -254,10 +254,15 @@ final class Model: NSObject, ObservableObject, UNUserNotificationCenterDelegate 
     func openPanel(_ p: ProjectState? = nil, _ doc: Doc? = nil) { openPanel(project: p?.id, doc: doc?.rel) }
     func openPanel(project: Int?, doc: String?) {
         var c = URLComponents(url: Api.base, resolvingAgainstBaseURL: false)!
+        c.path = "/"
+        var items: [URLQueryItem] = []
         if let project {
-            c.queryItems = [URLQueryItem(name: "project", value: String(project))]
-            if let doc { c.queryItems?.append(URLQueryItem(name: "doc", value: doc)) }
+            items.append(URLQueryItem(name: "project", value: String(project)))
+            if let doc { items.append(URLQueryItem(name: "doc", value: doc)) }
         }
+        // The browser keeps the key as a cookie; the server drops it from the address bar.
+        if let token = Api.token { items.append(URLQueryItem(name: "token", value: token)) }
+        c.queryItems = items.isEmpty ? nil : items
         NSWorkspace.shared.open(c.url!)
     }
 }

@@ -17,6 +17,9 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
     headers: { 'Content-Type': 'application/json' },
     ...init,
   });
+  // The browser's key is gone (a new ~/.kortext/kortext.db.token): reloading
+  // lands on the server's page that says how to get it back.
+  if (res.status === 401 && !import.meta.env.DEV) location.reload();
   // Preserve HTTP status errors when the response body is empty or not JSON.
   const text = await res.text();
   let body: unknown;
