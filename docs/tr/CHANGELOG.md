@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [3.4.0] — 2026-10-13
+
 - **Kortext yalnız size cevap verir.** Panelin artık bir anahtarı var; yalnız sizin kullanıcınızın
   okuyabildiği bir dosyada duruyor. `kortext` ve menü çubuğu uygulaması paneli açarken onu
   tarayıcınıza verir; aynı Mac'teki başka bir hesap ya da ağa erişip dosyalarınıza erişemeyen bir
@@ -15,6 +17,15 @@
   GPT-OSS 120B; artık sunmadığı eski modeller kalktı.
 - **Kılavuz, analiz sırasında ajanın neye dokunabildiğini** ve neden yalnız güvendiğiniz repo'ları
   eklemeniz gerektiğini anlatıyor.
+- **Sohbet cevapları daha okunaklı.** Cevaptaki tablolar tablo olarak görünür; linkler yeni
+  sekmede açılır; cevap kutusu yazdıkça büyür; **Use this** cevabı kutuya geri değil notlarınıza
+  koyar. Bütün belge hakkında, bir satır seçmeden, alttan soru sorabilirsiniz.
+- **Tasarım önizlemesine soru sorun.** Önizleme düğmesi belgenin başlığında. Önizlemede bir
+  bölüme tıklayın, belgede seçilmiş bir satır gibi altında soru kutusu açılır. `#fff` (Light) /
+  `#000` (Dark) diye yazılmış renkler de okunur.
+- **EXPERIENCE.md'nin promptları kopyalamaya hazır** — her prompt bir kart. Kimsenin istemediği
+  isteğe bağlı belge artık listede görünmüyor.
+- **Menü çubuğu bildirimleri projenin adını söyler**, üç harfli kodunu değil.
 
 ## [3.3.2] — 2026-09-28
 

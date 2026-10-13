@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [3.4.0] — 2026-10-13
+
 - **Kortext answers only to you.** The panel now has a key, kept in a file only your user can
   read. `kortext` and the menu bar app hand it to your browser when they open the panel; another
   account on the same Mac, or an app that has the network but not your files, can no longer start
@@ -15,6 +17,15 @@
   GPT-OSS 120B; the older ones it no longer offers are gone.
 - **The guide says what the agent can touch** during an analysis, and why to register only repos
   you trust.
+- **Chat answers read better.** Tables in an answer show as tables; links open in a new tab;
+  the answer box grows as you type; **Use this** puts the answer into your notes instead of
+  back into the box. Ask about the whole document from the footer, no line needed.
+- **Ask about the design preview.** The preview button sits in the document's header. Click a
+  section in the preview and an ask box opens under it, like a picked line in the document.
+  Colours written as `#fff` (Light) / `#000` (Dark) are read too.
+- **EXPERIENCE.md's prompts, ready to copy** — one card per prompt. An on-request document nobody
+  asked for no longer shows in the list.
+- **Menu bar notifications name the project**, not its three-letter code.
 
 ## [3.3.2] — 2026-09-28
 
