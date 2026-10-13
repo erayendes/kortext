@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [3.4.1] — 2026-10-13
+
 - **A fence around the agent.** Claude no longer runs with every permission skipped: it cannot
   write outside the project folder or reach the network (web search stays). Antigravity's commands
   can no longer change files; it writes the document with its own tool. Codex already wrote only
