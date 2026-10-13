@@ -137,6 +137,14 @@ Ajanı projeyi eklerken seçersiniz ama istediğiniz zaman değiştirebilirsiniz
 - **Export documents** yazılmış her belgeyi tikli listeler — **All**, **None** ya da seçin — ve seçtiklerinizi tek bir zip olarak indirir.
 - **Remove** `.kortext/` klasörünü (brief dahil), `AGENTS.md`'deki Kortext bloğunu, `CLAUDE.md`'deki işaret satırını ve projenin loglarını siler; projeyi listeden çıkarır. `AGENTS.md` ve `CLAUDE.md`'deki kendi yazdıklarınız kalır.
 
+## Ajan neye dokunabilir
+
+Kortext ajanınızı arka planda, siz başında değilken çalıştırır. Bu yüzden ajan izin sormaz: `claude` ve `antigravity` `--dangerously-skip-permissions` ile, `gemini` ve benzerleri `--yolo` ile çalışır. `codex` biraz daha dar çalışır: yalnız proje klasörüne yazabilir.
+
+"Yalnız bu belgeyi yaz" kuralı ajana verilen talimattadır, dosya sisteminde değil. Ajan sizin kullanıcınızla çalışır; ilke olarak sizin yapabildiğiniz her şeyi yapabilir. Repo'daki metin de ajanın önüne gelir: bir dosyaya gömülmüş bir talimat onu yanlış yöne çekebilir.
+
+Bu yüzden Kortext'e yalnız güvendiğiniz repo'ları ekleyin. İnternetten indirdiğiniz, içini bilmediğiniz bir projeyi analiz ettirmeden önce okuyun.
+
 ## El sıkışma
 
 ![El sıkışma kartı — üç başlangıç komutu ve isteğe bağlı EXPERIENCE.md teklifi](../assets/panel-handshake.png)
