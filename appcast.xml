@@ -7,7 +7,31 @@
     <link>https://github.com/erayendes/kortext</link>
     <description>Kortext menu bar app update feed</description>
     <language>en</language>
-                                                      <item>
+                                                          <item>
+      <title>Kortext 3.4.0</title>
+      <sparkle:version>300400000</sparkle:version>
+      <sparkle:shortVersionString>3.4.0</sparkle:shortVersionString>
+      <pubDate>Tue, 13 Oct 2026 12:08:48 +0000</pubDate>
+      <description><![CDATA[
+<ul>
+<li><b>Kortext answers only to you.</b> The panel now has a key, kept in a file only your user can read. `kortext` and the menu bar app hand it to your browser when they open the panel; another account on the same Mac, or an app that has the network but not your files, can no longer start an agent. Typing the address by hand in a browser that has never had the key shows where to open Kortext from. <b>Update the menu bar app together with Kortext</b> — an older app cannot talk to the new server.</li>
+<li><b>Current models.</b> Claude: Opus 5.5, Sonnet 5.5, Haiku 5.5. Codex: GPT-6.1-Sol, GPT-6-Sol and GPT-6-Luna join the list. Antigravity: Gemini 3.8 Flash, Claude Opus 5.5, Claude Sonnet 5.5 and GPT-OSS 120B; the older ones it no longer offers are gone.</li>
+<li><b>The guide says what the agent can touch</b> during an analysis, and why to register only repos you trust.</li>
+<li><b>Chat answers read better.</b> Tables in an answer show as tables; links open in a new tab; the answer box grows as you type; <b>Use this</b> puts the answer into your notes instead of back into the box. Ask about the whole document from the footer, no line needed.</li>
+<li><b>Ask about the design preview.</b> The preview button sits in the document's header. Click a section in the preview and an ask box opens under it, like a picked line in the document. Colours written as `#fff` (Light) / `#000` (Dark) are read too.</li>
+<li><b>EXPERIENCE.md's prompts, ready to copy</b> — one card per prompt. An on-request document nobody asked for no longer shows in the list.</li>
+<li><b>Menu bar notifications name the project</b>, not its three-letter code.</li>
+</ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/erayendes/kortext/releases/download/v3.4.0/Kortext.zip"
+        sparkle:edSignature="HCm2LteOgZDaNEsFj0pHbwLXExtBsG3PNIbl0DppxxSDbbWia3CFrVHfTtqjJfH7Cek90cXUdpckZFev90JnDg=="
+        length="1384515"
+        type="application/octet-stream"
+        sparkle:minimumSystemVersion="14.0"/>
+    </item>
+
+<item>
       <title>Kortext 3.3.2</title>
       <sparkle:version>300302000</sparkle:version>
       <sparkle:shortVersionString>3.3.2</sparkle:shortVersionString>
