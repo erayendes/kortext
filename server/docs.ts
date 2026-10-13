@@ -748,7 +748,9 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
   // settles it there: `removeRequest` falls back to the author's line.
   for (const doc of docs) {
     for (const r of doc.outgoing) {
-      byRel.get(r.target)?.revisionRequests.push({ from: doc.rel, reason: r.reason, pending: true });
+      byRel
+        .get(r.target)
+        ?.revisionRequests.push({ from: doc.rel, reason: r.reason, pending: true });
     }
   }
 
