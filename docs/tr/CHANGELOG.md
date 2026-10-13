@@ -7,7 +7,8 @@
 - **Ajanın etrafında bir sınır.** Claude artık bütün izinler kapalı çalışmıyor: proje klasörünün
   dışına yazamaz ve internete çıkamaz (arama açık). Antigravity'nin komutları artık dosya
   değiştiremez; belgeyi kendi aracıyla yazar. Codex zaten yalnız proje klasörüne yazıyordu.
-  Kılavuzdaki bölümün adı artık *Güvendiğiniz projeleri ekleyin*.
+  Kılavuzdaki bölümün adı artık *Güvendiğiniz projeleri ekleyin*; **Add project** de klasörü
+  seçtiğiniz yerde aynı uyarıyı veriyor.
 
 ## [3.4.0] — 2026-10-13
 

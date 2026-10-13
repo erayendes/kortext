@@ -142,8 +142,8 @@ Ajanı projeyi eklerken seçersiniz ama istediğiniz zaman değiştirebilirsiniz
 Kortext belgeleri yazdırırken ajanınızı arka planda çalıştırır. Başında siz olmadığınız için ajan her adımda izin istemez; onun yerine Kortext ajanın etrafına bir sınır çizer:
 
 - `claude` proje klasörünün dışına yazamaz ve internete çıkamaz; yalnız arama yapabilir.
-- `codex` yalnız proje klasörüne yazabilir.
-- `antigravity`'nin komutları hiçbir dosyayı değiştiremez; belgeyi kendi yazma aracıyla yazar.
+- `codex` yalnız proje klasörüne yazabilir ve internete çıkamaz; yalnız arama yapabilir.
+- `antigravity`'nin komutları hiçbir dosyayı değiştiremez; belgeyi kendi yazma aracıyla yazar. İnternete çıkabilir: arama yapar, sayfa açar.
 - `gemini` ve listedeki diğerleri henüz bu sınır olmadan çalışır.
 
 Ajan projedeki dosyaları okur. Bir dosyaya saklanmış kötü niyetli bir yönerge onu yanlış yöne çekebilir; sınır, zararı proje klasörüyle kısıtlar ama sıfırlamaz. Bu yüzden Kortext'e yalnız güvendiğiniz projeleri ekleyin. İnternetten indirdiğiniz, ne olduğunu bilmediğiniz bir projeyi analiz ettirmeyin.

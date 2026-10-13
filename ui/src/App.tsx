@@ -1486,6 +1486,22 @@ function AddProject({
           Browse…
         </button>
       </div>
+      {/* The document callout's WARNING, not a band: nothing here to act on. */}
+      <div className="kx-alert kx-alert-warning">
+        <span className="kx-alert-head">Warning</span>
+        <span className="kx-alert-body">
+          Add only a project you trust. The agent reads every file in it, and an instruction hidden
+          in a file can lead it astray — Kortext keeps the damage inside the folder, but cannot make
+          it zero.{' '}
+          <a
+            href="https://github.com/erayendes/kortext/blob/main/docs/GUIDE.md#add-projects-you-trust"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Why
+          </a>
+        </span>
+      </div>
       <div className="kx-form-row">
         <input
           className="kx-input kx-path"
