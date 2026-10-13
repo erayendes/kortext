@@ -434,8 +434,9 @@ assembly, job lifecycle, nothing starts after an abort) · `readiness` (floor th
 · `projects` (code derivation and collision, scaffold, contract block: install · refresh ·
 uninstall, archive/remove) · `highlight`.
 
-CI (`.github/workflows/kortext-ci.yml`, `main` + `v*`) on Node 22: typecheck both sides → test →
-build → `node dist/index.js --help` smoke.
+CI (`.github/workflows/kortext-ci.yml`, `main` + `v*`) on Node 22: `prettier --check` → typecheck both
+sides → test → build → `node dist/index.js --help` smoke. `npm-publish.yml` runs the same checks before
+it publishes, so an unformatted file stops a release — run `npm run format:check` before tagging.
 
 ---
 
