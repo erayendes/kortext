@@ -4,6 +4,11 @@
 
 ## [Unreleased]
 
+- **A fence around the agent.** Claude no longer runs with every permission skipped: it cannot
+  write outside the project folder or reach the network (web search stays). Antigravity's commands
+  can no longer change files; it writes the document with its own tool. Codex already wrote only
+  inside the project. The guide's section is now *Add projects you trust*.
+
 ## [3.4.0] — 2026-10-13
 
 - **Kortext answers only to you.** The panel now has a key, kept in a file only your user can

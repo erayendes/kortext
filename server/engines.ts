@@ -53,9 +53,28 @@ export const ENGINES: EngineSpec[] = [
   {
     id: 'claude',
     binary: 'claude',
-    // --print: headless (no REPL); skip-permissions: auto-approve tool use;
-    // stdin carries the step prompt.
-    args: ['--print', '--dangerously-skip-permissions'],
+    // --print: headless (no REPL); stdin carries the step prompt. Nobody is
+    // there to answer a permission prompt, so instead of skipping them all the
+    // agent gets a fence: edits inside the project pass (acceptEdits), shell
+    // commands run in Claude Code's own sandbox — they read, and write only
+    // inside the project, with no network — and web search stays open. Anything
+    // else is refused. The agent does use the shell (ls, grep, head) to read a
+    // codebase; without it, it read whole lockfiles and ran out of context.
+    // ponytail: the sandbox is macOS Seatbelt / Linux bubblewrap. Windows has
+    // neither, and its spawn goes through cmd, which would mangle the JSON — it
+    // keeps skipping permissions until someone runs Kortext there.
+    args:
+      process.platform === 'win32'
+        ? ['--print', '--dangerously-skip-permissions']
+        : [
+            '--print',
+            '--permission-mode',
+            'acceptEdits',
+            '--allowedTools',
+            'WebSearch',
+            '--settings',
+            '{"sandbox":{"enabled":true,"autoAllowBashIfSandboxed":true,"allowUnsandboxedCommands":false}}',
+          ],
     modelFlag: '--model',
     effortFlag: '--effort',
     // The CLI's own slider, in its order; ultracode is xhigh plus workflows.
@@ -129,7 +148,9 @@ export const ENGINES: EngineSpec[] = [
     binary: 'agy',
     // Antigravity's CLI. --print takes the prompt itself, so it rides as an
     // argument; the default print timeout is 5 minutes, too short for a document.
-    args: ['--dangerously-skip-permissions', '--print-timeout', '30m'],
+    // --sandbox: its shell commands may read but change nothing, not even in the
+    // project; the document goes in through its own write tool.
+    args: ['--dangerously-skip-permissions', '--sandbox', '--print-timeout', '30m'],
     promptFlag: '--print',
     // Without it the workspace is ~/.gemini/antigravity-cli and the agent
     // hunts for the repository with find and ls.

@@ -207,11 +207,21 @@ flag (or in its variable) on every spawn, read from the row each time. cwd is th
 
 | id | command | prompt |
 | --- | --- | --- |
-| `claude` | `claude --print --dangerously-skip-permissions` | stdin |
+| `claude` | `claude --print --permission-mode acceptEdits --allowedTools WebSearch --settings <sandbox>` (Windows: `--dangerously-skip-permissions`) | stdin |
 | `codex` | `codex exec --sandbox workspace-write --skip-git-repo-check` | stdin |
-| `antigravity` | `agy --dangerously-skip-permissions --print-timeout 30m --add-dir <repo>` | `--print <prompt>` |
+| `antigravity` | `agy --dangerously-skip-permissions --sandbox --print-timeout 30m --add-dir <repo>` | `--print <prompt>` |
 | `gemini` | `gemini --yolo` | stdin |
 | prepared, untested | `cursor` `copilot` `opencode` `amp` `droid` `goose` `qwen` `cline` — see `engines.ts` | as each spec says |
+
+**The fence.** Nobody answers a permission prompt in a headless run, but skipping them all hands
+the agent everything its user can do, and a repository's text reaches the agent. So each engine
+that can be fenced is: Claude runs in `acceptEdits` with its own sandbox switched on through
+`--settings` (shell commands read anywhere but write only inside the project, no network; web
+search allowed); Codex runs `--sandbox workspace-write`; Antigravity's `--sandbox` leaves its shell
+read-only and the document goes in through its write tool. Measured on a real existing-project step
+(2026-10-13): every engine uses the shell to read a codebase (`ls`, `grep`, `head`) and none needs it
+to change anything; with no shell at all, Claude read whole lockfiles and ran out of context. Gemini
+and the untested engines still skip permissions.
 
 **Spawn (`cli-spawn.ts`).** Never a command string — `binary + args`, no shell, so prompt text
 can never be read as a shell metacharacter (a spec that wants the prompt as an argument gets it

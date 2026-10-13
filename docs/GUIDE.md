@@ -137,13 +137,16 @@ You pick the agent when adding the project, but you can change it whenever you l
 - **Export documents** lists every written document with a tick — **All**, **None**, or pick — and downloads the chosen ones as one zip.
 - **Remove** deletes the `.kortext/` folder (brief included), the Kortext block in `AGENTS.md`, the pointer line in `CLAUDE.md` and the project's logs, and takes the project off the list. Your own text in `AGENTS.md` and `CLAUDE.md` stays.
 
-## What the agent can touch
+## Add projects you trust
 
-Kortext runs your agent in the background, while you are not watching. So the agent does not ask for permission: `claude` and `antigravity` run with `--dangerously-skip-permissions`, `gemini` and its kind with `--yolo`. `codex` runs a little narrower: it can write only inside the project folder.
+Kortext runs your agent in the background while it writes the documents. Nobody is there to answer the agent's permission questions, so instead Kortext draws a fence around it:
 
-The "write this one document only" rule lives in the agent's instructions, not in the filesystem. The agent runs as your user; in principle it can do anything you can. The repo's text reaches the agent too: an instruction buried in a file can pull it the wrong way.
+- `claude` cannot write outside the project folder or reach the network; it may only search the web.
+- `codex` can write only inside the project folder.
+- `antigravity`'s commands cannot change any file; it writes the document with its own write tool.
+- `gemini` and the others in the list still run without such a fence.
 
-So register only repos you trust. Before analysing a project you downloaded and do not know the inside of, read it.
+The agent reads the project's files. An instruction hidden in a file can pull it the wrong way; the fence keeps the damage inside the project folder, but does not make it zero. So add only projects you trust to Kortext. Do not have it analyse a project you downloaded and do not know.
 
 ## The handshake
 
