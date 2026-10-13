@@ -38,7 +38,7 @@ export type MdToken = {
   selectable: boolean;
 };
 
-function tableCells(row: string): string[] {
+export function tableCells(row: string): string[] {
   return row
     .trim()
     .replace(/^\|/, '')
@@ -47,7 +47,7 @@ function tableCells(row: string): string[] {
     .map((c) => c.trim());
 }
 
-function isSeparatorRow(row: string): boolean {
+export function isSeparatorRow(row: string): boolean {
   return tableCells(row).every((c) => /^:?-+:?$/.test(c));
 }
 
@@ -186,7 +186,8 @@ export type InlineSpan =
   | { type: 'bold'; value: string }
   | { type: 'italic'; value: string }
   | { type: 'code'; value: string }
-  | { type: 'math'; value: string };
+  | { type: 'math'; value: string }
+  | { type: 'link'; value: string; href: string };
 
 // ponytail: plain-text math. The agents write simple LaTeX (subscripts, \text,
 // \times, ≥, °C); this turns it into readable Unicode instead of shipping KaTeX.
@@ -284,8 +285,9 @@ export function deTex(src: string): string {
  */
 export function parseInline(text: string): InlineSpan[] {
   const spans: InlineSpan[] = [];
+  // A link comes first: its text may hold code, `[`a.html`](…)`, and must stay one span.
   const re =
-    /\*\*(.+?)\*\*|`(.+?)`|\$(\S(?:[^$]*?\S)?)\$|\*(\S(?:.*?\S)?)\*|(?<![A-Za-z0-9_])_(\S(?:.*?\S)?)_(?![A-Za-z0-9_])/g;
+    /\[([^\]\n]+)\]\(([^)\s]+)\)|\*\*(.+?)\*\*|`(.+?)`|\$(\S(?:[^$]*?\S)?)\$|\*(\S(?:.*?\S)?)\*|(?<![A-Za-z0-9_])_(\S(?:.*?\S)?)_(?![A-Za-z0-9_])/g;
   let last = 0;
   let m: RegExpExecArray | null;
 
@@ -293,14 +295,44 @@ export function parseInline(text: string): InlineSpan[] {
     if (m.index > last) {
       spans.push({ type: 'text', value: text.slice(last, m.index) });
     }
-    if (m[1] !== undefined) spans.push({ type: 'bold', value: m[1] });
-    else if (m[2] !== undefined) spans.push({ type: 'code', value: m[2] });
-    else if (m[3] !== undefined) spans.push({ type: 'math', value: deTex(m[3]) });
-    else spans.push({ type: 'italic', value: m[4] ?? m[5] ?? '' });
+    if (m[1] !== undefined) spans.push({ type: 'link', value: m[1], href: m[2]! });
+    else if (m[3] !== undefined) spans.push({ type: 'bold', value: m[3] });
+    else if (m[4] !== undefined) spans.push({ type: 'code', value: m[4] });
+    else if (m[5] !== undefined) spans.push({ type: 'math', value: deTex(m[5]) });
+    else spans.push({ type: 'italic', value: m[6] ?? m[7] ?? '' });
     last = m.index + m[0].length;
   }
   if (last < text.length) {
     spans.push({ type: 'text', value: text.slice(last) });
   }
   return spans;
+}
+
+/**
+ * The prompts a document hands on to another AI: every fenced block under a
+ * `##` heading that says prompts (EXPERIENCE.md's `## Part 2 — Prompts`),
+ * named by the heading above it.
+ */
+export function promptsOf(md: string): Array<{ title: string; text: string }> {
+  const out: Array<{ title: string; text: string }> = [];
+  let inPart = false;
+  let title = '';
+  let fence: string[] | null = null;
+  for (const line of md.split('\n')) {
+    if (fence) {
+      if (/^\s*```/.test(line)) {
+        out.push({ title, text: fence.join('\n').trim() });
+        fence = null;
+      } else fence.push(line);
+      continue;
+    }
+    const h = line.match(/^(#{1,6})\s+(.*?)\s*$/);
+    if (h) {
+      if (h[1]!.length <= 2) inPart = /prompt/i.test(h[2]!);
+      else if (inPart) title = h[2]!;
+      continue;
+    }
+    if (inPart && /^\s*```/.test(line)) fence = [];
+  }
+  return out;
 }

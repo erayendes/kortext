@@ -139,7 +139,10 @@ reason `` with `` - accepted on THIS.md `` under it; Discard deletes it. `parseI
 that trailer as `presumed: 'accept'`, and the panel opens the target with the row ticked — the
 one person who could accept it there already did — but still unticks on request. Nothing is
 rewritten until the target's own Apply, so everything owed there goes into one rewrite. An
-undecided outgoing request holds approval, like an open question. (Documents approved before
+undecided outgoing request holds approval, like an open question. Until it is decided it also
+shows at the target, flagged `pending` (listDocs adds it to the target's `revisionRequests`), so
+the target is not rewritten first and sent back for a second round; decided there, it is settled
+at the author too (`removeRequest` falls back to `discardOutgoing`). (Documents approved before
 requests travelled are swept on listing and land without the trailer, decided at the target.)
 Accepted and written, the line is removed — the text now says what it asked for, and git keeps
 the history.

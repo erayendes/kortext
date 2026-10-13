@@ -798,15 +798,81 @@ a.btn {
 .dr-body-preview {
   padding: 0;
   overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
 }
-.dr-body-preview > *:not(.kx-doc-preview) {
+.dr-body-preview > *:not(.kx-doc-preview):not(.kx-ask-box) {
   display: none;
 }
 .kx-doc-preview {
   width: 100%;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   border: 0;
   display: block;
+}
+/* EXPERIENCE.md's prompts, laid out to copy: the document itself is hidden. */
+.dr-body-prompts > *:not(.kx-prompts):not(.kx-cmd-hint) {
+  display: none;
+}
+.kx-prompts {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.kx-prompt {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.kx-prompt-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-muted);
+  font-weight: 600;
+  font-size: 13px;
+}
+/* A code block hides its Copy until hovered; a prompt is here to be copied. */
+.kx-prompt-head .kx-copy {
+  position: static;
+  opacity: 1;
+  font-weight: 400;
+}
+.kx-prompt-text {
+  margin: 0;
+  padding: 12px;
+  max-height: 260px;
+  overflow: auto;
+  white-space: pre-wrap;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+/* Asked about with no line in view: a selection in the preview, or the whole document. */
+.kx-ask-box {
+  max-height: 45%;
+  overflow: auto;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+}
+/* In the preview: sits over a gap opened in the page under the selected row,
+   flat like a line's thread in the document — the gap is its background. */
+.kx-ask-inline {
+  position: absolute;
+  max-height: 45%;
+  padding: 8px 10px;
+  border-top: 0;
+  /* The page may be in the other theme: the box keeps the panel's own ground. */
+  background: var(--bg);
+  border-radius: 8px;
+}
+.dr-foot > .kx-ask-box {
+  max-height: 40vh;
+  padding: 0;
+  border-top: 0;
 }
 
 /* Define hover styling per variant to avoid base-rule overrides. */
@@ -2810,6 +2876,11 @@ button.kx-note-exc:hover {
   white-space: pre-wrap;
   line-height: 1.5;
 }
+.kx-answer-table {
+  white-space: normal;
+  overflow-x: auto;
+  margin: var(--sp-2) 0;
+}
 
 /* Align thread content with the selected block. */
 .kx-thread {
@@ -2846,6 +2917,10 @@ button.kx-note-exc:hover {
 .kx-thread-text {
   height: auto;
   min-height: var(--control-h);
+  /* Grow with what is typed, up to half the window; past that it scrolls.
+     ponytail: native field-sizing — a browser without it keeps the resize handle. */
+  field-sizing: content;
+  max-height: 50vh;
   resize: vertical;
   font-family: inherit;
   padding: var(--sp-2) var(--sp-3);
@@ -2858,7 +2933,6 @@ button.kx-note-exc:hover {
 }
 .kx-thread-input .kx-input {
   flex: 1;
-  height: 30px;
   font-size: var(--fs-ui);
 }
 

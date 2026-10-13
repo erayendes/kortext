@@ -292,6 +292,10 @@ text's own ink.
 | `recheck` | an input moved; read again when it settles — the tooltip names the input | amber | To do while queued, Doing while `reading` |
 | `revision` | the run is a rewrite of what already stands, not a first draft | muted | Doing |
 
+An on-request document nobody asked for (`request`) is not a row at all: it is not owed, and a To
+do row left at the end reads as an analysis never finished. The handshake card offers it; once
+asked for it is listed like any other.
+
 A badge is drawn only when it says something the state beside it does not. `queue` and `draft`
 exist in the data and are never drawn: `waiting` in To do already means queued, `writing` already
 means a first draft — only a rewrite needs a word, and that word is `revision`. `failed` is a

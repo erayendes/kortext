@@ -35,7 +35,14 @@ export interface DocInfo {
    * nobody has written yet they are not prime's to decide: they go into its
    * first write.
    */
-  revisionRequests: Array<{ from: string; reason: string; presumed?: 'accept' }>;
+  revisionRequests: Array<{
+    from: string;
+    reason: string;
+    presumed?: 'accept';
+    /** Still an undecided outgoing line in `from`'s draft. Shown here too, so
+     *  prime decides it while reading this document, not after rewriting it. */
+    pending?: true;
+  }>;
   /** Requests prime denied here. A record, not work: nothing asks about them again. */
   denied: Array<{ from: string; reason: string }>;
   /**
@@ -470,6 +477,13 @@ export function removeRequest(project: Project, rel: string, from: string, reaso
     writeFileSync(path, lines.join('\n'), 'utf8');
     return;
   }
+  // Not filed here yet: it is still an outgoing line in the author's draft,
+  // decided from this side. Settle it there, or it would be sent later.
+  try {
+    discardOutgoing(project, from, rel, reason);
+  } catch {
+    // `from` is not a document path docPath accepts; there is no draft to settle.
+  }
 }
 
 /** Drops what this document asked of another, before it was sent. */
@@ -727,6 +741,15 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
       if (!input) return false;
       return input.revisionRequests.length > 0 || !settled(input.status);
     });
+  }
+  // A request still waiting in its author's draft is shown at its target too.
+  // Otherwise prime rewrites the target, opens the author afterwards, sends the
+  // request, and the target comes back for a second round. Deciding it here
+  // settles it there: `removeRequest` falls back to the author's line.
+  for (const doc of docs) {
+    for (const r of doc.outgoing) {
+      byRel.get(r.target)?.revisionRequests.push({ from: doc.rel, reason: r.reason, pending: true });
+    }
   }
 
   // Sort by maximum dependency depth. Memoize per document, but keep cycle detection

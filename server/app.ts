@@ -1,7 +1,7 @@
 import express from 'express';
 import type Database from 'better-sqlite3';
-import { existsSync, rmSync } from 'node:fs';
-import { join, sep } from 'node:path';
+import { existsSync, realpathSync, rmSync } from 'node:fs';
+import { join, relative, sep } from 'node:path';
 import {
   createProject,
   listProjects,
@@ -570,6 +570,30 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     return path;
   };
 
+  // A file an answer links to, served so the link opens in a new tab. The page
+  // cannot follow file:// from localhost. Only inside the project, no dotfiles
+  // (.env, .git), and sandboxed: a served page runs with no origin, so it can
+  // never call this API — the Origin check above refuses it.
+  app.get('/api/projects/:id/files/*path', (req, res) => {
+    const project = projectOr404(req.params.id, res);
+    if (!project) return;
+    const rel = ([] as string[]).concat(req.params.path).join('/');
+    const root = realpathSync(project.repo_path);
+    let real: string;
+    try {
+      real = realpathSync(join(root, rel));
+    } catch {
+      return res.status(404).json({ error: `no such file in the project: ${rel}` });
+    }
+    if (!real.startsWith(root + sep)) {
+      return res.status(403).json({ error: 'only files inside the project open from here' });
+    }
+    res.setHeader('Content-Security-Policy', 'sandbox allow-scripts allow-popups allow-forms');
+    res.sendFile(relative(root, real), { root, dotfiles: 'deny' }, (err) => {
+      if (err && !res.headersSent) res.status(404).json({ error: `cannot open ${rel}` });
+    });
+  });
+
   app.get('/api/projects/:id/docs', (req, res) => {
     const project = projectOr404(req.params.id, res);
     if (!project) return;
@@ -822,7 +846,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
           );
           return found ? { ...found, note: String(r.note ?? '').trim() } : undefined;
         })
-        .filter((r): r is { from: string; reason: string; note: string } => !!r);
+        .filter((r): r is { from: string; reason: string; note: string; pending?: true } => !!r);
     const applying = pick(apply);
     const denying = pick(deny);
     const said = (Array.isArray(answers) ? answers : []).map(String).filter((a) => a.trim());
@@ -847,6 +871,11 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       return res.status(409).json({ error: 'there is nothing left to settle here' });
     }
     for (const r of discarding) discardOutgoing(project, doc.rel, r.target, r.reason);
+    // Accepted here while still waiting in its author's draft: file it here
+    // now, so the author stops offering it while this document is rewritten.
+    // A pending denial needs nothing — `markRequestHandled` settles the author.
+    for (const r of applying.filter((a) => a.pending))
+      deliverRequests(project, r.from, [{ target: doc.rel, reason: r.reason }]);
     // Accepted where it was asked: the line lands at the target with that
     // written under it, and the target opens with it already ticked. Prime
     // decided once; the target's own Apply carries it into one rewrite with

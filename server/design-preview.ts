@@ -143,7 +143,12 @@ export function parseDesignTokens(md: string): DesignTokens {
       }
       // `| Token | Light | Dark | Usage |` — the header is the only place that
       // says which column is which, so it is read before the rows.
-      if (lower.some((c) => /\bdark\b/.test(c)) && lower.some((c) => /token|name|light/.test(c))) {
+      // A row whose cell reads `#fff (Light) / #000 (Dark)` says dark too, but holds values.
+      if (
+        lower.some((c) => /\bdark\b/.test(c)) &&
+        lower.some((c) => /token|name|light/.test(c)) &&
+        !lower.some((c) => /#[0-9a-f]{3}|rgba?\(|hsla?\(|oklch\(/.test(c))
+      ) {
         darkColumn = lower.findIndex((c) => /\bdark\b/.test(c));
         header = null;
         continue;
@@ -168,8 +173,22 @@ export function parseDesignTokens(md: string): DesignTokens {
         header = null;
       }
       // A token row: the name cell, then the first cell holding a real value.
-      const name = row[0] ?? '';
+      // The name may carry an alias after it — `--bg` (`--color-bg-main`).
+      const name =
+        (row[0] ?? '').replace(/`/g, '').match(/^(--?[\w-]+|[a-z][\w-]*(?:\.[\w-]+)+)\b/i)?.[1] ??
+        '';
       if (!NAME.test(name)) continue;
+      // Both modes in one cell: `#fff` (Light) / `#0a0a0b` (Dark).
+      const pair = row
+        .slice(1)
+        .map((c) => variants(c.replace(/`/g, '')))
+        .find((vs) => vs.length === 2 && vs.every((v) => COLOR.test(v.value)));
+      if (pair) {
+        const light = pair.find((v) => /light/i.test(v.context)) ?? pair[0]!;
+        const dark = pair.find((v) => /dark/i.test(v.context)) ?? pair[1]!;
+        attach(name, light.value, row.length > 2 ? (row[row.length - 1] ?? '') : '', dark.value);
+        continue;
+      }
       const usable = (c: string, i: number) =>
         i !== darkColumn && decided(c) && (COLOR.test(c) || LENGTH.test(c));
       const value = row.slice(1).find((c, i) => usable(c, i + 1));
@@ -350,22 +369,72 @@ function colorSection(
     <div class="tokrow">${cards}</div></section>`;
 }
 
+/**
+ * One cell may carry a value per context — `40px` (Marketing) / `21px`
+ * (`--fs-title` App) — and the context may name the token that holds it.
+ */
+export function variants(cell: string): Array<{ value: string; context: string; token: string }> {
+  return cell
+    .split(/\s+\/\s+/)
+    .map((part) => {
+      // A context is a word — (Marketing), (App). `(11px – 14px)` is a note on
+      // the value, and stays with it.
+      const context = (part.match(/\(([^)]*)\)/)?.[1] ?? '').replace(/`?--[\w-]+`?/g, '').trim();
+      const word = /^[\p{L} /&-]*$/u.test(context);
+      return {
+        value: unwrap(word ? part.replace(/\([^)]*\)/g, '') : part).replace(/`/g, ''),
+        context: word ? context : '',
+        token: part.match(/--[\w-]+/)?.[0] ?? '',
+      };
+    })
+    .filter((v) => v.value);
+}
+
+/** A role written for two contexts is two rows: each drawn at its own size and weight. */
+export function typeRows(role: TypeRole) {
+  const cols = {
+    size: variants(role.size),
+    weight: variants(role.weight),
+    lineHeight: variants(role.lineHeight),
+    tracking: variants(role.tracking),
+  };
+  const contexts = [
+    ...new Set(Object.values(cols).flatMap((vs) => vs.map((v) => v.context).filter(Boolean))),
+  ];
+  return (contexts.length ? contexts : ['']).map((context) => {
+    const at = (vs: Array<{ value: string; context: string; token: string }>) =>
+      vs.find((v) => v.context === context) ?? vs.find((v) => !v.context) ?? vs[0];
+    return {
+      role: unwrap(role.role),
+      context,
+      token: at(cols.size)?.token ?? '',
+      size: at(cols.size)?.value ?? '',
+      weight: at(cols.weight)?.value ?? '',
+      lineHeight: at(cols.lineHeight)?.value ?? '',
+      tracking: at(cols.tracking)?.value ?? '',
+    };
+  });
+}
+
 function typeSection(type: TypeRole[], fonts: Token[]): string {
   if (type.length === 0) return '';
   const fallback = fonts.map((f) => safe(f.value)).find(Boolean) ?? 'system-ui, sans-serif';
+  // `var(--font-sans)` names a font token; this page defines no such variable.
+  const family = (f: string) => {
+    const name = unwrap(f).match(/^var\((--[\w-]+)\)$/)?.[1];
+    const token = name ? fonts.find((t) => t.name === name) : undefined;
+    return safe(token ? token.value : f) ?? fallback;
+  };
   const rows = type
-    .map((r) => {
-      const family = safe(r.family) ?? fallback;
-      const size = safe(r.size) ?? '16px';
-      const lh = safe(r.lineHeight) ?? '1.5';
-      const weight = safe(r.weight) ?? '400';
-      const tracking = safe(r.tracking) ?? 'normal';
-      const style = `font-family:${esc(family)};font-size:${esc(size)};line-height:${esc(lh)};font-weight:${esc(weight)};letter-spacing:${esc(tracking)}`;
-      return `<div class="spec">
-        <div class="tag">${esc(r.role)}<span>${esc([r.size, r.weight, r.lineHeight].filter(Boolean).join(' · '))}</span></div>
+    .flatMap((r) =>
+      typeRows(r).map((v) => {
+        const style = `font-family:${esc(family(r.family))};font-size:${esc(safe(v.size) ?? '16px')};line-height:${esc(safe(v.lineHeight) ?? '1.5')};font-weight:${esc(safe(v.weight) ?? '400')};letter-spacing:${esc(safe(v.tracking) ?? 'normal')}`;
+        return `<div class="spec">
+        <div class="tag"><b>${esc(v.role)}</b>${v.context ? `<span>· ${esc(v.context)}</span>` : ''}${v.token ? `<code>${esc(v.token)}</code>` : ''}<span class="nums">${esc([v.size, v.weight, v.lineHeight].filter(Boolean).join(' / '))}</span></div>
         <div class="sample" style="${style}">Grumpy wizards make toxic brew — 0123</div>
       </div>`;
-    })
+      }),
+    )
     .join('');
   return `<section><h2>Typography</h2><div class="surface">${rows}</div></section>`;
 }
@@ -526,11 +595,13 @@ export function renderDesignPreview(md: string, projectName = 'project'): string
   .tk .note { display:block; }
   .badge { display:inline-block; margin-top:6px; padding:1px 7px; border-radius:999px; font-size:11px; font-weight:600; }
   .badge.ok { background:#16a34a26; color:#22a05a; } .badge.warn { background:#f59e0b26; color:#c1820c; } .badge.bad { background:#dc262626; color:#e0574f; }
-  .spec { display:flex; gap:20px; align-items:baseline; padding:14px 0; border-bottom:1px solid var(--line); }
+  .spec { padding:14px 0; border-bottom:1px solid var(--line); }
   .spec:last-child { border-bottom:0; }
-  .spec .tag { width:150px; flex:none; font-family:ui-monospace,monospace; font-size:11.5px; color:var(--muted); }
-  .spec .tag span { display:block; font-size:10.5px; opacity:.75; }
-  .spec .sample { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .spec .tag { display:flex; gap:8px; align-items:baseline; margin-bottom:6px; font-family:ui-monospace,monospace; font-size:11.5px; color:var(--muted); }
+  .spec .tag b { color:var(--ink); font-weight:600; }
+  .spec .tag code { font-size:11px; }
+  .spec .tag .nums { margin-left:auto; }
+  .spec .sample { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .scale-row { display:flex; align-items:center; gap:14px; padding:7px 0; }
   .scale-row code { width:150px; flex:none; }
   .scale-row .val { width:70px; flex:none; }

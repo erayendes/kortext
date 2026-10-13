@@ -46,8 +46,9 @@ export interface DocInfo {
   dependentOn: string[];
   openQuestions: boolean;
   hasProducingStep: boolean;
-  /** `presumed`: accepted where it was asked — opens ticked here, still yours to untick. */
-  revisionRequests: Array<{ from: string; reason: string; presumed?: 'accept' }>;
+  /** `presumed`: accepted where it was asked — opens ticked here, still yours to untick.
+   *  `pending`: not sent yet — still in the asker's draft; deciding it here settles it there. */
+  revisionRequests: Array<{ from: string; reason: string; presumed?: 'accept'; pending?: true }>;
   denied: Array<{ from: string; reason: string }>;
   outgoing: Array<{ target: string; reason: string }>;
   warnings: Array<{ subject: string; reason: string }>;
