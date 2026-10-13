@@ -64,10 +64,10 @@ export const ENGINES: EngineSpec[] = [
     models: ['opus[1m]', 'fable', 'sonnet', 'haiku'],
     label: { 'opus[1m]': 'Opus (1M context)', fable: 'Fable', sonnet: 'Sonnet', haiku: 'Haiku' },
     about: {
-      'opus[1m]': 'Opus 5 with 1M context · recommended',
+      'opus[1m]': 'Opus 5.5 with 1M context · recommended',
       fable: 'Fable 5.1 · most capable',
-      sonnet: 'Sonnet 5 · efficient',
-      haiku: 'Haiku 4.5 · fastest',
+      sonnet: 'Sonnet 5.5 · efficient',
+      haiku: 'Haiku 5.5 · fastest',
       low: 'faster',
       medium: 'faster',
       high: 'the CLI default',
@@ -89,17 +89,34 @@ export const ENGINES: EngineSpec[] = [
     effortPrefix: '-c model_reasoning_effort=',
     // The picker's "More reasoning…" opens ultra and max; both take on the command line.
     efforts: ['low', 'medium', 'high', 'xhigh', 'ultra', 'max'],
-    models: ['gpt-6-astra', 'gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.5'],
+    // The Luna models stop at max (`codex debug models`).
+    modelEfforts: {
+      'gpt-6-luna': ['low', 'medium', 'high', 'xhigh', 'max'],
+      'gpt-5.6-luna': ['low', 'medium', 'high', 'xhigh', 'max'],
+    },
+    models: [
+      'gpt-6.1-sol',
+      'gpt-6-astra',
+      'gpt-6-sol',
+      'gpt-6-luna',
+      'gpt-5.6-sol',
+      'gpt-5.6-terra',
+      'gpt-5.6-luna',
+    ],
     label: { xhigh: 'extra high' },
-    // What the CLI's own picker says, in its order and words.
+    // What the CLI's own picker says, in its order and words. The default level
+    // differs per model now (low on Sol and Astra, medium elsewhere), so no level
+    // is marked as the CLI default.
     about: {
-      'gpt-6-astra': 'Our most capable model for complex, demanding work',
-      'gpt-5.6-sol': 'Reliable agentic workhorse for everyday tasks',
-      'gpt-5.6-terra': 'Balanced agentic coding model for everyday work',
-      'gpt-5.6-luna': 'Fast and affordable agentic coding model',
-      'gpt-5.5': 'Proven previous-generation model for coding and general work',
+      'gpt-6.1-sol': 'Latest workhorse model for coding and everyday work',
+      'gpt-6-astra': 'Frontier intelligence for the most demanding work',
+      'gpt-6-sol': 'Previous generation workhorse model',
+      'gpt-6-luna': 'Fast and affordable model for easier tasks',
+      'gpt-5.6-sol': 'Older generation workhorse model',
+      'gpt-5.6-terra': 'Older balanced model for straightforward work',
+      'gpt-5.6-luna': 'Older fast and efficient model',
       low: 'Fast responses with lighter reasoning',
-      medium: 'Balances speed and reasoning depth for everyday tasks · the CLI default',
+      medium: 'Balances speed and reasoning depth for everyday tasks',
       high: 'Greater reasoning depth for complex problems',
       xhigh: 'Extra high reasoning depth for complex problems',
       ultra: 'More reasoning',
@@ -125,27 +142,13 @@ export const ENGINES: EngineSpec[] = [
     efforts: ['low', 'medium', 'high'],
     // Verified with a run each: the CLI names what the model takes when refused.
     modelEfforts: {
-      'gemini-3.1-pro': ['low', 'high'],
-      'claude-sonnet-4-6': [],
-      'claude-opus-4-6-thinking': [],
       'gpt-oss-120b': ['medium'],
     },
-    models: [
-      'gemini-3.8-flash',
-      'gemini-3.7-flash',
-      'gemini-3.6-flash',
-      'gemini-3.1-pro',
-      'claude-sonnet-4-6',
-      'claude-opus-4-6-thinking',
-      'gpt-oss-120b',
-    ],
+    models: ['gemini-3.8-flash', 'claude-opus-5-5', 'claude-sonnet-5-5', 'gpt-oss-120b'],
     label: {
       'gemini-3.8-flash': 'Gemini 3.8 Flash',
-      'gemini-3.7-flash': 'Gemini 3.7 Flash',
-      'gemini-3.6-flash': 'Gemini 3.6 Flash',
-      'gemini-3.1-pro': 'Gemini 3.1 Pro',
-      'claude-sonnet-4-6': 'Claude Sonnet 4.6 (Thinking)',
-      'claude-opus-4-6-thinking': 'Claude Opus 4.6 (Thinking)',
+      'claude-opus-5-5': 'Claude Opus 5.5',
+      'claude-sonnet-5-5': 'Claude Sonnet 5.5',
       'gpt-oss-120b': 'GPT-OSS 120B (Medium)',
     },
     // What the CLI's own picker says, in its order and words.

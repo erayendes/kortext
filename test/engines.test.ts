@@ -148,14 +148,19 @@ test('Add project takes the picker model and effort, and refuses a level the CLI
 
 test('a level the model lacks never reaches the CLI', () => {
   const agy = spec('antigravity');
-  // agy refuses the whole run: "--effort is not supported for model ...".
-  assert.ok(
-    !engineArgs(agy, { model: 'claude-opus-4-6-thinking', effort: 'high' }).includes('--effort'),
-  );
-  assert.ok(!engineArgs(agy, { model: 'gemini-3.1-pro', effort: 'medium' }).includes('--effort'));
-  assert.deepEqual(engineArgs(agy, { model: 'gemini-3.1-pro', effort: 'low' }).slice(-2), [
+  // agy refuses the whole run: "gpt-oss-120b has no "high" effort (available: medium)".
+  assert.ok(!engineArgs(agy, { model: 'gpt-oss-120b', effort: 'high' }).includes('--effort'));
+  assert.deepEqual(engineArgs(agy, { model: 'gpt-oss-120b', effort: 'medium' }).slice(-2), [
     '--effort',
-    'low',
+    'medium',
   ]);
   assert.deepEqual(engineArgs(agy, { effort: 'medium' }).slice(-2), ['--effort', 'medium']);
+  // codex: the Luna models stop at max.
+  const codex = spec('codex');
+  assert.ok(
+    !engineArgs(codex, { model: 'gpt-6-luna', effort: 'ultra' }).join(' ').includes('ultra'),
+  );
+  assert.ok(
+    engineArgs(codex, { model: 'gpt-6.1-sol', effort: 'ultra' }).join(' ').includes('ultra'),
+  );
 });
