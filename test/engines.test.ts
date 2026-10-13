@@ -171,3 +171,62 @@ test('a level the model lacks never reaches the CLI', () => {
     engineArgs(codex, { model: 'gpt-6.1-sol', effort: 'ultra' }).join(' ').includes('ultra'),
   );
 });
+
+test('agy models: one line per model and level, grouped into a model and its levels', async () => {
+  const { parseAgyModels } = await import('../server/engines.ts');
+  const out = [
+    'Fetching available models...',
+    'gemini-4-argon-high\tGemini 4 Argon (High)',
+    'gemini-3.8-flash-high\tGemini 3.8 Flash (High)',
+    'gemini-3.8-flash-medium\tGemini 3.8 Flash (Medium)',
+    'gemini-3.8-flash-low\tGemini 3.8 Flash (Low)',
+    'claude-opus-4-6-thinking\tClaude Opus 4.6 (Thinking)',
+    'gpt-oss-120b-medium\tGPT-OSS 120B (Medium)',
+  ].join('\n');
+  assert.deepEqual(parseAgyModels(out), {
+    models: ['gemini-4-argon', 'gemini-3.8-flash', 'claude-opus-4-6-thinking', 'gpt-oss-120b'],
+    efforts: ['low', 'medium', 'high'],
+    modelEfforts: {
+      'gemini-4-argon': ['high'],
+      'claude-opus-4-6-thinking': [],
+      'gpt-oss-120b': ['medium'],
+    },
+    label: {
+      'gemini-4-argon': 'Gemini 4 Argon',
+      'gemini-3.8-flash': 'Gemini 3.8 Flash',
+      'claude-opus-4-6-thinking': 'Claude Opus 4.6 (Thinking)',
+      'gpt-oss-120b': 'GPT-OSS 120B',
+    },
+  });
+  assert.equal(parseAgyModels('Fetching available models...\n'), null);
+});
+
+test('codex debug models: only what the picker lists, in its order, with each model’s levels', async () => {
+  const { parseCodexModels } = await import('../server/engines.ts');
+  const lv = (...e: string[]) => e.map((effort) => ({ effort, description: `${effort} words` }));
+  const out = JSON.stringify({
+    models: [
+      { slug: 'gpt-5.5', visibility: 'hide', priority: 0, supported_reasoning_levels: lv('low') },
+      {
+        slug: 'luna',
+        description: 'Fast.',
+        visibility: 'list',
+        priority: 2,
+        supported_reasoning_levels: lv('low', 'max'),
+      },
+      {
+        slug: 'sol',
+        description: 'Workhorse.',
+        visibility: 'list',
+        priority: 1,
+        supported_reasoning_levels: lv('low', 'max', 'ultra'),
+      },
+    ],
+  });
+  const m = parseCodexModels(out)!;
+  assert.deepEqual(m.models, ['sol', 'luna']);
+  assert.deepEqual(m.efforts, ['low', 'max', 'ultra']);
+  assert.deepEqual(m.modelEfforts, { luna: ['low', 'max'] });
+  assert.equal(m.about?.sol, 'Workhorse');
+  assert.equal(m.about?.ultra, 'ultra words');
+});
