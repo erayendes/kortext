@@ -11,6 +11,11 @@
 - **Tek satırda yazılmış uyarı da uyarı.** `> [!WARNING] Metin` artık içinde işaretin göründüğü bir
   alıntı olarak değil, uyarı kutusu olarak görünüyor.
 - **Düzenleme ekranı bütün çekmeceyi kullanıyor**, pencerenin sabit bir parçasını değil.
+- **Henüz kimsenin bilemeyeceği şey öyle yazılıyor.** `ENVIRONMENT.md`'deki repo, alan adı, canlı
+  adres ve veritabanı satırları *[to be filled by prime]* olarak kalıyor, Approve da belgeyi bu
+  yüzden reddediyordu. Ajan artık girdilerde varsa değeri, yoksa *Not decided yet — set during the
+  build* yazıyor; `AGENTS.md` de kodu yazan ajana bu satırları değerler ortaya çıkınca doldurmasını
+  söylüyor.
 
 - **Kendi model listeniz.** Codex ve Antigravity'ye hangi modelleri sunduğu soruluyor; seçici,
   Kortext'e yazılmış bir liste yerine planınızda ne varsa onu gösteriyor — Google AI Ultra'da
