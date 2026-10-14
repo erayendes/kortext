@@ -19,6 +19,7 @@ import {
   tableCells,
   type AlertKind,
   type MdToken,
+  mermaidSafe,
 } from './markdown';
 import { api, type DocInfo, type DocVersion, type Project } from './api';
 
@@ -2119,29 +2120,45 @@ function Body({ text }: { text: string }) {
 let mermaidId = 0;
 function Mermaid({ code }: { code: string }) {
   const [svg, setSvg] = useState<string | null>(null);
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
     setSvg(null);
-    setFailed(false);
+    setFailed(null);
+    const id = `kx-mmd-${mermaidId++}`;
     import('mermaid')
       .then(async ({ default: mermaid }) => {
         // Treat agent-written diagram text as untrusted. Require strict sanitization
-        // before inserting the generated SVG into the DOM.
-        mermaid.initialize({ startOnLoad: false, theme: 'neutral', securityLevel: 'strict' });
-        const { svg } = await mermaid.render(`kx-mmd-${mermaidId++}`, code);
+        // before inserting the generated SVG into the DOM. A failed diagram must not
+        // draw Mermaid's own error picture at the foot of the page.
+        mermaid.initialize({
+          startOnLoad: false,
+          theme: 'neutral',
+          securityLevel: 'strict',
+          suppressErrorRendering: true,
+        });
+        const { svg } = await mermaid.render(id, mermaidSafe(code));
         if (alive) setSvg(svg);
       })
-      .catch(() => {
-        if (alive) setFailed(true);
+      .catch((e: unknown) => {
+        // render() works in a scratch element it leaves behind when it throws.
+        document.getElementById(`d${id}`)?.remove();
+        document.getElementById(id)?.remove();
+        if (alive) setFailed(String((e as Error)?.message ?? e).split('\n')[0] || 'cannot draw');
       });
     return () => {
       alive = false;
     };
   }, [code]);
 
-  if (failed) return <pre className="kx-code mono">{code}</pre>;
+  if (failed)
+    return (
+      <>
+        <pre className="kx-code mono">{code}</pre>
+        <span className="kx-cmd-hint">The diagram could not be drawn — {failed}</span>
+      </>
+    );
   if (!svg) return <span className="kx-cmd-hint">rendering diagram…</span>;
   return <div className="kx-mermaid-svg" dangerouslySetInnerHTML={{ __html: svg }} />;
 }

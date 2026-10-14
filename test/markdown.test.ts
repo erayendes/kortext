@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { deTex, parseInline, parseMarkdown, promptsOf } from '../ui/src/markdown.js';
+import { deTex, mermaidSafe, parseInline, parseMarkdown, promptsOf } from '../ui/src/markdown.js';
 
 // The LaTeX the agents actually write, reduced to readable Unicode.
 test('deTex: the forms the documents use', () => {
@@ -109,4 +109,21 @@ test('promptsOf: each fenced block under Part 2, named by its heading', () => {
     { title: 'Master prompt', text: 'ROLE: designer' },
     { title: 'Prompt 1 — Journey 1', text: 'TASK: home' },
   ]);
+});
+
+test('a semicolon in a sequence-diagram message is drawn, not read as the end of the line', () => {
+  const seq = 'sequenceDiagram\n  A->>DB: BEGIN; COMMIT;\n  Note over A: done';
+  assert.equal(
+    mermaidSafe(seq),
+    'sequenceDiagram\n  A->>DB: BEGIN#59; COMMIT#59;\n  Note over A: done',
+  );
+  const flow = 'graph TD\n  A["x; y"] --> B';
+  assert.equal(mermaidSafe(flow), flow, 'other diagrams are left alone');
+});
+
+test('an alert with its text on the marker line is still an alert', () => {
+  const [t] = parseMarkdown('> [!WARNING] **FE RULE:** Raw values are forbidden.');
+  assert.equal(t?.kind, 'alert');
+  assert.equal(t?.alert, 'warning');
+  assert.equal(t?.text, '**FE RULE:** Raw values are forbidden.');
 });

@@ -4,6 +4,14 @@
 
 ## [Unreleased]
 
+- **İçinde SQL olan diyagramlar çiziliyor.** Bir sıra diyagramındaki mesajda geçen noktalı virgül
+  (`BEGIN; COMMIT;`) bütün diyagramı bozuyordu; diyagram kod olarak görünüyor, Mermaid'in hata
+  resmi de sayfanın altına yığılıyordu. Artık bu diyagramlar çiziliyor; yine de çizilemeyen bir
+  diyagram nedenini kodunun altında söylüyor ve arkasında bir şey bırakmıyor.
+- **Tek satırda yazılmış uyarı da uyarı.** `> [!WARNING] Metin` artık içinde işaretin göründüğü bir
+  alıntı olarak değil, uyarı kutusu olarak görünüyor.
+- **Düzenleme ekranı bütün çekmeceyi kullanıyor**, pencerenin sabit bir parçasını değil.
+
 - **Kendi model listeniz.** Codex ve Antigravity'ye hangi modelleri sunduğu soruluyor; seçici,
   Kortext'e yazılmış bir liste yerine planınızda ne varsa onu gösteriyor — Google AI Ultra'da
   Gemini 4 Argon, Enterprise'da Gemini 3.1 Pro ve sonradan eklenen her şey.

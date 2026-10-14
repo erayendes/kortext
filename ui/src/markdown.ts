@@ -104,10 +104,12 @@ export function parseMarkdown(md: string): MdToken[] {
     // GitHub alerts: a blockquote whose first line is `> [!NOTE]` and friends.
     // The whole quote is one token — the marker is the block's kind, not a line
     // of its text, and the reader annotates the callout rather than its parts.
-    const marker = line.match(/^>\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*$/i);
+    // Agents also write the text on the marker's own line (`> [!WARNING] Text`),
+    // which GitHub would not take; it is the same alert, so it reads as one.
+    const marker = line.match(/^>\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*(.*)$/i);
     if (marker) {
       i++;
-      const body: string[] = [];
+      const body: string[] = marker[2] ? [marker[2]] : [];
       while (i < lines.length && (lines[i] ?? '').startsWith('>')) {
         body.push((lines[i] ?? '').replace(/^>\s?/, ''));
         i++;
@@ -335,4 +337,18 @@ export function promptsOf(md: string): Array<{ title: string; text: string }> {
     if (inPart && /^\s*```/.test(line)) fence = [];
   }
   return out;
+}
+
+/** In a sequence diagram `;` ends a statement, so `DB: BEGIN; COMMIT;` splits a
+ *  message in two and the whole diagram fails. Agents write SQL there; the
+ *  `#59;` entity draws the same semicolon. The file itself is left as written. */
+export function mermaidSafe(code: string): string {
+  if (!/^\s*sequenceDiagram\b/.test(code)) return code;
+  return code
+    .split('\n')
+    .map((line) => {
+      const i = line.indexOf(':');
+      return i < 0 ? line : line.slice(0, i + 1) + line.slice(i + 1).replaceAll(';', '#59;');
+    })
+    .join('\n');
 }

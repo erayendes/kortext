@@ -4,6 +4,14 @@
 
 ## [Unreleased]
 
+- **Diagrams with SQL in them draw.** A semicolon in a sequence-diagram message (`BEGIN; COMMIT;`)
+  broke the whole diagram, which then showed as code — and Mermaid's error picture piled up at the
+  foot of the page. Such diagrams now draw; one that still cannot says why under its code, and
+  leaves nothing behind.
+- **A warning written on one line is a warning.** `> [!WARNING] Text` shows as the callout, not as a
+  quote with the marker in it.
+- **Editing uses the whole drawer**, not a fixed part of the window.
+
 - **Your own model list.** Codex and Antigravity are asked which models they offer, so the picker
   shows what your plan has — Gemini 4 Argon on Google AI Ultra, Gemini 3.1 Pro on Enterprise, and
   whatever is added later — instead of a list written into Kortext.
