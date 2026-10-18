@@ -4,6 +4,27 @@
 
 ## [Unreleased]
 
+- **Diagrams with SQL in them draw.** A semicolon in a sequence-diagram message (`BEGIN; COMMIT;`)
+  broke the whole diagram, which then showed as code — and Mermaid's error picture piled up at the
+  foot of the page. Such diagrams now draw; one that still cannot says why under its code, and
+  leaves nothing behind.
+- **A warning written on one line is a warning.** `> [!WARNING] Text` shows as the callout, not as a
+  quote with the marker in it.
+- **Editing uses the whole drawer**, not a fixed part of the window.
+- **What nobody can know yet is said so.** The repository, domain, production URL and database
+  instances in `ENVIRONMENT.md` used to stay as *[to be filled by prime]*, and Approve refused the
+  document over them. The agent now writes the value if the inputs name it, or *Not decided yet —
+  set during the build*; `AGENTS.md` tells the coding agent to fill those lines once they exist.
+
+- **Your own model list.** Codex and Antigravity are asked which models they offer, so the picker
+  shows what your plan has — Gemini 3.1 Pro on Enterprise, and
+  whatever is added later — instead of a list written into Kortext.
+- **Claude: Opus is plain Opus.** Opus 5.5 has a 1M context of its own, so *Opus (1M context)* is
+  now *Opus*. The picker no longer calls `high` the default: Opus, Sonnet and Haiku 5.5 default to
+  `medium`, Fable to `high`.
+- **Antigravity: Gemini 4 Argon on Google AI Pro.** Google now gives it to Pro (not on a trial) as
+  well as Ultra, so the picker lists it first even before Antigravity answers.
+
 ## [3.4.1] — 2026-10-13
 
 - **A fence around the agent.** Claude no longer runs with every permission skipped: it cannot

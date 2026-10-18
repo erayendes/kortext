@@ -41,6 +41,9 @@ Make your decisions by reading from here, not by guessing from the code:
 - **Work that falls to +prime** (opening accounts, API keys, purchases, approvals): you
   cannot do it — report it, and if it creates a wait, make it visible.
 - **Read-before-Write:** read the current version of a shared file before writing to it.
+- **Not decided yet — set during the build:** a value no one could know during the analysis
+  (the repository, the domain, a production URL, a database instance). When your work creates
+  it, or +prime gives it to you, write it into that line of the document.
 
 ## 3. Behavior constitution (essentials)
 

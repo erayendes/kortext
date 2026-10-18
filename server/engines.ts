@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process';
+import { execFile, spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -29,7 +29,7 @@ export interface EngineSpec {
    *  picker says, kept short. Missing means the name alone. */
   about?: Record<string, string>;
   /** What the picker shows for an id, when the CLI's own picker shows
-   *  something other than the id — `opus[1m]` reads "Opus (1M context)". */
+   *  something other than the id — `gemini-3.8-flash` reads "Gemini 3.8 Flash". */
   label?: Record<string, string>;
   /** Set when the CLI takes the prompt as an argument: the flag it follows,
    *  or '' when it is the last positional argument. */
@@ -44,7 +44,15 @@ export interface EngineSpec {
   installHint: string;
   /** Written from the CLI's documentation, not from a run on this machine. */
   untested?: boolean;
+  /** How the CLI lists what the user's own plan offers. Its answer replaces
+   *  `models` (and the fields that describe them); the lists above are what the
+   *  panel shows until it arrives, or when the CLI cannot be asked. */
+  listModels?: { args: string[]; parse: (out: string) => LiveModels | null };
 }
+
+/** What a CLI says it offers. */
+export type LiveModels = Pick<EngineSpec, 'models'> &
+  Partial<Pick<EngineSpec, 'efforts' | 'modelEfforts' | 'label' | 'about'>>;
 
 // The first four ran a real project here. The rest are prepared from each
 // CLI's own documentation (2026-09) so the panel offers them the day they are
@@ -79,17 +87,19 @@ export const ENGINES: EngineSpec[] = [
     effortFlag: '--effort',
     // The CLI's own slider, in its order; ultracode is xhigh plus workflows.
     efforts: ['low', 'medium', 'high', 'xhigh', 'max', 'ultracode'],
-    // As the CLI's own picker lists them; `opus[1m]` is the 1M-context alias.
-    models: ['opus[1m]', 'fable', 'sonnet', 'haiku'],
-    label: { 'opus[1m]': 'Opus (1M context)', fable: 'Fable', sonnet: 'Sonnet', haiku: 'Haiku' },
+    // The aliases, as the CLI's own picker lists them. Opus 5.5 has a 1M context
+    // of its own, so `opus[1m]` is plain `opus` now; a project that picked it
+    // still runs, since the flag takes any name.
+    models: ['opus', 'fable', 'sonnet', 'haiku'],
+    label: { opus: 'Opus', fable: 'Fable', sonnet: 'Sonnet', haiku: 'Haiku' },
     about: {
-      'opus[1m]': 'Opus 5.5 with 1M context · recommended',
+      opus: 'Opus 5.5 · 1M context · recommended',
       fable: 'Fable 5.1 · most capable',
       sonnet: 'Sonnet 5.5 · efficient',
       haiku: 'Haiku 5.5 · fastest',
       low: 'faster',
-      medium: 'faster',
-      high: 'the CLI default',
+      medium: 'the CLI default on Opus, Sonnet and Haiku',
+      high: 'the CLI default on Fable',
       xhigh: 'smarter',
       max: 'smarter · spends limits fastest',
       ultracode: 'xhigh + workflows',
@@ -141,6 +151,8 @@ export const ENGINES: EngineSpec[] = [
       ultra: 'More reasoning',
       max: 'More reasoning · consumes usage limits faster',
     },
+    // The catalog the CLI ships, the same one its picker reads.
+    listModels: { args: ['debug', 'models'], parse: parseCodexModels },
     installHint: 'npm install -g @openai/codex',
   },
   {
@@ -165,8 +177,16 @@ export const ENGINES: EngineSpec[] = [
     modelEfforts: {
       'gpt-oss-120b': ['medium'],
     },
-    models: ['gemini-3.8-flash', 'claude-opus-5-5', 'claude-sonnet-5-5', 'gpt-oss-120b'],
+    // The Google AI Pro plan's models, in the CLI picker's order; Argon reached Pro in 2026-10.
+    models: [
+      'gemini-4-argon',
+      'gemini-3.8-flash',
+      'claude-opus-5-5',
+      'claude-sonnet-5-5',
+      'gpt-oss-120b',
+    ],
     label: {
+      'gemini-4-argon': 'Gemini 4 Argon',
       'gemini-3.8-flash': 'Gemini 3.8 Flash',
       'claude-opus-5-5': 'Claude Opus 5.5',
       'claude-sonnet-5-5': 'Claude Sonnet 5.5',
@@ -179,6 +199,9 @@ export const ENGINES: EngineSpec[] = [
       medium: 'Balanced',
       high: 'Deepest reasoning for complex problems — slower but stronger · the CLI default',
     },
+    // Which models a user gets depends on their Google plan (Gemini 3.1 Pro only
+    // on Enterprise, Argon not on a Pro trial…), so the list comes from the CLI.
+    listModels: { args: ['models'], parse: parseAgyModels },
     installHint: 'install Antigravity, then run: agy install',
   },
   {
@@ -351,15 +374,139 @@ export function detectEngines(): Array<EngineSpec & { available: boolean }> {
   if (detected && Date.now() - detected.at < DETECT_TTL_MS) return detected.engines;
   const engines = ENGINES.map((e) => {
     const path = binaryPath(e.binary);
-    return { ...e, binary: path ?? e.binary, available: path !== null };
+    if (path) refreshModels(e, path);
+    return { ...withLiveModels(e), binary: path ?? e.binary, available: path !== null };
   });
   detected = { at: Date.now(), engines };
   return engines;
 }
 
+/** The spec as the panel sees it: the CLI's own model list where it gave one. */
+export function engineSpec(id: string | undefined): EngineSpec | undefined {
+  const e = ENGINES.find((x) => x.id === id);
+  return e && withLiveModels(e);
+}
+
 /** Forget the cache — the user just told us the installed set may have changed. */
 export function forgetDetectedEngines(): void {
   detected = null;
+  live.clear();
+}
+
+// Asking a CLI for its models takes a second or two and may go to the network,
+// so it runs in the background, at most hourly per CLI; the panel shows the
+// spec's own list until the answer lands. A failed ask keeps the last answer.
+const MODELS_TTL_MS = 3600_000;
+const live = new Map<string, { at: number; models: LiveModels | null }>();
+
+function refreshModels(e: EngineSpec, path: string): void {
+  if (!e.listModels) return;
+  const known = live.get(e.id);
+  if (known && Date.now() - known.at < MODELS_TTL_MS) return;
+  live.set(e.id, { at: Date.now(), models: known?.models ?? null }); // one ask at a time
+  const { args, parse } = e.listModels;
+  execFile(path, args, { timeout: 15_000, maxBuffer: 16 << 20 }, (err, out) => {
+    let models: LiveModels | null = null;
+    try {
+      models = err ? null : parse(out);
+    } catch {
+      /* an answer we cannot read is no answer */
+    }
+    if (!models?.models.length) return;
+    live.set(e.id, { at: Date.now(), models });
+    detected = null;
+  });
+}
+
+function withLiveModels(e: EngineSpec): EngineSpec {
+  const m = live.get(e.id)?.models;
+  if (!m) return e;
+  return {
+    ...e,
+    models: m.models,
+    efforts: m.efforts ?? e.efforts,
+    modelEfforts: m.modelEfforts ?? e.modelEfforts,
+    label: { ...e.label, ...m.label },
+    about: { ...e.about, ...m.about },
+  };
+}
+
+const LEVEL_ORDER = ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'];
+const byLevel = (a: string, b: string) => LEVEL_ORDER.indexOf(a) - LEVEL_ORDER.indexOf(b);
+
+/** A model's levels, kept only where they differ from the CLI's full list. */
+function narrower(efforts: string[], perModel: Map<string, string[]>): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  for (const [model, levels] of perModel) {
+    if (levels.join() !== efforts.join()) out[model] = levels;
+  }
+  return out;
+}
+
+/** `agy models`: one line per model and level, `<id>-<level>\t<Name> (<Level>)`.
+ *  A model with no level in its name (`Claude Opus 4.6 (Thinking)`) takes none. */
+export function parseAgyModels(out: string): LiveModels | null {
+  const order: string[] = [];
+  const levels = new Map<string, string[]>();
+  const label: Record<string, string> = {};
+  for (const line of out.split('\n')) {
+    const [id, name] = line.split('\t').map((x) => x?.trim());
+    if (!id || !name) continue;
+    const m = /^(.*) \(([^)]+)\)$/.exec(name);
+    const level = m?.[2]?.toLowerCase() ?? '';
+    const leveled = LEVEL_ORDER.includes(level) && id.endsWith(`-${level}`);
+    const base = leveled ? id.slice(0, -(level.length + 1)) : id;
+    if (!levels.has(base)) {
+      order.push(base);
+      levels.set(base, []);
+      label[base] = leveled ? m![1]! : name;
+    }
+    if (leveled) levels.get(base)!.push(level);
+  }
+  if (!order.length) return null;
+  for (const l of levels.values()) l.sort(byLevel);
+  const efforts = [...new Set([...levels.values()].flat())].sort(byLevel);
+  return { models: order, efforts, modelEfforts: narrower(efforts, levels), label };
+}
+
+/** `codex debug models`: the bundled catalog; only what its picker lists. */
+export function parseCodexModels(out: string): LiveModels | null {
+  const catalog = JSON.parse(out) as {
+    models?: Array<{
+      slug: string;
+      description?: string;
+      visibility?: string;
+      priority?: number;
+      supported_reasoning_levels?: Array<{ effort: string; description?: string }>;
+    }>;
+  };
+  const listed = (catalog.models ?? [])
+    .filter((m) => m.visibility === 'list')
+    .sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
+  if (!listed.length) return null;
+  const about: Record<string, string> = {};
+  const levels = new Map<string, string[]>();
+  for (const m of listed) {
+    if (m.description) about[m.slug] = m.description.replace(/\.$/, '');
+    const own = (m.supported_reasoning_levels ?? []).map((l) => l.effort);
+    levels.set(m.slug, own);
+    for (const l of m.supported_reasoning_levels ?? []) {
+      if (l.description && !about[l.effort]) about[l.effort] = l.description;
+    }
+  }
+  // The CLI's order, not ours: the first model that knows every level sets it.
+  const efforts = [...new Set([...levels.values()].flat())];
+  for (const [m, l] of levels)
+    levels.set(
+      m,
+      efforts.filter((e) => l.includes(e)),
+    );
+  return {
+    models: listed.map((m) => m.slug),
+    efforts,
+    modelEfforts: narrower(efforts, levels),
+    about,
+  };
 }
 
 export function getSetting(db: Database.Database, key: string): string | null {

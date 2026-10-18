@@ -35,6 +35,7 @@ import { pickDirectoryNative } from './pick-directory.js';
 import { readdirSync } from 'node:fs';
 import {
   detectEngines,
+  engineSpec,
   engineFor,
   forgetDetectedEngines,
   getSetting,
@@ -252,7 +253,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     const { name, repoPath, kind, code, brief, docLang, engine } = req.body ?? {};
     // The picker's model and effort, chosen before the project existed; the
     // same words the PUT routes accept, and only ones the CLI knows.
-    const spec = ENGINES.find((e) => e.id === engine);
+    const spec = engineSpec(engine);
     const model = String(req.body?.model ?? '').trim();
     const effort = String(req.body?.effort ?? '').trim();
     if (!MODEL_NAME.test(model)) return res.status(400).json({ error: 'a model name is one word' });
@@ -300,7 +301,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     if (!ENGINES.some((e) => e.id === id)) return res.status(400).json({ error: 'unknown engine' });
     // A model name belongs to one CLI — `sonnet` means nothing to codex — so a
     // switch drops it back to the new CLI's default unless the new CLI knows it.
-    const next = ENGINES.find((e) => e.id === id);
+    const next = engineSpec(id);
     const keeps = next?.models.includes(project.model ?? '') ?? false;
     const keepsEffort = effortsFor(next, keeps ? project.model : '').includes(project.effort ?? '');
     db.prepare('UPDATE projects SET engine = ?, model = ?, effort = ? WHERE id = ?').run(
@@ -325,7 +326,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     const model = String(req.body?.model ?? '').trim();
     if (!MODEL_NAME.test(model)) return res.status(400).json({ error: 'a model name is one word' });
     // A level the new model lacks falls back to the CLI default, as a CLI switch does.
-    const spec = ENGINES.find((e) => e.id === project.engine);
+    const spec = engineSpec(project.engine);
     const effort = effortsFor(spec, model).includes(project.effort ?? '') ? project.effort : '';
     db.prepare('UPDATE projects SET model = ?, effort = ? WHERE id = ?').run(
       model,
@@ -340,7 +341,7 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     const project = projectOr404(req.params.id, res);
     if (!project) return;
     const effort = String(req.body?.effort ?? '').trim();
-    const spec = ENGINES.find((e) => e.id === project.engine);
+    const spec = engineSpec(project.engine);
     if (effort && !effortsFor(spec, project.model).includes(effort))
       return res
         .status(400)

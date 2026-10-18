@@ -2550,7 +2550,13 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   border-top: 1px solid var(--border);
   margin: 8px 0;
 }
+/* The editor takes the drawer's whole height, not a fixed share of the window. */
+.dr-body:has(> .kx-editor) {
+  display: flex;
+  flex-direction: column;
+}
 .kx-editor {
+  flex: 1;
   width: 100%;
   min-height: 60vh;
   font-size: var(--fs-ui);

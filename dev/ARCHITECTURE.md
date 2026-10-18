@@ -196,6 +196,12 @@ after `CONTENT.md`; after the handshake it belongs to the project's owner.
 **Selection (`engines.ts`).** One `EngineSpec` per CLI: binary, headless args, how the prompt
 travels (stdin, after a flag, or last and alone), the model flag or variable, a cwd flag, extra
 env, a model list for the panel, and `untested` for the ones prepared from documentation only.
+Where a CLI can say what it offers, the list comes from it (`listModels`): `codex debug models`
+(the catalog its picker reads, `visibility: list` only) and `agy models` (one line per model and
+level, folded into a model and its levels). Antigravity's list depends on the user's Google plan —
+Gemini 4 Argon on Ultra, Gemini 3.1 Pro on Enterprise — so no fixed list is right for everyone.
+The ask runs in the background, at most hourly per CLI, and the spec's own list stands until it
+answers or when it cannot; `engineSpec(id)` is the merged spec every route validates against.
 Detected with `which`, then `~/.local/bin`. They are equals — nothing ranks them —
 so the choice belongs to the project, not the app: the **Add project** form carries a dropdown
 beside Initialize, and the answer is stored in `projects.engine`. `engineFor` honours it as long

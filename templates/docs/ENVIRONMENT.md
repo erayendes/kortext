@@ -55,8 +55,8 @@ The `.env` file is git-ignored. Copy it from `.env.example`.
 
 ## Version Control
 
-- GitHub Repo: [to be filled by prime]
-- Organization: [to be filled by prime]
+- GitHub Repo: [the value, if the inputs name it — otherwise: Not decided yet — set during the build]
+- Organization: [the value, if the inputs name it — otherwise: Not decided yet — set during the build]
 - Branch strategy: [which branches exist, what merges into what, what is protected]
 
 ## CI/CD Pipeline
@@ -69,23 +69,23 @@ The `.env` file is git-ignored. Copy it from `.env.example`.
 
 ## Hosting & Deployment
 
-- Production URL: [to be filled by prime]
-- Staging URL: [to be filled by prime]
+- Production URL: [the value, if the inputs name it — otherwise: Not decided yet — set during the build]
+- Staging URL: [the value, if the inputs name it — otherwise: Not decided yet — set during the build]
 - Platform: [Firebase Hosting / Vercel / AWS]
 - **Hosting region:** [where the servers physically run — e.g., `eu-central-1` (Frankfurt). Compliance decides the cross-border transfer regime on this line, so name a region, not a provider]
 
 ## Server Access
 
-- SSH Root: [to be filled by prime]
-- Domain: [to be filled by prime]
+- SSH Root: [the value, if the inputs name it — otherwise: Not decided yet — set during the build]
+- Domain: [the value, if the inputs name it — otherwise: Not decided yet — set during the build]
 
 ## Database Instances
 
 - Provider: [Firebase / Supabase / PostgreSQL]
 - Engine + version: [e.g., PostgreSQL 16 — the schema is designed for this]
 - **Region:** [where the data physically sits]
-- Production Instance: [to be filled by prime]
-- Staging Instance: [to be filled by prime]
+- Production Instance: [the value, if the inputs name it — otherwise: Not decided yet — set during the build]
+- Staging Instance: [the value, if the inputs name it — otherwise: Not decided yet — set during the build]
 
 ## Other Services
 
