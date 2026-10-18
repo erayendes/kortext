@@ -174,11 +174,22 @@ export const ENGINES: EngineSpec[] = [
     effortFlag: '--effort',
     efforts: ['low', 'medium', 'high'],
     // Verified with a run each: the CLI names what the model takes when refused.
+    // Argon: `agy models` lists it at high only; the docs' picker hints at all
+    // three, so the fallback offers the one level both agree on.
     modelEfforts: {
+      'gemini-4-argon': ['high'],
       'gpt-oss-120b': ['medium'],
     },
-    models: ['gemini-3.8-flash', 'claude-opus-5-5', 'claude-sonnet-5-5', 'gpt-oss-120b'],
+    // The Google AI Pro plan's models, in the docs' order; Argon reached Pro in 2026-10.
+    models: [
+      'gemini-4-argon',
+      'gemini-3.8-flash',
+      'claude-opus-5-5',
+      'claude-sonnet-5-5',
+      'gpt-oss-120b',
+    ],
     label: {
+      'gemini-4-argon': 'Gemini 4 Argon',
       'gemini-3.8-flash': 'Gemini 3.8 Flash',
       'claude-opus-5-5': 'Claude Opus 5.5',
       'claude-sonnet-5-5': 'Claude Sonnet 5.5',
@@ -191,8 +202,8 @@ export const ENGINES: EngineSpec[] = [
       medium: 'Balanced',
       high: 'Deepest reasoning for complex problems — slower but stronger · the CLI default',
     },
-    // Which models a user gets depends on their Google plan (Gemini 4 Argon on
-    // Ultra, Gemini 3.1 Pro on Enterprise…), so the list comes from the CLI.
+    // Which models a user gets depends on their Google plan (Gemini 3.1 Pro only
+    // on Enterprise, Argon not on a Pro trial…), so the list comes from the CLI.
     listModels: { args: ['models'], parse: parseAgyModels },
     installHint: 'install Antigravity, then run: agy install',
   },

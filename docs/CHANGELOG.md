@@ -17,11 +17,13 @@
   set during the build*; `AGENTS.md` tells the coding agent to fill those lines once they exist.
 
 - **Your own model list.** Codex and Antigravity are asked which models they offer, so the picker
-  shows what your plan has — Gemini 4 Argon on Google AI Ultra, Gemini 3.1 Pro on Enterprise, and
+  shows what your plan has — Gemini 3.1 Pro on Enterprise, and
   whatever is added later — instead of a list written into Kortext.
 - **Claude: Opus is plain Opus.** Opus 5.5 has a 1M context of its own, so *Opus (1M context)* is
   now *Opus*. The picker no longer calls `high` the default: Opus, Sonnet and Haiku 5.5 default to
   `medium`, Fable to `high`.
+- **Antigravity: Gemini 4 Argon on Google AI Pro.** Google now gives it to Pro (not on a trial) as
+  well as Ultra, so the picker lists it first even before Antigravity answers.
 
 ## [3.4.1] — 2026-10-13
 

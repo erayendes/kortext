@@ -18,11 +18,13 @@
   söylüyor.
 
 - **Kendi model listeniz.** Codex ve Antigravity'ye hangi modelleri sunduğu soruluyor; seçici,
-  Kortext'e yazılmış bir liste yerine planınızda ne varsa onu gösteriyor — Google AI Ultra'da
-  Gemini 4 Argon, Enterprise'da Gemini 3.1 Pro ve sonradan eklenen her şey.
+  Kortext'e yazılmış bir liste yerine planınızda ne varsa onu gösteriyor — Enterprise'da
+  Gemini 3.1 Pro ve sonradan eklenen her şey.
 - **Claude: Opus artık düz Opus.** Opus 5.5'in bağlamı zaten 1M; *Opus (1M context)* artık *Opus*.
   Seçici `high` seviyesine artık varsayılan demiyor: Opus, Sonnet ve Haiku 5.5'te varsayılan
   `medium`, Fable'da `high`.
+- **Antigravity: Google AI Pro'da Gemini 4 Argon.** Google artık onu Ultra'nın yanında Pro'ya da
+  veriyor (deneme sürümünde değil); seçici, Antigravity cevap vermeden de onu ilk sırada gösteriyor.
 
 ## [3.4.1] — 2026-10-13
 
