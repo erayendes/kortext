@@ -174,13 +174,10 @@ export const ENGINES: EngineSpec[] = [
     effortFlag: '--effort',
     efforts: ['low', 'medium', 'high'],
     // Verified with a run each: the CLI names what the model takes when refused.
-    // Argon: `agy models` lists it at high only; the docs' picker hints at all
-    // three, so the fallback offers the one level both agree on.
     modelEfforts: {
-      'gemini-4-argon': ['high'],
       'gpt-oss-120b': ['medium'],
     },
-    // The Google AI Pro plan's models, in the docs' order; Argon reached Pro in 2026-10.
+    // The Google AI Pro plan's models, in the CLI picker's order; Argon reached Pro in 2026-10.
     models: [
       'gemini-4-argon',
       'gemini-3.8-flash',
