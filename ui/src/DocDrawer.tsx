@@ -174,7 +174,7 @@ export function DocDrawer({
   // after a rewrite): an approve or a save sent now would name no version and
   // be refused, so the buttons wait for it.
   const locked = busy || writing || !version;
-  // DESIGN.md drawn, or EXPERIENCE.md's prompts laid out to copy — a look, not the document.
+  // DESIGN.md drawn, or PROMPTS.md laid out to copy — a look, not the document.
   const [preview, setPreview] = useState(false);
   const drawn = doc?.rel === 'DESIGN.md';
   // Text selected in the preview: asked about like a line. `line` is the block of
@@ -943,7 +943,7 @@ export function DocDrawer({
             {!editing &&
               !preview &&
               doc.status !== 'uninitialized' &&
-              (drawn || doc.rel === 'EXPERIENCE.md') && (
+              (drawn || doc.rel === 'PROMPTS.md') && (
                 <button className="btn btn-secondary" onClick={doPreview}>
                   {drawn ? 'Preview' : 'Prompts'}
                 </button>

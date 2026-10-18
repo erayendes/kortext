@@ -812,7 +812,7 @@ a.btn {
   border: 0;
   display: block;
 }
-/* EXPERIENCE.md's prompts, laid out to copy: the document itself is hidden. */
+/* PROMPTS.md, laid out to copy: the document itself is hidden. */
 .dr-body-prompts > *:not(.kx-prompts):not(.kx-cmd-hint) {
   display: none;
 }

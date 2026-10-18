@@ -312,7 +312,7 @@ export function parseInline(text: string): InlineSpan[] {
 
 /**
  * The prompts a document hands on to another AI: every fenced block under a
- * `##` heading that says prompts (EXPERIENCE.md's `## Part 2 — Prompts`),
+ * `##` heading that says prompts (PROMPTS.md's `## Prompts`),
  * named by the heading above it.
  */
 export function promptsOf(md: string): Array<{ title: string; text: string }> {

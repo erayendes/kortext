@@ -236,8 +236,9 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     const projects = listProjects(db).map((p) => {
       const docCounts = { settled: 0, total: 0 };
       try {
+        const map = loadDocMap(pkgRoot, p.kind ?? 'new');
         for (const d of listDocs(db, p, pkgRoot)) {
-          if (d.optional && d.status === 'uninitialized' && !asked(db, p, d.rel)) continue; // not asked for: not owed
+          if (d.optional && d.status === 'uninitialized' && !asked(db, p, d.rel, map)) continue; // not asked for: not owed
           docCounts.total++;
           if (d.status === 'approved' || d.status === 'not-applicable') docCounts.settled++;
         }
@@ -432,11 +433,12 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
     const project = projectOr404(req.params.id, res);
     if (!project) return;
     const rel = String(req.body?.rel ?? '');
-    const step = loadDocMap(pkgRoot, project.kind ?? 'new').get(rel);
+    const map = loadDocMap(pkgRoot, project.kind ?? 'new');
+    const step = map.get(rel);
     const doc = listDocs(db, project, pkgRoot).find((d) => d.rel === rel);
     if (!step?.optional || !doc)
       return res.status(404).json({ error: 'not an on-request document' });
-    if (doc.status !== 'uninitialized' || asked(db, project, rel))
+    if (doc.status !== 'uninitialized' || asked(db, project, rel, map))
       return res.status(409).json({ error: `${rel} was already asked for — see it in the list` });
     if (doc.blocked) return res.status(409).json({ error: 'document inputs are not settled' });
     if (project.paused || runningDoc(db, project.id, rel))
@@ -1093,6 +1095,7 @@ ${body}`,
     // deferred to the build phase, and prime should see how much of it there is
     // without being asked to settle any of it here.
     scaffoldOptional(project.repo_path, pkgRoot, project.kind ?? 'new');
+    const map = loadDocMap(pkgRoot, project.kind ?? 'new');
     const all = listDocs(db, project, pkgRoot);
     const docs = all.filter((d) => d.status !== 'uninitialized');
     // What can still be asked for: an on-request document not yet written, whose
@@ -1101,7 +1104,10 @@ ${body}`,
     const onRequest = all
       .filter(
         (d) =>
-          d.optional && d.status === 'uninitialized' && !d.blocked && !asked(db, project, d.rel),
+          d.optional &&
+          d.status === 'uninitialized' &&
+          !d.blocked &&
+          !asked(db, project, d.rel, map),
       )
       .filter((d) => !d.inputs.some((i) => nap.has(i)))
       .map((d) => d.rel);

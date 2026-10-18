@@ -1145,10 +1145,11 @@ test('an on-request document gates nothing until prime asks; asked for, it is a 
   const map = loadDocMap(pkgRoot, 'new');
   const step = map.get('EXPERIENCE.md');
   assert.ok(step?.optional, 'EXPERIENCE.md is written on request');
+  const onRequest = new Set(['EXPERIENCE.md', 'PROMPTS.md']);
   for (const rel of map.keys())
-    if (rel !== 'EXPERIENCE.md') setFrontmatterStatus(docPath(p, rel), 'approved');
+    if (!onRequest.has(rel)) setFrontmatterStatus(docPath(p, rel), 'approved');
   // Every input stands, yet the chain never picks it up, and the handshake does not wait for it.
-  assert.ok(!producibleSteps(db, p, pkgRoot).some((s) => s.output === 'EXPERIENCE.md'));
+  assert.ok(!producibleSteps(db, p, pkgRoot).some((s) => onRequest.has(s.output)));
   assert.equal(analysisComplete(db, p, pkgRoot), true);
   const before = listDocs(db, p, pkgRoot).find((d) => d.rel === 'EXPERIENCE.md');
   assert.equal(before?.detail, 'request');
@@ -1156,7 +1157,16 @@ test('an on-request document gates nothing until prime asks; asked for, it is a 
   const out = await runStep(db, p, step!, mockEngine(work, 'ok'), pkgRoot);
   assert.ok(out.ok);
   assert.equal(analysisComplete(db, p, pkgRoot), false);
+  // Asking for EXPERIENCE.md asked for PROMPTS.md: queued, and the chain writes it once its input stands.
+  const prompts = listDocs(db, p, pkgRoot).find((d) => d.rel === 'PROMPTS.md');
+  assert.equal(prompts?.detail, 'queue');
+  assert.ok(!producibleSteps(db, p, pkgRoot).some((s) => s.output === 'PROMPTS.md'));
   setFrontmatterStatus(docPath(p, 'EXPERIENCE.md'), 'approved');
+  const follower = producibleSteps(db, p, pkgRoot).find((s) => s.output === 'PROMPTS.md');
+  assert.ok(follower, 'PROMPTS.md follows the approved EXPERIENCE.md');
+  assert.equal(analysisComplete(db, p, pkgRoot), false);
+  assert.ok((await runStep(db, p, follower, mockEngine(work, 'ok'), pkgRoot)).ok);
+  setFrontmatterStatus(docPath(p, 'PROMPTS.md'), 'approved');
   assert.equal(analysisComplete(db, p, pkgRoot), true);
   rmSync(work, { recursive: true, force: true });
 });
@@ -1169,7 +1179,8 @@ test('an on-request document asked for and then stopped holds the handshake and 
   approveBrief(p);
   const map = loadDocMap(pkgRoot, 'new');
   for (const rel of map.keys())
-    if (rel !== 'EXPERIENCE.md') setFrontmatterStatus(docPath(p, rel), 'approved');
+    if (rel !== 'EXPERIENCE.md' && rel !== 'PROMPTS.md')
+      setFrontmatterStatus(docPath(p, rel), 'approved');
   assert.equal(analysisComplete(db, p, pkgRoot), true);
   // Asked for, and the run stopped before a line was written: the file is still
   // uninitialized, but the document is now owed — Continue or Retry, not the offer.

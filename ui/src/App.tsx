@@ -2027,8 +2027,8 @@ function ProjectScreen({
   );
 }
 
-// The one document written only on request: the brief and prompts a design AI
-// works from. Offered here, after everything else settled, so a project whose
+// The one document written only on request: the brief a design AI works from,
+// PROMPTS.md following it. Offered here, after everything else settled, so a project whose
 // design is already in hand never pays for it. Pressing starts the step; the
 // handshake card yields to the chain until the document is approved.
 function ExperienceOffer({ project, paused }: { project: Project; paused?: boolean }) {
@@ -2065,9 +2065,9 @@ function ExperienceOffer({ project, paused }: { project: Project; paused?: boole
       <div className="kx-handshake-offer-text">
         <span className="kx-handshake-offer-title">Designing with an AI?</span>
         <span className="kx-handshake-offer-body">
-          EXPERIENCE.md gives it the journeys, every screen with its states, the copy word for word,
-          and the prompts to paste — one master, one per journey. Skip it if the design is already
-          in hand.
+          EXPERIENCE.md gives it the journeys, every screen with its states and the copy word for
+          word; once you approve it, PROMPTS.md follows with the prompts to paste — one master, one
+          per journey. Skip it if the design is already in hand.
         </span>
         {err && <span className="kx-error">{err}</span>}
       </div>

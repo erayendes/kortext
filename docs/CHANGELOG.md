@@ -4,6 +4,11 @@
 
 ## [Unreleased]
 
+- **The prompts have a file of their own.** `EXPERIENCE.md` is now the brief alone; the prompts are
+  in `PROMPTS.md`, which the chain writes on its own once you approve `EXPERIENCE.md` — still one
+  press. The master prompt tells the design AI that the section prompts come one at a time, and to
+  say when it has finished each and ask for the next. *Prompts* in the drawer now sits on
+  `PROMPTS.md`.
 - **Diagrams with SQL in them draw.** A semicolon in a sequence-diagram message (`BEGIN; COMMIT;`)
   broke the whole diagram, which then showed as code — and Mermaid's error picture piled up at the
   foot of the page. Such diagrams now draw; one that still cannot says why under its code, and
