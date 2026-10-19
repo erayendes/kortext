@@ -38,6 +38,8 @@ test('parseInline: $math$ is a span, prices are prose', () => {
   assert.deepEqual(parseInline('costs $5 and $10 a month'), [
     { type: 'text', value: 'costs $5 and $10 a month' },
   ]);
+  const prices = "1 Kredi = $0,10. Paddle'ın kesintileri ($0,50 sabit) ve eşik $10";
+  assert.deepEqual(parseInline(prices), [{ type: 'text', value: prices }]);
 });
 
 test('parseMarkdown: a $$display$$ line is a paragraph holding one formula', () => {

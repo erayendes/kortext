@@ -26,13 +26,16 @@ export function App() {
   const [selected, setSelected] = useState<Project | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  // Until the first list arrives, "no projects" is not known, and is not said.
+  const [loaded, setLoaded] = useState(false);
   const update = useUpdate();
 
   const refresh = () =>
     api
       .listProjects()
       .then((r) => setProjects(r.projects))
-      .catch((e) => setError(e.message));
+      .catch((e) => setError(e.message))
+      .finally(() => setLoaded(true));
 
   useEffect(() => {
     refresh();
@@ -40,18 +43,19 @@ export function App() {
 
   // `/?project=<id>&doc=<rel>` opens straight onto a document — the menu bar
   // app links here. Read once, when the list first arrives.
-  const linked = useRef(new URLSearchParams(location.search).get('project'));
+  // State, not a ref: clearing it re-renders, so the held page shows even when the id is gone.
+  const [linked, setLinked] = useState(() => new URLSearchParams(location.search).get('project'));
   useEffect(() => {
-    if (!linked.current || projects.length === 0) return;
-    const p = projects.find((x) => String(x.id) === linked.current);
-    linked.current = null;
+    if (!linked || !loaded) return;
+    const p = projects.find((x) => String(x.id) === linked);
+    setLinked(null);
     if (p) setSelected(p);
-  }, [projects]);
+  }, [projects, loaded, linked]);
   useEffect(() => {
-    if (linked.current) return;
+    if (linked) return;
     const url = selected ? `/?project=${selected.id}` : '/';
     if (location.pathname + location.search !== url) history.replaceState(null, '', url);
-  }, [selected]);
+  }, [selected, linked]);
 
   const live = projects.filter((p) => !p.archived);
   const archived = projects.filter((p) => p.archived);
@@ -115,7 +119,10 @@ export function App() {
         <ThemeSwitch />
       </header>
       {error && <div className="kx-error">{error}</div>}
-      {selected ? (
+      {/* Held empty while loading or opening a linked project: the list never flashes first. */}
+      {!selected && (!loaded || linked) ? (
+        <main className="kx-main" />
+      ) : selected ? (
         <ProjectScreen
           key={selected.id}
           project={selected}
@@ -182,7 +189,9 @@ export function App() {
           </span>
           <span className="kx-statusbar-line">
             <ReportIssue />
-            <span className="kx-danger-sep">·</span>
+            <span className="kx-danger-sep" aria-hidden="true">
+              ·
+            </span>
             <SupportWork />
           </span>
         </span>
@@ -1281,20 +1290,24 @@ the last 30 days; weekly active users per team.
 No billing, no phone integration, no mobile app. The MVP customer list caps at 8 items per
 view. Nothing is shared between teams.`;
 
+// A label element, so the visible name is also the input's accessible one.
 function Field({
+  label,
   err,
   className,
   children,
 }: {
+  label: string;
   err?: string;
   className?: string;
   children: ReactNode;
 }) {
   return (
-    <span className={className ? `kx-field ${className}` : 'kx-field'}>
+    <label className={className ? `kx-field ${className}` : 'kx-field'}>
+      <span className="kx-field-label">{label}</span>
       {children}
       {err && <span className="kx-field-err">{err}</span>}
-    </span>
+    </label>
   );
 }
 
@@ -1446,10 +1459,10 @@ function AddProject({
           : 'Existing codebase: the engine documents the current state via existing-project-analysis.'}
       </span>
       <div className="kx-form-row">
-        <Field err={fieldErrs.name}>
+        <Field label="Project name" err={fieldErrs.name}>
           <input
             className={fieldErrs.name ? 'kx-input kx-input-bad' : 'kx-input'}
-            placeholder="Project name"
+            placeholder="e.g. Atlas"
             value={name}
             onChange={(e) => {
               setName(e.target.value);
@@ -1457,10 +1470,10 @@ function AddProject({
             }}
           />
         </Field>
-        <Field err={fieldErrs.code} className="kx-code-field">
+        <Field label="Code" err={fieldErrs.code} className="kx-code-field">
           <input
             className={`kx-input mono kx-code-input${fieldErrs.code ? ' kx-input-bad' : ''}`}
-            placeholder="Code (ACM)"
+            placeholder="ACM"
             maxLength={3}
             value={code}
             onChange={(e) => {
@@ -1471,10 +1484,10 @@ function AddProject({
         </Field>
       </div>
       <div className="kx-form-row">
-        <Field err={fieldErrs.repoPath}>
+        <Field label="Project folder" err={fieldErrs.repoPath}>
           <input
             className={`kx-input mono${fieldErrs.repoPath ? ' kx-input-bad' : ''}`}
-            placeholder="Project folder (pick with Browse)"
+            placeholder="pick with Browse…"
             value={repoPath}
             onChange={(e) => {
               setRepoPath(e.target.value);
@@ -1503,16 +1516,18 @@ function AddProject({
         </span>
       </div>
       <div className="kx-form-row">
-        <input
-          className="kx-input kx-path"
-          placeholder={
-            kind === 'existing'
-              ? 'Documents language — e.g. Türkçe (there is no brief to take it from)'
-              : 'Documents language (optional) — leave empty to follow the brief'
-          }
-          value={docLang}
-          onChange={(e) => setDocLang(e.target.value)}
-        />
+        <Field label={kind === 'existing' ? 'Documents language' : 'Documents language (optional)'}>
+          <input
+            className="kx-input kx-path"
+            placeholder={
+              kind === 'existing'
+                ? 'e.g. Türkçe — there is no brief to take it from'
+                : 'leave empty to follow the brief'
+            }
+            value={docLang}
+            onChange={(e) => setDocLang(e.target.value)}
+          />
+        </Field>
       </div>
       {kind === 'existing' && (
         <span className="kx-cmd-hint">
@@ -1562,6 +1577,7 @@ function AddProject({
             <>
               <textarea
                 className="kx-editor kx-brief-text"
+                aria-label="Brief"
                 placeholder={[
                   'Write the brief in any language — the documents come back in the language you use here.',
                   '',
@@ -1662,6 +1678,7 @@ function ProjectScreen({
   const [pending, setPending] = useState(true); // any document still unwritten
   const [settled, setSettled] = useState(false); // every document approved — the handshake
   const [checking, setChecking] = useState(false); // the gate is reading the brief
+  const [blocked, setBlocked] = useState(false); // the gate sent the brief back with questions
   const [err, setErr] = useState<string | null>(null);
   // Use in-place confirmation because embedded browsers may suppress native confirm dialogs.
   const [arming, setArming] = useState<'restart' | 'archive' | 'cancel' | 'export' | null>(null);
@@ -1809,6 +1826,10 @@ function ProjectScreen({
           <span className="kx-nav-status">
             ⏸ Paused — running steps were stopped; nothing new starts.
           </span>
+        ) : pending && blocked ? (
+          <span className="kx-nav-status">
+            The brief needs answers — open it, then check again.
+          </span>
         ) : pending ? (
           <span className="kx-nav-status">
             {hasJobs
@@ -1863,9 +1884,14 @@ function ProjectScreen({
                 </button>
               ) : (
                 // Offer Start when the chain is idle, even if the project is already unpaused.
+                // While the gate holds questions, the card's Open the brief leads; Start only re-checks.
                 pending && (
-                  <button className="btn btn-primary" disabled={busy || settling} onClick={start}>
-                    {settling ? '…' : hasJobs ? '▶ Continue' : '▶ Start'}
+                  <button
+                    className={blocked ? 'btn btn-secondary' : 'btn btn-primary'}
+                    disabled={busy || settling}
+                    onClick={start}
+                  >
+                    {settling ? '…' : blocked ? 'Check again' : hasJobs ? '▶ Continue' : '▶ Start'}
                   </button>
                 )
               )}
@@ -1964,7 +1990,9 @@ function ProjectScreen({
               >
                 Restart analysis
               </button>
-              <span className="kx-danger-sep">·</span>
+              <span className="kx-danger-sep" aria-hidden="true">
+                ·
+              </span>
               <button
                 className="btn btn-link-success"
                 disabled={busy}
@@ -1972,11 +2000,15 @@ function ProjectScreen({
               >
                 {project.archived ? 'Unarchive project' : 'Archive project'}
               </button>
-              <span className="kx-danger-sep">·</span>
+              <span className="kx-danger-sep" aria-hidden="true">
+                ·
+              </span>
               <button className="btn btn-link-primary" disabled={busy} onClick={openExport}>
                 Export documents
               </button>
-              <span className="kx-danger-sep">·</span>
+              <span className="kx-danger-sep" aria-hidden="true">
+                ·
+              </span>
               <button
                 className="btn btn-link-danger"
                 disabled={busy}
@@ -2014,6 +2046,7 @@ function ProjectScreen({
         onHasJobs={setHasJobs}
         onPending={setPending}
         onChecking={setChecking}
+        onBlocked={setBlocked}
         onSettled={setSettled}
         onPaused={setPaused}
         // The handshake card offers the same picker the gear holds; opening it
@@ -2195,6 +2228,7 @@ function DocumentsTab({
   onHasJobs,
   onPending,
   onChecking,
+  onBlocked,
   onSettled,
   onPaused,
   onExport,
@@ -2206,6 +2240,7 @@ function DocumentsTab({
   onHasJobs?: (has: boolean) => void;
   onPending?: (pending: boolean) => void;
   onChecking?: (checking: boolean) => void;
+  onBlocked?: (blocked: boolean) => void;
   onSettled?: (settled: boolean) => void;
   onPaused?: (paused: boolean) => void;
 }) {
@@ -2219,6 +2254,9 @@ function DocumentsTab({
   });
   // Clear active-work indicators when disconnected; cached state cannot confirm a running step.
   const [offline, setOffline] = useState(false);
+  // Nothing is drawn before the first answer: the rows then land once instead of
+  // pushing the slider and the status bar down under the reader.
+  const [loaded, setLoaded] = useState(false);
 
   // Keep the current project ID outside request closures to reject responses for a previous project.
   const showing = useRef(project.id);
@@ -2241,12 +2279,21 @@ function DocumentsTab({
         onPaused?.(j.paused);
         setGate(g);
         onChecking?.(g.checking);
+        const r = g.readiness;
+        onBlocked?.(
+          !!r &&
+            !r.ready &&
+            (r.stage === 'floor' || r.stage === 'judgment') &&
+            r.questions.length > 0,
+        );
         setOffline(false);
+        setLoaded(true);
         setErr(null);
       })
       .catch((e) => {
         if (asked !== showing.current) return;
         setOffline(true);
+        setLoaded(true);
         setErr(
           `${e.message} — the panel has lost the Kortext server; this page may be out of date.`,
         );
@@ -2282,7 +2329,11 @@ function DocumentsTab({
   const running = offline ? [] : jobs.filter((j) => j.status === 'running');
   useEffect(() => {
     onStatus?.(running.length > 0 ? `${running.map((j) => j.doc_rel).join(' · ')} writing…` : '');
-    onHasJobs?.(jobs.length > 0);
+    // A document past the brief already written means the analysis has begun,
+    // even when its job rows are gone: the head says Continue, not Start.
+    onHasJobs?.(
+      jobs.length > 0 || docs.some((d) => d.rel !== 'BRIEF.md' && d.status !== 'uninitialized'),
+    );
     // An on-request document not asked for is not pending and does not unsettle
     // the project: the head's engine and Start go when everything owed is in.
     const owed = docs.filter((d) => !(d.optional && d.status === 'uninitialized'));
@@ -2312,6 +2363,7 @@ function DocumentsTab({
   const sortFor = (key: string, items: DocInfo[]) =>
     key === 'done' ? [...items].sort((a, b) => a.name.localeCompare(b.name)) : items;
 
+  if (!loaded) return <div className="kx-docs" />;
   return (
     <div className="kx-docs">
       <HandshakeCard project={project} paused={paused} onExport={onExport} />
