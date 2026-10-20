@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [3.4.2] — 2026-10-20
+
 - **Promptların kendi dosyası var.** `EXPERIENCE.md` artık yalnızca brief; promptlar
   `PROMPTS.md`'de. `EXPERIENCE.md`'yi onayladığınızda zincir onu kendiliğinden yazıyor — yine tek
   basış. Ana prompt, tasarım yapay zekâsına bölüm promptlarının tek tek geleceğini, her birini
@@ -30,6 +32,24 @@
   `medium`, Fable'da `high`.
 - **Antigravity: Google AI Pro'da Gemini 4 Argon.** Google artık onu Ultra'nın yanında Pro'ya da
   veriyor (deneme sürümünde değil); seçici, Antigravity cevap vermeden de onu ilk sırada gösteriyor.
+
+- **Fiyatlar fiyat olarak görünüyor.** Bir satırdaki iki dolar tutarı (`$0,10 … $0,50`)
+  aradaki sözcükleri formüle çeviriyordu: dolar işaretleri kayboluyor, metin kod yazısına
+  dönüyordu. Artık düz metin olarak kalıyor.
+- **Brief kapısı ile başlık aynı şeyi söylüyor.** Brief'te açık sorular varken başlık cevap
+  gerektiğini söylüyor, buton da **Start** yerine **Check again** oluyor. Brief'in **Edit**
+  butonu artık ⋯ menüsünde değil, görünür yerde.
+- **Henüz yazılmamış belge nedenini söylüyor.** Sırada bekleyen, yazılmakta olan ya da isteğe
+  bağlı bir belge açılınca boş bir panel çıkıyordu; artık neyi beklediğini söylüyor.
+- **Okuması ve tıklaması daha kolay.** Gri yazılar iki temada da koyulaştı. Küçük kontrollerin
+  (kaydırıcı noktaları, *Hide this*, açma/kapama düğmesi) tıklama alanı büyüdü. **Add project**
+  formundaki alanların etiketi var. Belge çekmecesi ve motor seçici klavye odağını alıyor ve
+  kapanınca geri veriyor.
+- **Durumlar daha net.** *waiting*, belge sizi bekliyorsa **your turn**, sırasını bekliyorsa
+  **queued** olarak görünüyor. Başarısız yazım çekmecede de kırmızı. Belgeleri yazılmaya başlamış
+  duraklatılmış bir proje **Start** değil **Continue** diyor.
+- **Açılışta yanıp sönme yok.** Bir bağlantıdan proje açılınca önce proje listesi görünmüyor; dar
+  ekranda da alt çubuk ekranın dışına taşmıyor.
 
 ## [3.4.1] — 2026-10-13
 

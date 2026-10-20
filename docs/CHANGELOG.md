@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [3.4.2] — 2026-10-20
+
 - **The prompts have a file of their own.** `EXPERIENCE.md` is now the brief alone; the prompts are
   in `PROMPTS.md`, which the chain writes on its own once you approve `EXPERIENCE.md` — still one
   press. The master prompt tells the design AI that the section prompts come one at a time, and to
@@ -29,6 +31,23 @@
   `medium`, Fable to `high`.
 - **Antigravity: Gemini 4 Argon on Google AI Pro.** Google now gives it to Pro (not on a trial) as
   well as Ultra, so the picker lists it first even before Antigravity answers.
+
+- **Prices read as prices.** Two dollar amounts in one line (`$0,10 … $0,50`) turned the words
+  between them into a formula: the dollar signs disappeared and the text went monospace. It now
+  stays prose.
+- **The brief gate and the head say the same thing.** While the brief has open questions, the head
+  says it needs answers and the button reads **Check again** instead of **Start**. The brief's
+  **Edit** is in view, no longer under ⋯.
+- **An unwritten document says why.** Opening one that is queued, being written or on request
+  showed an empty panel; it now says what it is waiting for.
+- **Easier to read and to reach.** Grey text is darker in both themes; the small controls (the
+  slider dots, *Hide this*, the power button) have bigger targets; **Add project**'s fields have
+  labels; the document drawer and the engine picker take the keyboard focus and give it back.
+- **Clearer states.** *waiting* reads **your turn** when the document waits on you and **queued**
+  when it waits its turn. A failed write is red in the drawer too. A paused project whose
+  documents are under way says **Continue**, not **Start**.
+- **No flash on load.** Opening a project from a link no longer shows the project list first, and
+  on a narrow screen the status bar no longer runs off the edge.
 
 ## [3.4.1] — 2026-10-13
 
