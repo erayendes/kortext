@@ -174,7 +174,7 @@ export function DocDrawer({
   // after a rewrite): an approve or a save sent now would name no version and
   // be refused, so the buttons wait for it.
   const locked = busy || writing || !version;
-  // DESIGN.md drawn, or EXPERIENCE.md's prompts laid out to copy — a look, not the document.
+  // DESIGN.md drawn, or PROMPTS.md laid out to copy — a look, not the document.
   const [preview, setPreview] = useState(false);
   const drawn = doc?.rel === 'DESIGN.md';
   // Text selected in the preview: asked about like a line. `line` is the block of
@@ -852,6 +852,7 @@ export function DocDrawer({
               ? 'No agent writes this document — use Edit in ⋯ to change it yourself.'
               : '';
 
+  const isBrief = doc?.rel === 'BRIEF.md';
   const doEdit = () => {
     setMenuOpen(false);
     setPreview(false);
@@ -943,11 +944,17 @@ export function DocDrawer({
             {!editing &&
               !preview &&
               doc.status !== 'uninitialized' &&
-              (drawn || doc.rel === 'EXPERIENCE.md') && (
+              (drawn || doc.rel === 'PROMPTS.md') && (
                 <button className="btn btn-secondary" onClick={doPreview}>
                   {drawn ? 'Preview' : 'Prompts'}
                 </button>
               )}
+            {/* The brief is the one document prime writes: its Edit sits in view. */}
+            {!editing && !preview && isBrief && doc.status !== 'uninitialized' && (
+              <button className="btn btn-secondary" disabled={locked} onClick={doEdit}>
+                Edit
+              </button>
+            )}
             {/* What is done to the document rather than decided about it. */}
             {!editing && !preview && doc.status !== 'uninitialized' && (
               <div className="kx-menu" ref={menuRef}>
@@ -962,9 +969,11 @@ export function DocDrawer({
                 </button>
                 {menuOpen && (
                   <div className="kx-menu-list" role="menu">
-                    <button role="menuitem" disabled={locked} onClick={doEdit}>
-                      Edit
-                    </button>
+                    {!isBrief && (
+                      <button role="menuitem" disabled={locked} onClick={doEdit}>
+                        Edit
+                      </button>
+                    )}
                     <button role="menuitem" onClick={doExport}>
                       Export
                     </button>
@@ -1139,7 +1148,7 @@ export function DocDrawer({
             </div>
           )}
           {failedError && !editing && (
-            <div className="kx-doc-changebar">
+            <div className="kx-doc-changebar kx-doc-failbar">
               <div className="kx-changebar-head">
                 The last attempt to write this document failed.
               </div>
@@ -1154,6 +1163,9 @@ export function DocDrawer({
             </div>
           )}
           {!editing && <RelatedDocuments doc={doc} docs={docs} />}
+          {!editing && !failedError && doc.status === 'uninitialized' && (
+            <NotWritten doc={doc} docs={docs} />
+          )}
           {doc.dependentOn.length > 0 && !editing && (
             <div className="kx-doc-dependbar">
               <span className="mono">
@@ -1207,6 +1219,7 @@ export function DocDrawer({
               ) : (
                 <textarea
                   className="kx-editor mono"
+                  aria-label="Document text"
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                 />
@@ -1512,6 +1525,10 @@ export function statusOf(doc: DocInfo): { key: string; label: string } {
   if (doc.state === 'n/a') return { key: 'not-applicable', label: 'n/a' };
   // The agent's verdict, waiting for prime's: the word with a question mark.
   if (doc.naProposed) return { key: 'not-applicable', label: 'n/a?' };
+  // Two kinds of waiting read alike in a list: on you, or on the chain.
+  if (doc.state === 'waiting' && doc.section === 'needs')
+    return { key: 'waiting', label: 'your turn' };
+  if (doc.state === 'waiting' && doc.detail === 'queue') return { key: 'waiting', label: 'queued' };
   return { key: doc.state, label: doc.state };
 }
 
@@ -1569,6 +1586,26 @@ export function DocBadges({ doc }: { doc: DocInfo }) {
  * one settles, every document here is read against it again. A reader nobody
  * has written yet is greyed; it will read this when its turn comes.
  */
+// An unwritten document has no body; say why, and when it comes, instead of an empty panel.
+function NotWritten({ doc, docs }: { doc: DocInfo; docs: DocInfo[] }) {
+  const unsettled = doc.inputs
+    .map((rel) => docs.find((d) => d.rel === rel))
+    .filter((d): d is DocInfo => !!d && d.status !== 'approved' && d.status !== 'not-applicable');
+  const text =
+    doc.state === 'writing'
+      ? 'The agent is writing this document now. It opens here when it is done.'
+      : doc.rel === 'BRIEF.md'
+        ? 'No brief yet. Write .kortext/BRIEF.md in the project folder, then press Start.'
+        : doc.optional
+          ? 'Written only if you ask for it — the handshake card offers it once the analysis is done.'
+          : doc.state === 'paused'
+            ? 'The project is paused. This document is written after you press Continue.'
+            : unsettled.length > 0
+              ? `Not written yet. It is written once ${unsettled.map((d) => d.name).join(', ')} ${unsettled.length > 1 ? 'are' : 'is'} approved.`
+              : 'Not written yet. It is next in line.';
+  return <div className="kx-doc-empty">{text}</div>;
+}
+
 function RelatedDocuments({ doc, docs }: { doc: DocInfo; docs: DocInfo[] }) {
   const readers = docs.filter((d) => d.inputs.includes(doc.rel));
   if (readers.length === 0) return null;
@@ -2038,6 +2075,7 @@ function DocBlock({
             checked={task[1] !== ' '}
             readOnly
             tabIndex={-1}
+            aria-label={task[1] !== ' ' ? 'done' : 'not done'}
           />
           <span className="kx-task-text">
             <Body text={task[2] ?? ''} />
@@ -2596,6 +2634,7 @@ function LineThread({
         <div className="kx-thread-input" ref={box}>
           <textarea
             className="kx-input kx-thread-text"
+            aria-label="Question or note"
             autoFocus={active}
             rows={1}
             // Enter is a new line everywhere; only a button sends.

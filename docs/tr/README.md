@@ -31,7 +31,7 @@ Yazdığınız brief yeterli değilse Kortext bunu söylüyor. `BRIEF.md` için 
 Tek bir insan rolü var, **`Prime`**. 
 Diğer personalar; `product manager`, `architect`, `designer`, `growth expert`, `security engineer`, `DevOps engineer`, `DBA`, `compliance expert`, `copywriter` ve `QA engineer`.
 
-Brief referansıyla Kortext’in ürettiği belgeler; `PRODUCT.md`, `STACK.md`, `STRUCTURE.md`, `ARCHITECTURE.md`, `DESIGN.md`, `GROWTH.md`, `SECURITY.md`, `ENVIRONMENT.md`, `DATABASE.md`, `API.md`, `LEGAL.md`, `CONTENT.md`, `ENGINEERING.md`, `TEST.md`. Bir de en sonunda isteğe bağlı `EXPERIENCE.md` var.
+Brief referansıyla Kortext’in ürettiği belgeler; `PRODUCT.md`, `STACK.md`, `STRUCTURE.md`, `ARCHITECTURE.md`, `DESIGN.md`, `GROWTH.md`, `SECURITY.md`, `ENVIRONMENT.md`, `DATABASE.md`, `API.md`, `LEGAL.md`, `CONTENT.md`, `ENGINEERING.md`, `TEST.md`. Bir de en sonunda isteğe bağlı `EXPERIENCE.md` ve onun `PROMPTS.md`'si var.
 
 <p align="center">
   <img src="../assets/panel-documents.png" alt="Analiz sürerken: belgeler gruplar altında, her birinin yazarı ve durumu" width="880">

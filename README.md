@@ -29,7 +29,7 @@ If the brief you wrote is not enough, Kortext says so. The panel explains `BRIEF
 There is one human role, **`Prime`**.
 The other personas: `product manager`, `architect`, `designer`, `growth expert`, `security engineer`, `DevOps engineer`, `DBA`, `compliance expert`, `copywriter` and `QA engineer`.
 
-From the brief, Kortext produces `PRODUCT.md`, `STACK.md`, `STRUCTURE.md`, `ARCHITECTURE.md`, `DESIGN.md`, `GROWTH.md`, `SECURITY.md`, `ENVIRONMENT.md`, `DATABASE.md`, `API.md`, `LEGAL.md`, `CONTENT.md`, `ENGINEERING.md`, `TEST.md`. And, at the very end, an optional `EXPERIENCE.md`.
+From the brief, Kortext produces `PRODUCT.md`, `STACK.md`, `STRUCTURE.md`, `ARCHITECTURE.md`, `DESIGN.md`, `GROWTH.md`, `SECURITY.md`, `ENVIRONMENT.md`, `DATABASE.md`, `API.md`, `LEGAL.md`, `CONTENT.md`, `ENGINEERING.md`, `TEST.md`. And, at the very end, an optional `EXPERIENCE.md` with its `PROMPTS.md`.
 
 <p align="center">
   <img src="docs/assets/panel-documents.png" alt="The analysis in flight: documents in their groups, each with its author and state" width="880">

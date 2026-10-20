@@ -6,52 +6,40 @@ approver: +prime
 
 # Experience
 
-> For the AI that will design this product. Part 1 is the brief; Part 2 is the prompts, ready to paste.
+> For the AI that will design this product: the brief. The prompts to paste are in `PROMPTS.md`, written from it.
 > After the handshake this document belongs to the project's owner — update it with your own agent.
 
-## Part 1 — Brief
-
-### Product
+## Product
 
 - [One sentence: what it is, for whom, why]
 - [Tone and voice, from CONTENT.md]
 
-### Platform & Constraints
+## Platform & Constraints
 
 - [Web / iOS / Android / desktop; framework; component library if any — from STACK.md]
 - [Interface language(s), from BRIEF.md]
 
-### Journeys
+## Journeys
 
 - [One per journey: who, why, the steps in order, where it ends]
 
-### Screen Map
+## Screen Map
 
 - [Every screen, its route or place, and where it leads]
 
-### Screens
+## Screens
 
 For each screen:
 
 - **[Screen name]** — purpose · data shown · actions · states (empty, loading, error, first run) · copy, word for word from CONTENT.md
 
-### Design System
+## Design System
 
 - [Tokens and components from DESIGN.md — only what the design AI must hold to]
 
-### Do Not
+## Do Not
 
 - [Out of scope, patterns to avoid, anything the brief rules out]
-
-## Part 2 — Prompts
-
-### Master prompt
-
-- [Sets the product, the platform, the system and the rules; says how many section prompts follow and that each builds on the last]
-
-### Section prompts
-
-- [One per journey, in order; each stands on its own: the master's summary, that journey's screens, states and copy]
 
 ## Change Requests
 

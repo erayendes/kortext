@@ -9,6 +9,7 @@ import { writeDesignPreview } from './design-preview.js';
 import {
   appendIncomingRequest,
   docPath,
+  follows,
   listDocs,
   loadDocMap,
   QUESTIONS,
@@ -103,7 +104,8 @@ export function producibleSteps(
   for (const doc of docs) {
     if (doc.status !== 'uninitialized' || doc.blocked || running.has(doc.rel)) continue;
     const step = map.get(doc.rel);
-    if (step && !step.optional) steps.push(step); // on request: prime starts it, the chain never does
+    // On request: prime starts it, the chain never does — unless it follows one prime asked for.
+    if (step && (!step.optional || follows(db, project, doc.rel, map))) steps.push(step);
   }
   return steps;
 }

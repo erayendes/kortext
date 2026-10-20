@@ -103,9 +103,15 @@
 > Written only when prime asks — offered at the handshake, never queued by the chain. A
 > project whose design is already in hand, or whose product renders nothing, never sees it.
 
-1. **+designer:** Produce `EXPERIENCE.md`. The brief a design AI needs to design the product without asking: the journeys (who, why, which steps), the screen map and its navigation, every screen with its purpose, data, actions and states (empty, loading, error, first run), the copy word for word from `CONTENT.md`, the tokens and components from `DESIGN.md`, the platform and its constraints from `STACK.md`, and what not to do. Then the prompts, tool-agnostic and ready to paste: one master prompt that sets the product, the system and the rules and says how many section prompts follow, and one prompt per journey that stands on its own. After the handshake the document belongs to the project's owner, who updates it with their own agent.
+1. **+designer:** Produce `EXPERIENCE.md`. The brief a design AI needs to design the product without asking: the journeys (who, why, which steps), the screen map and its navigation, every screen with its purpose, data, actions and states (empty, loading, error, first run), the copy word for word from `CONTENT.md`, the tokens and components from `DESIGN.md`, the platform and its constraints from `STACK.md`, and what not to do. The prompts are not here — `PROMPTS.md` is written from this once it is approved. After the handshake the document belongs to the project's owner, who updates it with their own agent.
    - inputs: `.kortext/BRIEF.md`, `.kortext/PRODUCT.md`, `.kortext/STACK.md`, `.kortext/DESIGN.md`, `.kortext/CONTENT.md`
    - outputs: `.kortext/EXPERIENCE.md`
    - n/a when: the product has no visual surface, or the design is already in hand and no AI will be asked to design it.
+   - approver: +prime
+   - on request: yes
+
+2. **+designer:** Produce `PROMPTS.md`. The prompts that hand `EXPERIENCE.md` to a design AI, tool-agnostic and ready to paste. First the master prompt: it sets the product, the platform, the system and the rules; it says how many section prompts follow and that they come one at a time, each building on the last; and it tells the AI to say when it has finished each section and ask for the next prompt, never starting a section before its prompt arrives. Then one prompt per journey, in order, each standing on its own and ending with that same request — the last one says it is the last. Asking for `EXPERIENCE.md` asks for this too: the chain writes it once `EXPERIENCE.md` is approved. After the handshake the document belongs to the project's owner, who updates it with their own agent.
+   - inputs: `.kortext/EXPERIENCE.md`, `.kortext/DESIGN.md`, `.kortext/CONTENT.md`
+   - outputs: `.kortext/PROMPTS.md`
    - approver: +prime
    - on request: yes

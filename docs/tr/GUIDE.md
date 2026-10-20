@@ -47,7 +47,7 @@ Kısa yeter; bir cümle bir soruyu keser. Brief'te olmayan her karar, ilk belged
 
 Kortext repo'nun köküne `.kortext/` dizinini ve içine belge iskeletlerini, bir de `AGENTS.md` yerleştirir. `AGENTS.md` zaten varsa içine işaretli bir blok ekler; sizin yazdıklarınıza dokunmaz.
 
-Kortext, belgelerin bağımlılık sırasına uyan bir iş akışında adım adım çalışır. Her adım tek bir belge yazar — `PRODUCT.md`, `STACK.md`, `STRUCTURE.md`, `ARCHITECTURE.md`, `DESIGN.md`, `GROWTH.md`, `SECURITY.md`, `ENVIRONMENT.md`, `DATABASE.md`, `API.md`, `LEGAL.md`, `CONTENT.md`, `ENGINEERING.md`, `TEST.md`, `EXPERIENCE.md` (isteğe bağlı) — ve bunu bir persona olarak yapar: `product manager`, `architect`, `designer`, `growth expert`, `security engineer`, `DevOps engineer`, `DBA`, `compliance expert`, `copywriter` ve `QA engineer`.
+Kortext, belgelerin bağımlılık sırasına uyan bir iş akışında adım adım çalışır. Her adım tek bir belge yazar — `PRODUCT.md`, `STACK.md`, `STRUCTURE.md`, `ARCHITECTURE.md`, `DESIGN.md`, `GROWTH.md`, `SECURITY.md`, `ENVIRONMENT.md`, `DATABASE.md`, `API.md`, `LEGAL.md`, `CONTENT.md`, `ENGINEERING.md`, `TEST.md`, `EXPERIENCE.md` ve `PROMPTS.md` (isteğe bağlı) — ve bunu bir persona olarak yapar: `product manager`, `architect`, `designer`, `growth expert`, `security engineer`, `DevOps engineer`, `DBA`, `compliance expert`, `copywriter` ve `QA engineer`.
 
 > Bir belge "bu projede buna gerek yok" gerekçesiyle, `not-applicable` olarak önerebilir.
 
@@ -154,7 +154,7 @@ Ajan projedeki dosyaları okur. Bir dosyaya saklanmış kötü niyetli bir yöne
 
 Bütün belgeler onaylandığında analiz biter. Kart size üç başlangıç komutu verir; birini kendi ajanınıza kopyalayın. Ajan `AGENTS.md`'yi ve `.kortext/` belgelerini okuyarak başlar.
 
-Eğer henüz tasarımınız yoksa ve yapay zekaya yaptıracaksanız, isteğe bağlı `EXPERIENCE.md` belgesini talep edebilirsiniz. Tüm belgeleri inceleyip tam bir tasarım brief’i sahibi olursunuz. 
+Eğer henüz tasarımınız yoksa ve yapay zekaya yaptıracaksanız, isteğe bağlı `EXPERIENCE.md` belgesini talep edebilirsiniz. Tüm belgeleri inceleyip tam bir tasarım brief’i sahibi olursunuz. Onu onayladığınızda `PROMPTS.md` kendiliğinden gelir: tasarım yapay zekâsına yapıştıracağınız promptlar, bir ana prompt ve her yolculuk için bir tane. Ana prompt, promptların tek tek geleceğini, her birini bitirince bitirdiğini söyleyip sıradakini istemesini yapay zekâya baştan söyler.
 
 Buradan sonra Kortext işin içinde değildir.
 

@@ -186,8 +186,12 @@ control left with the handshake, and this one step still picks its CLI, model an
 `POST …/docs/request` runs the
 step (refused while the project is paused — the offer's button says so), and from then on it
 gates the handshake like any other document. Today there
-is one: `EXPERIENCE.md`, the brief and prompts a design AI works from — new projects only,
-after `CONTENT.md`; after the handshake it belongs to the project's owner.
+is one: `EXPERIENCE.md`, the brief a design AI works from — new projects only, after
+`CONTENT.md`. An on-request step fed by another on-request document *follows* it
+(`follows()` in `docs.ts`): asking for the first asks for it too, it is never offered on its
+own, and the chain writes it once its input stands. `PROMPTS.md` follows `EXPERIENCE.md` — the
+prompts to paste, the master saying they come one at a time. After the handshake both belong to
+the project's owner.
 
 ---
 

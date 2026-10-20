@@ -194,12 +194,14 @@ AI?* — with the engine line above **Write EXPERIENCE.md**. Nothing in the chai
 → `onRequest` in `GET …/handshake`, `POST …/docs/request`
 
 - [ ] `EXPERIENCE.md` sits in To do as `on request · waiting` through the whole chain, and the
-      project reads `15/15 documents settled` without it.
+      project reads `15/15 documents settled` without it or `PROMPTS.md`.
 - [ ] The offer is absent when `DESIGN.md` or `CONTENT.md` was ruled `not-applicable`, and on an
       existing project (no skeleton is scaffolded there).
 - [ ] Press **Write EXPERIENCE.md**: the card yields, the row moves to Doing as `writing…`, and
-      the draft lands under Action Needed as `approve`; approve it and the card returns without
-      the offer.
+      the draft lands under Action Needed as `approve`. `PROMPTS.md` now reads `waiting · queue`,
+      not `on request`.
+- [ ] Approve `EXPERIENCE.md`: `PROMPTS.md` is written on its own, with no second offer; approve
+      it and the card returns without the offer.
 - [ ] Pause the project mid-write: the row reads `paused`, the card stays away, and Continue
       resumes it — no second offer, no card beside a paused row.
 - [ ] While the project is paused before pressing, the button is disabled and says to Continue
@@ -207,8 +209,10 @@ AI?* — with the engine line above **Write EXPERIENCE.md**. Nothing in the chai
 - [ ] A project added before the step existed shows the offer once its project screen is
       opened — the skeleton appears in `.kortext/` then.
 - [ ] The written document: Part 1 traces every fact to a document above (no invented screens),
-      copy is quoted from `CONTENT.md` word for word, and Part 2 is one master prompt plus one
-      prompt per journey, each a copyable block naming no design tool.
+      copy is quoted from `CONTENT.md` word for word, and it carries no prompts.
+- [ ] `PROMPTS.md`: one master prompt plus one prompt per journey, each a copyable block naming
+      no design tool; the master says the section prompts come one at a time and asks the AI to
+      say when it has finished each and ask for the next. **Prompts** in its drawer lays them out.
 
 ---
 

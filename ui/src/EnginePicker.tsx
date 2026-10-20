@@ -5,8 +5,9 @@
  * the effort as a slider with its levels named under it and one line about the
  * chosen one. Every pick saves at once; Done and Escape close.
  */
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { api, type EngineInfo } from './api';
+import { useModalFocus } from './Drawer';
 
 export type EnginePickerProps = {
   open: boolean;
@@ -42,6 +43,11 @@ export function EnginePicker({
   const levels = spec?.modelEfforts?.[model] ?? spec?.efforts ?? [];
   const about = (key: string) => spec?.about?.[key] ?? '';
   const label = (key: string) => spec?.label?.[key] ?? key;
+  // The level "default" resolves to, named the way the project head names it.
+  const cliDefault = levels.find((l) => /CLI default/.test(about(l)));
+
+  const box = useRef<HTMLDivElement>(null);
+  useModalFocus(open, box);
 
   // Escape closes; ↑↓ walk the models, ←→ the levels, as the CLIs do.
   useEffect(() => {
@@ -113,7 +119,14 @@ export function EnginePicker({
   return (
     <>
       <div className="drawer-backdrop open" onClick={onClose} aria-hidden />
-      <div className="kx-dialog" role="dialog" aria-modal="true" aria-labelledby="kx-picker-title">
+      <div
+        ref={box}
+        tabIndex={-1}
+        className="kx-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="kx-picker-title"
+      >
         <div className="kx-dialog-head">
           <span id="kx-picker-title" className="kx-dialog-title">
             Engine
@@ -182,7 +195,9 @@ export function EnginePicker({
                   ))}
                 </div>
                 <div className="kx-picker-about">
-                  {effort ? about(effort) : "the CLI's own setting"}
+                  {effort
+                    ? about(effort)
+                    : `the CLI's own setting${cliDefault ? ` — ${label(cliDefault)}` : ''}`}
                 </div>
               </div>
             </>

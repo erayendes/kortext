@@ -4,6 +4,11 @@
 
 ## [Unreleased]
 
+- **Promptların kendi dosyası var.** `EXPERIENCE.md` artık yalnızca brief; promptlar
+  `PROMPTS.md`'de. `EXPERIENCE.md`'yi onayladığınızda zincir onu kendiliğinden yazıyor — yine tek
+  basış. Ana prompt, tasarım yapay zekâsına bölüm promptlarının tek tek geleceğini, her birini
+  bitirince bitirdiğini söyleyip sıradakini istemesini söylüyor. Çekmecedeki *Prompts* artık
+  `PROMPTS.md`'de.
 - **İçinde SQL olan diyagramlar çiziliyor.** Bir sıra diyagramındaki mesajda geçen noktalı virgül
   (`BEGIN; COMMIT;`) bütün diyagramı bozuyordu; diyagram kod olarak görünüyor, Mermaid'in hata
   resmi de sayfanın altına yığılıyordu. Artık bu diyagramlar çiziliyor; yine de çizilemeyen bir

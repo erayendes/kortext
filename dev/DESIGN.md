@@ -69,8 +69,9 @@ auto.
 | `--border-hover` | `#c6c6cc` | `#3a3a40` | under the cursor |
 
 **Text** has four steps, importance falling: `--fg` `#18181b`/`#ededef` (read this) ·
-`--fg-secondary` `#51515a`/`#9c9ca5` · `--fg-muted` `#76767f`/`#6e6e77` · `--fg-faint`
-`#a3a3ad`/`#54545c` (just needs to exist).
+`--fg-secondary` `#51515a`/`#9c9ca5` · `--fg-muted` `#6b6b74`/`#86868f` · `--fg-faint`
+`#8b8b94`/`#64646c` (just needs to exist). `--fg-muted` is the faintest **text**: at least 4.5:1
+on every surface. `--fg-faint` is for icons, bullets and marks only — 3:1, never words.
 
 **Accent** is single and neutral. Kortext is not a brand show; the primary action is black,
 because it is the one thing that must be seen.
@@ -272,7 +273,7 @@ The heart of the system. A document is in **exactly one** state — where it is.
 
 | state | means | colour |
 |---|---|---|
-| `waiting` | queued — or written and waiting for you, which the `approve` badge says | neutral |
+| `waiting` | drawn **your turn** when it waits on you (Action needed), **queued** when it waits on the chain | neutral |
 | `writing` | the agent is writing it now | blue, the dot pulses |
 | `reading` | a recheck is running against it now — the agent reads, it does not write | blue, the dot pulses |
 | `paused` | writing was stopped | amber |
@@ -297,7 +298,7 @@ do row left at the end reads as an analysis never finished. The handshake card o
 asked for it is listed like any other.
 
 A badge is drawn only when it says something the state beside it does not. `queue` and `draft`
-exist in the data and are never drawn: `waiting` in To do already means queued, `writing` already
+exist in the data and are never drawn: the state already reads **queued** in To do, `writing` already
 means a first draft — only a rewrite needs a word, and that word is `revision`. `failed` is a
 state, not a badge — the run fell over and asks for a Retry — and the row that carries it wears
 `revision` when the run that failed was one, `recheck` when it was a reading. The reason sits in
@@ -479,7 +480,7 @@ parsed as one piece, so a reader asks about the whole alert, not one of its line
 block is a framed panel with a **Copy** button that appears on hover, becomes ✓ *Copied* and
 reverts after 1.6s — a code block is there to be taken somewhere, not read. Highlighting comes
 from our own painter (`ui/src/highlight.ts`, no dependency), six token kinds from the §2 palette:
-keyword/command violet · string green · number amber · JSON key blue · comment `--fg-faint` italic
+keyword/command violet · string green · number amber · JSON key blue · comment `--fg-muted` italic
 · flag `--fg-muted`. An unknown or unlabelled language is **not painted at all**, so folder trees
 and output dumps stay plain. The painter's one hard rule: text in equals text out.
 

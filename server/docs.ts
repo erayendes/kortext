@@ -89,7 +89,11 @@ interface LastJob {
  *
  * Order matters: the first match wins.
  */
-function fileDoc(doc: DocInfo, job: LastJob | null): Pick<DocInfo, 'section' | 'state' | 'detail'> {
+function fileDoc(
+  doc: DocInfo,
+  job: LastJob | null,
+  queued: boolean,
+): Pick<DocInfo, 'section' | 'state' | 'detail'> {
   const at = (section: DocInfo['section'], state: DocInfo['state'], detail: DocInfo['detail']) => ({
     section,
     state,
@@ -113,7 +117,7 @@ function fileDoc(doc: DocInfo, job: LastJob | null): Pick<DocInfo, 'section' | '
   if (job?.status === 'failed') return at('needs', 'failed', pass);
   // An on-request document is not queued: it waits for prime's word, not for its inputs.
   if (doc.status === 'uninitialized')
-    return at('todo', 'waiting', doc.optional ? 'request' : 'queue');
+    return at('todo', 'waiting', doc.optional && !queued ? 'request' : 'queue');
   // Every open Action Needed item blocks approval, so one case covers them all:
   // questions left for prime, requests arriving from other documents, and
   // requests this one wants to send. Findings are not among them — they are
@@ -801,7 +805,7 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
     const job = jobs.get(doc.rel) ?? null;
     doc.pendingRecheck =
       rechecking.has(doc.rel) || (job?.kind === 'recheck' && job.status === 'running');
-    Object.assign(doc, fileDoc(doc, job));
+    Object.assign(doc, fileDoc(doc, job, doc.optional && follows(db, project, doc.rel, map)));
   }
 
   docs.sort((a, b) => depth(a.rel) - depth(b.rel) || a.rel.localeCompare(b.rel));
@@ -809,10 +813,30 @@ export function listDocs(db: Database.Database, project: Project, pkgRoot: strin
 }
 
 /** An on-request document that was asked for: still unwritten, but a job — running, stopped, failed — stands for it. */
-export function asked(db: Database.Database, project: Project, rel: string): boolean {
-  return !!db
-    .prepare('SELECT 1 FROM jobs WHERE project_id = ? AND doc_rel = ? LIMIT 1')
-    .get(project.id, rel);
+export function asked(
+  db: Database.Database,
+  project: Project,
+  rel: string,
+  map: Map<string, DocStep>,
+): boolean {
+  if (
+    db
+      .prepare('SELECT 1 FROM jobs WHERE project_id = ? AND doc_rel = ? LIMIT 1')
+      .get(project.id, rel)
+  )
+    return true;
+  return follows(db, project, rel, map);
+}
+
+/** An on-request document fed by another (PROMPTS.md by EXPERIENCE.md) follows it:
+ *  asking for that one asks for this one, and the chain writes it once its input stands. */
+export function follows(
+  db: Database.Database,
+  project: Project,
+  rel: string,
+  map: Map<string, DocStep>,
+): boolean {
+  return !!map.get(rel)?.inputs.some((i) => map.get(i)?.optional && asked(db, project, i, map));
 }
 
 // The handshake is done when every document the workflow produces is settled
@@ -842,7 +866,7 @@ export function analysisComplete(
   // moment it was asked for — a job exists, running, stopped or failed, whether
   // or not the file was written yet — it is part of the analysis like any other.
   const targets = [...map.keys()].filter(
-    (rel) => !(map.get(rel)?.optional && !asked(db, project, rel)),
+    (rel) => !(map.get(rel)?.optional && !asked(db, project, rel, map)),
   );
   if (targets.length === 0) return false;
   const settled = (s: string | undefined) => s === 'approved' || s === 'not-applicable';

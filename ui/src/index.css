@@ -22,8 +22,8 @@
   /* text */
   --fg: #18181b;
   --fg-secondary: #51515a;
-  --fg-muted: #76767f;
-  --fg-faint: #a3a3ad;
+  --fg-muted: #6b6b74;
+  --fg-faint: #8b8b94;
 
   /* Primary action colors */
   --accent: #18181b;
@@ -114,8 +114,8 @@
 
   --fg: #ededef;
   --fg-secondary: #9c9ca5;
-  --fg-muted: #6e6e77;
-  --fg-faint: #54545c;
+  --fg-muted: #86868f;
+  --fg-faint: #64646c;
 
   /* Dark-theme primary action colors */
   --accent: #ededef;
@@ -167,8 +167,8 @@
 
     --fg: #ededef;
     --fg-secondary: #9c9ca5;
-    --fg-muted: #6e6e77;
-    --fg-faint: #54545c;
+    --fg-muted: #86868f;
+    --fg-faint: #64646c;
 
     /* Dark-theme primary action colors */
     --accent: #ededef;
@@ -219,6 +219,9 @@ body,
 #root {
   height: 100%;
   margin: 0;
+}
+html {
+  background: var(--bg);
 }
 body {
   background: var(--bg);
@@ -487,13 +490,24 @@ body {
   border-left: 1px solid var(--border-strong);
   z-index: 61;
   transform: translateX(100%);
-  transition: transform 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+  /* Hidden once it has slid out, so Tab never walks into a closed panel. */
+  visibility: hidden;
+  transition:
+    transform 0.26s cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 0s linear 0.26s;
   display: flex;
   flex-direction: column;
 }
 .drawer.open {
   transform: translateX(0);
+  visibility: visible;
+  transition: transform 0.26s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: -18px 0 50px rgba(0, 0, 0, 0.4);
+}
+/* The panel itself takes focus on open (see useModalFocus); its controls carry the ring. */
+.drawer:focus,
+.kx-dialog:focus {
+  outline: none;
 }
 .dr-head {
   min-height: 52px;
@@ -598,7 +612,7 @@ body {
 }
 .kx-dialog-hint {
   font-size: var(--fs-ui);
-  color: var(--fg-faint);
+  color: var(--fg-muted);
 }
 .kx-dialog-foot {
   display: flex;
@@ -631,7 +645,7 @@ body {
 .kx-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--sp-2);
 }
 .kx-chip {
   height: var(--control-h);
@@ -665,7 +679,7 @@ body {
 }
 .kx-picker-about {
   font-size: var(--fs-ui);
-  color: var(--fg-faint);
+  color: var(--fg-muted);
   min-height: 1.4em;
 }
 .kx-picker-select {
@@ -812,7 +826,7 @@ a.btn {
   border: 0;
   display: block;
 }
-/* EXPERIENCE.md's prompts, laid out to copy: the document itself is hidden. */
+/* PROMPTS.md, laid out to copy: the document itself is hidden. */
 .dr-body-prompts > *:not(.kx-prompts):not(.kx-cmd-hint) {
   display: none;
 }
@@ -1100,8 +1114,10 @@ a.btn {
     border-color var(--speed) var(--ease),
     box-shadow var(--speed) var(--ease);
 }
-.input::placeholder {
-  color: var(--fg-faint);
+.input::placeholder,
+.kx-input::placeholder,
+.kx-editor::placeholder {
+  color: var(--fg-muted);
 }
 .input:hover {
   border-color: var(--border-hover);
@@ -1455,27 +1471,27 @@ a.btn {
   background: none;
   padding: 0;
   font: inherit;
-  color: var(--fg-faint);
+  color: var(--fg-muted);
   cursor: pointer;
 }
 .kx-made-trigger:hover {
-  color: var(--fg-muted);
+  color: var(--fg-secondary);
 }
 .kx-made-by {
   position: relative;
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  color: var(--fg-faint);
+  color: var(--fg-muted);
 }
 .kx-support {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  color: var(--fg-faint);
+  color: var(--fg-muted);
 }
 .kx-support:hover {
-  color: var(--fg-muted);
+  color: var(--fg-secondary);
 }
 .kx-made-pop {
   position: absolute;
@@ -1495,7 +1511,7 @@ a.btn {
   cursor: default;
 }
 .kx-made-pop-head {
-  color: var(--fg-faint);
+  color: var(--fg-muted);
 }
 .kx-made-pop-row {
   display: flex;
@@ -1512,11 +1528,11 @@ a.btn {
 }
 .kx-made-pop-link {
   margin-top: 2px;
-  color: var(--fg-faint);
+  color: var(--fg-muted);
   text-decoration: none;
 }
 .kx-made-pop-link:hover {
-  color: var(--fg-muted);
+  color: var(--fg-secondary);
 }
 .kx-statusbar-link {
   border: 0;
@@ -1524,11 +1540,32 @@ a.btn {
   padding: 0;
   font: inherit;
   cursor: pointer;
-  color: var(--fg-faint);
+  color: var(--fg-muted);
   text-decoration: none;
 }
 .kx-statusbar-link:hover {
-  color: var(--fg-muted);
+  color: var(--fg-secondary);
+}
+/* A phone is narrower than both columns side by side: the credit drops to its own row,
+   and its empty row-holder goes, since there is no status column beside it to match. */
+@media (max-width: 480px) {
+  .kx-statusbar {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 8px 12px;
+    row-gap: 4px;
+  }
+  .kx-statusbar-line:empty {
+    display: none;
+  }
+  /* Report and Support do not fit one 375px line either; the dot would dangle at a break. */
+  .kx-statusbar-line {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+  .kx-statusbar .kx-danger-sep {
+    display: none;
+  }
 }
 .kx-status-warn {
   color: var(--red);
@@ -1541,7 +1578,9 @@ a.btn {
   align-items: center;
   border: 0;
   background: none;
-  padding: 0;
+  /* A 13px icon in a 25px target; the negative margin keeps the line where it was. */
+  padding: 6px;
+  margin: -6px;
   color: var(--fg-faint);
   cursor: pointer;
 }
@@ -1588,7 +1627,7 @@ a.btn {
   color: var(--fg);
 }
 .kx-status-note {
-  color: var(--fg-faint);
+  color: var(--fg-muted);
 }
 .kx-copy-cmd {
   display: inline-flex;
@@ -1701,7 +1740,7 @@ a.btn {
 }
 .kx-card-path {
   font-size: var(--fs-label);
-  color: var(--fg-faint);
+  color: var(--fg-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1733,13 +1772,14 @@ a.btn {
   align-items: center;
   gap: 10px;
   font-size: var(--fs-label);
-  color: var(--fg-faint);
+  color: var(--fg-muted);
 }
 .kx-siblings-close {
   display: inline-flex;
   border: 0;
   background: none;
-  padding: 0;
+  padding: 7px;
+  margin: -7px;
   color: var(--fg-faint);
   opacity: 0.45;
   cursor: pointer;
@@ -1798,23 +1838,32 @@ a.btn {
 }
 .kx-slide-dots {
   display: inline-flex;
-  gap: 5px;
+  margin: -9px 0;
 }
+/* The dot is drawn inside a 24px target, so a click near it still lands. */
 .kx-slide-dot {
-  width: 5px;
-  height: 5px;
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
   padding: 0;
   border: 0;
-  border-radius: 50%;
-  background: var(--border-strong);
+  background: none;
   cursor: pointer;
 }
-.kx-slide-dot-on {
+.kx-slide-dot::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--border-strong);
+}
+.kx-slide-dot-on::before {
   background: var(--fg-muted);
 }
 .kx-sib-soon {
   font-size: var(--fs-micro);
-  color: var(--fg-faint);
+  color: var(--fg-muted);
 }
 .kx-sib-card {
   display: flex;
@@ -1847,11 +1896,11 @@ a.btn {
   align-items: center;
   gap: 5px;
   font-size: var(--fs-micro);
-  color: var(--fg-faint);
+  color: var(--fg-muted);
 }
 .kx-sib-goes {
   display: inline-flex;
-  color: var(--fg-faint);
+  color: var(--fg-muted);
 }
 a.kx-sib-card:hover .kx-sib-goes {
   color: var(--fg);
@@ -1910,6 +1959,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
 }
 .kx-form-row {
   display: flex;
+  align-items: flex-end;
   gap: 8px;
 }
 .kx-input {
@@ -1966,7 +2016,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
 }
 .kx-cmd-copy {
   font-size: var(--fs-label);
-  color: var(--fg-faint);
+  color: var(--fg-muted);
   white-space: nowrap;
 }
 .kx-cmd-card:hover .kx-cmd-copy {
@@ -1988,7 +2038,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
 }
 .kx-cmd-hint {
   font-size: var(--fs-label);
-  color: var(--fg-faint);
+  color: var(--fg-muted);
 }
 
 /* Document list and drawer */
@@ -2002,7 +2052,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--fg-faint);
+  color: var(--fg-muted);
   margin-bottom: 8px;
 }
 .kx-doc-details > summary.kx-doc-group {
@@ -2047,7 +2097,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   background: var(--bg);
   cursor: pointer;
   text-align: left;
-  margin-bottom: 5px;
+  margin-bottom: var(--sp-2);
   font-family: inherit;
   transition: border-color var(--speed) var(--ease);
 }
@@ -2062,7 +2112,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
 }
 .kx-doc-author {
   font-size: var(--fs-micro);
-  color: var(--fg-faint);
+  color: var(--fg-muted);
 }
 .kx-doc-spacer {
   flex: 1;
@@ -2172,6 +2222,14 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
 /* A reader that does not exist yet: named, but greyed — it is coming, not gone. */
 .kx-doc-readbar .kx-reader-unwritten {
   color: var(--fg-muted);
+}
+.kx-doc-empty {
+  margin: var(--sp-3) 0 8px;
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px dashed var(--border-strong, var(--border));
+  border-radius: var(--r-md);
+  color: var(--fg-secondary);
+  font-size: var(--fs-ui);
 }
 .kx-doc-dependbar {
   margin: var(--sp-3) 0 8px;
@@ -2330,7 +2388,7 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
   display: inline-block;
   min-width: 1.4em;
   margin-right: var(--sp-2);
-  color: var(--fg-faint);
+  color: var(--fg-muted);
   font-size: var(--fs-label);
 }
 .kx-block:hover {
@@ -2544,6 +2602,13 @@ a.kx-made-pop-row:hover .kx-made-pop-name {
 }
 .kx-blank {
   height: 8px;
+}
+/* A heading carries its own margins: source blank lines beside it, and a second
+   blank in a row, add nothing but a hole under the title. */
+.kx-doc > div:has(> .kx-h1, > .kx-h2, > .kx-h3, > .kx-h4) + div > .kx-blank,
+.kx-doc > div:has(+ div > .kx-h1, + div > .kx-h2, + div > .kx-h3, + div > .kx-h4) > .kx-blank,
+.kx-doc > div:has(> .kx-blank) + div > .kx-blank {
+  display: none;
 }
 .kx-rule {
   border: 0;
@@ -2769,6 +2834,7 @@ button.kx-note-exc:hover {
 .kx-companion-close {
   border: 0;
   background: none;
+  font-family: inherit;
   padding: 0 4px;
   font-size: var(--fs-heading);
   line-height: 1;
@@ -2847,6 +2913,10 @@ button.kx-note-exc:hover {
 }
 .kx-field .kx-input {
   width: 100%;
+}
+.kx-field-label {
+  font-size: var(--fs-label);
+  color: var(--fg-secondary);
 }
 .kx-field-err {
   color: var(--red);
@@ -2934,7 +3004,7 @@ button.kx-note-exc:hover {
 }
 .kx-explain-who {
   font-size: var(--fs-micro);
-  color: var(--fg-faint);
+  color: var(--fg-muted);
   letter-spacing: 0.02em;
 }
 .kx-thread-input .kx-input {
@@ -2978,6 +3048,14 @@ button.kx-note-exc:hover {
 .kx-changebar-head {
   color: var(--amber);
   font-weight: 600;
+}
+/* A failed write is an error, red like its badge, not the amber of work waiting on you. */
+.kx-doc-failbar {
+  background: var(--red-bg);
+  border-color: var(--red-border);
+}
+.kx-doc-failbar .kx-changebar-head {
+  color: var(--red);
 }
 /* Boxes, not bullets: the box is ticked once the row has its answer or its
    decision. It is drawn, not pressed — the row is the control. */
@@ -3198,7 +3276,7 @@ button.kx-removed-toggle:hover {
 .kx-req-presumed {
   margin-left: 8px;
   font-size: var(--fs-micro);
-  color: var(--fg-faint);
+  color: var(--fg-muted);
   white-space: nowrap;
 }
 .kx-req-text {
@@ -3266,8 +3344,7 @@ button.kx-removed-toggle:hover {
 .kx-gate p {
   margin: 0;
   font-size: var(--fs-ui);
-  color: var(--blue);
-  opacity: 0.8;
+  color: var(--fg-secondary);
   max-width: 68ch;
 }
 .kx-gate-questions {
@@ -3278,14 +3355,11 @@ button.kx-removed-toggle:hover {
   gap: 6px;
   font-size: var(--fs-body);
 }
+/* No surface of its own: the cards inside are the surfaces, the green title says it is done. */
 .kx-handshake {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 18px;
-  border: 1px solid rgba(52, 146, 90, 0.35);
-  border-radius: var(--r-lg);
-  background: rgba(52, 146, 90, 0.06);
 }
 .kx-handshake-head {
   display: flex;
@@ -3349,7 +3423,7 @@ button.kx-removed-toggle:hover {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 6px;
+  gap: var(--sp-2);
 }
 .kx-handshake-offer-title {
   font-size: var(--fs-heading);
@@ -3477,7 +3551,7 @@ button.kx-removed-toggle:hover {
 
 /* Syntax highlighting token styles */
 .hl-com {
-  color: var(--fg-faint);
+  color: var(--fg-muted);
   font-style: italic;
 }
 .hl-str {

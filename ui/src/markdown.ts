@@ -282,14 +282,14 @@ export function deTex(src: string): string {
  * dangerouslySetInnerHTML).
  *
  * Bold is matched before italic so `**x**` never reads as an empty emphasis.
- * Math follows the pandoc rule — no space inside the dollars — so "$5 and $10"
- * stays prose.
+ * Math follows the pandoc rule — no space inside the dollars, no digit right
+ * after the closing one — so "$5 and $10" and "$0,10. … ($0,50" stay prose.
  */
 export function parseInline(text: string): InlineSpan[] {
   const spans: InlineSpan[] = [];
   // A link comes first: its text may hold code, `[`a.html`](…)`, and must stay one span.
   const re =
-    /\[([^\]\n]+)\]\(([^)\s]+)\)|\*\*(.+?)\*\*|`(.+?)`|\$(\S(?:[^$]*?\S)?)\$|\*(\S(?:.*?\S)?)\*|(?<![A-Za-z0-9_])_(\S(?:.*?\S)?)_(?![A-Za-z0-9_])/g;
+    /\[([^\]\n]+)\]\(([^)\s]+)\)|\*\*(.+?)\*\*|`(.+?)`|\$(\S(?:[^$]*?\S)?)\$(?!\d)|\*(\S(?:.*?\S)?)\*|(?<![A-Za-z0-9_])_(\S(?:.*?\S)?)_(?![A-Za-z0-9_])/g;
   let last = 0;
   let m: RegExpExecArray | null;
 
@@ -312,7 +312,7 @@ export function parseInline(text: string): InlineSpan[] {
 
 /**
  * The prompts a document hands on to another AI: every fenced block under a
- * `##` heading that says prompts (EXPERIENCE.md's `## Part 2 — Prompts`),
+ * `##` heading that says prompts (PROMPTS.md's `## Prompts`),
  * named by the heading above it.
  */
 export function promptsOf(md: string): Array<{ title: string; text: string }> {
