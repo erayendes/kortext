@@ -4,6 +4,9 @@
 
 ## [Unreleased]
 
+- **Codex'te GPT-6.1 Terra var.** `gpt-6.1-terra` artık Codex'in kendi listesinde; panel onu
+  Codex cevap vermeden önce de gösteriyor.
+
 ## [3.4.2] — 2026-10-20
 
 - **Promptların kendi dosyası var.** `EXPERIENCE.md` artık yalnızca brief; promptlar
