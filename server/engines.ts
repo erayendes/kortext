@@ -126,10 +126,10 @@ export const ENGINES: EngineSpec[] = [
     models: [
       'gpt-6.1-sol',
       'gpt-6-astra',
-      'gpt-6.1-terra',
       'gpt-6-sol',
       'gpt-6-luna',
       'gpt-5.6-sol',
+      'gpt-6.1-terra',
       'gpt-5.6-terra',
       'gpt-5.6-luna',
     ],
@@ -140,10 +140,10 @@ export const ENGINES: EngineSpec[] = [
     about: {
       'gpt-6.1-sol': 'Latest workhorse model for coding and everyday work',
       'gpt-6-astra': 'Frontier intelligence for the most demanding work',
-      'gpt-6.1-terra': 'GPT-6.1 Terra Codex model',
       'gpt-6-sol': 'Previous generation workhorse model',
       'gpt-6-luna': 'Fast and affordable model for easier tasks',
       'gpt-5.6-sol': 'Older generation workhorse model',
+      'gpt-6.1-terra': 'GPT-6.1 Terra Codex model',
       'gpt-5.6-terra': 'Older balanced model for straightforward work',
       'gpt-5.6-luna': 'Older fast and efficient model',
       low: 'Fast responses with lighter reasoning',
