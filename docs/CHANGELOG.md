@@ -4,6 +4,9 @@
 
 ## [Unreleased]
 
+- **Codex offers GPT-6.1 Terra.** `gpt-6.1-terra` is in Codex's own picker now, so the panel
+  lists it before Codex has answered too.
+
 ## [3.4.2] — 2026-10-20
 
 - **The prompts have a file of their own.** `EXPERIENCE.md` is now the brief alone; the prompts are
