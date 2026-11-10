@@ -6,6 +6,8 @@
 
 - **Codex'te GPT-6.1 Terra var.** `gpt-6.1-terra` artık Codex'in kendi listesinde; panel onu
   Codex cevap vermeden önce de gösteriyor.
+- **Claude'da `fable` artık Fable 5.2.** Panel bu adın çalıştırdığı modeli doğru gösteriyor;
+  CLI'ın varsayılan eforu Fable dahil her Claude modelinde `medium`.
 
 ## [3.4.2] — 2026-10-20
 

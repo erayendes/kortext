@@ -6,6 +6,8 @@
 
 - **Codex offers GPT-6.1 Terra.** `gpt-6.1-terra` is in Codex's own picker now, so the panel
   lists it before Codex has answered too.
+- **Claude's `fable` is Fable 5.2.** The panel names the model the alias runs now, and shows
+  `medium` as the CLI's default effort on every Claude model, Fable included.
 
 ## [3.4.2] — 2026-10-20
 
