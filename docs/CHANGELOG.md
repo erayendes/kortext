@@ -4,6 +4,13 @@
 
 ## [Unreleased]
 
+- **Antigravity offers Gemini 4 Hydrogen.** It is in the Google AI Pro plan's picker now, with
+  its fourth level, Extra (`xhigh`), so the panel lists it before Antigravity has answered too.
+- **Codex offers GPT-6.1 Terra.** `gpt-6.1-terra` is in Codex's own picker now, so the panel
+  lists it before Codex has answered too.
+- **Claude's `fable` is Fable 5.2.** The panel names the model the alias runs now, and shows
+  `medium` as the CLI's default effort on every Claude model, Fable included.
+
 ## [3.4.2] — 2026-10-20
 
 - **The prompts have a file of their own.** `EXPERIENCE.md` is now the brief alone; the prompts are
