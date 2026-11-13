@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [3.4.3] — 2026-11-13
+
 - **Antigravity offers Gemini 4 Hydrogen.** It is in the Google AI Pro plan's picker now, with
   its fourth level, Extra (`xhigh`), so the panel lists it before Antigravity has answered too.
 - **Codex offers GPT-6.1 Terra.** `gpt-6.1-terra` is in Codex's own picker now, so the panel
