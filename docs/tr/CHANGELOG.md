@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- **Antigravity'de Gemini 4 Hydrogen var.** Artık Google AI Pro planının listesinde; dördüncü
+  seviyesi Extra (`xhigh`) ile birlikte. Panel onu Antigravity cevap vermeden önce de gösteriyor.
 - **Codex'te GPT-6.1 Terra var.** `gpt-6.1-terra` artık Codex'in kendi listesinde; panel onu
   Codex cevap vermeden önce de gösteriyor.
 - **Claude'da `fable` artık Fable 5.2.** Panel bu adın çalıştırdığı modeli doğru gösteriyor;

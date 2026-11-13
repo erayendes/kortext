@@ -173,14 +173,22 @@ export const ENGINES: EngineSpec[] = [
     // the CLI's own picker is a model and an effort apart, and --model takes
     // the base id with --effort beside it — verified with a run.
     effortFlag: '--effort',
-    efforts: ['low', 'medium', 'high'],
-    // Verified with a run each: the CLI names what the model takes when refused.
+    // Only Gemini 4 Hydrogen goes up to xhigh (the picker's "Extra"); the rest stop
+    // at high, as `agy models` would say.
+    efforts: ['low', 'medium', 'high', 'xhigh'],
+    // GPT-OSS's level was verified with a run: the CLI names what a model takes when refused.
     modelEfforts: {
+      'gemini-4-argon': ['low', 'medium', 'high'],
+      'gemini-3.8-flash': ['low', 'medium', 'high'],
+      'claude-opus-5-5': ['low', 'medium', 'high'],
+      'claude-sonnet-5-5': ['low', 'medium', 'high'],
       'gpt-oss-120b': ['medium'],
     },
-    // The Google AI Pro plan's models, in the CLI picker's order; Argon reached Pro in 2026-10.
+    // The Google AI Pro plan's models, in the CLI picker's order; Argon reached Pro in
+    // 2026-10, Hydrogen came to every plan in 2026-11.
     models: [
       'gemini-4-argon',
+      'gemini-4-hydrogen',
       'gemini-3.8-flash',
       'claude-opus-5-5',
       'claude-sonnet-5-5',
@@ -188,10 +196,12 @@ export const ENGINES: EngineSpec[] = [
     ],
     label: {
       'gemini-4-argon': 'Gemini 4 Argon',
+      'gemini-4-hydrogen': 'Gemini 4 Hydrogen',
       'gemini-3.8-flash': 'Gemini 3.8 Flash',
       'claude-opus-5-5': 'Claude Opus 5.5',
       'claude-sonnet-5-5': 'Claude Sonnet 5.5',
       'gpt-oss-120b': 'GPT-OSS 120B (Medium)',
+      xhigh: 'Extra',
     },
     // What the CLI's own picker says, in its order and words.
     about: {
