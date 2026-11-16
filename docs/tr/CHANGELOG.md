@@ -7,6 +7,9 @@
 - **Antigravity'de Orchestrator (Argon) var.** Artık Google AI Pro planının listesinde: planı
   ve kontrolü Gemini 4 Argon yapıyor, işi Gemini 4 Hydrogen. Efor seviyesi almadığı için panel
   onun için seviye göstermiyor.
+- **Antigravity'de Gemini 4 Carbon ve Orchestrator (Carbon) var.** İkisi Google AI Ultra planında;
+  panel onları Antigravity cevap vermeden önce de gösteriyor, Pro hesabın kendi cevabı onları
+  listeden çıkarıyor.
 
 ## [3.4.3] — 2026-11-13
 

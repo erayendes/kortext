@@ -178,20 +178,26 @@ export const ENGINES: EngineSpec[] = [
     efforts: ['low', 'medium', 'high', 'xhigh'],
     // GPT-OSS's level was verified with a run: the CLI names what a model takes when refused.
     modelEfforts: {
+      'gemini-4-carbon': ['low', 'medium', 'high'],
       'gemini-4-argon': ['low', 'medium', 'high'],
       'gemini-3.8-flash': ['low', 'medium', 'high'],
       'claude-opus-5-5': ['low', 'medium', 'high'],
       'claude-sonnet-5-5': ['low', 'medium', 'high'],
       'gpt-oss-120b': ['medium'],
       // Orchestrator runs a fixed configuration; the CLI takes no level for it.
+      'Orchestrator (Carbon)': [],
       'gemini-pro-orchestrator-g1-pro': [],
     },
-    // The Google AI Pro plan's models, in the CLI picker's order; Argon reached Pro in
-    // 2026-10, Hydrogen came to every plan in 2026-11, Orchestrator (Argon) — Argon plans,
-    // Hydrogen builds — came with it.
+    // The Google AI Pro and Ultra plans' models, in the CLI picker's order; Argon reached
+    // Pro in 2026-10, Hydrogen came to every plan in 2026-11, the Orchestrators (Carbon or
+    // Argon plans, Hydrogen builds) with it. Carbon and its Orchestrator are Ultra's: a Pro
+    // user sees them only until `agy models` answers. The docs give no id for those two —
+    // Carbon follows the Gemini 4 ids, the Orchestrator goes by the name the docs pass.
     models: [
+      'gemini-4-carbon',
       'gemini-4-argon',
       'gemini-4-hydrogen',
+      'Orchestrator (Carbon)',
       'gemini-pro-orchestrator-g1-pro',
       'gemini-3.8-flash',
       'claude-opus-5-5',
@@ -199,6 +205,7 @@ export const ENGINES: EngineSpec[] = [
       'gpt-oss-120b',
     ],
     label: {
+      'gemini-4-carbon': 'Gemini 4 Carbon',
       'gemini-4-argon': 'Gemini 4 Argon',
       'gemini-4-hydrogen': 'Gemini 4 Hydrogen',
       'gemini-pro-orchestrator-g1-pro': 'Orchestrator (Argon)',
