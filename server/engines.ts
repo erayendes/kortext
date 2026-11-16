@@ -94,12 +94,11 @@ export const ENGINES: EngineSpec[] = [
     label: { opus: 'Opus', fable: 'Fable', sonnet: 'Sonnet', haiku: 'Haiku' },
     about: {
       opus: 'Opus 5.5 · 1M context · recommended',
-      fable: 'Fable 5.1 · most capable',
+      fable: 'Fable 5.2 · most capable',
       sonnet: 'Sonnet 5.5 · efficient',
       haiku: 'Haiku 5.5 · fastest',
       low: 'faster',
-      medium: 'the CLI default on Opus, Sonnet and Haiku',
-      high: 'the CLI default on Fable',
+      medium: 'the CLI default',
       xhigh: 'smarter',
       max: 'smarter · spends limits fastest',
       ultracode: 'xhigh + workflows',
@@ -129,6 +128,7 @@ export const ENGINES: EngineSpec[] = [
       'gpt-6-sol',
       'gpt-6-luna',
       'gpt-5.6-sol',
+      'gpt-6.1-terra',
       'gpt-5.6-terra',
       'gpt-5.6-luna',
     ],
@@ -142,6 +142,7 @@ export const ENGINES: EngineSpec[] = [
       'gpt-6-sol': 'Previous generation workhorse model',
       'gpt-6-luna': 'Fast and affordable model for easier tasks',
       'gpt-5.6-sol': 'Older generation workhorse model',
+      'gpt-6.1-terra': 'GPT-6.1 Terra Codex model',
       'gpt-5.6-terra': 'Older balanced model for straightforward work',
       'gpt-5.6-luna': 'Older fast and efficient model',
       low: 'Fast responses with lighter reasoning',
@@ -172,25 +173,47 @@ export const ENGINES: EngineSpec[] = [
     // the CLI's own picker is a model and an effort apart, and --model takes
     // the base id with --effort beside it — verified with a run.
     effortFlag: '--effort',
-    efforts: ['low', 'medium', 'high'],
-    // Verified with a run each: the CLI names what the model takes when refused.
+    // Only Gemini 4 Hydrogen goes up to xhigh (the picker's "Extra"); the rest stop
+    // at high, as `agy models` would say.
+    efforts: ['low', 'medium', 'high', 'xhigh'],
+    // GPT-OSS's level was verified with a run: the CLI names what a model takes when refused.
     modelEfforts: {
+      'gemini-4-carbon': ['low', 'medium', 'high'],
+      'gemini-4-argon': ['low', 'medium', 'high'],
+      'gemini-3.8-flash': ['low', 'medium', 'high'],
+      'claude-opus-5-5': ['low', 'medium', 'high'],
+      'claude-sonnet-5-5': ['low', 'medium', 'high'],
       'gpt-oss-120b': ['medium'],
+      // Orchestrator runs a fixed configuration; the CLI takes no level for it.
+      'Orchestrator (Carbon)': [],
+      'gemini-pro-orchestrator-g1-pro': [],
     },
-    // The Google AI Pro plan's models, in the CLI picker's order; Argon reached Pro in 2026-10.
+    // The Google AI Pro and Ultra plans' models, in the CLI picker's order; Argon reached
+    // Pro in 2026-10, Hydrogen came to every plan in 2026-11, the Orchestrators (Carbon or
+    // Argon plans, Hydrogen builds) with it. Carbon and its Orchestrator are Ultra's: a Pro
+    // user sees them only until `agy models` answers. The docs give no id for those two —
+    // Carbon follows the Gemini 4 ids, the Orchestrator goes by the name the docs pass.
     models: [
+      'gemini-4-carbon',
       'gemini-4-argon',
+      'gemini-4-hydrogen',
+      'Orchestrator (Carbon)',
+      'gemini-pro-orchestrator-g1-pro',
       'gemini-3.8-flash',
       'claude-opus-5-5',
       'claude-sonnet-5-5',
       'gpt-oss-120b',
     ],
     label: {
+      'gemini-4-carbon': 'Gemini 4 Carbon',
       'gemini-4-argon': 'Gemini 4 Argon',
+      'gemini-4-hydrogen': 'Gemini 4 Hydrogen',
+      'gemini-pro-orchestrator-g1-pro': 'Orchestrator (Argon)',
       'gemini-3.8-flash': 'Gemini 3.8 Flash',
       'claude-opus-5-5': 'Claude Opus 5.5',
       'claude-sonnet-5-5': 'Claude Sonnet 5.5',
       'gpt-oss-120b': 'GPT-OSS 120B (Medium)',
+      xhigh: 'Extra',
     },
     // What the CLI's own picker says, in its order and words.
     about: {

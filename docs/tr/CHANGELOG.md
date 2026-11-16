@@ -4,6 +4,22 @@
 
 ## [Unreleased]
 
+- **Antigravity'de Orchestrator (Argon) var.** Artık Google AI Pro planının listesinde: planı
+  ve kontrolü Gemini 4 Argon yapıyor, işi Gemini 4 Hydrogen. Efor seviyesi almadığı için panel
+  onun için seviye göstermiyor.
+- **Antigravity'de Gemini 4 Carbon ve Orchestrator (Carbon) var.** İkisi Google AI Ultra planında;
+  panel onları Antigravity cevap vermeden önce de gösteriyor, Pro hesabın kendi cevabı onları
+  listeden çıkarıyor.
+
+## [3.4.3] — 2026-11-13
+
+- **Antigravity'de Gemini 4 Hydrogen var.** Artık Google AI Pro planının listesinde; dördüncü
+  seviyesi Extra (`xhigh`) ile birlikte. Panel onu Antigravity cevap vermeden önce de gösteriyor.
+- **Codex'te GPT-6.1 Terra var.** `gpt-6.1-terra` artık Codex'in kendi listesinde; panel onu
+  Codex cevap vermeden önce de gösteriyor.
+- **Claude'da `fable` artık Fable 5.2.** Panel bu adın çalıştırdığı modeli doğru gösteriyor;
+  CLI'ın varsayılan eforu Fable dahil her Claude modelinde `medium`.
+
 ## [3.4.2] — 2026-10-20
 
 - **Promptların kendi dosyası var.** `EXPERIENCE.md` artık yalnızca brief; promptlar
