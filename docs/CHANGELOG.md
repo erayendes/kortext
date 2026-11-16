@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+- **Antigravity offers Orchestrator (Argon).** It is in the Google AI Pro plan's picker now:
+  Gemini 4 Argon plans and reviews, Gemini 4 Hydrogen does the work. It takes no effort level,
+  so the panel offers none for it.
+
 ## [3.4.3] — 2026-11-13
 
 - **Antigravity offers Gemini 4 Hydrogen.** It is in the Google AI Pro plan's picker now, with

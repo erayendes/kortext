@@ -183,12 +183,16 @@ export const ENGINES: EngineSpec[] = [
       'claude-opus-5-5': ['low', 'medium', 'high'],
       'claude-sonnet-5-5': ['low', 'medium', 'high'],
       'gpt-oss-120b': ['medium'],
+      // Orchestrator runs a fixed configuration; the CLI takes no level for it.
+      'gemini-pro-orchestrator-g1-pro': [],
     },
     // The Google AI Pro plan's models, in the CLI picker's order; Argon reached Pro in
-    // 2026-10, Hydrogen came to every plan in 2026-11.
+    // 2026-10, Hydrogen came to every plan in 2026-11, Orchestrator (Argon) — Argon plans,
+    // Hydrogen builds — came with it.
     models: [
       'gemini-4-argon',
       'gemini-4-hydrogen',
+      'gemini-pro-orchestrator-g1-pro',
       'gemini-3.8-flash',
       'claude-opus-5-5',
       'claude-sonnet-5-5',
@@ -197,6 +201,7 @@ export const ENGINES: EngineSpec[] = [
     label: {
       'gemini-4-argon': 'Gemini 4 Argon',
       'gemini-4-hydrogen': 'Gemini 4 Hydrogen',
+      'gemini-pro-orchestrator-g1-pro': 'Orchestrator (Argon)',
       'gemini-3.8-flash': 'Gemini 3.8 Flash',
       'claude-opus-5-5': 'Claude Opus 5.5',
       'claude-sonnet-5-5': 'Claude Sonnet 5.5',
