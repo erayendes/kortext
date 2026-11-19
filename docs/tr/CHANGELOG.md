@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+- **Brief'teki notlar uygulanabiliyor.** Brief'i hiçbir ajan yazmadığı için satırlarına düşülen
+  not bir yere gitmiyor, **Apply** gri kalıyordu. Artık Apply'a basınca ajan notlarınızın
+  istediği değişikliğin taslağını yazıyor; taslak editörde açılıyor ve siz kaydedene kadar hiçbir
+  şey değişmiyor.
 - **Antigravity'de Orchestrator (Argon) var.** Artık Google AI Pro planının listesinde: planı
   ve kontrolü Gemini 4 Argon yapıyor, işi Gemini 4 Hydrogen. Efor seviyesi almadığı için panel
   onun için seviye göstermiyor.

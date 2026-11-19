@@ -670,6 +670,40 @@ printf -- '---\\nstatus: draft\\nauthor: +prime\\n---\\n\\n# Brief\\n\\nrevised\
   rmSync(work, { recursive: true, force: true });
 });
 
+test("prime's own notes on the brief are drafted into a proposal", async () => {
+  const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
+  const db = openDb(join(work, 'db.sqlite'));
+  const p = createProject(db, { name: 'Notes', repoPath: join(work, 'notes') }, pkgRoot);
+  approveBrief(p);
+  const script = join(work, 'echo-proposer.sh');
+  // Writes the prompt it was given as the proposal, so the test can read what was asked.
+  writeFileSync(
+    script,
+    `#!/bin/sh
+prompt=$(cat)
+rel=$(printf '%s' "$prompt" | grep -o '\\.kortext/\\.proposal-[a-z0-9]*\\.txt' | head -1)
+printf '%s' "$prompt" > "$rel"
+`,
+  );
+  chmodSync(script, 0o755);
+  const out = await proposeRevision(
+    db,
+    p,
+    'BRIEF.md',
+    [],
+    { id: 'echo', binary: script, args: [], installHint: '' },
+    pkgRoot,
+    ['[Telemetri kapsam dışı.] Anonim kullanım ölçümünü kapsama alalım.'],
+  );
+  assert.match(out.proposal, /The human has noted lines/);
+  assert.match(
+    out.proposal,
+    /\[Telemetri kapsam dışı\.\] Anonim kullanım ölçümünü kapsama alalım\./,
+  );
+  assert.doesNotMatch(out.proposal, /REQUESTS:/);
+  rmSync(work, { recursive: true, force: true });
+});
+
 test('an engine that proposes nothing is an error, not an empty document', async () => {
   const work = mkdtempSync(join(tmpdir(), 'kortext-test-'));
   const db = openDb(join(work, 'db.sqlite'));

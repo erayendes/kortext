@@ -4,6 +4,9 @@
 
 ## [Unreleased]
 
+- **Notes on the brief can be applied.** No agent writes the brief, so a note on one of its lines
+  went nowhere and **Apply** stayed grey. Apply now has the agent draft the change your notes ask
+  for; it opens in the editor, and nothing changes until you save it.
 - **Antigravity offers Orchestrator (Argon).** It is in the Google AI Pro plan's picker now:
   Gemini 4 Argon plans and reviews, Gemini 4 Hydrogen does the work. It takes no effort level,
   so the panel offers none for it.
