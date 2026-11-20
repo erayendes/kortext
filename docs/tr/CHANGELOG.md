@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [3.4.4] — 2026-11-20
+
 - **Brief'teki notlar uygulanabiliyor.** Brief'i hiçbir ajan yazmadığı için satırlarına düşülen
   not bir yere gitmiyor, **Apply** gri kalıyordu. Artık Apply'a basınca ajan notlarınızın
   istediği değişikliğin taslağını yazıyor; taslak editörde açılıyor ve siz kaydedene kadar hiçbir
