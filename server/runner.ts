@@ -814,6 +814,7 @@ export async function proposeRevision(
   notes: string[],
   engine: EngineSpec,
   pkgRoot: string,
+  answers: string[] = [],
 ): Promise<{ proposal: string }> {
   // One file per call: two proposals in flight would otherwise overwrite each
   // other and hand both callers whichever draft finished last.
@@ -822,7 +823,9 @@ export async function proposeRevision(
   const scratch = join(project.repo_path, '.kortext', scratchRel);
   const author = loadDocMap(pkgRoot, project.kind ?? 'new').get(rel)?.author ?? '+agent';
   const prompt = [
-    `Another document has asked .kortext/${rel} to change. Draft that change.`,
+    notes.length > 0
+      ? `Another document has asked .kortext/${rel} to change. Draft that change.`
+      : `The human has noted lines of .kortext/${rel} to change. Draft that change.`,
     ...(author !== '+agent'
       ? [`Write as ${author}, but the document belongs to the human — you propose, they decide.`]
       : []),
@@ -832,10 +835,15 @@ export async function proposeRevision(
     '- Touch NO other file. Do not modify the document itself; the human applies your draft.',
     '- Keep the frontmatter exactly as it is, including the status line.',
     '- Keep every section heading verbatim, and keep the document in its own language.',
-    '- Change ONLY what the requests below ask for. Everything they do not mention stays word for word.',
-    '',
-    'REQUESTS:',
-    ...notes.map((n) => `- ${n}`),
+    '- Change ONLY what the requests and notes below ask for. Everything they do not mention stays word for word.',
+    ...(notes.length > 0 ? ['', 'REQUESTS:', ...notes.map((n) => `- ${n}`)] : []),
+    ...(answers.length > 0
+      ? [
+          '',
+          "THE HUMAN'S NOTES (the line each one is about is in brackets):",
+          ...answers.map((a) => `- ${a}`),
+        ]
+      : []),
   ].join('\n');
   // Track proposals so cancellation cannot leave a CLI writing into removed project files.
   const run = trackRun(project.id);

@@ -809,11 +809,25 @@ export function buildApp(db: Database.Database, pkgRoot: string, dbPath: string)
       listDocs(db, project, pkgRoot)
         .find((d) => d.rel === String(rel))
         ?.revisionRequests.map((r) => r.reason) ?? [];
-    if (notes.length === 0) {
+    // Prime's own notes on lines of a document no agent writes, such as the brief.
+    const answers = Array.isArray(req.body?.answers)
+      ? (req.body.answers as unknown[]).filter(
+          (a): a is string => typeof a === 'string' && a.trim() !== '',
+        )
+      : [];
+    if (notes.length === 0 && answers.length === 0) {
       return res.status(409).json({ error: `nothing is asking ${rel} to change` });
     }
     try {
-      const { proposal } = await proposeRevision(db, project, String(rel), notes, engine, pkgRoot);
+      const { proposal } = await proposeRevision(
+        db,
+        project,
+        String(rel),
+        notes,
+        engine,
+        pkgRoot,
+        answers,
+      );
       res.json({ proposal });
     } catch (err) {
       res.status(500).json({ error: (err as Error).message });

@@ -678,12 +678,14 @@ export function DocDrawer({
   // they read differently, and prime should see which is which before pressing.
   const answered = notes.filter(isQuestionNote).length;
   const remarks = notes.length - answered;
+  // No agent writes this document: what is answered, noted or accepted becomes one
+  // drafted change in the editor, which prime reads and saves.
+  const drafted = written ? '' : ' — drafted into the editor for you to save';
   const summary = [
-    answered > 0 && written ? plural(answered, 'question answered', 'questions answered') : null,
-    remarks > 0 && written ? plural(remarks, 'note added', 'notes added') : null,
+    answered > 0 ? plural(answered, 'question answered', 'questions answered') + drafted : null,
+    remarks > 0 ? plural(remarks, 'note added', 'notes added') + drafted : null,
     accepting.length > 0
-      ? plural(accepting.length, 'request accepted', 'requests accepted') +
-        (written ? '' : ' — drafted into the editor for you to save')
+      ? plural(accepting.length, 'request accepted', 'requests accepted') + drafted
       : null,
     denying.length > 0 ? plural(denying.length, 'request rejected', 'requests rejected') : null,
     sending.length > 0
@@ -715,14 +717,18 @@ export function DocDrawer({
       // Answers and accepted requests go into a rewrite, and the tray shows
       // them as sent until it lands. A send or a discard alone edits the file
       // at once and is done: nothing to wait for, so the tray empties.
-      // No agent writes this document: the accepted requests become one
-      // drafted change in the editor, which prime saves — what Draft the
-      // change on a row does, reached from the button everyone presses.
-      if (!written && accepting.length > 0) {
+      // No agent writes this document: the accepted requests and prime's notes
+      // become one drafted change in the editor, which prime saves — what Draft
+      // the change on a row does, reached from the button everyone presses.
+      if (!written && (accepting.length > 0 || notes.length > 0)) {
         const rel = doc.rel;
         setDrafting(true);
         const { proposal } = await api
-          .proposeRevision(project.id, rel)
+          .proposeRevision(
+            project.id,
+            rel,
+            notes.map((n) => (n.excerpt ? `[${n.excerpt}] ${n.text}` : n.text)),
+          )
           .finally(() => setDrafting(false));
         if (showing.current === rel) pendingProposal.current = { rel, text: proposal };
       }
@@ -849,7 +855,7 @@ export function DocDrawer({
               ? 'The author says this document does not apply here.'
               : (approveBlocked ?? '')
             : !written
-              ? 'No agent writes this document — use Edit in ⋯ to change it yourself.'
+              ? 'No agent writes this document — use Edit, or note lines and Apply for a drafted change.'
               : '';
 
   const isBrief = doc?.rel === 'BRIEF.md';

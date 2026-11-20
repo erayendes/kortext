@@ -230,10 +230,10 @@ export const api = {
       `/api/projects/${projectId}/docs/settle-requests`,
       { method: 'POST', body: JSON.stringify(body) },
     ),
-  proposeRevision: (projectId: number, rel: string) =>
+  proposeRevision: (projectId: number, rel: string, answers: string[] = []) =>
     req<{ proposal: string }>(`/api/projects/${projectId}/docs/propose`, {
       method: 'POST',
-      body: JSON.stringify({ rel }),
+      body: JSON.stringify({ rel, answers }),
     }),
   reviseDoc: (projectId: number, rel: string, notes: string[]) =>
     req<{ started: string }>(`/api/projects/${projectId}/docs/revise`, {
