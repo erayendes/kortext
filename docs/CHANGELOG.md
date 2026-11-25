@@ -4,6 +4,13 @@
 
 ## [Unreleased]
 
+- **Codex offers GPT-6.2 Sol and GPT-6.2 Astra.** They are at the top of Codex's own picker now,
+  so the panel lists them before Codex has answered too. The model descriptions follow Codex's
+  catalog.
+- **Antigravity offers Gemini 4 Neon.** It is in the Google AI Pro and Ultra plans' picker, with
+  its fourth level, Extra (`xhigh`), and it is the default for new conversations. The panel lists
+  it before Antigravity has answered too.
+
 ## [3.4.4] — 2026-11-20
 
 - **Notes on the brief can be applied.** No agent writes the brief, so a note on one of its lines
