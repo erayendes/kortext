@@ -123,12 +123,14 @@ export const ENGINES: EngineSpec[] = [
       'gpt-5.6-luna': ['low', 'medium', 'high', 'xhigh', 'max'],
     },
     models: [
+      'gpt-6.2-sol',
+      'gpt-6.2-astra',
+      'gpt-6.1-terra',
       'gpt-6.1-sol',
       'gpt-6-astra',
       'gpt-6-sol',
       'gpt-6-luna',
       'gpt-5.6-sol',
-      'gpt-6.1-terra',
       'gpt-5.6-terra',
       'gpt-5.6-luna',
     ],
@@ -137,14 +139,16 @@ export const ENGINES: EngineSpec[] = [
     // differs per model now (low on Sol and Astra, medium elsewhere), so no level
     // is marked as the CLI default.
     about: {
-      'gpt-6.1-sol': 'Latest workhorse model for coding and everyday work',
-      'gpt-6-astra': 'Frontier intelligence for the most demanding work',
-      'gpt-6-sol': 'Previous generation workhorse model',
+      'gpt-6.2-sol': 'Fast, go-to model for coding and everyday work',
+      'gpt-6.2-astra': 'Our most capable model for complex coding and professional work',
+      'gpt-6.1-terra': 'Efficient model that excels at visual understanding and computer use',
+      'gpt-6.1-sol': 'Previous generation model for coding and everyday work',
+      'gpt-6-astra': 'Previous generation model for complex coding and professional work',
+      'gpt-6-sol': 'Legacy model for coding and everyday work',
       'gpt-6-luna': 'Fast and affordable model for easier tasks',
-      'gpt-5.6-sol': 'Older generation workhorse model',
-      'gpt-6.1-terra': 'GPT-6.1 Terra Codex model',
-      'gpt-5.6-terra': 'Older balanced model for straightforward work',
-      'gpt-5.6-luna': 'Older fast and efficient model',
+      'gpt-5.6-sol': 'Legacy model for coding and everyday work',
+      'gpt-5.6-terra': 'Legacy balanced model for agentic coding',
+      'gpt-5.6-luna': 'Legacy fast model for simpler tasks',
       low: 'Fast responses with lighter reasoning',
       medium: 'Balances speed and reasoning depth for everyday tasks',
       high: 'Greater reasoning depth for complex problems',
@@ -173,8 +177,8 @@ export const ENGINES: EngineSpec[] = [
     // the CLI's own picker is a model and an effort apart, and --model takes
     // the base id with --effort beside it — verified with a run.
     effortFlag: '--effort',
-    // Only Gemini 4 Hydrogen goes up to xhigh (the picker's "Extra"); the rest stop
-    // at high, as `agy models` would say.
+    // Only Gemini 4 Neon and Hydrogen go up to xhigh (the picker's "Extra"); the rest
+    // stop at high, as `agy models` would say.
     efforts: ['low', 'medium', 'high', 'xhigh'],
     // GPT-OSS's level was verified with a run: the CLI names what a model takes when refused.
     modelEfforts: {
@@ -194,6 +198,7 @@ export const ENGINES: EngineSpec[] = [
     // user sees them only until `agy models` answers. The docs give no id for those two —
     // Carbon follows the Gemini 4 ids, the Orchestrator goes by the name the docs pass.
     models: [
+      'gemini-4-neon',
       'gemini-4-carbon',
       'gemini-4-argon',
       'gemini-4-hydrogen',
@@ -205,6 +210,7 @@ export const ENGINES: EngineSpec[] = [
       'gpt-oss-120b',
     ],
     label: {
+      'gemini-4-neon': 'Gemini 4 Neon',
       'gemini-4-carbon': 'Gemini 4 Carbon',
       'gemini-4-argon': 'Gemini 4 Argon',
       'gemini-4-hydrogen': 'Gemini 4 Hydrogen',
@@ -217,7 +223,7 @@ export const ENGINES: EngineSpec[] = [
     },
     // What the CLI's own picker says, in its order and words.
     about: {
-      'gemini-3.8-flash': 'current default',
+      'gemini-4-neon': 'current default',
       low: 'Fastest, lightest reasoning',
       medium: 'Balanced',
       high: 'Deepest reasoning for complex problems — slower but stronger · the CLI default',

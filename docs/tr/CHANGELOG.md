@@ -4,6 +4,13 @@
 
 ## [Unreleased]
 
+- **Codex'te GPT-6.2 Sol ve GPT-6.2 Astra var.** Codex'in kendi listesinin en üstünde; Codex
+  cevap vermeden önce de panel onları gösteriyor. Model açıklamaları Codex'in kataloğuna göre
+  güncellendi.
+- **Antigravity'de Gemini 4 Neon var.** Google AI Pro ve Ultra planlarının listesinde, dördüncü
+  seviyesi Extra (`xhigh`) ile; yeni konuşmalarda varsayılan. Antigravity cevap vermeden önce de
+  panel onu gösteriyor.
+
 ## [3.4.4] — 2026-11-20
 
 - **Brief'teki notlar uygulanabiliyor.** Brief'i hiçbir ajan yazmadığı için satırlarına düşülen
